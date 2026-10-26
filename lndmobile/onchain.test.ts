@@ -8,7 +8,7 @@ jest.mock('react-native', () => ({
 }));
 
 import { NativeModules } from 'react-native';
-import { getTransactions } from './onchain';
+import { getTransactions, sendCoins } from './onchain';
 import { lnrpc } from '../proto/lightning';
 
 const LndMobile = NativeModules.LndMobile as unknown as {
@@ -62,5 +62,34 @@ describe('getTransactions', () => {
         expect(request.start_height).toBe(0);
         expect(request.end_height).toBe(0);
         expect(request.max_transactions).toBe(500);
+    });
+});
+
+describe('sendCoins', () => {
+    const sentSendCoins = () =>
+        lnrpc.SendCoinsRequest.decode(
+            Uint8Array.from(
+                Buffer.from(LndMobile.sendCommand.mock.calls[0][1], 'base64')
+            )
+        );
+
+    it('passes the label to SendCoins', async () => {
+        await sendCoins(
+            'bcrt1qrecipient',
+            100000,
+            2,
+            undefined,
+            undefined,
+            undefined,
+            'ZEUS send 0123456789abcdef'
+        );
+        const request = sentSendCoins();
+        expect(request.addr).toBe('bcrt1qrecipient');
+        expect(request.label).toBe('ZEUS send 0123456789abcdef');
+    });
+
+    it('sends no label when none is given', async () => {
+        await sendCoins('bcrt1qrecipient', 100000, 2);
+        expect(sentSendCoins().label).toBe('');
     });
 });

@@ -1,8 +1,8 @@
 // Import-time scaffolding for the native modules EmbeddedLND.ts and its LND
 // base class pull in. listPeers only touches lndMobile.index.listPeers;
 // closeChannel only uses the injected close call, the stream decoder and
-// the event emitter mocked below; getTransactions only the injected
-// onchain call.
+// the event emitter mocked below; getTransactions and sendCoins only the
+// injected onchain calls.
 jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: { fetch: jest.fn(), config: jest.fn() }
@@ -19,6 +19,7 @@ const mockSendPaymentV2Sync = jest.fn();
 const mockSendKeysendPaymentV2 = jest.fn();
 const mockListPayments = jest.fn();
 const mockGetTransactions = jest.fn();
+const mockSendCoins = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
     default: {
@@ -37,7 +38,8 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
         },
         wallet: {},
         onchain: {
-            getTransactions: (...args: any[]) => mockGetTransactions(...args)
+            getTransactions: (...args: any[]) => mockGetTransactions(...args),
+            sendCoins: (...args: any[]) => mockSendCoins(...args)
         },
         wtclient: {}
     }
@@ -442,6 +444,29 @@ describe('EmbeddedLND.lookupPayment', () => {
         expect(mockListPayments).toHaveBeenCalledTimes(1);
         expect(mockListPayments.mock.calls[0][0].creationDateStart).toBe(
             undefined
+        );
+    });
+});
+
+describe('EmbeddedLND on-chain sends', () => {
+    beforeEach(() => mockSendCoins.mockReset());
+
+    it('passes the send label to SendCoins', async () => {
+        await new EmbeddedLND().sendCoins({
+            addr: 'bcrt1qrecipient',
+            amount: '100000',
+            sat_per_vbyte: '2',
+            label: 'ZEUS send 0123456789abcdef'
+        });
+
+        expect(mockSendCoins).toHaveBeenCalledWith(
+            'bcrt1qrecipient',
+            '100000',
+            '2',
+            undefined,
+            undefined,
+            undefined,
+            'ZEUS send 0123456789abcdef'
         );
     });
 });

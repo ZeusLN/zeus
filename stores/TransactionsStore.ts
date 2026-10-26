@@ -27,6 +27,11 @@ import {
 import { sleep } from '../utils/SleepUtils';
 import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
+import {
+    findSentTransaction,
+    isRequestTimeout,
+    makeSendLabel
+} from '../utils/OnchainSendUtils';
 
 import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
@@ -131,6 +136,9 @@ export default class TransactionsStore {
 
     // in lieu of receiving txid on LND's publishTransaction
     @observable publishSuccess = false;
+    // an on-chain send timed out and was not found among the wallet's
+    // transactions; it may still have been broadcast, so no retry is offered
+    @observable sendOutcomeUnknown = false;
     @observable broadcast_txid: string;
     @observable broadcast_err: string | null;
     // coin control
@@ -147,6 +155,9 @@ export default class TransactionsStore {
 
     // monotonic id assigned to each dispatched payment
     private paymentSequence = 0;
+    // id of the current on-chain send; reset() and the next send change it,
+    // so a late result (e.g. a timeout lookup) for an earlier send is dropped
+    private sendCoinsSeq = 0;
     // sequence of the payment that set paymentInFlight (null when none);
     // completion callbacks and the backstop timer only clear the flag on
     // behalf of that payment, so overlapping payments (e.g. one that
@@ -196,7 +207,9 @@ export default class TransactionsStore {
 
     @action
     public reset = () => {
+        this.sendCoinsSeq++;
         this.loading = false;
+        this.sendOutcomeUnknown = false;
         this.paymentInFlight = false;
         this.inFlightOwnerSeq = null;
         this.inFlightPaymentHash = null;
@@ -245,7 +258,14 @@ export default class TransactionsStore {
     };
 
     @action
-    public broadcast = async (raw_final_tx: string) => {
+    // seq is the sequence of the send that started this broadcast; it
+    // defaults to the current one for broadcasts started from TxHex or PSBT
+    public broadcast = async (
+        raw_final_tx: string,
+        seq: number = this.sendCoinsSeq
+    ) => {
+        const isCurrent = () => seq === this.sendCoinsSeq;
+        if (!isCurrent()) return;
         this.loading = true;
 
         const tx_hex = raw_final_tx.includes('=')
@@ -277,6 +297,7 @@ export default class TransactionsStore {
                     const data = response.data;
                     if (status == 200) {
                         runInAction(() => {
+                            if (!isCurrent()) return;
                             this.txid = data || txid;
                             this.publishSuccess = true;
                             this.loading = false;
@@ -286,6 +307,7 @@ export default class TransactionsStore {
                     } else {
                         const errorMsg = errorToUserFriendly(data);
                         runInAction(() => {
+                            if (!isCurrent()) return;
                             this.error_msg = errorMsg;
                             this.error = true;
                             this.loading = false;
@@ -297,6 +319,7 @@ export default class TransactionsStore {
                         err?.error || err?.message || err?.toString()
                     );
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
@@ -311,12 +334,14 @@ export default class TransactionsStore {
                 if (data.publish_error) {
                     const errorMsg = errorToUserFriendly(data.publish_error);
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
                     });
                 } else {
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.txid = txid;
                         this.publishSuccess = true;
                         this.loading = false;
@@ -324,11 +349,38 @@ export default class TransactionsStore {
                     });
                 }
             })
-            .catch((error: any) => {
+            .catch(async (error: any) => {
+                // a timed out publish may still have gone out, and Try Again
+                // would fund a new transaction from other inputs
+                if (isRequestTimeout(error)) {
+                    const found =
+                        txid && isCurrent()
+                            ? await this.findTimedOutSend(
+                                  (tx: any) => tx.tx_hash === txid
+                              )
+                            : undefined;
+                    runInAction(() => {
+                        if (!isCurrent()) return;
+                        if (found) {
+                            this.txid = found;
+                            this.publishSuccess = true;
+                            this.channelsStore.resetOpenChannel();
+                        } else {
+                            this.error_msg = localeString(
+                                'stores.TransactionsStore.sendOutcomeUnknown'
+                            );
+                            this.error = true;
+                            this.sendOutcomeUnknown = true;
+                        }
+                        this.loading = false;
+                    });
+                    return;
+                }
                 const errorMsg = errorToUserFriendly(
                     error.publish_error || error.message
                 );
                 runInAction(() => {
+                    if (!isCurrent()) return;
                     this.error_msg = errorMsg;
                     this.error = true;
                     this.loading = false;
@@ -339,17 +391,20 @@ export default class TransactionsStore {
     @action
     public finalizePsbtAndBroadcast = (
         funded_psbt: string,
-        defaultAccount?: boolean
+        defaultAccount?: boolean,
+        seq: number = this.sendCoinsSeq
     ) => {
+        const isCurrent = () => seq === this.sendCoinsSeq;
         this.funded_psbt = '';
         this.loading = true;
 
         if (defaultAccount) {
             return BackendUtils.finalizePsbt({ funded_psbt })
-                .then((data: any) => this.broadcast(data.raw_final_tx))
+                .then((data: any) => this.broadcast(data.raw_final_tx, seq))
                 .catch((error: any) => {
                     const errorMsg = errorToUserFriendly(error.message);
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
@@ -373,7 +428,7 @@ export default class TransactionsStore {
                     // Step 3: Extract the transaction
                     const txHex = psbt.extractTransaction().toHex();
 
-                    this.broadcast(txHex);
+                    this.broadcast(txHex, seq);
 
                     resolve(true);
                 } catch (error: any) {
@@ -381,6 +436,7 @@ export default class TransactionsStore {
                         error?.message || error
                     );
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
@@ -489,8 +545,10 @@ export default class TransactionsStore {
 
     private sendCoinsLNDCoinControl = (
         transactionRequest: TransactionRequest,
-        defaultAccount?: boolean
+        defaultAccount: boolean,
+        seq: number
     ) => {
+        const isCurrent = () => seq === this.sendCoinsSeq;
         const {
             utxos,
             addr,
@@ -539,6 +597,7 @@ export default class TransactionsStore {
         BackendUtils.fundPsbt(fundPsbtRequest)
             .then((data: any) => {
                 runInAction(() => {
+                    if (!isCurrent()) return;
                     this.crafting = false;
                     const funded_psbt: string = new FundedPsbt(
                         data.funded_psbt
@@ -550,7 +609,8 @@ export default class TransactionsStore {
                     } else {
                         this.finalizePsbtAndBroadcast(
                             funded_psbt,
-                            defaultAccount
+                            defaultAccount,
+                            seq
                         );
                     }
                 });
@@ -558,6 +618,7 @@ export default class TransactionsStore {
             .catch((error: any) => {
                 const errorMsg = errorToUserFriendly(error.message);
                 runInAction(() => {
+                    if (!isCurrent()) return;
                     this.error_msg = errorMsg;
                     this.error = true;
                     this.crafting = false;
@@ -568,8 +629,15 @@ export default class TransactionsStore {
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
+        // also invalidates a lookup still running for an earlier send; the
+        // coin control path carries seq through funding, finalizing and
+        // broadcasting
+        const seq = ++this.sendCoinsSeq;
+        const isCurrent = () => seq === this.sendCoinsSeq;
+
         this.funded_psbt = '';
         this.error = false;
+        this.sendOutcomeUnknown = false;
         this.error_msg = null;
         this.txid = null;
         this.publishSuccess = false;
@@ -608,29 +676,79 @@ export default class TransactionsStore {
         ) {
             return this.sendCoinsLNDCoinControl(
                 transactionRequest,
-                transactionRequest.account === 'default'
+                transactionRequest.account === 'default',
+                seq
             );
         }
 
         this.crafting = false;
 
-        BackendUtils.sendCoins(transactionRequest)
-            .then((data: any) => {
-                runInAction(() => {
-                    this.txid = data.txid;
-                    this.publishSuccess = true;
-                    this.loading = false;
-                    this.balanceStore.getCombinedBalance();
-                });
-            })
-            .catch((error: Error) => {
+        // lets a timed out send be found among the wallet's transactions;
+        // only the LND backends label sends
+        const label = BackendUtils.isLNDBased() ? makeSendLabel() : undefined;
+
+        const onSent = (txid: string) =>
+            runInAction(() => {
+                if (!isCurrent()) return;
+                this.txid = txid;
+                this.publishSuccess = true;
+                this.loading = false;
+                this.balanceStore.getCombinedBalance();
+            });
+
+        BackendUtils.sendCoins(
+            label ? { ...transactionRequest, label } : transactionRequest
+        )
+            .then((data: any) => onSent(data.txid))
+            .catch(async (error: Error) => {
+                // a timed out send may still have been broadcast on any
+                // backend (e.g. CLN's withdraw past the 30s REST timeout);
+                // only labeled sends can be looked up
+                if (isRequestTimeout(error)) {
+                    const txid =
+                        label && isCurrent()
+                            ? await this.findTimedOutSend(
+                                  (tx: any) => tx.label === label
+                              )
+                            : undefined;
+                    if (txid) {
+                        onSent(txid);
+                        return;
+                    }
+                    runInAction(() => {
+                        if (!isCurrent()) return;
+                        this.error_msg = localeString(
+                            'stores.TransactionsStore.sendOutcomeUnknown'
+                        );
+                        this.error = true;
+                        this.sendOutcomeUnknown = true;
+                        this.loading = false;
+                    });
+                    return;
+                }
                 const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
+                    if (!isCurrent()) return;
                     this.error_msg = errorMsg;
                     this.error = true;
                     this.loading = false;
                 });
             });
+    };
+
+    // The send may have been broadcast before its request timed out. Only
+    // recent blocks and unconfirmed transactions can hold it.
+    private findTimedOutSend = (isSent: (tx: any) => boolean) => {
+        const height = Number(
+            this.nodeInfoStore.nodeInfo?.currentBlockHeight || 0
+        );
+        return findSentTransaction(
+            () =>
+                BackendUtils.getTransactions(
+                    height > 6 ? { start_height: height - 6 } : undefined
+                ),
+            isSent
+        );
     };
 
     @action
