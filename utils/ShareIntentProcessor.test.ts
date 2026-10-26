@@ -114,13 +114,25 @@ describe('processSharedQRImageFast', () => {
         const result = await processSharedQRImageFast();
 
         expect(result?.params.base64Image).toBe('QRIMAGE');
+
+        // The intent is still in place, so the next read delivers the same
+        // image again rather than losing it, and the guard has been released
+        const again = await processSharedQRImageFast();
+
+        expect(getSharedImageBase64).toHaveBeenCalledTimes(2);
+        expect(again?.params.base64Image).toBe('QRIMAGE');
     });
 
     it('returns null when nothing was shared', async () => {
-        getSharedImageBase64.mockResolvedValue(null);
+        getSharedImageBase64.mockResolvedValueOnce(null);
 
         expect(await processSharedQRImageFast()).toBeNull();
         expect(clearSharedIntent).not.toHaveBeenCalled();
+
+        // An empty read releases the guard too
+        const result = await processSharedQRImageFast();
+
+        expect(result?.params.base64Image).toBe('QRIMAGE');
     });
 
     // On resume two handlers look for the same share at once (iOS:
