@@ -128,26 +128,33 @@ export default class CLNRest {
                         }
                         return response.json();
                     } else {
+                        let errorInfo: any;
                         try {
-                            const errorInfo = response.json();
-                            throw new Error(
-                                (errorInfo.error && errorInfo.error.message) ||
-                                    errorInfo.message ||
-                                    errorInfo.error
-                            );
+                            errorInfo = response.json();
                         } catch (e) {
-                            if (
-                                response.data &&
-                                typeof response.data === 'string'
-                            ) {
-                                throw new Error(response.data);
-                            } else {
-                                throw new Error(
-                                    localeString(
-                                        'backends.LND.restReq.connectionError'
-                                    )
-                                );
-                            }
+                            // not JSON: fall back to the raw body below
+                        }
+                        const errorMessage = [
+                            errorInfo?.error?.message,
+                            errorInfo?.message,
+                            errorInfo?.error
+                        ].find(
+                            (message: any) =>
+                                typeof message === 'string' && message
+                        );
+                        if (errorMessage) {
+                            throw new Error(errorMessage);
+                        } else if (
+                            response.data &&
+                            typeof response.data === 'string'
+                        ) {
+                            throw new Error(response.data);
+                        } else {
+                            throw new Error(
+                                localeString(
+                                    'backends.LND.restReq.connectionError'
+                                )
+                            );
                         }
                     }
                 });
