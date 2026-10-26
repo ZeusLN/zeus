@@ -481,6 +481,20 @@ describe('TransactionsStore.sendCoins', () => {
                 markHttpStatus(new Error('Unauthorized'), 401)
             ],
             [
+                'a refused connection to an offline node',
+                'lnd',
+                new Error(
+                    'Failed to connect to node.example.com/203.0.113.5:8080'
+                )
+            ],
+            [
+                'an unresolved CLNRest host on iOS',
+                'cln-rest',
+                new Error(
+                    'A server with the specified hostname could not be found.'
+                )
+            ],
+            [
                 'an embedded LND error',
                 'embedded-lnd',
                 new Error(

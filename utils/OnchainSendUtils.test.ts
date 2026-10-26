@@ -271,4 +271,59 @@ describe('mayHaveBeenSent', () => {
     ])('is false for %s', (_, implementation, error) => {
         expect(mayHaveBeenSent(error, implementation)).toBe(false);
     });
+
+    it.each([
+        [
+            'a refused connection on Android',
+            'Failed to connect to /10.0.2.2:24899'
+        ],
+        [
+            'an unresolved host on Android',
+            'Unable to resolve host "node.example.com": No address associated with hostname'
+        ],
+        [
+            'an untrusted certificate on Android',
+            'java.security.cert.CertPathValidatorException: Trust anchor for certification path not found.'
+        ],
+        ['a failed handshake on Android', 'Handshake failed'],
+        [
+            'a certificate for another host on Android',
+            'Hostname 10.0.2.2 not verified:\n    certificate: sha256/abc=\n    DN: CN=wronghost.example'
+        ],
+        ['a refused connection on iOS', 'Could not connect to the server.'],
+        [
+            'a failed TLS handshake on iOS',
+            'A TLS error caused the secure connection to fail.'
+        ],
+        [
+            'an unresolved host on iOS',
+            'A server with the specified hostname could not be found.'
+        ],
+        ['no network on iOS', 'The Internet connection appears to be offline.'],
+        [
+            'a TLS failure on iOS',
+            'An SSL error has occurred and a secure connection to the server cannot be made.'
+        ],
+        [
+            'an invalid certificate on iOS',
+            'The certificate for this server is invalid. You might be connecting to a server that is pretending to be “127.0.0.1” which could put your confidential information at risk.'
+        ]
+    ])('is false for %s on REST backends', (_, message) => {
+        expect(mayHaveBeenSent(new Error(message), 'lnd')).toBe(false);
+        expect(mayHaveBeenSent(message, 'cln-rest')).toBe(false);
+    });
+
+    it.each([
+        [
+            'a connection lost mid-request on iOS',
+            'The network connection was lost.'
+        ],
+        [
+            'a stream ended on Android',
+            'unexpected end of stream on https://node.example.com/...'
+        ],
+        ['a timeout on Android', 'The request timed out.']
+    ])('stays true for %s on REST backends', (_, message) => {
+        expect(mayHaveBeenSent(new Error(message), 'lnd')).toBe(true);
+    });
 });

@@ -39,6 +39,36 @@ const LNC_TRANSPORT_CODES = [
 const LNC_NOT_SENT =
     /^(RPC connection not ready|error getting client|rpc with name .* not found|param \w+ required)/;
 
+// Native HTTP errors that only happen before the request is written: a
+// refused connection, an unresolved host, no network, or a failed TLS
+// handshake. Android passes OkHttp's exception message, iOS the
+// NSURLSession error's localizedDescription. A connection lost after that
+// ("unexpected end of stream", "The network connection was lost.") may
+// still have delivered the request, and so may a timeout: Android reports
+// connect and read timeouts alike as "The request timed out."
+const NOT_DELIVERED = [
+    // Android
+    /^Failed to connect to /,
+    /^Unable to resolve host /,
+    /Trust anchor for certification path not found/,
+    /^Hostname .+ not verified/,
+    /^Handshake failed/,
+    /^Chain validation failed/,
+    // iOS
+    /^Could not connect to the server\./,
+    /^A server with the specified hostname could not be found\./,
+    /^The Internet connection appears to be offline\./,
+    /^A TLS error caused the secure connection to fail\./,
+    // older iOS
+    /^An SSL error has occurred/,
+    /^The certificate for this server is invalid/
+];
+
+const notDelivered = (error: any): boolean => {
+    const message = String(error?.message ?? error ?? '');
+    return NOT_DELIVERED.some((pattern) => pattern.test(message));
+};
+
 // Whether a failed send or publish may still have reached the node, so the
 // outcome is unknown and a retry could pay twice. Only an answer from the
 // node itself, or a failure before the request went out, rules that out.
@@ -65,7 +95,7 @@ export const mayHaveBeenSent = (
         // error response other than a gateway error came from the server.
         // No response at all means the connection failed.
         default: {
-            if (isNodeResponse(error)) return false;
+            if (isNodeResponse(error) || notDelivered(error)) return false;
             const status = httpStatusOf(error);
             return status === undefined || GATEWAY_STATUSES.includes(status);
         }
