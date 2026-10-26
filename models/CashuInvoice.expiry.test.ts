@@ -1,8 +1,7 @@
-jest.mock('../stores/Stores', () => ({
-    settingsStore: { settings: { locale: 'en' } }
-}));
+jest.mock('../stores/Stores', () => ({}));
 
 import CashuInvoice from './CashuInvoice';
+import * as LocaleUtils from '../utils/LocaleUtils';
 
 // decodes with timestamp 1700074718 and expiry 3600 (see Bolt11Utils.test.ts)
 const paymentRequest =
@@ -20,12 +19,18 @@ describe('CashuInvoice.determineFormattedOriginalTimeUntilExpiry', () => {
     });
 
     it('formats "Never" when no expiry information is available', () => {
+        const spy = jest
+            .spyOn(LocaleUtils, 'localeString')
+            .mockImplementation((key: string) => key);
         const invoice = new CashuInvoice({
             quote: 'quote-id',
             request: '',
             mintUrl: 'https://mint.example.com'
         });
         invoice.determineFormattedOriginalTimeUntilExpiry('en');
-        expect(invoice.formattedOriginalTimeUntilExpiry).toBe('Never');
+        expect(invoice.formattedOriginalTimeUntilExpiry).toBe(
+            'models.Invoice.never'
+        );
+        spy.mockRestore();
     });
 });

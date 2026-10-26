@@ -1,11 +1,10 @@
-jest.mock('../stores/Stores', () => ({
-    settingsStore: { settings: { locale: 'en' } }
-}));
+jest.mock('../stores/Stores', () => ({}));
 
 import { autorun } from 'mobx';
 
 import Invoice from './Invoice';
 import Bolt11Utils from '../utils/Bolt11Utils';
+import * as LocaleUtils from '../utils/LocaleUtils';
 
 // decodes with timestamp 1700074718 and expiry 3600 (see Bolt11Utils.test.ts)
 const paymentRequest =
@@ -197,10 +196,16 @@ describe('Invoice.determineFormattedOriginalTimeUntilExpiry', () => {
     });
 
     it('formats "Never" when no expiry information is available', () => {
+        const spy = jest
+            .spyOn(LocaleUtils, 'localeString')
+            .mockImplementation((key: string) => key);
         const invoice = new Invoice({
             destination: '02758997f184be06f4350b136db0bed6f8'
         });
         invoice.determineFormattedOriginalTimeUntilExpiry('en');
-        expect(invoice.formattedOriginalTimeUntilExpiry).toBe('Never');
+        expect(invoice.formattedOriginalTimeUntilExpiry).toBe(
+            'models.Invoice.never'
+        );
+        spy.mockRestore();
     });
 });
