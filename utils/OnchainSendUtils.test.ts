@@ -4,7 +4,7 @@ jest.mock('react-native-randombytes', () => ({
 
 import {
     SEND_LABEL_PREFIX,
-    findLabeledSend,
+    findSentTransaction,
     isRequestTimeout,
     makeSendLabel
 } from './OnchainSendUtils';
@@ -29,7 +29,8 @@ describe('isRequestTimeout', () => {
         ],
         ['the REST backend timer', 'Request timeout'],
         ['the iOS URL session', 'The request timed out.'],
-        ['an Android socket', 'timeout']
+        ['an Android socket', 'timeout'],
+        ['the Tor client', 'request timed out']
     ])('matches %s', (_source, message) => {
         expect(isRequestTimeout(new Error(message))).toBe(true);
     });
@@ -51,11 +52,12 @@ describe('isRequestTimeout', () => {
     });
 });
 
-describe('findLabeledSend', () => {
+describe('findSentTransaction', () => {
     const label = 'ZEUS send 0011223344556677';
+    const isSent = (tx: any) => tx.label === label;
     const options = { attempts: 3, delayMs: 0 };
 
-    it('resolves the txid of the transaction carrying the label', async () => {
+    it('resolves the txid of the transaction that matches', async () => {
         const getTransactions = jest.fn().mockResolvedValue({
             transactions: [
                 { tx_hash: 'other', label: '' },
@@ -64,7 +66,7 @@ describe('findLabeledSend', () => {
         });
 
         await expect(
-            findLabeledSend(getTransactions, label, options)
+            findSentTransaction(getTransactions, isSent, options)
         ).resolves.toBe('sent');
         expect(getTransactions).toHaveBeenCalledTimes(1);
     });
@@ -78,7 +80,7 @@ describe('findLabeledSend', () => {
             });
 
         await expect(
-            findLabeledSend(getTransactions, label, options)
+            findSentTransaction(getTransactions, isSent, options)
         ).resolves.toBe('sent');
         expect(getTransactions).toHaveBeenCalledTimes(2);
     });
@@ -92,7 +94,7 @@ describe('findLabeledSend', () => {
             });
 
         await expect(
-            findLabeledSend(getTransactions, label, options)
+            findSentTransaction(getTransactions, isSent, options)
         ).resolves.toBe('sent');
     });
 
@@ -102,16 +104,26 @@ describe('findLabeledSend', () => {
         });
 
         await expect(
-            findLabeledSend(getTransactions, label, options)
+            findSentTransaction(getTransactions, isSent, options)
         ).resolves.toBeUndefined();
         expect(getTransactions).toHaveBeenCalledTimes(3);
+    });
+
+    it('skips empty entries', async () => {
+        const getTransactions = jest.fn().mockResolvedValue({
+            transactions: [null, { tx_hash: 'sent', label }]
+        });
+
+        await expect(
+            findSentTransaction(getTransactions, isSent, options)
+        ).resolves.toBe('sent');
     });
 
     it('tolerates a response without transactions', async () => {
         const getTransactions = jest.fn().mockResolvedValue({});
 
         await expect(
-            findLabeledSend(getTransactions, label, options)
+            findSentTransaction(getTransactions, isSent, options)
         ).resolves.toBeUndefined();
     });
 
@@ -121,7 +133,7 @@ describe('findLabeledSend', () => {
             const getTransactions = jest
                 .fn()
                 .mockResolvedValue({ transactions: [] });
-            const result = findLabeledSend(getTransactions, label, {
+            const result = findSentTransaction(getTransactions, isSent, {
                 attempts: 2,
                 delayMs: 5000
             });

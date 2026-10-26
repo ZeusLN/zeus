@@ -28,7 +28,7 @@ import { sleep } from '../utils/SleepUtils';
 import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 import {
-    findLabeledSend,
+    findSentTransaction,
     isRequestTimeout,
     makeSendLabel
 } from '../utils/OnchainSendUtils';
@@ -259,6 +259,8 @@ export default class TransactionsStore {
 
     @action
     public broadcast = async (raw_final_tx: string) => {
+        const seq = this.sendCoinsSeq;
+        const isCurrent = () => seq === this.sendCoinsSeq;
         this.loading = true;
 
         const tx_hex = raw_final_tx.includes('=')
@@ -337,7 +339,33 @@ export default class TransactionsStore {
                     });
                 }
             })
-            .catch((error: any) => {
+            .catch(async (error: any) => {
+                // a timed out publish may still have gone out, and Try Again
+                // would fund a new transaction from other inputs
+                if (isRequestTimeout(error)) {
+                    const found =
+                        txid && isCurrent()
+                            ? await this.findTimedOutSend(
+                                  (tx: any) => tx.tx_hash === txid
+                              )
+                            : undefined;
+                    runInAction(() => {
+                        if (!isCurrent()) return;
+                        if (found) {
+                            this.txid = found;
+                            this.publishSuccess = true;
+                            this.channelsStore.resetOpenChannel();
+                        } else {
+                            this.error_msg = localeString(
+                                'stores.TransactionsStore.sendOutcomeUnknown'
+                            );
+                            this.error = true;
+                            this.sendOutcomeUnknown = true;
+                        }
+                        this.loading = false;
+                    });
+                    return;
+                }
                 const errorMsg = errorToUserFriendly(
                     error.publish_error || error.message
                 );
@@ -655,9 +683,12 @@ export default class TransactionsStore {
                 // backend (e.g. CLN's withdraw past the 30s REST timeout);
                 // only labeled sends can be looked up
                 if (isRequestTimeout(error)) {
-                    const txid = label
-                        ? await this.findTimedOutSend(label)
-                        : undefined;
+                    const txid =
+                        label && isCurrent()
+                            ? await this.findTimedOutSend(
+                                  (tx: any) => tx.label === label
+                              )
+                            : undefined;
                     if (txid) {
                         onSent(txid);
                         return;
@@ -685,16 +716,16 @@ export default class TransactionsStore {
 
     // The send may have been broadcast before its request timed out. Only
     // recent blocks and unconfirmed transactions can hold it.
-    private findTimedOutSend = (label: string) => {
+    private findTimedOutSend = (isSent: (tx: any) => boolean) => {
         const height = Number(
             this.nodeInfoStore.nodeInfo?.currentBlockHeight || 0
         );
-        return findLabeledSend(
+        return findSentTransaction(
             () =>
                 BackendUtils.getTransactions(
                     height > 6 ? { start_height: height - 6 } : undefined
                 ),
-            label
+            isSent
         );
     };
 

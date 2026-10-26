@@ -1,6 +1,8 @@
 jest.mock('../stores/Stores', () => ({}));
 jest.mock('react-native-blob-util', () => ({}));
-jest.mock('bitcoinjs-lib', () => ({}));
+jest.mock('bitcoinjs-lib', () => ({
+    Transaction: { fromHex: () => ({ getId: () => 'batchtxid' }) }
+}));
 jest.mock('react-native-randombytes', () => ({
     randomBytes: (n: number) => jest.requireActual('crypto').randomBytes(n)
 }));
@@ -15,7 +17,11 @@ jest.mock('../utils/BackendUtils', () => ({
         isLNDBased: jest.fn(() => true),
         supportsOnchainSendMax: jest.fn(() => true),
         sendCoins: jest.fn(),
-        getTransactions: jest.fn()
+        getTransactions: jest.fn(),
+        getClass: jest.fn(() => ({ publishTransaction: true })),
+        fundPsbt: jest.fn(),
+        finalizePsbt: jest.fn(),
+        publishTransaction: jest.fn()
     }
 }));
 jest.mock('../utils/GraphSyncUtils', () => ({
@@ -40,12 +46,15 @@ import { SEND_LABEL_PREFIX } from '../utils/OnchainSendUtils';
 const isLNDBased = BackendUtils.isLNDBased as jest.Mock;
 const sendCoins = BackendUtils.sendCoins as jest.Mock;
 const getTransactions = BackendUtils.getTransactions as jest.Mock;
+const fundPsbt = BackendUtils.fundPsbt as jest.Mock;
+const finalizePsbt = BackendUtils.finalizePsbt as jest.Mock;
+const publishTransaction = BackendUtils.publishTransaction as jest.Mock;
 
 const newStore = (currentBlockHeight = 800000) =>
     new TransactionsStore(
         { implementation: 'lnd', settings: {} } as any,
         { nodeInfo: { currentBlockHeight } } as any,
-        {} as any,
+        { resetOpenChannel: jest.fn() } as any,
         { getCombinedBalance: jest.fn() } as any,
         {} as any
     );
@@ -67,6 +76,9 @@ describe('TransactionsStore.sendCoins', () => {
         isLNDBased.mockReset().mockReturnValue(true);
         sendCoins.mockReset();
         getTransactions.mockReset();
+        fundPsbt.mockReset().mockResolvedValue({ funded_psbt: 'cHNidP8B' });
+        finalizePsbt.mockReset().mockResolvedValue({ raw_final_tx: '0200' });
+        publishTransaction.mockReset();
     });
 
     afterEach(() => {
@@ -325,6 +337,173 @@ describe('TransactionsStore.sendCoins', () => {
         await settle();
 
         store.reset();
+        expect(store.sendOutcomeUnknown).toBe(false);
+    });
+    it('drops a send that answers after a reset', async () => {
+        let answer: (data: any) => void = () => undefined;
+        sendCoins.mockReturnValueOnce(
+            new Promise((resolve) => {
+                answer = resolve;
+            })
+        );
+        const store = newStore();
+        store.sendCoins(request());
+        store.reset();
+        answer({ txid: 'old' });
+        await settle();
+
+        expect(store.txid).toBe(null);
+        expect(store.publishSuccess).toBe(false);
+    });
+
+    it("does not report an earlier send's answer for a newer send", async () => {
+        let answer: (data: any) => void = () => undefined;
+        sendCoins.mockReturnValueOnce(
+            new Promise((resolve) => {
+                answer = resolve;
+            })
+        );
+        const store = newStore();
+        store.sendCoins(request());
+
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
+        answer({ txid: 'old' });
+        await settle();
+
+        expect(store.txid).toBe(null);
+        expect(store.publishSuccess).toBe(false);
+        expect(store.loading).toBe(true);
+    });
+
+    it('skips the lookup for a send that timed out after a reset', async () => {
+        let rejectFirst: (error: Error) => void = () => undefined;
+        sendCoins.mockReturnValueOnce(
+            new Promise((_, reject) => {
+                rejectFirst = reject;
+            })
+        );
+        const store = newStore();
+        store.sendCoins(request());
+        store.reset();
+        rejectFirst(new Error('Request timeout'));
+        await settle();
+
+        expect(getTransactions).not.toHaveBeenCalled();
+        expect(store.sendOutcomeUnknown).toBe(false);
+    });
+});
+
+describe('TransactionsStore.sendCoins with additional outputs', () => {
+    const batchedRequest = () => ({
+        ...request(),
+        account: 'default',
+        additional_outputs: [
+            { address: 'bc1qsecond', amount: '5000', satAmount: '5000' }
+        ]
+    });
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        isLNDBased.mockReset().mockReturnValue(true);
+        sendCoins.mockReset();
+        getTransactions.mockReset();
+        fundPsbt.mockReset().mockResolvedValue({ funded_psbt: 'cHNidP8B' });
+        finalizePsbt.mockReset().mockResolvedValue({ raw_final_tx: '0200' });
+        publishTransaction.mockReset();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('reports a published transaction', async () => {
+        publishTransaction.mockResolvedValue({});
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await settle();
+
+        expect(sendCoins).not.toHaveBeenCalled();
+        expect(store.publishSuccess).toBe(true);
+        expect(store.txid).toBe('batchtxid');
+        expect(getTransactions).not.toHaveBeenCalled();
+    });
+
+    it('reports a timed out publish that went out as sent', async () => {
+        publishTransaction.mockRejectedValue(new Error('Request timeout'));
+        getTransactions.mockResolvedValue({
+            transactions: [
+                { tx_hash: 'other', label: '' },
+                { tx_hash: 'batchtxid', label: '' }
+            ]
+        });
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await settle();
+
+        expect(store.publishSuccess).toBe(true);
+        expect(store.txid).toBe('batchtxid');
+        expect(store.error).toBe(false);
+        expect(store.sendOutcomeUnknown).toBe(false);
+        expect(store.loading).toBe(false);
+    });
+
+    it('offers no retry when a timed out publish cannot be found', async () => {
+        publishTransaction.mockRejectedValue(
+            new Error(
+                'lnrpc.WalletKit.PublishTransaction timed out after 60000ms'
+            )
+        );
+        getTransactions.mockResolvedValue({
+            transactions: [{ tx_hash: 'other', label: '' }]
+        });
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await settle();
+
+        expect(getTransactions).toHaveBeenCalledTimes(3);
+        expect(store.publishSuccess).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.sendOutcomeUnknown).toBe(true);
+        expect(store.error_msg).toBe(
+            'stores.TransactionsStore.sendOutcomeUnknown'
+        );
+        expect(store.loading).toBe(false);
+    });
+
+    it('shows a publish error as before, without looking it up', async () => {
+        publishTransaction.mockResolvedValue({
+            publish_error: 'insufficient fee'
+        });
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await settle();
+
+        expect(getTransactions).not.toHaveBeenCalled();
+        expect(store.error).toBe(true);
+        expect(store.sendOutcomeUnknown).toBe(false);
+        expect(store.error_msg).toBe('insufficient fee');
+    });
+
+    it('drops a publish lookup result that lands after a reset', async () => {
+        publishTransaction.mockRejectedValue(new Error('Request timeout'));
+        let answerLookup: (result: any) => void = () => undefined;
+        getTransactions.mockReturnValueOnce(
+            new Promise((resolve) => {
+                answerLookup = resolve;
+            })
+        );
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await jest.advanceTimersByTimeAsync(0);
+        expect(getTransactions).toHaveBeenCalledTimes(1);
+
+        store.reset();
+        answerLookup({ transactions: [{ tx_hash: 'batchtxid' }] });
+        await settle();
+
+        expect(store.txid).toBe(null);
+        expect(store.publishSuccess).toBe(false);
         expect(store.sendOutcomeUnknown).toBe(false);
     });
 });

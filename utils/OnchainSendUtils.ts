@@ -21,12 +21,12 @@ export const isRequestTimeout = (error: any): boolean => {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Looks for the labeled send in the wallet's transactions. Each lookup can
-// fail on the same connection that timed out the send, so it retries a
+// Looks for a sent transaction in the wallet's transactions. Each lookup
+// can fail on the same connection that timed out the send, so it retries a
 // few times. Resolves the txid, or undefined if the send was not found.
-export const findLabeledSend = async (
+export const findSentTransaction = async (
     getTransactions: () => Promise<any>,
-    label: string,
+    isSent: (tx: any) => boolean,
     {
         attempts = 3,
         delayMs = 5000
@@ -37,7 +37,7 @@ export const findLabeledSend = async (
         try {
             const result = await getTransactions();
             const match = (result?.transactions || []).find(
-                (tx: any) => tx?.label === label
+                (tx: any) => tx && isSent(tx)
             );
             if (match?.tx_hash) return match.tx_hash;
         } catch (error) {
