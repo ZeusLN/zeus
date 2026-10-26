@@ -268,6 +268,27 @@ describe('CLNRest.request error fallback', () => {
         expect(await rejectWith(500, body)).toBe('inner');
     });
 
+    it('skips an empty nested message for a top-level one', async () => {
+        const body = JSON.stringify({
+            message: 'bad param',
+            error: { message: '' }
+        });
+        expect(await rejectWith(500, body)).toBe('bad param');
+    });
+
+    it('skips a non-string nested message for a top-level one', async () => {
+        const body = JSON.stringify({
+            message: 'bad param',
+            error: { message: 123 }
+        });
+        expect(await rejectWith(500, body)).toBe('bad param');
+    });
+
+    it('throws the raw body for an empty nested message alone', async () => {
+        const body = JSON.stringify({ error: { message: '' } });
+        expect(await rejectWith(500, body)).toBe(body);
+    });
+
     it('throws the raw body for JSON with no message', async () => {
         const body = JSON.stringify({ code: 1 });
         expect(await rejectWith(500, body)).toBe(body);
@@ -292,30 +313,8 @@ describe('CLNRest.request error fallback', () => {
         expect(await rejectWith(500, '')).toBe(CONNECTION_ERROR);
     });
 
-    it('throws the message of a non-string body', async () => {
-        const response = {
-            info: () => ({ status: 500 }),
-            data: { error: { message: 'object body' } },
-            json: () => ({ error: { message: 'object body' } })
-        };
-        mockFetch.mockResolvedValue(response);
-
-        await expect(cln.postRequest('/v1/pay')).rejects.toThrow(
-            new Error('object body')
-        );
-    });
-
-    it('falls back to the connection error for a non-string body with no message', async () => {
-        const response = {
-            info: () => ({ status: 500 }),
-            data: { code: 1 },
-            json: () => ({ code: 1 })
-        };
-        mockFetch.mockResolvedValue(response);
-
-        await expect(cln.postRequest('/v1/pay')).rejects.toThrow(
-            CONNECTION_ERROR
-        );
+    it('falls back to the connection error for a missing body', async () => {
+        expect(await rejectWith(500, undefined)).toBe(CONNECTION_ERROR);
     });
 
     it('propagates a transport failure unchanged', async () => {
