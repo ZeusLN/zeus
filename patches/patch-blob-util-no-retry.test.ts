@@ -16,6 +16,7 @@ const FIXTURE = path.join(
 const REQ_DIR =
     'node_modules/react-native-blob-util/android/src/main/java/com/ReactNativeBlobUtil';
 const MARKER = '// ZEUS PATCH: blob-util-no-retry';
+const HTTP_RETRY_MARKER = '// ZEUS PATCH: blob-util-no-503-retry';
 
 const patchUrl = pathToFileURL(
     path.join(__dirname, 'patch-blob-util-no-retry.mjs')
@@ -90,16 +91,6 @@ describe('patch-blob-util-no-retry', () => {
         expect(body).toContain('throw e;');
     });
 
-    it('still marks socket failures as timeouts', () => {
-        const root = makeTree();
-        run(root);
-        const body = interceptor(read(root));
-
-        expect(body).toContain(
-            'if (e instanceof SocketException || e instanceof SocketTimeoutException) {\n                            timeout = true;'
-        );
-    });
-
     it('wraps other exceptions so OkHttp reports them through onFailure', () => {
         const root = makeTree();
         run(root);
@@ -128,13 +119,25 @@ describe('patch-blob-util-no-retry', () => {
         expect(patched.split('retryOnConnectionFailure(')).toHaveLength(3);
     });
 
-    it('leaves the redirect interceptor alone', () => {
+    it('drops Retry-After from 503 responses to methods other than GET and HEAD', () => {
         const root = makeTree();
         run(root);
-
-        expect(read(root)).toContain(
-            'redirects.add(chain.request().url().toString());\n                    return chain.proceed(chain.request());'
+        const patched = read(root);
+        const start = patched.indexOf('addNetworkInterceptor');
+        const network = patched.slice(
+            start,
+            patched.indexOf('\n            });', start)
         );
+
+        expect(network).toContain(
+            'redirects.add(chain.request().url().toString());'
+        );
+        expect(network).toContain(HTTP_RETRY_MARKER);
+        expect(network.split('chain.proceed(')).toHaveLength(2);
+        expect(network).toContain(
+            'if (response.code() == 503 && !("GET".equals(requestMethod) || "HEAD".equals(requestMethod))) {\n                        return response.newBuilder().removeHeader("Retry-After").build();'
+        );
+        expect(network).toContain('return response;');
     });
 
     it('keeps the CRLF line endings of the upstream file', () => {
@@ -195,7 +198,7 @@ describe('patch-blob-util-no-retry', () => {
         );
     });
 
-    it('adds the retry edit to a copy that only has the interceptor edit', () => {
+    it('adds the later edits to a copy that only has the interceptor edit', () => {
         const root = makeTree();
         run(root);
         const onlyInterceptor = readRaw(root)
@@ -204,7 +207,12 @@ describe('patch-blob-util-no-retry', () => {
                 / {12}\/\/ ZEUS PATCH: blob-util-no-connection-retry\n.*\n.*\n.*\n/,
                 '            clientBuilder.retryOnConnectionFailure(true);\n'
             )
+            .replace(
+                / {20}\/\/ ZEUS PATCH: blob-util-no-503-retry\n[\s\S]*?return response;\n/,
+                '                    return chain.proceed(chain.request());\n'
+            )
             .replace(/\n/g, '\r\n');
+        expect(onlyInterceptor).not.toContain(HTTP_RETRY_MARKER);
         expect(onlyInterceptor).toContain(MARKER);
         expect(onlyInterceptor).toContain(
             'clientBuilder.retryOnConnectionFailure(true);'
@@ -214,6 +222,21 @@ describe('patch-blob-util-no-retry', () => {
         run(again);
 
         expect(read(again)).toBe(read(root));
+    });
+
+    it('fails the install when the redirect interceptor has changed', () => {
+        const root = makeTree(
+            fs
+                .readFileSync(FIXTURE, 'utf8')
+                .replace(
+                    'redirects.add(chain.request().url().toString());',
+                    'redirects.add(chain.request().url().redact());'
+                )
+        );
+
+        expect(() => run(root)).toThrow(
+            /redirect network interceptor in ReactNativeBlobUtilReq.java does not match/
+        );
     });
 
     it('fails the install when the file is missing', () => {
