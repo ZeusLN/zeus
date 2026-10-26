@@ -10,6 +10,7 @@ import CashuDevKit, {
     CDKMintQuote,
     CDKMeltQuote,
     CDKMelted,
+    CDKPartialMelted,
     CDKToken,
     CDKSendKind,
     CDKSpendingConditions,
@@ -5283,6 +5284,22 @@ export default class CashuStore {
                                   partialAmount * 1000
                               );
 
+                        // Record the quote this part was paid with. For MPP
+                        // parts that is the quote meltPartial created, not
+                        // the planner's probe quote, which was never paid.
+                        // Builds that omit the paid quote's fee reserve or
+                        // expiry fall back to the planner's.
+                        const partialResult = useRegularMelt
+                            ? undefined
+                            : (meltResult as CDKPartialMelted);
+                        const paidQuoteId = partialResult
+                            ? partialResult.quote_id
+                            : meltQuote.id;
+                        const paidFeeReserve =
+                            partialResult?.fee_reserve ?? meltQuote.fee_reserve;
+                        const paidExpiry =
+                            partialResult?.expiry ?? meltQuote.expiry;
+
                         const normalizedMeltState = normalizeMeltState(
                             meltResult.state,
                             meltQuote.state
@@ -5306,11 +5323,11 @@ export default class CashuStore {
                             bolt11: paymentRequest,
                             meltResponse: {
                                 quote: {
-                                    quote: meltQuote.id,
+                                    quote: paidQuoteId,
                                     amount: meltQuote.amount,
-                                    fee_reserve: meltQuote.fee_reserve,
+                                    fee_reserve: paidFeeReserve,
                                     state: normalizedMeltState,
-                                    expiry: meltQuote.expiry,
+                                    expiry: paidExpiry,
                                     payment_preimage: paymentPreimage || null
                                 },
                                 change: meltResult.change,
