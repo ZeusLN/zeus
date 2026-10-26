@@ -66,6 +66,7 @@ import CashuUtils, {
     PendingMelt
 } from '../utils/CashuUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
+import { maxCashuSweepFeeReserve } from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
@@ -176,6 +177,8 @@ interface ClaimTokenResponse {
     success: boolean;
     errorMessage: string;
     warningMessage?: string;
+    // Sats paid to the node by a self-custody claim, after the mint's fee
+    receivedAmtSat?: number;
 }
 
 // Reason a mint was excluded by the multi-mint planner. 'selfSend' marks
@@ -1075,7 +1078,8 @@ export default class CashuStore {
      */
     public meltCDK = async (
         mintUrl: string,
-        bolt11: string
+        bolt11: string,
+        maxFeeReserve?: number
     ): Promise<CDKMelted> => {
         if (!this.cdkInitialized) {
             throw new Error('CDK not initialized');
@@ -1085,6 +1089,11 @@ export default class CashuStore {
 
         // Create melt quote first, then execute melt with quote ID
         const quote = await CashuDevKit.createMeltQuote(mintUrl, bolt11);
+        if (maxFeeReserve !== undefined && quote.fee_reserve > maxFeeReserve) {
+            throw new Error(
+                `Melt fee reserve ${quote.fee_reserve} exceeds ${maxFeeReserve}`
+            );
+        }
         const result = await this.trackAndMelt({
             quote: quote.id,
             mintUrl,
@@ -5959,6 +5968,23 @@ export default class CashuStore {
                     };
                 }
 
+                // The reserve comes out of what the node receives, so don't
+                // pay out most of the token as fees. Checked before the
+                // receive so the token stays claimable
+                if (meltQuote.fee_reserve > maxCashuSweepFeeReserve(tokenAmt)) {
+                    this.loading = false;
+                    return {
+                        success: false,
+                        errorMessage: localeString(
+                            'stores.CashuStore.sweepFeeTooHigh',
+                            {
+                                fee: meltQuote.fee_reserve,
+                                amount: tokenAmt
+                            }
+                        )
+                    };
+                }
+
                 // Pass signing key only when token is P2PK-locked (decoded has proofs)
 
                 // Point of no return: this consumes the token and credits
@@ -5971,6 +5997,7 @@ export default class CashuStore {
                 await this.syncCDKBalances();
 
                 let melted: CDKMelted | undefined;
+                let receiveAmtSat: number;
                 try {
                     // The mint may credit less than face value (input fees),
                     // so size the sweep from what was actually received,
@@ -5979,7 +6006,7 @@ export default class CashuStore {
                         mintUrl,
                         receivedAmt
                     );
-                    const receiveAmtSat =
+                    receiveAmtSat =
                         receivedAmt - meltQuote.fee_reserve - inputFee;
                     if (receiveAmtSat <= 0) {
                         throw new Error(
@@ -6006,10 +6033,13 @@ export default class CashuStore {
                         }
                     }
 
-                    // Melt via CDK to pay the invoice
+                    // Melt via CDK to pay the invoice. The quote for the
+                    // adjusted invoice must not reserve more than the one it
+                    // was sized from
                     melted = await this.meltCDK(
                         mintUrl,
-                        invoice.paymentRequest
+                        invoice.paymentRequest,
+                        meltQuote.fee_reserve
                     );
                 } catch (sweepError: any) {
                     // The token is now spent and its value sits in the
@@ -6044,6 +6074,13 @@ export default class CashuStore {
                         )
                     };
                 }
+
+                this.loading = false;
+                return {
+                    success: true,
+                    errorMessage: '',
+                    receivedAmtSat: receiveAmtSat
+                };
             } else {
                 // Regular receive via CDK
                 await this.receiveTokenCDK(encodedToken, signingKey, mintUrl);
