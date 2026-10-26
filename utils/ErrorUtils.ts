@@ -238,9 +238,23 @@ const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
     return baseError;
 };
 
+// Message of a JSON REST error body: the first non-empty string among
+// error.message (CLN JSON-RPC, LND stream chunks), message and a string
+// error. Undefined when the body carries none, so each caller keeps its
+// own fallback.
+const restErrorMessage = (body: unknown): string | undefined => {
+    if (!body || typeof body !== 'object') return undefined;
+    const { error, message } = body as any;
+    return [error?.message, message, error].find(
+        (candidate: unknown): candidate is string =>
+            typeof candidate === 'string' && candidate !== ''
+    );
+};
+
 export {
     errorToUserFriendly,
     parseLdkNodeError,
     parseCashuDevKitError,
-    cashuErrorForDisplay
+    cashuErrorForDisplay,
+    restErrorMessage
 };

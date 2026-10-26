@@ -2,7 +2,8 @@ import {
     errorToUserFriendly,
     parseLdkNodeError,
     parseCashuDevKitError,
-    cashuErrorForDisplay
+    cashuErrorForDisplay,
+    restErrorMessage
 } from './ErrorUtils';
 
 jest.mock('./LocaleUtils', () => ({
@@ -626,6 +627,50 @@ describe('ErrorUtils', () => {
                     `CDK Error: Unknown error response: ${body}`
                 )
             ).toEqual('Quote amount not as requested');
+        });
+    });
+
+    describe('restErrorMessage', () => {
+        it('prefers a nested message over a top-level one', () => {
+            expect(
+                restErrorMessage({
+                    message: 'outer',
+                    error: { code: 210, message: 'inner' }
+                })
+            ).toBe('inner');
+        });
+
+        it('returns a top-level message', () => {
+            expect(restErrorMessage({ code: 2, message: 'bad param' })).toBe(
+                'bad param'
+            );
+        });
+
+        it('returns a string error', () => {
+            expect(restErrorMessage({ error: 'Not authorized' })).toBe(
+                'Not authorized'
+            );
+        });
+
+        it('skips an empty or non-string nested message', () => {
+            expect(
+                restErrorMessage({ message: 'outer', error: { message: '' } })
+            ).toBe('outer');
+            expect(
+                restErrorMessage({ message: 'outer', error: { message: 123 } })
+            ).toBe('outer');
+        });
+
+        it('returns undefined when the body carries no message', () => {
+            expect(restErrorMessage({ error: { code: 1 } })).toBeUndefined();
+            expect(restErrorMessage({ code: 1, message: '' })).toBeUndefined();
+            expect(restErrorMessage({})).toBeUndefined();
+        });
+
+        it('returns undefined for a body that is not an object', () => {
+            expect(restErrorMessage('Bad Gateway')).toBeUndefined();
+            expect(restErrorMessage(undefined)).toBeUndefined();
+            expect(restErrorMessage(null)).toBeUndefined();
         });
     });
 });
