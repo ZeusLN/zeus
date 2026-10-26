@@ -104,3 +104,59 @@ describe('locale keys', () => {
         }
     });
 });
+
+describe('locale placeholders', () => {
+    // localeString() substitutes {{name}} tokens, and a few views call
+    // .replace('{name}', ...) on the result, so a translation must keep
+    // every token from en.json verbatim. A renamed or translated token
+    // (e.g. {pays} for {country}) shows up as literal braces in the UI.
+    const tokenRegExp = /\{\{[^{}]+\}\}|\{[^{}]+\}/g;
+    const tokensIn = (value: string): string[] =>
+        [...new Set(value.match(tokenRegExp) || [])].sort();
+
+    const localesDir = path.join(__dirname, 'locales');
+
+    const localeFiles = fs
+        .readdirSync(localesDir)
+        .filter((file) => file.endsWith('.json') && file !== 'en.json')
+        .sort();
+
+    const mismatches: {
+        file: string;
+        key: string;
+        expected: string[];
+        actual: string[];
+    }[] = [];
+    localeFiles.forEach((file) => {
+        const locale: { [key: string]: string } = JSON.parse(
+            fs.readFileSync(path.join(localesDir, file)).toString('utf8')
+        );
+        Object.keys(locale).forEach((key) => {
+            const translation = locale[key];
+            // empty or missing translations fall back to English
+            if (!(key in enLocale) || typeof translation !== 'string') return;
+            if (!translation) return;
+            const expected = tokensIn(enLocale[key]);
+            const actual = tokensIn(translation);
+            if (expected.join() !== actual.join())
+                mismatches.push({ file, key, expected, actual });
+        });
+    });
+
+    it('translations keep the placeholders from locales/en.json', () => {
+        const broken = mismatches.map(
+            ({ file, key, expected, actual }) =>
+                `${file} ${key}: expected ` +
+                `${expected.join(' ') || '(none)'}, ` +
+                `got ${actual.join(' ') || '(none)'}`
+        );
+        if (broken.length > 0) {
+            throw new Error(
+                'These translations rename, translate, add, or drop a ' +
+                    'placeholder, so the substitution never happens. Fix ' +
+                    'them on Transifex:\n' +
+                    broken.join('\n')
+            );
+        }
+    });
+});
