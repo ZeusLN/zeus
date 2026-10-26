@@ -169,6 +169,15 @@ const newStore = () => {
     return store;
 };
 
+// members a swap creation response is not expected to have: "model" and
+// "qrCodeValue" are names of Swap getters, which new Swap() can't assign,
+// and "imported" marks a rescued swap
+const EXTRA_MEMBERS = {
+    model: 'not a swap',
+    qrCodeValue: 'bitcoin:other-address',
+    imported: true
+};
+
 const TIP_URL = 'https://mempool.test/api/blocks/tip/height';
 
 // answers the tip lookup with `tip` and the swap request with `response`
@@ -235,6 +244,48 @@ describe('SwapStore.createSubmarineSwap response verification', () => {
             expect.stringMatching(/\/swap\/submarine$/)
         ]);
     });
+
+    it('stores and opens only the submarine swap fields of the response', async () => {
+        const { store, navigation, stored } = await create(EXTRA_MEMBERS);
+
+        expect(store.apiError).toBe('');
+        expect(stored).toHaveLength(1);
+        const { swapData } = navigation.navigate.mock.calls[0][1];
+        for (const swap of [swapData, stored[0]]) {
+            for (const member of Object.keys(EXTRA_MEMBERS)) {
+                expect(Object.keys(swap)).not.toContain(member);
+            }
+            const model = new Swap(swap);
+            expect(model.qrCodeValue).toBe(
+                `bitcoin:${VALID.address}?amount=0.00000424`
+            );
+            expect(model.expectedAmount).toBe(EXPECTED_AMOUNT);
+        }
+    });
+
+    it('reports an error from the provider without saving or opening a swap', async () => {
+        const { store, navigation, stored } = await create({
+            error: 'invalid pair'
+        });
+
+        expect(store.apiError).toBe('invalid pair');
+        expect(store.loading).toBe(false);
+        expect(stored).toHaveLength(0);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it.each([null, []])(
+        'aborts before saving or opening when the response body is %j',
+        async (body) => {
+            storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+            mockHttp(body);
+            const store = newStore();
+            const navigation = { navigate: jest.fn() };
+            await store.createSubmarineSwap(INVOICE, navigation);
+
+            expectAborted({ store, navigation, stored: storedSwaps() });
+        }
+    );
 
     it("sends the quote's pair hash so the host refuses a changed quote", async () => {
         await create();
