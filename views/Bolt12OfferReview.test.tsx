@@ -168,6 +168,19 @@ describe('Bolt12OfferReview confirmation', () => {
         );
     });
 
+    it('keeps an explicit 0 sat fee limit', async () => {
+        const { TransactionsStore } = await renderView({
+            satAmount: '100000',
+            feeLimitSat: '0'
+        });
+
+        await payControl().confirm();
+
+        expect(TransactionsStore.sendPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ amount: '100000', fee_limit_sat: '0' })
+        );
+    });
+
     it('requires a swipe at or above the slide-to-pay threshold and dispatches once', async () => {
         const { TransactionsStore } = await renderView({ satAmount: '10000' });
 
