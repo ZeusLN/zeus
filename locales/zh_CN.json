@@ -1798,6 +1798,7 @@
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub 实例可能不支持 0 金额的发票",
     "stores.InvoicesStore.errorRedeemingWithdrawalRequest": "兑换提现请求时出错",
     "stores.InvoicesStore.lspFeeAboveMaxWithdrawable": "The withdrawal amount doesn't cover the LSP's {fee} sats setup fee. Adding the fee on top would withdraw {total} sats, more than the {max} sats this service allows.",
+    "stores.TransactionsStore.sendOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this transaction was sent. Check your on-chain activity before sending again.",
     "stores.SettingsStore.btcPayImplementationSupport": "抱歉，我们目前仅支持使用闪电网络守护进程（LND）的 BTCPay 实例",
     "stores.SettingsStore.btcPayFetchConfigError": "获取 BTCPay 配置时出错",
     "stores.SettingsStore.btcPayFetchConfirmMessage": "ZEUS 将联系 {host} 以获取此 BTCPay 节点配置。仅当您信任此二维码时才继续操作。",
