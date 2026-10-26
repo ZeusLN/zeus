@@ -32,6 +32,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { v4 as uuidv4 } from 'uuid';
 
 import BackendUtils from '../utils/BackendUtils';
+import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import NostrConnectUtils, {
@@ -2068,6 +2069,12 @@ export default class NostrWalletConnectStore {
         paymentRequest: string;
         rHash?: string;
     }): Promise<{ result: Nip47Transaction; error: undefined }> {
+        const { paymentHash, descriptionHash, expiryTime } =
+            await NostrConnectUtils.decodeInvoiceTagsForMakeInvoice(
+                paymentRequest,
+                rHash
+            );
+
         let invoice: CashuInvoice | Invoice | undefined;
 
         if (payment_source === 'cashu') {
@@ -2075,21 +2082,17 @@ export default class NostrWalletConnectStore {
                 (inv: CashuInvoice) => inv.getPaymentRequest === paymentRequest
             );
         } else {
-            invoice = this.invoicesStore.invoices?.find(
-                (inv: Invoice) =>
-                    inv.getRHash === rHash ||
-                    inv.getPaymentRequest === paymentRequest
-            );
+            invoice = await this.resolveMakeInvoiceLightningInvoice({
+                request,
+                paymentRequest,
+                rHash,
+                paymentHash
+            });
         }
 
         const satAmount = millisatsToSats(
             request.amount || invoice?.getAmount || 0
         );
-        const { paymentHash, descriptionHash, expiryTime } =
-            await NostrConnectUtils.decodeInvoiceTagsForMakeInvoice(
-                paymentRequest,
-                rHash
-            );
         runInAction(() => {
             connection.activity.push({
                 id: invoice?.getPaymentRequest || paymentRequest,
@@ -2116,6 +2119,95 @@ export default class NostrWalletConnectStore {
                 expiryTime
             }
         );
+    }
+
+    /**
+     * The invoice a lightning make_invoice activity stores. It is looked up
+     * by this request's own hash, not read from the shared InvoicesStore
+     * list: with overlapping requests that list can predate this invoice
+     * (#5428), and refreshing it toggles the Receive screen's loading state
+     * (#5426). Activity reconciliation and the NWC activity screen need an
+     * invoice, so when the lookup fails one is built from the request and
+     * the bolt11.
+     */
+    private async resolveMakeInvoiceLightningInvoice({
+        request,
+        paymentRequest,
+        rHash,
+        paymentHash
+    }: {
+        request: Nip47MakeInvoiceRequest;
+        paymentRequest: string;
+        rHash?: string;
+        paymentHash: string;
+    }): Promise<Invoice> {
+        // every backend's lookupInvoice takes a hex hash; createUnifiedInvoice
+        // returns base64url for LND REST
+        const hexHash = this.makeInvoiceHashToHex(paymentHash || rHash);
+
+        if (hexHash) {
+            try {
+                const raw = await BackendUtils.lookupInvoice({
+                    r_hash: hexHash
+                });
+                if (raw && typeof raw === 'object') {
+                    const looked = new Invoice(raw);
+                    // LDK Node payment records can lack the bolt11 and memo
+                    if (!looked.getPaymentRequest) {
+                        looked.payment_request = paymentRequest;
+                    }
+                    if (!looked.getMemo && request.description) {
+                        looked.memo = request.description;
+                    }
+                    if (!looked.getRHash) {
+                        looked.r_hash = hexHash;
+                    }
+                    return looked;
+                }
+            } catch {
+                // unknown hash or no lookup on this backend: fall through
+            }
+        }
+
+        const fromStore = this.invoicesStore.invoices?.find(
+            (inv: Invoice) =>
+                (!!hexHash && inv.getRHash === hexHash) ||
+                inv.getPaymentRequest === paymentRequest
+        );
+        if (fromStore) return fromStore;
+
+        let createdAt = 0;
+        try {
+            const decoded = await NostrConnectUtils.decodeInvoiceTags(
+                paymentRequest
+            );
+            createdAt = decoded.createdAt;
+        } catch {
+            // not decodable here; the backend accepted it anyway
+        }
+        if (!createdAt) {
+            createdAt = Math.floor(Date.now() / 1000);
+        }
+
+        return new Invoice({
+            payment_request: paymentRequest,
+            r_hash: hexHash || '',
+            value: String(millisatsToSats(request.amount || 0)),
+            memo: request.description || '',
+            creation_date: String(createdAt),
+            expiry: String(request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS),
+            settled: false
+        });
+    }
+
+    private makeInvoiceHashToHex(hash?: string): string {
+        if (!hash) return '';
+        if (/^[0-9a-fA-F]+$/.test(hash)) return hash.toLowerCase();
+        try {
+            return Base64Utils.base64UrlToHex(hash);
+        } catch {
+            return '';
+        }
     }
 
     private pruneConnectionActivity(connection: NWCConnection): void {
@@ -2312,8 +2404,8 @@ export default class NostrWalletConnectStore {
 
             const rHash = invoiceResult?.rHash || '';
 
-            await this.invoicesStore.getInvoices();
-
+            // no invoicesStore.getInvoices() here: it drives the Receive
+            // screen's loading state and empties the list when it fails
             const result = await this.recordMakeInvoiceActivity({
                 connection,
                 request,
