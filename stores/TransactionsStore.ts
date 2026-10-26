@@ -258,9 +258,14 @@ export default class TransactionsStore {
     };
 
     @action
-    public broadcast = async (raw_final_tx: string) => {
-        const seq = this.sendCoinsSeq;
+    // seq is the sequence of the send that started this broadcast; it
+    // defaults to the current one for broadcasts started from TxHex or PSBT
+    public broadcast = async (
+        raw_final_tx: string,
+        seq: number = this.sendCoinsSeq
+    ) => {
         const isCurrent = () => seq === this.sendCoinsSeq;
+        if (!isCurrent()) return;
         this.loading = true;
 
         const tx_hex = raw_final_tx.includes('=')
@@ -292,6 +297,7 @@ export default class TransactionsStore {
                     const data = response.data;
                     if (status == 200) {
                         runInAction(() => {
+                            if (!isCurrent()) return;
                             this.txid = data || txid;
                             this.publishSuccess = true;
                             this.loading = false;
@@ -301,6 +307,7 @@ export default class TransactionsStore {
                     } else {
                         const errorMsg = errorToUserFriendly(data);
                         runInAction(() => {
+                            if (!isCurrent()) return;
                             this.error_msg = errorMsg;
                             this.error = true;
                             this.loading = false;
@@ -312,6 +319,7 @@ export default class TransactionsStore {
                         err?.error || err?.message || err?.toString()
                     );
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
@@ -326,12 +334,14 @@ export default class TransactionsStore {
                 if (data.publish_error) {
                     const errorMsg = errorToUserFriendly(data.publish_error);
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
                     });
                 } else {
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.txid = txid;
                         this.publishSuccess = true;
                         this.loading = false;
@@ -370,6 +380,7 @@ export default class TransactionsStore {
                     error.publish_error || error.message
                 );
                 runInAction(() => {
+                    if (!isCurrent()) return;
                     this.error_msg = errorMsg;
                     this.error = true;
                     this.loading = false;
@@ -380,17 +391,20 @@ export default class TransactionsStore {
     @action
     public finalizePsbtAndBroadcast = (
         funded_psbt: string,
-        defaultAccount?: boolean
+        defaultAccount?: boolean,
+        seq: number = this.sendCoinsSeq
     ) => {
+        const isCurrent = () => seq === this.sendCoinsSeq;
         this.funded_psbt = '';
         this.loading = true;
 
         if (defaultAccount) {
             return BackendUtils.finalizePsbt({ funded_psbt })
-                .then((data: any) => this.broadcast(data.raw_final_tx))
+                .then((data: any) => this.broadcast(data.raw_final_tx, seq))
                 .catch((error: any) => {
                     const errorMsg = errorToUserFriendly(error.message);
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
@@ -414,7 +428,7 @@ export default class TransactionsStore {
                     // Step 3: Extract the transaction
                     const txHex = psbt.extractTransaction().toHex();
 
-                    this.broadcast(txHex);
+                    this.broadcast(txHex, seq);
 
                     resolve(true);
                 } catch (error: any) {
@@ -422,6 +436,7 @@ export default class TransactionsStore {
                         error?.message || error
                     );
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
@@ -530,8 +545,10 @@ export default class TransactionsStore {
 
     private sendCoinsLNDCoinControl = (
         transactionRequest: TransactionRequest,
-        defaultAccount?: boolean
+        defaultAccount: boolean,
+        seq: number
     ) => {
+        const isCurrent = () => seq === this.sendCoinsSeq;
         const {
             utxos,
             addr,
@@ -580,6 +597,7 @@ export default class TransactionsStore {
         BackendUtils.fundPsbt(fundPsbtRequest)
             .then((data: any) => {
                 runInAction(() => {
+                    if (!isCurrent()) return;
                     this.crafting = false;
                     const funded_psbt: string = new FundedPsbt(
                         data.funded_psbt
@@ -591,7 +609,8 @@ export default class TransactionsStore {
                     } else {
                         this.finalizePsbtAndBroadcast(
                             funded_psbt,
-                            defaultAccount
+                            defaultAccount,
+                            seq
                         );
                     }
                 });
@@ -599,6 +618,7 @@ export default class TransactionsStore {
             .catch((error: any) => {
                 const errorMsg = errorToUserFriendly(error.message);
                 runInAction(() => {
+                    if (!isCurrent()) return;
                     this.error_msg = errorMsg;
                     this.error = true;
                     this.crafting = false;
@@ -609,8 +629,9 @@ export default class TransactionsStore {
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
-        // also invalidates a lookup still running for an earlier send,
-        // including when this send takes the coin control path
+        // also invalidates a lookup still running for an earlier send; the
+        // coin control path carries seq through funding, finalizing and
+        // broadcasting
         const seq = ++this.sendCoinsSeq;
         const isCurrent = () => seq === this.sendCoinsSeq;
 
@@ -655,7 +676,8 @@ export default class TransactionsStore {
         ) {
             return this.sendCoinsLNDCoinControl(
                 transactionRequest,
-                transactionRequest.account === 'default'
+                transactionRequest.account === 'default',
+                seq
             );
         }
 

@@ -485,6 +485,135 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
         expect(store.error_msg).toBe('insufficient fee');
     });
 
+    // Send A's finalizePsbt answers after a reset and a newer send B,
+    // which is still waiting on the node
+    const finalizeAfterNewerSend = async () => {
+        let finalizeA: (data: any) => void = () => undefined;
+        finalizePsbt.mockReturnValueOnce(
+            new Promise((resolve) => {
+                finalizeA = resolve;
+            })
+        );
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await jest.advanceTimersByTimeAsync(0);
+        expect(finalizePsbt).toHaveBeenCalledTimes(1);
+
+        store.reset();
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
+        finalizeA({ raw_final_tx: '0200' });
+        await settle();
+        return store;
+    };
+
+    const expectNewerSendPending = (store: any) => {
+        expect(store.txid).toBe(null);
+        expect(store.publishSuccess).toBe(false);
+        expect(store.error).toBe(false);
+        expect(store.sendOutcomeUnknown).toBe(false);
+        expect(store.loading).toBe(true);
+    };
+
+    it.each([
+        ['found', [{ tx_hash: 'batchtxid' }]],
+        ['missing', []]
+    ])(
+        'does not publish an earlier send finalized after a newer send (lookup %s)',
+        async (_, transactions) => {
+            publishTransaction.mockRejectedValue(new Error('Request timeout'));
+            getTransactions.mockResolvedValue({ transactions });
+            const store = await finalizeAfterNewerSend();
+
+            expect(publishTransaction).not.toHaveBeenCalled();
+            expect(getTransactions).not.toHaveBeenCalled();
+            expectNewerSendPending(store);
+        }
+    );
+
+    it.each([
+        ['found', [{ tx_hash: 'batchtxid' }]],
+        ['missing', []]
+    ])(
+        'does not end a newer send with an earlier publish timeout (lookup %s)',
+        async (_, transactions) => {
+            let rejectPublish: (error: Error) => void = () => undefined;
+            publishTransaction.mockReturnValueOnce(
+                new Promise((_resolve, reject) => {
+                    rejectPublish = reject;
+                })
+            );
+            getTransactions.mockResolvedValue({ transactions });
+            const store = newStore();
+            store.sendCoins(batchedRequest());
+            await jest.advanceTimersByTimeAsync(0);
+            expect(publishTransaction).toHaveBeenCalledTimes(1);
+
+            sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+            store.sendCoins(request());
+            rejectPublish(new Error('Request timeout'));
+            await settle();
+
+            expect(getTransactions).not.toHaveBeenCalled();
+            expectNewerSendPending(store);
+        }
+    );
+
+    it('does not end a newer send with an earlier finalize error', async () => {
+        let rejectFinalize: (error: Error) => void = () => undefined;
+        finalizePsbt.mockReturnValueOnce(
+            new Promise((_resolve, reject) => {
+                rejectFinalize = reject;
+            })
+        );
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await jest.advanceTimersByTimeAsync(0);
+
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
+        rejectFinalize(new Error('finalize failed'));
+        await settle();
+
+        expectNewerSendPending(store);
+    });
+
+    it('does not end a newer send with an earlier publish error', async () => {
+        let answerPublish: (data: any) => void = () => undefined;
+        publishTransaction.mockReturnValueOnce(
+            new Promise((resolve) => {
+                answerPublish = resolve;
+            })
+        );
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await jest.advanceTimersByTimeAsync(0);
+
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
+        answerPublish({ publish_error: 'insufficient fee' });
+        await settle();
+
+        expectNewerSendPending(store);
+    });
+
+    it('does not finalize an earlier send funded after a reset', async () => {
+        let answerFund: (data: any) => void = () => undefined;
+        fundPsbt.mockReturnValueOnce(
+            new Promise((resolve) => {
+                answerFund = resolve;
+            })
+        );
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        store.reset();
+        answerFund({ funded_psbt: 'cHNidP8B' });
+        await settle();
+
+        expect(finalizePsbt).not.toHaveBeenCalled();
+        expect(publishTransaction).not.toHaveBeenCalled();
+    });
+
     it('drops a publish lookup result that lands after a reset', async () => {
         publishTransaction.mockRejectedValue(new Error('Request timeout'));
         let answerLookup: (result: any) => void = () => undefined;
