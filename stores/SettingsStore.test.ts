@@ -446,6 +446,58 @@ describe('SettingsStore reconnect and fetch lock', () => {
     });
 });
 
+// A persistent node or NWC service keeps this store alive across Android
+// activities; a new App root must start the session as a cold start does.
+describe('SettingsStore.startNewRootSession', () => {
+    const loggedInStore = (settings: any, posStatus = 'inactive') => {
+        const store = new SettingsStore();
+        store.settings = settings;
+        store.setLoginStatus(true);
+        store.setPosStatus(posStatus);
+        return store;
+    };
+
+    it('requires the PIN again when one is set', () => {
+        const store = loggedInStore({ pin: '1234' });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBe(true);
+        expect(store.sessionStarted()).toBe(false);
+    });
+
+    it('requires the passphrase again when one is set', () => {
+        const store = loggedInStore({ passphrase: 'hunter2' });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBe(true);
+    });
+
+    it('does not require a login when no login method is configured', () => {
+        const store = loggedInStore({});
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBeFalsy();
+    });
+
+    it.each(['inactive', 'active'])(
+        'returns POS status %s to unselected so Wallet reopens POS',
+        (posStatus) => {
+            const store = loggedInStore(
+                { pin: '1234', pos: { posEnabled: PosEnabled.Standalone } },
+                posStatus
+            );
+
+            store.startNewRootSession();
+
+            expect(store.posStatus).toBe('unselected');
+            expect(store.sessionStarted()).toBe(false);
+        }
+    );
+});
+
 describe('SettingsStore.updateSettings', () => {
     it('serializes concurrent updates so neither is lost', async () => {
         seedSettings({ fiat: 'USD', locale: 'en' });

@@ -2749,6 +2749,16 @@ export default class SettingsStore {
 
     public setLoginStatus = (status = false) => (this.loggedIn = status);
 
+    // On Android a persistent LND, LDK Node or NWC service keeps the process
+    // and this store alive after MainActivity is destroyed, and the next
+    // MainActivity mounts a new App on it. Put the session back where a cold
+    // start leaves it: logged out, and POS not yet chosen, so Wallet opens
+    // POS (if enabled) or the Lockscreen as it does at launch.
+    public startNewRootSession = () => {
+        this.loggedIn = false;
+        this.posStatus = 'unselected';
+    };
+
     // Single-flight guard for Wallet.fetchData. Returns an ownership token,
     // or null if another invocation already holds the lock.
     @action

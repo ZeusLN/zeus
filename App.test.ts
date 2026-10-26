@@ -43,11 +43,16 @@ const appImports = (): Array<{ specifier: string; names: string[] }> => {
 // App's componentDidMount runs.
 const mountChecks: boolean[] = [];
 
+// The reset itself is tested in stores/SettingsStore.test.ts; these tests
+// cover when App calls it.
 const settingsStore = {
     loggedIn: false,
     settings: { pin: '1234' } as any,
     setLoginStatus(status = false) {
         this.loggedIn = status;
+    },
+    startNewRootSession() {
+        this.loggedIn = false;
     },
     loginMethodConfigured() {
         return !!(this.settings.passphrase || this.settings.pin);
@@ -175,16 +180,6 @@ describe('App', () => {
 
         expect(mountChecks).toEqual([true, true]);
         expect(settingsStore.loggedIn).toBe(false);
-
-        await unmount();
-    });
-
-    it('leaves the session alone when no login method is configured', async () => {
-        settingsStore.settings = {};
-
-        const { unmount } = await render(React.createElement(App));
-
-        expect(mountChecks).toEqual([false]);
 
         await unmount();
     });
