@@ -1287,7 +1287,7 @@
     "views.Settings.Payments.slideToPayThreshold": "Scorri per pagare soglia",
     "views.Settings.Payments.timeoutSeconds": "Timeout (secondi)",
     "views.Settings.Payments.preferredMempoolRate": "Tasso di mempool preferito",
-    "views.Settings.Payments.feeLimitMethodExplainer": "Il metodo del limite delle commissioni sarà corretto per fissarsi per importi fino a 1000 sats e percentuale per importi superiori a 1000 sats. Sarai in grado di modificare il metodo e i valori da utilizzare, nella sezione Impostazioni della visualizzazione della richiesta di pagamento.",
+    "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You can change the method and values for an individual payment before you send it.",
     "views.Settings.Payments.defaultDonationPercentage": "Percentuale di donazione predefinita",
     "views.Settings.Invoices.title": "Impostazioni delle fatture",
     "views.Settings.Invoices.showCustomPreimageField": "Mostra campo preimage personalizzato",

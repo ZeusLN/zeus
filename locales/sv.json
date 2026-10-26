@@ -1287,7 +1287,7 @@
     "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Timeout (sekunder)",
     "views.Settings.Payments.preferredMempoolRate": "Önskat Mempool-pris",
-    "views.Settings.Payments.feeLimitMethodExplainer": "Avgiftsgränsmetoden kommer som standard att vara fast för belopp upp till 1000 sats och procentsats för belopp större än 1000 sats. Du kommer dock att kunna ändra vilken metod och vilka värden du ska använda under Inställningar i vyn Betalningsförfrågan.",
+    "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You can change the method and values for an individual payment before you send it.",
     "views.Settings.Payments.defaultDonationPercentage": "Default Donation Percentage",
     "views.Settings.Invoices.title": "Fakturainställningar",
     "views.Settings.Invoices.showCustomPreimageField": "Visa anpassat förbildsfält",
