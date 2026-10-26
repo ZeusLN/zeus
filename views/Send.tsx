@@ -255,6 +255,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         const settings = await getSettings();
 
         this.setState({
+            maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60'
         });
 
