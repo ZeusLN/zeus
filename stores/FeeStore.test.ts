@@ -7,6 +7,11 @@ jest.mock('../stores/Stores', () => ({
 jest.mock('react-native-blob-util', () => ({
     fetch: jest.fn()
 }));
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequest: jest.fn(),
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
+}));
 jest.mock('../utils/UrlUtils', () => ({
     getMempoolApiUrl: jest.fn(() => 'https://mempool.space/api')
 }));
@@ -485,7 +490,9 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
         expect(store.loading).toBe(false);
         expect(mockedFetch).toHaveBeenCalledWith(
             'get',
-            'https://mempool.space/api/v1/fees/recommended'
+            'https://mempool.space/api/v1/fees/recommended',
+            undefined,
+            undefined
         );
         expect(alertStore.clearMempoolError).toHaveBeenCalled();
     });
