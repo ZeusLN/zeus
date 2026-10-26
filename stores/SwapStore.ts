@@ -1507,7 +1507,8 @@ export default class SwapStore {
      * back from /swap/restore. The claim path takes one from the wallet and
      * records it here. Swap.claimDestinationAddress ignores it on an
      * imported swap, since legacy rescues stored host fields under the same
-     * keys, so each claim attempt on a rescued swap uses a fresh address.
+     * keys, so SwapDetails takes a fresh address for a rescued swap once
+     * per screen session.
      *
      * Rescued swaps are written to SWAPS_KEY whatever their type and only
      * moved to REVERSE_SWAPS_KEY by the next fetchAndUpdateSwaps, so both
@@ -1727,9 +1728,10 @@ export default class SwapStore {
      *
      * A swap created on this device carries the destination the user picked.
      * A rescued one does not, and Swap.claimDestinationAddress ignores any
-     * address it has stored, so every attempt falls back to a fresh address
-     * from the wallet in use and records it. Returns '' when there is
-     * nowhere to claim to.
+     * address it has stored, so it falls back to a fresh address from the
+     * wallet in use and records it. SwapDetails calls this once per screen
+     * session and reuses the result. Returns '' when there is nowhere to
+     * claim to.
      */
     public resolveClaimAddress = async ({
         swapId,

@@ -524,14 +524,21 @@ describe('SwapDetails reverse claim fee', () => {
         expect(nativeClaim).toHaveBeenCalledTimes(1);
     });
 
-    it('does not show the host on-chain amount of a rescued swap', async () => {
-        const { store } = await renderView({
-            imported: true,
-            onchainAmount: 99100
-        });
+    it.each([
+        [false, true],
+        [true, false]
+    ])(
+        'with imported %s, shows the on-chain amount row: %s',
+        async (imported, shown) => {
+            await renderView({ imported, onchainAmount: 99100 });
 
-        expect(store.getReverseSwapReceiveAmount).not.toHaveBeenCalled();
-    });
+            const rows = screen.root!.queryAll(
+                (node: any) =>
+                    node.props.keyValue === 'views.SwapDetails.onchainAmount'
+            );
+            expect(rows.length > 0).toBe(shown);
+        }
+    );
 
     it('does not claim with a stored fee above the maximum', async () => {
         await claim({ claimMinerFee: 2000 * 152 + 1, claimFeeRate: 25 });
