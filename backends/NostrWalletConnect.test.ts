@@ -3,8 +3,10 @@
 // assertions cover the request that would be sent to the wallet service
 // (field names, msat units) and the decoded result Zeus gets back.
 import {
+    Nip47PublishError,
     Nip47PublishTimeoutError,
     Nip47ReplyTimeoutError,
+    Nip47ResponseDecodingError,
     Nip47WalletError,
     NostrWebLNProvider
 } from '@getalby/sdk';
@@ -640,26 +642,47 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         ).rejects.toMatchObject({ message, code });
     });
 
-    it('reports a reply timeout as in flight, since the wallet may still pay', async () => {
-        const { backend, client } = await setup();
-        client.payInvoice.mockRejectedValue(
+    it.each([
+        [
+            'a reply timeout',
             new Nip47ReplyTimeoutError('reply timeout: event abc', 'INTERNAL')
-        );
+        ],
+        [
+            // the SDK stops waiting but does not cancel the publish
+            'a publish timeout',
+            new Nip47PublishTimeoutError('publish timeout: abc', 'INTERNAL')
+        ],
+        [
+            // the wallet answered, but the outcome can't be read
+            'an unparseable reply',
+            new Nip47ResponseDecodingError(
+                'failed to deserialize response',
+                'INTERNAL'
+            )
+        ]
+    ])(
+        'reports %s as in flight, since the wallet may still pay',
+        async (_, error) => {
+            const { backend, client } = await setup();
+            client.payInvoice.mockRejectedValue(error);
 
-        await expect(
-            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
-        ).resolves.toEqual({
-            status: 'IN_FLIGHT',
-            payment_hash: PAY_HASH
-        });
-        expect(client.payInvoice).toHaveBeenCalledTimes(1);
-    });
+            await expect(
+                backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+            ).resolves.toEqual({
+                status: 'IN_FLIGHT',
+                payment_hash: PAY_HASH
+            });
+            expect(client.payInvoice).toHaveBeenCalledTimes(1);
+        }
+    );
 
-    it('still rejects on a publish timeout, since the wallet never got the request', async () => {
+    it('still rejects when no relay accepted the request', async () => {
+        // since SDK 9.0.0 this only means refused or unreachable relays
         const { backend, client } = await setup();
-        const error = new Nip47PublishTimeoutError(
-            'publish timeout: abc',
-            'INTERNAL'
+        const error = new Nip47PublishError(
+            `failed to publish: ${RELAY}: blocked: not allowed`,
+            'INTERNAL',
+            [{ url: RELAY, reason: 'blocked: not allowed' }]
         );
         client.payInvoice.mockRejectedValue(error);
 
@@ -669,8 +692,8 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
     });
 
     it('does not treat another error with the same code as a reply timeout', async () => {
-        // reply and publish timeouts share the INTERNAL code, so only the
-        // error class tells them apart
+        // the SDK's timeout and decoding errors share the INTERNAL code,
+        // so only the error class tells them apart
         const { backend, client } = await setup();
         const error = new Nip47WalletError(
             'reply timeout: event abc',
@@ -866,6 +889,66 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
             message: localeString('error.sendingPayment')
         });
         expect(error.walletReplied).toBeUndefined();
+    });
+
+    describe("through the SDK's publish path", () => {
+        // The real NIP-47 client builds the error; only the relay pool and
+        // encryption are stubbed. A missing acknowledgement must surface as
+        // a publish timeout and a refusal as a publish error with the
+        // relay's reason (SDK 9.0.0).
+        const setupRelay = async (publish: () => Promise<string>) => {
+            mockSettingsStore.nostrWalletConnectUrl = NWC_URL;
+            const backend = new NostrWalletConnect();
+            await backend.initNWC();
+            await backend.connect();
+            const client = backend.nwc.client;
+            client._checkConnected = jest.fn().mockResolvedValue(undefined);
+            client._selectEncryptionType = jest.fn(async () => {
+                client._encryptionType = 'nip44_v2';
+            });
+            client.encrypt = jest.fn().mockResolvedValue('ciphertext');
+            client.pool.subscribe = jest.fn(() => ({ close: jest.fn() }));
+            client.pool.publish = jest.fn(() => [publish()]);
+            return { backend, client };
+        };
+
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
+        it('reports a relay that never acknowledges as in flight', async () => {
+            jest.useFakeTimers();
+            const { backend, client } = await setupRelay(
+                () => new Promise<string>(() => {})
+            );
+
+            const result = backend.payLightningInvoice({
+                payment_request: SPEC_INVOICE
+            });
+            await jest.advanceTimersByTimeAsync(client.pool.publishTimeout);
+
+            await expect(result).resolves.toEqual({
+                status: 'IN_FLIGHT',
+                payment_hash: PAY_HASH
+            });
+            expect(client.pool.publish).toHaveBeenCalledTimes(1);
+        });
+
+        it.each([
+            ['refuses the request', 'blocked: not allowed'],
+            ['cannot be reached', 'connection failure: Error: timed out']
+        ])('rejects when the relay %s', async (_, reason) => {
+            const { backend } = await setupRelay(() =>
+                Promise.reject(new Error(reason))
+            );
+
+            const error = await backend
+                .payLightningInvoice({ payment_request: SPEC_INVOICE })
+                .catch((e: any) => e);
+
+            expect(error).toBeInstanceOf(Nip47PublishError);
+            expect(error.relayErrors).toEqual([{ url: RELAY, reason }]);
+        });
     });
 
     it('does not retry a failed payment', async () => {
