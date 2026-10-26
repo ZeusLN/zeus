@@ -240,13 +240,22 @@ export default class FeeStore {
         this.forwardingEvents = [];
         this.forwardingHistoryError = false;
         this.earnedDuringTimeframe = new BigNumber(0);
-        const response = BackendUtils.getForwardingHistory(
-            params,
-            chanIdIn,
-            chanIdOut
-        );
+        this.fetchForwardingHistory(params, chanIdIn, chanIdOut, true);
+    };
 
-        response
+    // serverFilter false: the node rejected the channel filter, so fetch
+    // everything and keep only events for the requested channels
+    private fetchForwardingHistory = (
+        params: number | undefined,
+        chanIdIn: string | undefined,
+        chanIdOut: string | undefined,
+        serverFilter: boolean
+    ) => {
+        BackendUtils.getForwardingHistory(
+            params,
+            serverFilter ? chanIdIn : undefined,
+            serverFilter ? chanIdOut : undefined
+        )
             .then((data: any) => {
                 try {
                     runInAction(() => {
@@ -262,15 +271,27 @@ export default class FeeStore {
                             );
                         }
 
-                        this.forwardingEvents = rawEvents
-                            .map((event: any) => new ForwardEvent(event))
-                            .reverse();
+                        let events: ForwardEvent[] = rawEvents.map(
+                            (event: any) => new ForwardEvent(event)
+                        );
+
+                        if (!serverFilter) {
+                            events = events.filter(
+                                (event) =>
+                                    (!chanIdIn ||
+                                        String(event.inChannelId) ===
+                                            chanIdIn) &&
+                                    (!chanIdOut ||
+                                        String(event.outChannelId) ===
+                                            chanIdOut)
+                            );
+                        }
+
+                        this.forwardingEvents = events.reverse();
 
                         this.forwardingEvents.forEach((event: ForwardEvent) => {
                             this.earnedDuringTimeframe =
-                                this.earnedDuringTimeframe.plus(
-                                    Number(event.fee_msat) / 1000
-                                );
+                                this.earnedDuringTimeframe.plus(event.feeSat);
                         });
 
                         this.lastOffsetIndex = data.last_offset_index;
@@ -305,14 +326,20 @@ export default class FeeStore {
                     (errorMessage.includes('incoming_chan_ids') ||
                         errorMessage.includes('outgoing_chan_ids'));
 
-                if (isUnsupportedFieldError && (chanIdIn || chanIdOut)) {
+                if (
+                    isUnsupportedFieldError &&
+                    serverFilter &&
+                    (chanIdIn || chanIdOut)
+                ) {
                     console.warn(
                         'Server does not support channel ID filtering, retrying without filter'
                     );
-                    runInAction(() => {
-                        this.forwardingHistoryError = false;
-                    });
-                    return this.getForwardingHistory(params);
+                    return this.fetchForwardingHistory(
+                        params,
+                        chanIdIn,
+                        chanIdOut,
+                        false
+                    );
                 }
 
                 console.error('Fetching forwarding history failed:', e);
