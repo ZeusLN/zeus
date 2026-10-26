@@ -144,7 +144,8 @@ const doTorRequest = async (
             `HTTP ${response.status_code}`;
         throw markRestErrorResponse(
             new Error(message),
-            grpcErrorCode(parsedBody)
+            grpcErrorCode(parsedBody),
+            response.status_code
         );
     }
 

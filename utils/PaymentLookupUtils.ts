@@ -65,18 +65,41 @@ export const grpcErrorCode = (body: unknown): unknown => {
     return isGrpcErrorCode(found) ? found : undefined;
 };
 
+// Records the HTTP status of an error response, so a caller can tell an
+// answer from the server (or a proxy in front of it) from a request that
+// got no response at all.
+export const markHttpStatus = (
+    error: unknown,
+    httpStatus?: unknown
+): unknown => {
+    if (error && typeof error === 'object' && Number.isInteger(httpStatus)) {
+        (error as any).httpStatus = httpStatus;
+    }
+    return error;
+};
+
+export const httpStatusOf = (error: unknown): number | undefined => {
+    const status = (error as any)?.httpStatus;
+    return Number.isInteger(status) ? status : undefined;
+};
+
 // Tags an LND REST error status as the node's answer only when the body
 // carries a gRPC status code. LND's REST gateway puts one in every error it
 // returns. A reverse proxy in front of LND (nginx, envoy, Cloudflare)
 // answers 502/503/504 with its own body and no code, while the request may
 // still be on its way to LND, so that error stays a transport failure.
+// The HTTP status is recorded either way.
 export const markRestErrorResponse = (
     error: Error,
-    grpcCode: unknown
+    grpcCode: unknown,
+    httpStatus?: unknown
 ): unknown =>
-    grpcCode === undefined || grpcCode === null
-        ? error
-        : markNodeResponded(error, grpcCode);
+    markHttpStatus(
+        grpcCode === undefined || grpcCode === null
+            ? error
+            : markNodeResponded(error, grpcCode),
+        httpStatus
+    );
 
 // LND refuses a send with AlreadyExists when it already has a payment for
 // the hash (already paid, still in flight, or being created), before any

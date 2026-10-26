@@ -358,6 +358,24 @@ describe('CLNRest.request error fallback', () => {
             'Network request failed'
         );
     });
+
+    it.each([
+        ['a JSON-RPC error', 500, JSON.stringify({ code: 301, message: 'x' })],
+        ['a non-JSON body', 502, 'Bad Gateway'],
+        ['an empty body', 500, '']
+    ])('records the HTTP status of %s', async (_, status, body) => {
+        mockFetch.mockResolvedValue(blobResponse(status, body));
+        const error = await cln.postRequest('/v1/withdraw').catch((e) => e);
+
+        expect(error.httpStatus).toBe(status);
+    });
+
+    it('records no HTTP status for a transport failure', async () => {
+        mockFetch.mockRejectedValue(new Error('unexpected end of stream'));
+        const error = await cln.postRequest('/v1/withdraw').catch((e) => e);
+
+        expect(error.httpStatus).toBeUndefined();
+    });
 });
 
 describe('CLNRest payment timeout race', () => {

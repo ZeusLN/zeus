@@ -7,6 +7,8 @@ import {
     isPaymentRefusedAsDuplicate,
     markNodeResponded,
     markRestErrorResponse,
+    markHttpStatus,
+    httpStatusOf,
     paymentCreationTimeMs
 } from './PaymentLookupUtils';
 
@@ -202,6 +204,34 @@ describe('markRestErrorResponse', () => {
         expect(
             isNodeResponse(markRestErrorResponse(new Error('x'), null))
         ).toBe(false);
+    });
+});
+
+describe('markHttpStatus', () => {
+    it('records an integer status on the error', () => {
+        const error = new Error('Bad Gateway');
+        expect(markHttpStatus(error, 502)).toBe(error);
+        expect(httpStatusOf(error)).toBe(502);
+    });
+
+    it('records nothing without an integer status', () => {
+        expect(httpStatusOf(markHttpStatus(new Error('x'), undefined))).toBe(
+            undefined
+        );
+        expect(httpStatusOf(markHttpStatus(new Error('x'), '502'))).toBe(
+            undefined
+        );
+        expect(httpStatusOf(new Error('x'))).toBeUndefined();
+        expect(httpStatusOf(undefined)).toBeUndefined();
+    });
+
+    it('is recorded by markRestErrorResponse with or without a gRPC code', () => {
+        expect(
+            httpStatusOf(markRestErrorResponse(new Error('x'), 2, 500))
+        ).toBe(500);
+        expect(
+            httpStatusOf(markRestErrorResponse(new Error('x'), undefined, 502))
+        ).toBe(502);
     });
 });
 
