@@ -74,6 +74,7 @@ import {
     checkLndStreamErrorResponse,
     createLndWallet,
     deleteLndWallet,
+    deleteNeutrinoFiles,
     expressGraphSync,
     initializeLnd,
     LndMobileEventEmitter,
@@ -296,14 +297,17 @@ describe('embedded LND start with an invalid lndDir', () => {
     const invalidDirs = ['', '.', '..', '../victim', 'x/..', 'lnd\n'];
     const repairGraphDb = jest.fn();
     const resetGraphDb = jest.fn();
+    const DEBUG_deleteNeutrinoFiles = jest.fn();
 
     beforeEach(() => {
         jest.clearAllMocks();
         repairGraphDb.mockReset().mockResolvedValue('noop');
         resetGraphDb.mockReset().mockResolvedValue('noop');
+        DEBUG_deleteNeutrinoFiles.mockReset().mockResolvedValue(true);
         (NativeModules as any).LndMobileTools = {
             repairGraphDb,
-            resetGraphDb
+            resetGraphDb,
+            DEBUG_deleteNeutrinoFiles
         };
         (settingsStore as any).embeddedLndStarted = false;
     });
@@ -379,6 +383,27 @@ describe('embedded LND start with an invalid lndDir', () => {
             );
 
             expect(resetGraphDb).not.toHaveBeenCalled();
+        }
+    );
+
+    it('deleteNeutrinoFiles deletes the files for a valid dir', async () => {
+        await deleteNeutrinoFiles('lnd', 'mainnet', true);
+
+        expect(DEBUG_deleteNeutrinoFiles).toHaveBeenCalledWith(
+            'lnd',
+            'mainnet',
+            true
+        );
+    });
+
+    it.each(invalidDirs)(
+        'deleteNeutrinoFiles refuses %j without deleting anything',
+        async (lndDir) => {
+            await expect(
+                deleteNeutrinoFiles(lndDir, 'mainnet', true)
+            ).rejects.toThrow('Invalid node directory');
+
+            expect(DEBUG_deleteNeutrinoFiles).not.toHaveBeenCalled();
         }
     );
 });

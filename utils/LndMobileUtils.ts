@@ -347,6 +347,23 @@ export async function deleteLndWallet(lndDir: string): Promise<boolean> {
     }
 }
 
+/**
+ * Deletes the neutrino chain files of an embedded LND wallet so they are
+ * fetched again on the next start.
+ */
+export async function deleteNeutrinoFiles(
+    lndDir: string,
+    network: string,
+    isSqlite: boolean
+): Promise<void> {
+    assertValidNodeDir(lndDir);
+    await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
+        lndDir,
+        network,
+        isSqlite
+    );
+}
+
 export async function expressGraphSync(): Promise<{ resetFailed: boolean }> {
     const lndDir = settingsStore?.lndDir || 'lnd';
     assertValidNodeDir(lndDir);
