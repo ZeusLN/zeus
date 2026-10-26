@@ -1798,6 +1798,7 @@
     "stores.InvoicesStore.zeroAmountLndhub": "Instance služby LNDHub nemusí podporovat faktury s nulovou částkou",
     "stores.InvoicesStore.errorRedeemingWithdrawalRequest": "Chyba při uplatňování žádosti o výběr prostředků",
     "stores.InvoicesStore.lspFeeAboveMaxWithdrawable": "Částka k výběru nepokrývá poplatek LSP za nastavení ve výši {fee} satů. Po připočtení poplatku by vybíraná částka byla ve výši {total} satů, což je více, než je maximum povolené touto službou ve výši {max} satů.",
+    "stores.TransactionsStore.sendOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this transaction was sent. Check your on-chain activity before sending again.",
     "stores.SettingsStore.btcPayImplementationSupport": "Je nám to líto, ale v současné době podporujeme pouze BTCPay instance s použitím LND",
     "stores.SettingsStore.btcPayFetchConfigError": "Chyba při načítání konfigurace BTCPay",
     "stores.SettingsStore.btcPayFetchConfirmMessage": "ZEUS naváže kontakt s {host}, aby stáhl konfiguraci tohoto BTCPay uzlu. Pokračujte pouze v případě, že tomuto QR kódu důvěřujete.",
