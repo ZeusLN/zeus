@@ -457,7 +457,11 @@ export default class SwapDetails extends React.Component<
             return;
         }
 
-        // a claim recorded as broadcast, on this screen or an earlier visit
+        // a claim recorded as broadcast, on this screen or an earlier visit.
+        // A legacy rescue may carry the host's claimTxid, which stops the
+        // claim here; the invoice then expires and the payment returns. It
+        // can't be ignored on imported swaps, since this wallet records its
+        // own claims on them in the same field.
         let submitted = !!swapData?.claimTxid;
         // set once the host reports the invoice settled: it has the
         // preimage, so a lockup already spent means the swap is done
@@ -900,44 +904,44 @@ export default class SwapDetails extends React.Component<
      * address a rescued swap has stored is ignored, including one this
      * wallet generated on an earlier attempt. SwapStore falls back to a
      * fresh address from the wallet in use, which is the same source the
-     * swap creation screen defaults to.
+     * swap creation screen defaults to. That address is kept for the rest
+     * of this screen's session, so rechecks while the lockup confirms
+     * don't each take another one.
      */
     resolveDestinationAddress = async (swapId: string): Promise<string> => {
+        if (this.resolvedClaimAddress) return this.resolvedClaimAddress;
+
         const { InvoicesStore, SwapStore } = this.props;
 
-        const existing = this.state.swapData?.claimDestinationAddress;
         const destinationAddress =
             (await SwapStore?.resolveClaimAddress({
                 swapId,
-                destinationAddress: existing,
+                destinationAddress:
+                    this.state.swapData?.claimDestinationAddress,
                 canReceiveOnchain: BackendUtils.supportsOnchainReceiving(),
                 getNewAddress: () =>
                     InvoicesStore!.getNewAddress({ unified: true })
             })) || '';
 
-        if (destinationAddress && destinationAddress !== existing) {
-            this.setState((prevState) => ({
-                swapData: new Swap({
-                    ...prevState.swapData,
-                    destinationAddress,
-                    claimAddressFromWallet: true
-                })
-            }));
-        }
-
+        if (destinationAddress) this.resolvedClaimAddress = destinationAddress;
         return destinationAddress;
     };
+
+    private resolvedClaimAddress?: string;
 
     // The fee the reverse claim pays. A swap created since the fee is
     // decided at creation stores it with its rate, so this returns the
     // stored fee. One stored before that, or a rescued swap, pays at least
-    // currentRate (else 2 sat/vB) on the largest claim.
+    // currentRate (else 2 sat/vB) on the largest claim. Legacy rescues
+    // stored the host's fields, so a rescued swap's stored fee and rate
+    // are ignored.
     claimMinerFee = (currentRate?: number): number | undefined => {
         const { swapData } = this.state;
         const { fee } = this.props.route.params;
+        const stored = swapData?.imported ? undefined : swapData;
         return reverseClaimMinerFee(
-            swapData?.claimMinerFee,
-            swapData?.claimFeeRate ??
+            stored?.claimMinerFee,
+            stored?.claimFeeRate ??
                 (fee ? Number(fee) : undefined) ??
                 currentRate ??
                 2
@@ -969,7 +973,10 @@ export default class SwapDetails extends React.Component<
 
     fetchCurrentClaimFeeRate = async (): Promise<number | undefined> => {
         const { swapData } = this.state;
-        if (swapData?.claimFeeRate != null || this.props.route.params.fee) {
+        if (
+            (!swapData?.imported && swapData?.claimFeeRate != null) ||
+            this.props.route.params.fee
+        ) {
             return undefined;
         }
         try {
@@ -1398,26 +1405,29 @@ export default class SwapDetails extends React.Component<
                                     showCopyIcon
                                 />
                             )}
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.SwapDetails.onchainAmount'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={
-                                            SwapStore?.getReverseSwapReceiveAmount(
-                                                swapData?.getAmount,
-                                                this.claimMinerFee(
-                                                    this.state
-                                                        .currentClaimFeeRate
-                                                ) ?? swapData?.claimMinerFee
-                                            ) || 0
-                                        }
-                                        sensitive
-                                        toggleable
-                                    />
-                                }
-                            />
+                            {/* a legacy rescue's amount came from the host */}
+                            {!swapData.imported && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.SwapDetails.onchainAmount'
+                                    )}
+                                    value={
+                                        <Amount
+                                            sats={
+                                                SwapStore?.getReverseSwapReceiveAmount(
+                                                    swapData?.getAmount,
+                                                    this.claimMinerFee(
+                                                        this.state
+                                                            .currentClaimFeeRate
+                                                    ) ?? swapData?.claimMinerFee
+                                                ) || 0
+                                            }
+                                            sensitive
+                                            toggleable
+                                        />
+                                    }
+                                />
+                            )}
                         </>
                     )}
                     {swapData.isReverseSwap && (

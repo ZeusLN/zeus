@@ -312,6 +312,27 @@ describe('SwapDetails reverse claim', () => {
         }
     );
 
+    it('keeps one wallet address for a rescued swap across lockup rechecks', async () => {
+        const { store } = await renderView({ imported: true });
+        let next = 0;
+        store.resolveClaimAddress.mockImplementation(
+            async () => `bc1qwallet${next++}`
+        );
+        store.verifyReverseLockup
+            .mockResolvedValueOnce({ status: 'unconfirmed' })
+            .mockResolvedValueOnce({ status: 'unconfirmed' })
+            .mockResolvedValueOnce({ status: 'unconfirmed' })
+            .mockResolvedValue({ status: 'ok' });
+        nativeClaim.mockResolvedValue(undefined);
+
+        await sendConfirmedLockup();
+        await advance(3 * 60000);
+
+        expect(store.verifyReverseLockup).toHaveBeenCalledTimes(4);
+        expect(store.resolveClaimAddress).toHaveBeenCalledTimes(1);
+        expect(claimedTo()).toBe('bc1qwallet0');
+    });
+
     it('builds the claim without the host endpoint', async () => {
         await renderView();
         nativeClaim.mockResolvedValue(undefined);
@@ -480,6 +501,36 @@ describe('SwapDetails reverse claim fee', () => {
             99100,
             30 * 152
         );
+    });
+
+    it('ignores the fee and rate stored on a rescued swap', async () => {
+        // a legacy rescue copied these from the host
+        const FeeStore = {
+            getOnchainFeesviaMempool: jest
+                .fn()
+                .mockResolvedValue({ fastestFee: 30 })
+        };
+        await renderView(
+            { imported: true, claimMinerFee: 300000, claimFeeRate: 2000 },
+            {},
+            { FeeStore }
+        );
+        nativeClaim.mockResolvedValue(undefined);
+
+        await sendConfirmedLockup();
+
+        expect(FeeStore.getOnchainFeesviaMempool).toHaveBeenCalled();
+        expect(claimedFee()).toBe(30 * 152);
+        expect(nativeClaim).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not show the host on-chain amount of a rescued swap', async () => {
+        const { store } = await renderView({
+            imported: true,
+            onchainAmount: 99100
+        });
+
+        expect(store.getReverseSwapReceiveAmount).not.toHaveBeenCalled();
     });
 
     it('does not claim with a stored fee above the maximum', async () => {
