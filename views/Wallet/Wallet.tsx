@@ -1588,20 +1588,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { nodeInfo } = NodeInfoStore;
         const error =
             NodeInfoStore.error || SettingsStore.error || BalanceStore.error;
-        const {
-            implementation,
-            settings,
-            loggedIn,
-            connecting,
-            posStatus,
-            isMigrating
-        } = SettingsStore;
+        const { implementation, settings, loggedIn, connecting, isMigrating } =
+            SettingsStore;
         const loginRequired = !settings || SettingsStore.loginRequired();
 
         const posEnabled: PosEnabled =
             settings?.pos?.posEnabled || PosEnabled.Disabled;
 
         const showKeypad: boolean = settings?.pos?.showKeypad || false;
+        const posView = SettingsStore.posViewActive();
 
         const dataAvailable =
             implementation === 'lndhub' ||
@@ -1811,9 +1806,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             : error &&
                                               posEnabled === PosEnabled.Disabled
                                             ? 'Balance'
-                                            : posEnabled !==
-                                                  PosEnabled.Disabled &&
-                                              posStatus === 'active'
+                                            : posView
                                             ? (settings.pos &&
                                                   settings.pos.defaultView) ||
                                               'Products'
@@ -1887,9 +1880,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 : undefined
                                     })}
                                 >
-                                    {!isChannelMigrating &&
-                                    posEnabled !== PosEnabled.Disabled &&
-                                    posStatus === 'active' ? (
+                                    {!isChannelMigrating && posView ? (
                                         <Tab.Screen name="Products">
                                             {PosScreen}
                                         </Tab.Screen>
@@ -1900,56 +1891,53 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     )}
                                     {!isChannelMigrating &&
                                         posEnabled === PosEnabled.Standalone &&
-                                        posStatus === 'active' &&
+                                        posView &&
                                         showKeypad && (
                                             <Tab.Screen name="POS Keypad">
                                                 {PosKeypadScreen}
                                             </Tab.Screen>
                                         )}
-                                    {!isChannelMigrating &&
-                                        posStatus !== 'active' && (
-                                            <>
-                                                {!error &&
-                                                    !(
-                                                        isSyncing &&
-                                                        !settings?.ecash
-                                                            ?.enableCashu
-                                                    ) && (
-                                                        <Tab.Screen name="Keypad">
-                                                            {KeypadScreen}
-                                                        </Tab.Screen>
-                                                    )}
-                                                {BackendUtils.supportsChannelManagement() &&
-                                                    !error &&
-                                                    !isSyncing && (
-                                                        <Tab.Screen
-                                                            name={localeString(
-                                                                'views.Wallet.Wallet.channels'
-                                                            )}
-                                                        >
-                                                            {ChannelsScreen}
-                                                        </Tab.Screen>
-                                                    )}
-                                            </>
-                                        )}
-                                    {!isChannelMigrating &&
-                                        posStatus !== 'active' &&
-                                        !error && (
-                                            <Tab.Screen
-                                                name="Camera"
-                                                listeners={{
-                                                    tabPress: (e) => {
-                                                        // Prevent default action
-                                                        e.preventDefault();
-                                                        navigation.navigate(
-                                                            'HandleAnythingQRScanner'
-                                                        );
-                                                    }
-                                                }}
-                                            >
-                                                {CameraScreen}
-                                            </Tab.Screen>
-                                        )}
+                                    {!isChannelMigrating && !posView && (
+                                        <>
+                                            {!error &&
+                                                !(
+                                                    isSyncing &&
+                                                    !settings?.ecash
+                                                        ?.enableCashu
+                                                ) && (
+                                                    <Tab.Screen name="Keypad">
+                                                        {KeypadScreen}
+                                                    </Tab.Screen>
+                                                )}
+                                            {BackendUtils.supportsChannelManagement() &&
+                                                !error &&
+                                                !isSyncing && (
+                                                    <Tab.Screen
+                                                        name={localeString(
+                                                            'views.Wallet.Wallet.channels'
+                                                        )}
+                                                    >
+                                                        {ChannelsScreen}
+                                                    </Tab.Screen>
+                                                )}
+                                        </>
+                                    )}
+                                    {!isChannelMigrating && !posView && !error && (
+                                        <Tab.Screen
+                                            name="Camera"
+                                            listeners={{
+                                                tabPress: (e) => {
+                                                    // Prevent default action
+                                                    e.preventDefault();
+                                                    navigation.navigate(
+                                                        'HandleAnythingQRScanner'
+                                                    );
+                                                }
+                                            }}
+                                        >
+                                            {CameraScreen}
+                                        </Tab.Screen>
+                                    )}
                                 </Tab.Navigator>
                             </NavigationContainer>
                         </NavigationIndependentTree>

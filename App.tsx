@@ -329,6 +329,15 @@ export default class App extends React.PureComponent {
         'NostrContacts'
     ];
 
+    constructor(props: {}) {
+        super(props);
+
+        // The stores can outlive the previous App root (see
+        // startNewRootSession). Done in the constructor because Wallet's
+        // componentDidMount, which checks the session, runs before App's.
+        settingsStore.startNewRootSession();
+    }
+
     private handleBackPress = (navigation: any) => {
         const dialogHasBeenClosed = modalStore.closeVisibleModalDialog();
         if (dialogHasBeenClosed) {

@@ -446,6 +446,95 @@ describe('SettingsStore reconnect and fetch lock', () => {
     });
 });
 
+// A persistent node or NWC service keeps this store alive across Android
+// activities; a new App root must start the session as a cold start does.
+describe('SettingsStore.startNewRootSession', () => {
+    const loggedInStore = (settings: any, posStatus = 'inactive') => {
+        const store = new SettingsStore();
+        store.settings = settings;
+        store.setLoginStatus(true);
+        store.setPosStatus(posStatus);
+        return store;
+    };
+
+    it('requires the PIN again when one is set', () => {
+        const store = loggedInStore({ pin: '1234' });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBe(true);
+        expect(store.sessionStarted()).toBe(false);
+    });
+
+    it('requires the passphrase again when one is set', () => {
+        const store = loggedInStore({ passphrase: 'hunter2' });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBe(true);
+    });
+
+    it('does not require a login when no login method is configured', () => {
+        const store = loggedInStore({});
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBeFalsy();
+    });
+
+    it.each(['inactive', 'active'])(
+        'returns POS status %s to unselected so Wallet reopens POS',
+        (posStatus) => {
+            const store = loggedInStore(
+                { pin: '1234', pos: { posEnabled: PosEnabled.Standalone } },
+                posStatus
+            );
+
+            store.startNewRootSession();
+
+            expect(store.posStatus).toBe('unselected');
+            expect(store.sessionStarted()).toBe(false);
+        }
+    );
+});
+
+describe('SettingsStore.posViewActive', () => {
+    const storeWith = (posEnabled: PosEnabled, posStatus: string) => {
+        const store = new SettingsStore();
+        store.settings = { pos: { posEnabled } } as any;
+        store.setPosStatus(posStatus);
+        return store;
+    };
+
+    it.each([
+        [PosEnabled.Standalone, 'active', true],
+        [PosEnabled.Square, 'active', true],
+        // Wallet moves 'unselected' to 'active' when POS is enabled
+        [PosEnabled.Standalone, 'unselected', true],
+        // the owner unlocked the full wallet
+        [PosEnabled.Standalone, 'inactive', false],
+        [PosEnabled.Disabled, 'unselected', false],
+        [PosEnabled.Disabled, 'active', false]
+    ])('POS %s with status %s: %s', (posEnabled, posStatus, expected) => {
+        expect(storeWith(posEnabled, posStatus).posViewActive()).toBe(expected);
+    });
+
+    it('is false before settings load', () => {
+        expect(new SettingsStore().posViewActive()).toBe(false);
+    });
+
+    // A new App root mounts Wallet's tab navigator at once when the node is
+    // still connected, so it must already pick the POS tabs, as a cold start
+    // does once connecting ends
+    it('shows the POS tabs for a new App root after the owner unlocked the wallet', () => {
+        const store = storeWith(PosEnabled.Standalone, 'inactive');
+
+        store.startNewRootSession();
+
+        expect(store.posViewActive()).toBe(true);
+    });
+});
+
 describe('SettingsStore.updateSettings', () => {
     it('serializes concurrent updates so neither is lost', async () => {
         seedSettings({ fiat: 'USD', locale: 'en' });

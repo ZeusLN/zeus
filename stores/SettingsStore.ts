@@ -2723,6 +2723,15 @@ export default class SettingsStore {
         (this.settings?.pos?.posEnabled || PosEnabled.Disabled) !==
         PosEnabled.Disabled;
 
+    // Whether Wallet shows the POS tabs. 'unselected' counts: with POS
+    // enabled, Wallet always moves it to 'active', and the tab navigator
+    // picks its first tab when it mounts. A new App root over a connected
+    // node (see startNewRootSession) mounts the tabs before Wallet makes
+    // that move, so treating 'unselected' as not POS would open the wallet
+    // tabs and then swap them out from under the navigator.
+    public posViewActive = () =>
+        this.isPosEnabled() && this.posStatus !== 'inactive';
+
     public loginMethodConfigured = () =>
         this.settings &&
         (this.settings.passphrase ||
@@ -2748,6 +2757,16 @@ export default class SettingsStore {
         this.settings.supportedBiometryType !== undefined;
 
     public setLoginStatus = (status = false) => (this.loggedIn = status);
+
+    // On Android a persistent LND, LDK Node or NWC service keeps the process
+    // and this store alive after MainActivity is destroyed, and the next
+    // MainActivity mounts a new App on it. Put the session back where a cold
+    // start leaves it: logged out, and POS not yet chosen, so Wallet opens
+    // POS (if enabled) or the Lockscreen as it does at launch.
+    public startNewRootSession = () => {
+        this.loggedIn = false;
+        this.posStatus = 'unselected';
+    };
 
     // Single-flight guard for Wallet.fetchData. Returns an ownership token,
     // or null if another invocation already holds the lock.
