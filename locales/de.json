@@ -1287,7 +1287,7 @@
     "views.Settings.Payments.slideToPayThreshold": "Schwellwert für 'Zum Bezahlen streichen'",
     "views.Settings.Payments.timeoutSeconds": "Zeitlimit (Sekunden)",
     "views.Settings.Payments.preferredMempoolRate": "Bevorzugter Mempool-Gebührenvorschlag",
-    "views.Settings.Payments.feeLimitMethodExplainer": "Standardmäßig wird für Beträge bis zu 1000 Sats ein fixes Gebührenlimit verwendet und für Beträge über 1000 Sats ein prozentuales. Du kannst jedoch sowohl die Methode als auch die Werte in der Zahlungs-Anforderungs-Ansicht unter 'Einstellungen' beliebig ändern.",
+    "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You can change the method and values for an individual payment before you send it.",
     "views.Settings.Payments.defaultDonationPercentage": "Standard-Prozentsatz für Spende",
     "views.Settings.Invoices.title": "Rechnungseinstellungen",
     "views.Settings.Invoices.showCustomPreimageField": "Feld für benutzerdefiniertes Pre-Image anzeigen",
