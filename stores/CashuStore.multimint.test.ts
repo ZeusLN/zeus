@@ -941,6 +941,24 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         ]);
     });
 
+    it('records a zero fee reserve from meltPartial over the planner fee', async () => {
+        const store = await plannedStore();
+        cdk.meltPartial.mockImplementation(
+            async (mintUrl: string, _i: string, msat: number) => ({
+                ...paid(msat / 1000, 0),
+                quote_id: `paid-${mintUrl}`,
+                fee_reserve: 0
+            })
+        );
+
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+
+        // The planner quoted fee 1, so a falsy fallback would record 1
+        expect(
+            store.payments!.map((p) => p.meltResponse.quote!.fee_reserve)
+        ).toEqual([0, 0]);
+    });
+
     it("keeps the planner's fee reserve and expiry when the bridge omits them", async () => {
         const store = await plannedStore();
         cdk.meltPartial.mockImplementation(
