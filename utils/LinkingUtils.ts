@@ -66,8 +66,12 @@ class LinkingUtils {
 
             if (url) {
                 // After an in-app restart on iOS this is still the URL that
-                // launched the process, already handled by the previous JS
-                // runtime and possibly from before a data wipe
+                // launched the process, possibly from before a data wipe.
+                // It is skipped even if the previous JS runtime restarted
+                // before handling it (channel migration lock, a restart
+                // from Settings after a failed connection, Lockscreen
+                // wipes). Android drops it the same way, since
+                // ProcessPhoenix relaunches without the URL
                 if (
                     url !== this.lastHandledUrl &&
                     !(await startedByInAppRestart())
