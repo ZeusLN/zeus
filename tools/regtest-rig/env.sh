@@ -50,7 +50,8 @@ unset -f p
 # default on macOS.
 : "${ANDROID_HOME:=${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
 
-STATE="$RIG_DIR/state/$RIG_NAME"
+# RIG_STATE overrides the state directory (rig.test.js uses a temp dir)
+STATE="${RIG_STATE:-$RIG_DIR/state/$RIG_NAME}"
 mkdir -p "$STATE/logs" "$STATE/run"
 
 ADB="$ANDROID_HOME/platform-tools/adb"

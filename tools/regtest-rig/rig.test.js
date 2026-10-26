@@ -423,3 +423,127 @@ describe('regtest rig: stub LSP wrapped-invoice amount', () => {
         ).toEqual({ valid: false, error: 'amount_mismatch' });
     });
 });
+
+describe('regtest rig: bin/up against a fake docker', () => {
+    // each bin/up run takes about a second
+    jest.setTimeout(30000);
+    const os = require('os');
+    const hasTools = ['jq', 'shasum', 'xxd'].every((t) => {
+        try {
+            execFileSync('sh', ['-c', `command -v ${t}`]);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    });
+    const maybe = hasTools ? it : it.skip;
+
+    let dir;
+    beforeEach(() => {
+        dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rig-up-'));
+        fs.mkdirSync(path.join(dir, 'state/tls/alice'), { recursive: true });
+        // present so bin/up skips bin/ca
+        fs.writeFileSync(path.join(dir, 'state/tls/alice/tls.cert'), '');
+        fs.writeFileSync(path.join(dir, 'rig.env'), '');
+    });
+    afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+    // A funded stack: no funding needed, bob's channels as given
+    const up = (channels, env = {}) => {
+        const statePath = path.join(dir, 'docker.json');
+        if (channels) {
+            fs.writeFileSync(
+                statePath,
+                JSON.stringify({
+                    blocks: 200,
+                    utxos: { alice: 2, bob: 4, carol: 2 },
+                    active: { bob: channels.active },
+                    pending: { bob: channels.pending }
+                })
+            );
+        }
+        const logPath = path.join(dir, 'docker.log');
+        fs.writeFileSync(logPath, '');
+        execFileSync('bash', [path.join(RIG, 'bin/up')], {
+            env: {
+                ...process.env,
+                PATH: `${path.join(RIG, 'test-fixtures')}:${process.env.PATH}`,
+                RIG_ENV: path.join(dir, 'rig.env'),
+                RIG_STATE: path.join(dir, 'state'),
+                RIG_NAME: 'zrigtest',
+                PROFILES: '',
+                FAKE_DOCKER_STATE: statePath,
+                FAKE_DOCKER_LOG: logPath,
+                ...env
+            },
+            stdio: 'pipe'
+        });
+        return fs
+            .readFileSync(logPath, 'utf8')
+            .trim()
+            .split('\n')
+            .map((l) => JSON.parse(l));
+    };
+    const BOTH_ACTIVE = { active: ['alicepk', 'carolpk'], pending: [] };
+    const has = (calls, ...parts) =>
+        calls.some((c) => parts.every((p) => c.includes(p)));
+    const mined = (calls) => has(calls, 'generatetoaddress');
+    const opened = (calls, pk) =>
+        calls.some((c) => c.includes('openchannel') && c.includes(pk));
+    const mintRestarted = (calls) => has(calls, 'restart', 'mint');
+    const mintWaited = (calls) =>
+        calls.some(
+            (c) =>
+                c[0] === 'compose' &&
+                c.includes('--wait') &&
+                c.at(-1) === 'mint'
+        );
+
+    maybe('mines for a channel a previous run left pending', () => {
+        const calls = up({ active: ['carolpk'], pending: ['alicepk'] });
+        expect(opened(calls, 'alicepk')).toBe(false);
+        expect(opened(calls, 'carolpk')).toBe(false);
+        expect(mined(calls)).toBe(true);
+    });
+
+    maybe('opens only the missing channel next to a pending one', () => {
+        const calls = up({ active: [], pending: ['alicepk'] });
+        expect(opened(calls, 'alicepk')).toBe(false);
+        expect(opened(calls, 'carolpk')).toBe(true);
+        expect(mined(calls)).toBe(true);
+    });
+
+    maybe('does not mine when both channels are active', () => {
+        const calls = up(BOTH_ACTIVE);
+        expect(mined(calls)).toBe(false);
+        expect(calls.some((c) => c.includes('openchannel'))).toBe(false);
+    });
+
+    maybe('restarts the mint only when its config changed', () => {
+        const cashu = { PROFILES: 'cashu', MINT_MAX_DELAY: '3' };
+        // first run records the config the new container started with
+        let calls = up(BOTH_ACTIVE, cashu);
+        expect(mintRestarted(calls)).toBe(false);
+
+        calls = up(null, cashu);
+        expect(mintRestarted(calls)).toBe(false);
+
+        calls = up(null, { ...cashu, MINT_MAX_DELAY: '9' });
+        expect(mintRestarted(calls)).toBe(true);
+        expect(mintWaited(calls)).toBe(true);
+
+        calls = up(null, { ...cashu, MINT_MAX_DELAY: '9' });
+        expect(mintRestarted(calls)).toBe(false);
+    });
+
+    maybe('a run without cashu does not hide a mint config change', () => {
+        const cashu = { PROFILES: 'cashu', MINT_MAX_DELAY: '3' };
+        up(BOTH_ACTIVE, cashu);
+
+        let calls = up(null, { PROFILES: '', MINT_MAX_DELAY: '9' });
+        expect(mintRestarted(calls)).toBe(false);
+
+        calls = up(null, { ...cashu, MINT_MAX_DELAY: '9' });
+        expect(mintRestarted(calls)).toBe(true);
+    });
+});

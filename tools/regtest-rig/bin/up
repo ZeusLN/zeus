@@ -23,7 +23,6 @@ if [ "${1:-}" = "--profiles" ]; then PROFILES="$2"; export PROFILES; fi
 [ -f "$STATE/tls/alice/tls.cert" ] || "$RIG_DIR/bin/ca"
 
 mkdir -p "$STATE/mint"
-mint_cfg_old=$(shasum "$STATE/mint/config.toml" 2>/dev/null | cut -d' ' -f1 || true)
 sed -e "s/@MINT_PORT@/$MINT_PORT/g" -e "s/@RIG_NAME@/$RIG_NAME/g" \
     -e "s/@MIN@/$MINT_MIN_DELAY/g" -e "s/@MAX@/$MINT_MAX_DELAY/g" \
     "$RIG_DIR/templates/mint-config.toml" >"$STATE/mint/config.toml"
@@ -32,14 +31,20 @@ log "compose up (profiles: ${PROFILES:-none})"
 # shellcheck disable=SC2046
 compose $(profile_flags) up -d --wait --wait-timeout 180
 # The mint applies its config only on start, and compose does not recreate
-# a container when a bind-mounted file changes
-mint_cfg_new=$(shasum "$STATE/mint/config.toml" | cut -d' ' -f1)
-if has_profile cashu && [ -n "$mint_cfg_old" ] && [ "$mint_cfg_old" != "$mint_cfg_new" ]; then
-    log "mint config changed, restarting the mint"
-    # shellcheck disable=SC2046
-    compose $(profile_flags) restart mint >/dev/null
-    # shellcheck disable=SC2046
-    compose $(profile_flags) up -d --wait --wait-timeout 180 mint
+# a container when a bind-mounted file changes. mint/applied.sha is the
+# config the running mint started with; it only changes when the mint
+# (re)starts here, so a run without cashu cannot hide a config change.
+if has_profile cashu; then
+    mint_cfg=$(shasum "$STATE/mint/config.toml" | cut -d' ' -f1)
+    mint_applied=$(cat "$STATE/mint/applied.sha" 2>/dev/null || true)
+    if [ -n "$mint_applied" ] && [ "$mint_applied" != "$mint_cfg" ]; then
+        log "mint config changed, restarting the mint"
+        # shellcheck disable=SC2046
+        compose $(profile_flags) restart mint >/dev/null
+        # shellcheck disable=SC2046
+        compose $(profile_flags) up -d --wait --wait-timeout 180 mint
+    fi
+    echo "$mint_cfg" >"$STATE/mint/applied.sha"
 fi
 
 # bitcoind wallet

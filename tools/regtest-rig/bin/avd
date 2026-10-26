@@ -9,7 +9,8 @@
 #                                  /data/misc/user/0/cacerts-added/<hash>.0
 #        bin/avd stop              adb emu kill, then the PID
 #        bin/avd delete            stop + avdmanager delete avd, only for an AVD
-#                                  bin/avd create made (state/avd-created)
+#                                  bin/avd create made (marker zrig-created
+#                                  in the AVD directory)
 #        bin/avd adb-kill          stop the private adb server
 #        bin/avd status
 #
@@ -23,17 +24,19 @@ set -euo pipefail
 . "$RIG_DIR/lib/common.sh"
 usage_if_help "$@"
 
+AVD_DIR="$HOME/.android/avd/$AVD_NAME.avd"
 booted() { [ "$(adb_ shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; }
 
 case "${1:-}" in
     create)
         if "$EMULATOR" -list-avds | grep -qx "$AVD_NAME"; then log "AVD $AVD_NAME exists"; exit 0; fi
         echo no | "$AVDMANAGER" create avd -n "$AVD_NAME" -k "$AVD_IMAGE" -d "$AVD_DEVICE" >/dev/null
-        cfg="$HOME/.android/avd/$AVD_NAME.avd/config.ini"
+        cfg="$AVD_DIR/config.ini"
         # keyboard on, more RAM, no snapshot quickboot
         { echo "hw.keyboard=yes"; echo "hw.ramSize=3072"; echo "fastboot.forceColdBoot=yes"; } >>"$cfg"
-        # delete only removes AVDs the rig created
-        echo "$AVD_NAME" >"$STATE/avd-created"
+        # delete only removes AVDs the rig created. The marker lives in the
+        # AVD directory so it outlasts state/ and goes away with the AVD.
+        echo "$RIG_NAME" >"$AVD_DIR/zrig-created"
         log "AVD $AVD_NAME created ($AVD_IMAGE)" ;;
     boot)
         if proc_running emulator && booted; then log "emulator already booted ($ANDROID_SERIAL)"; exit 0; fi
@@ -70,13 +73,12 @@ case "${1:-}" in
         stop_proc emulator ;;
     delete)
         "$0" stop
-        if [ "$(cat "$STATE/avd-created" 2>/dev/null)" != "$AVD_NAME" ]; then
+        if [ ! -f "$AVD_DIR/zrig-created" ]; then
             log "AVD $AVD_NAME was not created by bin/avd create; kept"
             exit 0
         fi
         "$AVDMANAGER" delete avd -n "$AVD_NAME" >/dev/null 2>&1 || true
         rm -rf "$HOME/.android/avd/$AVD_NAME.avd" "$HOME/.android/avd/$AVD_NAME.ini"
-        rm -f "$STATE/avd-created"
         log "AVD $AVD_NAME deleted" ;;
     adb-kill) "$ADB" kill-server >/dev/null 2>&1 || true; log "adb server :$ADB_SERVER_PORT stopped" ;;
     status)

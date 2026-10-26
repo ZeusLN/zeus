@@ -69,7 +69,8 @@ lib/lnurlw.js       LNURL-withdraw server
 lib/nwc.js          NWCClient from @getalby/sdk
 bin/                up down ca avd app metro cdp zeus lsp lnurlw nwc
                     pay mine decode ln shot teardown
-rig.test.js         Jest contract test (app names the rig uses, helpers)
+rig.test.js         Jest contract test (app names the rig uses, helpers,
+                    bin/up against test-fixtures/docker, a fake docker)
 state/<RIG_NAME>/   tls/ macaroons/ pubkeys.json urls.json nwc/ logs/
                     run/ (PID files) screenshots/
 ```

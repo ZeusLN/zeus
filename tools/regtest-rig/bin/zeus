@@ -92,6 +92,7 @@ case "$cmd" in
             const c = Z.S().cashuStore;
             await c.addMint($(js "$url"));
             return { mints: c.mintUrls, selected: c.selectedMintUrl, error: c.error_msg || null };"
+        log "mint added; restarting the app (fails if the selected wallet does not connect)"
         # Cashu wallets are initialized at startup; without a restart melts
         # are spent at the mint but never recorded in cashuStore.payments
         "$RIG_DIR/bin/app" restart --node ;;
