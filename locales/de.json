@@ -1798,6 +1798,7 @@
     "stores.InvoicesStore.zeroAmountLndhub": "Die LNDHub-Instanz unterstützt möglicherweise keine Nullbetragsrechnungen",
     "stores.InvoicesStore.errorRedeemingWithdrawalRequest": "Fehler beim Einlösen der Abhebungsanfrage",
     "stores.InvoicesStore.lspFeeAboveMaxWithdrawable": "The withdrawal amount doesn't cover the LSP's {fee} sats setup fee. Adding the fee on top would withdraw {total} sats, more than the {max} sats this service allows.",
+    "stores.TransactionsStore.sendOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this transaction was sent. Check your on-chain activity before sending again.",
     "stores.SettingsStore.btcPayImplementationSupport": "Sorry, aktuell unterstützen wir nur BTCPay-Instanzen mit LND.",
     "stores.SettingsStore.btcPayFetchConfigError": "Fehler beim Abrufen der BTCPay-Konfiguration",
     "stores.SettingsStore.btcPayFetchConfirmMessage": "ZEUS kontaktiert {host}, um diese BTCPay-Node-Konfiguration abzurufen. Fahre nur fort, wenn du diesem QR-Code vertraust.",
