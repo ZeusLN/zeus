@@ -12,7 +12,7 @@ const log = Log('utils/LndMobileUtils.ts');
 
 import Base64Utils from './Base64Utils';
 import { localeString } from './LocaleUtils';
-import { isValidNodeDir } from './NodeDirUtils';
+import { assertValidNodeDir, isValidNodeDir } from './NodeDirUtils';
 import { retry, sleep } from './SleepUtils';
 import { importChannelDb } from './ChannelMigrationUtils';
 
@@ -348,6 +348,9 @@ export async function deleteLndWallet(lndDir: string): Promise<boolean> {
 }
 
 export async function expressGraphSync(): Promise<{ resetFailed: boolean }> {
+    const lndDir = settingsStore?.lndDir || 'lnd';
+    assertValidNodeDir(lndDir);
+
     return await new Promise(async (resolve) => {
         let resetFailed = false;
         syncStore.setExpressGraphSyncStatus(true);
@@ -373,7 +376,6 @@ export async function expressGraphSync(): Promise<{ resetFailed: boolean }> {
             if (settingsStore?.isSqlite) {
                 log.d('Resetting native SQL graph database');
                 try {
-                    const lndDir = settingsStore?.lndDir || 'lnd';
                     const network =
                         settingsStore?.embeddedLndNetwork === 'Mainnet'
                             ? 'mainnet'
@@ -400,7 +402,7 @@ export async function expressGraphSync(): Promise<{ resetFailed: boolean }> {
                     ? settingsStore?.settings?.customSpeedloader
                     : settingsStore?.settings?.speedloader ||
                           DEFAULT_SPEEDLOADER,
-                settingsStore?.lndDir || 'lnd',
+                lndDir,
                 settingsStore?.isSqlite || false
             );
 
@@ -430,6 +432,10 @@ export async function initializeLnd({
     compactDb?: boolean;
     isSqlite?: boolean;
 }) {
+    // The native config, graph and log helpers join lndDir onto app storage
+    // paths without checking it, so refuse a stored value that could leave
+    // the wallet's own directory.
+    assertValidNodeDir(lndDir);
     const { initialize } = lndMobile.index;
     await writeLndConfig({ lndDir, isTestnet, rescan, compactDb, isSqlite });
 
@@ -604,6 +610,7 @@ export async function startLnd({
     isTestnet: boolean;
     isRecovery?: boolean;
 }) {
+    assertValidNodeDir(lndDir);
     const { startLnd, decodeState, subscribeState } = lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
 
@@ -1264,6 +1271,7 @@ export async function createLndWallet({
     setStatus?: (message: string | null) => void;
     isSqlite?: boolean;
 }) {
+    assertValidNodeDir(lndDir);
     const {
         initialize,
         createIOSApplicationSupportAndLndDirectories,

@@ -74,7 +74,10 @@ import {
     checkLndStreamErrorResponse,
     createLndWallet,
     deleteLndWallet,
-    LndMobileEventEmitter
+    expressGraphSync,
+    initializeLnd,
+    LndMobileEventEmitter,
+    startLnd
 } from './LndMobileUtils';
 
 const mockRandomBytes = jest.fn<Uint8Array, [number]>();
@@ -287,4 +290,95 @@ describe('deleteLndWallet', () => {
 
         await expect(deleteLndWallet('lnd')).resolves.toBe(false);
     });
+});
+
+describe('embedded LND start with an invalid lndDir', () => {
+    const invalidDirs = ['', '.', '..', '../victim', 'x/..', 'lnd\n'];
+    const repairGraphDb = jest.fn();
+    const resetGraphDb = jest.fn();
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        repairGraphDb.mockReset().mockResolvedValue('noop');
+        resetGraphDb.mockReset().mockResolvedValue('noop');
+        (NativeModules as any).LndMobileTools = {
+            repairGraphDb,
+            resetGraphDb
+        };
+        (settingsStore as any).embeddedLndStarted = false;
+    });
+
+    afterEach(() => {
+        delete (NativeModules as any).LndMobileTools;
+        delete (settingsStore as any).lndDir;
+        delete (settingsStore as any).isSqlite;
+        delete (settingsStore.settings as any).resetExpressGraphSyncOnStartup;
+    });
+
+    it('initializeLnd writes the config and repairs the graph for a valid dir', async () => {
+        await initializeLnd({ lndDir: 'lnd', isSqlite: true });
+
+        expect(lndMobile.index.writeConfig).toHaveBeenCalledWith(
+            expect.objectContaining({ lndDir: 'lnd' })
+        );
+        expect(repairGraphDb).toHaveBeenCalledWith('lnd', 'mainnet');
+        expect(lndMobile.index.initialize).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(invalidDirs)(
+        'initializeLnd refuses %j before touching native files',
+        async (lndDir) => {
+            await expect(
+                initializeLnd({ lndDir, isSqlite: true })
+            ).rejects.toThrow('Invalid node directory');
+
+            expect(lndMobile.index.writeConfig).not.toHaveBeenCalled();
+            expect(repairGraphDb).not.toHaveBeenCalled();
+            expect(lndMobile.index.initialize).not.toHaveBeenCalled();
+        }
+    );
+
+    it.each(invalidDirs)(
+        'startLnd refuses %j without starting LND',
+        async (lndDir) => {
+            await expect(
+                startLnd({
+                    lndDir,
+                    walletPassword: 'password',
+                    isTorEnabled: false,
+                    isTestnet: false
+                })
+            ).rejects.toThrow('Invalid node directory');
+
+            expect(lndMobile.index.startLnd).not.toHaveBeenCalled();
+            expect(settingsStore.embeddedLndStarted).toBe(false);
+        }
+    );
+
+    it.each(invalidDirs)(
+        'createLndWallet refuses %j before writing the config',
+        async (lndDir) => {
+            await expect(createLndWallet({ lndDir })).rejects.toThrow(
+                'Invalid node directory'
+            );
+
+            expect(lndMobile.index.writeConfig).not.toHaveBeenCalled();
+            expect(lndMobile.index.startLnd).not.toHaveBeenCalled();
+        }
+    );
+
+    it.each(invalidDirs.filter((lndDir) => lndDir !== ''))(
+        'expressGraphSync refuses a stored lndDir of %j before resetting the graph',
+        async (lndDir) => {
+            Object.assign(settingsStore, { lndDir, isSqlite: true });
+            (settingsStore.settings as any).resetExpressGraphSyncOnStartup =
+                true;
+
+            await expect(expressGraphSync()).rejects.toThrow(
+                'Invalid node directory'
+            );
+
+            expect(resetGraphDb).not.toHaveBeenCalled();
+        }
+    );
 });
