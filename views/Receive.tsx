@@ -77,7 +77,8 @@ import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { isNfcWithdraw, scanNfcTag } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { numberWithCommas, SATS_PER_BTC } from '../utils/UnitsUtils';
+import { numberWithCommas, roundUpToWholeSats } from '../utils/UnitsUtils';
+import { buildOnChainUri, buildUnifiedUri } from '../utils/Bip21Utils';
 import { getAmountFromSats } from '../utils/AmountUtils';
 import {
     ExpirationPreset,
@@ -1366,19 +1367,13 @@ export default class Receive extends React.Component<
             lnInvoiceCopyValue,
             btcAddress,
             btcAddressCopyValue;
-        // if format is case insensitive, format as all caps to save QR space, otherwise present in original format
-        const onChainFormatted =
-            address && address === address.toLowerCase()
-                ? address.toUpperCase()
-                : address;
         if (haveUnifiedInvoice) {
-            unifiedInvoice = `bitcoin:${onChainFormatted}?${`lightning=${payment_request.toUpperCase()}`}${
-                Number(satAmount) > 0
-                    ? `&amount=${new BigNumber(satAmount)
-                          .dividedBy(SATS_PER_BTC)
-                          .toFixed()}`
-                    : ''
-            }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
+            unifiedInvoice = buildUnifiedUri({
+                address,
+                paymentRequest: payment_request,
+                satAmount,
+                memo
+            });
         }
 
         if (payment_request) {
@@ -1387,21 +1382,7 @@ export default class Receive extends React.Component<
         }
 
         if (address) {
-            btcAddress = `bitcoin:${onChainFormatted}${
-                (Number(satAmount) > 0 || memo) && '?'
-            }${
-                Number(satAmount) > 0
-                    ? `amount=${new BigNumber(satAmount)
-                          .dividedBy(SATS_PER_BTC)
-                          .toFixed()}`
-                    : ''
-            }${
-                memo
-                    ? Number(satAmount) > 0
-                        ? `&message=${memo.replace(/ /g, '%20')}`
-                        : `message=${memo.replace(/ /g, '%20')}`
-                    : ''
-            }`;
+            btcAddress = buildOnChainUri({ address, satAmount, memo });
 
             if (Number(satAmount) > 0 || memo) {
                 btcAddressCopyValue = btcAddress;
@@ -2033,9 +2014,11 @@ export default class Receive extends React.Component<
                                                     }
                                                     nfcSupported={nfcSupported}
                                                     satAmount={
-                                                        satAmount === '0'
-                                                            ? undefined
-                                                            : satAmount
+                                                        Number(satAmount) > 0
+                                                            ? roundUpToWholeSats(
+                                                                  satAmount
+                                                              )
+                                                            : undefined
                                                     }
                                                     displayAmount
                                                 />
