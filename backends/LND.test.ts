@@ -448,10 +448,17 @@ describe('LND.subscribeCustomMessages', () => {
     let sockets: any[];
 
     class FakeWebSocket {
+        listeners: { [event: string]: Array<(e: any) => void> } = {};
         constructor() {
             sockets.push(this);
         }
-        addEventListener() {}
+        addEventListener(event: string, fn: (e: any) => void) {
+            (this.listeners[event] ||= []).push(fn);
+        }
+        send() {}
+        emit(event: string, e: any = {}) {
+            (this.listeners[event] || []).forEach((fn) => fn(e));
+        }
     }
 
     beforeEach(() => {
@@ -462,10 +469,12 @@ describe('LND.subscribeCustomMessages', () => {
             port: 8080,
             macaroonHex: 'mac'
         });
+        jest.spyOn(console, 'log').mockImplementation(() => {});
     });
 
     afterEach(() => {
         (global as any).WebSocket = realWebSocket;
+        jest.mocked(console.log).mockRestore();
     });
 
     // LSPStore keeps this socket to avoid opening one per fetch and to
@@ -474,6 +483,44 @@ describe('LND.subscribeCustomMessages', () => {
         const ws = new LND().subscribeCustomMessages(jest.fn(), jest.fn());
         expect(sockets).toHaveLength(1);
         expect(ws).toBe(sockets[0]);
+    });
+
+    // LSPStore's error handler relies on these shapes: a string for a
+    // socket error, the stream's error object for a server error
+    describe('error callback', () => {
+        const certWarning = localeString('backends.LND.wsReq.warning');
+
+        it('passes the certificate warning with the socket error message', () => {
+            const onError = jest.fn();
+            new LND().subscribeCustomMessages(jest.fn(), onError);
+
+            sockets[0].emit('error', { message: 'SSL handshake failed' });
+
+            expect(onError).toHaveBeenCalledWith(
+                `${certWarning} (SSL handshake failed)`
+            );
+        });
+
+        it('passes the certificate warning alone when the socket error has no message', () => {
+            const onError = jest.fn();
+            new LND().subscribeCustomMessages(jest.fn(), onError);
+
+            sockets[0].emit('error', {});
+
+            expect(onError).toHaveBeenCalledWith(certWarning);
+        });
+
+        it('passes the error object from a stream message', () => {
+            const onResponse = jest.fn();
+            const onError = jest.fn();
+            new LND().subscribeCustomMessages(onResponse, onError);
+            const error = { code: 2, message: 'permission denied' };
+
+            sockets[0].emit('message', { data: JSON.stringify({ error }) });
+
+            expect(onError).toHaveBeenCalledWith(error);
+            expect(onResponse).not.toHaveBeenCalled();
+        });
     });
 });
 

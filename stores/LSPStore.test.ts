@@ -743,18 +743,21 @@ describe('LSPStore.initFlowLSP', () => {
         );
         const error = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-        store.initFlowLSP();
-        await settle();
+        try {
+            store.initFlowLSP();
+            await settle();
 
-        expect(error).toHaveBeenCalledWith(
-            'Failed to subscribe to custom messages:',
-            'sub failed'
-        );
-        expect(error).toHaveBeenCalledWith(
-            'Failed to start channel acceptor:',
-            'acceptor failed'
-        );
-        error.mockRestore();
+            expect(error).toHaveBeenCalledWith(
+                'Failed to subscribe to custom messages:',
+                'sub failed'
+            );
+            expect(error).toHaveBeenCalledWith(
+                'Failed to start channel acceptor:',
+                'acceptor failed'
+            );
+        } finally {
+            error.mockRestore();
+        }
     });
 
     it('skips LSP info when the LSP is turned off', async () => {
@@ -1044,6 +1047,41 @@ describe('LSPStore remote LND sockets', () => {
         expect(BackendUtils.subscribeCustomMessages).toHaveBeenCalledTimes(2);
     });
 
+    it.each([
+        [
+            'a socket error (string)',
+            'backends.LND.wsReq.warning (SSL handshake failed)',
+            'backends.LND.wsReq.warning (SSL handshake failed)'
+        ],
+        [
+            'a stream error object',
+            { code: 2, message: 'permission denied' },
+            'permission denied'
+        ]
+    ])(
+        'logs the reason for %s from the custom message subscription',
+        async (_label, error, expected) => {
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            const store = makeStore('lnd');
+
+            try {
+                await store.subscribeCustomMessages();
+                const onError = jest.mocked(
+                    BackendUtils.subscribeCustomMessages
+                ).mock.calls[0][1];
+                onError(error);
+
+                expect(consoleError).toHaveBeenCalledWith(
+                    `sub custom messages error: ${expected}`
+                );
+            } finally {
+                consoleError.mockRestore();
+            }
+        }
+    );
+
     it('closes both sockets on reset and opens new ones on the next connect', async () => {
         const store = makeStore('lnd');
         await store.initChannelAcceptor();
@@ -1120,6 +1158,35 @@ describe('LSPStore embedded LND listeners', () => {
 
         await store.subscribeCustomMessages();
         expect(store.customMessagesSubscriber).toBeTruthy();
+    });
+
+    it('logs a custom message that fails to decode and skips empty events', async () => {
+        jest.clearAllMocks();
+        const { index } = LndMobileInjection as any;
+        index.decodeCustomMessage.mockImplementationOnce(() => {
+            throw new Error('bad message');
+        });
+        const consoleError = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+        const store = makeStore('embedded-lnd');
+
+        try {
+            await store.subscribeCustomMessages();
+            const onEvent = jest.mocked(LndMobileEventEmitter.addListener).mock
+                .calls[0][1];
+
+            onEvent({});
+            expect(index.decodeCustomMessage).not.toHaveBeenCalled();
+
+            onEvent({ data: 'payload' });
+            expect(index.decodeCustomMessage).toHaveBeenCalledWith('payload');
+            expect(consoleError).toHaveBeenCalledWith(
+                'sub custom messages error: bad message'
+            );
+        } finally {
+            consoleError.mockRestore();
+        }
     });
 });
 
