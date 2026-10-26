@@ -144,7 +144,7 @@ class MainActivity : ReactActivity() {
     companion object {
         var TAG = "MainActivity"
         var started = false
-        var createdInProcess = false
+        private var createdInProcess = false
         var INTENT_EXPORTCHANBACKUP = 101
         var INTENT_EXPORTCHANBACKUPFILE = 102
         var INTENT_EXPORTCHANBACKUPFILETESTNET = 202
