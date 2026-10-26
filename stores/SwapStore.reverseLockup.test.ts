@@ -146,6 +146,20 @@ const newStore = () =>
         { settings: {}, implementation: 'lnd' } as any
     );
 
+// members a swap creation response is not expected to have: "model" and
+// "qrCodeValue" are names of Swap getters, which new Swap() can't assign,
+// and "imported" marks a rescued swap
+const EXTRA_MEMBERS = {
+    model: 'not a swap',
+    qrCodeValue: 'lnbc-other-invoice',
+    imported: true
+};
+const expectNoExtraMembers = (swap: any) => {
+    for (const member of Object.keys(EXTRA_MEMBERS)) {
+        expect(Object.keys(swap)).not.toContain(member);
+    }
+};
+
 beforeEach(() => {
     for (const key of Object.keys(storageBacking)) delete storageBacking[key];
     jest.clearAllMocks();
@@ -253,6 +267,48 @@ describe('SwapStore.createReverseSwap response verification', () => {
             );
             expect(store.loading).toBe(false);
             expect(stored).toHaveLength(0);
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        }
+    );
+
+    it('stores and opens only the reverse swap fields of the response', async () => {
+        const { store, navigation, stored } = await create(EXTRA_MEMBERS);
+
+        expect(store.apiError).toBe('');
+        expect(stored).toHaveLength(1);
+        const { swapData } = navigation.navigate.mock.calls[0][1];
+        for (const swap of [swapData, stored[0]]) {
+            expectNoExtraMembers(swap);
+            const model = new Swap(swap);
+            expect(model.qrCodeValue).toBe('lnbc-provider-invoice');
+            expect(model.claimDestinationAddress).toBe('bc1qdestination');
+        }
+    });
+
+    it.each([null, []])(
+        'aborts before saving or paying when the response body is %j',
+        async (body) => {
+            storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+            fetchMock.mockResolvedValueOnce({ data: JSON.stringify(body) });
+            fetchMock.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                text: () => String(TIMEOUT - 100)
+            });
+            const store = newStore();
+            store.reverseInfo = REVERSE_INFO;
+            const navigation = { navigate: jest.fn() };
+            await store.createReverseSwap(
+                'bc1qdestination',
+                INVOICE_AMOUNT,
+                '2',
+                navigation
+            );
+
+            expect(store.apiError).toBe(
+                'views.Swaps.invalidReverseSwapResponse'
+            );
+            expect(store.loading).toBe(false);
+            expect(storageBacking[REVERSE_SWAPS_KEY]).toBeUndefined();
             expect(navigation.navigate).not.toHaveBeenCalled();
         }
     );

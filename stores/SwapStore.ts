@@ -120,6 +120,32 @@ const INVALID_PAIR_HASH_ERROR = 'invalid pair hash';
 // The lockup minimum allows for that one sat.
 const REVERSE_LOCKUP_ROUNDING_SLACK = 1;
 
+// The fields a new swap takes from the host's /swap/submarine and
+// /swap/reverse responses. Anything else would be stored with the swap and
+// copied onto the Swap model, where a member named like one of its getters
+// makes new Swap() throw. 'error' is kept so a failed request is reported.
+const SUBMARINE_SWAP_FIELDS = [
+    'error',
+    'id',
+    'bip21',
+    'address',
+    'swapTree',
+    'claimPublicKey',
+    'timeoutBlockHeight',
+    'acceptZeroConf',
+    'expectedAmount'
+];
+const REVERSE_SWAP_FIELDS = [
+    'error',
+    'id',
+    'invoice',
+    'swapTree',
+    'lockupAddress',
+    'refundPublicKey',
+    'timeoutBlockHeight',
+    'onchainAmount'
+];
+
 // The fields a rescued swap takes from the host's /swap/restore response,
 // at the top level and inside claimDetails/refundDetails
 const RESCUE_SWAP_FIELDS = ['id', 'status', 'createdAt'];
@@ -594,7 +620,10 @@ export default class SwapStore {
                 })
             );
 
-            const responseData = JSON.parse(response.data);
+            const responseData = pickFields(
+                JSON.parse(response.data),
+                SUBMARINE_SWAP_FIELDS
+            );
             console.log('Parsed Response Data:', responseData);
 
             // Check for errors in the response
@@ -837,7 +866,10 @@ export default class SwapStore {
                 data
             );
 
-            const responseData = JSON.parse(response.data);
+            const responseData = pickFields(
+                JSON.parse(response.data),
+                REVERSE_SWAP_FIELDS
+            );
             console.log('Created reverse swap:', responseData);
 
             // The provider's fees changed since the quote: fetch the new
