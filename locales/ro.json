@@ -1287,7 +1287,7 @@
     "views.Settings.Payments.slideToPayThreshold": "Glisați pentru a plăti pragul",
     "views.Settings.Payments.timeoutSeconds": "Expirare (secunde)",
     "views.Settings.Payments.preferredMempoolRate": "Rata mempool preferată",
-    "views.Settings.Payments.feeLimitMethodExplainer": "Metoda limită a taxelor va fi fixată pentru a fi fixată pentru sume de până la 1000 sats și procent pentru sume mai mari de 1000 sats. Cu toate acestea, veți putea modifica ce metodă și valori să utilizați, în secțiunea Setări din vizualizarea cererii de plată.",
+    "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You can change the method and values for an individual payment before you send it.",
     "views.Settings.Payments.defaultDonationPercentage": "Procentul implicit de donație",
     "views.Settings.Invoices.title": "Setări factură",
     "views.Settings.Invoices.showCustomPreimageField": "Afișați câmpul preimage personalizat",
