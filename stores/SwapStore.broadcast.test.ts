@@ -292,7 +292,7 @@ describe('SwapStore.broadcastSwapTransaction', () => {
         });
     });
 
-    describe('on a signet node', () => {
+    describe('by node network', () => {
         beforeEach(() =>
             mockServesNetwork.mockImplementation((nodeInfo) =>
                 jest
@@ -301,7 +301,7 @@ describe('SwapStore.broadcastSwapTransaction', () => {
             )
         );
 
-        it('broadcasts to the mempool instance when the swap host is down', async () => {
+        it('uses the mempool instance on signet when the swap host is down', async () => {
             routes({
                 [MEMPOOL_TX]: respond(200, CLAIM_TXID),
                 [HOST_TX]: respond(503, 'unavailable')
