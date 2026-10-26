@@ -410,6 +410,33 @@ export function feeLimitSatsToMaxRoutingFeeMsat(
 }
 
 /**
+ * Converts a percent routing fee limit into whole satoshis for an amount.
+ *
+ * Rounds up so that a nonzero percent of a nonzero amount never becomes a
+ * fee limit of 0 sats, which backends treat as a hard cap of zero.
+ *
+ * @param maxFeePercent - Fee limit as a percent of the amount; commas are
+ * accepted as the decimal separator
+ * @param satAmount - Payment amount in satoshis
+ * @returns Fee limit in whole satoshis, or '' when the amount is missing or
+ * not above 0, or the percent is missing, not a number or negative
+ */
+export function getFeeLimitSatsFromPercent(
+    maxFeePercent: string,
+    satAmount?: string | number
+): string {
+    const percent = new BigNumber(maxFeePercent.replace(/,/g, '.'));
+    const amount = new BigNumber(satAmount ?? NaN);
+    if (!percent.isFinite() || percent.lt(0)) return '';
+    if (!amount.isFinite() || !amount.gt(0)) return '';
+    return percent
+        .div(100)
+        .times(amount)
+        .integerValue(BigNumber.ROUND_CEIL)
+        .toFixed();
+}
+
+/**
  * Converts an amount in the current display unit (sats, BTC, or fiat) to satoshis
  * @param amount - The amount to convert (as string or number)
  * @param forceUnit - Optional unit override ('sats', 'BTC', or 'fiat')

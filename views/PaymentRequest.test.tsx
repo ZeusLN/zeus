@@ -64,7 +64,7 @@ jest.mock('../utils/SleepUtils', () => ({
 }));
 
 import * as React from 'react';
-import { act, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import PaymentRequest from './PaymentRequest';
 
 const PAY = 'views.PaymentRequest.payInvoice';
@@ -106,7 +106,10 @@ const renderView = async ({
         <PaymentRequest
             ref={ref}
             {...({
-                navigation: { addListener: jest.fn(() => jest.fn()) },
+                navigation: {
+                    addListener: jest.fn(() => jest.fn()),
+                    navigate: jest.fn()
+                },
                 route: { params: {} },
                 BalanceStore,
                 SettingsStore: {
@@ -287,5 +290,42 @@ describe('PaymentRequest payment in flight', () => {
         expect(
             screen.queryByText('components.PaymentInFlightNotice.checking')
         ).not.toBeOnTheScreen();
+    });
+});
+
+describe('PaymentRequest fee limit', () => {
+    const pay = async (feeLimitSat: string) => {
+        const TransactionsStore = {
+            paymentInFlight: false,
+            sendPayment: jest.fn()
+        };
+        await renderView({
+            implementation: 'lnd',
+            payReqOverrides: { getRequestAmount: 45 },
+            TransactionsStore
+        });
+        await flush();
+
+        const [feeLimit] = screen.container.queryAll(
+            (n) => n.type === 'FeeLimit'
+        );
+        await act(async () => feeLimit.props.onFeeLimitSatChange(feeLimitSat));
+        await fireEvent.press(payButton());
+
+        expect(TransactionsStore.sendPayment).toHaveBeenCalledTimes(1);
+        return TransactionsStore.sendPayment.mock.calls[0][0];
+    };
+
+    it('pays with the default limit when the fee limit is empty', async () => {
+        // the default for amounts up to 1000 sats is the whole amount
+        expect(await pay('')).toMatchObject({ fee_limit_sat: '45' });
+    });
+
+    it('keeps an explicit 0 sat limit', async () => {
+        expect(await pay('0')).toMatchObject({ fee_limit_sat: '0' });
+    });
+
+    it('pays with the limit FeeLimit reports', async () => {
+        expect(await pay('3')).toMatchObject({ fee_limit_sat: '3' });
     });
 });
