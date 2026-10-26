@@ -1332,7 +1332,7 @@
     "views.Settings.StealthMode.vpnCountry": "Sblocca il Paese",
     "views.Settings.StealthMode.vpnServer": "Sblocca server",
     "views.Settings.StealthMode.tapCount": "Numero di tocca",
-    "views.Settings.StealthMode.unlockVPNCustom": "Seleziona {paese} > {server} per visualizzare ZEUS",
+    "views.Settings.StealthMode.unlockVPNCustom": "Seleziona {country} > {server} per visualizzare ZEUS",
     "views.Settings.StealthMode.unlockCalculatorCustom": "Tocca il pulsante = {count} volte velocemente per rivelare ZEUS",
     "views.Settings.StealthMode.unlockNotepadCustom": "Tocca rapidamente il titolo \"Blocco note\" {count} volte per rivelare ZEUS",
     "views.Settings.StealthMode.unlockQRScannerCustom": "Tocca rapidamente il testo \"QR Scanner\" {count} volte per rivelare ZEUS",
