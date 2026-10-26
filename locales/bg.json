@@ -1287,7 +1287,7 @@
     "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Timeout (секунди)",
     "views.Settings.Payments.preferredMempoolRate": "Предпочитана Mempool тарифа",
-    "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You'll be able to change which method and values to use though, under the Settings section of the Payment Request view.",
+    "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You can change the method and values for an individual payment before you send it.",
     "views.Settings.Payments.defaultDonationPercentage": "Default Donation Percentage",
     "views.Settings.Invoices.title": "Настройки на фактурите",
     "views.Settings.Invoices.showCustomPreimageField": "Show custom preimage field",
