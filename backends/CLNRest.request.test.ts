@@ -227,6 +227,42 @@ describe('CLNRest.request', () => {
             undefined
         );
     });
+
+    it('issues a fresh Tor request after a failed one', async () => {
+        mockSettingsStore.enableTor = true;
+        mockDoTorRequest
+            .mockRejectedValueOnce(new Error('tor down'))
+            .mockResolvedValueOnce({ ok: true });
+
+        await expect(cln.postRequest('/v1/getinfo')).rejects.toThrow(
+            'tor down'
+        );
+        await expect(cln.postRequest('/v1/getinfo')).resolves.toEqual({
+            ok: true
+        });
+        expect(mockDoTorRequest).toHaveBeenCalledTimes(2);
+    });
+
+    it('shares one in-flight failed Tor request, then drops it from the cache', async () => {
+        mockSettingsStore.enableTor = true;
+        let reject: (e: Error) => void = () => {};
+        mockDoTorRequest
+            .mockReturnValueOnce(new Promise((_, r) => (reject = r)))
+            .mockResolvedValueOnce({ ok: true });
+
+        const first = cln.postRequest('/v1/getinfo');
+        const second = cln.postRequest('/v1/getinfo');
+        reject(new Error('tor down'));
+
+        await expect(first).rejects.toThrow('tor down');
+        await expect(second).rejects.toThrow('tor down');
+        expect(mockDoTorRequest).toHaveBeenCalledTimes(1);
+
+        await expect(cln.postRequest('/v1/getinfo')).resolves.toEqual({
+            ok: true
+        });
+        expect(mockDoTorRequest).toHaveBeenCalledTimes(2);
+    });
 });
 
 // restReq's non-2xx branch builds a message from the JSON-RPC body
