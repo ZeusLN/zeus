@@ -24,6 +24,7 @@ const getMempoolApiUrl = (nodeInfo: {
     isMutinynet: boolean;
     isTestNet: boolean;
     isTestNet4?: boolean;
+    isSigNet?: boolean;
 }): string => {
     const privacy = settingsStore?.settings?.privacy;
     // No stored selection resolves to DEFAULT_MEMPOOL_INSTANCE. This
@@ -44,8 +45,11 @@ const getMempoolApiUrl = (nodeInfo: {
         );
         return `${host}/api`;
     }
+    // LDK Node sets isSigNet on Mutinynet too, so Mutinynet must be checked first
     if (nodeInfo.isMutinynet) return 'https://mutinynet.com/api';
-    // electrs.zeusln.com is mainnet-only; testnet3 lives at mempool.space/testnet
+    // electrs.zeusln.com is mainnet-only; signet, testnet4 and testnet3 use
+    // mempool.space
+    if (nodeInfo.isSigNet) return 'https://mempool.space/signet/api';
     if (nodeInfo.isTestNet4) return 'https://mempool.space/testnet4/api';
     if (nodeInfo.isTestNet) return 'https://mempool.space/testnet/api';
     return `https://${
@@ -57,8 +61,8 @@ const getMempoolApiUrl = (nodeInfo: {
 
 /**
  * Whether getMempoolApiUrl points at an instance for the node's network.
- * Regtest and plain signet fall through to the mainnet instance unless a
- * custom one is set, so anything sent there would go to the wrong chain.
+ * Regtest falls through to the mainnet instance unless a custom one is set,
+ * so anything sent there would go to the wrong chain.
  */
 const mempoolServesNetwork = (nodeInfo: {
     isMutinynet: boolean;
@@ -69,8 +73,7 @@ const mempoolServesNetwork = (nodeInfo: {
     const privacy = settingsStore?.settings?.privacy;
     if (privacy?.mempoolInstance === 'Custom' && privacy?.customMempoolInstance)
         return true;
-    if (nodeInfo.isMutinynet || nodeInfo.isTestNet) return true;
-    return !nodeInfo.isRegTest && !nodeInfo.isSigNet;
+    return !nodeInfo.isRegTest;
 };
 
 /**
@@ -80,6 +83,7 @@ const getMempoolInstanceHost = (nodeInfo: {
     isMutinynet: boolean;
     isTestNet: boolean;
     isTestNet4?: boolean;
+    isSigNet?: boolean;
 }): string => {
     try {
         return new URL(getMempoolApiUrl(nodeInfo)).host;
@@ -96,7 +100,7 @@ const goToBlockExplorer = (
     const { settings } = settingsStore;
     const { privacy } = settings;
     const custom = privacy && privacy.defaultBlockExplorer === 'Custom';
-    const { isMutinynet, isTestNet4 } = nodeInfoStore.nodeInfo;
+    const { isMutinynet, isSigNet, isTestNet4 } = nodeInfoStore.nodeInfo;
     const host =
         custom && privacy.customBlockExplorer
             ? privacy.customBlockExplorer
@@ -105,6 +109,8 @@ const goToBlockExplorer = (
             : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
     const network = isMutinynet
         ? ''
+        : isSigNet
+        ? 'signet/'
         : isTestNet4
         ? 'testnet4/'
         : nodeInfoStore.nodeInfo.isTestNet || testnet
