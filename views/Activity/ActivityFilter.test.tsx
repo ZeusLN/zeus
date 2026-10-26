@@ -1,6 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import renderer, { act } from 'react-test-renderer';
+import { render, screen, within } from '@testing-library/react-native';
 
 // ListItem's PadView adds a spacer after every child but the last, using
 // React.Children.count, which also counts false. Record that count.
@@ -86,39 +85,30 @@ const renderFilter = async () => {
         clearEndDateFilter: jest.fn(),
         setMemoFilter: jest.fn()
     };
-    let tree: renderer.ReactTestRenderer;
-    await act(async () => {
-        tree = renderer.create(
-            <ActivityFilter
-                navigation={{ goBack: jest.fn() } as any}
-                ActivityStore={ActivityStore as any}
-                SettingsStore={
-                    {
-                        settings: {
-                            locale: 'en',
-                            lightningAddress: { enabled: false }
-                        }
-                    } as any
-                }
-                SwapStore={{ formatStatus: (s: string) => s } as any}
-            />
-        );
-    });
-    return tree!;
+    await render(
+        <ActivityFilter
+            navigation={{ goBack: jest.fn() } as any}
+            ActivityStore={ActivityStore as any}
+            SettingsStore={
+                {
+                    settings: {
+                        locale: 'en',
+                        lightningAddress: { enabled: false }
+                    }
+                } as any
+            }
+            SwapStore={{ formatStatus: (s: string) => s } as any}
+        />
+    );
 };
 
-const rowWithLabel = (tree: renderer.ReactTestRenderer, label: string) =>
-    tree.root.find(
-        (n) =>
-            n.type === View &&
-            n.props.testID === 'list-item' &&
-            n
-                .findAllByType(Text)
-                .some(
-                    (t: renderer.ReactTestInstance) =>
-                        t.props.children === label
-                )
-    );
+const rowWithLabel = (label: string) => {
+    const rows = screen
+        .getAllByTestId('list-item')
+        .filter((row) => within(row).queryByText(label));
+    expect(rows).toHaveLength(1);
+    return rows[0];
+};
 
 describe('ActivityFilter', () => {
     it.each([
@@ -129,12 +119,12 @@ describe('ActivityFilter', () => {
         'views.ActivityFilter.maximumAmount',
         'general.sent'
     ])('renders the %s row as a label and one control group', async (label) => {
-        const tree = await renderFilter();
-        const row = rowWithLabel(tree, label);
+        await renderFilter();
+        const row = rowWithLabel(label);
         // With two children, PadView adds no trailing spacer, so every row
         // gets its right inset from paddingRight. #4878: the End Date
         // control was the last of six children and lost the inset.
-        expect(row.props.childCount).toBe(2);
-        expect(StyleSheet.flatten(row.props.style).paddingRight).toBe(16);
+        expect(row).toHaveProp('childCount', 2);
+        expect(row).toHaveStyle({ paddingRight: 16 });
     });
 });
