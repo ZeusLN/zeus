@@ -175,11 +175,9 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {`${localeString(
-                                        'general.confirmed'
-                                    )} ${localeString(
-                                        'views.Settings.Display.DefaultView.balance'
-                                    )}`}
+                                    {localeString(
+                                        'views.Sweep.confirmedBalance'
+                                    )}
                                 </Text>
                                 <Amount
                                     sats={confirmedBlockchainBalance}
@@ -196,11 +194,9 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {`${localeString(
-                                        'general.unconfirmed'
-                                    )} ${localeString(
-                                        'views.Settings.Display.DefaultView.balance'
-                                    )}`}
+                                    {localeString(
+                                        'views.Sweep.unconfirmedBalance'
+                                    )}
                                 </Text>
                                 <Amount
                                     sats={unconfirmedBlockchainBalance}

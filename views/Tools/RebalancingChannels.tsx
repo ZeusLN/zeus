@@ -244,9 +244,7 @@ const ChannelShiftAnimation: React.FC<ChannelShiftAnimationProps> = ({
                 <ChannelItem
                     title={`${localeString('general.from')}: ${
                         sourceChannel.alias ||
-                        localeString('general.unknown') +
-                            ' ' +
-                            localeString('views.Channel.title')
+                        localeString('views.RebalancingChannels.unknownChannel')
                     }`}
                     secondTitle={
                         sourceChannel.remotePubkey?.substring(0, 8) + '...'
@@ -267,9 +265,7 @@ const ChannelShiftAnimation: React.FC<ChannelShiftAnimationProps> = ({
                 <ChannelItem
                     title={`${localeString('general.to')}: ${
                         destinationChannel.alias ||
-                        localeString('general.unknown') +
-                            ' ' +
-                            localeString('views.Channel.title')
+                        localeString('views.RebalancingChannels.unknownChannel')
                     }`}
                     secondTitle={
                         destinationChannel.remotePubkey?.substring(0, 8) + '...'
