@@ -1287,7 +1287,7 @@
     "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Timeout (δευτερόλεπτα)",
     "views.Settings.Payments.preferredMempoolRate": "Προτιμώμενα τέλη Mempool",
-    "views.Settings.Payments.feeLimitMethodExplainer": "Η μέθοδος ορίου τελών είναι εξ ορισμού σταθερή για ποσά έως 1000 sats και ποσοστιαία για ποσά μεγαλύτερα από 1000 sats. Ωστόσο, μπορείτε να αλλάξετε τη μέθοδο και τις τιμές που θα χρησιμοποιηθούν, στην ενότητα Ρυθμίσεις της προβολής Αίτησης πληρωμής.",
+    "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You can change the method and values for an individual payment before you send it.",
     "views.Settings.Payments.defaultDonationPercentage": "Προεπιλεγμένο Ποσοστό Δωρεάς",
     "views.Settings.Invoices.title": "Ρυθμίσεις τιμολογίων",
     "views.Settings.Invoices.showCustomPreimageField": "Εμφάνιση προσαρμοσμένου πεδίου προεικόνισης",
