@@ -154,18 +154,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             getInfoData?.result ||
             getInfoData;
 
-        if (lspBalanceSat === 0 && info?.min_initial_lsp_balance_sat) {
-            this.setState({
-                lspBalanceSat: parseInt(info.min_initial_lsp_balance_sat)
-            });
+        const minLspBalance = parseInt(info?.min_initial_lsp_balance_sat);
+        if (lspBalanceSat === 0 && minLspBalance > 0) {
+            this.setState({ lspBalanceSat: minLspBalance });
         }
-        if (
-            clientBalanceSat === 0 &&
-            info?.min_initial_client_balance_sat > 0
-        ) {
-            this.setState({
-                clientBalanceSat: parseInt(info.min_initial_client_balance_sat)
-            });
+        const minClientBalance = parseInt(info?.min_initial_client_balance_sat);
+        if (clientBalanceSat === 0 && minClientBalance > 0) {
+            this.setState({ clientBalanceSat: minClientBalance });
         }
 
         if (channelExpiryBlocks === 'N/A' && info?.max_channel_expiry_blocks) {
@@ -658,7 +653,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                     )}
                                                                 />
                                                             )}
-                                                            {info?.min_channel_confirmations && (
+                                                            {info?.min_channel_confirmations !=
+                                                                null && (
                                                                 <KeyValue
                                                                     keyValue={localeString(
                                                                         'views.LSPS1.minChannelConfirmations'
@@ -668,7 +664,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                     }
                                                                 />
                                                             )}
-                                                            {info?.min_onchain_payment_confirmations && (
+                                                            {info?.min_onchain_payment_confirmations !=
+                                                                null && (
                                                                 <KeyValue
                                                                     keyValue={localeString(
                                                                         'views.LSPS1.minOnchainPaymentConfirmations'
@@ -700,7 +697,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                     }
                                                                 />
                                                             )}
-                                                            {info?.min_required_channel_confirmations && (
+                                                            {info?.min_required_channel_confirmations !=
+                                                                null && (
                                                                 <KeyValue
                                                                     keyValue={localeString(
                                                                         'views.LSPS1.minRequiredChannelConfirmations'
@@ -1120,7 +1118,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 autoCapitalize="none"
                                             />
 
-                                            {info?.min_onchain_payment_confirmations && (
+                                            {info?.min_onchain_payment_confirmations !=
+                                                null && (
                                                 <>
                                                     <Text
                                                         style={{

@@ -215,7 +215,7 @@ export default class LSPS1OrderResponse extends React.Component<
                                 value={payment?.min_fee_for_0conf}
                             />
                         )}
-                        {payment?.min_onchain_payment_confirmations && (
+                        {payment?.min_onchain_payment_confirmations != null && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.LSPS1.minOnchainPaymentConfirmations'
@@ -364,7 +364,8 @@ export default class LSPS1OrderResponse extends React.Component<
                                 value={payment?.onchain.min_fee_for_0conf}
                             />
                         )}
-                        {payment?.onchain.min_onchain_payment_confirmations && (
+                        {payment?.onchain.min_onchain_payment_confirmations !=
+                            null && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.LSPS1.minOnchainPaymentConfirmations'
