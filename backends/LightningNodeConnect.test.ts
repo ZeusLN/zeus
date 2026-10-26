@@ -667,3 +667,32 @@ describe('LightningNodeConnect', () => {
         });
     });
 });
+
+describe('LightningNodeConnect on-chain sends', () => {
+    // RPCs read the selected session through the lnc getter, so open a
+    // wallet the normal way and stub sendCoins on its client
+    const makeBackend = async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        lnc.lnd.lightning.sendCoins = jest.fn(async () => ({ txid: 'abc' }));
+        return backend;
+    };
+
+    it('passes the send label to lnd', async () => {
+        const backend = await makeBackend();
+        await backend.sendCoins({
+            addr: 'bc1qrecipient',
+            amount: '100000',
+            label: 'ZEUS send 0011223344556677'
+        });
+
+        expect(backend.lnc.lnd.lightning.sendCoins).toHaveBeenCalledWith(
+            expect.objectContaining({
+                addr: 'bc1qrecipient',
+                label: 'ZEUS send 0011223344556677'
+            })
+        );
+    });
+});
