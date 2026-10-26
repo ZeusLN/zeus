@@ -34,16 +34,22 @@ class MainActivity : ReactActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Android passes the intent that first started the activity when it is
-        // re-created (savedInstanceState is set) or when a finished task is
-        // reopened from the recent apps. After a process kill, a new JS
-        // runtime would handle its deep link, NFC tag or shared image again,
-        // so replace it with a launcher intent. A payload JS has not read yet
-        // is dropped.
-        if (savedInstanceState != null ||
+        // restored after the process was killed (savedInstanceState is set
+        // and MainActivity has not been created in this process yet) or when
+        // a finished task is reopened from the recent apps. The new JS runtime
+        // would handle its deep link, NFC tag or shared image again, so
+        // replace it with a launcher intent. A payload JS had not read yet is
+        // dropped. A re-creation within the process (a configuration change
+        // not listed in configChanges) keeps the intent: JS keeps its state,
+        // and the intent already holds the latest link with consumed NFC and
+        // share payloads removed.
+        val restoredInNewProcess = savedInstanceState != null && !createdInProcess
+        if (restoredInNewProcess ||
             ((intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0
         ) {
             setIntent(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER))
         }
+        createdInProcess = true
 
         super.onCreate(null)
         
@@ -138,6 +144,7 @@ class MainActivity : ReactActivity() {
     companion object {
         var TAG = "MainActivity"
         var started = false
+        var createdInProcess = false
         var INTENT_EXPORTCHANBACKUP = 101
         var INTENT_EXPORTCHANBACKUPFILE = 102
         var INTENT_EXPORTCHANBACKUPFILETESTNET = 202
