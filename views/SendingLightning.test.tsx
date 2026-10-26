@@ -45,7 +45,7 @@ jest.mock('../utils/BackendUtils', () => ({
     default: {
         isLocalWallet: () => false,
         isLNDBased: () => false,
-        supportsChannelManagement: () => false
+        supportsChannelManagement: jest.fn(() => false)
     }
 }));
 jest.mock('../utils/ContactUtils', () => ({
@@ -70,6 +70,7 @@ import {
     screen,
     waitFor
 } from '@testing-library/react-native';
+import BackendUtils from '../utils/BackendUtils';
 import { loadDonationLnurl } from '../utils/DonationUtils';
 import SendingLightning from './SendingLightning';
 
@@ -515,6 +516,93 @@ describe('SendingLightning donation', () => {
             expect(sendPaymentSilently).not.toHaveBeenCalled();
             expect(hostProps('DonationGiftIcon').payingDonation).toBe(false);
         });
+    });
+});
+
+describe('SendingLightning refreshes when the payment resolves', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (BackendUtils.supportsChannelManagement as jest.Mock).mockReturnValue(
+            true
+        );
+    });
+    afterEach(() => {
+        (BackendUtils.supportsChannelManagement as jest.Mock).mockReturnValue(
+            false
+        );
+    });
+
+    // Opens the screen while the payment is sending, then applies `result`
+    // to TransactionsStore, which runs componentDidUpdate
+    const resolveWith = async (result: Record<string, any>) => {
+        const TransactionsStore: any = {
+            loading: true,
+            error: false,
+            status: null,
+            sendPaymentSilently: jest.fn()
+        };
+        const props: any = {
+            navigation: {
+                goBack: jest.fn(),
+                popTo: jest.fn(),
+                addListener: jest.fn(() => jest.fn())
+            },
+            route: {
+                key: 'SendingLightning',
+                name: 'SendingLightning',
+                params: { enableDonations: true, donationAmount: '25' }
+            },
+            TransactionsStore,
+            BalanceStore: { getCombinedBalance: jest.fn() },
+            ChannelsStore: { getChannels: jest.fn() },
+            PaymentsStore: { getPayments: jest.fn().mockResolvedValue([]) },
+            ContactStore: { contacts: [] },
+            LnurlPayStore: {},
+            NodeInfoStore: { nodeInfo: { isMainNet: true } }
+        };
+        const { rerender } = await render(<SendingLightning {...props} />);
+
+        Object.assign(TransactionsStore, { loading: false, ...result });
+        await rerender(<SendingLightning {...props} />);
+        await act(async () => {
+            await new Promise((resolve) => setImmediate(resolve));
+        });
+
+        return props;
+    };
+
+    it('does not refresh or donate for a pending LDK keysend with a route', async () => {
+        const props = await resolveWith({
+            status: 'IN_FLIGHT',
+            payment_route: {},
+            payment_preimage: ''
+        });
+
+        expect(props.BalanceStore.getCombinedBalance).not.toHaveBeenCalled();
+        expect(props.ChannelsStore.getChannels).not.toHaveBeenCalled();
+        expect(props.PaymentsStore.getPayments).not.toHaveBeenCalled();
+        expect(loadDonationLnurl).not.toHaveBeenCalled();
+        expect(
+            props.TransactionsStore.sendPaymentSilently
+        ).not.toHaveBeenCalled();
+    });
+
+    it('refreshes and donates once for a completed payment', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue(null);
+
+        const props = await resolveWith({
+            status: 'SUCCEEDED',
+            payment_route: {},
+            payment_preimage: 'aa'.repeat(32)
+        });
+
+        expect(props.BalanceStore.getCombinedBalance).toHaveBeenCalledTimes(1);
+        expect(props.ChannelsStore.getChannels).toHaveBeenCalledTimes(1);
+        expect(props.PaymentsStore.getPayments).toHaveBeenCalledWith({
+            maxPayments: 5,
+            reversed: true
+        });
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
     });
 });
 
