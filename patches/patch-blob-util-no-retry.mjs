@@ -14,8 +14,14 @@
 // wrapped in one, because OkHttp rethrows anything else on its dispatcher
 // thread after calling onFailure, which would crash the app.
 //
-// OkHttp's own retryOnConnectionFailure is left on. It does not retry a
-// timeout once the request has been sent.
+// OkHttp's own retry is limited to GET and HEAD. With
+// retryOnConnectionFailure(true), OkHttp 4.x resends a request after an
+// IOException other than a timeout (a connection reset, "unexpected end of
+// stream") even once the request was sent, when the call used a pooled
+// connection. blob-util shares one connection pool, so a POST the server
+// received could go out again. GETs keep the retry, which hides stale
+// pooled connections; a POST on a stale connection now fails instead, and
+// the server never saw it.
 //
 // Upstream: react-native-blob-util 0.25.1 (latest at time of writing).
 //
@@ -25,6 +31,7 @@
 import fs from 'fs';
 
 export const MARKER = '// ZEUS PATCH: blob-util-no-retry';
+export const RETRY_MARKER = '// ZEUS PATCH: blob-util-no-connection-retry';
 
 const REQ_PATH =
     './node_modules/react-native-blob-util/android/src/main/java/com/ReactNativeBlobUtil/ReactNativeBlobUtilReq.java';
@@ -68,31 +75,52 @@ const PATCHED = `                    } catch (IOException e) {
                     }
                 }`;
 
+const RETRY_ORIGINAL = `            clientBuilder.followSslRedirects(options.followRedirect);
+            clientBuilder.retryOnConnectionFailure(true);`;
+
+const RETRY_PATCHED = `            clientBuilder.followSslRedirects(options.followRedirect);
+            ${RETRY_MARKER}
+            // OkHttp may resend a request it already sent after a
+            // connection failure; only allow that for idempotent methods
+            clientBuilder.retryOnConnectionFailure("GET".equals(method) || "HEAD".equals(method));`;
+
 const countOf = (content, needle) => content.split(needle).length - 1;
 
 // Pure transform, exported for tests. Returns the patched source, or the
-// input unchanged if it is already patched. Throws if the source does not
-// match what this patch was written against.
+// input unchanged if it is already patched. Each edit is skipped when its
+// marker is present, so a copy with only the interceptor edit still gets the
+// retry edit. Throws if the source does not match what this patch was
+// written against.
 export function applyBlobUtilNoRetry(content) {
-    if (content.includes(MARKER)) {
-        return content;
-    }
-
     // the upstream file has CRLF line endings
     const eol = content.includes('\r\n') ? '\r\n' : '\n';
-    const original = ORIGINAL.replace(/\n/g, eol);
+    const withEol = (text) => text.replace(/\n/g, eol);
 
-    if (countOf(content, original) !== 1) {
-        throw new Error(
-            'patch-blob-util-no-retry: the request interceptor in ' +
-                'ReactNativeBlobUtilReq.java does not match the expected ' +
-                'pattern. react-native-blob-util may have changed; verify ' +
-                'whether it still resends a failed request and update this ' +
-                'patch before building.'
-        );
+    let patched = content;
+    for (const [name, marker, original, replacement] of [
+        ['the request interceptor', MARKER, ORIGINAL, PATCHED],
+        [
+            'the retryOnConnectionFailure(true) call',
+            RETRY_MARKER,
+            RETRY_ORIGINAL,
+            RETRY_PATCHED
+        ]
+    ]) {
+        if (patched.includes(marker)) continue;
+
+        if (countOf(patched, withEol(original)) !== 1) {
+            throw new Error(
+                `patch-blob-util-no-retry: ${name} in ` +
+                    'ReactNativeBlobUtilReq.java does not match the expected ' +
+                    'pattern. react-native-blob-util may have changed; verify ' +
+                    'whether it still resends a failed request and update ' +
+                    'this patch before building.'
+            );
+        }
+        patched = patched.replace(withEol(original), withEol(replacement));
     }
 
-    return content.replace(original, PATCHED.replace(/\n/g, eol));
+    return patched;
 }
 
 export function patchBlobUtilNoRetry() {
@@ -116,5 +144,7 @@ export function patchBlobUtilNoRetry() {
     }
 
     fs.writeFileSync(REQ_PATH, patched);
-    console.log('  - Patched ReactNativeBlobUtilReq.java request interceptor');
+    console.log(
+        '  - Patched ReactNativeBlobUtilReq.java request interceptor and retry'
+    );
 }

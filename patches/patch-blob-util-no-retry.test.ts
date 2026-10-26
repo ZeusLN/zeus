@@ -110,6 +110,24 @@ describe('patch-blob-util-no-retry', () => {
         expect(other).toContain('throw new IOException(ex);');
     });
 
+    it('limits OkHttp connection failure retries to GET and HEAD', () => {
+        const root = makeTree();
+        run(root);
+        const patched = read(root);
+
+        expect(patched).not.toContain(
+            'clientBuilder.retryOnConnectionFailure(true);'
+        );
+        expect(patched).toContain(
+            'clientBuilder.retryOnConnectionFailure("GET".equals(method) || "HEAD".equals(method));'
+        );
+        // the earlier retryOnConnectionFailure(false) is left as it was
+        expect(patched).toContain(
+            'clientBuilder.retryOnConnectionFailure(false);\n            clientBuilder.followRedirects'
+        );
+        expect(patched.split('retryOnConnectionFailure(')).toHaveLength(3);
+    });
+
     it('leaves the redirect interceptor alone', () => {
         const root = makeTree();
         run(root);
@@ -160,6 +178,42 @@ describe('patch-blob-util-no-retry', () => {
         );
 
         expect(() => run(root)).toThrow(/does not match the expected pattern/);
+    });
+
+    it('fails the install when the retry call has changed', () => {
+        const root = makeTree(
+            fs
+                .readFileSync(FIXTURE, 'utf8')
+                .replace(
+                    'clientBuilder.retryOnConnectionFailure(true);',
+                    'clientBuilder.retryOnConnectionFailure(options.retry);'
+                )
+        );
+
+        expect(() => run(root)).toThrow(
+            /retryOnConnectionFailure\(true\) call in ReactNativeBlobUtilReq.java does not match/
+        );
+    });
+
+    it('adds the retry edit to a copy that only has the interceptor edit', () => {
+        const root = makeTree();
+        run(root);
+        const onlyInterceptor = readRaw(root)
+            .replace(/\r\n/g, '\n')
+            .replace(
+                / {12}\/\/ ZEUS PATCH: blob-util-no-connection-retry\n.*\n.*\n.*\n/,
+                '            clientBuilder.retryOnConnectionFailure(true);\n'
+            )
+            .replace(/\n/g, '\r\n');
+        expect(onlyInterceptor).toContain(MARKER);
+        expect(onlyInterceptor).toContain(
+            'clientBuilder.retryOnConnectionFailure(true);'
+        );
+
+        const again = makeTree(onlyInterceptor);
+        run(again);
+
+        expect(read(again)).toBe(read(root));
     });
 
     it('fails the install when the file is missing', () => {
