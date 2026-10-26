@@ -30,6 +30,11 @@ jest.mock('../../utils/BackendUtils', () => ({
 }));
 jest.mock('../../utils/UnitsUtils', () => ({ numberWithCommas: String }));
 jest.mock('react-native-blob-util', () => ({}));
+jest.mock('../../utils/TorUtils', () => ({
+    doTorRequest: jest.fn(),
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
+}));
 jest.mock('../../utils/LnurlPayUtils', () => ({}));
 jest.mock('../../utils/LinkingUtils', () => ({}));
 
