@@ -93,8 +93,3 @@ wait_until() {
 }
 
 adb_() { "$ADB" -s "$ANDROID_SERIAL" "$@"; }
-
-node_req() {
-    # Node with requires resolved from the Zeus checkout's node_modules
-    NODE_PATH="$ZEUS_DIR/node_modules" node "$@"
-}

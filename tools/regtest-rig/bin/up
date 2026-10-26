@@ -4,10 +4,12 @@
 # usage: bin/up [--profiles lsp,cashu,nwc,ldk|all]
 #
 # Idempotent: safe to rerun on a running stack. Steps:
-#   1. bin/ca (if certs are missing), write the mint config
+#   1. bin/ca (if certs are missing), write the mint config (the mint is
+#      restarted when the config changed)
 #   2. docker compose up -d (base + profiles), wait for healthy
 #   3. create the bitcoind wallet "rig", mine 101+ blocks, fund alice/bob/carol
 #   4. open bob->alice and bob->carol (10M sat, 4M pushed) if missing, mine 6
+#      while any channel is pending
 #   5. export macaroons (hex), certs, pubkeys and URLs to state/<RIG_NAME>/
 #   6. profile lsp: start the stub LSP (bin/lsp start)
 # --profiles overrides PROFILES from the env file.
@@ -17,11 +19,11 @@ set -euo pipefail
 usage_if_help "$@"
 
 if [ "${1:-}" = "--profiles" ]; then PROFILES="$2"; export PROFILES; fi
-echo "$PROFILES" >"$STATE/profiles"
 
 [ -f "$STATE/tls/alice/tls.cert" ] || "$RIG_DIR/bin/ca"
 
 mkdir -p "$STATE/mint"
+mint_cfg_old=$(shasum "$STATE/mint/config.toml" 2>/dev/null | cut -d' ' -f1 || true)
 sed -e "s/@MINT_PORT@/$MINT_PORT/g" -e "s/@RIG_NAME@/$RIG_NAME/g" \
     -e "s/@MIN@/$MINT_MIN_DELAY/g" -e "s/@MAX@/$MINT_MAX_DELAY/g" \
     "$RIG_DIR/templates/mint-config.toml" >"$STATE/mint/config.toml"
@@ -29,6 +31,16 @@ sed -e "s/@MINT_PORT@/$MINT_PORT/g" -e "s/@RIG_NAME@/$RIG_NAME/g" \
 log "compose up (profiles: ${PROFILES:-none})"
 # shellcheck disable=SC2046
 compose $(profile_flags) up -d --wait --wait-timeout 180
+# The mint applies its config only on start, and compose does not recreate
+# a container when a bind-mounted file changes
+mint_cfg_new=$(shasum "$STATE/mint/config.toml" | cut -d' ' -f1)
+if has_profile cashu && [ -n "$mint_cfg_old" ] && [ "$mint_cfg_old" != "$mint_cfg_new" ]; then
+    log "mint config changed, restarting the mint"
+    # shellcheck disable=SC2046
+    compose $(profile_flags) restart mint >/dev/null
+    # shellcheck disable=SC2046
+    compose $(profile_flags) up -d --wait --wait-timeout 180 mint
+fi
 
 # bitcoind wallet
 if ! btc -rpcwallet=rig getwalletinfo >/dev/null 2>&1; then
@@ -84,10 +96,11 @@ open_chan() {
         || die "openchannel bob->$peer failed"
     log "opened bob->$peer"
 }
-OPENED=0
-open_chan alice "$ALICE_PK" && OPENED=1
-open_chan carol "$CAROL_PK" && OPENED=1
-if [ "$OPENED" = 1 ]; then
+open_chan alice "$ALICE_PK" || true
+open_chan carol "$CAROL_PK" || true
+# Mine whenever a channel is pending, including ones a previous run opened
+# before it stopped
+if lncli bob pendingchannels | jq -e '.pending_open_channels|length > 0' >/dev/null; then
     btc generatetoaddress 6 "$MINER" >/dev/null
 fi
 wait_until 90 sh -c "[ \$(docker exec $(container bob) lncli --network=regtest --tlscertpath=/tls/tls.cert --macaroonpath=/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon listchannels --active_only | jq '.channels|length') -ge 2 ]" \

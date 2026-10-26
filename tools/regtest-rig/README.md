@@ -48,6 +48,10 @@ fields and methods (`settingsStore.updateSettings`, `nodeInfoStore.nodeInfo`,
 and settings keys (`nodes`, `selectedNode`, `enableLSP`, `lspMainnet`,
 `lspTestnet`, `lspMutinynet`, `ecash`, `pos`, `invoices`). A PR that renames
 or reshapes any of these should update the rig in the same PR.
+`rig.test.js` runs in `yarn test` and checks the module paths, store
+methods and setting values the rig writes, plus the pure helpers in
+`lib/prelude.js` and `lib/stub-lsp-amount.js`. Bump `V` in `lib/prelude.js`
+whenever the file changes; a running app keeps the `Z` it already has.
 
 ## Layout
 
@@ -60,10 +64,12 @@ lib/common.sh       compose/lncli/btc wrappers, PID-file process helpers
 lib/cdp.js          Metro CDP client (sync and async evaluation)
 lib/prelude.js      in-app helper object globalThis.Z
 lib/stub-lsp.js     stub Olympus Flow LSP
+lib/stub-lsp-amount.js  the stub's wrapped-invoice amount (msat)
 lib/lnurlw.js       LNURL-withdraw server
 lib/nwc.js          NWCClient from @getalby/sdk
 bin/                up down ca avd app metro cdp zeus lsp lnurlw nwc
                     pay mine decode ln shot teardown
+rig.test.js         Jest contract test (app names the rig uses, helpers)
 state/<RIG_NAME>/   tls/ macaroons/ pubkeys.json urls.json nwc/ logs/
                     run/ (PID files) screenshots/
 ```
@@ -157,8 +163,11 @@ it and point `ZEUS_DIR` (or `bin/metro start --dir`) at the PR worktree.
 
 - `bin/up`, `bin/down`: stack lifecycle; `up` is idempotent.
 - `bin/ca [--force]`: CA plus alice/bob/carol certs with SANs localhost,
-  127.0.0.1, ::1, 10.0.2.2.
-- `bin/avd create|boot|install-ca|stop|delete|adb-kill|status`.
+  127.0.0.1, ::1, 10.0.2.2. After `--force`, restart lnd (`bin/down &&
+  bin/up`) and rerun `bin/avd install-ca`.
+- `bin/avd create|boot|install-ca|stop|delete|adb-kill|status`. `delete`
+  (and `bin/teardown` without `--keep-avd`) only deletes an AVD that
+  `bin/avd create` made for this rig.
 - `bin/app install|prefs|reverse|setup|launch|terminate|restart [--node]|wait|clear|logcat|uninstall`.
 - `bin/metro start [--dir PATH] [--reset-cache]|stop|status|log|check <symbol>`.
 - `bin/cdp '<expr>'`, `bin/cdp --async '<body>'`, `bin/cdp -f file.js`.
@@ -168,7 +177,9 @@ it and point `ZEUS_DIR` (or `bin/metro start --dir`) at the PR worktree.
   `Z.inst('Receive')`, `Z.walk(fn)`, `Z.wrap(obj,'method','tag')` with
   `Z.log(clear)`, `Z.captureConsole()`, `Z.logbox()`, `Z.handle(input)`.
 - `bin/zeus status|nodes|add-lnd|select|lsp on|off|ldk-create|mint-add|mint-quote|pos|invoices|set|restart`.
-- `bin/lsp start|stop|status|fee <msat>|none [--queue]|log`.
+- `bin/lsp start|stop|status|fee <msat>|none [--queue]|log`. The stub's
+  `jit_bolt11` is a bob hold invoice that is never settled, so paying it
+  hangs until it expires.
 - `bin/lnurlw start|stop|make <id> [--hold] [--delay MS] [--pay] [--min] [--max]|release <id>|log`.
   Feed a string to the app with `bin/cdp --async "return await Z.handle('LNURL1...')"`.
 - `bin/nwc create <name> [budget]|info|balance|make <name> <sats>|pay <name> <bolt11>|lookup|list`.
@@ -253,7 +264,8 @@ Verified).
   `--macaroonpath`.
 - **New lnd identities after down/up.** `bin/down` removes the volumes, so
   after `bin/down` + `bin/up` the lnd nodes have new pubkeys and macaroons.
-  Rerun `bin/zeus add-lnd alice --select` (it replaces the old entry).
+  Rerun `bin/zeus add-lnd alice --select` (it replaces the old entry in
+  place).
 - **Flow LSP.** `flowLspNotConfigured()` needs `certVerification: true` and
   zero-conf plus scid-alias feature bits. So alice's REST cert is signed by
   the rig CA and `bin/avd install-ca` installs the CA as a user CA (Zeus's
@@ -275,30 +287,27 @@ Verified).
   (anchor reserve); fund it and open outbound to bob at
   `10.0.2.2:<BOB_P2P_PORT>`.
 - **cdk-mintd 0.18** keeps its config in its database. The container runs
-  `config init` once and `config apply` on every start, so editing
-  `MINT_MIN_DELAY`/`MINT_MAX_DELAY` and rerunning `bin/up` changes when
-  fakewallet quotes turn PAID. `cashuStore.checkInvoicePaid()` returns an
-  object even when unpaid; test `.isPaid`.
+  `config init` once and `config apply` on every start. Compose does not
+  restart it when the bind-mounted config changes, so `bin/up` restarts the
+  mint itself when `MINT_MIN_DELAY`/`MINT_MAX_DELAY` changed the config.
+  `cashuStore.checkInvoicePaid()` returns an object even when unpaid; test
+  `.isPaid`.
 - **bitcoind funding.** bob gets several UTXOs so it can open both channels
   in one block without waiting for change to confirm.
 - **Shells.** zsh does not word-split `$var` (use `${=var}`), so
   `A="adb -s ..."; $A devices` fails there. The scripts are bash; call them,
   don't paste their bodies into zsh.
-- **Settings not loaded yet.** `bin/app restart` without `--node` returns
-  before settings load, so `settingsStore.settings.nodes` can still be
-  empty. Writing a filtered copy of that list back over CDP deletes every
-  wallet. Check `nodes.length` before writing nodes, or use
-  `bin/app restart --node`.
-- **Cashu after `bin/zeus mint-add`.** `mint-add` turns Cashu on without
-  calling `cashuStore.initializeWallets()`, so `cashuStore.payments` stays
-  undefined and melts are spent at the mint but never recorded. Run
-  `bin/app restart --node` after `mint-add`. `cashuStore.mintBalances` can
-  lag behind CDK `getBalances()` after a melt.
+- **Settings writes over CDP.** Use `Z.settings()` or
+  `settingsStore.updateSettings(cur => patch)`. A patch built from
+  `settingsStore.settings` before settings load (or while another write is
+  queued) can replace the wallet list with a stale copy. `bin/app restart`
+  waits for `settingsLoaded`.
+- **Cashu balances.** `bin/zeus mint-add` restarts the app so the Cashu
+  wallets initialize. `cashuStore.mintBalances` can lag behind CDK
+  `getBalances()` after a melt.
 - **Extra adb reverse ports.** `bin/app restart` re-applies only the rig's
   own ports. A port you add yourself (a proxy, a second mint) is lost when
   the adb server restarts; re-add it and remove it when done.
-- **Screenshots in subdirectories.** `bin/shot <dir>/<name>` fails unless
-  `state/<RIG>/screenshots/<dir>` exists; create it first.
 - **Tapping.** Wait about 3 s after navigating before tapping; an early tap
   on Receive or Send can land on the memo field and open the keyboard.
   `Z.press(text)` can match the wrong control when labels repeat (on Send,

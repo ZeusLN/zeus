@@ -3,13 +3,16 @@
 // POST /api/v1/fee       -> { fee_amount_msat, id } from the queue, else the
 //                           default; a null fee answers a fee-less { id }
 // POST /api/v1/proposal  -> { jit_bolt11 }: a bob hold invoice with the same
-//                           payment hash, amount = inner + quoted fee
+//                           payment hash, amount = inner + quoted fee (msat).
+//                           The hold invoice is never settled, so paying
+//                           jit_bolt11 hangs until it expires.
 // POST /admin/fee        { fee_msat: number|null, queue?: bool } sets the
 //                           default or pushes one answer onto the queue
 // GET  /admin/state      -> { defaultFeeMsat, queue, quotes }
 const http = require('http');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
+const { jitAmountMsat } = require('./stub-lsp-amount');
 
 const PORT = Number(process.env.LSP_PORT);
 const LOG = `${process.env.STATE}/logs/stub-lsp.events.log`;
@@ -70,13 +73,12 @@ http.createServer((req, res) => {
             if (req.url.startsWith('/api/v1/proposal')) {
                 const inner = bob('decodepayreq', json.bolt11);
                 const feeMsat = quotes[json.fee_id] ?? 0;
-                const totalSat =
-                    Number(inner.num_satoshis) + Math.floor(feeMsat / 1000);
+                const totalMsat = jitAmountMsat(inner.num_msat, feeMsat);
                 const hold = bob(
                     'addholdinvoice',
                     inner.payment_hash,
-                    '--amt',
-                    String(totalSat),
+                    '--amt_msat',
+                    totalMsat,
                     '--expiry',
                     '86400',
                     '--memo',
@@ -84,7 +86,7 @@ http.createServer((req, res) => {
                 );
                 log(
                     'RES proposal',
-                    `inner=${inner.num_satoshis} fee_msat=${feeMsat} jit=${totalSat}`,
+                    `inner_msat=${inner.num_msat} fee_msat=${feeMsat} jit_msat=${totalMsat}`,
                     hold.payment_request
                 );
                 return send(res, 200, { jit_bolt11: hold.payment_request });

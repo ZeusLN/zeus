@@ -8,8 +8,8 @@
 # can use https://localhost:<rest port> with certVerification: true once
 # bin/avd install-ca has put ca.crt in the emulator's user CA store
 # (Zeus's network_security_config trusts user CAs).
-# Existing certs are kept unless --force; lnd must be restarted after
-# --force (bin/down && bin/up).
+# Existing certs are kept unless --force. After --force restart lnd
+# (bin/down && bin/up) and rerun bin/avd install-ca.
 set -euo pipefail
 . "$(dirname "$0")/../env.sh"
 . "$RIG_DIR/lib/common.sh"

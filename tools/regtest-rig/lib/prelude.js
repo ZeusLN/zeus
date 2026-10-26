@@ -5,9 +5,11 @@
 // their dev-bundle path (Metro keeps verboseName in dev builds).
 // __r is Metro's module require; __zlog is the trace buffer this file
 // creates on globalThis.
+// Bump V whenever this file changes: a running app keeps the Z of the
+// version it already has.
 /* global __r, __zlog */
 (function () {
-    var V = 9;
+    var V = 10;
     if (globalThis.Z && globalThis.Z.v === V) return 'Z ok';
     var Z = { v: V };
     globalThis.__zids = globalThis.__zids || {};
@@ -62,10 +64,16 @@
     };
 
     // ---- settings ------------------------------------------------------
+    // Pure helpers (Z.mergeSettings, Z.upsertNodes) are exercised by
+    // tools/regtest-rig/rig.test.js. Writes go through the functional
+    // form of updateSettings, which applies the patch to the stored
+    // settings inside the store's write queue, so a write made before
+    // settings load (or racing another write) cannot replace the wallet
+    // list with a stale copy.
+
     // Merge a patch into settings (nested objects are merged one level).
-    Z.settings = async function (patch) {
-        var ss = Z.S().settingsStore;
-        var cur = ss.settings || {};
+    Z.mergeSettings = function (cur, patch) {
+        cur = cur || {};
         var next = {};
         Object.keys(patch).forEach(function (k) {
             var v = patch[k];
@@ -78,8 +86,47 @@
                     ? Object.assign({}, cur[k], v)
                     : v;
         });
-        await ss.updateSettings(next);
-        return Object.keys(next);
+        return next;
+    };
+    Z.settings = async function (patch) {
+        await Z.S().settingsStore.updateSettings(function (cur) {
+            return Z.mergeSettings(cur, patch);
+        });
+        return Object.keys(patch);
+    };
+    // Settings patch that adds `node`, or replaces in place the first
+    // node whose matchKeys all equal node's (compared as strings), so
+    // other wallets keep their indexes. selectedNode only changes when
+    // opts.select is set. Returns { patch, index }.
+    Z.upsertNodes = function (cur, node, opts) {
+        opts = opts || {};
+        var keys = opts.matchKeys || [];
+        var nodes = ((cur && cur.nodes) || []).slice();
+        var index = keys.length
+            ? nodes.findIndex(function (x) {
+                  return keys.every(function (k) {
+                      return x && String(x[k]) === String(node[k]);
+                  });
+              })
+            : -1;
+        if (index < 0) {
+            nodes.push(node);
+            index = nodes.length - 1;
+        } else {
+            nodes[index] = node;
+        }
+        var patch = { nodes };
+        if (opts.select) patch.selectedNode = index;
+        return { patch, index };
+    };
+    Z.upsertNode = async function (node, opts) {
+        var index;
+        await Z.S().settingsStore.updateSettings(function (cur) {
+            var r = Z.upsertNodes(cur, node, opts);
+            index = r.index;
+            return r.patch;
+        });
+        return index;
     };
     Z.nodes = function () {
         var s = Z.S().settingsStore.settings;

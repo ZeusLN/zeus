@@ -77,7 +77,7 @@ services:
 
   electrs:
     profiles: ["ldk"]
-    image: mempool/electrs:latest
+    image: mempool/electrs@sha256:35963870c36a8da5fff8310e94df15869d0e97788bdaa11e63901cdb26fd781a
     depends_on: [bitcoind]
     entrypoint: ["/bin/electrs"]
     command: ["-vv", "--network", "regtest", "--jsonrpc-import",
@@ -111,7 +111,7 @@ services:
 
   relay:
     profiles: ["nwc"]
-    image: scsibug/nostr-rs-relay:latest
+    image: scsibug/nostr-rs-relay@sha256:48d54c2d2781577cf3ed2951112f0953dc2c5e7c9d2ea20c64e8c0fa37d16e4d
     ports:
       - "127.0.0.1:${RELAY_PORT}:8080"
 

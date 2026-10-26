@@ -8,8 +8,9 @@
 #                                   service port (localhost:<port> = host port)
 #        bin/app setup [APK]        install + prefs + reverse
 #        bin/app launch|terminate
-#        bin/app restart [--node]   terminate + launch, wait for CDP; with --node
-#                                   also wait until the selected node is connected
+#        bin/app restart [--node]   terminate + launch, wait until settings are
+#                                   loaded; with --node wait until the selected
+#                                   node is connected
 #        bin/app wait [--node] [SECONDS]
 #        bin/app clear              pm clear (wipes app data) + prefs
 #        bin/app logcat [N]         last N lines of ReactNativeJS/zeus logcat
@@ -49,9 +50,11 @@ wait_ready() {
     for a in "$@"; do
         case "$a" in --node) node=1 ;; *) t="$a" ;; esac
     done
-    local expr='typeof Z'
+    # cdp.js installs Z before every evaluation, so `typeof Z` is 'object' as
+    # soon as JS runs; wait for the stored settings to be loaded instead
+    local expr='String(!!Z.S().settingsStore.settingsLoaded)'
     [ "$node" = 1 ] && expr='String(!!(Z.S().nodeInfoStore.nodeInfo && (Z.S().nodeInfoStore.nodeInfo.nodeId || Z.S().nodeInfoStore.nodeInfo.identity_pubkey)))'
-    local want=object; [ "$node" = 1 ] && want=true
+    local want=true
     local i=0
     while [ "$i" -lt "$t" ]; do
         r=$(CDP_TIMEOUT=8000 node "$RIG_DIR/lib/cdp.js" "$expr" 2>/dev/null || true)
