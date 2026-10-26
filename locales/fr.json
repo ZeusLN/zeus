@@ -1287,7 +1287,7 @@
     "views.Settings.Payments.slideToPayThreshold": "Faites glisser pour payer seuil",
     "views.Settings.Payments.timeoutSeconds": "Délai d'attente (secondes)",
     "views.Settings.Payments.preferredMempoolRate": "Taux de Mempool préféré",
-    "views.Settings.Payments.feeLimitMethodExplainer": "La méthode de limite de frais sera défini par défaut pour les montants allant jusqu'à 1000 sats et pourcentage pour des montants supérieurs à 1000 sats. Vous pourrez cependant modifier la méthode et les valeurs à utiliser, dans la section Paramètres de la vue de la demande de paiement.",
+    "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You can change the method and values for an individual payment before you send it.",
     "views.Settings.Payments.defaultDonationPercentage": "Pourcentage de don par défaut",
     "views.Settings.Invoices.title": "Paramètres de facture",
     "views.Settings.Invoices.showCustomPreimageField": "Afficher un champ de préimage personnalisé",
