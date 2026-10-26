@@ -170,17 +170,17 @@ describe('UrlUtils', () => {
             settingsStore.settings.privacy = {};
         });
 
-        it('is true for mainnet, testnet and mutinynet', () => {
+        it('is true for mainnet, testnet, signet and mutinynet', () => {
             expect(UrlUtils.mempoolServesNetwork(mainnet)).toBe(true);
             expect(UrlUtils.mempoolServesNetwork(testnet)).toBe(true);
+            expect(UrlUtils.mempoolServesNetwork(signet)).toBe(true);
             expect(
                 UrlUtils.mempoolServesNetwork({ ...mutinynet, isSigNet: true })
             ).toBe(true);
         });
 
-        it('is false for regtest and plain signet without a custom instance', () => {
+        it('is false for regtest without a custom instance', () => {
             expect(UrlUtils.mempoolServesNetwork(regtest)).toBe(false);
-            expect(UrlUtils.mempoolServesNetwork(signet)).toBe(false);
             settingsStore.settings.privacy = {
                 mempoolInstance: 'Custom',
                 customMempoolInstance: ''

@@ -7,12 +7,12 @@ jest.mock('../utils/ThemeUtils', () => ({
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (s: string) => s
 }));
-const mockServesNetwork = jest.fn(() => true);
+const mockServesNetwork = jest.fn((_nodeInfo?: any) => true);
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
     default: {
         getMempoolApiUrl: () => 'https://mempool.test/api',
-        mempoolServesNetwork: () => mockServesNetwork()
+        mempoolServesNetwork: (nodeInfo: any) => mockServesNetwork(nodeInfo)
     }
 }));
 jest.mock('react-native-blob-util', () => ({
@@ -91,9 +91,11 @@ import { SWAPS_KEY, REVERSE_SWAPS_KEY } from '../utils/SwapUtils';
 const storageBacking = (Storage as any).__store as { [key: string]: string };
 const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
 
-const newStore = () =>
+const newStore = (network: { [flag: string]: boolean } = {}) =>
     new SwapStore(
-        { nodeInfo: { nodeId: 'node-pubkey', isTestNet: false } } as any,
+        {
+            nodeInfo: { nodeId: 'node-pubkey', isTestNet: false, ...network }
+        } as any,
         { settings: {}, implementation: 'lnd' } as any
     );
 
@@ -287,6 +289,49 @@ describe('SwapStore.broadcastSwapTransaction', () => {
                 newStore().broadcastSwapTransaction(CLAIM_HEX)
             ).rejects.toThrow('no broadcast endpoint for this network');
             expect(fetchMock).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('on a signet node', () => {
+        beforeEach(() =>
+            mockServesNetwork.mockImplementation((nodeInfo) =>
+                jest
+                    .requireActual('../utils/UrlUtils')
+                    .default.mempoolServesNetwork(nodeInfo)
+            )
+        );
+
+        it('broadcasts to the mempool instance when the swap host is down', async () => {
+            routes({
+                [MEMPOOL_TX]: respond(200, CLAIM_TXID),
+                [HOST_TX]: respond(503, 'unavailable')
+            });
+
+            await expect(
+                newStore({ isSigNet: true }).broadcastSwapTransaction(
+                    CLAIM_HEX,
+                    HOST
+                )
+            ).resolves.toBe(CLAIM_TXID);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            expect(fetchMock).toHaveBeenCalledWith(
+                'POST',
+                MEMPOOL_TX,
+                expect.anything(),
+                CLAIM_HEX
+            );
+        });
+
+        it('skips the mempool instance on regtest', async () => {
+            routes({ [HOST_TX]: respond(503, 'unavailable') });
+
+            await expect(
+                newStore({ isRegTest: true }).broadcastSwapTransaction(
+                    CLAIM_HEX,
+                    HOST
+                )
+            ).rejects.toThrow(/swaps\.test.*unavailable/);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
         });
     });
 

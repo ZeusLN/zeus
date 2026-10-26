@@ -61,8 +61,8 @@ const getMempoolApiUrl = (nodeInfo: {
 
 /**
  * Whether getMempoolApiUrl points at an instance for the node's network.
- * Regtest and plain signet fall through to the mainnet instance unless a
- * custom one is set, so anything sent there would go to the wrong chain.
+ * Regtest falls through to the mainnet instance unless a custom one is set,
+ * so anything sent there would go to the wrong chain.
  */
 const mempoolServesNetwork = (nodeInfo: {
     isMutinynet: boolean;
@@ -73,8 +73,7 @@ const mempoolServesNetwork = (nodeInfo: {
     const privacy = settingsStore?.settings?.privacy;
     if (privacy?.mempoolInstance === 'Custom' && privacy?.customMempoolInstance)
         return true;
-    if (nodeInfo.isMutinynet || nodeInfo.isTestNet) return true;
-    return !nodeInfo.isRegTest && !nodeInfo.isSigNet;
+    return !nodeInfo.isRegTest;
 };
 
 /**
