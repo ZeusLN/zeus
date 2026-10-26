@@ -420,7 +420,8 @@ export default class Invoice extends BaseModel {
             // expiry is missing in payment request in Core Lightning
             return !isNaN(timestamp) ? this.expires_at - timestamp : undefined;
         }
-        if (decoded) return decoded.expiry;
+        // BOLT11: an invoice without an expiry (x) field expires after 3600s
+        if (decoded) return decoded.expiry ?? 3600;
         // no bolt11 string to decode (e.g. pay_req built from a backend
         // decodepayreq response) — use the reported expiry seconds
         return this.expiry != null && this.expiry !== ''
@@ -435,7 +436,10 @@ export default class Invoice extends BaseModel {
             this.originalTimeUntilExpiryInSeconds;
 
         if (originalTimeUntilExpiryInSeconds == null) {
-            return localeString('models.Invoice.never');
+            this.formattedOriginalTimeUntilExpiry = localeString(
+                'models.Invoice.never'
+            );
+            return;
         }
 
         const originalTimeUntilExpiryInMs =

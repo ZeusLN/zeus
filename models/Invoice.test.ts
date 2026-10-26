@@ -1,16 +1,30 @@
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores', () => ({
+    settingsStore: { settings: { locale: 'en' } }
+}));
 
 import { autorun } from 'mobx';
 
 import Invoice from './Invoice';
+import Bolt11Utils from '../utils/Bolt11Utils';
 
 // decodes with timestamp 1700074718 and expiry 3600 (see Bolt11Utils.test.ts)
 const paymentRequest =
     'lnbcrt1230n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
 
+// BOLT11 spec test vector with no expiry (x) field, timestamp 1496314658
+const noExpiryPaymentRequest =
+    'lnbc1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq9qrsgq357wnc5r2ueh7ck6q93dj32dlqnls087fxdwk8qakdyafkq3yap9us6v52vjjsrvywa6rt52cm9r9zqt8r2t7mlcwspyetp5h2tztugp9lfyql';
+
 describe('Invoice.originalTimeUntilExpiryInSeconds', () => {
     it('derives expiry from a decodable payment request', () => {
         const invoice = new Invoice({ payment_request: paymentRequest });
+        expect(invoice.originalTimeUntilExpiryInSeconds).toBe(3600);
+    });
+
+    it('defaults to 3600 when the payment request has no expiry field', () => {
+        const invoice = new Invoice({
+            payment_request: noExpiryPaymentRequest
+        });
         expect(invoice.originalTimeUntilExpiryInSeconds).toBe(3600);
     });
 
@@ -82,6 +96,20 @@ describe('Invoice.isExpired / isExpiredNow', () => {
         expect(invoice.isExpiredNow()).toBe(false);
     });
 
+    it('expires an invoice without an expiry field 3600s after its timestamp', () => {
+        const invoice = new Invoice({
+            payment_request: noExpiryPaymentRequest
+        });
+
+        jest.useFakeTimers();
+
+        jest.setSystemTime((1496314658 + 3600) * 1000 - 1000);
+        expect(invoice.isExpiredNow()).toBe(false);
+
+        jest.setSystemTime((1496314658 + 3600) * 1000);
+        expect(invoice.isExpiredNow()).toBe(true);
+    });
+
     it('is false before the expiry timestamp and true after it', () => {
         const invoice = new Invoice({ payment_request: paymentRequest });
 
@@ -151,5 +179,28 @@ describe('Invoice.determineFormattedOriginalTimeUntilExpiry', () => {
         const invoice = new Invoice({ payment_request: paymentRequest });
         invoice.determineFormattedOriginalTimeUntilExpiry('en');
         expect(invoice.formattedOriginalTimeUntilExpiry).toBe('1 hour');
+    });
+
+    // CashuStore.getPayReq builds its payReq this way
+    it('humanizes the expiry of an invoice built from Bolt11Utils.decode output', () => {
+        const invoice = new Invoice(Bolt11Utils.decode(paymentRequest) as any);
+        invoice.determineFormattedOriginalTimeUntilExpiry('en');
+        expect(invoice.formattedOriginalTimeUntilExpiry).toBe('1 hour');
+    });
+
+    it('uses the BOLT11 default of 3600s when the invoice has no expiry field', () => {
+        const invoice = new Invoice({
+            payment_request: noExpiryPaymentRequest
+        });
+        invoice.determineFormattedOriginalTimeUntilExpiry('en');
+        expect(invoice.formattedOriginalTimeUntilExpiry).toBe('1 hour');
+    });
+
+    it('formats "Never" when no expiry information is available', () => {
+        const invoice = new Invoice({
+            destination: '02758997f184be06f4350b136db0bed6f8'
+        });
+        invoice.determineFormattedOriginalTimeUntilExpiry('en');
+        expect(invoice.formattedOriginalTimeUntilExpiry).toBe('Never');
     });
 });
