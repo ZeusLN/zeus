@@ -23,7 +23,8 @@ const mockWindow = (fontScale: number) =>
         fontScale
     });
 
-const renderSheet = async (props: any) => {
+const renderSheet = async (props: any, containerTop = 0) => {
+    const ref = React.createRef<any>();
     await render(
         <SafeAreaProvider
             initialMetrics={{
@@ -31,11 +32,23 @@ const renderSheet = async (props: any) => {
                 insets: { top: TOP_INSET, left: 0, right: 0, bottom: 0 }
             }}
         >
-            <ModalBox SettingsStore={SettingsStore} startOpen {...props}>
+            <ModalBox
+                ref={ref}
+                SettingsStore={SettingsStore}
+                startOpen
+                {...props}
+            >
                 <Text testID="sheet-content">content</Text>
             </ModalBox>
         </SafeAreaProvider>
     );
+    // Where the container starts in the window
+    ref.current.containerRef = {
+        current: {
+            measureInWindow: (cb: (...args: number[]) => void) =>
+                cb(0, containerTop, 400, WINDOW_HEIGHT - containerTop)
+        }
+    };
     // The container measures the area the sheet is positioned in
     const container = screen.getByTestId('sheet-content').parent!.parent!;
     await act(async () => {
@@ -77,6 +90,24 @@ describe('ModalBox sheet height', () => {
         mockWindow(1);
         await renderSheet({ position: 'bottom', style: { height: 2000 } });
         expect(sheetHeight()).toBe(WINDOW_HEIGHT - TOP_INSET);
+    });
+
+    it('only subtracts the part of the inset the container overlaps', async () => {
+        mockWindow(1.3);
+        await renderSheet(
+            { position: 'bottom', style: { height: WINDOW_HEIGHT } },
+            30
+        );
+        expect(sheetHeight()).toBe(WINDOW_HEIGHT - (TOP_INSET - 30));
+    });
+
+    it('does not subtract the inset when the container starts below it', async () => {
+        mockWindow(1.3);
+        await renderSheet(
+            { position: 'bottom', style: { height: WINDOW_HEIGHT } },
+            120
+        );
+        expect(sheetHeight()).toBe(WINDOW_HEIGHT);
     });
 
     it('clamps a centered sheet to the full container', async () => {
