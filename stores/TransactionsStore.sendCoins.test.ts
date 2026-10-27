@@ -188,6 +188,61 @@ describe('TransactionsStore.sendCoins', () => {
         expect(store.error).toBe(true);
     });
 
+    it.each([
+        ['an LND REST send on Android', 'Software caused connection abort'],
+        [
+            'an LNC send',
+            'rpc error: code = Unavailable desc = error reading from server: EOF'
+        ]
+    ])(
+        'offers no retry when the connection drops during %s',
+        async (_case, message) => {
+            sendCoins.mockRejectedValue(new Error(message));
+            getTransactions.mockResolvedValue({ transactions: [] });
+            const store = newStore();
+            store.sendCoins(request());
+            await settle();
+
+            expect(getTransactions).toHaveBeenCalledTimes(3);
+            expect(store.error).toBe(true);
+            expect(store.sendOutcomeUnknown).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.TransactionsStore.sendOutcomeUnknown'
+            );
+        }
+    );
+
+    it('reports a dropped send that was broadcast as sent', async () => {
+        sendCoins.mockRejectedValue(new Error('Connection reset'));
+        getTransactions.mockImplementation(async () => ({
+            transactions: [
+                {
+                    tx_hash: 'broadcast',
+                    label: sendCoins.mock.calls[0][0].label
+                }
+            ]
+        }));
+        const store = newStore();
+        store.sendCoins(request());
+        await settle();
+
+        expect(store.publishSuccess).toBe(true);
+        expect(store.txid).toBe('broadcast');
+        expect(store.sendOutcomeUnknown).toBe(false);
+    });
+
+    it('offers no retry when the connection drops on backends that do not label', async () => {
+        isLNDBased.mockReturnValue(false);
+        sendCoins.mockRejectedValue(new Error('Network request failed'));
+        const store = newStore();
+        store.sendCoins(request());
+        await settle();
+
+        expect(getTransactions).not.toHaveBeenCalled();
+        expect(store.sendOutcomeUnknown).toBe(true);
+        expect(store.error).toBe(true);
+    });
+
     it('shows a node error as before, without looking it up', async () => {
         sendCoins.mockRejectedValue(
             new Error('insufficient funds available to construct transaction')
@@ -469,6 +524,23 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
             'stores.TransactionsStore.sendOutcomeUnknown'
         );
         expect(store.loading).toBe(false);
+    });
+
+    it('offers no retry when the connection drops during a publish', async () => {
+        publishTransaction.mockRejectedValue(
+            new Error('The network connection was lost.')
+        );
+        getTransactions.mockResolvedValue({ transactions: [] });
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await settle();
+
+        expect(getTransactions).toHaveBeenCalledTimes(3);
+        expect(store.error).toBe(true);
+        expect(store.sendOutcomeUnknown).toBe(true);
+        expect(store.error_msg).toBe(
+            'stores.TransactionsStore.sendOutcomeUnknown'
+        );
     });
 
     it('shows a publish error as before, without looking it up', async () => {

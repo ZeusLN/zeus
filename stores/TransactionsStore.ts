@@ -29,7 +29,7 @@ import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 import {
     findSentTransaction,
-    isRequestTimeout,
+    isOutcomeUnknownError,
     makeSendLabel
 } from '../utils/OnchainSendUtils';
 
@@ -350,9 +350,9 @@ export default class TransactionsStore {
                 }
             })
             .catch(async (error: any) => {
-                // a timed out publish may still have gone out, and Try Again
-                // would fund a new transaction from other inputs
-                if (isRequestTimeout(error)) {
+                // a timed out or dropped publish may still have gone out, and
+                // Try Again would fund a new transaction from other inputs
+                if (isOutcomeUnknownError(error)) {
                     const found =
                         txid && isCurrent()
                             ? await this.findTimedOutSend(
@@ -701,10 +701,10 @@ export default class TransactionsStore {
         )
             .then((data: any) => onSent(data.txid))
             .catch(async (error: Error) => {
-                // a timed out send may still have been broadcast on any
-                // backend (e.g. CLN's withdraw past the 30s REST timeout);
-                // only labeled sends can be looked up
-                if (isRequestTimeout(error)) {
+                // a timed out or dropped send may still have been broadcast
+                // on any backend (e.g. CLN's withdraw past the 30s REST
+                // timeout); only labeled sends can be looked up
+                if (isOutcomeUnknownError(error)) {
                     const txid =
                         label && isCurrent()
                             ? await this.findTimedOutSend(

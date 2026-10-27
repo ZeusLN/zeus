@@ -19,6 +19,23 @@ export const isRequestTimeout = (error: any): boolean => {
     return /timed out|timeout/i.test(message);
 };
 
+// Transport errors for a connection that dropped after the request may
+// have reached the node: RN fetch, iOS URL sessions, OkHttp via
+// ReactNativeBlobUtil (including a response body cut off mid-read), grpc-go
+// under LNC, and hyper/reqwest under Tor. Failures to connect at all
+// (refused, unresolved host) are left out, as nothing was sent.
+const DROPPED_CONNECTION =
+    /network request failed|network connection was lost|connection reset|econnreset|broken pipe|epipe|connection abort|socket closed|unexpected end of stream|stream was reset|failed to encode response data|transport is closing|error reading from server|client connection is closing|connection closed before message completed|error sending request|failed to read response body/i;
+
+// Whether a failed send may still have gone out, so it must not be offered
+// for a retry: a timeout or a dropped connection, as opposed to the node
+// rejecting the send
+export const isOutcomeUnknownError = (error: any): boolean => {
+    if (isRequestTimeout(error)) return true;
+    const message = String(error?.message ?? error ?? '');
+    return DROPPED_CONNECTION.test(message);
+};
+
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Looks for a sent transaction in the wallet's transactions. Each lookup

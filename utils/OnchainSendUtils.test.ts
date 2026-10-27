@@ -5,6 +5,7 @@ jest.mock('react-native-randombytes', () => ({
 import {
     SEND_LABEL_PREFIX,
     findSentTransaction,
+    isOutcomeUnknownError,
     isRequestTimeout,
     makeSendLabel
 } from './OnchainSendUtils';
@@ -49,6 +50,76 @@ describe('isRequestTimeout', () => {
 
     it('does not match a missing error', () => {
         expect(isRequestTimeout(undefined)).toBe(false);
+    });
+});
+
+describe('isOutcomeUnknownError', () => {
+    it.each([
+        ['the REST backend timer', 'Request timeout'],
+        [
+            'the lnc-rn request timer',
+            'lnrpc.Lightning.SendCoins timed out after 60000ms'
+        ],
+        ['RN fetch', 'Network request failed'],
+        ['an iOS URL session', 'The network connection was lost.'],
+        ['OkHttp', 'Connection reset'],
+        ['OkHttp', 'Software caused connection abort'],
+        ['OkHttp', 'unexpected end of stream on https://node:8080/...'],
+        ['OkHttp', 'Socket closed'],
+        ['OkHttp', 'Broken pipe'],
+        ['OkHttp over HTTP/2', 'stream was reset: CANCEL'],
+        [
+            'ReactNativeBlobUtil reading the body',
+            'ReactNativeBlobUtil failed to encode response data to UTF8 string.'
+        ],
+        ['a Node-style socket', 'read ECONNRESET'],
+        ['a Node-style socket', 'write EPIPE'],
+        [
+            'grpc-go under LNC',
+            'rpc error: code = Unavailable desc = error reading from server: EOF'
+        ],
+        [
+            'grpc-go under LNC',
+            'rpc error: code = Unavailable desc = transport is closing'
+        ],
+        [
+            'grpc-go under LNC',
+            'rpc error: code = Canceled desc = grpc: the client connection is closing'
+        ],
+        [
+            'grpc-go under LNC',
+            'rpc error: code = Unavailable desc = read tcp 10.0.0.2:51234->1.2.3.4:443: read: connection reset by peer'
+        ],
+        [
+            'Tor',
+            'Request failed: error sending request for url (http://abc.onion/v1/transactions)'
+        ],
+        ['Tor', 'Failed to read response body: connection closed'],
+        ['hyper under Tor', 'connection closed before message completed']
+    ])('matches %s: "%s"', (_source, message) => {
+        expect(isOutcomeUnknownError(new Error(message))).toBe(true);
+    });
+
+    it('matches a dropped connection passed as a string', () => {
+        expect(isOutcomeUnknownError('Network request failed')).toBe(true);
+    });
+
+    it.each([
+        'insufficient funds available to construct transaction',
+        'invalid address',
+        'transaction output is dust',
+        'fee rate too low',
+        'min relay fee not met',
+        'Failed to connect to node/10.0.0.2:8080',
+        'Unable to resolve host "node.example": No address associated with hostname',
+        'Connection refused',
+        'RPC connection not ready'
+    ])('does not match "%s"', (message) => {
+        expect(isOutcomeUnknownError(new Error(message))).toBe(false);
+    });
+
+    it('does not match a missing error', () => {
+        expect(isOutcomeUnknownError(undefined)).toBe(false);
     });
 });
 
