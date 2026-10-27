@@ -418,11 +418,11 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     private fun encodeMintQuote(quote: MintQuote): JSONObject {
         return JSONObject().apply {
             put("id", quote.id)
-            put("amount", quote.amount?.value ?: 0)
+            put("amount", quote.amount?.value?.toLong() ?: 0L)
             put("unit", currencyUnitToString(quote.unit))
             put("request", quote.request)
             put("state", quoteStateToString(quote.state))
-            put("expiry", quote.expiry)
+            put("expiry", quote.expiry.toLong())
             put("mint_url", quote.mintUrl.url)
         }
     }
@@ -435,7 +435,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             put("request", quote.request)
             put("fee_reserve", quote.feeReserve.value.toLong())
             put("state", quoteStateToString(quote.state))
-            put("expiry", quote.expiry)
+            put("expiry", quote.expiry.toLong())
             // Upstream renamed payment_preimage to payment_proof; the bridge
             // key is part of the JS contract and keeps the old name
             quote.paymentProof?.let { put("payment_preimage", it) }
@@ -1857,7 +1857,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                         put("direction", if (tx.direction == TransactionDirection.INCOMING) "incoming" else "outgoing")
                         put("amount", tx.amount.value.toLong())
                         put("mint_url", tx.mintUrl.url)
-                        put("timestamp", tx.timestamp)
+                        put("timestamp", tx.timestamp.toLong())
                         tx.fee?.let { put("fee", it.value.toLong()) }
                         tx.memo?.let { put("memo", it) }
                         put("state", transactionStatusToString(tx.status))
