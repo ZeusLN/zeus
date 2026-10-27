@@ -153,4 +153,46 @@ describe('Channel getConfirmations', () => {
         });
         expect(channel.getConfirmations()).toBeNull();
     });
+
+    // LND and LNC give the confirmation height and the blocks left instead
+    // (stores/ChannelsStore.ts)
+    it('counts LND confirmations from the confirmation height', () => {
+        const channel = new Channel({
+            pendingOpen: true,
+            confirmation_height: 100,
+            confirmations_until_active: 3
+        });
+        expect(channel.getConfirmations(102)).toEqual({
+            current: 3,
+            total: 6
+        });
+    });
+
+    it('returns 0 LND confirmations without the current block height', () => {
+        const channel = new Channel({
+            pendingOpen: true,
+            confirmation_height: 100,
+            confirmations_until_active: 3
+        });
+        expect(channel.getConfirmations()).toEqual({
+            current: 0,
+            total: 3
+        });
+    });
+
+    it('returns null when LND gives no confirmations_until_active', () => {
+        const channel = new Channel({
+            pendingOpen: true,
+            confirmation_height: 100
+        });
+        expect(channel.getConfirmations(102)).toBeNull();
+    });
+
+    it('returns null for an LDK channel without a confirmation count', () => {
+        const channel = new Channel({
+            pendingOpen: true,
+            confirmations_required: 6
+        });
+        expect(channel.getConfirmations(102)).toBeNull();
+    });
 });
