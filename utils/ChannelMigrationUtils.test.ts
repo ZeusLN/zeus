@@ -72,11 +72,73 @@ jest.mock('react-native', () => ({
     Platform: { OS: 'android', select: (opts: any) => opts.android }
 }));
 
+import { Alert } from 'react-native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import { stopLnd } from './LndMobileUtils';
+import Storage from '../storage';
+
 import {
     graphDataExists,
     validateChannelBackupFile,
-    importChannelDb
+    importChannelDb,
+    uploadChannelBackupToOlympus,
+    restoreChannelBackupFromOlympus
 } from './ChannelMigrationUtils';
+
+const BACKUP_ZIP = expect.stringMatching(
+    /^\/cache\/zeus-olympus-backup-\d+\.zip$/
+);
+const BACKUP_ENC = expect.stringMatching(
+    /^\/cache\/zeus-olympus-backup-\d+\.enc$/
+);
+const RESTORE_ZIP = expect.stringMatching(
+    /^\/cache\/zeus-olympus-restore-\d+\.zip$/
+);
+const RESTORE_ENC = expect.stringMatching(
+    /^\/cache\/zeus-olympus-restore-\d+\.enc$/
+);
+
+const mockFetch = ReactNativeBlobUtil.fetch as jest.Mock;
+const mockReadFile = ReactNativeBlobUtil.fs.readFile as jest.Mock;
+const mockAlert = Alert.alert as jest.Mock;
+const mockStopLnd = stopLnd as jest.Mock;
+
+const jsonResponse = (status: number, body: any) => ({
+    info: () => ({ status }),
+    json: () => body,
+    text: async () => JSON.stringify(body)
+});
+
+// Olympus server: auth always succeeds, uploads are accepted, and the
+// status and restore responses are configurable.
+const mockOlympusServer = ({
+    lastBackupAt = 1700000000000 as number | null,
+    restoreStatus = 200
+} = {}) =>
+    mockFetch.mockImplementation(async (_method: string, url: string) => {
+        if (url.endsWith('/api/auth'))
+            return jsonResponse(200, {
+                success: true,
+                verification: 'challenge'
+            });
+        if (url.endsWith('/api/status'))
+            return jsonResponse(200, {
+                success: true,
+                last_backup_at: lastBackupAt
+            });
+        if (url.endsWith('/api/restore-channels'))
+            return restoreStatus === 200
+                ? {
+                      info: () => ({ status: 200 }),
+                      text: async () => 'ZW5jcnlwdGVk'
+                  }
+                : jsonResponse(restoreStatus, { error: 'server error' });
+        if (url.endsWith('/api/channels-backup'))
+            return jsonResponse(200, { success: true });
+        throw new Error(`unexpected fetch ${url}`);
+    });
+
+const unlinkedPaths = () => mockUnlink.mock.calls.map((c) => c[0]);
 
 describe('ChannelMigrationUtils', () => {
     beforeEach(() => {
@@ -84,6 +146,19 @@ describe('ChannelMigrationUtils', () => {
         mockExists.mockResolvedValue(true);
         mockStat.mockResolvedValue({ size: 1024 });
         mockReadDir.mockResolvedValue([]);
+        mockUnlink.mockResolvedValue(undefined);
+        mockZipFolder.mockResolvedValue(undefined);
+        mockEncryptFile.mockResolvedValue(undefined);
+        mockDecryptFile.mockResolvedValue(undefined);
+        mockUnzipFile.mockResolvedValue(undefined);
+        mockReadFile.mockResolvedValue('base64encodeddata');
+        mockStopLnd.mockResolvedValue(undefined);
+        // Confirm the "backup found, restore?" prompt.
+        mockAlert.mockImplementation((title: string, _msg, buttons) => {
+            if (title === 'views.Tools.migration.export.backupFound')
+                buttons[1].onPress();
+        });
+        mockOlympusServer();
     });
 
     describe('graphDataExists', () => {
@@ -294,6 +369,191 @@ describe('ChannelMigrationUtils', () => {
                 '/output.zip',
                 'my seed phrase'
             );
+        });
+    });
+
+    describe('uploadChannelBackupToOlympus', () => {
+        let consoleError: jest.SpyInstance;
+        let consoleLog: jest.SpyInstance;
+
+        beforeEach(() => {
+            // No existing backup, so the upload starts without a prompt.
+            mockOlympusServer({ lastBackupAt: null });
+            consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            consoleLog = jest
+                .spyOn(console, 'log')
+                .mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            consoleError.mockRestore();
+            consoleLog.mockRestore();
+        });
+
+        const upload = () =>
+            uploadChannelBackupToOlympus('lnd', false, 'pubkey', 'seed');
+
+        const expectFailureAlert = () =>
+            expect(mockAlert).toHaveBeenCalledWith(
+                'general.error',
+                'views.Tools.migration.export.failedToUpload',
+                expect.any(Array),
+                { cancelable: false }
+            );
+
+        it('uploads and removes the staging zip and .enc on success', async () => {
+            await upload();
+
+            expect(mockEncryptFile).toHaveBeenCalledWith(
+                BACKUP_ZIP,
+                BACKUP_ENC,
+                'seed'
+            );
+            expect(mockUnlink).toHaveBeenCalledWith(BACKUP_ZIP);
+            expect(mockUnlink).toHaveBeenCalledWith(BACKUP_ENC);
+            expect(Storage.setItem).toHaveBeenCalledWith(
+                'channel_migration_active',
+                JSON.stringify({ migrationStatus: true, lndDir: 'lnd' })
+            );
+            expect(mockAlert).toHaveBeenCalledWith(
+                'views.Tools.migration.export.success',
+                'views.Tools.migration.export.success.text',
+                expect.any(Array),
+                { cancelable: false }
+            );
+        });
+
+        it('removes the plaintext zip and .enc when encryption fails', async () => {
+            mockEncryptFile.mockRejectedValue(new Error('encrypt failed'));
+
+            await upload();
+
+            expect(unlinkedPaths()).toEqual(
+                expect.arrayContaining([BACKUP_ZIP, BACKUP_ENC])
+            );
+            expect(Storage.setItem).not.toHaveBeenCalled();
+            expectFailureAlert();
+        });
+
+        it('removes the .enc when reading it fails', async () => {
+            mockReadFile.mockRejectedValue(new Error('read failed'));
+
+            await upload();
+
+            expect(unlinkedPaths()).toEqual(
+                expect.arrayContaining([BACKUP_ZIP, BACKUP_ENC])
+            );
+            expectFailureAlert();
+        });
+
+        it('removes the partial zip when zipping fails', async () => {
+            mockZipFolder.mockRejectedValue(new Error('zip failed'));
+
+            await upload();
+
+            expect(mockUnlink).toHaveBeenCalledWith(BACKUP_ZIP);
+            expect(mockEncryptFile).not.toHaveBeenCalled();
+            expectFailureAlert();
+        });
+
+        it('does not unlink staging paths that do not exist', async () => {
+            mockEncryptFile.mockRejectedValue(new Error('encrypt failed'));
+            mockExists.mockImplementation(
+                async (path: string) => !path.endsWith('.enc')
+            );
+
+            await upload();
+
+            expect(mockUnlink).toHaveBeenCalledWith(BACKUP_ZIP);
+            expect(mockUnlink).not.toHaveBeenCalledWith(BACKUP_ENC);
+        });
+    });
+
+    describe('restoreChannelBackupFromOlympus', () => {
+        let consoleError: jest.SpyInstance;
+        let consoleLog: jest.SpyInstance;
+
+        beforeEach(() => {
+            consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            consoleLog = jest
+                .spyOn(console, 'log')
+                .mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            consoleError.mockRestore();
+            consoleLog.mockRestore();
+        });
+
+        const restore = () =>
+            restoreChannelBackupFromOlympus('lnd', false, 'pubkey', 'seed');
+
+        it('restores and removes the staging .enc and zip on success', async () => {
+            await expect(restore()).resolves.toBe(true);
+
+            expect(mockDecryptFile).toHaveBeenCalledWith(
+                RESTORE_ENC,
+                RESTORE_ZIP,
+                'seed'
+            );
+            expect(mockUnzipFile).toHaveBeenCalledWith(
+                RESTORE_ZIP,
+                expect.stringContaining('lnd/data/graph/mainnet')
+            );
+            expect(mockUnlink).toHaveBeenCalledWith(RESTORE_ENC);
+            expect(mockUnlink).toHaveBeenCalledWith(RESTORE_ZIP);
+        });
+
+        it('removes the decrypted zip when stopping LND fails', async () => {
+            mockStopLnd.mockRejectedValue(new Error('rpc error'));
+
+            await expect(restore()).rejects.toThrow(
+                'views.Tools.migration.export.failedToStopLnd'
+            );
+
+            expect(mockUnzipFile).not.toHaveBeenCalled();
+            expect(mockUnlink).toHaveBeenCalledWith(RESTORE_ZIP);
+        });
+
+        it('removes the decrypted zip when unzipping fails', async () => {
+            mockUnzipFile.mockRejectedValue(new Error('unzip failed'));
+
+            await expect(restore()).rejects.toThrow('unzip failed');
+
+            expect(mockUnlink).toHaveBeenCalledWith(RESTORE_ZIP);
+        });
+
+        it('removes the downloaded .enc when decryption fails', async () => {
+            mockDecryptFile.mockRejectedValue(new Error('bad seed'));
+
+            await expect(restore()).rejects.toThrow('bad seed');
+
+            expect(unlinkedPaths()).toEqual(
+                expect.arrayContaining([RESTORE_ENC, RESTORE_ZIP])
+            );
+        });
+
+        it('rethrows the original error when cleanup unlink fails', async () => {
+            mockStopLnd.mockRejectedValue(new Error('rpc error'));
+            mockUnlink.mockImplementation(async (path: string) => {
+                if (path.endsWith('.zip')) throw new Error('EBUSY');
+            });
+
+            await expect(restore()).rejects.toThrow(
+                'views.Tools.migration.export.failedToStopLnd'
+            );
+        });
+
+        it('does not unlink anything when the download fails', async () => {
+            mockOlympusServer({ restoreStatus: 500 });
+
+            await expect(restore()).rejects.toThrow('server error');
+
+            expect(mockUnlink).not.toHaveBeenCalled();
         });
     });
 });
