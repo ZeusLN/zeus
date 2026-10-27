@@ -578,7 +578,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         // Enable filesystem logging
         if (this.storedStorageDirPath.isNotEmpty()) {
             Log.d("LdkNodeModule", "applyBuilderSettings: Enabling filesystem logger")
-            builder.setFilesystemLogger("${this.storedStorageDirPath}/ldk_node.log", LogLevel.DEBUG)
+            builder.setFilesystemLogger("${this.storedStorageDirPath}/ldk_node.log", LogLevel.INFO)
         }
     }
 
