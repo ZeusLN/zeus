@@ -11,7 +11,9 @@ import {
 } from './OnchainSendUtils';
 import {
     markHttpStatus,
+    markJsonRpcCode,
     markNodeResponded,
+    markRequestNotSent,
     markRestErrorResponse
 } from './PaymentLookupUtils';
 
@@ -232,7 +234,10 @@ describe('mayHaveBeenSent', () => {
         [
             "clnrest's JSON-RPC error",
             'cln-rest',
-            markHttpStatus(new Error('x'), 500)
+            markJsonRpcCode(markHttpStatus(new Error('x'), 500), {
+                code: 301,
+                message: 'x'
+            })
         ],
         [
             'a node error marked in process',
@@ -324,6 +329,104 @@ describe('mayHaveBeenSent', () => {
         ],
         ['a timeout on Android', 'The request timed out.']
     ])('stays true for %s on REST backends', (_, message) => {
+        expect(mayHaveBeenSent(new Error(message), 'lnd')).toBe(true);
+    });
+
+    const restCases = (status: number, implementation: string) =>
+        mayHaveBeenSent(markHttpStatus(new Error('x'), status), implementation);
+
+    it.each([
+        [1, 499],
+        [4, 504],
+        [13, 500],
+        [14, 503]
+    ])(
+        "is true for the REST gateway's gRPC transport code %i",
+        (code, status) => {
+            expect(
+                mayHaveBeenSent(
+                    markRestErrorResponse(new Error('x'), code, status),
+                    'lnd'
+                )
+            ).toBe(true);
+        }
+    );
+
+    it.each([2, 3, 5, 6, 9])(
+        "is false for lnd's own gRPC code %i over REST",
+        (code) => {
+            expect(
+                mayHaveBeenSent(
+                    markRestErrorResponse(new Error('x'), code, 500),
+                    'lnd'
+                )
+            ).toBe(false);
+        }
+    );
+
+    it.each([500, 501, 520, 524])(
+        'is true for an LND REST %i without a gRPC code',
+        (status) => {
+            expect(restCases(status, 'lnd')).toBe(true);
+        }
+    );
+
+    it.each([501, 502, 520, 524])('is true for a CLNRest %i', (status) => {
+        expect(restCases(status, 'cln-rest')).toBe(true);
+    });
+
+    it('is true for a CLNRest 500 without a JSON-RPC code', () => {
+        expect(restCases(500, 'cln-rest')).toBe(true);
+    });
+
+    it.each([
+        [300, 'lnd'],
+        [401, 'lnd'],
+        [404, 'lnd'],
+        [429, 'lnd'],
+        [400, 'cln-rest'],
+        [401, 'cln-rest']
+    ])('is false for a %i refusal over %s', (status, implementation) => {
+        expect(restCases(status, implementation)).toBe(false);
+    });
+
+    it.each(['lightning-node-connect', 'lnd', 'cln-rest'])(
+        'is false on %s for an error tagged as not sent, whatever its text',
+        (implementation) => {
+            expect(
+                mayHaveBeenSent(
+                    markRequestNotSent(
+                        new Error(
+                            'Failed to connect the LNC client to the proxy server'
+                        )
+                    ),
+                    implementation
+                )
+            ).toBe(false);
+        }
+    );
+
+    it.each([
+        ['Tor not running', 'Tor service not running'],
+        ['Tor not initialized', 'Tor library not initialized'],
+        [
+            'a failed connect over Tor',
+            'Request failed: error sending request for url (https://abc.onion:8080/v1/transactions): error trying to connect: socks connect error: Host unreachable'
+        ]
+    ])('is false for %s', (_, message) => {
+        expect(mayHaveBeenSent(new Error(message), 'lnd')).toBe(false);
+    });
+
+    it.each([
+        [
+            'a connection closed mid-request over Tor',
+            'Request failed: error sending request for url (https://abc.onion:8080/v1/transactions): connection closed before message completed'
+        ],
+        [
+            'a timeout over Tor',
+            'Request failed: error sending request for url (https://abc.onion:8080/v1/transactions): operation timed out'
+        ]
+    ])('is true for %s', (_, message) => {
         expect(mayHaveBeenSent(new Error(message), 'lnd')).toBe(true);
     });
 });
