@@ -266,6 +266,8 @@ export default class TransactionsStore {
     ) => {
         const isCurrent = () => seq === this.sendCoinsSeq;
         if (!isCurrent()) return;
+        // the backend this publish goes to, for classifying its failure
+        const { implementation } = this.settingsStore;
         this.loading = true;
 
         const tx_hex = raw_final_tx.includes('=')
@@ -353,10 +355,10 @@ export default class TransactionsStore {
                 // a publish that timed out or lost its connection may still
                 // have gone out, and Try Again would fund a new transaction
                 // from other inputs
-                if (mayHaveBeenSent(error, this.settingsStore.implementation)) {
+                if (mayHaveBeenSent(error, implementation)) {
                     const found =
                         txid && isCurrent()
-                            ? await this.findTimedOutSend(
+                            ? await this.findPossiblySentTx(
                                   (tx: any) => tx.tx_hash === txid
                               )
                             : undefined;
@@ -684,9 +686,11 @@ export default class TransactionsStore {
 
         this.crafting = false;
 
-        // lets a timed out send be found among the wallet's transactions;
-        // only the LND backends label sends
+        // lets a send whose request failed be found among the wallet's
+        // transactions; only the LND backends label sends
         const label = BackendUtils.isLNDBased() ? makeSendLabel() : undefined;
+        // the backend this send goes to, for classifying its failure
+        const { implementation } = this.settingsStore;
 
         const onSent = (txid: string) =>
             runInAction(() => {
@@ -706,10 +710,10 @@ export default class TransactionsStore {
                 // have been broadcast on any backend (e.g. CLN's withdraw
                 // past the 30s REST timeout); only labeled sends can be
                 // looked up
-                if (mayHaveBeenSent(error, this.settingsStore.implementation)) {
+                if (mayHaveBeenSent(error, implementation)) {
                     const txid =
                         label && isCurrent()
-                            ? await this.findTimedOutSend(
+                            ? await this.findPossiblySentTx(
                                   (tx: any) => tx.label === label
                               )
                             : undefined;
@@ -738,9 +742,9 @@ export default class TransactionsStore {
             });
     };
 
-    // The send may have been broadcast before its request timed out. Only
+    // The send may have been broadcast before its request failed. Only
     // recent blocks and unconfirmed transactions can hold it.
-    private findTimedOutSend = (isSent: (tx: any) => boolean) => {
+    private findPossiblySentTx = (isSent: (tx: any) => boolean) => {
         const height = Number(
             this.nodeInfoStore.nodeInfo?.currentBlockHeight || 0
         );

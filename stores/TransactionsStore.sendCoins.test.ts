@@ -44,6 +44,8 @@ import BackendUtils from '../utils/BackendUtils';
 import { SEND_LABEL_PREFIX } from '../utils/OnchainSendUtils';
 import {
     markHttpStatus,
+    markJsonRpcCode,
+    markRequestNotSent,
     markRestErrorResponse
 } from '../utils/PaymentLookupUtils';
 
@@ -73,8 +75,17 @@ const request = () => ({
 const lndError = (message: string) =>
     markRestErrorResponse(new Error(message), 2, 500);
 
-// clnrest answers a refused withdraw with HTTP 500 and its own JSON body
-const clnError = (message: string) => markHttpStatus(new Error(message), 500);
+// clnrest answers a refused withdraw with HTTP 500 and a JSON-RPC body
+const clnError = (message: string) =>
+    markJsonRpcCode(markHttpStatus(new Error(message), 500), {
+        code: 301,
+        message
+    });
+
+// LND's REST gateway answers with a gRPC transport code when it can't reach
+// lnd, or the call to lnd broke off
+const gatewayError = (code: number, status: number, message: string) =>
+    markRestErrorResponse(new Error(message), code, status);
 
 // runs the send, then every lookup and the 5s waits between them
 const settle = async () => {
@@ -432,6 +443,31 @@ describe('TransactionsStore.sendCoins', () => {
                 new Error(
                     'rpc error: code = Unavailable desc = transport is closing'
                 )
+            ],
+            [
+                "the REST gateway's Canceled",
+                'lnd',
+                gatewayError(1, 499, 'context canceled')
+            ],
+            [
+                "the REST gateway's DeadlineExceeded",
+                'lnd',
+                gatewayError(4, 504, 'context deadline exceeded')
+            ],
+            [
+                "the REST gateway's Internal",
+                'lnd',
+                gatewayError(13, 500, 'stream terminated by RST_STREAM')
+            ],
+            [
+                "the REST gateway's Unavailable",
+                'lnd',
+                gatewayError(14, 503, 'transport is closing')
+            ],
+            [
+                "Cloudflare's 520 over REST",
+                'lnd',
+                markHttpStatus(new Error('error code: 520'), 520)
             ]
         ])(
             'reports a send found after %s as sent',
@@ -447,6 +483,19 @@ describe('TransactionsStore.sendCoins', () => {
                 expect(store.error).toBe(false);
             }
         );
+
+        it("offers no retry when a send after the REST gateway's Unavailable is not found", async () => {
+            sendCoins.mockRejectedValue(
+                gatewayError(14, 503, 'transport is closing')
+            );
+            getTransactions.mockResolvedValue({ transactions: [] });
+            const store = newStore();
+            store.sendCoins(request());
+            await settle();
+
+            expect(getTransactions).toHaveBeenCalledTimes(3);
+            expect(store.sendOutcomeUnknown).toBe(true);
+        });
 
         it('offers no retry when a send after a dropped connection is not found', async () => {
             sendCoins.mockRejectedValue(new Error('connection closed'));
@@ -481,6 +530,16 @@ describe('TransactionsStore.sendCoins', () => {
                 markHttpStatus(new Error('Unauthorized'), 401)
             ],
             [
+                'an LNC client that is reconnecting',
+                'lightning-node-connect',
+                markRequestNotSent(
+                    new Error(
+                        'Failed to connect the LNC client to the proxy server'
+                    )
+                )
+            ],
+            ['Tor not running', 'lnd', new Error('Tor service not running')],
+            [
                 'a refused connection to an offline node',
                 'lnd',
                 new Error(
@@ -510,6 +569,18 @@ describe('TransactionsStore.sendCoins', () => {
             expect(getTransactions).not.toHaveBeenCalled();
             expect(store.error).toBe(true);
             expect(store.sendOutcomeUnknown).toBe(false);
+        });
+
+        it("offers no retry after Cloudflare's 520 in front of CLNRest", async () => {
+            isLNDBased.mockReturnValue(false);
+            sendCoins.mockRejectedValue(
+                markHttpStatus(new Error('error code: 520'), 520)
+            );
+            const store = newStore(800000, 'cln-rest');
+            store.sendCoins(request());
+            await settle();
+
+            expect(store.sendOutcomeUnknown).toBe(true);
         });
 
         it('offers no retry after a dropped CLNRest connection', async () => {
