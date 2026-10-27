@@ -168,11 +168,9 @@ export function localeString(
 
     if (substitutions && translation) {
         Object.keys(substitutions).forEach((subKey) => {
-            const regex = new RegExp(`{{${subKey}}}`, 'g');
-            translation = translation.replace(
-                regex,
-                String(substitutions[subKey])
-            );
+            translation = translation
+                .split(`{{${subKey}}}`)
+                .join(String(substitutions[subKey]));
         });
     }
 
