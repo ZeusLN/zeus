@@ -261,6 +261,7 @@ export default class LSPStore {
         // can't write into the next screen's state.
         this.getInfoId = '';
         this.createOrderId = '';
+        this.getOrderId = '';
         this.createOrderResponse = {};
         this.getInfoData = {};
         this.loadingLSPS1 = false;
@@ -273,6 +274,9 @@ export default class LSPStore {
         this.stopFreeOrderStatusPolling();
         this.createExtensionOrderResponseResolver?.();
         this.createExtensionOrderId = '';
+        // same invalidation as resetLSPS1Data: a late get_order reply must
+        // not match the id of a request the reset left behind
+        this.getExtensionOrderId = '';
         this.createExtensionOrderResponse = {};
         this.loadingLSPS7 = false;
         this.error = false;

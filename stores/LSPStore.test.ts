@@ -202,6 +202,48 @@ describe('LSPStore custom-message request timeouts', () => {
         expect(store.getInfoData).toEqual({});
     });
 
+    it('resetLSPS1Data drops a late get_order response', () => {
+        const store = makeStore();
+        store.lsps1GetOrderCustomMessage('order-x', 'peer');
+        const lateId = store.getOrderId;
+        store.resetLSPS1Data();
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: lateId,
+                    result: { order_state: 'COMPLETED' }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(false);
+        expect(store.getOrderResponse).toEqual({});
+    });
+
+    it('resetLSPS7Data drops a late get_extension_order response', () => {
+        const store = makeStore();
+        store.lsps7GetOrderCustomMessage('order-y', 'peer');
+        const lateId = store.getExtensionOrderId;
+        store.resetLSPS7Data();
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: lateId,
+                    result: { order_state: 'COMPLETED' }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(false);
+        expect(store.getExtensionOrderResponse).toEqual({});
+    });
+
     it.each([
         ['an empty id', { id: '' }],
         ['no id', {}],
