@@ -17,7 +17,7 @@ class CashuDevKitModule: RCTEventEmitter {
     // MARK: - Properties
 
     private var repo: WalletRepository?
-    private var db: WalletSqliteDatabase?
+    private var db: WalletDatabase?
     private var walletUnit: CurrencyUnit = .sat
     private var wallets: [String: Wallet] = [:]
     private var preparedSends: [String: PreparedSend] = [:]
@@ -511,7 +511,7 @@ class CashuDevKitModule: RCTEventEmitter {
         // of; decoding a foreign token must not add its mint or contact
         // it, so read the cached keysets straight from the database
         // (0.18 removed Wallet.getMintKeysets)
-        let handles: (WalletRepository, WalletSqliteDatabase)? = walletQueue.sync {
+        let handles: (WalletRepository, WalletDatabase)? = walletQueue.sync {
             guard isInitialized, let repo = self.repo, let db = self.db else { return nil }
             return (repo, db)
         }
@@ -554,13 +554,28 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             do {
                 let dbPath = getDatabasePath(for: mnemonic)
-                let sqliteDb = try WalletSqliteDatabase(filePath: dbPath)
+                // createWalletDb returns a Rust-backed WalletDatabaseImpl,
+                // which WalletStore.custom hands to Rust by cloning its
+                // handle. A Swift-constructed WalletSqliteDatabase would be
+                // passed as a foreign callback object instead, and CDK's
+                // rate limiter writer task can drop the last reference on a
+                // tokio thread. That runs the Swift deinit there, and
+                // freeing the database's owned tokio runtime inside an
+                // async context panics into the deinit's try! (crash on
+                // wallet switch). The runtime drop is fixed upstream in
+                // cashubtc/cdk#2581, backported to 0.18.x in #2731.
+                //
+                // Keep this after that bump only if the bump also has
+                // cashubtc/cdk#2769. Direct calls on WalletDatabaseImpl run
+                // outside tokio, and until #2769 a transaction that fails
+                // there (removeProofs) skips its rollback and returns the
+                // connection to the pool with the write lock held
+                let sqliteDb = try createWalletDb(backend: .sqlite(path: dbPath))
 
                 let currencyUnit = parseCurrencyUnit(unit)
 
-                // WalletSqliteDatabase conforms to WalletDatabase; passing
-                // it via WalletStore.custom keeps the same handle available
-                // for the direct database methods below
+                // Passing the same handle via WalletStore.custom keeps it
+                // available for the direct database methods below
                 let newRepo = try WalletRepository(
                     mnemonic: mnemonic,
                     store: .custom(db: sqliteDb)
@@ -654,7 +669,7 @@ class CashuDevKitModule: RCTEventEmitter {
                     )
                 }
                 _ = walletQueue.sync { wallets.removeValue(forKey: normalized) }
-                let dbHandle: WalletSqliteDatabase? = walletQueue.sync { self.db }
+                let dbHandle: WalletDatabase? = walletQueue.sync { self.db }
                 if let db = dbHandle {
                     try await db.removeMint(mintUrl: url)
                 } else {
@@ -942,7 +957,7 @@ class CashuDevKitModule: RCTEventEmitter {
                                secretKey: String?,
                                resolve: @escaping RCTPromiseResolveBlock,
                                reject: @escaping RCTPromiseRejectBlock) {
-        let dbHandle: WalletSqliteDatabase? = walletQueue.sync {
+        let dbHandle: WalletDatabase? = walletQueue.sync {
             guard isInitialized else { return nil }
             return self.db
         }
@@ -1624,7 +1639,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func listTransactions(_ direction: String?,
                           resolve: @escaping RCTPromiseResolveBlock,
                           reject: @escaping RCTPromiseRejectBlock) {
-        let dbHandle: WalletSqliteDatabase? = walletQueue.sync {
+        let dbHandle: WalletDatabase? = walletQueue.sync {
             guard isInitialized else { return nil }
             return self.db
         }
@@ -1678,7 +1693,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func getUnspentProofs(_ mintUrl: String,
                           resolve: @escaping RCTPromiseResolveBlock,
                           reject: @escaping RCTPromiseRejectBlock) {
-        let dbHandle: WalletSqliteDatabase? = walletQueue.sync { self.db }
+        let dbHandle: WalletDatabase? = walletQueue.sync { self.db }
         guard let db = dbHandle else {
             reject("NO_WALLET", "Wallet not initialized", nil)
             return
@@ -1718,7 +1733,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func removeProofs(_ proofsYJson: String,
                       resolve: @escaping RCTPromiseResolveBlock,
                       reject: @escaping RCTPromiseRejectBlock) {
-        let dbHandle: WalletSqliteDatabase? = walletQueue.sync { self.db }
+        let dbHandle: WalletDatabase? = walletQueue.sync { self.db }
         guard let db = dbHandle else {
             reject("NO_WALLET", "Wallet not initialized", nil)
             return
