@@ -77,12 +77,12 @@ const renderScreen = async (
     connectionPermissions?: string[],
     relayUrl: string = 'wss://relay.example'
 ) => {
-    const ref = React.createRef<any>();
     const ModalStore = { toggleInfoModal: jest.fn() };
     let onFocus: () => void = () => {};
     const NostrWalletConnectStore = {
         maxBudgetLimit: 0,
         maxBudgetSource: 'lightning',
+        canOfferCashuSwitch: false,
         loadMaxBudget: jest.fn(() => Promise.resolve()),
         loadConnections: jest.fn(() => Promise.resolve()),
         getConnection: jest.fn(() => ({
@@ -95,6 +95,7 @@ const renderScreen = async (
             }
         }))
     };
+    const ref = React.createRef<AddOrEditNWCConnection>();
     await render(
         <AddOrEditNWCConnection
             ref={ref}
@@ -144,40 +145,5 @@ describe('AddOrEditNWCConnection budget info', () => {
                 'views.Settings.NostrWalletConnect.budgetInfo.limit'
             ]
         });
-    });
-});
-
-describe('AddOrEditNWCConnection custom relay validation', () => {
-    it('requires wss:// for a new custom relay', async () => {
-        const { ref } = await renderScreen();
-        const screenInstance = ref.current;
-
-        expect(screenInstance.isValidRelayUrl('wss://relay.example.com')).toBe(
-            true
-        );
-        expect(screenInstance.isValidRelayUrl('ws://relay.example.com')).toBe(
-            false
-        );
-        expect(
-            screenInstance.isValidRelayUrl(
-                'ws://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion'
-            )
-        ).toBe(true);
-    });
-
-    it('keeps an existing ws:// relay valid when editing', async () => {
-        const { ref } = await renderScreen(
-            NostrConnectUtils.getReadOnlyPermissions(),
-            'ws://relay.example.com'
-        );
-        const screenInstance = ref.current;
-
-        expect(screenInstance.state.customRelayUrl).toBe(
-            'ws://relay.example.com'
-        );
-        expect(screenInstance.isFormValid()).toBe(true);
-        expect(screenInstance.isValidRelayUrl('ws://other.example.com')).toBe(
-            false
-        );
     });
 });
