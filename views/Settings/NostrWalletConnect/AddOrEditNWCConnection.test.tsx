@@ -79,6 +79,7 @@ const renderScreen = async (connectionPermissions?: string[]) => {
     const NostrWalletConnectStore = {
         maxBudgetLimit: 0,
         maxBudgetSource: 'lightning',
+        canOfferCashuSwitch: false,
         loadMaxBudget: jest.fn(() => Promise.resolve()),
         loadConnections: jest.fn(() => Promise.resolve()),
         getConnection: jest.fn(() => ({
@@ -91,8 +92,10 @@ const renderScreen = async (connectionPermissions?: string[]) => {
             }
         }))
     };
+    const ref = React.createRef<AddOrEditNWCConnection>();
     await render(
         <AddOrEditNWCConnection
+            ref={ref}
             navigation={
                 {
                     addListener: jest.fn((_: string, cb: () => void) => {
@@ -115,7 +118,7 @@ const renderScreen = async (connectionPermissions?: string[]) => {
     await act(async () => {
         onFocus();
     });
-    return { ModalStore };
+    return { ModalStore, ref };
 };
 
 describe('AddOrEditNWCConnection budget info', () => {
@@ -139,5 +142,32 @@ describe('AddOrEditNWCConnection budget info', () => {
                 'views.Settings.NostrWalletConnect.budgetInfo.limit'
             ]
         });
+    });
+});
+
+describe('AddOrEditNWCConnection zero-balance wallet with budget', () => {
+    it('blocks zero budget when payment permissions are set', async () => {
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getFullAccessPermissions()
+        );
+        expect(ref.current!.state.connectionName).toBe('Test');
+        expect(ref.current!.state.maxBudgetLimit).toBe(0);
+        expect(ref.current!.state.budgetValue).toBe(0);
+        expect(ref.current!.isFormValid()).toBe(false);
+    });
+
+    it('allows a nonzero budget with a zero-balance wallet', async () => {
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getFullAccessPermissions()
+        );
+        await act(async () => {
+            ref.current!.handleCustomBudgetValueChange('10000');
+        });
+        expect(ref.current!.state.maxBudgetLimit).toBe(0);
+        expect(ref.current!.state.budgetValue).toBe(10000);
+        expect(ref.current!.isFormValid()).toBe(true);
+        await expect(
+            ref.current!.buildConnectionParams(false)
+        ).resolves.toMatchObject({ budgetAmount: 10000 });
     });
 });
