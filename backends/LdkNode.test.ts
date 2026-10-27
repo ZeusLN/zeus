@@ -49,6 +49,7 @@ jest.mock('../utils/LocaleUtils');
 
 import LdkNode from './LdkNode';
 import Payment from '../models/Payment';
+import * as LocaleUtils from '../utils/LocaleUtils';
 
 const PAYMENT_ID = 'payment-id';
 
@@ -524,6 +525,154 @@ describe('LdkNode.closeChannel', () => {
 
         expect(close.settled).toBe(false);
         expect(unsubscribed).toBe(false);
+    });
+
+    describe('closure reason', () => {
+        beforeEach(() => {
+            // the shared LocaleUtils mock drops substitutions, so include
+            // them to check which reason ends up in the error
+            jest.spyOn(LocaleUtils, 'localeString').mockImplementation(
+                (key: string, substitutions?: any) =>
+                    substitutions
+                        ? `${key} ${JSON.stringify(substitutions)}`
+                        : key
+            );
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        const closeWithReason = async (force: boolean, reason?: any) => {
+            const close = track(
+                ldk.closeChannel(['txid', '0', force ? 'true' : ''])
+            );
+            await jest.advanceTimersByTimeAsync(0);
+            emitEvent({
+                type: 'channelClosed',
+                userChannelId: 'user-channel-id',
+                reason
+            });
+            await jest.advanceTimersByTimeAsync(0);
+            expect(close.settled).toBe(true);
+            expect(unsubscribed).toBe(true);
+            return close;
+        };
+
+        it.each([
+            'locallyInitiatedCooperativeClosure',
+            'counterpartyInitiatedCooperativeClosure',
+            'legacyCooperativeClosure',
+            'locallyCoopClosedUnfundedChannel',
+            'counterpartyCoopClosedUnfundedChannel'
+        ])('resolves a cooperative close that ends with %s', async (type) => {
+            const close = await closeWithReason(false, { type });
+            expect(close.error).toBeUndefined();
+        });
+
+        it('resolves a cooperative close when the event has no reason', async () => {
+            const close = await closeWithReason(false, undefined);
+            expect(close.error).toBeUndefined();
+        });
+
+        it('rejects a cooperative close that LDK turned into a force close', async () => {
+            const close = await closeWithReason(false, {
+                type: 'processingError',
+                peerMessage:
+                    'remote wants something (4073 sat) higher than our max fee (1182 sat)'
+            });
+
+            expect(close.error?.message).toEqual(
+                'views.Channel.coopCloseBecameForceClose {"reason":"views.Channel.closureReason.processingError {\\"peerMessage\\":\\"remote wants something (4073 sat) higher than our max fee (1182 sat)\\"}"}'
+            );
+        });
+
+        it.each([
+            'holderForceClosed',
+            'counterpartyForceClosed',
+            'commitmentTxConfirmed',
+            'htlcsTimedOut',
+            'disconnectedPeer'
+        ])('rejects a cooperative close that ends with %s', async (type) => {
+            const close = await closeWithReason(false, { type });
+
+            expect(close.error?.message).toContain(
+                'views.Channel.coopCloseBecameForceClose'
+            );
+        });
+
+        it.each([
+            'holderForceClosed',
+            'processingError',
+            'commitmentTxConfirmed',
+            'locallyInitiatedCooperativeClosure'
+        ])('resolves a force close that ends with %s', async (type) => {
+            const close = await closeWithReason(true, { type });
+            expect(close.error).toBeUndefined();
+        });
+
+        it('ignores a force close of another channel', async () => {
+            const close = track(ldk.closeChannel(['txid', '0', '']));
+            await jest.advanceTimersByTimeAsync(0);
+
+            emitEvent({
+                type: 'channelClosed',
+                userChannelId: 'other-channel',
+                reason: { type: 'holderForceClosed' }
+            });
+            await jest.advanceTimersByTimeAsync(0);
+            expect(close.settled).toBe(false);
+
+            emitEvent({
+                type: 'channelClosed',
+                userChannelId: 'user-channel-id',
+                reason: { type: 'locallyInitiatedCooperativeClosure' }
+            });
+            await jest.advanceTimersByTimeAsync(0);
+            expect(close.settled).toBe(true);
+            expect(close.error).toBeUndefined();
+        });
+
+        it('rejects once the close call returns when the force close event arrives first', async () => {
+            let returnClose: () => void = () => {};
+            mockCloseChannel.mockReturnValue(
+                new Promise<void>((resolve) => {
+                    returnClose = resolve;
+                })
+            );
+
+            const close = track(ldk.closeChannel(['txid', '0', '']));
+            await jest.advanceTimersByTimeAsync(0);
+            emitEvent({
+                type: 'channelClosed',
+                userChannelId: 'user-channel-id',
+                reason: { type: 'holderForceClosed' }
+            });
+            await jest.advanceTimersByTimeAsync(0);
+            expect(close.settled).toBe(false);
+
+            returnClose();
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(close.error?.message).toContain(
+                'views.Channel.coopCloseBecameForceClose'
+            );
+        });
+
+        it('reports the close call error over a later force close event', async () => {
+            mockCloseChannel.mockRejectedValue(new Error('peer disconnected'));
+
+            const close = track(ldk.closeChannel(['txid', '0', '']));
+            await jest.advanceTimersByTimeAsync(0);
+            emitEvent({
+                type: 'channelClosed',
+                userChannelId: 'user-channel-id',
+                reason: { type: 'holderForceClosed' }
+            });
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(close.error?.message).toEqual('peer disconnected');
+        });
     });
 
     it('rejects and stops listening when LDK rejects the close', async () => {
