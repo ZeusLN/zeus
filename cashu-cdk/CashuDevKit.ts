@@ -22,6 +22,7 @@ import {
     CDKPreparedSend,
     CDKReceiveOptions,
     CDKProofState,
+    CDKRecoveryReport,
     CDKTransaction,
     CDKTransactionDirection,
     CDKErrorType,
@@ -29,6 +30,7 @@ import {
     CashuDevKitNativeModule
 } from './types';
 import { parseCashuDevKitError } from '../utils/ErrorUtils';
+import MintOperationGate from './MintOperationGate';
 
 const { CashuDevKitModule } = NativeModules as unknown as {
     CashuDevKitModule: CashuDevKitNativeModule;
@@ -100,6 +102,10 @@ function mapCDKError(error: any): CDKError {
 class CashuDevKit {
     private initialized: boolean = false;
 
+    // Operations that create or drive CDK sagas run through this gate so
+    // that saga recovery never runs alongside them on the same mint
+    private gate = new MintOperationGate();
+
     /**
      * Check if native module is available
      */
@@ -129,6 +135,9 @@ class CashuDevKit {
     ): Promise<void> {
         try {
             await CashuDevKitModule.initializeWallet(mnemonic, unit);
+            // Operations still counted against the previous wallet's
+            // repository must not hold up recovery on the new one
+            this.gate = new MintOperationGate();
             this.initialized = true;
         } catch (error) {
             throw mapCDKError(error);
@@ -356,16 +365,18 @@ class CashuDevKit {
         quoteId: string,
         amount: number
     ): Promise<CDKProof[]> {
-        try {
-            const json = await CashuDevKitModule.mintExternal(
-                mintUrl,
-                quoteId,
-                amount
-            );
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.mintExternal(
+                    mintUrl,
+                    quoteId,
+                    amount
+                );
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     /**
@@ -379,16 +390,18 @@ class CashuDevKit {
         quoteId: string,
         conditions?: CDKSpendingConditions
     ): Promise<CDKProof[]> {
-        try {
-            const json = await CashuDevKitModule.mint(
-                mintUrl,
-                quoteId,
-                conditions ? JSON.stringify(conditions) : undefined
-            );
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.mint(
+                    mintUrl,
+                    quoteId,
+                    conditions ? JSON.stringify(conditions) : undefined
+                );
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     // ========================================================================
@@ -419,7 +432,8 @@ class CashuDevKit {
     }
 
     /**
-     * Check status of a melt quote
+     * Check status of a melt quote. For a quote a melt saga holds, CDK
+     * resumes that saga, so this goes through the gate like a melt.
      * @param mintUrl - The mint's URL
      * @param quoteId - The quote ID
      */
@@ -427,15 +441,17 @@ class CashuDevKit {
         mintUrl: string,
         quoteId: string
     ): Promise<CDKMeltQuote> {
-        try {
-            const json = await CashuDevKitModule.checkMeltQuote(
-                mintUrl,
-                quoteId
-            );
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.checkMeltQuote(
+                    mintUrl,
+                    quoteId
+                );
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     /**
@@ -444,12 +460,14 @@ class CashuDevKit {
      * @param quoteId - The melt quote ID (from createMeltQuote)
      */
     async melt(mintUrl: string, quoteId: string): Promise<CDKMelted> {
-        try {
-            const json = await CashuDevKitModule.melt(mintUrl, quoteId);
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.melt(mintUrl, quoteId);
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     /**
@@ -467,16 +485,18 @@ class CashuDevKit {
         bolt11: string,
         mppAmountMsat: number
     ): Promise<CDKPartialMelted> {
-        try {
-            const json = await CashuDevKitModule.meltPartial(
-                mintUrl,
-                bolt11,
-                mppAmountMsat
-            );
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.meltPartial(
+                    mintUrl,
+                    bolt11,
+                    mppAmountMsat
+                );
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     // ========================================================================
@@ -570,8 +590,12 @@ class CashuDevKit {
             memo: memo ? { memo, include_memo: true } : undefined
         };
 
-        const prepared = await this.prepareSend(mintUrl, amount, options);
-        return await this.confirmSend(prepared.id, memo);
+        // Recovery compensates a send saga left between prepare and
+        // confirm, so both steps run as one operation
+        return this.gate.runOperation(mintUrl, async () => {
+            const prepared = await this.prepareSend(mintUrl, amount, options);
+            return await this.confirmSend(prepared.id, memo);
+        });
     }
 
     /**
@@ -609,14 +633,25 @@ class CashuDevKit {
         encodedToken: string,
         options?: CDKReceiveOptions
     ): Promise<number> {
+        const receive = async () => {
+            try {
+                return await CashuDevKitModule.receive(
+                    encodedToken,
+                    options ? JSON.stringify(options) : undefined
+                );
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        };
+
+        // The receive saga belongs to the token's mint
+        let mintUrl: string | undefined;
         try {
-            return await CashuDevKitModule.receive(
-                encodedToken,
-                options ? JSON.stringify(options) : undefined
-            );
-        } catch (error) {
-            throw mapCDKError(error);
+            mintUrl = (await this.decodeToken(encodedToken)).mint_url;
+        } catch (_e) {
+            // CDK rejects a token it cannot decode without creating a saga
         }
+        return mintUrl ? this.gate.runOperation(mintUrl, receive) : receive();
     }
 
     // ========================================================================
@@ -658,11 +693,13 @@ class CashuDevKit {
      * @returns Amount restored in sats
      */
     async restore(mintUrl: string): Promise<number> {
-        try {
-            return await CashuDevKitModule.restore(mintUrl);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                return await CashuDevKitModule.restore(mintUrl);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     /**
@@ -672,11 +709,43 @@ class CashuDevKit {
      * @returns Amount restored in sats
      */
     async restoreFromSeed(mintUrl: string, seedHex: string): Promise<number> {
-        try {
-            return await CashuDevKitModule.restoreFromSeed(mintUrl, seedHex);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                return await CashuDevKitModule.restoreFromSeed(
+                    mintUrl,
+                    seedHex
+                );
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
+    }
+
+    // ========================================================================
+    // Saga Recovery
+    // ========================================================================
+
+    /**
+     * Resume or roll back the CDK operations an app kill or crash left
+     * unfinished on a mint (swap, send, receive, mint, melt). Needs the mint.
+     * @param mintUrl - The mint's URL
+     * @returns The recovery counts, or null when recovery did not run because
+     * an operation or another recovery was in flight on the mint
+     */
+    async recoverIncompleteSagas(
+        mintUrl: string
+    ): Promise<CDKRecoveryReport | null> {
+        const outcome = await this.gate.tryRunRecovery(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.recoverIncompleteSagas(
+                    mintUrl
+                );
+                return JSON.parse(json) as CDKRecoveryReport;
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
+        return outcome.ran ? outcome.result : null;
     }
 
     // ========================================================================

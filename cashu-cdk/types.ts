@@ -178,6 +178,16 @@ export interface CDKPreparedSend {
     fee: number;
 }
 
+// Counts from recover_incomplete_sagas. A sent token still unclaimed at the
+// mint counts as recovered without being changed, so recovered > 0 does not
+// mean anything was fixed.
+export interface CDKRecoveryReport {
+    recovered: number;
+    compensated: number;
+    skipped: number;
+    failed: number;
+}
+
 export interface CDKReceiveOptions {
     p2pk_signing_keys?: string[]; // hex-encoded secret keys
     preimages?: string[];
@@ -322,6 +332,9 @@ export interface CashuDevKitNativeModule {
     // Restore
     restore(mintUrl: string): Promise<number>;
     restoreFromSeed(mintUrl: string, seedHex: string): Promise<number>;
+
+    // Saga Recovery
+    recoverIncompleteSagas(mintUrl: string): Promise<string>;
 
     // Proof Management
     checkProofsState(mintUrl: string, proofsJson: string): Promise<string>;
