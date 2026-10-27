@@ -573,7 +573,7 @@ class LdkNodeModule: RCTEventEmitter {
 
         if !self.storedStorageDirPath.isEmpty {
             NSLog("LdkNodeModule: applyBuilderSettings: Enabling filesystem logger")
-            builder.setFilesystemLogger(logFilePath: "\(self.storedStorageDirPath)/ldk_node.log", maxLogLevel: .debug)
+            builder.setFilesystemLogger(logFilePath: "\(self.storedStorageDirPath)/ldk_node.log", maxLogLevel: .info)
         }
     }
 
