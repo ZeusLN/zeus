@@ -46,6 +46,20 @@ export const markNodeResponded = (
 export const isNodeResponse = (error: unknown): boolean =>
     (error as any)?.nodeResponded === true;
 
+// Tags an error thrown before a request went out at all (no session to the
+// node, Tor not running), so a caller knows the node never saw it. String
+// rejections are wrapped so they can carry the tag.
+export const markRequestNotSent = (error: unknown): unknown => {
+    const tagged = typeof error === 'string' ? new Error(error) : error;
+    if (tagged && typeof tagged === 'object') {
+        (tagged as any).requestNotSent = true;
+    }
+    return tagged;
+};
+
+export const isRequestNotSent = (error: unknown): boolean =>
+    (error as any)?.requestNotSent === true;
+
 // gRPC status codes other than OK (1 Canceled to 16 Unauthenticated)
 const isGrpcErrorCode = (code: unknown): boolean =>
     Number.isInteger(code) && (code as number) >= 1 && (code as number) <= 16;
@@ -77,6 +91,25 @@ export const markHttpStatus = (
     }
     return error;
 };
+
+// Records the JSON-RPC error code of a Core Lightning error body
+// ({ code, message }), which shows clnrest itself answered rather than a
+// proxy in front of it
+export const markJsonRpcCode = (error: unknown, body: unknown): unknown => {
+    const code =
+        body && typeof body === 'object'
+            ? Number.isInteger((body as any).code)
+                ? (body as any).code
+                : (body as any).error?.code
+            : undefined;
+    if (error && typeof error === 'object' && Number.isInteger(code)) {
+        (error as any).jsonRpcCode = code;
+    }
+    return error;
+};
+
+export const hasJsonRpcCode = (error: unknown): boolean =>
+    Number.isInteger((error as any)?.jsonRpcCode);
 
 export const httpStatusOf = (error: unknown): number | undefined => {
     const status = (error as any)?.httpStatus;

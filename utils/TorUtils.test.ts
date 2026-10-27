@@ -16,7 +16,8 @@ import { RnTor } from 'react-native-nitro-tor';
 import { doTorRequest, isOnionHttpsUrl, RequestMethod } from './TorUtils';
 import {
     isNodeResponse,
-    isPaymentRefusedAsDuplicate
+    isPaymentRefusedAsDuplicate,
+    isRequestNotSent
 } from './PaymentLookupUtils';
 
 describe('TorUtils', () => {
@@ -188,6 +189,36 @@ describe('doTorRequest errors', () => {
             expect(isNodeResponse(error)).toBe(false);
         }
     );
+
+    it('tags a failure to start Tor as not sent', async () => {
+        // a fresh module, so Tor isn't already started from earlier tests
+        let fresh: any;
+        let tor: any;
+        jest.isolateModules(() => {
+            tor = require('react-native-nitro-tor').RnTor;
+            fresh = require('./TorUtils');
+        });
+        tor.startTorIfNotRunning.mockResolvedValueOnce({
+            is_success: false,
+            error_message: 'bootstrap timed out'
+        });
+
+        const error = await fresh
+            .doTorRequest(
+                'https://node.onion:8080/v1/transactions',
+                fresh.RequestMethod.POST,
+                '{}'
+            )
+            .catch((e: any) => e);
+
+        expect(error.message).toBe('bootstrap timed out');
+        expect(isRequestNotSent(error)).toBe(true);
+        expect(tor.httpPost).not.toHaveBeenCalledWith(
+            expect.objectContaining({
+                url: 'https://node.onion:8080/v1/transactions'
+            })
+        );
+    });
 
     it('does not tag a transport failure', async () => {
         (RnTor.httpPost as jest.Mock).mockResolvedValue({

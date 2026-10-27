@@ -9,6 +9,10 @@ import {
     markRestErrorResponse,
     markHttpStatus,
     httpStatusOf,
+    markJsonRpcCode,
+    hasJsonRpcCode,
+    markRequestNotSent,
+    isRequestNotSent,
     paymentCreationTimeMs
 } from './PaymentLookupUtils';
 
@@ -232,6 +236,55 @@ describe('markHttpStatus', () => {
         expect(
             httpStatusOf(markRestErrorResponse(new Error('x'), undefined, 502))
         ).toBe(502);
+    });
+});
+
+describe('markRequestNotSent', () => {
+    it('tags an Error in place', () => {
+        const error = new Error('Failed to connect the LNC client');
+        expect(markRequestNotSent(error)).toBe(error);
+        expect(isRequestNotSent(error)).toBe(true);
+    });
+
+    it('wraps a string rejection in a tagged Error', () => {
+        const tagged = markRequestNotSent('Tor not running') as Error;
+        expect(tagged).toBeInstanceOf(Error);
+        expect(isRequestNotSent(tagged)).toBe(true);
+    });
+
+    it('leaves other errors untagged', () => {
+        expect(isRequestNotSent(new Error('x'))).toBe(false);
+        expect(isRequestNotSent(undefined)).toBe(false);
+    });
+});
+
+describe('markJsonRpcCode', () => {
+    it('records a top-level JSON-RPC code', () => {
+        const error = markJsonRpcCode(new Error('x'), {
+            code: 301,
+            message: 'x'
+        });
+        expect(hasJsonRpcCode(error)).toBe(true);
+        expect((error as any).jsonRpcCode).toBe(301);
+    });
+
+    it('records a nested JSON-RPC code', () => {
+        const error = markJsonRpcCode(new Error('x'), {
+            error: { code: -32602, message: 'x' }
+        });
+        expect((error as any).jsonRpcCode).toBe(-32602);
+    });
+
+    it('records nothing without an integer code', () => {
+        expect(hasJsonRpcCode(markJsonRpcCode(new Error('x'), undefined))).toBe(
+            false
+        );
+        expect(
+            hasJsonRpcCode(markJsonRpcCode(new Error('x'), { code: 'E1' }))
+        ).toBe(false);
+        expect(
+            hasJsonRpcCode(markJsonRpcCode(new Error('x'), 'Bad Gateway'))
+        ).toBe(false);
     });
 });
 
