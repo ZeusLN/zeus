@@ -84,6 +84,21 @@ describe('decode', () => {
         expect(decoded.timeExpireDate).toBe(decoded.timestamp + 3600);
     });
 
+    it('applies the BOLT 11 default expiry of 3600 s when the invoice has no expiry field', () => {
+        const decoded = Bolt11Utils.decode(NO_AMOUNT_FIXTURE);
+
+        expect(decoded.sections.map((s) => s.name)).not.toContain('expiry');
+        expect(decoded.expiry).toBe(3600);
+        expect(decoded.timeExpireDate).toBe(decoded.timestamp + 3600);
+    });
+
+    it('keeps an explicit expiry field', () => {
+        const decoded = Bolt11Utils.decode(BOLT11_SPEC_FIXTURE);
+
+        expect(decoded.expiry).toBe(60);
+        expect(decoded.timeExpireDate).toBe(decoded.timestamp + 60);
+    });
+
     it('recovers destination as a 33-byte compressed pubkey via signature recovery', () => {
         const decoded = Bolt11Utils.decode(REGTEST_FIXTURE);
 
