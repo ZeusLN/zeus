@@ -562,7 +562,14 @@ class CashuDevKitModule: RCTEventEmitter {
                 // tokio thread. That runs the Swift deinit there, and
                 // freeing the database's owned tokio runtime inside an
                 // async context panics into the deinit's try! (crash on
-                // wallet switch, fixed upstream in cashubtc/cdk#2581)
+                // wallet switch). The runtime drop is fixed upstream in
+                // cashubtc/cdk#2581, backported to 0.18.x in #2731.
+                //
+                // Keep this after that bump only if the bump also has
+                // cashubtc/cdk#2769. Direct calls on WalletDatabaseImpl run
+                // outside tokio, and until #2769 a transaction that fails
+                // there (removeProofs) skips its rollback and returns the
+                // connection to the pool with the write lock held
                 let sqliteDb = try createWalletDb(backend: .sqlite(path: dbPath))
 
                 let currencyUnit = parseCurrencyUnit(unit)
