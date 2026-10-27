@@ -80,7 +80,7 @@ Versions pinned as of 2026-10-24 (always check `fetch-libraries-versions.json`):
 
 | Artifact | Version | Android destination | iOS destination |
 |---|---|---|---|
-| embedded LND (`ZeusLN/lnd` release) | `v0.21.5-beta.rc1-zeus` | `android/lndmobile/Lndmobile.aar` | unzipped to `ios/LncMobile/Lndmobile.xcframework` (yes, **Lnc**Mobile; see §4) |
+| embedded LND (`ZeusLN/lnd` release) | `v0.21.5-beta-zeus` | `android/lndmobile/Lndmobile.aar` | unzipped to `ios/LncMobile/Lndmobile.xcframework` (yes, **Lnc**Mobile; see §4) |
 | LDK Node (`ZeusLN/ldk-node` release) | `v0.7.1-zeus` | `.so` files unzipped into `android/app/src/main/jniLibs/<abi>/libldk_node.so` | `ios/LdkNodeMobile/LDKNodeFFI.xcframework` |
 | CDK (Android: `org.cashudevkit:cdk-android` aar from Maven Central, which bundles the Kotlin bindings; iOS: `cashubtc/cdk-swift` release) | `0.18.1` | `android/cdk/cashudevkit.aar` | `ios/Cdk/CashuDevKitFFI.xcframework` (macOS slice stripped). Only the iOS Swift bindings have a separate hash (`iosBindingsSha256`) |
 | zeus-cashu-restore (`ZeusLN/zeus-cashu-restore` release) | `0.1.0` | `android/zeus-restore/zeus-cashu-restore.aar` | `ios/ZeusRestore/zeusRestoreFFI.xcframework` |
