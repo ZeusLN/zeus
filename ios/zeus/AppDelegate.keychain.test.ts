@@ -27,6 +27,11 @@ const extractCheck = () => {
     return source.slice(start, end);
 };
 
+// Replays a sequence of launch events the way AppDelegate wires them:
+//   launch:<0|1>  didFinishLaunching with protected data unavailable/available
+//   unlock        applicationProtectedDataDidBecomeAvailable:
+//   active:<0|1>  UIApplicationDidBecomeActiveNotification, with protected data
+//                 unavailable/available at that moment
 const HARNESS = (check: string) => `#import <Foundation/Foundation.h>
 #import <Security/Security.h>
 
@@ -37,25 +42,62 @@ static OSStatus FakeSecItemDelete(CFDictionaryRef query) {
 }
 #define SecItemDelete FakeSecItemDelete
 
+// In-memory stand-in for standardUserDefaults, so runs share no state and
+// write nothing to the developer's ~/Library/Preferences
+@interface FakeDefaults : NSObject
++ (instancetype)standardUserDefaults;
+- (BOOL)boolForKey:(NSString *)key;
+- (void)setBool:(BOOL)value forKey:(NSString *)key;
+@end
+@implementation FakeDefaults {
+  NSMutableDictionary *_values;
+}
++ (instancetype)standardUserDefaults {
+  static FakeDefaults *shared;
+  if (!shared) {
+    shared = [FakeDefaults new];
+    shared->_values = [NSMutableDictionary dictionary];
+  }
+  return shared;
+}
+- (BOOL)boolForKey:(NSString *)key { return [_values[key] boolValue]; }
+- (void)setBool:(BOOL)value forKey:(NSString *)key { _values[key] = @(value); }
+@end
+#define NSUserDefaults FakeDefaults
+
 ${check}
 
 int main(int argc, const char *argv[]) {
   @autoreleasepool {
-    // argv: <protected data 0|1> <defaults flag 0|1> <defaults file path>
-    BOOL protectedData = atoi(argv[1]);
+    // argv: <defaults flag 0|1> <defaults file path> <event>...
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    [defaults removeObjectForKey:kHasRunBeforeKey];
-    if (atoi(argv[2])) [defaults setBool:YES forKey:kHasRunBeforeKey];
+    if (atoi(argv[1])) [defaults setBool:YES forKey:kHasRunBeforeKey];
+    NSString *path = @(argv[2]);
     gDeleted = [NSMutableArray array];
 
-    BOOL ran = ClearKeychainIfNecessary(protectedData, @(argv[3]));
+    BOOL pending = NO;
+    int checks = 0;
+    for (int i = 3; i < argc; i++) {
+      NSString *event = @(argv[i]);
+      if ([event hasPrefix:@"launch:"]) {
+        pending = !ClearKeychainIfNecessary([event hasSuffix:@"1"], path);
+        if (!pending) checks++;
+      } else if ([event isEqualToString:@"unlock"]) {
+        if (RunPendingKeychainCheck(&pending, YES, path)) checks++;
+      } else if ([event hasPrefix:@"active:"]) {
+        if (RunPendingKeychainCheck(&pending, [event hasSuffix:@"1"], path)) checks++;
+      } else {
+        fprintf(stderr, "unknown event %s\\n", argv[i]);
+        return 1;
+      }
+    }
 
     NSDictionary *report = @{
-      @"ran": @(ran),
+      @"checks": @(checks),
+      @"pending": @(pending),
       @"deleted": @(gDeleted.count),
       @"flag": @([defaults boolForKey:kHasRunBeforeKey])
     };
-    [defaults removeObjectForKey:kHasRunBeforeKey];
     NSData *json = [NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
     printf("%s\\n", [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding].UTF8String);
   }
@@ -112,42 +154,37 @@ int main(int argc, const char *argv[]) {
             if (dir) fs.rmSync(dir, { recursive: true, force: true });
         });
 
-        const check = (
-            protectedData: boolean,
+        const run = (
             defaultsFlag: boolean,
-            defaultsFile: string
+            defaultsFile: string,
+            ...events: string[]
         ) =>
             JSON.parse(
                 execFileSync(
                     binary,
-                    [
-                        protectedData ? '1' : '0',
-                        defaultsFlag ? '1' : '0',
-                        defaultsFile
-                    ],
+                    [defaultsFlag ? '1' : '0', defaultsFile, ...events],
                     { encoding: 'utf8' }
                 )
             );
 
-        // The reported wipe: a launch before the first unlock reads empty
-        // defaults on an install that has run before
-        it('does nothing while protected data is unavailable', () => {
-            expect(check(false, false, withFlag)).toEqual({
-                ran: false,
-                deleted: 0,
-                flag: false
-            });
-            expect(check(false, false, missing)).toEqual({
-                ran: false,
-                deleted: 0,
-                flag: false
-            });
+        // Before the first unlock after a reboot, a background launch on an
+        // install that has run before reads empty defaults
+        it('does nothing at launch while protected data is unavailable', () => {
+            for (const file of [withFlag, missing]) {
+                expect(run(false, file, 'launch:0')).toEqual({
+                    checks: 0,
+                    pending: true,
+                    deleted: 0,
+                    flag: false
+                });
+            }
         });
 
         it('clears every keychain class on a fresh install', () => {
             for (const file of [missing, withoutFlag]) {
-                expect(check(true, false, file)).toEqual({
-                    ran: true,
+                expect(run(false, file, 'launch:1')).toEqual({
+                    checks: 1,
+                    pending: false,
                     deleted: 5,
                     flag: true
                 });
@@ -155,25 +192,115 @@ int main(int argc, const char *argv[]) {
         });
 
         it('keeps the keychain once the app has run', () => {
-            expect(check(true, true, withFlag)).toEqual({
-                ran: true,
+            expect(run(true, withFlag, 'launch:1')).toEqual({
+                checks: 1,
+                pending: false,
                 deleted: 0,
                 flag: true
             });
         });
 
-        it('keeps the keychain when defaults read empty but the file has the flag', () => {
-            expect(check(true, false, withFlag)).toEqual({
-                ran: true,
+        it('keeps the keychain and leaves defaults alone when defaults read empty but the file has the flag', () => {
+            expect(run(false, withFlag, 'launch:1')).toEqual({
+                checks: 1,
+                pending: false,
                 deleted: 0,
-                flag: true
+                flag: false
+            });
+        });
+
+        describe('deferred check', () => {
+            it('runs once when protected data becomes available after a locked launch', () => {
+                expect(run(false, missing, 'launch:0', 'unlock')).toEqual({
+                    checks: 1,
+                    pending: false,
+                    deleted: 5,
+                    flag: true
+                });
+                expect(run(false, withFlag, 'launch:0', 'unlock')).toEqual({
+                    checks: 1,
+                    pending: false,
+                    deleted: 0,
+                    flag: false
+                });
+            });
+
+            it('runs on becoming active when the unlock callback was missed', () => {
+                expect(run(false, missing, 'launch:0', 'active:1')).toEqual({
+                    checks: 1,
+                    pending: false,
+                    deleted: 5,
+                    flag: true
+                });
+            });
+
+            it('stays pending while becoming active without protected data', () => {
+                expect(run(false, missing, 'launch:0', 'active:0')).toEqual({
+                    checks: 0,
+                    pending: true,
+                    deleted: 0,
+                    flag: false
+                });
+                expect(
+                    run(false, missing, 'launch:0', 'active:0', 'active:1')
+                ).toEqual({
+                    checks: 1,
+                    pending: false,
+                    deleted: 5,
+                    flag: true
+                });
+            });
+
+            it('does not run again on repeated callbacks', () => {
+                expect(
+                    run(
+                        false,
+                        missing,
+                        'launch:0',
+                        'unlock',
+                        'active:1',
+                        'unlock',
+                        'active:1'
+                    )
+                ).toEqual({
+                    checks: 1,
+                    pending: false,
+                    deleted: 5,
+                    flag: true
+                });
+                expect(
+                    run(
+                        false,
+                        missing,
+                        'launch:0',
+                        'active:1',
+                        'unlock',
+                        'active:1'
+                    )
+                ).toEqual({
+                    checks: 1,
+                    pending: false,
+                    deleted: 5,
+                    flag: true
+                });
+            });
+
+            it('never runs after a launch with protected data', () => {
+                expect(
+                    run(false, missing, 'launch:1', 'unlock', 'active:1')
+                ).toEqual({
+                    checks: 1,
+                    pending: false,
+                    deleted: 5,
+                    flag: true
+                });
             });
         });
     }
 );
 
-// The deferred check is UIKit wiring the harness cannot run, so pin its
-// shape in the source. These need no compiler and run everywhere.
+// The harness runs the deferred logic but not its UIKit wiring, so pin
+// that in the source. These need no compiler and run everywhere.
 describe('AppDelegate deferred keychain check wiring', () => {
     const source = fs.readFileSync(APP_DELEGATE, 'utf8');
     const method = (signature: string) => {
@@ -188,28 +315,24 @@ describe('AppDelegate deferred keychain check wiring', () => {
         );
 
         expect(launch).toContain(
-            'self.keychainCheckPending = !ClearKeychainIfNecessary(application.isProtectedDataAvailable, StandardDefaultsPath());'
+            '_keychainCheckPending = !ClearKeychainIfNecessary(application.isProtectedDataAvailable, StandardDefaultsPath());'
         );
         // Retried on becoming active, not only on the protected-data callback
         const pending = launch.slice(
-            launch.indexOf('if (self.keychainCheckPending)')
+            launch.indexOf('if (_keychainCheckPending)')
         );
         expect(pending).toContain('UIApplicationDidBecomeActiveNotification');
         expect(pending).toContain('@selector(runPendingKeychainCheck)');
     });
 
-    it('runs the pending check once, and only with protected data', () => {
+    it('hands the pending state and current protected-data state to the helper', () => {
         const run = method('- (void)runPendingKeychainCheck');
-        const guard = run.indexOf('isProtectedDataAvailable');
-        const clear = run.indexOf('ClearKeychainIfNecessary(YES');
 
-        expect(run).toContain('!self.keychainCheckPending');
-        expect(guard).toBeGreaterThan(0);
-        expect(run.indexOf('self.keychainCheckPending = NO;')).toBeGreaterThan(
-            guard
+        expect(run).toContain(
+            'RunPendingKeychainCheck(&_keychainCheckPending,'
         );
-        expect(clear).toBeGreaterThan(
-            run.indexOf('self.keychainCheckPending = NO;')
+        expect(run).toContain(
+            '[UIApplication sharedApplication].isProtectedDataAvailable'
         );
         expect(run).toContain('removeObserver:self');
     });
