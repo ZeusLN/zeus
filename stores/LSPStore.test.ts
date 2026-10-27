@@ -33,7 +33,7 @@ jest.mock('../utils/LocaleUtils');
 jest.mock('./SettingsStore', () => ({
     __esModule: true,
     default: class {},
-    getLspConfigForNetwork: () => ({ lsps1Pubkey: 'lsp-pubkey' })
+    getLspConfigForNetwork: () => ({ lsps1Pubkey: 'aa' })
 }));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -238,6 +238,84 @@ describe('LSPStore custom-message request timeouts', () => {
                 data: Buffer.from('null').toString('base64')
             })
         ).toBe(false);
+    });
+
+    it('ignores a get_info reply from a peer the request was not sent to', () => {
+        const store = makeStore();
+        store.lsps1GetInfoCustomMessage();
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('bb', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getInfoId,
+                    result: { min_channel_size: 777777 }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(false);
+        expect(store.getInfoData).toEqual({});
+    });
+
+    it('accepts a get_info reply from the peer the request was sent to', () => {
+        const store = makeStore();
+        store.lsps1GetInfoCustomMessage();
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getInfoId,
+                    result: { min_channel_size: 100000 }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(true);
+        expect(store.getInfoData?.result?.min_channel_size).toBe(100000);
+    });
+
+    it('ignores an extendable_channels reply from a peer the request was not sent to', () => {
+        const store = makeStore();
+        store.getExtendableChannels();
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('bb', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getExtendableChannelsId,
+                    result: {
+                        extendable_channels: [{ short_channel_id: '1x1x1' }]
+                    }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(false);
+        expect(store.getExtendableChannelsData).toEqual([]);
+    });
+
+    it('ignores a create_extension_order reply from a peer the request was not sent to', () => {
+        const store = makeStore();
+        store.lsps7CreateOrderCustomMessage({});
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('bb', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.createExtensionOrderId,
+                    result: { order_id: 'other-order' }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(false);
+        expect(store.createExtensionOrderResponse).toEqual({});
     });
 
     it('background probe send failure only sets the lease error', async () => {
@@ -1428,7 +1506,7 @@ describe('LSPStore lease fetch waits for the custom message subscription', () =>
             (this.listeners[event] || []).forEach((fn) => fn());
         }
     }
-    const lspChannel = { remotePubkey: 'lsp-pubkey' };
+    const lspChannel = { remotePubkey: 'aa' };
     const otherChannel = { remotePubkey: 'other-pubkey' };
 
     let sockets: FakeSocket[];
