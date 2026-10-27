@@ -19,6 +19,10 @@ import {
     StyleProp,
     LayoutChangeEvent
 } from 'react-native';
+import {
+    SafeAreaInsetsContext,
+    initialWindowMetrics
+} from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 
 import SettingsStore from '../stores/SettingsStore';
@@ -626,7 +630,7 @@ export default class ModalBox extends React.PureComponent<
         return backdrop;
     }
 
-    renderContent() {
+    renderContent(topInset: number) {
         const { style }: { style?: StyleProp<ViewStyle> } = this.props;
         const size = {
             height: this.state.containerHeight,
@@ -644,6 +648,14 @@ export default class ModalBox extends React.PureComponent<
         // but the result must never exceed the container: calculateModalPosition
         // clamps a bottom sheet's offset at 0, so any excess height spills off
         // the bottom of the screen, taking footer buttons with it.
+        // The coverScreen Modal starts at the top edge of the screen (Android
+        // edge-to-edge, iOS always), so a bottom sheet also has to leave the
+        // top inset free, or its first row sits under the status bar where it
+        // can't be read or tapped.
+        const maxHeight =
+            this.props.position === 'bottom'
+                ? this.state.containerHeight - topInset
+                : this.state.containerHeight;
         const customHeightStyle =
             style &&
             typeof style === 'object' &&
@@ -652,7 +664,7 @@ export default class ModalBox extends React.PureComponent<
                 ? {
                       height: Math.min(
                           (style.height as number) * fontScale,
-                          this.state.containerHeight
+                          maxHeight
                       )
                   }
                 : undefined;
@@ -710,7 +722,17 @@ export default class ModalBox extends React.PureComponent<
                     onLayout={this.onContainerLayout}
                 >
                     {visible && this.renderBackdrop()}
-                    {visible && this.renderContent()}
+                    {visible && (
+                        <SafeAreaInsetsContext.Consumer>
+                            {(insets) =>
+                                this.renderContent(
+                                    insets?.top ??
+                                        initialWindowMetrics?.insets.top ??
+                                        0
+                                )
+                            }
+                        </SafeAreaInsetsContext.Consumer>
+                    )}
                 </View>
             </View>
         );
