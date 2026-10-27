@@ -73,6 +73,10 @@ const renderTools = async (settings: any) => {
     return navigation;
 };
 
+afterEach(() => {
+    jest.restoreAllMocks();
+});
+
 describe('Tools', () => {
     it('offers wallet config export/import when no wallet exists', async () => {
         const navigation = await renderTools({ nodes: [] });
@@ -101,13 +105,9 @@ describe('Tools', () => {
         ['android', 'views.Tools.keychainCleanup.title.android'],
         ['ios', 'views.Tools.keychainCleanup.title']
     ] as const)('names the keychain cleanup tool for %s', async (os, title) => {
-        const platform = jest.replaceProperty(Platform, 'OS', os);
-        try {
-            await renderTools({ nodes: [] });
+        jest.replaceProperty(Platform, 'OS', os);
+        await renderTools({ nodes: [] });
 
-            expect(screen.getByText(title)).toBeTruthy();
-        } finally {
-            platform.restore();
-        }
+        expect(screen.getByText(title)).toBeTruthy();
     });
 });

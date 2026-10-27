@@ -30,11 +30,21 @@ jest.mock('../../components/Text', () => {
 });
 
 import * as React from 'react';
-import { Alert, Platform } from 'react-native';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { Alert, AlertButton, Platform } from 'react-native';
+import {
+    act,
+    fireEvent,
+    getDefaultNormalizer,
+    render,
+    screen
+} from '@testing-library/react-native';
 
 import KeychainCleanup from './KeychainCleanup';
-import { scanPurgeCandidates } from '../../utils/KeychainPurgeUtils';
+import {
+    executePurge,
+    scanPurgeCandidates,
+    verifyPurgePreflight
+} from '../../utils/KeychainPurgeUtils';
 
 const KEY = 'views.Tools.keychainCleanup';
 
@@ -108,4 +118,87 @@ describe('KeychainCleanup wording', () => {
             ).toBeOnTheScreen();
         }
     );
+});
+
+describe('KeychainCleanup purge result', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    // Taps the purge button, confirms the dialog and waits for the purge.
+    // purge() is the same on both platforms
+    const purge = async () => {
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation();
+        await renderOn('ios', SCANS.ios);
+        await fireEvent.press(await screen.findByText(`${KEY}.purgeButton`));
+        const buttons = alert.mock.calls[0][2] as AlertButton[];
+        // AlertButton types onPress as void, but this one returns purge()
+        const confirm = buttons.find((b) => b.style === 'destructive')!
+            .onPress as () => Promise<void>;
+        await act(async () => {
+            await confirm();
+        });
+    };
+
+    it('shows the preflight failure with its reason and deletes nothing', async () => {
+        (verifyPurgePreflight as jest.Mock).mockResolvedValue({
+            ok: false,
+            reason: 'missing-settings'
+        });
+        await purge();
+
+        expect(
+            screen.getByText(`${KEY}.preflightFailed (missing-settings)`)
+        ).toBeOnTheScreen();
+        expect(executePurge).not.toHaveBeenCalled();
+    });
+
+    it('shows deleted out of total when some deletes fail', async () => {
+        (verifyPurgePreflight as jest.Mock).mockResolvedValue({ ok: true });
+        (executePurge as jest.Mock).mockResolvedValue({
+            deleted: 2,
+            failures: ['zeus-settings'],
+            skipped: []
+        });
+        await purge();
+
+        expect(
+            screen.getByText(`${KEY}.partialSuccess (2/3)`)
+        ).toBeOnTheScreen();
+    });
+
+    it('adds a line for the entries kept for safety', async () => {
+        (verifyPurgePreflight as jest.Mock).mockResolvedValue({ ok: true });
+        (executePurge as jest.Mock).mockResolvedValue({
+            deleted: 1,
+            failures: [],
+            skipped: ['zeus-settings']
+        });
+        await purge();
+
+        expect(
+            screen.getByText(
+                `${KEY}.successMessage (1)\n${KEY}.skippedForSafety (1)`,
+                {
+                    normalizer: getDefaultNormalizer({
+                        collapseWhitespace: false
+                    })
+                }
+            )
+        ).toBeOnTheScreen();
+    });
+
+    it('shows the error message when the purge throws', async () => {
+        const consoleError = jest.spyOn(console, 'error').mockImplementation();
+        (verifyPurgePreflight as jest.Mock).mockResolvedValue({ ok: true });
+        (executePurge as jest.Mock).mockRejectedValue(
+            new Error('Keychain locked')
+        );
+        await purge();
+
+        expect(
+            screen.getByText('general.error: Keychain locked')
+        ).toBeOnTheScreen();
+        expect(consoleError).toHaveBeenCalled();
+    });
 });

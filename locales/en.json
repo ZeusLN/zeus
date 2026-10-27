@@ -1036,7 +1036,7 @@
     "views.Tools.keychainCleanup.title": "Keychain Cleanup",
     "views.Tools.keychainCleanup.title.android": "Legacy Data Cleanup",
     "views.Tools.keychainCleanup.explainer1": "Older versions of ZEUS left copies of your wallet data, including seeds and connection credentials, in storage locations that are no longer used: the iCloud-synced keychain and legacy unprefixed keychain entries. This tool removes those copies. Your active wallet data is not affected.",
-    "views.Tools.keychainCleanup.explainer1.android": "Older versions of ZEUS left copies of your wallet data, including seeds and connection credentials, in storage locations that are no longer used: legacy entries in the app's secure storage and the legacy settings blob. This tool removes those copies. Your active wallet data is not affected.",
+    "views.Tools.keychainCleanup.explainer1.android": "Older versions of ZEUS left copies of your wallet data, including seeds and connection credentials, in storage locations that are no longer used: legacy entries in the app's secure storage and an old copy of your settings. This tool removes those copies. Your active wallet data is not affected.",
     "views.Tools.keychainCleanup.purgeButton": "Delete legacy and iCloud copies",
     "views.Tools.keychainCleanup.purgeButton.android": "Delete legacy copies",
     "views.Tools.keychainCleanup.confirmTitle": "Delete keychain copies?",

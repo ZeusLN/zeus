@@ -61,13 +61,14 @@ export default class KeychainCleanup extends React.Component<
         (scan.hasLegacyEncryptedSettings ? 1 : 0);
 
     confirmPurge = () => {
+        const android = Platform.OS === 'android';
         Alert.alert(
-            Platform.OS === 'android'
+            android
                 ? localeString(
                       'views.Tools.keychainCleanup.confirmTitle.android'
                   )
                 : localeString('views.Tools.keychainCleanup.confirmTitle'),
-            Platform.OS === 'android'
+            android
                 ? localeString(
                       'views.Tools.keychainCleanup.confirmMessage.android'
                   )
