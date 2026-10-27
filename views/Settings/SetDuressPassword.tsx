@@ -5,6 +5,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import PreventRemove from '../../components/PreventRemove';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
@@ -26,6 +28,9 @@ interface SetDuressPassphraseState {
     duressPassphraseMismatchError: boolean;
     duressPassphraseInvalidError: boolean;
     duressPassphraseEmptyError: boolean;
+    duressPassphraseSaveError: boolean;
+    saving: boolean;
+    saved: boolean;
 }
 
 @inject('SettingsStore')
@@ -40,7 +45,10 @@ export default class SetDuressPassphrase extends React.Component<
         savedDuressPassphrase: '',
         duressPassphraseMismatchError: false,
         duressPassphraseInvalidError: false,
-        duressPassphraseEmptyError: false
+        duressPassphraseEmptyError: false,
+        duressPassphraseSaveError: false,
+        saving: false,
+        saved: false
     };
 
     async componentDidMount() {
@@ -65,7 +73,7 @@ export default class SetDuressPassphrase extends React.Component<
     saveSettings = async () => {
         const { SettingsStore, navigation } = this.props;
         const { duressPassphrase, duressPassphraseConfirm } = this.state;
-        const { getSettings, updateSettings } = SettingsStore;
+        const { settings, updateSettings } = SettingsStore;
 
         if (duressPassphrase !== duressPassphraseConfirm) {
             this.setState({
@@ -75,8 +83,11 @@ export default class SetDuressPassphrase extends React.Component<
             return;
         }
 
-        const settings = await getSettings();
-
+        // In-memory settings are current here: every write of
+        // passphrase/duressPassphrase goes through updateSettings, which
+        // updates this.settings once the write has landed, and those flows
+        // only navigate afterwards. Re-reading the keychain would only add
+        // latency and a full re-render.
         if (
             duressPassphrase !== '' &&
             duressPassphrase === settings.passphrase
@@ -95,10 +106,18 @@ export default class SetDuressPassphrase extends React.Component<
             return;
         }
 
-        await updateSettings({ duressPassphrase }).then(() => {
-            getSettings();
-            navigation.popTo('Security');
-        });
+        this.setState({ saving: true, duressPassphraseSaveError: false });
+        try {
+            await updateSettings({ duressPassphrase });
+        } catch (error) {
+            console.error('Could not save duress password', error);
+            this.setState({ saving: false, duressPassphraseSaveError: true });
+            return;
+        }
+
+        // PreventRemove would also block this popTo; navigate only once
+        // `saved` has been committed and lifted the block
+        this.setState({ saved: true }, () => navigation.popTo('Security'));
     };
 
     deleteDuressPassword = async () => {
@@ -118,13 +137,21 @@ export default class SetDuressPassphrase extends React.Component<
             savedDuressPassphrase,
             duressPassphraseMismatchError,
             duressPassphraseInvalidError,
-            duressPassphraseEmptyError
+            duressPassphraseEmptyError,
+            duressPassphraseSaveError,
+            saving,
+            saved
         } = this.state;
 
         return (
             <Screen>
+                {/* Leaving mid-save would let Security read the old settings */}
+                <PreventRemove
+                    enabled={saving && !saved}
+                    onAttempt={() => void 0}
+                />
                 <Header
-                    leftComponent="Back"
+                    leftComponent={saving ? undefined : 'Back'}
                     centerComponent={{
                         text: localeString(
                             savedDuressPassphrase
@@ -136,6 +163,9 @@ export default class SetDuressPassphrase extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        saving ? <LoadingIndicator size={30} /> : undefined
+                    }
                     navigation={navigation}
                 />
                 <View
@@ -166,6 +196,13 @@ export default class SetDuressPassphrase extends React.Component<
                             )}
                         />
                     )}
+                    {duressPassphraseSaveError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.SetPassword.saveError'
+                            )}
+                        />
+                    )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.newDuressPassword')}
                     </Text>
@@ -178,12 +215,14 @@ export default class SetDuressPassphrase extends React.Component<
                                 duressPassphrase: text,
                                 duressPassphraseMismatchError: false,
                                 duressPassphraseInvalidError: false,
-                                duressPassphraseEmptyError: false
+                                duressPassphraseEmptyError: false,
+                                duressPassphraseSaveError: false
                             })
                         }
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
+                        locked={saving}
                         style={{
                             paddingLeft: 10,
                             paddingTop:
@@ -206,12 +245,14 @@ export default class SetDuressPassphrase extends React.Component<
                                 duressPassphraseConfirm: text,
                                 duressPassphraseMismatchError: false,
                                 duressPassphraseInvalidError: false,
-                                duressPassphraseEmptyError: false
+                                duressPassphraseEmptyError: false,
+                                duressPassphraseSaveError: false
                             })
                         }
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
+                        locked={saving}
                         style={{
                             paddingLeft: 10,
                             paddingTop:
@@ -237,6 +278,7 @@ export default class SetDuressPassphrase extends React.Component<
                                 'views.Settings.SetPassword.save'
                             )}
                             onPress={() => this.saveSettings()}
+                            disabled={saving}
                         />
                     </View>
                     {!!savedDuressPassphrase && (
@@ -271,6 +313,7 @@ export default class SetDuressPassphrase extends React.Component<
                                     );
                                 }}
                                 warning
+                                disabled={saving}
                             />
                         </View>
                     )}
