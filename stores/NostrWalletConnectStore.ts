@@ -2255,9 +2255,13 @@ export default class NostrWalletConnectStore {
         try {
             if (this.isCashuConfigured) {
                 try {
+                    // silent: the invoice comes back in the result and
+                    // failures are thrown, and ReceiveEcash keeps the
+                    // invoice it is showing and watching
                     const cashuInvoice = await this.cashuStore.createInvoice({
                         value: millisatsToSats(request.amount).toString(),
-                        memo: request.description || ''
+                        memo: request.description || '',
+                        silent: true
                     });
 
                     if (!cashuInvoice || !cashuInvoice.paymentRequest) {

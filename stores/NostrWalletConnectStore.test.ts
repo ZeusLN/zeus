@@ -2208,6 +2208,59 @@ describe('NostrWalletConnectStore make_invoice from Cashu', () => {
             'lnbc-second'
         ]);
     });
+
+    it('leaves the invoice ReceiveEcash shows and watches alone', async () => {
+        const { store, connection, cashuStore } = setup();
+        cashuStore.createMintQuoteCDK = jest.fn().mockResolvedValue({
+            id: 'quote-nwc',
+            request: 'lnbc-nwc',
+            state: 'Unpaid',
+            expiry: 4_000_000_000
+        });
+        cashuStore.invoice = 'lnbc-screen';
+        cashuStore.quoteId = 'quote-screen';
+        cashuStore.lastInvoiceMintUrl = MINT;
+        cashuStore.creatingInvoice = false;
+
+        const response = await (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000
+        });
+
+        expect(response.error).toBeUndefined();
+        expect(response.result.invoice).toBe('lnbc-nwc');
+        expect(cashuStore.invoice).toBe('lnbc-screen');
+        expect(cashuStore.quoteId).toBe('quote-screen');
+        expect(cashuStore.lastInvoiceMintUrl).toBe(MINT);
+        expect(cashuStore.creatingInvoice).toBe(false);
+        // kept so lookup_invoice and reconcile can find it
+        expect(cashuStore.invoices!.map((i: any) => i.quote)).toEqual([
+            'quote-nwc'
+        ]);
+    });
+
+    it('replies with the mint error and leaves ReceiveEcash alone', async () => {
+        const { store, connection, cashuStore } = setup();
+        cashuStore.createMintQuoteCDK = jest
+            .fn()
+            .mockRejectedValue(new Error('mint offline'));
+        cashuStore.invoice = 'lnbc-screen';
+        cashuStore.quoteId = 'quote-screen';
+        cashuStore.creatingInvoice = true;
+
+        const response = await (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000
+        });
+
+        expect(response.result).toBeUndefined();
+        expect(response.error.code).toBe('FAILED_TO_CREATE_INVOICE');
+        expect(response.error.message).toContain('mint offline');
+        expect(cashuStore.invoice).toBe('lnbc-screen');
+        expect(cashuStore.quoteId).toBe('quote-screen');
+        expect(cashuStore.creatingInvoice).toBe(true);
+        expect(cashuStore.creatingInvoiceError).toBe(false);
+        expect(cashuStore.error_msg).toBeUndefined();
+        expect(connection.activity).toEqual([]);
+    });
 });
 
 describe('NostrWalletConnectStore activity prune', () => {
