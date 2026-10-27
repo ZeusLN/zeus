@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     Alert,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -814,9 +815,13 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString(
-                                    'views.Tools.keychainCleanup.title'
-                                )}
+                                {Platform.OS === 'android'
+                                    ? localeString(
+                                          'views.Tools.keychainCleanup.title.android'
+                                      )
+                                    : localeString(
+                                          'views.Tools.keychainCleanup.title'
+                                      )}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon stroke={forwardArrowColor} />

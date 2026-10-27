@@ -45,6 +45,7 @@ jest.mock('../../assets/images/SVG/nwc-logo.svg', () => 'Svg');
 jest.mock('../../assets/images/SVG/Nostrich.svg', () => 'Svg');
 
 import * as React from 'react';
+import { Platform } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import Tools from './index';
 
@@ -72,6 +73,10 @@ const renderTools = async (settings: any) => {
     return navigation;
 };
 
+afterEach(() => {
+    jest.restoreAllMocks();
+});
+
 describe('Tools', () => {
     it('offers wallet config export/import when no wallet exists', async () => {
         const navigation = await renderTools({ nodes: [] });
@@ -94,5 +99,15 @@ describe('Tools', () => {
         expect(
             screen.getByText('views.Tools.nodeConfigExportImport.title')
         ).toBeTruthy();
+    });
+
+    it.each([
+        ['android', 'views.Tools.keychainCleanup.title.android'],
+        ['ios', 'views.Tools.keychainCleanup.title']
+    ] as const)('names the keychain cleanup tool for %s', async (os, title) => {
+        jest.replaceProperty(Platform, 'OS', os);
+        await renderTools({ nodes: [] });
+
+        expect(screen.getByText(title)).toBeTruthy();
     });
 });
