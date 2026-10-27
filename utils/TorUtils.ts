@@ -1,6 +1,10 @@
 import { RnTor } from 'react-native-nitro-tor';
 import RNFS from 'react-native-fs';
-import { grpcErrorCode, markRestErrorResponse } from './PaymentLookupUtils';
+import {
+    grpcErrorCode,
+    markRequestNotSent,
+    markRestErrorResponse
+} from './PaymentLookupUtils';
 
 const SOCKS_PORT = 9056;
 const TARGET_PORT = 9057;
@@ -53,7 +57,10 @@ const ensureTorStarted = (): Promise<void> => {
                 timeout_ms: START_TIMEOUT_MS
             });
             if (!result.is_success) {
-                throw new Error(result.error_message || 'Failed to start Tor');
+                // the request that needed Tor never went out
+                throw markRequestNotSent(
+                    new Error(result.error_message || 'Failed to start Tor')
+                );
             }
         })().catch((e) => {
             startPromise = null;

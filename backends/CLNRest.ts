@@ -17,7 +17,7 @@ import {
 } from './CoreLightningRequestHandler';
 import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { markHttpStatus } from '../utils/PaymentLookupUtils';
+import { markHttpStatus, markJsonRpcCode } from '../utils/PaymentLookupUtils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import {
     doTorRequest,
@@ -148,17 +148,20 @@ export default class CLNRest {
                                 typeof message === 'string' && message
                         );
                         if (errorMessage) {
-                            throw markHttpStatus(
-                                new Error(errorMessage),
-                                status
+                            throw markJsonRpcCode(
+                                markHttpStatus(new Error(errorMessage), status),
+                                errorInfo
                             );
                         } else if (
                             response.data &&
                             typeof response.data === 'string'
                         ) {
-                            throw markHttpStatus(
-                                new Error(response.data),
-                                status
+                            throw markJsonRpcCode(
+                                markHttpStatus(
+                                    new Error(response.data),
+                                    status
+                                ),
+                                errorInfo
                             );
                         } else {
                             throw markHttpStatus(

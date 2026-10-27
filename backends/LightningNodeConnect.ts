@@ -19,7 +19,10 @@ import {
     deriveExpectedPaymentHash
 } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { findPaymentByHash } from '../utils/PaymentLookupUtils';
+import {
+    findPaymentByHash,
+    markRequestNotSent
+} from '../utils/PaymentLookupUtils';
 import {
     toLnrpcAddressType,
     toWalletrpcAddressTypeName
@@ -43,8 +46,9 @@ export default class LightningNodeConnect {
     // selected wallet's session. A pending native dial can outlive a switch.
     get lnc(): any {
         if (!this.isSelectedSession(this.client)) {
-            throw new Error(
-                localeString('stores.SettingsStore.lncConnectError')
+            // nothing has gone out yet: no session to send the RPC on
+            throw markRequestNotSent(
+                new Error(localeString('stores.SettingsStore.lncConnectError'))
             );
         }
         return this.client;
