@@ -290,6 +290,7 @@ export default class LSPStore {
         delete this.customMessageRequestPeers[this.getOrderId];
         this.getInfoId = '';
         this.createOrderId = '';
+        this.getOrderId = '';
         this.createOrderRequestTerms = {};
         this.createOrderResponse = {};
         this.getInfoData = {};
@@ -305,6 +306,9 @@ export default class LSPStore {
         delete this.customMessageRequestPeers[this.createExtensionOrderId];
         delete this.customMessageRequestPeers[this.getExtensionOrderId];
         this.createExtensionOrderId = '';
+        // same invalidation as resetLSPS1Data: a late get_order reply must
+        // not match the id of a request the reset left behind
+        this.getExtensionOrderId = '';
         this.createExtensionOrderResponse = {};
         this.loadingLSPS7 = false;
         this.error = false;
