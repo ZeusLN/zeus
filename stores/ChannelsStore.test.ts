@@ -4,6 +4,7 @@ jest.mock('react-native-randombytes', () => ({
 jest.mock('../utils/BackendUtils', () => ({
     getChannels: jest.fn(),
     getPendingChannels: jest.fn(),
+    getClosedChannels: jest.fn(),
     getNodeInfo: jest.fn(() => Promise.resolve(null)),
     closeChannel: jest.fn(),
     connectPeer: jest.fn(),
@@ -12,7 +13,7 @@ jest.mock('../utils/BackendUtils', () => ({
     fundPsbt: jest.fn(),
     signPsbt: jest.fn(),
     fundingStateStep: jest.fn(),
-    supportsClosedChannels: () => false,
+    supportsClosedChannels: jest.fn(() => false),
     supportsPendingChannels: jest.fn(() => false),
     isLNDBased: () => false
 }));
@@ -406,6 +407,7 @@ describe('ChannelsStore.haveAnnouncedChannels', () => {
         jest.mocked(BackendUtils.supportsPendingChannels).mockReturnValue(
             false
         );
+        jest.mocked(BackendUtils.supportsClosedChannels).mockReturnValue(false);
     });
 
     it('is not cleared by a pending channel', async () => {
@@ -449,6 +451,91 @@ describe('ChannelsStore.haveAnnouncedChannels', () => {
         await settle();
 
         expect(store.haveAnnouncedChannels).toBe(false);
+    });
+
+    it('is not cleared by a closed channel', async () => {
+        const store = makeStore();
+        jest.mocked(BackendUtils.supportsClosedChannels).mockReturnValue(true);
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [channel(11243, 5000, true)]
+        } as any);
+        jest.mocked(BackendUtils.getClosedChannels).mockResolvedValue({
+            channels: [{ ...channel(0, 0, false), close_type: 'REMOTE' }]
+        } as any);
+
+        await store.getChannels();
+        await settle();
+
+        expect(store.closedChannels.length).toBe(1);
+        expect(store.haveAnnouncedChannels).toBe(true);
+    });
+
+    it('follows the open channel list across refreshes', async () => {
+        const store = makeStore();
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [channel(11243, 5000, true)]
+        } as any);
+        await store.getChannels();
+        await settle();
+        expect(store.haveAnnouncedChannels).toBe(true);
+
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [
+                channel(11243, 5000, false),
+                { ...channel(4000, 1000, true), private: true }
+            ]
+        } as any);
+        await store.getChannels();
+        await settle();
+        expect(store.haveAnnouncedChannels).toBe(false);
+    });
+
+    it('is set before node info lookups finish', async () => {
+        jest.useFakeTimers();
+        try {
+            // lnd looks up node info for each new peer, which can take up
+            // to 10s before it times out
+            const store = new ChannelsStore(
+                { implementation: 'lnd' } as any,
+                { setPendingCloseBalance: jest.fn() } as any
+            );
+            jest.mocked(BackendUtils.getNodeInfo).mockReturnValue(
+                new Promise(() => {}) as any
+            );
+            jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+                channels: [channel(11243, 5000, true)]
+            } as any);
+
+            await store.getChannels();
+
+            expect(BackendUtils.getNodeInfo).toHaveBeenCalled();
+            expect(store.haveAnnouncedChannels).toBe(true);
+        } finally {
+            jest.clearAllTimers();
+            jest.useRealTimers();
+            jest.mocked(BackendUtils.getNodeInfo).mockImplementation(() =>
+                Promise.resolve(null)
+            );
+        }
+    });
+
+    it('keeps its value when a refresh fails', async () => {
+        const store = makeStore();
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [channel(11243, 5000, true)]
+        } as any);
+        await store.getChannels();
+        await settle();
+
+        jest.mocked(BackendUtils.getChannels).mockRejectedValue(
+            new Error('offline')
+        );
+        await store.getChannels();
+        await settle();
+
+        expect(store.error).toBe(true);
+        expect(store.channels.length).toBe(0);
+        expect(store.haveAnnouncedChannels).toBe(true);
     });
 });
 
