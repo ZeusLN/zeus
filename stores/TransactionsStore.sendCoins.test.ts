@@ -540,6 +540,19 @@ describe('TransactionsStore.sendCoins', () => {
             ],
             ['Tor not running', 'lnd', new Error('Tor service not running')],
             [
+                'a CLN refusal over Tor',
+                'cln-rest',
+                // as doTorRequest tags clnrest's 500 { code, message }
+                markJsonRpcCode(
+                    markRestErrorResponse(
+                        new Error('Could not afford 500000000sat'),
+                        undefined,
+                        500
+                    ),
+                    { code: 301, message: 'Could not afford 500000000sat' }
+                )
+            ],
+            [
                 'a refused connection to an offline node',
                 'lnd',
                 new Error(

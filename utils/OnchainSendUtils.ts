@@ -116,17 +116,16 @@ export const mayHaveBeenSent = (
         // proxy's 502/503/504, Cloudflare's 520) or no response at all may
         // have come after the node acted.
         default: {
-            if (isNodeResponse(error)) {
+            const cln = implementation === 'cln-rest';
+            // gRPC codes are lnd's; a Core Lightning body's code is a
+            // JSON-RPC code even where it falls in the gRPC range
+            if (!cln && isNodeResponse(error)) {
                 return TRANSPORT_GRPC_CODES.includes((error as any).grpcCode);
             }
             const status = httpStatusOf(error);
             if (status === undefined) return true;
             if (status < 500) return false;
-            return !(
-                implementation === 'cln-rest' &&
-                status === 500 &&
-                hasJsonRpcCode(error)
-            );
+            return !(cln && status === 500 && hasJsonRpcCode(error));
         }
     }
 };

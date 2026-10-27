@@ -2,6 +2,7 @@ import { RnTor } from 'react-native-nitro-tor';
 import RNFS from 'react-native-fs';
 import {
     grpcErrorCode,
+    markJsonRpcCode,
     markRequestNotSent,
     markRestErrorResponse
 } from './PaymentLookupUtils';
@@ -149,10 +150,15 @@ const doTorRequest = async (
                     parsedBody.error)) ||
             (typeof parsedBody === 'string' && parsedBody) ||
             `HTTP ${response.status_code}`;
-        throw markRestErrorResponse(
-            new Error(message),
-            grpcErrorCode(parsedBody),
-            response.status_code
+        // also keeps a Core Lightning error body's JSON-RPC code, which
+        // shows clnrest itself answered
+        throw markJsonRpcCode(
+            markRestErrorResponse(
+                new Error(message),
+                grpcErrorCode(parsedBody),
+                response.status_code
+            ),
+            parsedBody
         );
     }
 

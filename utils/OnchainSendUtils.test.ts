@@ -375,6 +375,21 @@ describe('mayHaveBeenSent', () => {
         expect(restCases(status, 'cln-rest')).toBe(true);
     });
 
+    it("reads a CLN code inside the gRPC range as clnrest's answer, not lnd's", () => {
+        // doTorRequest tags a body code of 1 to 16 as a gRPC code too
+        const error = markJsonRpcCode(
+            markRestErrorResponse(new Error('x'), 4, 500),
+            { code: 4, message: 'x' }
+        );
+        expect(mayHaveBeenSent(error, 'cln-rest')).toBe(false);
+        expect(
+            mayHaveBeenSent(
+                markRestErrorResponse(new Error('x'), 2, 520),
+                'cln-rest'
+            )
+        ).toBe(true);
+    });
+
     it('is true for a CLNRest 500 without a JSON-RPC code', () => {
         expect(restCases(500, 'cln-rest')).toBe(true);
     });
