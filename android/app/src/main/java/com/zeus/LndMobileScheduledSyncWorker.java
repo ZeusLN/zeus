@@ -33,7 +33,7 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.ReadableMap;
 
 import app.zeusln.zeus.WorkerReactContext;
-import com.oblador.keychain.KeychainModule;
+import app.zeusln.zeus.securestorage.ZeusSecureStorageModule;
 import com.google.protobuf.ByteString;
 // import com.hypertrack.Hyperlog.Hyperlog;
 
@@ -94,67 +94,58 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
         return null;
       }
 
-      KeychainModule keychain = new KeychainModule(new WorkerReactContext(getApplicationContext()));
+      new Thread(() -> {
+        final String value;
+        try {
+          value = ZeusSecureStorageModule.open(getApplicationContext()).get("password");
+        } catch (Exception e) {
+          // Hyperlog.d(TAG, "Failed to get wallet password " + e.getMessage(), e);
+          completer.set(Result.failure());
+          return;
+        }
+        // Hyperlog.d(TAG, "onSuccess");
 
-      WritableMap keychainOptions = Arguments.createMap();
-      WritableMap keychainOptionsAuthenticationPrompt = Arguments.createMap();
-      keychainOptionsAuthenticationPrompt.putString("title", "Authenticate to retrieve secret");
-      keychainOptionsAuthenticationPrompt.putString("cancel", "Cancel");
-      keychainOptions.putMap("authenticationPrompt", keychainOptionsAuthenticationPrompt);
+        if (value == null) {
+          // Hyperlog.e(TAG, "Failed to get wallet password, got null from keychain provider");
+          completer.set(Result.failure());
+          return;
+        } else {
+          // Hyperlog.d(TAG, "Password data retrieved from keychain");
+          final String password = value;
+          // Hyperlog.d(TAG, "Password retrieved");
 
-      keychain.getInternetCredentialsForServer("password", keychainOptions, new PromiseWrapper() {
-        @Override
-        public void onSuccess(@Nullable Object value) {
-          // Hyperlog.d(TAG, "onSuccess");
+          if (torEnabled) {
+            // zeusTor.startTor(new PromiseWrapper() {
+            //   @Override
+            //   void onSuccess(@Nullable Object value) {
+            //     // Hyperlog.i(TAG, "Tor started");
+            //     // Hyperlog.i(TAG, "torSocksPort: " + (int) value);
+            //     torStarted = true;
+            //     torSocksPort = (int) value;
 
-          if (value == null) {
-            // Hyperlog.e(TAG, "Failed to get wallet password, got null from keychain provider");
-            completer.set(Result.failure());
-            return;
+            //     startLndWorkThread(completer, password);
+            //   }
+
+            //   @Override
+            //   void onFail(Throwable throwable) {
+            //     // Hyperlog.e(TAG, "Failed to start Tor", throwable);
+            //     zeusTor.stopTor(new PromiseWrapper() {
+            //       @Override
+            //       void onSuccess(@Nullable Object value) {
+            //       }
+
+            //       @Override
+            //       void onFail(Throwable throwable) {
+            //       }
+            //     });
+            //     completer.set(Result.failure());
+            //   }
+            // });
           } else {
-            // Hyperlog.d(TAG, "Password data retrieved from keychain");
-            final String password = ((ReadableMap) value).getString("password");
-            // Hyperlog.d(TAG, "Password retrieved");
-
-            if (torEnabled) {
-              // zeusTor.startTor(new PromiseWrapper() {
-              //   @Override
-              //   void onSuccess(@Nullable Object value) {
-              //     // Hyperlog.i(TAG, "Tor started");
-              //     // Hyperlog.i(TAG, "torSocksPort: " + (int) value);
-              //     torStarted = true;
-              //     torSocksPort = (int) value;
-
-              //     startLndWorkThread(completer, password);
-              //   }
-
-              //   @Override
-              //   void onFail(Throwable throwable) {
-              //     // Hyperlog.e(TAG, "Failed to start Tor", throwable);
-              //     zeusTor.stopTor(new PromiseWrapper() {
-              //       @Override
-              //       void onSuccess(@Nullable Object value) {
-              //       }
-
-              //       @Override
-              //       void onFail(Throwable throwable) {
-              //       }
-              //     });
-              //     completer.set(Result.failure());
-              //   }
-              // });
-            } else {
-              startLndWorkThread(completer, password);
-            }
+            startLndWorkThread(completer, password);
           }
         }
-
-        @Override
-        public void onFail(Throwable throwable) {
-          // Hyperlog.d(TAG, "Failed to get wallet password " + throwable.getMessage(), throwable);
-          completer.set(Result.failure());
-        }
-      });
+      }).start();
       return null;
     });
   }

@@ -57,7 +57,7 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.facebook.react.modules.permissions.PermissionsModule;
 
 import com.jakewharton.processphoenix.ProcessPhoenix;
-import com.oblador.keychain.KeychainModule;
+import app.zeusln.zeus.securestorage.ZeusSecureStorageModule;
 
 // import org.torproject.jni.TorService;
 import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier;
@@ -300,30 +300,19 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void DEBUG_getWalletPasswordFromKeychain(Promise promise) {
-    KeychainModule keychain = new KeychainModule(getReactApplicationContext());
-
-    WritableMap keychainOptions = Arguments.createMap();
-    WritableMap keychainOptionsAuthenticationPrompt = Arguments.createMap();
-    keychainOptionsAuthenticationPrompt.putString("title", "Authenticate to retrieve secret");
-    keychainOptionsAuthenticationPrompt.putString("cancel", "Cancel");
-    keychainOptions.putMap("authenticationPrompt", keychainOptionsAuthenticationPrompt);
-
-    keychain.getInternetCredentialsForServer("password", keychainOptions, new PromiseWrapper() {
-      @Override
-      public void onSuccess(@Nullable Object value) {
-        if (value != null) {
-          promise.resolve(((ReadableMap) value).getString("password"));
+    new Thread(() -> {
+      try {
+        String password = ZeusSecureStorageModule.open(getReactApplicationContext()).get("password");
+        if (password != null) {
+          promise.resolve(password);
           return;
         }
         promise.reject("fail2");
+      } catch (Exception e) {
+        Log.d(TAG, "error", e);
+        promise.reject(e.getMessage());
       }
-
-      @Override
-      public void onFail(Throwable throwable) {
-        Log.d(TAG, "error", throwable);
-        promise.reject(throwable.getMessage());
-      }
-    });
+    }).start();
   }
 
   @ReactMethod

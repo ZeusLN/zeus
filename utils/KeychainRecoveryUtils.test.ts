@@ -45,12 +45,6 @@ jest.mock('../utils/SwapUtils', () => ({
 
 jest.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
 
-jest.mock('react-native-keychain', () => ({
-    getInternetCredentials: jest.fn(),
-    setInternetCredentials: jest.fn(),
-    resetInternetCredentials: jest.fn()
-}));
-
 jest.mock('react-native-encrypted-storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn(),
@@ -61,17 +55,21 @@ jest.mock('../storage', () => ({
     __esModule: true,
     default: { getItem: jest.fn(), setItem: jest.fn() },
     KEY_PREFIX: 'zeus:',
-    getRawItem: jest.fn()
+    getRawItem: jest.fn(),
+    removeRawItem: jest.fn(),
+    setRawItemForDevelopment: jest.fn()
 }));
 
 import { Platform } from 'react-native';
-import * as Keychain from 'react-native-keychain';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import Storage, { getRawItem } from '../storage';
+import Storage, {
+    getRawItem,
+    removeRawItem,
+    setRawItemForDevelopment
+} from '../storage';
 import { STORAGE_KEY } from '../stores/SettingsStore';
 import utils from './KeychainRecoveryUtils';
 
-const keychain = Keychain as jest.Mocked<typeof Keychain>;
 // EncryptedStorage's methods are overloaded (promise and callback forms), so
 // jest.Mocked<> resolves mockResolvedValue's parameter to never. The stub above
 // is what these actually are.
@@ -82,6 +80,8 @@ const encrypted = EncryptedStorage as unknown as {
 };
 const storage = Storage as jest.Mocked<typeof Storage>;
 const rawItem = getRawItem as jest.MockedFunction<typeof getRawItem>;
+const removeRaw = removeRawItem as jest.Mock;
+const setDev = setRawItemForDevelopment as jest.Mock;
 
 // Internal to KeychainRecoveryUtils; must match its LEGACY_STORAGE_KEY
 const LEGACY_STORAGE_KEY = 'zeus-settings';
@@ -96,10 +96,6 @@ const SETTINGS = JSON.stringify({
 /** Storage.getItem resolves `false`, not null, when a key is unset. */
 const storageMiss = () => storage.getItem.mockResolvedValue(false as any);
 
-/** react-native-keychain resolves `false` when nothing is stored. */
-const keychainMiss = () =>
-    keychain.getInternetCredentials.mockResolvedValue(false as any);
-
 const setPlatform = (os: string) => {
     (Platform as any).OS = os;
 };
@@ -111,7 +107,6 @@ describe('KeychainRecoveryUtils', () => {
         jest.clearAllMocks();
         setPlatform('ios');
         storageMiss();
-        keychainMiss();
         rawItem.mockResolvedValue(null as any);
         encrypted.getItem.mockResolvedValue(null as any);
         logs = [
@@ -292,11 +287,8 @@ describe('KeychainRecoveryUtils', () => {
 
                 await utils.scanForRecoverableData();
 
-                expect(rawItem).not.toHaveBeenCalled();
-                for (const call of keychain.getInternetCredentials.mock.calls) {
-                    expect(call[1]).not.toEqual(
-                        expect.objectContaining({ cloudSync: true })
-                    );
+                for (const call of rawItem.mock.calls) {
+                    expect(call[1]).toBe(false);
                 }
             }
         );
@@ -506,13 +498,13 @@ describe('KeychainRecoveryUtils', () => {
             );
 
             expect(result.success).toBe(false);
-            expect(keychain.setInternetCredentials).not.toHaveBeenCalled();
+            expect(setDev).not.toHaveBeenCalled();
             expect(encrypted.setItem).not.toHaveBeenCalled();
         });
 
         it('copyToLegacyLocations writes every legacy location in a dev build', async () => {
             storage.getItem.mockResolvedValue(SETTINGS as any);
-            keychain.setInternetCredentials.mockResolvedValue(undefined as any);
+            setDev.mockResolvedValue(undefined);
             encrypted.setItem.mockResolvedValue(undefined as any);
 
             const result = await withDev(true, () =>
@@ -524,17 +516,8 @@ describe('KeychainRecoveryUtils', () => {
                 'unprefixed-cloud',
                 'encrypted-storage'
             ]);
-            expect(keychain.setInternetCredentials).toHaveBeenCalledWith(
-                STORAGE_KEY,
-                STORAGE_KEY,
-                SETTINGS
-            );
-            expect(keychain.setInternetCredentials).toHaveBeenCalledWith(
-                STORAGE_KEY,
-                STORAGE_KEY,
-                SETTINGS,
-                { cloudSync: true }
-            );
+            expect(setDev).toHaveBeenCalledWith(STORAGE_KEY, SETTINGS, false);
+            expect(setDev).toHaveBeenCalledWith(STORAGE_KEY, SETTINGS, true);
             expect(encrypted.setItem).toHaveBeenCalledWith(
                 STORAGE_KEY,
                 SETTINGS
@@ -547,7 +530,7 @@ describe('KeychainRecoveryUtils', () => {
             );
 
             expect(result.success).toBe(false);
-            expect(keychain.resetInternetCredentials).not.toHaveBeenCalled();
+            expect(removeRaw).not.toHaveBeenCalled();
             expect(encrypted.removeItem).not.toHaveBeenCalled();
         });
 
@@ -557,9 +540,7 @@ describe('KeychainRecoveryUtils', () => {
                 .mockResolvedValueOnce(false as any) // verify: gone
                 .mockResolvedValueOnce(SETTINGS as any); // after restore
             storage.setItem.mockResolvedValue(true as any);
-            keychain.resetInternetCredentials.mockResolvedValue(
-                undefined as any
-            );
+            removeRaw.mockResolvedValue(undefined);
             encrypted.removeItem.mockResolvedValue(undefined as any);
 
             const result = await withDev(true, () =>
@@ -570,13 +551,8 @@ describe('KeychainRecoveryUtils', () => {
             // Positive assertions so the "did not call" checks in the guard
             // tests above mean something: a gutted clear would satisfy those
             // while failing these.
-            expect(keychain.resetInternetCredentials).toHaveBeenCalledWith({
-                server: STORAGE_KEY
-            });
-            expect(keychain.resetInternetCredentials).toHaveBeenCalledWith({
-                server: STORAGE_KEY,
-                cloudSync: true
-            });
+            expect(removeRaw).toHaveBeenCalledWith(STORAGE_KEY, false);
+            expect(removeRaw).toHaveBeenCalledWith(STORAGE_KEY, true);
             expect(encrypted.removeItem).toHaveBeenCalledWith(STORAGE_KEY);
             expect(result.cleared).toEqual([
                 'unprefixed-local',
@@ -592,9 +568,7 @@ describe('KeychainRecoveryUtils', () => {
                 .mockResolvedValueOnce(false as any) // verify: gone
                 .mockResolvedValueOnce(false as any); // restore failed too
             storage.setItem.mockResolvedValue(true as any);
-            keychain.resetInternetCredentials.mockResolvedValue(
-                undefined as any
-            );
+            removeRaw.mockResolvedValue(undefined);
             encrypted.removeItem.mockResolvedValue(undefined as any);
 
             const result = await withDev(true, () =>
@@ -753,11 +727,8 @@ describe('KeychainRecoveryUtils', () => {
             setPlatform('android');
             const store: Record<string, string> = { contacts: '["live"]' };
             roundTrip(store);
-            keychain.getInternetCredentials.mockImplementation(
-                async (key: string) =>
-                    key === 'contacts'
-                        ? ({ password: '["jan-2026"]' } as any)
-                        : (false as any)
+            rawItem.mockImplementation(async (server: string, cloud: any) =>
+                server === 'contacts' && !cloud ? '["jan-2026"]' : (null as any)
             );
 
             const scan = await utils.scanForRecoverableData();
@@ -772,13 +743,9 @@ describe('KeychainRecoveryUtils', () => {
             rawItem.mockImplementation(async (server: string, cloud: any) =>
                 server === 'zeus:contacts' && cloud
                     ? '["2026-08"]'
+                    : server === 'contacts' && !cloud
+                    ? '["2026-01"]'
                     : (null as any)
-            );
-            keychain.getInternetCredentials.mockImplementation(
-                async (key: string, opts?: any) =>
-                    key === 'contacts' && !opts
-                        ? ({ password: '["2026-01"]' } as any)
-                        : (false as any)
             );
 
             const scan = await utils.scanForRecoverableData();
