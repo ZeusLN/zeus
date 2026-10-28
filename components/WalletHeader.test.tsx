@@ -76,7 +76,9 @@ const renderHeader = async ({
     settingsLoaded = true,
     sessionStarted = true,
     nodeInfo = {},
-    settings = {}
+    settings = {},
+    settingsStore = {},
+    isOffline = false
 }: {
     clipboard: boolean;
     connecting?: boolean;
@@ -84,6 +86,8 @@ const renderHeader = async ({
     sessionStarted?: boolean;
     nodeInfo?: any;
     settings?: any;
+    settingsStore?: any;
+    isOffline?: boolean;
 }) => {
     const setPosStatus = jest.fn();
     const listeners: { [event: string]: () => void } = {};
@@ -103,7 +107,8 @@ const renderHeader = async ({
                     settings: { privacy: { clipboard }, ...settings },
                     settingsLoaded,
                     sessionStarted: () => sessionStarted,
-                    setPosStatus
+                    setPosStatus,
+                    ...settingsStore
                 },
                 CashuStore: { sentTokens: [] },
                 ChannelsStore: { pendingHTLCs: [] },
@@ -114,7 +119,7 @@ const renderHeader = async ({
                 NodeInfoStore: { nodeInfo },
                 ModalStore: {},
                 AlertStore: {},
-                ConnectivityStore: { isOffline: false }
+                ConnectivityStore: { isOffline }
             } as any)}
         />
     );
@@ -352,6 +357,59 @@ describe('WalletHeader before the session starts', () => {
         await fireEvent.press(nickname());
 
         expect(navigation.navigate).toHaveBeenCalledWith('Wallets');
+    });
+
+    // The status badges sit next to the nickname, so they are drawn on
+    // the connecting header before the session starts
+    const statusBadgeHeader = (sessionStarted: boolean) =>
+        renderHeader({
+            clipboard: false,
+            connecting: true,
+            sessionStarted,
+            isOffline: true,
+            nodeInfo: { isTestNet: true },
+            settings: nicknameSettings,
+            settingsStore: {
+                host: 'abc.onion',
+                implementation: 'lndhub'
+            }
+        });
+    const badge = (value: string) =>
+        screen.container.queryAll(
+            (n) => n.type === 'Badge' && String(n.props.value).includes(value)
+        )[0];
+    const torIcon = () =>
+        screen.container.queryAll((n) => n.type === 'Image')[0];
+
+    it('does not open Networking or NodeInfo from the status badges before the session starts', async () => {
+        const { navigation } = await statusBadgeHeader(false);
+
+        await click(badge('general.offline'));
+        await click(torIcon());
+
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(
+            badge('views.Wallet.MainPane.testnet').props.pressableProps.disabled
+        ).toBe(true);
+        expect(
+            badge('general.custodialWallet').props.pressableProps.disabled
+        ).toBe(true);
+    });
+
+    it('opens Networking and NodeInfo from the status badges once the session has started', async () => {
+        const { navigation } = await statusBadgeHeader(true);
+
+        await click(badge('general.offline'));
+        await click(torIcon());
+
+        expect(navigation.navigate).toHaveBeenCalledWith('Networking');
+        expect(navigation.navigate).toHaveBeenCalledWith('NodeInfo');
+        expect(
+            badge('views.Wallet.MainPane.testnet').props.pressableProps.disabled
+        ).toBe(false);
+        expect(
+            badge('general.custodialWallet').props.pressableProps.disabled
+        ).toBe(false);
     });
 
     it('draws the menu button and wallet picture once the session has started', async () => {
