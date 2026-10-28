@@ -124,6 +124,9 @@ describe('ContactStore', () => {
                     navigation
                 );
 
+                expect(logSpy).toHaveBeenCalledWith(
+                    'Contact updated successfully!'
+                );
                 const logged = JSON.stringify(logSpy.mock.calls);
                 expect(logged).not.toContain('alicia@example.com');
                 expect(logged).not.toContain('bc1qbobaddress');

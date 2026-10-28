@@ -262,6 +262,10 @@ describe('LND request core', () => {
                 'internal error'
             );
 
+            expect(console.log).toHaveBeenCalledWith(
+                'REST request failed:',
+                expect.any(String)
+            );
             const logged = JSON.stringify(
                 (console.log as jest.Mock).mock.calls
             );

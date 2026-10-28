@@ -1376,7 +1376,8 @@ export default class LSPStore {
         this.loadingLSPS1 = true;
         const endpoint = `${RESTHost}/api/v1/get_order?order_id=${id}`;
 
-        console.log('Sending data to:', endpoint);
+        // the order id is enough to fetch the order back, so only log the host
+        console.log('Fetching order from:', RESTHost);
 
         return ReactNativeBlobUtil.fetch('GET', endpoint, {
             'Content-Type': 'application/json'
