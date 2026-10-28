@@ -76,6 +76,7 @@ export default class Invoice extends BaseModel {
     public timestamp?: string | number;
     public destination?: string;
     public num_satoshis?: string | number;
+    public num_msat?: string | number;
     public features?: any;
     // lndhub
     public amt?: number;
@@ -273,7 +274,13 @@ export default class Invoice extends BaseModel {
             const msatoshi = this.millisatoshis || this.invoice_amount_msat;
             return Number(msatoshi) / 1000;
         }
-        return Number(this.num_satoshis || 0);
+        // LND rounds num_satoshis down, so a sub-sat invoice decodes as 0
+        // sats and only num_msat carries its amount
+        const numSatoshis = Number(this.num_satoshis || 0);
+        if (!numSatoshis && Number(this.num_msat || 0) > 0) {
+            return Number(this.num_msat) / 1000;
+        }
+        return numSatoshis;
     }
 
     @computed public get getDisplayTime(): string {

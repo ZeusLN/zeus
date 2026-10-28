@@ -209,3 +209,31 @@ describe('Invoice.determineFormattedOriginalTimeUntilExpiry', () => {
         spy.mockRestore();
     });
 });
+
+describe('Invoice.getRequestAmount', () => {
+    it('reads num_msat when LND rounds a sub-sat amount down to 0 sats', () => {
+        const invoice = new Invoice({ num_satoshis: '0', num_msat: '500' });
+        expect(invoice.getRequestAmount).toBe(0.5);
+    });
+
+    it('reads num_msat from embedded LND Long fields', () => {
+        const Long = require('long');
+        const invoice = new Invoice({
+            num_satoshis: Long.fromString('0'),
+            num_msat: Long.fromString('999')
+        });
+        expect(invoice.getRequestAmount).toBe(0.999);
+    });
+
+    it('keeps num_satoshis for amounts of 1 sat or more', () => {
+        const invoice = new Invoice({ num_satoshis: '1', num_msat: '1500' });
+        expect(invoice.getRequestAmount).toBe(1);
+    });
+
+    it('is 0 for a no-amount LND invoice', () => {
+        expect(
+            new Invoice({ num_satoshis: '0', num_msat: '0' }).getRequestAmount
+        ).toBe(0);
+        expect(new Invoice({}).getRequestAmount).toBe(0);
+    });
+});
