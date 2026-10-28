@@ -150,3 +150,270 @@ describe('Swaps: Generate invoice LSP decision', () => {
         ).toMatchObject(lsp(false));
     });
 });
+
+// The LSP fee row next to the invoice field. It has to show the fee the
+// invoice in the field was priced with, not LSPStore.zeroConfFee, which
+// holds the latest preview for the amount entered.
+describe('Swaps: LSP fee shown with the invoice', () => {
+    const collect = (node: any, out: any[] = []): any[] => {
+        if (Array.isArray(node)) {
+            node.forEach((n) => collect(n, out));
+        } else if (node && typeof node === 'object' && node.props) {
+            out.push(node);
+            collect(node.props.children, out);
+        }
+        return out;
+    };
+
+    // React Native throws when a string or number is a direct child of
+    // anything but Text; the test renderer does not, so collect them.
+    // React drops empty strings before they reach the host, so '' is fine.
+    const bareText = (
+        node: any,
+        insideText = false,
+        out: any[] = []
+    ): any[] => {
+        if (Array.isArray(node)) {
+            node.forEach((n) => bareText(n, insideText, out));
+        } else if (
+            (typeof node === 'string' && node !== '') ||
+            typeof node === 'number'
+        ) {
+            if (!insideText) out.push(node);
+        } else if (node && typeof node === 'object' && node.props) {
+            bareText(
+                node.props.children,
+                insideText || node.type === 'Text',
+                out
+            );
+        }
+        return out;
+    };
+
+    // A submarine swap screen on a wallet with the Flow LSP set up, with
+    // setState applied synchronously. `created` is what the next
+    // createUnifiedInvoice call returns; `previewDuringRequest` is a
+    // preview fee that lands after its quote, before it returns.
+    const makeView = (created: any, previewDuringRequest?: number) => {
+        const navigate = jest.fn();
+        const lspStore: any = {
+            getZeroConfFee: jest.fn(() => Promise.resolve()),
+            resetFee: jest.fn()
+        };
+        const invoicesStore: any = {
+            onChainAddress: ADDRESS,
+            payment_request: null,
+            createUnifiedInvoice: jest.fn(async () => {
+                invoicesStore.payment_request = created.paymentRequest;
+                // the invoice request asks for its own quote, which is
+                // also the preview until a newer one arrives
+                lspStore.zeroConfFee = created.lspFeeSats ?? undefined;
+                if (previewDuringRequest !== undefined)
+                    lspStore.zeroConfFee = previewDuringRequest;
+                return created;
+            })
+        };
+        const swapStore: any = {
+            clearError: jest.fn(),
+            subInfo: { fees: { percentage: 0.1, minerFees: 300 } },
+            reverseInfo: {},
+            getReverseClaimMinerFee: () => undefined
+        };
+        const view = new Swap({
+            navigation: { navigate },
+            route: { params: {} },
+            NodeInfoStore: {},
+            SwapStore: swapStore,
+            UnitsStore: { units: 'sats', getNextUnit: () => 'BTC' },
+            FiatStore: { fiatRates: [] },
+            SettingsStore: {
+                settings: { enableLSP: true },
+                updateSettings: jest.fn()
+            },
+            InvoicesStore: invoicesStore,
+            LSPStore: lspStore
+        } as any);
+        jest.spyOn(view, 'checkIsValid').mockImplementation(() => {});
+        jest.spyOn(view, 'setState').mockImplementation(
+            (update: any, callback?: () => void) => {
+                const prevState = view.state;
+                view.state = {
+                    ...prevState,
+                    ...(typeof update === 'function'
+                        ? update(prevState)
+                        : update)
+                };
+                view.componentDidUpdate(view.props, prevState);
+                callback?.();
+            }
+        );
+        view.state = {
+            ...view.state,
+            ...SUBMARINE_AMOUNTS,
+            lastEditedAmount: 'input',
+            enableLSP: true,
+            flowLspNotConfigured: false
+        };
+        return { view, navigate, lspStore, swapStore };
+    };
+
+    const find = (view: any, test: (e: any) => boolean) =>
+        collect(view.render()).find(test);
+
+    const pressGenerate = async (view: any) => {
+        await find(
+            view,
+            (e) => e.props.title === 'views.Swaps.generateInvoice'
+        ).props.onPress();
+    };
+
+    const paste = (view: any, text: string) =>
+        find(view, (e) => e.type === 'AddressInput').props.onChangeText(text);
+
+    // the fee row: its amount and where tapping it leads
+    const feeRow = (view: any, navigate: jest.Mock) => {
+        const elements = collect(view.render());
+        const amount = elements.find(
+            (e) => e.type === 'Amount' && e.props.fixedUnits === 'sats'
+        );
+        if (!amount) return undefined;
+        navigate.mockClear();
+        elements
+            .find(
+                (e) =>
+                    typeof e.props.onPress === 'function' &&
+                    collect(e.props.children).includes(amount)
+            )
+            .props.onPress();
+        return {
+            fee: amount.props.sats,
+            explanation: navigate.mock.calls[0][0]
+        };
+    };
+
+    it('keeps the fee the generated invoice was priced with after a later preview', async () => {
+        const { view, navigate, lspStore } = makeView({
+            rHash: 'hash',
+            paymentRequest: 'lnbc-wrapped',
+            lspFeeSats: 10000
+        });
+
+        await pressGenerate(view);
+        expect(view.state.invoice).toBe('lnbc-wrapped');
+        expect(feeRow(view, navigate)).toEqual({
+            fee: 10000,
+            explanation: 'LspExplanationFees'
+        });
+
+        // a newer preview replaces the shared fee
+        lspStore.zeroConfFee = 500;
+
+        expect(feeRow(view, navigate)).toEqual({
+            fee: 10000,
+            explanation: 'LspExplanationFees'
+        });
+    });
+
+    it('keeps the fee the invoice was priced with when a preview lands while it is being made', async () => {
+        const { view, navigate } = makeView(
+            {
+                rHash: 'hash',
+                paymentRequest: 'lnbc-wrapped',
+                lspFeeSats: 10000
+            },
+            500
+        );
+
+        await pressGenerate(view);
+        expect(view.state.invoice).toBe('lnbc-wrapped');
+        expect(feeRow(view, navigate)).toEqual({
+            fee: 10000,
+            explanation: 'LspExplanationFees'
+        });
+    });
+
+    it('keeps the invoice and its own fee when the amount is worked out again, and drops both when the amount is edited', async () => {
+        const { view, navigate, lspStore, swapStore } = makeView({
+            rHash: 'hash',
+            paymentRequest: 'lnbc-wrapped',
+            lspFeeSats: 10000
+        });
+        await pressGenerate(view);
+
+        // the host's network fee changes: the amount received is worked
+        // out again and a new preview is asked for it
+        swapStore.subInfo.fees.minerFees = 500;
+        view.recalculateAmounts();
+        expect(view.state.outputSats).not.toEqual(SUBMARINE_AMOUNTS.outputSats);
+        expect(lspStore.getZeroConfFee).toHaveBeenCalledWith(
+            Number(view.state.outputSats) * 1000
+        );
+        lspStore.zeroConfFee = 500;
+
+        expect(view.state.invoice).toBe('lnbc-wrapped');
+        expect(feeRow(view, navigate)).toEqual({
+            fee: 10000,
+            explanation: 'LspExplanationFees'
+        });
+
+        // the user edits the amount: the invoice goes, and its fee with it
+        find(view, (e) => e.type === 'AmountInput').props.onAmountChange(
+            '90000',
+            '90000'
+        );
+        expect(view.state.invoice).toBe('');
+        expect(feeRow(view, navigate)).toBeUndefined();
+    });
+
+    it('shows no fee for a pasted invoice', async () => {
+        const { view, navigate, lspStore } = makeView({
+            rHash: 'hash',
+            paymentRequest: 'lnbc-wrapped',
+            lspFeeSats: 10000
+        });
+        lspStore.zeroConfFee = 10000;
+
+        paste(view, 'lnbc-pasted');
+        expect(feeRow(view, navigate)).toBeUndefined();
+
+        // also when it replaces a generated one
+        paste(view, '');
+        await pressGenerate(view);
+        expect(feeRow(view, navigate)?.fee).toBe(10000);
+        paste(view, 'lnbc-pasted');
+        expect(feeRow(view, navigate)).toBeUndefined();
+    });
+
+    it('shows no fee for a generated invoice that is not LSP-wrapped', async () => {
+        const { view, navigate, lspStore } = makeView({
+            rHash: 'hash',
+            paymentRequest: 'lnbc-plain',
+            lspFeeSats: null
+        });
+
+        await pressGenerate(view);
+        // a preview for the amount is still around
+        lspStore.zeroConfFee = 10000;
+
+        expect(view.state.invoice).toBe('lnbc-plain');
+        expect(feeRow(view, navigate)).toBeUndefined();
+    });
+
+    it('shows a fee of 0 for a wrapped invoice, with no bare text outside Text', async () => {
+        const { view, navigate, lspStore } = makeView({
+            rHash: 'hash',
+            paymentRequest: 'lnbc-wrapped',
+            lspFeeSats: 0
+        });
+
+        await pressGenerate(view);
+        // the shared fee was reset after the invoice was made
+        lspStore.zeroConfFee = undefined;
+
+        expect(feeRow(view, navigate)).toEqual({
+            fee: 0,
+            explanation: 'LspExplanationRouting'
+        });
+        expect(bareText(view.render())).toEqual([]);
+    });
+});
