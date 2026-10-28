@@ -126,7 +126,8 @@ class FeeUtils {
             return (amount * FeeUtils.DEFAULT_ROUTING_FEE_PERCENT).toFixed(0);
         }
 
-        return amount.toString();
+        // LND takes a whole sat fee limit; round a msat amount up
+        return Math.ceil(amount).toString();
     };
     roundFee = (text: string) => {
         const split = text.split('.');
