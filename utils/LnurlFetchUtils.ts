@@ -5,6 +5,7 @@ import { decodelnurl, getDomain } from 'js-lnurl/lib/helpers';
 
 import { isLnurlCallbackAllowed } from './LnurlPayUtils';
 import { localeString } from './LocaleUtils';
+import type { TorHttpResponse } from './TorUtils';
 
 const UNSAFE_LNURL_ERROR = 'UnsafeLnurlError';
 
@@ -40,6 +41,65 @@ const getHeader = (headers: any, name: string): string | undefined => {
     return key ? headers[key] : undefined;
 };
 
+// Use Tor is read when each request starts. Stores is required here
+// rather than imported because stores that import this file (CashuStore,
+// InvoicesStore) are themselves loaded by Stores. TorUtils is required
+// only when Use Tor is on, so the native Tor module is not loaded for
+// clearnet requests.
+const isTorEnabled = (): boolean => {
+    const { settingsStore } = require('../stores/Stores');
+    return !!settingsStore?.enableTor;
+};
+
+/**
+ * A Tor response in the shape of the ReactNativeBlobUtil response that
+ * callers of fetchLnurlUrl use: info().status, info().headers (one string
+ * per header, multiple values joined with ', '), text() and json(). json()
+ * throws on a body that is not JSON, as ReactNativeBlobUtil's does.
+ */
+const torResponse = (response: TorHttpResponse) => {
+    const headers: { [key: string]: string } = {};
+    Object.keys(response.headers).forEach((name) => {
+        headers[name] = response.headers[name].join(', ');
+    });
+    return {
+        info: () => ({ status: response.statusCode, headers }),
+        text: () => response.body,
+        json: () => JSON.parse(response.body)
+    };
+};
+
+// Sends one hop without following redirects, over Tor when Use Tor is on.
+// Returns the status, the location header if any, and the response for
+// the caller.
+const fetchHop = async (
+    current: string
+): Promise<{ status: number; location?: string; response: any }> => {
+    if (isTorEnabled()) {
+        const { RequestMethod, torHttpRequest } = require('./TorUtils');
+        const response: TorHttpResponse = await torHttpRequest({
+            url: current,
+            method: RequestMethod.GET,
+            followRedirects: false
+        });
+        return {
+            status: response.statusCode,
+            location: response.headers.location?.[0],
+            response: torResponse(response)
+        };
+    }
+
+    const response = await ReactNativeBlobUtil.config({
+        followRedirect: false
+    }).fetch('get', current);
+    const info = response.info();
+    return {
+        status: info?.status,
+        location: getHeader(info?.headers, 'location'),
+        response
+    };
+};
+
 /**
  * GET an lnurl endpoint, callback, or lightning address well-known URL with
  * the host policy applied to every hop.
@@ -53,8 +113,16 @@ const getHeader = (headers: any, name: string): string | undefined => {
  * fetched, so the policy and the native URL parser cannot disagree about the
  * host.
  *
- * Resolves with the final ReactNativeBlobUtil response, whatever its status.
- * Rejects with an UnsafeLnurlError when a hop is refused.
+ * When Use Tor is on, every hop goes over the embedded Tor with redirect
+ * following turned off, so the same checks apply. With Use Tor off,
+ * requests go through ReactNativeBlobUtil, including to .onion hosts, which
+ * then work only if the device routes them through Tor itself (for
+ * example with Orbot).
+ *
+ * Resolves with the final response, whatever its status: a
+ * ReactNativeBlobUtil response, or an object with the same info(), text()
+ * and json() when the request went over Tor. Rejects with an
+ * UnsafeLnurlError when a hop is refused.
  */
 export const fetchLnurlUrl = async (target: string): Promise<any> => {
     // The first URL is serialized by the same parser that checks it, as the
@@ -75,13 +143,8 @@ export const fetchLnurlUrl = async (target: string): Promise<any> => {
             );
         }
 
-        const response = await ReactNativeBlobUtil.config({
-            followRedirect: false
-        }).fetch('get', current);
-
-        const info = response.info();
-        const location = getHeader(info?.headers, 'location');
-        if (!REDIRECT_STATUSES.includes(info?.status) || !location) {
+        const { status, location, response } = await fetchHop(current);
+        if (!REDIRECT_STATUSES.includes(status) || !location) {
             return response;
         }
 
