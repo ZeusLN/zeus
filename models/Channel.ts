@@ -115,6 +115,20 @@ export default class Channel extends BaseModel {
         };
     }
 
+    // LDK Node lists a channel as pending open until channel_ready messages
+    // have been exchanged. Once the funding transaction has the required
+    // confirmations, that usually means it waits for the peer's channel_ready
+    @computed
+    public get isWaitingForPeer(): boolean {
+        return (
+            !!this.pendingOpen &&
+            this.confirmations != null &&
+            this.confirmations_required != null &&
+            this.confirmations_required > 0 &&
+            this.confirmations >= this.confirmations_required
+        );
+    }
+
     @computed
     public get closeHeight(): number {
         return this.close_height;

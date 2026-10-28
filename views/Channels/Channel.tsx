@@ -294,6 +294,7 @@ export default class ChannelView extends React.Component<
         const confs = channel.getConfirmations(
             NodeInfoStore.nodeInfo.currentBlockHeight
         );
+        const waitingForPeer = channel.isWaitingForPeer;
 
         const editableFees: boolean = !(
             pendingOpen ||
@@ -439,12 +440,24 @@ export default class ChannelView extends React.Component<
                                 style={{
                                     ...styles.status,
                                     color: themeColor('text'),
-                                    marginTop: 0
+                                    marginTop: 0,
+                                    marginBottom: waitingForPeer ? 6 : 18
                                 }}
                             >
                                 {`${localeString(
                                     'views.OpenChannel.numConf'
                                 )}: ${confs.current} / ${confs.total}`}
+                            </Text>
+                        )}
+                        {waitingForPeer && (
+                            <Text
+                                style={{
+                                    ...styles.status,
+                                    color: themeColor('text'),
+                                    marginTop: 0
+                                }}
+                            >
+                                {localeString('views.Channel.waitingForPeer')}
                             </Text>
                         )}
                         {leaseDisplay.showFetchError && (

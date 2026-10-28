@@ -196,3 +196,56 @@ describe('Channel getConfirmations', () => {
         expect(channel.getConfirmations(102)).toBeNull();
     });
 });
+
+describe('Channel isWaitingForPeer', () => {
+    const ldkPendingOpen = (
+        confirmations: number,
+        confirmations_required = 6
+    ) =>
+        new Channel({
+            pendingOpen: true,
+            confirmations,
+            confirmations_required
+        });
+
+    it('is true for a pending LDK channel at the required depth', () => {
+        expect(ldkPendingOpen(6).isWaitingForPeer).toBe(true);
+    });
+
+    it('is true for a pending LDK channel past the required depth', () => {
+        expect(ldkPendingOpen(9).isWaitingForPeer).toBe(true);
+    });
+
+    it('is false below the required depth', () => {
+        expect(ldkPendingOpen(5).isWaitingForPeer).toBe(false);
+    });
+
+    it('is false for an LDK zero-conf channel', () => {
+        expect(ldkPendingOpen(0, 0).isWaitingForPeer).toBe(false);
+    });
+
+    it('is false when the channel is not pending open', () => {
+        const channel = new Channel({
+            confirmations: 9,
+            confirmations_required: 6
+        });
+        expect(channel.isWaitingForPeer).toBe(false);
+    });
+
+    it('is false for an LDK channel without a confirmation count', () => {
+        const channel = new Channel({
+            pendingOpen: true,
+            confirmations_required: 6
+        });
+        expect(channel.isWaitingForPeer).toBe(false);
+    });
+
+    it('is false for a pending LND channel', () => {
+        const channel = new Channel({
+            pendingOpen: true,
+            confirmation_height: 100,
+            confirmations_until_active: 0
+        });
+        expect(channel.isWaitingForPeer).toBe(false);
+    });
+});

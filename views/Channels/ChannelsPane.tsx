@@ -270,6 +270,13 @@ export default class ChannelsPane extends React.PureComponent<
                     }
                     isBelowReserve={item.isBelowReserve}
                     statusSuffix={(() => {
+                        // At the required depth the count no longer moves,
+                        // so say what the channel waits for instead
+                        if (item.isWaitingForPeer) {
+                            return `· ${localeString(
+                                'views.Channel.waitingForPeer'
+                            )}`;
+                        }
                         const { NodeInfoStore } = this.props;
                         const confs = item.getConfirmations(
                             NodeInfoStore?.nodeInfo?.currentBlockHeight
