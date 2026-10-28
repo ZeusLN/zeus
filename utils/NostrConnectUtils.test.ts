@@ -1700,3 +1700,38 @@ describe('NostrConnectUtils pay_invoice amount resolution', () => {
         ).resolves.toBe(0);
     });
 });
+
+describe('NostrConnectUtils payment hash in hex', () => {
+    const hex = '74e1540bf7f01fed' + 'ab'.repeat(24);
+    const base64 = Buffer.from(hex, 'hex').toString('base64');
+    const base64Url = base64.replace(/\+/g, '-').replace(/\//g, '_');
+
+    it.each([
+        ['hex', hex],
+        ['upper-case hex', hex.toUpperCase()],
+        ['base64 (LND REST r_hash)', base64],
+        ['base64url (Invoice.getFormattedRhash)', base64Url]
+    ])('turns %s into lower-case hex', (_label, input) => {
+        expect(NostrConnectUtils.paymentHashToHex(input)).toBe(hex);
+    });
+
+    it('leaves an empty or unrecognised hash as it is', () => {
+        expect(NostrConnectUtils.paymentHashToHex(undefined)).toBe('');
+        expect(NostrConnectUtils.paymentHashToHex('')).toBe('');
+        expect(NostrConnectUtils.paymentHashToHex('abc')).toBe('abc');
+    });
+
+    it('falls back to the hex of r_hash when the invoice cannot be decoded', async () => {
+        jest.spyOn(
+            NostrConnectUtils,
+            'decodeInvoiceTags'
+        ).mockRejectedValueOnce(new Error('bad invoice'));
+
+        const result = await NostrConnectUtils.decodeInvoiceTagsForMakeInvoice(
+            'lnbc-undecodable',
+            base64Url
+        );
+
+        expect(result.paymentHash).toBe(hex);
+    });
+});
