@@ -32,6 +32,10 @@ class DateTimeUtils {
     private fullMask = () =>
         `${this.numericDateMask() || "ddd, mmm d 'yy"}, ${this.timeMask()} Z`;
 
+    private dateOnlyMask = (date: Date): string =>
+        this.numericDateMask() ||
+        (this.isCurrentYear(date) ? 'mmm d' : "mmm d, 'yy");
+
     private shortMask = (date: Date) =>
         `${this.dateOnlyMask(date)}, ${this.timeMask()}`;
 
@@ -101,10 +105,6 @@ class DateTimeUtils {
         }
         return dateFormat(parsed, mask(parsed));
     };
-
-    private dateOnlyMask = (date: Date): string =>
-        this.numericDateMask() ||
-        (this.isCurrentYear(date) ? 'mmm d' : "mmm d, 'yy");
 
     formatDate = (date: Date | string | number | undefined) =>
         this.formatDateObject(date, (d) => this.dateOnlyMask(d));

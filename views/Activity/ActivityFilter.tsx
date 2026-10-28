@@ -418,14 +418,12 @@ export default class ActivityFilter extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }}
                         title={
-                            (props.type === 'startDate' && startDate) ||
-                            (props.type === 'endDate' && endDate)
+                            date
                                 ? localeString('views.ActivityFilter.edit')
                                 : localeString('views.ActivityFilter.set')
                         }
                     />
-                    {((props.type === 'startDate' && startDate) ||
-                        (props.type === 'endDate' && endDate)) && (
+                    {date && (
                         <Button
                             buttonStyle={{
                                 backgroundColor: themeColor('error'),
