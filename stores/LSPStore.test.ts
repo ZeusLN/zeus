@@ -1889,3 +1889,36 @@ describe('LSPStore get_extendable_channels response', () => {
         ).toEqual([extendableChannel]);
     });
 });
+
+describe('LSPStore.lsps1GetOrderREST', () => {
+    it('does not log the order id', async () => {
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        const store = makeStore();
+        jest.mocked(ReactNativeBlobUtil.fetch).mockReset();
+        jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({
+            data: JSON.stringify({ order_id: 'order-secret-123' })
+        } as any);
+
+        try {
+            await store.lsps1GetOrderREST(
+                'order-secret-123',
+                'https://lsp.example.com'
+            );
+
+            expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledWith(
+                'GET',
+                'https://lsp.example.com/api/v1/get_order?order_id=order-secret-123',
+                expect.anything()
+            );
+            expect(logSpy).toHaveBeenCalledWith(
+                'Fetching order from:',
+                'https://lsp.example.com'
+            );
+            expect(JSON.stringify(logSpy.mock.calls)).not.toContain(
+                'order-secret-123'
+            );
+        } finally {
+            logSpy.mockRestore();
+        }
+    });
+});
