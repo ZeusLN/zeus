@@ -247,12 +247,15 @@ const UnredeemedTokensBadge = ({
 
 const POSBadge = ({
     setPosStatus,
-    getOrders
+    getOrders,
+    disabled
 }: {
     setPosStatus: (status: string) => void;
     getOrders: () => void;
+    disabled?: boolean;
 }) => (
     <TouchableOpacity
+        disabled={disabled}
         onPress={async () => {
             getOrders();
             setPosStatus('active');
@@ -653,6 +656,9 @@ export default class WalletHeader extends React.Component<
 
         return (
             <View
+                // keeps the header's views in this View when the session
+                // starts, instead of Fabric flattening them into the parent
+                collapsable={false}
                 pointerEvents={sessionStarted ? 'auto' : 'none'}
                 // pointerEvents only stops touches: a screen reader's
                 // activation calls onPress without a hit test
@@ -711,6 +717,7 @@ export default class WalletHeader extends React.Component<
                                             fontFamily: 'PPNeueMontreal-Book',
                                             fontSize: 16
                                         }}
+                                        disabled={!sessionStarted}
                                         onPress={() => {
                                             navigation.navigate('Wallets');
                                         }}
@@ -808,6 +815,7 @@ export default class WalletHeader extends React.Component<
                                         <POSBadge
                                             setPosStatus={setPosStatus}
                                             getOrders={getOrders}
+                                            disabled={!sessionStarted}
                                         />
                                     </View>
                                 )}

@@ -75,14 +75,17 @@ const renderHeader = async ({
     connecting,
     settingsLoaded = true,
     sessionStarted = true,
-    nodeInfo = {}
+    nodeInfo = {},
+    settings = {}
 }: {
     clipboard: boolean;
     connecting?: boolean;
     settingsLoaded?: boolean;
     sessionStarted?: boolean;
     nodeInfo?: any;
+    settings?: any;
 }) => {
+    const setPosStatus = jest.fn();
     const listeners: { [event: string]: () => void } = {};
     const navigation = {
         addListener: jest.fn((event: string, listener: () => void) => {
@@ -97,9 +100,10 @@ const renderHeader = async ({
                 navigation,
                 connecting,
                 SettingsStore: {
-                    settings: { privacy: { clipboard } },
+                    settings: { privacy: { clipboard }, ...settings },
                     settingsLoaded,
-                    sessionStarted: () => sessionStarted
+                    sessionStarted: () => sessionStarted,
+                    setPosStatus
                 },
                 CashuStore: { sentTokens: [] },
                 ChannelsStore: { pendingHTLCs: [] },
@@ -114,7 +118,7 @@ const renderHeader = async ({
             } as any)}
         />
     );
-    return { navigation, listeners, ...result };
+    return { navigation, listeners, setPosStatus, ...result };
 };
 
 const clipboardBadge = () =>
@@ -278,6 +282,76 @@ describe('WalletHeader before the session starts', () => {
 
         expect(menuIcon()).toBeDefined();
         expect(nodeIdenticon()).toBeDefined();
+    });
+
+    // A screen reader or a hardware keyboard activates a control with a
+    // click that Pressability turns into onPress without a hit test, so
+    // pointerEvents on the wrapper does not stop it
+    const click = (node: any) => {
+        let n = node;
+        while (n && !n.props.onClick) n = n.parent;
+        return act(async () => n.props.onClick({ nativeEvent: {} }));
+    };
+    const posIcon = () =>
+        screen.container.queryAll((n) => n.type === 'POSIcon')[0];
+    const nickname = () =>
+        screen.getByText('My Node', { includeHiddenElements: true });
+    const posSettings = { pos: { posEnabled: 'standalone' } };
+    const nicknameSettings = {
+        display: { displayNickname: true },
+        nodes: [{ nickname: 'My Node' }],
+        selectedNode: 0
+    };
+
+    it('does not switch to POS mode before the session starts', async () => {
+        const { setPosStatus } = await renderHeader({
+            clipboard: false,
+            sessionStarted: false,
+            settings: posSettings
+        });
+
+        await fireEvent.press(posIcon());
+        await click(posIcon());
+
+        expect(setPosStatus).not.toHaveBeenCalled();
+    });
+
+    it('switches to POS mode from the badge once the session has started', async () => {
+        const { setPosStatus } = await renderHeader({
+            clipboard: false,
+            settings: posSettings
+        });
+
+        await click(posIcon());
+
+        expect(setPosStatus).toHaveBeenCalledWith('active');
+    });
+
+    it('does not open the wallet list from the nickname before the session starts', async () => {
+        const { navigation } = await renderHeader({
+            clipboard: false,
+            sessionStarted: false,
+            settings: nicknameSettings
+        });
+
+        await fireEvent.press(nickname());
+
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        // Text hands disabled to Pressability, which then ignores clicks
+        expect(nickname().props.disabled).toBe(true);
+    });
+
+    it('opens the wallet list from the nickname once the session has started', async () => {
+        const { navigation } = await renderHeader({
+            clipboard: false,
+            settings: nicknameSettings
+        });
+
+        expect(nickname().props.disabled).toBe(false);
+
+        await fireEvent.press(nickname());
+
+        expect(navigation.navigate).toHaveBeenCalledWith('Wallets');
     });
 
     it('draws the menu button and wallet picture once the session has started', async () => {
