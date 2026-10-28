@@ -12,6 +12,8 @@ import { Alert } from 'react-native';
 import { nip05 } from 'nostr-tools';
 
 import { invoicesStore, settingsStore } from '../stores/Stores';
+import { isUnsafeLnurlError } from './LnurlFetchUtils';
+import { localeString } from './LocaleUtils';
 import handleAnything, {
     strictUriEncode,
     convertMerchantQRToLightningAddress,
@@ -91,11 +93,16 @@ jest.mock('./AddressUtils', () => ({
     isValidWithdrawalRequest: () => mockIsValidWithdrawalRequest,
     ZEUS_ECASH_GIFT_URL
 }));
-const mockDoTorRequest = jest.fn();
+const mockTorHttpRequest = jest.fn();
 jest.mock('./TorUtils', () => ({
-    doTorRequest: (...args: any[]) => mockDoTorRequest(...args),
-    RequestMethod: { GET: 'GET' }
+    torHttpRequest: (...args: any[]) => mockTorHttpRequest(...args),
+    RequestMethod: { GET: 'get' }
 }));
+const torJson = (body: any) => ({
+    statusCode: 200,
+    headers: {},
+    body: JSON.stringify(body)
+});
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
     supportsAccounts: () => mockSupportsAccounts,
@@ -1417,23 +1424,24 @@ describe('handleAnything', () => {
                 'SATOSHI@ZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUS.ONION';
             mockProcessBIP21Uri.mockReturnValue({ value: address });
             mockIsValidLightningAddress = true;
-            mockDoTorRequest.mockResolvedValue({
-                callback: 'http://example.onion/callback'
-            });
+            mockTorHttpRequest.mockResolvedValue(
+                torJson({ callback: 'http://example.onion/callback' })
+            );
             (settingsStore as any).enableTor = true;
 
             try {
                 const result = await handleAnything(address);
 
-                expect(mockDoTorRequest).toHaveBeenCalledWith(
-                    'http://zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion/.well-known/lnurlp/satoshi',
-                    'GET'
-                );
+                expect(mockTorHttpRequest).toHaveBeenCalledWith({
+                    url: 'http://zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion/.well-known/lnurlp/satoshi',
+                    method: 'get',
+                    followRedirects: false
+                });
                 expect(mockBlobUtilFetch).not.toHaveBeenCalled();
                 expect(result[0]).toBe('LnurlPay');
             } finally {
                 (settingsStore as any).enableTor = undefined;
-                mockDoTorRequest.mockReset();
+                mockTorHttpRequest.mockReset();
             }
         });
     });
@@ -2037,7 +2045,8 @@ describe('handleAnything', () => {
 
             beforeEach(() => {
                 settingsStore = require('../stores/Stores').settingsStore;
-                mockDoTorRequest.mockReset();
+                mockTorHttpRequest.mockReset();
+                (nip05.queryProfile as jest.Mock).mockReset();
                 mockDoHResponse({
                     Status: 0,
                     AD: true,
@@ -2052,15 +2061,17 @@ describe('handleAnything', () => {
             it('makes no DoH request with Tor enabled', async () => {
                 settingsStore.enableTor = true;
                 const lnurlParams = { callback: `http://${ONION}/callback` };
-                mockDoTorRequest.mockResolvedValue(lnurlParams);
+                mockTorHttpRequest.mockResolvedValue(torJson(lnurlParams));
 
                 const result = await handleAnything(ONION_ADDRESS);
 
                 expect(mockDnsFetch).not.toHaveBeenCalled();
-                expect(mockDoTorRequest).toHaveBeenCalledWith(
-                    ONION_LNURLP,
-                    'GET'
-                );
+                expect(mockTorHttpRequest).toHaveBeenCalledWith({
+                    url: ONION_LNURLP,
+                    method: 'get',
+                    followRedirects: false
+                });
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
                 expect(result).toEqual([
                     'LnurlPay',
                     {
@@ -2074,19 +2085,52 @@ describe('handleAnything', () => {
 
             it('rejects with the Tor request error when the LNURL fetch fails', async () => {
                 settingsStore.enableTor = true;
-                mockDoTorRequest.mockRejectedValue(new Error('tor failure'));
+                mockTorHttpRequest.mockRejectedValue(new Error('tor failure'));
 
                 await expect(handleAnything(ONION_ADDRESS)).rejects.toThrow(
                     'tor failure'
                 );
                 expect(mockDnsFetch).not.toHaveBeenCalled();
+                // the NIP-05 lookup is not sent over Tor
+                expect(nip05.queryProfile).not.toHaveBeenCalled();
+            });
+
+            it('rejects a non-200 answer over Tor without a NIP-05 lookup', async () => {
+                settingsStore.enableTor = true;
+                mockTorHttpRequest.mockResolvedValue({
+                    statusCode: 404,
+                    headers: {},
+                    body: 'not found'
+                });
+
+                await expect(handleAnything(ONION_ADDRESS)).rejects.toThrow(
+                    localeString('utils.handleAnything.lightningAddressError')
+                );
+                expect(nip05.queryProfile).not.toHaveBeenCalled();
+            });
+
+            it('refuses a redirect off the onion service over Tor', async () => {
+                settingsStore.enableTor = true;
+                mockTorHttpRequest.mockResolvedValueOnce({
+                    statusCode: 302,
+                    headers: { location: ['http://192.168.1.1/lnurlp'] },
+                    body: ''
+                });
+
+                const error = await handleAnything(ONION_ADDRESS).catch(
+                    (e: any) => e
+                );
+
+                expect(isUnsafeLnurlError(error)).toBe(true);
+                expect(mockTorHttpRequest).toHaveBeenCalledTimes(1);
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
             });
 
             it('makes no DoH request with Tor disabled', async () => {
                 const result = await handleAnything(ONION_ADDRESS);
 
                 expect(mockDnsFetch).not.toHaveBeenCalled();
-                expect(mockDoTorRequest).not.toHaveBeenCalled();
+                expect(mockTorHttpRequest).not.toHaveBeenCalled();
                 expect(mockBlobUtilFetch).toHaveBeenCalledWith(
                     'get',
                     ONION_LNURLP
@@ -2096,17 +2140,21 @@ describe('handleAnything', () => {
 
             it('still looks up a clearnet domain with an .onion label', async () => {
                 settingsStore.enableTor = true;
+                mockTorHttpRequest.mockResolvedValue(
+                    torJson({ callback: 'https://pay.onion.example.com/cb' })
+                );
 
                 const result = await handleAnything(
                     'satoshi@pay.onion.example.com'
                 );
 
                 expect(mockDnsFetch).toHaveBeenCalledTimes(1);
-                expect(mockDoTorRequest).not.toHaveBeenCalled();
-                expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-                    'get',
-                    'https://pay.onion.example.com/.well-known/lnurlp/satoshi'
-                );
+                expect(mockTorHttpRequest).toHaveBeenCalledWith({
+                    url: 'https://pay.onion.example.com/.well-known/lnurlp/satoshi',
+                    method: 'get',
+                    followRedirects: false
+                });
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
                 expect(result[0]).toBe('ChoosePaymentMethod');
             });
         });

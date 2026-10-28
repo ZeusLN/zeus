@@ -10,6 +10,15 @@ jest.mock('react-native-blob-util', () => ({
 jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
+const mockSettingsStore: { enableTor?: boolean } = {};
+jest.mock('../stores/Stores', () => ({
+    settingsStore: mockSettingsStore
+}));
+const mockTorHttpRequest = jest.fn();
+jest.mock('./TorUtils', () => ({
+    RequestMethod: { GET: 'get', POST: 'post', DELETE: 'delete' },
+    torHttpRequest: (...args: any[]) => mockTorHttpRequest(...args)
+}));
 
 import { bech32 } from 'bech32';
 
@@ -40,6 +49,7 @@ describe('fetchLnurlUrl', () => {
     beforeEach(() => {
         mockBlobFetch.mockReset();
         mockBlobConfig.mockClear();
+        mockTorHttpRequest.mockReset();
     });
 
     it('turns off native redirect following', async () => {
@@ -52,6 +62,7 @@ describe('fetchLnurlUrl', () => {
             'get',
             'https://example.com/cb'
         );
+        expect(mockTorHttpRequest).not.toHaveBeenCalled();
     });
 
     it('follows redirects to public https hosts', async () => {
@@ -176,6 +187,200 @@ describe('fetchLnurlUrl', () => {
 
         expect(response.info().status).toBe(304);
         expect(mockBlobFetch).toHaveBeenCalledTimes(1);
+    });
+});
+
+// With Use Tor on, every hop goes over the embedded Tor with redirect
+// following off, and ReactNativeBlobUtil is never used
+describe('fetchLnurlUrl over Tor', () => {
+    const torRespond = (
+        statusCode: number,
+        body: any = {},
+        headers: { [key: string]: string[] } = {}
+    ) => ({
+        statusCode,
+        headers,
+        body: typeof body === 'string' ? body : JSON.stringify(body)
+    });
+
+    const torRedirect = (location: string, statusCode = 302) =>
+        torRespond(statusCode, '', { location: [location] });
+
+    const torUrls = () =>
+        mockTorHttpRequest.mock.calls.map((call) => call[0].url);
+
+    beforeEach(() => {
+        mockSettingsStore.enableTor = true;
+        mockTorHttpRequest.mockReset();
+        mockBlobFetch.mockReset();
+        mockBlobConfig.mockClear();
+    });
+
+    afterEach(() => {
+        delete mockSettingsStore.enableTor;
+    });
+
+    it('sends the request over Tor without following redirects', async () => {
+        mockTorHttpRequest.mockResolvedValue(torRespond(200, { ok: true }));
+
+        const response = await fetchLnurlUrl('https://example.com/cb');
+
+        expect(mockTorHttpRequest).toHaveBeenCalledWith({
+            url: 'https://example.com/cb',
+            method: 'get',
+            followRedirects: false
+        });
+        expect(mockBlobConfig).not.toHaveBeenCalled();
+        expect(mockBlobFetch).not.toHaveBeenCalled();
+        expect(response.info().status).toBe(200);
+        expect(response.json()).toEqual({ ok: true });
+        expect(response.text()).toBe('{"ok":true}');
+    });
+
+    it('returns headers as strings, as ReactNativeBlobUtil does', async () => {
+        mockTorHttpRequest.mockResolvedValue(
+            torRespond(200, {}, { 'content-type': ['application/json'] })
+        );
+
+        const response = await fetchLnurlUrl('https://example.com/cb');
+
+        expect(response.info().headers).toEqual({
+            'content-type': 'application/json'
+        });
+    });
+
+    it('throws from json() on a body that is not JSON', async () => {
+        mockTorHttpRequest.mockResolvedValue(torRespond(200, '<html>'));
+
+        const response = await fetchLnurlUrl('https://example.com/cb');
+
+        expect(() => response.json()).toThrow();
+        expect(response.text()).toBe('<html>');
+    });
+
+    it('refuses a redirect from https to http without requesting it', async () => {
+        mockTorHttpRequest.mockResolvedValueOnce(
+            torRedirect('http://public.example/cb')
+        );
+
+        const error = await fetchLnurlUrl('https://example.com/cb').catch(
+            (e) => e
+        );
+
+        expect(error.message).toBe('utils.lnurl.unsafeRedirect');
+        expect(isUnsafeLnurlError(error)).toBe(true);
+        expect(torUrls()).toEqual(['https://example.com/cb']);
+        expect(mockBlobFetch).not.toHaveBeenCalled();
+    });
+
+    it('refuses a redirect to the LAN without requesting it', async () => {
+        mockTorHttpRequest.mockResolvedValueOnce(
+            torRedirect('https://192.168.1.1/cb', 307)
+        );
+
+        await expect(fetchLnurlUrl('https://example.com/cb')).rejects.toThrow(
+            'utils.lnurl.unsafeRedirect'
+        );
+        expect(mockTorHttpRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it('follows allowed redirects one hop at a time', async () => {
+        mockTorHttpRequest
+            .mockResolvedValueOnce(torRedirect('https://canonical.example/a'))
+            .mockResolvedValueOnce(torRedirect('/b?x=1', 308))
+            .mockResolvedValueOnce(torRespond(200, { ok: true }));
+
+        const response = await fetchLnurlUrl('https://example.com/cb');
+
+        expect(response.json()).toEqual({ ok: true });
+        expect(torUrls()).toEqual([
+            'https://example.com/cb',
+            'https://canonical.example/a',
+            'https://canonical.example/b?x=1'
+        ]);
+        mockTorHttpRequest.mock.calls.forEach((call) =>
+            expect(call[0].followRedirects).toBe(false)
+        );
+    });
+
+    it('follows a redirect within an onion service over http', async () => {
+        const onion =
+            'http://zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
+        mockTorHttpRequest
+            .mockResolvedValueOnce(torRedirect('/lnurlp/satoshi'))
+            .mockResolvedValueOnce(torRespond(200, { tag: 'payRequest' }));
+
+        await fetchLnurlUrl(`${onion}/.well-known/lnurlp/satoshi`);
+
+        expect(torUrls()).toEqual([
+            `${onion}/.well-known/lnurlp/satoshi`,
+            `${onion}/lnurlp/satoshi`
+        ]);
+    });
+
+    it(`stops after ${MAX_LNURL_REDIRECTS} redirects`, async () => {
+        let hop = 0;
+        mockTorHttpRequest.mockImplementation(async () =>
+            torRedirect(`https://example.com/${++hop}`)
+        );
+
+        const error = await fetchLnurlUrl('https://example.com/cb').catch(
+            (e) => e
+        );
+
+        expect(error.message).toBe('utils.lnurl.tooManyRedirects');
+        expect(mockTorHttpRequest).toHaveBeenCalledTimes(
+            MAX_LNURL_REDIRECTS + 1
+        );
+    });
+
+    it('refuses an unsafe first URL without starting a request', async () => {
+        await expect(fetchLnurlUrl('http://192.168.1.1/cb')).rejects.toThrow(
+            'utils.lnurl.unsafeCallback'
+        );
+        expect(mockTorHttpRequest).not.toHaveBeenCalled();
+    });
+
+    it('rejects with the Tor transport error', async () => {
+        mockTorHttpRequest.mockRejectedValue(new Error('circuit closed'));
+
+        await expect(fetchLnurlUrl('https://example.com/cb')).rejects.toThrow(
+            'circuit closed'
+        );
+    });
+
+    it('resolves lnurl params over Tor', async () => {
+        mockTorHttpRequest.mockResolvedValue(
+            torRespond(200, {
+                tag: 'payRequest',
+                callback: 'https://pay.example/cb',
+                metadata: '[]'
+            })
+        );
+        const lnurl = bech32.encode(
+            'lnurl',
+            bech32.toWords(Base64Utils.utf8ToBytes('https://example.com/p')),
+            20000
+        );
+
+        const params = await fetchLnurlParams(lnurl);
+
+        expect(params.tag).toBe('payRequest');
+        expect(params.domain).toBe('pay.example');
+        expect(mockBlobFetch).not.toHaveBeenCalled();
+    });
+
+    it('uses ReactNativeBlobUtil again once Use Tor is turned off', async () => {
+        mockSettingsStore.enableTor = false;
+        mockBlobFetch.mockResolvedValue(respond(200));
+
+        await fetchLnurlUrl('https://example.com/cb');
+
+        expect(mockBlobFetch).toHaveBeenCalledWith(
+            'get',
+            'https://example.com/cb'
+        );
+        expect(mockTorHttpRequest).not.toHaveBeenCalled();
     });
 });
 

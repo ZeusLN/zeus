@@ -12,6 +12,10 @@ jest.mock('react-native-blob-util', () => ({
 jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
+// Use Tor off: requests go through ReactNativeBlobUtil
+jest.mock('../stores/Stores', () => ({
+    settingsStore: { enableTor: false }
+}));
 
 import { bech32 } from 'bech32';
 
