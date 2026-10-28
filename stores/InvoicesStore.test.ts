@@ -7,6 +7,7 @@ jest.mock('../utils/BackendUtils', () => ({
         decodePaymentRequest: jest.fn(),
         getNewAddress: jest.fn(),
         getNewChangeAddress: jest.fn(),
+        getRoutes: jest.fn(),
         isLNDBased: jest.fn(() => false),
         supportsFlowLSP: jest.fn(() => false),
         supportsOnchainReceiving: jest.fn(() => false),
@@ -62,6 +63,33 @@ describe('InvoicesStore.getPayReq', () => {
 
         expect(store.pay_req).toBeNull();
         expect(store.getPayReqError).toBe('decode failed');
+    });
+});
+
+describe('InvoicesStore route fee estimate', () => {
+    afterEach(() => {
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(false);
+    });
+
+    it('queries routes in whole sats, rounded up, for a msat amount', async () => {
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+        (BackendUtils.getRoutes as jest.Mock).mockResolvedValue({
+            routes: []
+        });
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
+            ...lndDecodeResponse,
+            num_satoshis: '1',
+            num_msat: '1500'
+        });
+
+        const store = newStore();
+        await store.getPayReq(paymentRequest);
+
+        expect(store.pay_req!.getRequestAmount).toBe(1.5);
+        expect(BackendUtils.getRoutes).toHaveBeenCalledWith([
+            lndDecodeResponse.destination,
+            2
+        ]);
     });
 });
 

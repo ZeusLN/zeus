@@ -274,13 +274,12 @@ export default class Invoice extends BaseModel {
             const msatoshi = this.millisatoshis || this.invoice_amount_msat;
             return Number(msatoshi) / 1000;
         }
-        // LND rounds num_satoshis down, so a sub-sat invoice decodes as 0
-        // sats and only num_msat carries its amount
-        const numSatoshis = Number(this.num_satoshis || 0);
-        if (!numSatoshis && Number(this.num_msat || 0) > 0) {
+        // LND rounds num_satoshis down, so num_msat carries the exact
+        // amount (a 500 msat invoice decodes as 0 sats)
+        if (Number(this.num_msat || 0) > 0) {
             return Number(this.num_msat) / 1000;
         }
-        return numSatoshis;
+        return Number(this.num_satoshis || 0);
     }
 
     @computed public get getDisplayTime(): string {

@@ -85,9 +85,10 @@ export default class InvoicesStore {
                     this.pay_req.destination &&
                     BackendUtils.isLNDBased()
                 ) {
+                    // QueryRoutes takes whole sats; round a msat amount up
                     this.getRoutes(
                         this.pay_req.destination,
-                        this.pay_req.getRequestAmount
+                        Math.ceil(this.pay_req.getRequestAmount)
                     );
                 }
                 // Send probes for LDK Node to warm up the scorer
