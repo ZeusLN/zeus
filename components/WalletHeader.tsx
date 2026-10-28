@@ -654,6 +654,12 @@ export default class WalletHeader extends React.Component<
         return (
             <View
                 pointerEvents={sessionStarted ? 'auto' : 'none'}
+                // pointerEvents only stops touches: a screen reader's
+                // activation calls onPress without a hit test
+                accessibilityElementsHidden={!sessionStarted}
+                importantForAccessibility={
+                    sessionStarted ? 'auto' : 'no-hide-descendants'
+                }
                 testID="wallet-header"
             >
                 <Header
