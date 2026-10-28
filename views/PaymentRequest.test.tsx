@@ -65,6 +65,7 @@ jest.mock('../utils/SleepUtils', () => ({
 
 import * as React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import Invoice from '../models/Invoice';
 import PaymentRequest from './PaymentRequest';
 
 const PAY = 'views.PaymentRequest.payInvoice';
@@ -265,6 +266,38 @@ describe('PaymentRequest no-amount invoice', () => {
         expect(view.sendPayment).toHaveBeenCalledWith(
             expect.objectContaining({ amount: '500' })
         );
+    });
+});
+
+describe('PaymentRequest sub-sat invoice', () => {
+    // LND decodes a 500 msat invoice with num_satoshis 0
+    const subSatAmount = new Invoice({ num_satoshis: '0', num_msat: '500' })
+        .getRequestAmount;
+
+    it('enables Pay without asking for an amount', async () => {
+        await renderView({
+            implementation: 'lnd',
+            payReqOverrides: { getRequestAmount: subSatAmount }
+        });
+
+        expect(payButton()).toBeEnabled();
+        expect(screen.queryByText(ENTER_AMOUNT)).not.toBeOnTheScreen();
+        expect(screen.queryByTestId('AmountInput')).not.toBeOnTheScreen();
+    });
+
+    it('pays the invoice without sending an amount', async () => {
+        const ref = React.createRef<any>();
+        await renderView({
+            implementation: 'lnd',
+            payReqOverrides: { getRequestAmount: subSatAmount },
+            ref
+        });
+        const view = ref.current;
+        view.sendPayment = jest.fn();
+
+        await act(async () => view.triggerPayment());
+        expect(view.sendPayment).toHaveBeenCalledTimes(1);
+        expect(view.sendPayment.mock.calls[0][0].amount).toBeFalsy();
     });
 });
 
