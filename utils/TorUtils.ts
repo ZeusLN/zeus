@@ -1,9 +1,9 @@
-import { RnTor } from 'react-native-nitro-tor';
+import { Tor } from 'react-native-nitro-tor';
+import type { HttpMethod } from 'react-native-nitro-tor';
 import RNFS from 'react-native-fs';
 import { grpcErrorCode, markRestErrorResponse } from './PaymentLookupUtils';
 
 const SOCKS_PORT = 9056;
-const TARGET_PORT = 9057;
 const START_TIMEOUT_MS = 30000;
 const REQUEST_TIMEOUT_MS = 60000;
 const TOR_DATA_PATH = `${RNFS.DocumentDirectoryPath}/tor_data`;
@@ -14,10 +14,25 @@ enum RequestMethod {
     DELETE = 'delete'
 }
 
-const headersToString = (headers?: any): string => {
-    if (!headers) return '';
-    if (typeof headers === 'string') return headers;
-    return JSON.stringify(headers);
+const HTTP_METHODS: { [key in RequestMethod]: HttpMethod } = {
+    [RequestMethod.GET]: 'GET',
+    [RequestMethod.POST]: 'POST',
+    [RequestMethod.DELETE]: 'DELETE'
+};
+
+// nitro-tor 1.x takes headers as an object of string values. Callers
+// pass either an object or, as with 0.6.x, a JSON string.
+const normalizeHeaders = (headers?: any): Record<string, string> => {
+    if (!headers) return {};
+    const parsed = typeof headers === 'string' ? JSON.parse(headers) : headers;
+    const result: Record<string, string> = {};
+    Object.keys(parsed).forEach((key) => {
+        const value = parsed[key];
+        if (value !== undefined && value !== null) {
+            result[key] = String(value);
+        }
+    });
+    return result;
 };
 
 // Whether a URL targets a Tor v3 hidden service over HTTPS. For such
@@ -43,39 +58,62 @@ const isOnionHttpsUrl = (url: string): boolean => {
 
 let startPromise: Promise<void> | null = null;
 
+// Shares one start between concurrent callers. A failed start is
+// cleared so the next request tries again.
 const ensureTorStarted = (): Promise<void> => {
     if (!startPromise) {
-        startPromise = (async () => {
-            const result = await RnTor.startTorIfNotRunning({
-                data_dir: TOR_DATA_PATH,
-                socks_port: SOCKS_PORT,
-                target_port: TARGET_PORT,
-                timeout_ms: START_TIMEOUT_MS
+        startPromise = Tor.daemon
+            .start({
+                dataDirectory: TOR_DATA_PATH,
+                socksPort: SOCKS_PORT,
+                bootstrapTimeoutMs: START_TIMEOUT_MS
+            })
+            .then(() => undefined)
+            .catch((e) => {
+                startPromise = null;
+                throw e;
             });
-            if (!result.is_success) {
-                throw new Error(result.error_message || 'Failed to start Tor');
-            }
-        })().catch((e) => {
-            startPromise = null;
-            throw e;
-        });
     }
     return startPromise;
 };
 
-const doTorRequest = async (
-    url: string,
-    method: RequestMethod,
-    data?: string,
-    headers?: any,
-    trustInvalidCerts: boolean = false,
-    // Callers with a request-scoped deadline (e.g. payments, where the
-    // node holds the connection open for timeout_seconds) must pass a
-    // longer timeout or the request dies before the node can answer.
-    timeoutMs: number = REQUEST_TIMEOUT_MS
-) => {
+interface TorHttpRequest {
+    url: string;
+    method: RequestMethod;
+    data?: string;
+    headers?: any;
+    trustInvalidCerts?: boolean;
+    timeoutMs?: number;
+    // When false, 3xx responses come back as-is so the caller can vet
+    // the location header before following it. Defaults to true.
+    followRedirects?: boolean;
+}
+
+interface TorHttpResponse {
+    statusCode: number;
+    // lowercase header names, each with all of its values
+    headers: Record<string, string[]>;
+    body: string;
+}
+
+// Sends one request over Tor and returns the status, headers and raw
+// body without interpreting them. Transport failures reject with the
+// native error (a TorError carrying the native message).
+const torHttpRequest = async ({
+    url,
+    method,
+    data,
+    headers,
+    trustInvalidCerts = false,
+    timeoutMs = REQUEST_TIMEOUT_MS,
+    followRedirects = true
+}: TorHttpRequest): Promise<TorHttpResponse> => {
+    const httpMethod = HTTP_METHODS[method];
+    if (!httpMethod) {
+        throw new Error(`Unsupported method: ${method}`);
+    }
+
     await ensureTorStarted();
-    const headerStr = headersToString(headers);
 
     // Defense in depth: only honor trustInvalidCerts for HTTPS .onion
     // URLs. If a caller passes true for a clearnet URL we drop it on
@@ -89,40 +127,43 @@ const doTorRequest = async (
         );
     }
 
-    let response;
-    switch (method) {
-        case RequestMethod.GET:
-            response = await RnTor.httpGet({
-                url,
-                headers: headerStr,
-                timeout_ms: timeoutMs,
-                trust_invalid_certs: effectiveTrustInvalidCerts
-            });
-            break;
-        case RequestMethod.POST:
-            response = await RnTor.httpPost({
-                url,
-                body: data || '',
-                headers: headerStr,
-                timeout_ms: timeoutMs,
-                trust_invalid_certs: effectiveTrustInvalidCerts
-            });
-            break;
-        case RequestMethod.DELETE:
-            response = await RnTor.httpDelete({
-                url,
-                headers: headerStr,
-                timeout_ms: timeoutMs,
-                trust_invalid_certs: effectiveTrustInvalidCerts
-            });
-            break;
-        default:
-            throw new Error(`Unsupported method: ${method}`);
-    }
+    const response = await Tor.http.request({
+        url,
+        method: httpMethod,
+        headers: normalizeHeaders(headers),
+        // GET and DELETE never sent a body with nitro-tor 0.6.x
+        body: method === RequestMethod.POST ? data || '' : undefined,
+        timeoutMs,
+        allowInvalidCertificates: effectiveTrustInvalidCerts,
+        followRedirects
+    });
 
-    if (response.error) {
-        throw new Error(response.error);
-    }
+    return {
+        statusCode: response.statusCode,
+        headers: response.headers || {},
+        body: response.body || ''
+    };
+};
+
+const doTorRequest = async (
+    url: string,
+    method: RequestMethod,
+    data?: string,
+    headers?: any,
+    trustInvalidCerts: boolean = false,
+    // Callers with a request-scoped deadline (e.g. payments, where the
+    // node holds the connection open for timeout_seconds) must pass a
+    // longer timeout or the request dies before the node can answer.
+    timeoutMs: number = REQUEST_TIMEOUT_MS
+) => {
+    const response = await torHttpRequest({
+        url,
+        method,
+        data,
+        headers,
+        trustInvalidCerts,
+        timeoutMs
+    });
 
     let parsedBody: any;
     if (response.body) {
@@ -133,7 +174,7 @@ const doTorRequest = async (
         }
     }
 
-    if (response.status_code >= 300) {
+    if (response.statusCode >= 300) {
         const message =
             (parsedBody &&
                 typeof parsedBody === 'object' &&
@@ -141,7 +182,7 @@ const doTorRequest = async (
                     parsedBody.message ||
                     parsedBody.error)) ||
             (typeof parsedBody === 'string' && parsedBody) ||
-            `HTTP ${response.status_code}`;
+            `HTTP ${response.statusCode}`;
         throw markRestErrorResponse(
             new Error(message),
             grpcErrorCode(parsedBody)
@@ -152,9 +193,16 @@ const doTorRequest = async (
 };
 
 const restartTor = async () => {
-    await RnTor.shutdownService();
+    await Tor.daemon.stop();
     startPromise = null;
     await ensureTorStarted();
 };
 
-export { doTorRequest, restartTor, isOnionHttpsUrl, RequestMethod };
+export {
+    doTorRequest,
+    torHttpRequest,
+    restartTor,
+    isOnionHttpsUrl,
+    RequestMethod
+};
+export type { TorHttpRequest, TorHttpResponse };
