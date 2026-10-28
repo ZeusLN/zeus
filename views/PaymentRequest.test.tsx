@@ -327,14 +327,14 @@ describe('PaymentRequest payment in flight', () => {
 });
 
 describe('PaymentRequest fee limit', () => {
-    const pay = async (feeLimitSat: string) => {
+    const pay = async (feeLimitSat: string, getRequestAmount: number = 45) => {
         const TransactionsStore = {
             paymentInFlight: false,
             sendPayment: jest.fn()
         };
         await renderView({
             implementation: 'lnd',
-            payReqOverrides: { getRequestAmount: 45 },
+            payReqOverrides: { getRequestAmount },
             TransactionsStore
         });
         await flush();
@@ -352,6 +352,18 @@ describe('PaymentRequest fee limit', () => {
     it('pays with the default limit when the fee limit is empty', async () => {
         // the default for amounts up to 1000 sats is the whole amount
         expect(await pay('')).toMatchObject({ fee_limit_sat: '45' });
+    });
+
+    it('rounds the default limit of a sub-sat amount up to whole sats', async () => {
+        // LND rejects or truncates a fractional fee_limit_sat
+        const amount = (num_satoshis: string, num_msat: string) =>
+            new Invoice({ num_satoshis, num_msat }).getRequestAmount;
+        expect(await pay('', amount('0', '500'))).toMatchObject({
+            fee_limit_sat: '1'
+        });
+        expect(await pay('', amount('1', '1500'))).toMatchObject({
+            fee_limit_sat: '2'
+        });
     });
 
     it('keeps an explicit 0 sat limit', async () => {

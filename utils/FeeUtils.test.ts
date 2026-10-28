@@ -30,6 +30,14 @@ describe('FeeUtils', () => {
             expect(FeeUtils.calculateDefaultRoutingFee(1011)).toEqual('51');
             expect(FeeUtils.calculateDefaultRoutingFee(10000)).toEqual('500');
         });
+
+        it('Rounds a sub-sat amount up to whole sats', () => {
+            expect(FeeUtils.calculateDefaultRoutingFee(0.5)).toEqual('1');
+            expect(FeeUtils.calculateDefaultRoutingFee(1.5)).toEqual('2');
+            expect(FeeUtils.calculateDefaultRoutingFee(999.001)).toEqual(
+                '1000'
+            );
+        });
     });
 
     describe('roundFee', () => {
