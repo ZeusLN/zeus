@@ -285,6 +285,18 @@ describe('PaymentRequest sub-sat invoice', () => {
         expect(screen.queryByTestId('AmountInput')).not.toBeOnTheScreen();
     });
 
+    it('shows the exact amount even with msat display off', async () => {
+        await renderView({
+            implementation: 'lnd',
+            payReqOverrides: { getRequestAmount: subSatAmount }
+        });
+
+        const [amount] = screen.container.queryAll(
+            (n) => n.type === 'Amount' && n.props.jumboText
+        );
+        expect(amount.props).toMatchObject({ sats: 0.5, forceMsats: true });
+    });
+
     it('pays the invoice without sending an amount', async () => {
         const ref = React.createRef<any>();
         await renderView({
