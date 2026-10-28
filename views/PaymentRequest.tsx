@@ -750,10 +750,13 @@ export default class PaymentRequest extends React.Component<
                                         />
                                     ) : (
                                         <View style={styles.center}>
+                                            {/* show the exact invoice amount
+                                            even with msat display off */}
                                             <Amount
                                                 sats={requestAmount}
                                                 jumboText
                                                 toggleable
+                                                forceMsats
                                             />
                                             <View style={{ top: 10 }}>
                                                 <Conversion

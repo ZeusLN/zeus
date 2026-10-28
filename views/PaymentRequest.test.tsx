@@ -65,6 +65,7 @@ jest.mock('../utils/SleepUtils', () => ({
 
 import * as React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import Invoice from '../models/Invoice';
 import PaymentRequest from './PaymentRequest';
 
 const PAY = 'views.PaymentRequest.payInvoice';
@@ -268,6 +269,50 @@ describe('PaymentRequest no-amount invoice', () => {
     });
 });
 
+describe('PaymentRequest sub-sat invoice', () => {
+    // LND decodes a 500 msat invoice with num_satoshis 0
+    const subSatAmount = new Invoice({ num_satoshis: '0', num_msat: '500' })
+        .getRequestAmount;
+
+    it('enables Pay without asking for an amount', async () => {
+        await renderView({
+            implementation: 'lnd',
+            payReqOverrides: { getRequestAmount: subSatAmount }
+        });
+
+        expect(payButton()).toBeEnabled();
+        expect(screen.queryByText(ENTER_AMOUNT)).not.toBeOnTheScreen();
+        expect(screen.queryByTestId('AmountInput')).not.toBeOnTheScreen();
+    });
+
+    it('shows the exact amount even with msat display off', async () => {
+        await renderView({
+            implementation: 'lnd',
+            payReqOverrides: { getRequestAmount: subSatAmount }
+        });
+
+        const [amount] = screen.container.queryAll(
+            (n) => n.type === 'Amount' && n.props.jumboText
+        );
+        expect(amount.props).toMatchObject({ sats: 0.5, forceMsats: true });
+    });
+
+    it('pays the invoice without sending an amount', async () => {
+        const ref = React.createRef<any>();
+        await renderView({
+            implementation: 'lnd',
+            payReqOverrides: { getRequestAmount: subSatAmount },
+            ref
+        });
+        const view = ref.current;
+        view.sendPayment = jest.fn();
+
+        await act(async () => view.triggerPayment());
+        expect(view.sendPayment).toHaveBeenCalledTimes(1);
+        expect(view.sendPayment.mock.calls[0][0].amount).toBeFalsy();
+    });
+});
+
 describe('PaymentRequest payment in flight', () => {
     it('explains the disabled Pay button while an earlier payment is checked', async () => {
         await renderView({
@@ -294,14 +339,14 @@ describe('PaymentRequest payment in flight', () => {
 });
 
 describe('PaymentRequest fee limit', () => {
-    const pay = async (feeLimitSat: string) => {
+    const pay = async (feeLimitSat: string, getRequestAmount: number = 45) => {
         const TransactionsStore = {
             paymentInFlight: false,
             sendPayment: jest.fn()
         };
         await renderView({
             implementation: 'lnd',
-            payReqOverrides: { getRequestAmount: 45 },
+            payReqOverrides: { getRequestAmount },
             TransactionsStore
         });
         await flush();
@@ -319,6 +364,18 @@ describe('PaymentRequest fee limit', () => {
     it('pays with the default limit when the fee limit is empty', async () => {
         // the default for amounts up to 1000 sats is the whole amount
         expect(await pay('')).toMatchObject({ fee_limit_sat: '45' });
+    });
+
+    it('rounds the default limit of a sub-sat amount up to whole sats', async () => {
+        // LND rejects or truncates a fractional fee_limit_sat
+        const amount = (num_satoshis: string, num_msat: string) =>
+            new Invoice({ num_satoshis, num_msat }).getRequestAmount;
+        expect(await pay('', amount('0', '500'))).toMatchObject({
+            fee_limit_sat: '1'
+        });
+        expect(await pay('', amount('1', '1500'))).toMatchObject({
+            fee_limit_sat: '2'
+        });
     });
 
     it('keeps an explicit 0 sat limit', async () => {

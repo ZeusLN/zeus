@@ -76,6 +76,7 @@ export default class Invoice extends BaseModel {
     public timestamp?: string | number;
     public destination?: string;
     public num_satoshis?: string | number;
+    public num_msat?: string | number;
     public features?: any;
     // lndhub
     public amt?: number;
@@ -272,6 +273,11 @@ export default class Invoice extends BaseModel {
         if (this.millisatoshis || this.invoice_amount_msat) {
             const msatoshi = this.millisatoshis || this.invoice_amount_msat;
             return Number(msatoshi) / 1000;
+        }
+        // LND rounds num_satoshis down, so num_msat carries the exact
+        // amount (a 500 msat invoice decodes as 0 sats)
+        if (Number(this.num_msat || 0) > 0) {
+            return Number(this.num_msat) / 1000;
         }
         return Number(this.num_satoshis || 0);
     }
