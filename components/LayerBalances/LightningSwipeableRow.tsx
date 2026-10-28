@@ -5,7 +5,6 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
-import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
 import { fetchLnurlUrl } from './../../utils/LnurlFetchUtils';
 import { getLnurlParams } from './../../utils/LnurlResolveUtils';
@@ -203,7 +202,7 @@ export default class LightningSwipeableRow extends Component<
         navigation: any,
         settings: any
     ): Promise<void> => {
-        const { url, isOnion } = getLnurlpUrl(lightningAddress);
+        const { url } = getLnurlpUrl(lightningAddress);
 
         if (!isLightningAddressEndpointAllowed(url).ok) {
             Alert.alert(
@@ -220,38 +219,23 @@ export default class LightningSwipeableRow extends Component<
         );
 
         try {
-            if (settingsStore.enableTor && isOnion) {
-                const response: any = await doTorRequest(
-                    url,
-                    RequestMethod.GET
-                );
-                if (!response.callback) {
-                    throw new Error(error);
-                }
-                navigation.navigate('LnurlPay', {
-                    lnurlParams: response,
-                    ecash:
-                        BackendUtils.supportsCashuWallet() &&
-                        settings?.ecash?.enableCashu,
-                    lightningAddress
-                });
-            } else {
-                const response = await fetchLnurlUrl(url);
-                if (response.info().status !== 200) {
-                    throw new Error(error);
-                }
-                const data = response.json();
-                if (!data.callback) {
-                    throw new Error(error);
-                }
-                navigation.navigate('LnurlPay', {
-                    lnurlParams: data,
-                    ecash:
-                        BackendUtils.supportsCashuWallet() &&
-                        settings?.ecash?.enableCashu,
-                    lightningAddress
-                });
+            // fetchLnurlUrl goes over Tor when Use Tor is on, .onion
+            // included, and checks every redirect hop
+            const response = await fetchLnurlUrl(url);
+            if (response.info().status !== 200) {
+                throw new Error(error);
             }
+            const data = response.json();
+            if (!data.callback) {
+                throw new Error(error);
+            }
+            navigation.navigate('LnurlPay', {
+                lnurlParams: data,
+                ecash:
+                    BackendUtils.supportsCashuWallet() &&
+                    settings?.ecash?.enableCashu,
+                lightningAddress
+            });
         } catch (e: any) {
             // fetchLnInvoice does not await this, so anything rethrown
             // would be lost and the tap would do nothing
