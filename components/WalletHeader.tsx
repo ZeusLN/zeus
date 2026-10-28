@@ -505,6 +505,7 @@ export default class WalletHeader extends React.Component<
         const NetworkBadge = () => {
             return infoValue ? (
                 <Badge
+                    pressableProps={{ disabled: !sessionStarted }}
                     onPress={() => navigation.navigate('NodeInfo')}
                     value={infoValue}
                     badgeStyle={{
@@ -522,6 +523,7 @@ export default class WalletHeader extends React.Component<
             return implementation === 'lndhub' &&
                 !selectedNode.dismissCustodialWarning ? (
                 <Badge
+                    pressableProps={{ disabled: !sessionStarted }}
                     onPress={() =>
                         navigation.navigate('CustodialWalletWarning')
                     }
@@ -541,6 +543,7 @@ export default class WalletHeader extends React.Component<
             <>
                 {nodeAddress && nodeAddress.includes('.onion') ? (
                     <TouchableOpacity
+                        disabled={!sessionStarted}
                         onPress={() => navigation.navigate('NodeInfo')}
                     >
                         <Image
@@ -578,6 +581,7 @@ export default class WalletHeader extends React.Component<
         const OfflineBadge = () => {
             return isOffline ? (
                 <TouchableOpacity
+                    disabled={!sessionStarted}
                     onPress={() => navigation.navigate('Networking')}
                 >
                     <Badge
