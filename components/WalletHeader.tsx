@@ -665,7 +665,13 @@ export default class WalletHeader extends React.Component<
                 collapsable={false}
                 pointerEvents={sessionStarted ? 'auto' : 'none'}
                 // pointerEvents only stops touches: a screen reader's
-                // activation calls onPress without a hit test
+                // activation calls onPress without a hit test, and so does
+                // a hardware keyboard. Only the controls drawn while
+                // connecting are also disabled before the session starts;
+                // the rest render only once connected, which happens before
+                // the session starts only under the Lockscreen. A startup
+                // path that connects before pushing the Lockscreen must
+                // disable them too.
                 accessibilityElementsHidden={!sessionStarted}
                 importantForAccessibility={
                     sessionStarted ? 'auto' : 'no-hide-descendants'
