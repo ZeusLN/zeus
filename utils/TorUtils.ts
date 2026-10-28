@@ -4,7 +4,10 @@ import RNFS from 'react-native-fs';
 import { grpcErrorCode, markRestErrorResponse } from './PaymentLookupUtils';
 
 const SOCKS_PORT = 9056;
-const START_TIMEOUT_MS = 30000;
+// nitro-tor 1.x resolves start() only once bootstrap reaches 100%. A
+// cold bootstrap took about 52 s on an Android 15 emulator, so leave
+// room for slower networks
+const START_TIMEOUT_MS = 90000;
 const REQUEST_TIMEOUT_MS = 60000;
 const TOR_DATA_PATH = `${RNFS.DocumentDirectoryPath}/tor_data`;
 
