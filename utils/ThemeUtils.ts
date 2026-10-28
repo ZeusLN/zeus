@@ -324,6 +324,58 @@ const Radioactive: { [key: string]: any } = {
     action: '#FFF'
 };
 
+const Gilded: { [key: string]: any } = {
+    generalStyle: 'dark',
+    background: '#000',
+    // Warm glow anchored at the top-left corner, fading to black
+    gradientBackground: ['#4F473C', '#3A342B', '#1C1A16', '#000000'],
+    gradientLocations: [0, 0.3, 0.6, 1],
+    gradientRadial: { cx: 0, cy: 0, rx: 1.4, ry: 0.8 },
+    secondary: '#141414',
+    modalBackground: '#141414',
+    text: '#FFFFFF',
+    secondaryText: '#A3A09A',
+    highlight: '#D5BF8D',
+    error: '#992600',
+    separator: '#262523',
+    outbound: '#D5BF8D',
+    inbound: '#5E5442',
+    outboundReserve: '#B7B7B7',
+    inboundReserve: '#636569',
+    success: '#46BE43',
+    warning: '#E14C4C',
+    warningReserve: '#EA8181',
+    bitcoin: '#E8D5A8',
+    delete: '#992600',
+    qr: '#000',
+    qrBackground: '#FFF',
+    qrLogoBackground: '#D5BF8D',
+    invertQrIcons: false,
+    qrFrame: '#D5BF8D',
+    bolt: '#E8D5A8',
+    chain: '#E8D5A8',
+    disabled: '#767577',
+    buttonBackground: '#D5BF8D',
+    buttonText: '#1A1814',
+    buttonTextSecondary: '#A3A09A',
+    action: '#FFF'
+};
+
+const Ember: { [key: string]: any } = {
+    ...Gilded,
+    // #FFA900 at 30%, 20% and 9% over black
+    gradientBackground: ['#4D3300', '#332200', '#170F00', '#000000'],
+    // Gilded's surfaces moved 8% toward #FFA900 so rows share the glow's hue
+    secondary: '#272012',
+    modalBackground: '#272012',
+    separator: '#373020',
+    highlight: '#FFA900',
+    outbound: '#FFA900',
+    qrLogoBackground: '#FFA900',
+    qrFrame: '#FFA900',
+    buttonBackground: '#FFA900'
+};
+
 export function themeColor(themeString: string): any {
     const { settings } = settingsStore;
     const theme = settings.display && settings.display.theme;
@@ -363,6 +415,10 @@ export function themeColor(themeString: string): any {
             return RedMetallic[themeString] || Dark[themeString];
         case 'radioactive':
             return Radioactive[themeString] || Dark[themeString];
+        case 'gilded':
+            return Gilded[themeString] || Dark[themeString];
+        case 'ember':
+            return Ember[themeString] || Dark[themeString];
         default:
             return Dark[themeString];
     }
