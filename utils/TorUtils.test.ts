@@ -589,7 +589,7 @@ describe('Tor start', () => {
         expect(tor.daemon.start).toHaveBeenCalledWith({
             dataDirectory: '/tmp/tor_data',
             socksPort: 9056,
-            bootstrapTimeoutMs: 30000
+            bootstrapTimeoutMs: 90000
         });
     });
 
