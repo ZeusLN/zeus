@@ -108,7 +108,7 @@ Open problems where Zeus can advance the state of the art in self-custodial Ligh
 | TLS verification OFF by default | `@observable certVerification: boolean = false` in `stores/SettingsStore.ts`; passed as `trusty: !certVerification` to react-native-blob-util | `grep -n "certVerification: boolean = " stores/SettingsStore.ts` |
 | CLINK refuses .onion relays | `ONION_NOT_SUPPORTED` error in `utils/ClinkUtils.ts` | `grep -n ONION_NOT_SUPPORTED utils/ClinkUtils.ts` |
 
-**Zeus's specific assets.** Embedded Tor (`react-native-nitro-tor`, version in `package.json`; `0.6.1` as of 2026-10-24); the hardened Tor TLS rule (cert bypass only for HTTPS .onion; the invariant and its incident history belong to **zeus-failure-archaeology** FA-5); Android Stealth Mode (four disabled-by-default `activity-alias` app disguises in `android/app/src/main/AndroidManifest.xml`: calculator, VPN, QR scanner, notepad); an ecash small-balance model already wired (`settings.ecash` defaults in `stores/SettingsStore.ts`: `enableCashu: false`, `enableMultiMint: false`, `automaticallySweep: false`, `sweepThresholdSats: 10000`; ecash holds small change, auto-sweeps to Lightning above threshold).
+**Zeus's specific assets.** Embedded Tor (`react-native-nitro-tor`, version in `package.json`; `1.1.0` as of 2026-10-29); the hardened Tor TLS rule (cert bypass only for HTTPS .onion; the invariant and its incident history belong to **zeus-failure-archaeology** FA-5); Android Stealth Mode (four disabled-by-default `activity-alias` app disguises in `android/app/src/main/AndroidManifest.xml`: calculator, VPN, QR scanner, notepad); an ecash small-balance model already wired (`settings.ecash` defaults in `stores/SettingsStore.ts`: `enableCashu: false`, `enableMultiMint: false`, `automaticallySweep: false`, `sweepThresholdSats: 10000`; ecash holds small change, auto-sweeps to Lightning above threshold).
 
 **First three concrete steps in this repo.**
 1. **Close the .onion LNURL gap:** implement Tor fetching of LNURL params at the 3 TODO sites using `utils/TorUtils.ts` (`doTorRequest`), respecting the .onion-HTTPS-only TLS rule.
@@ -173,7 +173,7 @@ Re-verify volatile facts before relying on them:
 | CLINK kind 21001 / onion unsupported | `grep -n "CLINK_KIND\|ONION_NOT_SUPPORTED" utils/ClinkUtils.ts` |
 | supports\* flag count (62) | `grep -o 'supports[A-Za-z0-9]*' utils/BackendUtils.ts \| sort -u \| wc -l` |
 | NWC typo flag | `grep -n supportsLSPS1customMessage backends/NostrWalletConnect.ts` |
-| nitro-tor version (0.6.1) | `grep -n nitro-tor package.json` |
+| nitro-tor version (1.1.0) | `grep -n nitro-tor package.json` |
 | PGP key fingerprint | `gpg --show-keys PGP.txt` |
 | Stealth aliases disabled by default | `grep -n -A2 activity-alias android/app/src/main/AndroidManifest.xml` |
 | Reproducible-build pins | `head -12 build.sh` |
