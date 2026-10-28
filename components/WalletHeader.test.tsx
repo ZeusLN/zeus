@@ -221,7 +221,8 @@ describe('WalletHeader before the session starts', () => {
         (Clipboard.getString as jest.Mock).mockResolvedValue('');
     });
 
-    const header = () => screen.getByTestId('wallet-header');
+    const header = () =>
+        screen.getByTestId('wallet-header', { includeHiddenElements: true });
 
     it('takes no touches on the cold start header', async () => {
         // the stored PIN and POS mode have not been acted on yet
@@ -249,6 +250,21 @@ describe('WalletHeader before the session starts', () => {
         expect(header().props.pointerEvents).toBe('none');
     });
 
+    it('hides its controls from screen readers before the session starts', async () => {
+        // a screen reader's activation calls onPress without a hit test, so
+        // pointerEvents alone would leave the controls usable
+        await renderHeader({
+            clipboard: false,
+            connecting: true,
+            sessionStarted: false
+        });
+
+        expect(header().props.accessibilityElementsHidden).toBe(true);
+        expect(header().props.importantForAccessibility).toBe(
+            'no-hide-descendants'
+        );
+    });
+
     // A bare header before the session started made the cold start render
     // light enough that Fabric dropped a screen from the root stack on
     // Android release builds, and the Lockscreen's pop after login crashed
@@ -268,6 +284,8 @@ describe('WalletHeader before the session starts', () => {
         await renderHeader({ clipboard: false, connecting: true });
 
         expect(header().props.pointerEvents).toBe('auto');
+        expect(header().props.accessibilityElementsHidden).toBe(false);
+        expect(header().props.importantForAccessibility).toBe('auto');
         expect(menuIcon()).toBeDefined();
         expect(nodeIdenticon()).toBeDefined();
 
