@@ -247,12 +247,15 @@ const UnredeemedTokensBadge = ({
 
 const POSBadge = ({
     setPosStatus,
-    getOrders
+    getOrders,
+    disabled
 }: {
     setPosStatus: (status: string) => void;
     getOrders: () => void;
+    disabled?: boolean;
 }) => (
     <TouchableOpacity
+        disabled={disabled}
         onPress={async () => {
             getOrders();
             setPosStatus('active');
@@ -431,10 +434,12 @@ export default class WalletHeader extends React.Component<
         } = this.props;
 
         // On a cold start this header is drawn before the stored PIN and
-        // POS mode have been acted on, so offer no controls until then
-        if (!SettingsStore!.sessionStarted()) {
-            return <Header containerStyle={{ marginTop: insets.top }} />;
-        }
+        // POS mode have been acted on, so its controls take no touches until
+        // then. They are still drawn: returning a bare header here instead
+        // made the first render light enough that, on Android release
+        // builds, Fabric dropped a screen from the root stack and the
+        // Lockscreen's pop after login crashed in react-native-screens.
+        const sessionStarted = SettingsStore!.sessionStarted();
 
         const { sentTokens } = CashuStore!!;
         const { pendingHTLCs } = ChannelsStore!;
@@ -500,6 +505,7 @@ export default class WalletHeader extends React.Component<
         const NetworkBadge = () => {
             return infoValue ? (
                 <Badge
+                    pressableProps={{ disabled: !sessionStarted }}
                     onPress={() => navigation.navigate('NodeInfo')}
                     value={infoValue}
                     badgeStyle={{
@@ -517,6 +523,7 @@ export default class WalletHeader extends React.Component<
             return implementation === 'lndhub' &&
                 !selectedNode.dismissCustodialWarning ? (
                 <Badge
+                    pressableProps={{ disabled: !sessionStarted }}
                     onPress={() =>
                         navigation.navigate('CustodialWalletWarning')
                     }
@@ -536,6 +543,7 @@ export default class WalletHeader extends React.Component<
             <>
                 {nodeAddress && nodeAddress.includes('.onion') ? (
                     <TouchableOpacity
+                        disabled={!sessionStarted}
                         onPress={() => navigation.navigate('NodeInfo')}
                     >
                         <Image
@@ -573,6 +581,7 @@ export default class WalletHeader extends React.Component<
         const OfflineBadge = () => {
             return isOffline ? (
                 <TouchableOpacity
+                    disabled={!sessionStarted}
                     onPress={() => navigation.navigate('Networking')}
                 >
                     <Badge
@@ -650,7 +659,25 @@ export default class WalletHeader extends React.Component<
         );
 
         return (
-            <>
+            <View
+                // keeps the header's views in this View when the session
+                // starts, instead of Fabric flattening them into the parent
+                collapsable={false}
+                pointerEvents={sessionStarted ? 'auto' : 'none'}
+                // pointerEvents only stops touches: a screen reader's
+                // activation calls onPress without a hit test, and so does
+                // a hardware keyboard. Only the controls drawn while
+                // connecting are also disabled before the session starts;
+                // the rest render only once connected, which happens before
+                // the session starts only under the Lockscreen. A startup
+                // path that connects before pushing the Lockscreen must
+                // disable them too.
+                accessibilityElementsHidden={!sessionStarted}
+                importantForAccessibility={
+                    sessionStarted ? 'auto' : 'no-hide-descendants'
+                }
+                testID="wallet-header"
+            >
                 <Header
                     containerStyle={{ marginTop: insets.top }}
                     leftComponent={
@@ -700,6 +727,7 @@ export default class WalletHeader extends React.Component<
                                             fontFamily: 'PPNeueMontreal-Book',
                                             fontSize: 16
                                         }}
+                                        disabled={!sessionStarted}
                                         onPress={() => {
                                             navigation.navigate('Wallets');
                                         }}
@@ -797,6 +825,7 @@ export default class WalletHeader extends React.Component<
                                         <POSBadge
                                             setPosStatus={setPosStatus}
                                             getOrders={getOrders}
+                                            disabled={!sessionStarted}
                                         />
                                     </View>
                                 )}
@@ -838,7 +867,7 @@ export default class WalletHeader extends React.Component<
                         />
                     </View>
                 )}
-            </>
+            </View>
         );
     }
 }

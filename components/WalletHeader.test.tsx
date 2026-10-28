@@ -75,14 +75,21 @@ const renderHeader = async ({
     connecting,
     settingsLoaded = true,
     sessionStarted = true,
-    nodeInfo = {}
+    nodeInfo = {},
+    settings = {},
+    settingsStore = {},
+    isOffline = false
 }: {
     clipboard: boolean;
     connecting?: boolean;
     settingsLoaded?: boolean;
     sessionStarted?: boolean;
     nodeInfo?: any;
+    settings?: any;
+    settingsStore?: any;
+    isOffline?: boolean;
 }) => {
+    const setPosStatus = jest.fn();
     const listeners: { [event: string]: () => void } = {};
     const navigation = {
         addListener: jest.fn((event: string, listener: () => void) => {
@@ -97,9 +104,11 @@ const renderHeader = async ({
                 navigation,
                 connecting,
                 SettingsStore: {
-                    settings: { privacy: { clipboard } },
+                    settings: { privacy: { clipboard }, ...settings },
                     settingsLoaded,
-                    sessionStarted: () => sessionStarted
+                    sessionStarted: () => sessionStarted,
+                    setPosStatus,
+                    ...settingsStore
                 },
                 CashuStore: { sentTokens: [] },
                 ChannelsStore: { pendingHTLCs: [] },
@@ -110,11 +119,11 @@ const renderHeader = async ({
                 NodeInfoStore: { nodeInfo },
                 ModalStore: {},
                 AlertStore: {},
-                ConnectivityStore: { isOffline: false }
+                ConnectivityStore: { isOffline }
             } as any)}
         />
     );
-    return { navigation, listeners, ...result };
+    return { navigation, listeners, setPosStatus, ...result };
 };
 
 const clipboardBadge = () =>
@@ -221,7 +230,10 @@ describe('WalletHeader before the session starts', () => {
         (Clipboard.getString as jest.Mock).mockResolvedValue('');
     });
 
-    it('draws no menu button or wallet picture on the cold start header', async () => {
+    const header = () =>
+        screen.getByTestId('wallet-header', { includeHiddenElements: true });
+
+    it('takes no touches on the cold start header', async () => {
         // the stored PIN and POS mode have not been acted on yet
         await renderHeader({
             clipboard: false,
@@ -230,24 +242,182 @@ describe('WalletHeader before the session starts', () => {
             sessionStarted: false
         });
 
-        expect(menuIcon()).toBeUndefined();
-        expect(nodeIdenticon()).toBeUndefined();
+        expect(header().props.pointerEvents).toBe('none');
+
+        await fireEvent.press(menuIcon());
+
+        expect(protectedNavigation).not.toHaveBeenCalled();
     });
 
-    it('draws no controls once settings load but before POS mode or login', async () => {
+    it('takes no touches once settings load but before POS mode or login', async () => {
         await renderHeader({
             clipboard: false,
             connecting: true,
             sessionStarted: false
         });
 
-        expect(menuIcon()).toBeUndefined();
-        expect(nodeIdenticon()).toBeUndefined();
+        expect(header().props.pointerEvents).toBe('none');
+    });
+
+    it('hides its controls from screen readers before the session starts', async () => {
+        // a screen reader's activation calls onPress without a hit test, so
+        // pointerEvents alone would leave the controls usable
+        await renderHeader({
+            clipboard: false,
+            connecting: true,
+            sessionStarted: false
+        });
+
+        expect(header().props.accessibilityElementsHidden).toBe(true);
+        expect(header().props.importantForAccessibility).toBe(
+            'no-hide-descendants'
+        );
+    });
+
+    // A bare header before the session started made the cold start render
+    // light enough that Fabric dropped a screen from the root stack on
+    // Android release builds, and the Lockscreen's pop after login crashed
+    it('still draws the menu button and wallet picture before the session starts', async () => {
+        await renderHeader({
+            clipboard: false,
+            connecting: true,
+            settingsLoaded: false,
+            sessionStarted: false
+        });
+
+        expect(menuIcon()).toBeDefined();
+        expect(nodeIdenticon()).toBeDefined();
+    });
+
+    // A screen reader or a hardware keyboard activates a control with a
+    // click that Pressability turns into onPress without a hit test, so
+    // pointerEvents on the wrapper does not stop it
+    const click = (node: any) => {
+        let n = node;
+        while (n && !n.props.onClick) n = n.parent;
+        return act(async () => n.props.onClick({ nativeEvent: {} }));
+    };
+    const posIcon = () =>
+        screen.container.queryAll((n) => n.type === 'POSIcon')[0];
+    const nickname = () =>
+        screen.getByText('My Node', { includeHiddenElements: true });
+    const posSettings = { pos: { posEnabled: 'standalone' } };
+    const nicknameSettings = {
+        display: { displayNickname: true },
+        nodes: [{ nickname: 'My Node' }],
+        selectedNode: 0
+    };
+
+    it('does not switch to POS mode before the session starts', async () => {
+        const { setPosStatus } = await renderHeader({
+            clipboard: false,
+            sessionStarted: false,
+            settings: posSettings
+        });
+
+        await fireEvent.press(posIcon());
+        await click(posIcon());
+
+        expect(setPosStatus).not.toHaveBeenCalled();
+    });
+
+    it('switches to POS mode from the badge once the session has started', async () => {
+        const { setPosStatus } = await renderHeader({
+            clipboard: false,
+            settings: posSettings
+        });
+
+        await click(posIcon());
+
+        expect(setPosStatus).toHaveBeenCalledWith('active');
+    });
+
+    it('does not open the wallet list from the nickname before the session starts', async () => {
+        const { navigation } = await renderHeader({
+            clipboard: false,
+            sessionStarted: false,
+            settings: nicknameSettings
+        });
+
+        await fireEvent.press(nickname());
+
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        // Text hands disabled to Pressability, which then ignores clicks
+        expect(nickname().props.disabled).toBe(true);
+    });
+
+    it('opens the wallet list from the nickname once the session has started', async () => {
+        const { navigation } = await renderHeader({
+            clipboard: false,
+            settings: nicknameSettings
+        });
+
+        expect(nickname().props.disabled).toBe(false);
+
+        await fireEvent.press(nickname());
+
+        expect(navigation.navigate).toHaveBeenCalledWith('Wallets');
+    });
+
+    // The status badges sit next to the nickname, so they are drawn on
+    // the connecting header before the session starts
+    const statusBadgeHeader = (sessionStarted: boolean) =>
+        renderHeader({
+            clipboard: false,
+            connecting: true,
+            sessionStarted,
+            isOffline: true,
+            nodeInfo: { isTestNet: true },
+            settings: nicknameSettings,
+            settingsStore: {
+                host: 'abc.onion',
+                implementation: 'lndhub'
+            }
+        });
+    const badge = (value: string) =>
+        screen.container.queryAll(
+            (n) => n.type === 'Badge' && String(n.props.value).includes(value)
+        )[0];
+    const torIcon = () =>
+        screen.container.queryAll((n) => n.type === 'Image')[0];
+
+    it('does not open Networking or NodeInfo from the status badges before the session starts', async () => {
+        const { navigation } = await statusBadgeHeader(false);
+
+        await click(badge('general.offline'));
+        await click(torIcon());
+
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(
+            badge('views.Wallet.MainPane.testnet').props.pressableProps.disabled
+        ).toBe(true);
+        expect(
+            badge('general.custodialWallet').props.pressableProps.disabled
+        ).toBe(true);
+    });
+
+    it('opens Networking and NodeInfo from the status badges once the session has started', async () => {
+        const { navigation } = await statusBadgeHeader(true);
+
+        await click(badge('general.offline'));
+        await click(torIcon());
+
+        expect(navigation.navigate).toHaveBeenCalledWith('Networking');
+        expect(navigation.navigate).toHaveBeenCalledWith('NodeInfo');
+        expect(
+            badge('views.Wallet.MainPane.testnet').props.pressableProps.disabled
+        ).toBe(false);
+        expect(
+            badge('general.custodialWallet').props.pressableProps.disabled
+        ).toBe(false);
     });
 
     it('draws the menu button and wallet picture once the session has started', async () => {
         await renderHeader({ clipboard: false, connecting: true });
 
+        expect(header().props.pointerEvents).toBe('auto');
+        expect(header().props.accessibilityElementsHidden).toBe(false);
+        expect(header().props.importantForAccessibility).toBe('auto');
         expect(menuIcon()).toBeDefined();
         expect(nodeIdenticon()).toBeDefined();
 
