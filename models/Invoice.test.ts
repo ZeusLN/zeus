@@ -225,9 +225,13 @@ describe('Invoice.getRequestAmount', () => {
         expect(invoice.getRequestAmount).toBe(0.999);
     });
 
-    it('keeps num_satoshis for amounts of 1 sat or more', () => {
+    it('keeps the msat part of amounts above 1 sat', () => {
         const invoice = new Invoice({ num_satoshis: '1', num_msat: '1500' });
-        expect(invoice.getRequestAmount).toBe(1);
+        expect(invoice.getRequestAmount).toBe(1.5);
+    });
+
+    it('reads num_satoshis when num_msat is absent', () => {
+        expect(new Invoice({ num_satoshis: '123' }).getRequestAmount).toBe(123);
     });
 
     it('is 0 for a no-amount LND invoice', () => {
