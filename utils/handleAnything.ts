@@ -13,11 +13,8 @@ import {
     getLnurlpUrl,
     isLightningAddressEndpointAllowed
 } from './LnurlPayUtils';
-import { fetchLnurlUrl } from './LnurlFetchUtils';
-import {
-    getLnurlParams as getlnurlParams,
-    isUnsafeLnurlError
-} from './LnurlResolveUtils';
+import { fetchLnurlUrl, isUnsafeLnurlError } from './LnurlFetchUtils';
+import { getLnurlParams as getlnurlParams } from './LnurlResolveUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
