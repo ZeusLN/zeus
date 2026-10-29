@@ -165,7 +165,12 @@ const doTorRequest = async (
         data,
         headers,
         trustInvalidCerts,
-        timeoutMs
+        timeoutMs,
+        // Callers pass node credentials (macaroon, rune) in custom
+        // headers, which reqwest keeps on a cross-host redirect, and the
+        // .onion certificate exception would apply to the new host too.
+        // A 3xx is an error here anyway, so never follow one.
+        followRedirects: false
     });
 
     let parsedBody: any;

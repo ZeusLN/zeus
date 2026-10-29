@@ -274,6 +274,23 @@ describe('doTorRequest', () => {
         expect(error.message).toBe('HTTP 302');
     });
 
+    it.each([RequestMethod.GET, RequestMethod.POST, RequestMethod.DELETE])(
+        'does not follow redirects for %s',
+        async (method) => {
+            respond(200, '{}');
+            await doTorRequest(
+                'https://node.onion/v1/x',
+                method,
+                '{}',
+                { 'Grpc-Metadata-macaroon': 'abcd' },
+                true
+            );
+            const request = requestMock.mock.calls[0][0];
+            expect(request.allowInvalidCertificates).toBe(true);
+            expect(request.followRedirects).toBe(false);
+        }
+    );
+
     it('sends a POST with its body, headers and the default timeout', async () => {
         respond(200, '{}');
         await doTorRequest(
@@ -289,7 +306,7 @@ describe('doTorRequest', () => {
             body: '{"value":1}',
             timeoutMs: 60000,
             allowInvalidCertificates: false,
-            followRedirects: true
+            followRedirects: false
         });
     });
 
