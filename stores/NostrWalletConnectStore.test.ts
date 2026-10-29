@@ -3,6 +3,10 @@ jest.mock('../stores/Stores');
 jest.mock('../utils/LocaleUtils');
 
 jest.mock('react-native-blob-util', () => ({}));
+// TransactionsStore is loaded to derive a real payment outcome
+jest.mock('react-native-randombytes', () => ({
+    randomBytes: (n: number) => require('crypto').randomBytes(n)
+}));
 // CashuStore is loaded for the Cashu make_invoice tests; these keep its
 // native and settings imports out of the test
 jest.mock('./SettingsStore', () => ({
@@ -98,6 +102,7 @@ import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
 import InvoicesStore from './InvoicesStore';
 import CashuStore from './CashuStore';
+import TransactionsStore from './TransactionsStore';
 import NostrWalletConnectStore, {
     NWC_CLIENT_KEYS,
     NWC_CONNECTIONS_KEY,
@@ -2984,6 +2989,60 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(connection.activity[0].status).toBe('failed');
         expect(connection.activity[0].error).toBe('no route');
         expect(connection.totalSpendSats).toBe(0);
+    });
+
+    it('holds the budget for a pending CLN pay reply the payments list misses, and debits it once listed', async () => {
+        // the outcome is derived by the real TransactionsStore from what
+        // CLN's /v1/pay returns while the payment is still in flight
+        const cln = new TransactionsStore(
+            { implementation: 'cln-rest', settings: {} } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        const { store, transactionsStore, paymentsStore } = buildHandlerStore();
+        transactionsStore.sendPaymentSilently.mockResolvedValue({
+            status: 'pending',
+            payment_hash: paymentHash,
+            amount_msat: 5_000_000
+        });
+        transactionsStore.getPaymentOutcome.mockImplementation(
+            cln.getPaymentOutcome
+        );
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        paymentsStore.getPayments.mockRejectedValue(new Error('offline'));
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe('');
+        expect(connection.activity).toHaveLength(1);
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.activity[0].paymentHash).toBe(paymentHash);
+        // the amount plus the 1000 sat fee cap it was sent with
+        expect(connection.pendingSpendSats).toBe(6000);
+        expect(connection.totalSpendSats).toBe(0);
+
+        paymentsStore.payments = [
+            new Payment({
+                payment_request: invoice,
+                payment_hash: paymentHash,
+                status: 'SUCCEEDED',
+                value_sat: 5000,
+                fee_sat: '10',
+                payment_preimage: hex64('d')
+            })
+        ];
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.pendingSpendSats).toBe(0);
+        expect(connection.totalSpendSats).toBe(5010);
     });
 });
 

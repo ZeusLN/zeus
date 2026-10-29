@@ -2810,6 +2810,20 @@ export default class NostrWalletConnectStore {
                 feeSats,
                 paymentHash: paymentHash || payment?.paymentHash
             });
+        } else {
+            // No preimage and the payments lookup missed it, yet the client
+            // is told the payment went through (canAssumeSuccess), e.g. a
+            // CLN pay reply with status 'pending'. Hold the amount like an
+            // in-transit payment so it cannot escape the budget; reconcile
+            // debits or releases it once the node lists the outcome.
+            await this.recordPendingPayment({
+                rawInvoice: request.invoice,
+                connection,
+                amountSats,
+                feeLimitSats: enforcesFeeLimit ? feeLimitSats : undefined,
+                payment_source: 'lightning',
+                paymentHash: paymentHash || undefined
+            });
         }
 
         return {
