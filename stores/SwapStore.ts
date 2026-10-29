@@ -146,6 +146,15 @@ const REVERSE_SWAP_FIELDS = [
     'onchainAmount'
 ];
 
+// Names of the Swap model's getters. new Swap() throws on a stored member
+// with one of these names (swaps saved before #5334 can have `model` or
+// `qrCodeValue`), so they are dropped from the copy each Swap is built from.
+const SWAP_GETTERS = new Set(
+    Object.entries(Object.getOwnPropertyDescriptors(Swap.prototype))
+        .filter(([, descriptor]) => descriptor.get)
+        .map(([name]) => name)
+);
+
 // The fields a rescued swap takes from the host's /swap/restore response,
 // at the top level and inside claimDetails/refundDetails
 const RESCUE_SWAP_FIELDS = ['id', 'status', 'createdAt'];
@@ -1622,13 +1631,15 @@ export default class SwapStore {
                     new Date(a.createdAt).getTime()
             );
 
-            // Build each swap on its own: a stored record new Swap() cannot
-            // take (such as one saved before #5334 with a member named like
-            // a Swap getter) is skipped instead of hiding every swap
+            // Build each swap on its own, without members named like a Swap
+            // getter. Stored records keep them. A record new Swap() still
+            // cannot take is skipped instead of hiding every swap.
             const models: Swap[] = [];
             for (const swap of swaps) {
                 try {
-                    models.push(new Swap(swap));
+                    const data = { ...swap };
+                    for (const name of SWAP_GETTERS) delete data[name];
+                    models.push(new Swap(data));
                 } catch (error) {
                     console.error(
                         `Failed to load stored swap ${swap?.id}:`,
