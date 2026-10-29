@@ -1223,6 +1223,7 @@
     "views.Settings.SignMessage.signingMethod": "Signing Method",
     "views.Settings.SignMessage.selectAddressSigning": "Select Address for Signing",
     "views.Settings.SignMessage.selectAddressVerification": "Enter Address for Verification",
+    "views.Settings.SignMessage.reservedMessage": "This message is reserved for LNURL-auth key derivation and cannot be signed. Signing it would expose your LNURL-auth identity for every site.",
     "views.Settings.SignMessage.fullAddress": "Full Address",
     "views.Settings.SignMessage.tapToSelectAddress": "Tap here to select an address",
     "views.Settings.SignMessage.signatureType": "Signature Type",
