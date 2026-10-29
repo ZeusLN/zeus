@@ -7,6 +7,24 @@ import Base64Utils from '../utils/Base64Utils';
 
 // WalletKit
 
+// The BumpFee view passes strings, which Long.fromValue misparses when
+// they contain a decimal point, so convert them to numbers first
+// (fundPsbt gets numbers, so 1.5 is truncated to 1 the same way). A value
+// that is not a number or is below 1 would be sent as 0, which makes LND
+// choose its own value instead of the one the user typed, so refuse it.
+const toLongAtLeastOne = (
+    value: Long | string | number | undefined,
+    error: string
+): Long | undefined => {
+    if (!value) return undefined;
+    const number = Number(value);
+    if (!(Number.isFinite(number) && number >= 1)) throw new Error(error);
+    return Long.fromNumber(number);
+};
+
+const FEE_RATE_ERROR = 'Fee rate must be at least 1 sat/vB';
+const BUDGET_ERROR = 'Budget must be at least 1 sat';
+
 /**
  * @throws
  */
@@ -27,10 +45,8 @@ export const bumpFee = async ({
         outpoint,
         target_conf,
         immediate,
-        sat_per_vbyte: sat_per_vbyte
-            ? Long.fromValue(sat_per_vbyte)
-            : undefined,
-        budget: budget ? Long.fromValue(budget) : undefined
+        sat_per_vbyte: toLongAtLeastOne(sat_per_vbyte, FEE_RATE_ERROR),
+        budget: toLongAtLeastOne(budget, BUDGET_ERROR)
     };
     const response = await sendCommand<
         walletrpc.IBumpFeeRequest,
@@ -62,10 +78,8 @@ export const bumpForceCloseFee = async ({
     const options: walletrpc.IBumpForceCloseFeeRequest = {
         chan_point,
         immediate,
-        starting_feerate: starting_feerate
-            ? Long.fromValue(starting_feerate)
-            : undefined,
-        budget: budget ? Long.fromValue(budget) : undefined
+        starting_feerate: toLongAtLeastOne(starting_feerate, FEE_RATE_ERROR),
+        budget: toLongAtLeastOne(budget, BUDGET_ERROR)
     };
     const response = await sendCommand<
         walletrpc.IBumpForceCloseFeeRequest,
@@ -101,7 +115,9 @@ export const fundPsbt = async ({
         raw,
         psbt,
         spend_unconfirmed,
-        sat_per_vbyte: sat_per_vbyte ? Long.fromValue(sat_per_vbyte) : undefined
+        // TransactionsStore sends Number(fee rate), which is NaN when no
+        // fee rate is given, so NaN is left to LND rather than refused
+        sat_per_vbyte: toLongAtLeastOne(sat_per_vbyte, FEE_RATE_ERROR)
     };
     const response = await sendCommand<
         walletrpc.IFundPsbtRequest,

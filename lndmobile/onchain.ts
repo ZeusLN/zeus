@@ -100,13 +100,31 @@ export const walletBalance = async ({
  */
 export const sendCoins = async (
     address: string,
-    sat: number,
-    feeRate?: number,
+    sat: number | string,
+    feeRate?: number | string,
     spend_unconfirmed?: boolean,
     send_all?: boolean,
     outpoints?: Array<lnrpc.IOutPoint>,
     label?: string
 ): Promise<lnrpc.SendCoinsResponse> => {
+    // Callers pass strings from the Send view. Long.fromValue parses a
+    // string without regard to a decimal point ('100000.001' becomes
+    // 10000001), so convert to a number first and refuse fractional sats.
+    const amount = Number(sat);
+    if (!send_all && !(Number.isSafeInteger(amount) && amount > 0)) {
+        throw new Error('Amount must be a whole number of satoshis');
+    }
+
+    // A fee rate that is not a number or is below 1 would be sent as 0,
+    // which makes LND pick its own fee instead of the one the user saw
+    const satPerVbyte = feeRate ? Number(feeRate) : undefined;
+    if (
+        satPerVbyte !== undefined &&
+        !(Number.isFinite(satPerVbyte) && satPerVbyte >= 1)
+    ) {
+        throw new Error('Fee rate must be at least 1 sat/vB');
+    }
+
     const response = await sendCommand<
         lnrpc.ISendCoinsRequest,
         lnrpc.SendCoinsRequest,
@@ -117,8 +135,11 @@ export const sendCoins = async (
         method: 'SendCoins',
         options: {
             addr: address,
-            amount: send_all ? undefined : Long.fromValue(sat),
-            sat_per_vbyte: feeRate ? Long.fromValue(feeRate) : undefined,
+            amount: send_all ? undefined : Long.fromNumber(amount),
+            sat_per_vbyte:
+                satPerVbyte !== undefined
+                    ? Long.fromNumber(satPerVbyte)
+                    : undefined,
             spend_unconfirmed,
             send_all,
             outpoints,

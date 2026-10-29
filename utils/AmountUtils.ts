@@ -391,6 +391,16 @@ export function millisatsToSats(millisats: number): number {
 }
 
 /**
+ * Whether an amount is a whole number of satoshis. On-chain outputs cannot
+ * carry millisatoshis, but the sats keypad allows 3 decimals.
+ * @param sats - Amount in satoshis (string or number)
+ * @returns true for whole numbers, false for fractions and non-numbers
+ */
+export function isWholeSatAmount(sats: string | number): boolean {
+    return Number.isInteger(Number(sats));
+}
+
+/**
  * Converts a routing fee limit in satoshis into the `maxTotalRoutingFeeMsat`
  * value ldk-node expects.
  *
