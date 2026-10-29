@@ -5604,13 +5604,25 @@ export default class CashuStore {
 
     @action
     public markTokenSpent = async (decoded: CashuToken) => {
+        // sentTokens only holds tokens this wallet created. A scanned or
+        // received token is returned marked spent but not stored.
+        const sentToken = this.sentTokens?.find(
+            (item) => item.encodedToken === decoded.encodedToken
+        );
+        if (!sentToken) {
+            return new CashuToken({
+                ...decoded,
+                spent: true
+            });
+        }
+
         // delete old instance of token
         this.sentTokens = this.sentTokens?.filter(
             (item) => item.encodedToken !== decoded.encodedToken
         );
 
         const updatedToken = new CashuToken({
-            ...decoded,
+            ...sentToken,
             spent: true
         });
 
