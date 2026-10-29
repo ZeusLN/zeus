@@ -22,6 +22,7 @@ import {
 } from 'react-native-vision-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStealthTapDetector } from './StealthTapDetector';
+import { DECOY_APP_NAMES } from '../../utils/StealthModeUtils';
 
 interface QRScannerAppProps {
     onUnlock: () => void;
@@ -305,7 +306,9 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
                     activeOpacity={1}
                     style={styles.titleContainer}
                 >
-                    <Text style={styles.appTitle}>QR Scanner</Text>
+                    <Text style={styles.appTitle}>
+                        {DECOY_APP_NAMES.qrscanner}
+                    </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity

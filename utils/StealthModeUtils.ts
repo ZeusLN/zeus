@@ -1,4 +1,5 @@
 import { NativeModules, Platform } from 'react-native';
+import { localeString } from './LocaleUtils';
 
 const { StealthMode } = NativeModules;
 
@@ -8,6 +9,58 @@ export type StealthApp =
     | 'vpn'
     | 'qrscanner'
     | 'notepad';
+
+export const DECOY_APP_NAMES: Record<Exclude<StealthApp, 'zeus'>, string> = {
+    calculator: 'Calculator',
+    vpn: 'Edge VPN',
+    qrscanner: 'QR Scanner',
+    notepad: 'Notepad'
+};
+
+export const getUnlockInstructionText = (
+    selectedApp: StealthApp,
+    stealthPinLength: number,
+    stealthVpnCountry: string,
+    stealthVpnServer: string
+) => {
+    switch (selectedApp) {
+        case 'vpn':
+            return localeString(
+                'views.Settings.StealthMode.unlockVPNCustomV2',
+                {
+                    appName: DECOY_APP_NAMES.vpn,
+                    country: stealthVpnCountry,
+                    server: stealthVpnServer
+                }
+            );
+        case 'calculator':
+            return localeString(
+                'views.Settings.StealthMode.unlockCalculatorCustomV2',
+                {
+                    appName: DECOY_APP_NAMES.calculator,
+                    count: stealthPinLength
+                }
+            );
+        case 'notepad':
+            return localeString(
+                'views.Settings.StealthMode.unlockNotepadCustomV2',
+                {
+                    appName: DECOY_APP_NAMES.notepad,
+                    count: stealthPinLength
+                }
+            );
+        case 'qrscanner':
+            return localeString(
+                'views.Settings.StealthMode.unlockQRScannerCustomV2',
+                {
+                    appName: DECOY_APP_NAMES.qrscanner,
+                    count: stealthPinLength
+                }
+            );
+        default:
+            return '';
+    }
+};
 
 class StealthModeUtils {
     /**

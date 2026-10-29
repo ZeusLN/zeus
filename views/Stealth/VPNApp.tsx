@@ -10,6 +10,7 @@ import {
     Animated
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DECOY_APP_NAMES } from '../../utils/StealthModeUtils';
 
 interface VPNAppProps {
     onUnlock: () => void;
@@ -248,7 +249,7 @@ const VPNApp: React.FC<VPNAppProps> = ({
 
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Edge VPN</Text>
+                <Text style={styles.headerTitle}>{DECOY_APP_NAMES.vpn}</Text>
                 <Text style={styles.headerSubtitle}>Secure & Private</Text>
             </View>
 

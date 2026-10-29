@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">ZEUS</string>
     <!-- Stealth Mode App Names -->
+    <!-- These launcher labels must stay in sync with DECOY_APP_NAMES. Enforced by StealthModeUtils.test.ts -->
     <string name="stealth_calculator">Calculator</string>
     <string name="stealth_vpn">Edge VPN</string>
     <string name="stealth_qrscanner">QR Scanner</string>
