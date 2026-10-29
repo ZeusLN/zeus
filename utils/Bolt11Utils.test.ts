@@ -9,6 +9,18 @@ const REGTEST_FIXTURE =
 const SIGNET_FIXTURE =
     'lntbs567780n1pnqr26ypp5c0wcrpzwxwqnwu2nld5q36dfc9yjrfdp87nn9d5y093jjncvqresdq0w3jhxar8v3n8xeccqzpuxqrrsssp5r94e3nwnw63gjaxc8wex38ufv2m6442vnrw49m7dad9jdum3tdsq9qyyssqk4dvvuk7zhhju8ztf7nfc2hzqq9gqtzuyc0ljz8nl93laxwv4869lt9fsxkxacje6eh4ur5ymg83hvakn4tfpzdu6fq49705sar7fxspga8qjp';
 
+// BOLT11 spec reference vector, 20 milli-BTC with a hashed description
+// https://github.com/lightning/bolts/blob/master/11-payment-encoding.md#examples
+const MILLI_FIXTURE =
+    'lnbc20m1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqhp58yjmdan79s6qqdhdzgynm4zwqd5d7xmw5fk98klysy043l2ahrqs9qrsgq7ea976txfraylvgzuxs8kgcw23ezlrszfnh8r6qtfpr6cxga50aj6txm9rxrydzd06dfeawfk6swupvz4erwnyutnjq7x39ymw6j38gp7ynn44';
+
+// BOLT11 spec reference vector using the pico-BTC multiplier. 9678785340p is
+// 967878534 msat, which is 967878.534 sat -- deliberately NOT a whole number
+// of satoshis, which is the whole point of keeping it.
+// https://github.com/lightning/bolts/blob/master/11-payment-encoding.md#examples
+const PICO_FIXTURE =
+    'lnbc9678785340p1pwmna7lpp5gc3xfm08u9qy06djf8dfflhugl6p7lgza6dsjxq454gxhj9t7a0sd8dgfkx7cmtwd68yetpd5s9xar0wfjn5gpc8qhrsdfq24f5ggrxdaezqsnvda3kkum5wfjkzmfqf3jkgem9wgsyuctwdus9xgrcyqcjcgpzgfskx6eqf9hzqnteypzxz7fzypfhg6trddjhygrcyqezcgpzfysywmm5ypxxjemgw3hxjmn8yptk7untd9hxwg3q2d6xjcmtv4ezq7pqxgsxzmnyyqcjqmt0wfjjq6t5v4khxsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsxqyjw5qcqp2rzjq0gxwkzc8w6323m55m4jyxcjwmy7stt9hwkwe2qxmy8zpsgg7jcuwz87fcqqeuqqqyqqqqlgqqqqn3qq9q9qrsgqrvgkpnmps664wgkp43l22qsgdw4ve24aca4nymnxddlnp8vh9v2sdxlu5ywdxefsfvm0fq3sesf08uf6q9a2ke0hc9j6z6wlxg5z5kqpu2v9wz';
+
 // BOLT11 spec reference vector (lnbc2500u with hashed description)
 // https://github.com/lightning/bolts/blob/master/11-payment-encoding.md#examples
 const BOLT11_SPEC_FIXTURE =
@@ -63,6 +75,49 @@ describe('decode', () => {
         expect(decoded.millisatoshis).toBe('56778000');
         expect(decoded.num_satoshis).toBe('56778');
         expect(decoded.num_msat).toBe('56778000');
+    });
+
+    it('parses the amount from a micro-BTC prefix (2500u = 250000 sat)', () => {
+        const decoded = Bolt11Utils.decode(BOLT11_SPEC_FIXTURE);
+
+        expect(decoded.satoshis).toBe(250000);
+        expect(decoded.millisatoshis).toBe('250000000');
+        expect(decoded.num_satoshis).toBe('250000');
+        expect(decoded.num_msat).toBe('250000000');
+    });
+
+    it('parses the amount from a milli-BTC prefix (20m = 2000000 sat)', () => {
+        const decoded = Bolt11Utils.decode(MILLI_FIXTURE);
+
+        expect(decoded.satoshis).toBe(2000000);
+        expect(decoded.millisatoshis).toBe('2000000000');
+        expect(decoded.num_satoshis).toBe('2000000');
+        expect(decoded.num_msat).toBe('2000000000');
+    });
+
+    it('keeps msat precision for a sub-satoshi pico-BTC amount (9678785340p)', () => {
+        const decoded = Bolt11Utils.decode(PICO_FIXTURE);
+
+        expect(decoded.millisatoshis).toBe('967878534');
+        expect(decoded.satoshis).toBeNull();
+        expect(decoded.num_msat).toBe('967878534');
+        expect(decoded.num_satoshis).toBe('967878');
+    });
+
+    it('accepts a pico amount whose last digit is 0 (10p = 1 msat)', () => {
+        const decoded = Bolt11Utils.decode(withPrefix('lnbc10p'));
+        expect(decoded.millisatoshis).toBe('1');
+        expect(decoded.satoshis).toBeNull();
+        expect(decoded.num_msat).toBe('1');
+    });
+
+    // The boundary itself is accepted, so a `>` turning into `>=` in the cap
+    // check fails here. It also covers an amount with no multiplier.
+    it('accepts an amount exactly at the supply cap', () => {
+        const decoded = Bolt11Utils.decode(withPrefix('lnbc21000000'));
+
+        expect(decoded.satoshis).toBe(2100000000000000);
+        expect(decoded.num_satoshis).toBe('2100000000000000');
     });
 
     it('exposes the matched network object with a bech32 prefix', () => {
