@@ -8,10 +8,7 @@ import { inject, observer } from 'mobx-react';
 import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
 import { fetchLnurlUrl } from './../../utils/LnurlFetchUtils';
-import {
-    getLnurlParams,
-    isUnsafeLnurlError
-} from './../../utils/LnurlResolveUtils';
+import { getLnurlParams } from './../../utils/LnurlResolveUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import {
     getLnurlpUrl,
@@ -222,58 +219,48 @@ export default class LightningSwipeableRow extends Component<
             'utils.handleAnything.lightningAddressError'
         );
 
-        if (settingsStore.enableTor && isOnion) {
-            await doTorRequest(url, RequestMethod.GET)
-                .then((response: any) => {
-                    if (!response.callback) {
-                        throw new Error(error);
-                    }
-                    navigation.navigate('LnurlPay', {
-                        lnurlParams: response,
-                        ecash:
-                            BackendUtils.supportsCashuWallet() &&
-                            settings?.ecash?.enableCashu,
-                        lightningAddress
-                    });
-                })
-                .catch((error: any) => {
+        try {
+            if (settingsStore.enableTor && isOnion) {
+                const response: any = await doTorRequest(
+                    url,
+                    RequestMethod.GET
+                );
+                if (!response.callback) {
                     throw new Error(error);
+                }
+                navigation.navigate('LnurlPay', {
+                    lnurlParams: response,
+                    ecash:
+                        BackendUtils.supportsCashuWallet() &&
+                        settings?.ecash?.enableCashu,
+                    lightningAddress
                 });
-        } else {
-            await fetchLnurlUrl(url)
-                .then((response: any) => {
-                    const status = response.info().status;
-                    if (status === 200) {
-                        const data = response.json();
-                        if (!data.callback) {
-                            throw new Error(error);
-                        }
-                        navigation.navigate('LnurlPay', {
-                            lnurlParams: data,
-                            ecash:
-                                BackendUtils.supportsCashuWallet() &&
-                                settings?.ecash?.enableCashu,
-                            lightningAddress
-                        });
-                    } else {
-                        throw new Error(error);
-                    }
-                })
-                .catch((e: any) => {
-                    if (!isUnsafeLnurlError(e)) throw e;
-                    // a redirect refused by the lnurl host policy
-                    Alert.alert(
-                        localeString('general.error'),
-                        e.message,
-                        [
-                            {
-                                text: localeString('general.ok'),
-                                onPress: () => void 0
-                            }
-                        ],
-                        { cancelable: false }
-                    );
+            } else {
+                const response = await fetchLnurlUrl(url);
+                if (response.info().status !== 200) {
+                    throw new Error(error);
+                }
+                const data = response.json();
+                if (!data.callback) {
+                    throw new Error(error);
+                }
+                navigation.navigate('LnurlPay', {
+                    lnurlParams: data,
+                    ecash:
+                        BackendUtils.supportsCashuWallet() &&
+                        settings?.ecash?.enableCashu,
+                    lightningAddress
                 });
+            }
+        } catch (e: any) {
+            // fetchLnInvoice does not await this, so anything rethrown
+            // would be lost and the tap would do nothing
+            Alert.alert(
+                localeString('general.error'),
+                e?.message || error,
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
+            );
         }
     };
 

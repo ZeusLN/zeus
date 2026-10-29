@@ -57,7 +57,13 @@ const getHeader = (headers: any, name: string): string | undefined => {
  * Rejects with an UnsafeLnurlError when a hop is refused.
  */
 export const fetchLnurlUrl = async (target: string): Promise<any> => {
-    let current = target;
+    // The first URL is serialized by the same parser that checks it, as the
+    // redirect hops are by url.resolve. Sent as given, the native parser can
+    // read a different host: url.parse treats '\' as '/', while iOS 17+
+    // NSURL percent-encodes it into the userinfo, so
+    // `http://abc.onion\@192.168.1.50/` would pass as abc.onion and reach the
+    // LAN address.
+    let current = url.format(url.parse(target));
     for (let redirects = 0; ; redirects++) {
         if (!isLnurlCallbackAllowed(current).ok) {
             throw unsafeLnurlError(

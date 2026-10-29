@@ -16,7 +16,8 @@ jest.mock('./LocaleUtils', () => ({
 import { bech32 } from 'bech32';
 
 import Base64Utils from './Base64Utils';
-import { getLnurlParams, isUnsafeLnurlError } from './LnurlResolveUtils';
+import { isUnsafeLnurlError } from './LnurlFetchUtils';
+import { getLnurlParams } from './LnurlResolveUtils';
 
 // The guarded resolve every caller goes through, including the
 // ChoosePaymentMethod rows that handleAnything never sees.
