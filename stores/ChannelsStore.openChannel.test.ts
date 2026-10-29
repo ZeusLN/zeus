@@ -183,7 +183,19 @@ describe('ChannelsStore.openChannel through openChannelSync', () => {
 
     it('drops a lookup result that lands after a reset', async () => {
         openChannelSync.mockRejectedValue(new Error('Request timeout'));
-        getPendingChannels.mockImplementation(async () => ({
+        let answerLookup: (pending: any) => void = () => undefined;
+        getPendingChannels.mockReturnValueOnce(
+            new Promise((resolve) => {
+                answerLookup = resolve;
+            })
+        );
+        const store = makeStore();
+        open(store);
+        // the open has timed out and the lookup is waiting on its first call
+        await jest.advanceTimersByTimeAsync(0);
+        expect(getPendingChannels).toHaveBeenCalledTimes(1);
+        store.resetOpenChannel();
+        answerLookup({
             pending_open_channels: [
                 {
                     channel: {
@@ -192,15 +204,23 @@ describe('ChannelsStore.openChannel through openChannelSync', () => {
                     }
                 }
             ]
-        }));
-        const store = makeStore();
-        open(store);
-        // the open has timed out and the lookup is waiting on its first call
-        store.resetOpenChannel();
+        });
         await settle();
 
         expect(store.channelSuccess).toBe(false);
         expect(store.funding_txid_str).toBe(null);
+    });
+
+    it('does not look up an open that timed out after a reset', async () => {
+        openChannelSync.mockRejectedValue(new Error('Request timeout'));
+        const store = makeStore();
+        open(store);
+        store.resetOpenChannel();
+        await settle();
+
+        expect(getPendingChannels).not.toHaveBeenCalled();
+        expect(getChannels).not.toHaveBeenCalled();
+        expect(store.openOutcomeUnknown).toBe(false);
     });
 
     it('drops an unknown outcome that lands after a reset', async () => {
@@ -245,5 +265,107 @@ describe('ChannelsStore.openChannel through openChannelSync', () => {
 
         store.resetOpenChannel();
         expect(store.openOutcomeUnknown).toBe(false);
+    });
+});
+
+describe('ChannelsStore.syncOpensInFlight', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        isLNDBased.mockReturnValue(true);
+        supportsChannelMemo.mockReturnValue(true);
+        getPendingChannels.mockResolvedValue({ pending_open_channels: [] });
+        getChannels.mockResolvedValue({ channels: [] });
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('counts an open until it settles, across a reset', async () => {
+        let rejectOpen: (error: Error) => void = () => undefined;
+        openChannelSync.mockReturnValueOnce(
+            new Promise((_, reject) => {
+                rejectOpen = reject;
+            })
+        );
+        const store = makeStore();
+        expect(store.syncOpensInFlight).toBe(0);
+        open(store);
+        expect(store.syncOpensInFlight).toBe(1);
+
+        // the user leaves the spinner and comes back to the screen
+        store.resetOpenChannel();
+        expect(store.openingChannel).toBe(false);
+        expect(store.syncOpensInFlight).toBe(1);
+
+        rejectOpen(new Error('Request timeout'));
+        await settle();
+        expect(store.syncOpensInFlight).toBe(0);
+    });
+
+    it('counts a timed out open until its lookup finishes', async () => {
+        openChannelSync.mockRejectedValue(new Error('Request timeout'));
+        const store = makeStore();
+        open(store);
+
+        // first lookup done, waiting 5s before the second
+        await jest.advanceTimersByTimeAsync(0);
+        expect(getPendingChannels).toHaveBeenCalledTimes(1);
+        expect(store.syncOpensInFlight).toBe(1);
+
+        await settle();
+        expect(getPendingChannels).toHaveBeenCalledTimes(3);
+        expect(store.syncOpensInFlight).toBe(0);
+    });
+
+    it.each([
+        [
+            'an open',
+            () =>
+                openChannelSync.mockResolvedValue({
+                    funding_txid_str: 'abc',
+                    output_index: 0
+                })
+        ],
+        [
+            'a node error',
+            () =>
+                openChannelSync.mockRejectedValue(
+                    new Error('peer is not online')
+                )
+        ],
+        [
+            'a timeout found by memo',
+            () => {
+                openChannelSync.mockRejectedValue(new Error('Request timeout'));
+                getPendingChannels.mockImplementation(async () => ({
+                    pending_open_channels: [
+                        {
+                            channel: {
+                                channel_point: 'funding:1',
+                                memo: sentRequest().memo
+                            }
+                        }
+                    ]
+                }));
+            }
+        ]
+    ])('stops counting after %s', async (_outcome, setUp) => {
+        setUp();
+        const store = makeStore();
+        open(store);
+        await settle();
+
+        expect(store.syncOpensInFlight).toBe(0);
+    });
+
+    it('counts each open', async () => {
+        openChannelSync.mockReturnValue(new Promise(() => undefined));
+        const store = makeStore();
+        open(store);
+        open(store);
+
+        expect(store.syncOpensInFlight).toBe(2);
     });
 });

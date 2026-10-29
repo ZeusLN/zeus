@@ -86,6 +86,11 @@ export default class ChannelsStore {
     // it, so a late result (e.g. a timeout lookup) for an earlier open is
     // dropped
     private openChannelSeq = 0;
+    // openChannelSync requests that have not settled yet, including the
+    // lookup after a timeout. resetOpenChannel() leaves this alone: leaving
+    // the screen does not stop the node from opening the channel, so
+    // OpenChannel does not submit again until they settle
+    @observable public syncOpensInFlight = 0;
     @observable public closeChannelErr: string | null;
     @observable public closingChannel = false;
     @observable channelRequest: any;
@@ -1307,6 +1312,7 @@ export default class ChannelsStore {
 
             const seq = ++this.openChannelSeq;
             const isCurrent = () => seq === this.openChannelSeq;
+            this.syncOpensInFlight++;
 
             const onOpened = (data: any) =>
                 runInAction(() => {
@@ -1328,6 +1334,9 @@ export default class ChannelsStore {
                     // backend (e.g. CLN past the 30s REST timeout); only
                     // opens that carry a memo can be looked up
                     if (isRequestTimeout(error)) {
+                        // the screen has moved on, so a lookup result
+                        // would be dropped anyway
+                        if (!isCurrent()) return;
                         const opened = memo
                             ? await findChannelByMemo(
                                   () => BackendUtils.getPendingChannels(),
@@ -1369,7 +1378,12 @@ export default class ChannelsStore {
                         this.peerSuccess = false;
                         this.channelSuccess = false;
                     });
-                });
+                })
+                .finally(() =>
+                    runInAction(() => {
+                        this.syncOpensInFlight--;
+                    })
+                );
         }
     };
 
