@@ -37,7 +37,8 @@ type Stream<P> = {
  * with no request correlation. Updates are attributed by the hash they
  * carry. Errors carry none, so an error fails every lookup still waiting
  * for its stream's first update (any of those streams may be the one that
- * errored) and forgets those streams. Streams that already answered keep
+ * errored) and forgets those streams; a forgotten stream that later
+ * delivers an update is taken back. Streams that already answered keep
  * serving their latest update: they exist on the node, and an error from
  * one can only mean it ended early, which the max age covers.
  */
@@ -107,10 +108,18 @@ export default class TrackPaymentStreams<P> {
 
     // An update for `hash` arrived. A terminal update ends the stream, so
     // the next lookup opens a new one (which answers and closes at once).
+    // An in-flight update for a hash with no stream comes from one that
+    // was forgotten when an error arrived before its first update (the
+    // error may have been another stream's): it is still open, so serve
+    // from it again instead of opening another on the next lookup.
     update = (hash: string, payment: P, terminal: boolean) => {
         const key = hash.toLowerCase();
-        const stream = this.streams.get(key);
-        if (!stream) return;
+        let stream = this.streams.get(key);
+        if (!stream) {
+            if (terminal) return;
+            stream = { openedAt: Date.now(), waiters: new Set() };
+            this.streams.set(key, stream);
+        }
         stream.latest = payment;
         const waiters = [...stream.waiters];
         stream.waiters.clear();
