@@ -3691,6 +3691,38 @@ describe('NostrWalletConnectStore wallet deletion', () => {
             expect(storedClientKeys()).toEqual({ [hex64('a')]: hex64('3') });
         });
 
+        it("keeps the current wallet's connections when a deleted config for the same node last loaded them", async () => {
+            // Wallets A and B reach the same node through different hosts,
+            // and B was the last to load the connection
+            storedItems.set(
+                NWC_CONNECTIONS_KEY,
+                JSON.stringify([
+                    connectionData({
+                        ...B_CONNECTION,
+                        nodePubkey: NODE_PUBKEY,
+                        walletConfigId:
+                            NostrConnectUtils.getWalletConfigId(WALLET_B)
+                    })
+                ])
+            );
+            storedItems.set(
+                NWC_CLIENT_KEYS,
+                JSON.stringify({ [B_CONNECTION.pubkey]: B_KEY })
+            );
+            const { store } = createStore({
+                settingsStore: { ...WALLET_A, settings: {} }
+            });
+            // A's restamp is scheduled but not yet saved
+            await store.loadConnections();
+
+            await store.deleteWalletConfigConnections(WALLET_B, [WALLET_A]);
+            await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-b']);
+            expect(storedClientKeys()[B_CONNECTION.pubkey]).toBe(B_KEY);
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
+        });
+
         it('leaves connections that were never loaded with a wallet config id', async () => {
             storedItems.set(
                 NWC_CONNECTIONS_KEY,
