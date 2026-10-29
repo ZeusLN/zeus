@@ -239,9 +239,11 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   //
   // These run on the IO scope because the Go calls can make blocking HTTP
   // requests to the swap host, which would otherwise hold the shared native
-  // modules thread. Each promise is settled from the worker thread with no
-  // suspension point after the call, so cancelling the scope cannot leave
-  // it pending.
+  // modules thread. Once a block starts, its promise is settled from the
+  // worker thread with no suspension point after the call, so cancelling
+  // the scope cannot leave it pending. A block that has not started when
+  // the scope is cancelled never runs, but the scope is only cancelled in
+  // invalidate(), when the React instance and its JS callers are torn down.
 
   @ReactMethod
   fun createClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, transactionHash: String, pubNonce: String, promise: Promise) {
