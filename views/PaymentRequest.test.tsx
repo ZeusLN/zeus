@@ -93,7 +93,8 @@ const renderView = async ({
     payReqOverrides = {},
     InvoicesStore = {
         pay_req: { ...payReq, ...payReqOverrides },
-        paymentRequest: 'lnbc10u1example'
+        paymentRequest: 'lnbc10u1example',
+        clearPayReq: jest.fn()
     },
     TransactionsStore = { paymentInFlight: false },
     ref
@@ -105,16 +106,15 @@ const renderView = async ({
     lightningBalance?: number;
     isLightningReadyToSend?: jest.Mock;
     getSettings?: jest.Mock;
-    InvoicesStore?: { pay_req: any; paymentRequest: string };
+    InvoicesStore?: {
+        pay_req: any;
+        paymentRequest: string;
+        clearPayReq?: jest.Mock;
+    };
 } = {}) => {
     const BalanceStore = {
         lightningBalance,
         getLightningBalance: jest.fn()
-    };
-    const InvoicesStore = {
-        pay_req: { ...payReq, ...payReqOverrides },
-        paymentRequest: 'lnbc10u1example',
-        clearPayReq: jest.fn()
     };
     const listeners: { [event: string]: Array<() => void> } = {};
     const navigation = {
