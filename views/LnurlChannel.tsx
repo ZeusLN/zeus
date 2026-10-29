@@ -137,7 +137,6 @@ export default class LnurlChannel extends React.Component<
         if (!isLnurlCallbackAllowed(lnurl.callback).ok) {
             // Never fetch a callback that would reach internal infrastructure
             // or leak in cleartext (SSRF-by-callback)
-            this.setState({ connectingToPeer: false });
             Alert.alert(
                 localeString('general.error'),
                 localeString('utils.lnurl.unsafeCallback'),
