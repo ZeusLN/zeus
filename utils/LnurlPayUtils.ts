@@ -280,6 +280,17 @@ export const isLnurlCallbackAllowed = (callback: string): LnurlCheckResult => {
         };
     }
 
+    // url.parse ends the host at '%', but OkHttp percent-decodes it before
+    // dialing, so `https://192.168.%31.1/` is classified as `192.168.` and
+    // reaches 192.168.1.1. A real host never contains '%'. Both parsers
+    // accept any run of '/' and '\' after the scheme.
+    const authority = /^[a-z][a-z0-9+.-]*:[/\\]*([^/?#\\]*)/i.exec(
+        callback.trim()
+    )?.[1];
+    if (authority?.includes('%')) {
+        return { ok: false, reason: 'percent-encoded host' };
+    }
+
     if (
         isPrivateOrReservedHost(hostname) ||
         isPrivateOrReservedHost(compatibilityHostname(callback))
