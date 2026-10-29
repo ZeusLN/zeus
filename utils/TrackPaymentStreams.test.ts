@@ -108,6 +108,27 @@ describe('TrackPaymentStreams', () => {
         expect(streams.size).toBe(1);
     });
 
+    it('takes back a stream that answers after an error forgot it', async () => {
+        // the error was another stream's NOT_FOUND, delivered before this
+        // stream's first update
+        const open = jest.fn();
+        const waiting = streams.lookup(HASH, 10000, open);
+        streams.fail(new Error("payment isn't initiated"));
+        await expect(waiting).rejects.toThrow("payment isn't initiated");
+        expect(streams.size).toBe(0);
+
+        streams.update(HASH, { status: 'IN_FLIGHT' }, false);
+        await expect(streams.lookup(HASH, 10000, open)).resolves.toEqual({
+            status: 'IN_FLIGHT'
+        });
+        expect(open).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores a terminal update for a hash with no stream', () => {
+        streams.update(HASH, { status: 'SUCCEEDED' }, true);
+        expect(streams.size).toBe(0);
+    });
+
     it('rejects with a timeout and keeps the stream for the next lookup', async () => {
         const open = jest.fn();
         const lookup = streams.lookup(HASH, 10000, open);
