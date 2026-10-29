@@ -15,7 +15,7 @@ static NSString *const kHasRunBeforeKey = @"HAS_RUN_BEFORE";
 
 /**
  Set when a fresh install finds device-local keychain items left by an earlier install on this
- device. JS reads it through the Settings module and then does not copy the iCloud Keychain
+ device. JS reads it through KeychainAudit.m and then does not copy the iCloud Keychain
  partition back into the device-local one, so a reinstall starts empty as the first-run clear
  intends. Never cleared: the install stays a reinstall.
  */

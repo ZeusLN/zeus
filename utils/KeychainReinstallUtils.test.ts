@@ -1,57 +1,62 @@
-// The Settings native module is not registered under Jest
-jest.mock('react-native/Libraries/Settings/Settings', () => ({
-    __esModule: true,
-    default: { get: jest.fn() }
-}));
+import { NativeModules, Platform } from 'react-native';
 
-import { Platform, Settings } from 'react-native';
-
-import {
-    KEYCHAIN_SURVIVED_REINSTALL_KEY,
-    keychainSurvivedReinstall
-} from './KeychainReinstallUtils';
+import { keychainSurvivedReinstall } from './KeychainReinstallUtils';
 
 describe('keychainSurvivedReinstall', () => {
     const originalOS = Platform.OS;
-    let get: jest.SpyInstance;
+    let read: jest.Mock;
 
     beforeEach(() => {
         Platform.OS = 'ios';
-        get = jest.spyOn(Settings, 'get');
+        read = jest.fn();
+        NativeModules.KeychainAudit = { keychainSurvivedReinstall: read };
     });
 
     afterEach(() => {
         Platform.OS = originalOS;
-        get.mockRestore();
+        delete NativeModules.KeychainAudit;
     });
 
-    it('reads the flag AppDelegate sets', () => {
-        get.mockReturnValue(true);
+    it('reads the flag AppDelegate sets', async () => {
+        read.mockResolvedValue(true);
 
-        expect(keychainSurvivedReinstall()).toBe(true);
-        expect(get).toHaveBeenCalledWith(KEYCHAIN_SURVIVED_REINSTALL_KEY);
+        await expect(keychainSurvivedReinstall()).resolves.toBe(true);
+        expect(read).toHaveBeenCalledTimes(1);
     });
 
-    it('is false when the flag is unset or false', () => {
-        get.mockReturnValue(undefined);
-        expect(keychainSurvivedReinstall()).toBe(false);
-        get.mockReturnValue(false);
-        expect(keychainSurvivedReinstall()).toBe(false);
+    it('is false when the flag is unset', async () => {
+        read.mockResolvedValue(false);
+
+        await expect(keychainSurvivedReinstall()).resolves.toBe(false);
     });
 
-    it('is false off iOS without reading defaults', () => {
+    it('reads native defaults on every call, so a deferred first-run check is seen', async () => {
+        // Launch before protected data was available: JS starts before the
+        // first-run check sets the flag, which must not be cached
+        read.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+
+        await expect(keychainSurvivedReinstall()).resolves.toBe(false);
+        await expect(keychainSurvivedReinstall()).resolves.toBe(true);
+        expect(read).toHaveBeenCalledTimes(2);
+    });
+
+    it('is false off iOS without reading defaults', async () => {
         Platform.OS = 'android';
-        get.mockReturnValue(true);
+        read.mockResolvedValue(true);
 
-        expect(keychainSurvivedReinstall()).toBe(false);
-        expect(get).not.toHaveBeenCalled();
+        await expect(keychainSurvivedReinstall()).resolves.toBe(false);
+        expect(read).not.toHaveBeenCalled();
     });
 
-    it('is false when the Settings module throws', () => {
-        get.mockImplementation(() => {
-            throw new Error('no native module');
-        });
+    it('is false when the native module is missing', async () => {
+        delete NativeModules.KeychainAudit;
 
-        expect(keychainSurvivedReinstall()).toBe(false);
+        await expect(keychainSurvivedReinstall()).resolves.toBe(false);
+    });
+
+    it('is false when the native read rejects', async () => {
+        read.mockRejectedValue(new Error('native failure'));
+
+        await expect(keychainSurvivedReinstall()).resolves.toBe(false);
     });
 });

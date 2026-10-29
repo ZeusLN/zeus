@@ -2119,7 +2119,7 @@ export default class SettingsStore {
                 !modernSettings &&
                 Platform.OS === 'ios' &&
                 // a reinstall starts empty; see keychainDesyncMigration
-                !keychainSurvivedReinstall()
+                !(await keychainSurvivedReinstall())
             ) {
                 // An empty local partition is indistinguishable from a failed
                 // desync migration: the blob may still live only in the

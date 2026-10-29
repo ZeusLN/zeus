@@ -1,5 +1,5 @@
 jest.mock('react-native-blob-util', () => ({}));
-const mockKeychainSurvivedReinstall = jest.fn(() => false);
+const mockKeychainSurvivedReinstall = jest.fn(async () => false);
 jest.mock('./KeychainReinstallUtils', () => ({
     keychainSurvivedReinstall: () => mockKeychainSurvivedReinstall()
 }));
@@ -1905,11 +1905,11 @@ describe('MigrationUtils', () => {
 
         afterEach(() => {
             consoleErrorSpy.mockRestore();
-            mockKeychainSurvivedReinstall.mockReturnValue(false);
+            mockKeychainSurvivedReinstall.mockResolvedValue(false);
         });
 
         it('leaves both partitions alone after a reinstall on the same device', async () => {
-            mockKeychainSurvivedReinstall.mockReturnValue(true);
+            mockKeychainSurvivedReinstall.mockResolvedValue(true);
             EncryptedStorage.getItem.mockResolvedValue(null);
             StorageModule.getInternetPasswordServers.mockResolvedValue([
                 'zeus:zeus-settings-v2'
@@ -2222,7 +2222,7 @@ describe('MigrationUtils', () => {
         afterEach(() => {
             consoleErrorSpy.mockRestore();
             consoleLogSpy.mockRestore();
-            mockKeychainSurvivedReinstall.mockReturnValue(false);
+            mockKeychainSurvivedReinstall.mockResolvedValue(false);
         });
 
         describe('legacy entries only in the iCloud partition', () => {
@@ -2253,7 +2253,7 @@ describe('MigrationUtils', () => {
             });
 
             it('does not read or restore them after a reinstall on the same device', async () => {
-                mockKeychainSurvivedReinstall.mockReturnValue(true);
+                mockKeychainSurvivedReinstall.mockResolvedValue(true);
 
                 await MigrationUtils.keychainCloudSyncMigration();
 

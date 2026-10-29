@@ -11,7 +11,7 @@
 // inside the critical section.
 
 jest.mock('react-native-biometrics', () => ({ BiometryType: {} }));
-const mockKeychainSurvivedReinstall = jest.fn(() => false);
+const mockKeychainSurvivedReinstall = jest.fn(async () => false);
 jest.mock('../utils/KeychainReinstallUtils', () => ({
     keychainSurvivedReinstall: () => mockKeychainSurvivedReinstall()
 }));
@@ -1394,13 +1394,13 @@ describe('SettingsStore.getSettings', () => {
     afterEach(() => {
         StorageMock.getRawItem.mockReset();
         StorageMock.getRawItem.mockResolvedValue(null);
-        mockKeychainSurvivedReinstall.mockReturnValue(false);
+        mockKeychainSurvivedReinstall.mockResolvedValue(false);
     });
 
     it('does not fall back to the synchronizable blob after a reinstall on the same device', async () => {
         // The first-run check emptied the local partition on purpose, so a
         // copy left in iCloud Keychain must not bring the old wallets back
-        mockKeychainSurvivedReinstall.mockReturnValue(true);
+        mockKeychainSurvivedReinstall.mockResolvedValue(true);
         StorageMock.getRawItem.mockImplementation(
             async (server: string, cloudSync: boolean) =>
                 cloudSync && server === `zeus:${STORAGE_KEY}`
