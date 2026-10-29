@@ -117,6 +117,94 @@ describe('clearTorData', () => {
         expect(mockedUnlink).toHaveBeenCalledTimes(3);
     });
 
+    it('waits for a start in progress before stopping Tor', async () => {
+        let finishStart: (value: { is_success: boolean }) => void = () => {};
+        mockedStart.mockReturnValue(
+            new Promise((resolve) => {
+                finishStart = resolve;
+            })
+        );
+        const torUtils = loadTorUtils();
+        const request = startTor(torUtils);
+
+        const clearing = torUtils.clearTorData();
+        await Promise.resolve();
+        expect(mockedShutdown).not.toHaveBeenCalled();
+
+        finishStart({ is_success: true });
+        await clearing;
+        await request;
+
+        expect(mockedShutdown).toHaveBeenCalledTimes(1);
+        expect(mockedHttpGet.mock.invocationCallOrder[0]).toBeLessThan(
+            mockedShutdown.mock.invocationCallOrder[0]
+        );
+        expect(mockedShutdown.mock.invocationCallOrder[0]).toBeLessThan(
+            mockedUnlink.mock.invocationCallOrder[0]
+        );
+    });
+
+    it('still stops Tor when the start in progress fails', async () => {
+        mockedStart.mockResolvedValue({
+            is_success: false,
+            error_message: 'bootstrap failed'
+        });
+        const torUtils = loadTorUtils();
+        const request = startTor(torUtils).catch(() => {});
+
+        await torUtils.clearTorData();
+        await request;
+
+        expect(mockedShutdown).toHaveBeenCalledTimes(1);
+        expect(mockedUnlink).toHaveBeenCalledTimes(3);
+    });
+
+    describe('when Tor does not respond', () => {
+        beforeEach(() => {
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
+        const expectDeletedAfterTimeout = async (
+            torUtils: typeof import('./TorUtils')
+        ) => {
+            let done = false;
+            const clearing = torUtils.clearTorData().then(() => {
+                done = true;
+            });
+
+            await jest.advanceTimersByTimeAsync(
+                torUtils.TOR_STOP_TIMEOUT_MS - 1
+            );
+            expect(done).toBe(false);
+            expect(mockedUnlink).not.toHaveBeenCalled();
+
+            await jest.advanceTimersByTimeAsync(1);
+            await clearing;
+            expect(mockedUnlink).toHaveBeenCalledTimes(3);
+        };
+
+        it('deletes the directories when the shutdown never settles', async () => {
+            mockedShutdown.mockReturnValue(new Promise(() => {}));
+            const torUtils = loadTorUtils();
+            await startTor(torUtils);
+
+            await expectDeletedAfterTimeout(torUtils);
+        });
+
+        it('deletes the directories when the start in progress never settles', async () => {
+            mockedStart.mockReturnValue(new Promise(() => {}));
+            const torUtils = loadTorUtils();
+            startTor(torUtils);
+
+            await expectDeletedAfterTimeout(torUtils);
+            expect(mockedShutdown).not.toHaveBeenCalled();
+        });
+    });
+
     it('goes on to the next directory when one cannot be deleted', async () => {
         mockedUnlink.mockImplementation((dir: string) =>
             dir === '/docs/tor_data'

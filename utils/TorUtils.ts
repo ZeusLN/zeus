@@ -53,16 +53,42 @@ const torDataDirectories = (): string[] =>
         ])
     );
 
+// How long clearTorData waits for a start in progress and for the daemon to
+// stop before it deletes the data directories anyway
+export const TOR_STOP_TIMEOUT_MS = 5000;
+
 // Stops the daemon if this JS context started it, then deletes Tor's data
 // directories (guard and consensus state, which show Tor was used). Each
 // step is best effort, so one failure does not keep the others from running.
 export const clearTorData = async (): Promise<void> => {
-    if (startPromise) {
+    const pending = startPromise;
+    if (pending) {
         startPromise = null;
+        // Let a start in progress finish first: a shutdown that runs before
+        // the daemon is up can leave it running, writing new state after
+        // the directories are gone. The wait and the shutdown are bounded so
+        // that a daemon that does not respond cannot keep the directories
+        // from being deleted.
+        let timer: ReturnType<typeof setTimeout> | undefined;
         try {
-            await RnTor.shutdownService();
+            await Promise.race([
+                (async () => {
+                    await pending.catch(() => {});
+                    await RnTor.shutdownService();
+                })(),
+                new Promise<void>((resolve) => {
+                    timer = setTimeout(() => {
+                        console.warn(
+                            '[TorUtils] Tor did not stop in time, deleting its data anyway'
+                        );
+                        resolve();
+                    }, TOR_STOP_TIMEOUT_MS);
+                })
+            ]);
         } catch (e) {
             console.warn('[TorUtils] Error stopping Tor:', e);
+        } finally {
+            clearTimeout(timer);
         }
     }
     for (const dir of torDataDirectories()) {
