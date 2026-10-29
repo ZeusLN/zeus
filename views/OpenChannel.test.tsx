@@ -52,7 +52,8 @@ jest.mock('../components/Screen', () => {
     return ({ children }: any) => <View>{children}</View>;
 });
 jest.mock('../components/SuccessErrorMessage', () => ({
-    ErrorMessage: 'ErrorMessage'
+    ErrorMessage: 'ErrorMessage',
+    WarningMessage: 'WarningMessage'
 }));
 jest.mock('../components/Switch', () => 'Switch');
 jest.mock('../components/TextInput', () => 'TextInput');
@@ -83,7 +84,10 @@ const makeProps = ({
     unconfirmedBlockchainBalance = 0,
     routeParams = PEER,
     settings = {},
-    openOutcomeUnknown = false
+    openOutcomeUnknown = false,
+    openingChannel = false,
+    syncOpensInFlight = 0,
+    channelsView = 'channels'
 }: {
     implementation?: string;
     confirmedBlockchainBalance?: number;
@@ -91,6 +95,9 @@ const makeProps = ({
     routeParams?: { node_pubkey_string?: string; host?: string };
     settings?: any;
     openOutcomeUnknown?: boolean;
+    openingChannel?: boolean;
+    syncOpensInFlight?: number;
+    channelsView?: string;
 } = {}) => {
     (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(
         implementation === 'lnd'
@@ -106,10 +113,12 @@ const makeProps = ({
             unconfirmedBlockchainBalance
         },
         ChannelsStore: {
-            channelsView: 'channels',
+            channelsView,
             aliasesByPubkey: {},
             nodes: {},
             openOutcomeUnknown,
+            openingChannel,
+            syncOpensInFlight,
             resetOpenChannel: jest.fn(),
             connectPeer: jest.fn(() => Promise.resolve())
         },
@@ -180,6 +189,38 @@ describe('OpenChannel after an open with an unknown outcome', () => {
         await enterAmount('50000', 50000);
 
         expect(isOpenDisabled()).toBe(true);
+    });
+});
+
+describe('OpenChannel while an earlier open is in flight', () => {
+    const warnings = () => hosts('WarningMessage');
+
+    it('does not allow opening and says why', async () => {
+        await renderView({ syncOpensInFlight: 1 });
+        await enterAmount('50000', 50000);
+
+        expect(isOpenDisabled()).toBe(true);
+        expect(warnings()).toHaveLength(1);
+        expect(warnings()[0].props.message).toBe(
+            'views.OpenChannel.earlierOpenInFlight'
+        );
+    });
+
+    it("shows no warning for this screen's own open", async () => {
+        await renderView({ syncOpensInFlight: 1, openingChannel: true });
+
+        expect(warnings()).toHaveLength(0);
+        expect(hosts('LoadingIndicator')).toHaveLength(1);
+    });
+
+    it('still allows connecting to a peer', async () => {
+        await renderView({ syncOpensInFlight: 1, channelsView: 'peers' });
+
+        const connect = hosts('Button').find(
+            (n) => n.props.title === 'views.OpenChannel.connectPeer'
+        )!;
+        expect(connect.props.disabled).toBe(false);
+        expect(warnings()).toHaveLength(0);
     });
 });
 
