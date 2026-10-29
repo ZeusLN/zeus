@@ -58,6 +58,7 @@ jest.mock('../../stores/LightningAddressStore', () => ({}));
 jest.mock('../../stores/UnitsStore', () => ({}));
 
 import * as React from 'react';
+import { Alert } from 'react-native';
 import {
     fireEvent,
     render,
@@ -322,7 +323,7 @@ const scanTag = async (
     response: any,
     amount: string,
     createFails = false,
-    readFails = false
+    readFails: boolean | Error = false
 ) => {
     const navigate = jest.fn();
     const createInvoice = jest.fn(() =>
@@ -343,7 +344,7 @@ const scanTag = async (
     (scanNfcTag as jest.Mock).mockResolvedValue('tag text');
     if (readFails) {
         (handleAnything as jest.Mock).mockRejectedValue(
-            new Error('unsupported')
+            readFails instanceof Error ? readFails : new Error('unsupported')
         );
     } else {
         (handleAnything as jest.Mock).mockResolvedValue(response);
@@ -396,6 +397,26 @@ describe('ReceiveEcash.validateAddress (Pay via NFC)', () => {
 
         expect(navigate).not.toHaveBeenCalled();
         expect(setState).toHaveBeenLastCalledWith({ nfcError: true });
+    });
+
+    it('shows the host policy refusal instead of the NFC error', async () => {
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const refusal = Object.assign(new Error('unsafe address'), {
+            name: 'UnsafeLnurlError'
+        });
+        const { navigate, setState } = await scanTag(
+            undefined,
+            '0',
+            false,
+            refusal
+        );
+
+        expect(navigate).not.toHaveBeenCalled();
+        expect(Alert.alert).toHaveBeenCalledWith(
+            'general.error',
+            'unsafe address'
+        );
+        expect(setState).not.toHaveBeenCalledWith({ nfcError: true });
     });
 
     it.each([
