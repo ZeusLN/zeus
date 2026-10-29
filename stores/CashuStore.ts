@@ -99,6 +99,11 @@ const UPGRADE_TITLES: { [key: number]: string } = {
 // author's relay list and reconnects the subscription as those arrive, growing
 // the pool past 40 relays and starving the JS thread for minutes.
 const NDK_CONNECT_TIMEOUT_MS = 2000;
+// If no relay is connected when connect() returns, wait this long for a
+// first one before giving up, so slow or proxied networks still work.
+const NDK_FIRST_RELAY_TIMEOUT_MS = 8000;
+// Upper bound for a single fetchEvents call, which otherwise has no timeout.
+const NDK_FETCH_TIMEOUT_MS = 15000;
 
 // ZEUS official npub for trusted mint recommendations
 const ZEUS_NPUB =
@@ -336,6 +341,8 @@ export default class CashuStore {
 
     private ndk?: NDK;
     private ndkConnect?: Promise<void>;
+    // Discovery calls currently using each NDK instance.
+    private ndkUsers = new Map<NDK, number>();
 
     constructor(
         settingsStore: SettingsStore,
@@ -2029,6 +2036,7 @@ export default class CashuStore {
         this.showOfflineSpentAlert = false;
         this.isSweeping = false;
         this.stopConnectivityMonitoring();
+        this.disconnectNdk();
     };
 
     @action
@@ -2109,8 +2117,9 @@ export default class CashuStore {
 
     /**
      * Returns the shared NDK instance, creating and connecting it on first
-     * use. Concurrent callers wait on the same connect. A failed connect is
-     * dropped so the next call starts over.
+     * use. Concurrent callers wait on the same connect. A failed connect, or
+     * one that ends with no relay connected, is dropped so the next call
+     * starts over.
      */
     private getNdk = async (): Promise<NDK> => {
         if (!this.ndk || !this.ndkConnect) {
@@ -2121,17 +2130,110 @@ export default class CashuStore {
             this.ndk = ndk;
             this.ndkConnect = ndk
                 .connect(NDK_CONNECT_TIMEOUT_MS)
+                .then(() => this.waitForFirstRelay(ndk))
                 .catch((e: any) => {
-                    if (this.ndk === ndk) {
-                        this.ndk = undefined;
-                        this.ndkConnect = undefined;
-                    }
+                    this.disconnectNdk(ndk);
                     throw e;
                 });
         }
         const ndk = this.ndk;
         await this.ndkConnect;
         return ndk;
+    };
+
+    /**
+     * connect() also resolves when its timeout elapses, even if no relay
+     * connected yet. Waits a little longer for a first relay, then fails so
+     * that callers do not fetch from an instance that can never answer.
+     */
+    private waitForFirstRelay = async (ndk: NDK): Promise<void> => {
+        if (ndk.pool.connectedRelays().length > 0) return;
+        await new Promise<void>((resolve) => {
+            const done = () => {
+                clearTimeout(timeout);
+                ndk.pool.off('relay:connect', done);
+                resolve();
+            };
+            const timeout = setTimeout(done, NDK_FIRST_RELAY_TIMEOUT_MS);
+            ndk.pool.on('relay:connect', done);
+        });
+        if (ndk.pool.connectedRelays().length === 0) {
+            throw new Error('No Nostr relay connected');
+        }
+    };
+
+    /**
+     * Gets the shared NDK instance for one discovery call and counts the
+     * call against that instance. Each successful call must be paired with
+     * releaseNdk().
+     */
+    private acquireNdk = async (): Promise<NDK> => {
+        // getNdk() sets this.ndk synchronously, before its first await.
+        const connecting = this.getNdk();
+        const ndk = this.ndk as NDK;
+        this.ndkUsers.set(ndk, (this.ndkUsers.get(ndk) ?? 0) + 1);
+        try {
+            await connecting;
+            return ndk;
+        } catch (e) {
+            this.releaseNdk(ndk);
+            throw e;
+        }
+    };
+
+    /**
+     * Ends one discovery call. Once no call uses an instance anymore, its
+     * relays are disconnected so their sockets and monitoring timers do not
+     * stay alive for the rest of the session. Counting per instance keeps a
+     * call that started before reset() from affecting the next instance.
+     */
+    private releaseNdk = (ndk: NDK) => {
+        const users = (this.ndkUsers.get(ndk) ?? 1) - 1;
+        if (users > 0) {
+            this.ndkUsers.set(ndk, users);
+            return;
+        }
+        this.ndkUsers.delete(ndk);
+        this.disconnectNdk(ndk);
+    };
+
+    /**
+     * fetchEvents() has no timeout of its own and can wait forever if a
+     * relay never answers.
+     */
+    private fetchEventsWithTimeout = async (
+        ndk: NDK,
+        filter: NDKFilter
+    ): Promise<Set<NDKEvent>> => {
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        try {
+            return await Promise.race([
+                ndk.fetchEvents(filter),
+                new Promise<never>((_, reject) => {
+                    timeout = setTimeout(
+                        () => reject(new Error('Nostr fetch timed out')),
+                        NDK_FETCH_TIMEOUT_MS
+                    );
+                })
+            ]);
+        } finally {
+            clearTimeout(timeout);
+        }
+    };
+
+    /**
+     * Disconnects and removes every relay of the given NDK instance (the
+     * shared one by default), and forgets it if it is the shared one.
+     */
+    private disconnectNdk = (ndk: NDK | undefined = this.ndk) => {
+        if (!ndk) return;
+        for (const url of ndk.pool.urls()) {
+            ndk.pool.removeRelay(url);
+        }
+        if (this.ndk === ndk) {
+            this.ndk = undefined;
+            this.ndkConnect = undefined;
+        }
     };
 
     /**
@@ -2143,27 +2245,23 @@ export default class CashuStore {
         logPrefix: string
     ): Promise<Set<NDKEvent>> => {
         const events = new Set<NDKEvent>();
-        let eoseCount = 0;
-        const totalRelays = DEFAULT_NOSTR_RELAYS.length;
         const sub = ndk.subscribe(filter, { closeOnEose: true });
 
         await new Promise<void>((resolve) => {
+            // NDKSubscription emits 'eose' once for the whole subscription,
+            // not once per relay.
+            const timeout = setTimeout(() => {
+                console.log(`${logPrefix}: Timeout reached`);
+                resolve();
+            }, 10000);
             sub.on('event', (event: NDKEvent) => {
                 events.add(event);
             });
             sub.on('eose', () => {
-                eoseCount++;
-                if (eoseCount >= Math.ceil(totalRelays / 2)) {
-                    console.log(
-                        `${logPrefix}: EOSE received from majority of relays`
-                    );
-                    resolve();
-                }
-            });
-            setTimeout(() => {
-                console.log(`${logPrefix}: Timeout reached`);
+                console.log(`${logPrefix}: EOSE received`);
+                clearTimeout(timeout);
                 resolve();
-            }, 10000);
+            });
         });
 
         sub.stop();
@@ -2325,6 +2423,7 @@ export default class CashuStore {
 
     @action
     public fetchMints = async () => {
+        let ndk: NDK | undefined;
         try {
             runInAction(() => {
                 this.loading = true;
@@ -2332,7 +2431,7 @@ export default class CashuStore {
                 this.error_msg = undefined;
             });
 
-            const ndk = await this.getNdk();
+            ndk = await this.acquireNdk();
 
             const filter: NDKFilter = {
                 kinds: [38000 as NDKKind],
@@ -2368,6 +2467,8 @@ export default class CashuStore {
                     'stores.CashuStore.errorDiscoveringMints'
                 );
             });
+        } finally {
+            if (ndk) this.releaseNdk(ndk);
         }
     };
 
@@ -2378,6 +2479,7 @@ export default class CashuStore {
 
     @action
     public fetchMintsFromFollows = async (npubInput?: string) => {
+        let ndk: NDK | undefined;
         try {
             runInAction(() => {
                 this.loadingTrustedMints = true;
@@ -2400,7 +2502,7 @@ export default class CashuStore {
                 return [];
             }
 
-            const ndk = await this.getNdk();
+            ndk = await this.acquireNdk();
 
             // Fetch follow list (kind 3)
             const followFilter: NDKFilter = {
@@ -2409,7 +2511,10 @@ export default class CashuStore {
                 limit: 1
             };
 
-            const followEvents = await ndk.fetchEvents(followFilter);
+            const followEvents = await this.fetchEventsWithTimeout(
+                ndk,
+                followFilter
+            );
             const followEvent = Array.from(followEvents)[0];
 
             if (!followEvent) {
@@ -2481,6 +2586,8 @@ export default class CashuStore {
                     'stores.CashuStore.errorDiscoveringMints'
                 );
             });
+        } finally {
+            if (ndk) this.releaseNdk(ndk);
         }
     };
 
@@ -2488,6 +2595,7 @@ export default class CashuStore {
     public fetchReviewerProfiles = async (pubkeys: string[]) => {
         if (!pubkeys.length) return;
 
+        let ndk: NDK | undefined;
         try {
             runInAction(() => {
                 this.loadingReviews = true;
@@ -2505,7 +2613,7 @@ export default class CashuStore {
                 return;
             }
 
-            const ndk = await this.getNdk();
+            ndk = await this.acquireNdk();
 
             // Fetch profiles (kind 0)
             const profileFilter: NDKFilter = {
@@ -2514,7 +2622,10 @@ export default class CashuStore {
                 limit: newPubkeys.length
             };
 
-            const events = await ndk.fetchEvents(profileFilter);
+            const events = await this.fetchEventsWithTimeout(
+                ndk,
+                profileFilter
+            );
 
             const profilesMap = new Map<string, ReviewerProfile>();
 
@@ -2558,6 +2669,8 @@ export default class CashuStore {
             runInAction(() => {
                 this.loadingReviews = false;
             });
+        } finally {
+            if (ndk) this.releaseNdk(ndk);
         }
     };
 
