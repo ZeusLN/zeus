@@ -20,6 +20,7 @@ jest.mock('../utils/AddressUtils', () => ({
 
 import MessageSignStore from './MessageSignStore';
 import BackendUtils from '../utils/BackendUtils';
+import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 
 const backend = BackendUtils as unknown as Record<string, jest.Mock>;
 
@@ -638,6 +639,31 @@ describe('MessageSignStore', () => {
             expect(store.error).toBe(true);
             expect(store.errorMessage).toBe('Error: offline');
             expect(store.loading).toBe(false);
+        });
+    });
+
+    describe('reserved messages', () => {
+        // LnurlAuth signs through BackendUtils.lnurlAuth, not this store, so
+        // refusing the phrase here does not affect the auth flow.
+        it('refuses to sign the LNURL-auth canonical phrase', async () => {
+            const result = await store.signMessage(
+                `  ${LNURLAUTH_CANONICAL_PHRASE.toLowerCase()}\n`
+            );
+            const onchain = await store.signMessage(
+                LNURLAUTH_CANONICAL_PHRASE,
+                'onchain'
+            );
+
+            expect(result).toBeNull();
+            expect(onchain).toBeNull();
+            expect(backend.signMessage).not.toHaveBeenCalled();
+            expect(backend.signMessageWithAddr).not.toHaveBeenCalled();
+            expect(store.error).toBe(true);
+            expect(store.errorMessage).toBe(
+                'views.Settings.SignMessage.reservedMessage'
+            );
+            expect(store.loading).toBe(false);
+            expect(store.signature).toBeNull();
         });
     });
 });
