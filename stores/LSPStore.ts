@@ -100,9 +100,10 @@ export default class LSPStore {
     private createExtensionOrderResponseResolver: (() => void) | null = null;
     private getExtensionOrderResponseResolver: (() => void) | null = null;
 
-    // Id of the custom-message request whose timeout set the current error.
-    // The LSP can still answer after the timeout, and a successful late
-    // reply clears that error so it is not shown over the order or info.
+    // Id of the custom-message request whose timeout set the error. The LSP
+    // can still answer after the timeout, and a successful late reply clears
+    // that error so it is not shown over the order or info. Another error
+    // set since then is left alone.
     private timedOutRequestId = '';
 
     // Free orders have no payment step, so they never pass through the LSPPaymentAwait polling screen.
@@ -1035,6 +1036,9 @@ export default class LSPStore {
     private clearTimeoutError = (requestId: string) => {
         if (!requestId || this.timedOutRequestId !== requestId) return;
         this.timedOutRequestId = '';
+        if (this.error_msg !== localeString('views.LSPS1.timeoutError')) {
+            return;
+        }
         this.error = false;
         this.error_msg = '';
     };

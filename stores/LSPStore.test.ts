@@ -355,6 +355,45 @@ describe('LSPStore custom-message request timeouts', () => {
             expect(store.error).toBe(false);
         });
 
+        it('a late get_info reply does not clear a later create_order error', () => {
+            const store = makeStore();
+            store.lsps1GetInfoCustomMessage();
+            const infoId = store.getInfoId;
+            jest.advanceTimersByTime(TIMEOUT_MS);
+            createOrder(store);
+            reply(store, {
+                id: store.createOrderId,
+                error: { code: 1, data: { message: 'balance too low' } }
+            });
+
+            reply(store, { id: infoId, result: { min_channel_size: 1 } });
+
+            expect(store.getInfoData.result.min_channel_size).toBe(1);
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('balance too low');
+        });
+
+        it('a late create_order reply does not clear a later get_info error', () => {
+            const store = makeStore();
+            createOrder(store);
+            const orderId = store.createOrderId;
+            jest.advanceTimersByTime(TIMEOUT_MS);
+            store.lsps1GetInfoCustomMessage();
+            reply(store, {
+                id: store.getInfoId,
+                error: { code: 1, message: 'info failed' }
+            });
+            const infoError = store.error_msg;
+            expect(store.error).toBe(true);
+            expect(infoError).not.toBe('views.LSPS1.timeoutError');
+
+            reply(store, { id: orderId, result: { order_id: 'late' } });
+
+            expect(store.createOrderResponse.result.order_id).toBe('late');
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe(infoError);
+        });
+
         it('a repeated get_info reply does not clear a create_order timeout', () => {
             const store = makeStore();
             store.lsps1GetInfoCustomMessage();
