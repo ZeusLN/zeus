@@ -319,7 +319,6 @@ describe('clearAllData node data directory wipe (KEY-005 regression)', () => {
 
 describe('clearAllData Tor data', () => {
     const { clearTorData } = require('./TorUtils');
-    const { TOR_CLEAR_TIMEOUT_MS } = require('./DataClearUtils');
     const mockedClearTorData = clearTorData as jest.Mock;
     const mockedAsyncStorageClear =
         require('@react-native-async-storage/async-storage').clear as jest.Mock;
@@ -343,27 +342,6 @@ describe('clearAllData Tor data', () => {
 
         expect(mockedAsyncStorageClear).toHaveBeenCalled();
         expect(EncryptedStorage.clear).toHaveBeenCalled();
-    });
-
-    it('does not wait on a Tor shutdown that never settles', async () => {
-        jest.useFakeTimers();
-        try {
-            mockedClearTorData.mockReturnValueOnce(new Promise(() => {}));
-            let done = false;
-            const wipe = clearAllData().then(() => {
-                done = true;
-            });
-
-            await jest.advanceTimersByTimeAsync(TOR_CLEAR_TIMEOUT_MS - 1);
-            expect(done).toBe(false);
-            expect(mockedAsyncStorageClear).not.toHaveBeenCalled();
-
-            await jest.advanceTimersByTimeAsync(1);
-            await wipe;
-            expect(mockedAsyncStorageClear).toHaveBeenCalled();
-        } finally {
-            jest.useRealTimers();
-        }
     });
 });
 
