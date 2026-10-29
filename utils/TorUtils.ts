@@ -41,6 +41,41 @@ const isOnionHttpsUrl = (url: string): boolean => {
     }
 };
 
+// Directories Tor state can be in: the current daemon's data directory, and
+// the one react-native-tor (replaced in a58b4cefc) created under the app's
+// cache directory on Android and its temporary directory on iOS
+const torDataDirectories = (): string[] =>
+    Array.from(
+        new Set([
+            TOR_DATA_PATH,
+            `${RNFS.CachesDirectoryPath}/sifir_sdk`,
+            `${RNFS.TemporaryDirectoryPath}/sifir_sdk`
+        ])
+    );
+
+// Stops the daemon if this JS context started it, then deletes Tor's data
+// directories (guard and consensus state, which show Tor was used). Each
+// step is best effort, so one failure does not keep the others from running.
+export const clearTorData = async (): Promise<void> => {
+    if (startPromise) {
+        startPromise = null;
+        try {
+            await RnTor.shutdownService();
+        } catch (e) {
+            console.warn('[TorUtils] Error stopping Tor:', e);
+        }
+    }
+    for (const dir of torDataDirectories()) {
+        try {
+            if (await RNFS.exists(dir)) {
+                await RNFS.unlink(dir);
+            }
+        } catch (e) {
+            console.warn(`[TorUtils] Error deleting ${dir}:`, e);
+        }
+    }
+};
+
 let startPromise: Promise<void> | null = null;
 
 const ensureTorStarted = (): Promise<void> => {

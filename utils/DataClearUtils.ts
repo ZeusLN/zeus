@@ -77,6 +77,10 @@ import {
 } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
 import hashjs from 'hash.js';
+import { clearTorData } from './TorUtils';
+
+// How long the wipe waits for Tor to stop and its data to be deleted
+export const TOR_CLEAR_TIMEOUT_MS = 5000;
 
 // LNC credentials are persisted by backends/LNC/credentialStore.ts under
 // `lnc-rn:<sha256(pairingPhrase)>` and `...:host`. Reconstruct those keys from
@@ -965,6 +969,23 @@ export async function clearAllData(): Promise<void> {
 
     // 2b. Clear CDK SQLite database (contains mints, proofs, transactions)
     await clearCDKDatabase();
+
+    // 2b2. Stop Tor and delete its data directories. Their guard and
+    // consensus state shows Tor was used. Bounded so that a daemon that does
+    // not stop cannot hold up the rest of the wipe.
+    let torTimeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+        await Promise.race([
+            clearTorData(),
+            new Promise<void>((resolve) => {
+                torTimeout = setTimeout(resolve, TOR_CLEAR_TIMEOUT_MS);
+            })
+        ]);
+    } catch (e) {
+        console.warn('[ClearData] Error clearing Tor data:', e);
+    } finally {
+        clearTimeout(torTimeout);
+    }
 
     // 2c. Stop and delete the on-disk LND/LDK node data directories. These
     // hold channel + wallet state and are not covered by the keychain/Cashu

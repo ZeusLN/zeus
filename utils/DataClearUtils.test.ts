@@ -64,6 +64,9 @@ jest.mock('./LdkNodeUtils', () => ({
 jest.mock('./SleepUtils', () => ({
     sleep: jest.fn().mockResolvedValue(undefined)
 }));
+jest.mock('./TorUtils', () => ({
+    clearTorData: jest.fn().mockResolvedValue(undefined)
+}));
 
 // The real derivation runs scrypt (N=32768); its correctness is pinned by
 // AezeedUtils.test.ts against lnd-generated golden vectors. Here only the
@@ -311,6 +314,56 @@ describe('clearAllData node data directory wipe (KEY-005 regression)', () => {
 
         expect(mockedDeleteLndWallet).not.toHaveBeenCalled();
         expect(mockedDeleteLdkNodeWallet).not.toHaveBeenCalled();
+    });
+});
+
+describe('clearAllData Tor data', () => {
+    const { clearTorData } = require('./TorUtils');
+    const { TOR_CLEAR_TIMEOUT_MS } = require('./DataClearUtils');
+    const mockedClearTorData = clearTorData as jest.Mock;
+    const mockedAsyncStorageClear =
+        require('@react-native-async-storage/async-storage').clear as jest.Mock;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedClearTorData.mockResolvedValue(undefined);
+    });
+
+    it('stops Tor and deletes its data directories', async () => {
+        await clearAllData();
+
+        expect(mockedClearTorData).toHaveBeenCalledTimes(1);
+    });
+
+    it('finishes the wipe when clearing Tor data fails', async () => {
+        mockedClearTorData.mockRejectedValueOnce(new Error('unlink failed'));
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(mockedAsyncStorageClear).toHaveBeenCalled();
+        expect(EncryptedStorage.clear).toHaveBeenCalled();
+    });
+
+    it('does not wait on a Tor shutdown that never settles', async () => {
+        jest.useFakeTimers();
+        try {
+            mockedClearTorData.mockReturnValueOnce(new Promise(() => {}));
+            let done = false;
+            const wipe = clearAllData().then(() => {
+                done = true;
+            });
+
+            await jest.advanceTimersByTimeAsync(TOR_CLEAR_TIMEOUT_MS - 1);
+            expect(done).toBe(false);
+            expect(mockedAsyncStorageClear).not.toHaveBeenCalled();
+
+            await jest.advanceTimersByTimeAsync(1);
+            await wipe;
+            expect(mockedAsyncStorageClear).toHaveBeenCalled();
+        } finally {
+            jest.useRealTimers();
+        }
     });
 });
 
