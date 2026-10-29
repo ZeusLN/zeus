@@ -24,6 +24,7 @@ jest.mock('./CoreLightningRequestHandler', () => ({
 
 import CLNRest from './CLNRest';
 import Payment from '../models/Payment';
+import { paymentCreationTimeMs } from '../utils/PaymentLookupUtils';
 
 // CLNRest's own `getURL` is not reachable with ws=true today — its single
 // caller passes no ws argument — so these lock in the anchored behaviour
@@ -306,5 +307,65 @@ describe('CLNRest.createWithdrawalRequest', () => {
             amount: 100_000,
             description: 'pocket money'
         });
+    });
+});
+
+describe('CLNRest.lookupPayment', () => {
+    const HASH = 'ab'.repeat(32);
+    const pay = (overrides: Record<string, unknown>) => ({
+        payment_hash: HASH,
+        status: 'failed',
+        created_at: 1700000000,
+        destination: '02' + 'cd'.repeat(32),
+        ...overrides
+    });
+    const lookup = (pays: any[]) => {
+        const cln: any = new CLNRest();
+        cln.postRequest = jest.fn().mockResolvedValue({ pays });
+        return cln.lookupPayment({ payment_hash: HASH }).then((result: any) => {
+            expect(cln.postRequest).toHaveBeenCalledWith('/v1/listpays', {
+                payment_hash: HASH
+            });
+            return result;
+        });
+    };
+
+    it('answers null when listpays has no entry for the hash', async () => {
+        await expect(lookup([])).resolves.toBeNull();
+    });
+
+    it('exposes created_at where the stale-attempt check reads it', async () => {
+        const result = await lookup([pay({ status: 'complete' })]);
+        expect(paymentCreationTimeMs(result)).toBe(1700000000 * 1000);
+        expect(new Payment(result).getTimestamp).toBe('1700000000');
+    });
+
+    it('prefers a settled retry group over failed ones', async () => {
+        const result = await lookup([
+            pay({ status: 'failed', created_at: 1 }),
+            pay({ status: 'complete', created_at: 2, preimage: 'ff' }),
+            pay({ status: 'failed', created_at: 3 })
+        ]);
+        expect(result.status).toBe('SUCCEEDED');
+        expect(result.creation_date).toBe('2');
+        expect(result.preimage).toBe('ff');
+    });
+
+    it('prefers a pending group over failed ones and maps it to IN_FLIGHT', async () => {
+        const result = await lookup([
+            pay({ status: 'failed', created_at: 1 }),
+            pay({ status: 'pending', created_at: 2 })
+        ]);
+        expect(result.status).toBe('IN_FLIGHT');
+        expect(result.creation_date).toBe('2');
+    });
+
+    it('falls back to the last failed group', async () => {
+        const result = await lookup([
+            pay({ status: 'failed', created_at: 1 }),
+            pay({ status: 'failed', created_at: 2 })
+        ]);
+        expect(result.status).toBe('FAILED');
+        expect(result.creation_date).toBe('2');
     });
 });

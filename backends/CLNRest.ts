@@ -448,6 +448,9 @@ export default class CLNRest {
                         ? 'FAILED'
                         : 'IN_FLIGHT',
                 destination: pay.destination,
+                // creation_date is what the send tracker's stale-attempt
+                // check and models/Payment read first
+                creation_date: pay.created_at?.toString(),
                 created_at: pay.created_at?.toString(),
                 bolt11: pay.bolt11,
                 bolt12: pay.bolt12,
