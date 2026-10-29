@@ -1419,6 +1419,10 @@ export default class PaymentRequest extends React.Component<
                                         this.setState({
                                             reviewedPaymentRequest:
                                                 InvoicesStore.paymentRequest,
+                                            // the typed amount was for the
+                                            // previous request
+                                            customAmount: '',
+                                            satAmount: '',
                                             swipeButtonKey:
                                                 this.state.swipeButtonKey + 1
                                         })
