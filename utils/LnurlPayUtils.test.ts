@@ -270,6 +270,26 @@ describe('LnurlPayUtils', () => {
             expect(isLnurlCallbackAllowed(cb).ok).toBe(false);
         });
 
+        // the bundled url package ends the host at '%', while OkHttp
+        // percent-decodes it before dialing
+        it.each([
+            'https://192.168.%31.1/x',
+            'https://l%6fcalhost/x',
+            'https://169.254.%31%36%39.254/latest',
+            'https://%31%32%37.0.0.1/x',
+            'https:\\\\192.168.%31.1\\x',
+            'https:/\\192.168.%31.1/x',
+            'HTTPS://l%6fcalhost/x'
+        ])('rejects %j, which has a percent-encoded authority', (cb) => {
+            expect(isLnurlCallbackAllowed(cb).ok).toBe(false);
+        });
+
+        it('still allows a percent-encoded path and query', () => {
+            expect(
+                isLnurlCallbackAllowed('https://pay.example.com/c%62?q=%31').ok
+            ).toBe(true);
+        });
+
         it('still allows a non-ASCII public domain', () => {
             expect(isLnurlCallbackAllowed('https://bücher.example/cb').ok).toBe(
                 true
@@ -484,13 +504,18 @@ describe('isLnurlEndpointAllowed', () => {
         'http://cleartext.example/lnurl',
         'https://１２７.０.０.１/lnurl',
         'https://12\u00AD7.0.0.1/lnurl',
-        'https://loc\u200Balhost/lnurl'
+        'https://loc\u200Balhost/lnurl',
+        'https://192.168.%31.1/lnurl',
+        'https://l%6fcalhost/lnurl'
     ])('refuses a bech32 endpoint pointing at %j', (target) => {
         expect(isLnurlEndpointAllowed(asLnurl(target)).ok).toBe(false);
     });
 
     it('refuses an lnurlw:// endpoint pointing at a LAN host', () => {
         expect(isLnurlEndpointAllowed('lnurlw://192.168.1.1/cb').ok).toBe(
+            false
+        );
+        expect(isLnurlEndpointAllowed('lnurlw://192.168.%31.1/w').ok).toBe(
             false
         );
     });
