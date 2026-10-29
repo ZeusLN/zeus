@@ -4,6 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { localeString } from './LocaleUtils';
 import handleAnything from './handleAnything';
 import { processSharedQRImageFast } from './ShareIntentProcessor';
+import { startedByInAppRestart } from './InAppRestartUtils';
 import { settingsStore } from '../stores/Stores';
 
 // Payment status screens that must never be popped out from under an
@@ -19,11 +20,13 @@ class LinkingUtils {
     private shareIntentProcessed = false;
     private pendingDeepLink: string | null = null;
     // Linking.getInitialURL() returns the same URL for the lifetime of the
-    // activity (and on Android, onNewIntent + setIntent refreshes it with
-    // each warm deep link), while the Wallet view — which consumes it — can
+    // process (and on Android, onNewIntent + setIntent refreshes it with
+    // each warm deep link), while the Wallet view, which consumes it, can
     // mount more than once, e.g. when 'Select wallet on start-up' is
-    // enabled. Track the last URL actually processed so it is only ever
-    // handled once.
+    // enabled. Track the last URL actually processed so it is handled once
+    // per JS runtime. A JS reload resets this field, and on iOS an in-app
+    // restart reloads JS without ending the process, so handleInitialUrl
+    // also checks startedByInAppRestart().
     private lastHandledUrl: string | null = null;
 
     processPendingDeepLink = (
@@ -62,7 +65,17 @@ class LinkingUtils {
             }
 
             if (url) {
-                if (url !== this.lastHandledUrl) {
+                // After an in-app restart on iOS this is still the URL that
+                // launched the process, possibly from before a data wipe.
+                // It is skipped even if the previous JS runtime restarted
+                // before handling it (channel migration lock, a restart
+                // from Settings after a failed connection, Lockscreen
+                // wipes). Android drops it the same way, since
+                // ProcessPhoenix relaunches without the URL
+                if (
+                    url !== this.lastHandledUrl &&
+                    !(await startedByInAppRestart())
+                ) {
                     this.handleDeepLink(url, navigation);
                 }
                 return;
