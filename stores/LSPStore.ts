@@ -113,7 +113,8 @@ export default class LSPStore {
     // request id. handleCustomMessages drops a reply whose id matches a
     // request but whose sender does not, so a connected peer that is not
     // the LSP can't answer in the LSP's place. Entries are removed when a
-    // reply is consumed and when a reset invalidates the request id.
+    // reply is consumed, when a new request replaces the id, and when a
+    // reset invalidates the id.
     private customMessageRequestPeers: { [requestId: string]: string } = {};
 
     // Free orders have no payment step, so they never pass through the LSPPaymentAwait polling screen.
@@ -387,6 +388,20 @@ export default class LSPStore {
     private getFlowHost = () => this.getLspConfig().flowHost;
 
     public getLSPSPubkey = () => this.getLspConfig().lsps1Pubkey;
+
+    // Returns a new request id bound to the peer it is sent to, and drops
+    // the binding of the id it replaces so timed-out requests don't pile up.
+    // The peer is lowercased because handleCustomMessages decodes the
+    // sender to lowercase hex, while the configured pubkey is kept as typed.
+    private newCustomMessageRequestId = (
+        previousId: string,
+        peer: string
+    ): string => {
+        delete this.customMessageRequestPeers[previousId];
+        const requestId = uuidv4();
+        this.customMessageRequestPeers[requestId] = (peer || '').toLowerCase();
+        return requestId;
+    };
 
     public getLSPSHost = () => this.getLspConfig().lsps1Host;
 
@@ -1202,9 +1217,11 @@ export default class LSPStore {
         this.error = false;
         this.error_msg = '';
 
-        this.getInfoId = uuidv4();
+        this.getInfoId = this.newCustomMessageRequestId(
+            this.getInfoId,
+            this.getLSPSPubkey()
+        );
         const requestId = this.getInfoId;
-        this.customMessageRequestPeers[requestId] = this.getLSPSPubkey();
         const method = 'lsps1.get_info';
 
         return new Promise<void>((resolve) => {
@@ -1339,9 +1356,11 @@ export default class LSPStore {
         this.error = false;
         this.error_msg = '';
 
-        this.createOrderId = uuidv4();
+        this.createOrderId = this.newCustomMessageRequestId(
+            this.createOrderId,
+            this.getLSPSPubkey()
+        );
         const requestId = this.createOrderId;
-        this.customMessageRequestPeers[requestId] = this.getLSPSPubkey();
         const method = 'lsps1.create_order';
 
         return new Promise<void>((resolve) => {
@@ -1459,8 +1478,7 @@ export default class LSPStore {
     ): Promise<void> {
         this.loadingLSPS1 = true;
 
-        this.getOrderId = uuidv4();
-        this.customMessageRequestPeers[this.getOrderId] = peer;
+        this.getOrderId = this.newCustomMessageRequestId(this.getOrderId, peer);
         const method = 'lsps1.get_order';
 
         return new Promise<void>((resolve) => {
@@ -1698,9 +1716,10 @@ export default class LSPStore {
         // probe settles the previous one without marking it failed.
         this.getExtendableChannelsResponseResolver?.();
 
-        this.getExtendableChannelsId = uuidv4();
-        this.customMessageRequestPeers[this.getExtendableChannelsId] =
-            this.getLSPSPubkey();
+        this.getExtendableChannelsId = this.newCustomMessageRequestId(
+            this.getExtendableChannelsId,
+            this.getLSPSPubkey()
+        );
         const method = 'lsps7.get_extendable_channels';
 
         await new Promise<void>((resolve) => {
@@ -1785,9 +1804,11 @@ export default class LSPStore {
         // can't fire a stale timeout after this newer request completes.
         this.createExtensionOrderResponseResolver?.();
 
-        this.createExtensionOrderId = uuidv4();
+        this.createExtensionOrderId = this.newCustomMessageRequestId(
+            this.createExtensionOrderId,
+            this.getLSPSPubkey()
+        );
         const requestId = this.createExtensionOrderId;
-        this.customMessageRequestPeers[requestId] = this.getLSPSPubkey();
         const method = 'lsps7.create_order';
 
         await new Promise<void>((resolve) => {
@@ -1888,8 +1909,10 @@ export default class LSPStore {
         }
 
         // Fall back to custom message for other backends
-        this.getExtensionOrderId = uuidv4();
-        this.customMessageRequestPeers[this.getExtensionOrderId] = peer;
+        this.getExtensionOrderId = this.newCustomMessageRequestId(
+            this.getExtensionOrderId,
+            peer
+        );
         const method = 'lsps7.get_order';
 
         await new Promise<void>((resolve) => {
