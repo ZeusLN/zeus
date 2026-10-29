@@ -57,4 +57,17 @@ RCT_EXPORT_METHOD(getInternetPasswordServers:(BOOL)synchronizable
     });
 }
 
+// Reads KEYCHAIN_SURVIVED_REINSTALL, which the first-run check in
+// AppDelegate.mm sets. Read here at call time rather than through RN's
+// Settings module: Settings.get serves a snapshot taken when JS loaded and
+// only learns of later writes through an async event, and the first-run check
+// can run after JS has loaded when launch happened before protected data was
+// available.
+RCT_EXPORT_METHOD(keychainSurvivedReinstall:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    resolve(@([[NSUserDefaults standardUserDefaults]
+                  boolForKey:@"KEYCHAIN_SURVIVED_REINSTALL"]));
+}
+
 @end

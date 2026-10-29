@@ -216,7 +216,7 @@ class MigrationsUtils {
 
             // Fallback to cloud keychain, except after a reinstall: the
             // first-run check emptied the local keychain on purpose
-            if (keychainSurvivedReinstall()) return false;
+            if (await keychainSurvivedReinstall()) return false;
             return await Keychain.getInternetCredentials(key, {
                 cloudSync: true
             });
@@ -1474,7 +1474,7 @@ class MigrationsUtils {
         // keeps autoPurgeLegacyKeychain from running: its copy-before-delete
         // step would restore them too, and deleting the iCloud copies would
         // remove them from any other device still reading that partition.
-        if (keychainSurvivedReinstall()) return;
+        if (await keychainSurvivedReinstall()) return;
 
         try {
             const hasRun = await this.readFlag(KEYCHAIN_DESYNC_KEY);
