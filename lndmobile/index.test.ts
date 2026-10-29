@@ -143,6 +143,13 @@ describe('trackPaymentV2', () => {
         await expect(promise).rejects.toThrow('Request timeout');
     });
 
+    it('rejects after the caller-supplied timeout', async () => {
+        jest.useFakeTimers();
+        const promise = trackPaymentV2(HASH_HEX, 2000);
+        jest.advanceTimersByTime(2000);
+        await expect(promise).rejects.toThrow('Request timeout');
+    });
+
     it('shares one stream between lookups of a held payment', async () => {
         const first = trackPaymentV2(HASH_HEX);
         emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT));
