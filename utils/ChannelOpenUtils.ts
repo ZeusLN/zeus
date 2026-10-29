@@ -1,6 +1,6 @@
 import { randomBytes } from 'react-native-randombytes';
 
-import { LookupOptions, lookUpWithRetries } from './OnchainSendUtils';
+import { LookupOptions, lookUpWithRetries } from './RequestTimeoutUtils';
 
 // Like an on-chain send, an OpenChannelSync request that timed out may
 // still have opened the channel: lnd keeps negotiating with the peer and

@@ -21,7 +21,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { getCooperativeCloses, getForceCloses } from '../utils/BalanceUtils';
 import { findChannelByMemo, makeOpenMemo } from '../utils/ChannelOpenUtils';
-import { isRequestTimeout } from '../utils/OnchainSendUtils';
+import { isRequestTimeout } from '../utils/RequestTimeoutUtils';
 
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
