@@ -2,14 +2,8 @@ import {
     isLnurlCallbackAllowed,
     isLnurlEndpointAllowed
 } from './LnurlPayUtils';
-import {
-    fetchLnurlParams,
-    isUnsafeLnurlError,
-    unsafeLnurlError
-} from './LnurlFetchUtils';
+import { fetchLnurlParams, unsafeLnurlError } from './LnurlFetchUtils';
 import { localeString } from './LocaleUtils';
-
-export { isUnsafeLnurlError };
 
 /**
  * The lnurl resolve behind the endpoint policy. Every resolve goes through

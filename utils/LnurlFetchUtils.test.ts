@@ -105,6 +105,38 @@ describe('fetchLnurlUrl', () => {
         expect(fetchedUrls()[1]).toBe('https://evil.example/@192.168.1.1/');
     });
 
+    // Sent as given, iOS 17+ NSURL would percent-encode the backslash into
+    // the userinfo and contact the LAN address instead
+    it.each([
+        [
+            'http://abc.onion\\@192.168.1.50:8080/p',
+            'http://abc.onion/@192.168.1.50:8080/p'
+        ],
+        [
+            'https://example.com\\@10.0.0.1/cb',
+            'https://example.com/@10.0.0.1/cb'
+        ]
+    ])(
+        'requests the first URL as the policy parsed it: %s',
+        async (target, expected) => {
+            mockBlobFetch.mockResolvedValueOnce(respond(200));
+
+            await fetchLnurlUrl(target);
+
+            expect(fetchedUrls()).toEqual([expected]);
+        }
+    );
+
+    it('leaves an ordinary first URL unchanged', async () => {
+        mockBlobFetch.mockResolvedValueOnce(respond(200));
+        const target =
+            'https://example.com/lnurlp/cb?amount=1000&comment=hi%20there';
+
+        await fetchLnurlUrl(target);
+
+        expect(fetchedUrls()).toEqual([target]);
+    });
+
     it('reads the Location header case-insensitively', async () => {
         mockBlobFetch.mockResolvedValueOnce(
             respond(301, '', { location: 'http://10.0.0.1/' })

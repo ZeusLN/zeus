@@ -18,7 +18,7 @@ import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import handleAnything from '../utils/handleAnything';
-import { isUnsafeLnurlError } from '../utils/LnurlResolveUtils';
+import { isUnsafeLnurlError } from '../utils/LnurlFetchUtils';
 
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 const ZIcon = require('../assets/images/icon_black.png');

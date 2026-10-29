@@ -6,10 +6,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
 import BackendUtils from '../../utils/BackendUtils';
-import {
-    getLnurlParams,
-    isUnsafeLnurlError
-} from '../../utils/LnurlResolveUtils';
+import { isUnsafeLnurlError } from '../../utils/LnurlFetchUtils';
+import { getLnurlParams } from '../../utils/LnurlResolveUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
