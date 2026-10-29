@@ -79,6 +79,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import Storage from '../storage';
 import SwapStore from './SwapStore';
 import { SwapState, SwapType } from '../models/Swap';
+import { SWAPS_KEY, REVERSE_SWAPS_KEY } from '../utils/SwapUtils';
 
 const SWAP_ID = 'swap-abc';
 const LOCKUP = {
@@ -398,5 +399,122 @@ describe('SwapStore.getSwapFees', () => {
 
         expect(store.apiError).toBe('');
         expect(store.reverseInfo.fees?.minerFees?.claim).toBe(300);
+    });
+});
+
+describe('SwapStore.fetchAndUpdateSwaps', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    const loadSwaps = async (
+        stored: { [key: string]: any[] },
+        { nodeId, implementation }: { nodeId?: string; implementation?: string }
+    ) => {
+        (Storage.getItem as jest.Mock).mockImplementation(async (key: string) =>
+            stored[key] ? JSON.stringify(stored[key]) : null
+        );
+        // every swap below is in a final state, so no status is fetched
+        const store = new SwapStore(
+            { nodeInfo: { nodeId, isTestNet: false } } as any,
+            { settings: { swaps: {} }, implementation } as any
+        );
+        await store.fetchAndUpdateSwaps();
+        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+        return store;
+    };
+
+    it('skips a stored swap that new Swap() rejects and loads the rest', async () => {
+        // Swap records saved before #5334 can carry host response members
+        // named like Swap getters. Assigning one throws, which used to
+        // leave the whole list empty.
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        const store = await loadSwaps(
+            {
+                [SWAPS_KEY]: [
+                    {
+                        id: 'bad-submarine',
+                        type: SwapType.Submarine,
+                        status: SwapState.TransactionClaimed,
+                        nodePubkey: 'node-a',
+                        createdAt: 300,
+                        model: 'x'
+                    },
+                    {
+                        id: 'good-submarine',
+                        type: SwapType.Submarine,
+                        status: SwapState.TransactionClaimed,
+                        nodePubkey: 'node-a',
+                        createdAt: 100
+                    }
+                ],
+                [REVERSE_SWAPS_KEY]: [
+                    {
+                        id: 'good-reverse',
+                        type: SwapType.Reverse,
+                        status: SwapState.TransactionRefunded,
+                        nodePubkey: 'node-a',
+                        createdAt: 200
+                    }
+                ]
+            },
+            { nodeId: 'node-a' }
+        );
+
+        expect(store.swaps.map((swap: any) => swap.id)).toEqual([
+            'good-reverse',
+            'good-submarine'
+        ]);
+        expect(store.swapsLoading).toBe(false);
+        expect(console.error).toHaveBeenCalledWith(
+            'Failed to load stored swap bad-submarine:',
+            expect.any(Error)
+        );
+        (console.error as jest.Mock).mockRestore();
+    });
+
+    it('keeps the skipped record in storage', async () => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        const bad = {
+            id: 'bad',
+            type: SwapType.Submarine,
+            status: SwapState.TransactionClaimed,
+            nodePubkey: 'node-a',
+            qrCodeValue: 'x'
+        };
+        await loadSwaps({ [SWAPS_KEY]: [bad] }, { nodeId: 'node-a' });
+
+        const written = (Storage.setItem as jest.Mock).mock.calls.find(
+            ([key]) => key === SWAPS_KEY
+        );
+        expect(JSON.parse(written[1])).toEqual([bad]);
+        (console.error as jest.Mock).mockRestore();
+    });
+
+    it('shows swaps of the current node, or of the implementation when a swap has no node pubkey', async () => {
+        const swap = (id: string, extra: any) => ({
+            id,
+            type: SwapType.Submarine,
+            status: SwapState.TransactionClaimed,
+            createdAt: 1,
+            ...extra
+        });
+        const store = await loadSwaps(
+            {
+                [SWAPS_KEY]: [
+                    swap('this-node', { nodePubkey: 'node-a' }),
+                    swap('other-node', {
+                        nodePubkey: 'node-b',
+                        implementation: 'lnd'
+                    }),
+                    swap('same-impl', { implementation: 'lnd' }),
+                    swap('other-impl', { implementation: 'cln-rest' })
+                ]
+            },
+            { nodeId: 'node-a', implementation: 'lnd' }
+        );
+
+        expect(store.swaps.map((s: any) => s.id).sort()).toEqual([
+            'same-impl',
+            'this-node'
+        ]);
     });
 });

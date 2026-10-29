@@ -1622,7 +1622,21 @@ export default class SwapStore {
                     new Date(a.createdAt).getTime()
             );
 
-            this.swaps = swaps.map((swap) => new Swap(swap));
+            // Build each swap on its own: a stored record new Swap() cannot
+            // take (such as one saved before #5334 with a member named like
+            // a Swap getter) is skipped instead of hiding every swap
+            const models: Swap[] = [];
+            for (const swap of swaps) {
+                try {
+                    models.push(new Swap(swap));
+                } catch (error) {
+                    console.error(
+                        `Failed to load stored swap ${swap?.id}:`,
+                        error
+                    );
+                }
+            }
+            this.swaps = models;
             this.swapsLoading = false;
         } catch (error) {
             console.error('Failed to fetch and update swaps:', error);
