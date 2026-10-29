@@ -683,10 +683,13 @@ export default class LND {
     // instead (no_inflight_updates suppresses its updates and the
     // transport can't read partial bodies anyway), so a timeout means
     // "exists, not terminal": resolve it via the scan, which also backs
-    // up any other transport failure before it propagates as unobservable
+    // up any other transport failure before it propagates as unobservable.
+    // trackTimeoutMs shortens that wait for callers answering a client
+    // with its own reply deadline (the NWC service)
     lookupPayment = (data: {
         payment_hash: string;
         creation_date_start?: number;
+        trackTimeoutMs?: number;
     }) =>
         this.getRequest(
             // base64url with its padding kept: lnd's REST gateway rejects
@@ -695,7 +698,7 @@ export default class LND {
                 .replace(/\+/g, '-')
                 .replace(/\//g, '_')}`,
             { no_inflight_updates: true },
-            TRACK_PAYMENT_TIMEOUT_MS
+            data.trackTimeoutMs ?? TRACK_PAYMENT_TIMEOUT_MS
         ).then(
             (response: any) => {
                 if (response?.result) return response.result;

@@ -94,6 +94,13 @@ const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
 const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
 /** Per-connection debounce for pending pay_invoice status refresh in getActivities */
 const PENDING_PAYMENT_STATUS_REFRESH_MS = 30_000;
+/**
+ * How long a pending pay_invoice lookup waits on TrackPaymentV2 before
+ * falling back to the payment list scan. LND REST holds the track request
+ * open for as long as the payment is in flight, and list_transactions
+ * waits on this refresh: Alby SDK clients give that request 10s.
+ */
+const PENDING_PAYMENT_LOOKUP_TRACK_TIMEOUT_MS = 2_000;
 /** Per-connection make_invoice rate limit (remote abuse protection; in-memory, resets on app restart). */
 const MAKE_INVOICE_RATE_WINDOW_MS = 60_000;
 const MAX_MAKE_INVOICE_PER_WINDOW = 5;
@@ -3307,7 +3314,10 @@ export default class NostrWalletConnectStore {
         try {
             const results = await Promise.all(
                 uniqueHashes.map((payment_hash) =>
-                    BackendUtils.lookupPayment({ payment_hash })
+                    BackendUtils.lookupPayment({
+                        payment_hash,
+                        trackTimeoutMs: PENDING_PAYMENT_LOOKUP_TRACK_TIMEOUT_MS
+                    })
                 )
             );
             return results

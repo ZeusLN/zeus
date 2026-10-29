@@ -437,6 +437,16 @@ describe('EmbeddedLND.lookupPayment', () => {
         expect(mockListPayments).not.toHaveBeenCalled();
     });
 
+    it('passes trackTimeoutMs to the track stream', async () => {
+        mockTrackPaymentV2.mockResolvedValue({ payment_hash: HASH });
+
+        await new EmbeddedLND().lookupPayment({
+            payment_hash: HASH,
+            trackTimeoutMs: 2000
+        });
+        expect(mockTrackPaymentV2).toHaveBeenCalledWith(HASH, 2000);
+    });
+
     it('answers null when NOT_FOUND and the scan agrees', async () => {
         mockTrackPaymentV2.mockRejectedValue(NOT_FOUND);
         mockListPayments.mockResolvedValue({ payments: [] });

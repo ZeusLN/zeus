@@ -2802,8 +2802,11 @@ describe('NostrWalletConnectStore targeted pending payment lookup', () => {
 
         await (store as any).reconcilePendingPayInvoiceActivities(connection);
 
+        // a short track probe: an in-flight payment holds LND REST's
+        // track request open past list_transactions' 10s client timeout
         expect(BackendUtils.lookupPayment).toHaveBeenCalledWith({
-            payment_hash: paymentHash
+            payment_hash: paymentHash,
+            trackTimeoutMs: 2000
         });
         expect(paymentsStore.getPayments).not.toHaveBeenCalled();
         expect(connection.activity[0].status).toBe('success');

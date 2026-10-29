@@ -484,11 +484,12 @@ export default class LightningNodeConnect {
     lookupPayment = async (data: {
         payment_hash: string;
         creation_date_start?: number;
+        trackTimeoutMs?: number;
     }) => {
         try {
             return await this.trackPaymentStreams.lookup(
                 data.payment_hash,
-                TRACK_PAYMENT_TIMEOUT_MS,
+                data.trackTimeoutMs ?? TRACK_PAYMENT_TIMEOUT_MS,
                 () => {
                     const streamingCall = this.lnc.lnd.router.trackPaymentV2({
                         payment_hash: Base64Utils.hexToBase64(

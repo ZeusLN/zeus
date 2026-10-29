@@ -641,6 +641,22 @@ describe('LND.lookupPayment', () => {
         expect(lnd.getPayments).not.toHaveBeenCalled();
     });
 
+    it('waits trackTimeoutMs for the track request when given', async () => {
+        const lnd = makeLnd();
+        lnd.getRequest.mockResolvedValue({
+            result: { payment_hash: HASH_HEX, status: 'SUCCEEDED' }
+        });
+
+        await lnd.lookupPayment({ payment_hash: HASH_HEX });
+        expect(lnd.getRequest.mock.calls[0][2]).toBe(10000);
+
+        await lnd.lookupPayment({
+            payment_hash: HASH_HEX,
+            trackTimeoutMs: 2000
+        });
+        expect(lnd.getRequest.mock.calls[1][2]).toBe(2000);
+    });
+
     it('maps a streamed NOT_FOUND error message to null', async () => {
         const lnd = makeLnd();
         lnd.getRequest.mockResolvedValue({

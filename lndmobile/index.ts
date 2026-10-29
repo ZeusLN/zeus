@@ -500,8 +500,11 @@ export const clearTrackPaymentStreams = () => trackPaymentStreams.clear();
  * stream.
  * @throws
  */
-export const trackPaymentV2 = (payment_hash: string): Promise<lnrpc.Payment> =>
-    trackPaymentStreams.lookup(payment_hash, TRACK_PAYMENT_TIMEOUT_MS, () => {
+export const trackPaymentV2 = (
+    payment_hash: string,
+    timeoutMs: number = TRACK_PAYMENT_TIMEOUT_MS
+): Promise<lnrpc.Payment> =>
+    trackPaymentStreams.lookup(payment_hash, timeoutMs, () => {
         if (!trackPaymentListener) {
             trackPaymentListener = LndMobileEventEmitter.addListener(
                 'RouterTrackPaymentV2',

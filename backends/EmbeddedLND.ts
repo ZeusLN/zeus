@@ -297,9 +297,10 @@ export default class EmbeddedLND extends LND {
     lookupPayment = async (data: {
         payment_hash: string;
         creation_date_start?: number;
+        trackTimeoutMs?: number;
     }) => {
         try {
-            return await trackPaymentV2(data.payment_hash);
+            return await trackPaymentV2(data.payment_hash, data.trackTimeoutMs);
         } catch {
             return await this.scanForPayment(data);
         }

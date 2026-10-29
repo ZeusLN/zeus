@@ -248,7 +248,10 @@ export interface ILndMobileInjections {
             amp: boolean;
             dest: string;
         }) => Promise<lnrpc.Payment>;
-        trackPaymentV2: (paymentHash: string) => Promise<lnrpc.Payment>;
+        trackPaymentV2: (
+            paymentHash: string,
+            timeoutMs?: number
+        ) => Promise<lnrpc.Payment>;
         queryRoutes: (
             pubkey: string,
             amount?: Long,
