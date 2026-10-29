@@ -182,15 +182,49 @@ describe('CashuDevKit saga recovery', () => {
         await expect(melting).resolves.toEqual({ state: 'Paid' });
     });
 
-    it('does not let a previous wallet hold up recovery', async () => {
+    it('does not let another wallet hold up recovery', async () => {
         const pending = deferred<string>();
         mockNative.melt.mockReturnValue(pending.promise);
 
+        await cdk.initializeWallet('wallet one', 'sat');
         const melting = cdk.melt(MINT, 'q1');
         await flush();
-        await cdk.initializeWallet('abandon about', 'sat');
+        await cdk.initializeWallet('wallet two', 'sat');
 
         await expect(cdk.recoverIncompleteSagas(MINT)).resolves.toEqual(REPORT);
+
+        pending.resolve('{}');
+        await melting;
+    });
+
+    it('keeps an operation counted when its wallet is initialized again', async () => {
+        const pending = deferred<string>();
+        mockNative.melt.mockReturnValue(pending.promise);
+
+        await cdk.initializeWallet('wallet one', 'sat');
+        const melting = cdk.melt(MINT, 'q1');
+        await flush();
+        await cdk.initializeWallet('wallet one', 'sat');
+
+        await expect(cdk.recoverIncompleteSagas(MINT)).resolves.toBeNull();
+        expect(mockNative.recoverIncompleteSagas).not.toHaveBeenCalled();
+
+        pending.resolve('{}');
+        await melting;
+        await expect(cdk.recoverIncompleteSagas(MINT)).resolves.toEqual(REPORT);
+    });
+
+    it('keeps an operation counted after switching away and back', async () => {
+        const pending = deferred<string>();
+        mockNative.melt.mockReturnValue(pending.promise);
+
+        await cdk.initializeWallet('wallet one', 'sat');
+        const melting = cdk.melt(MINT, 'q1');
+        await flush();
+        await cdk.initializeWallet('wallet two', 'sat');
+        await cdk.initializeWallet('wallet one', 'sat');
+
+        await expect(cdk.recoverIncompleteSagas(MINT)).resolves.toBeNull();
 
         pending.resolve('{}');
         await melting;
