@@ -21,5 +21,9 @@
         "iosSha256": "a5b98ce83f242b670e492e914d51a96f05e27e7c3b4c6dbde2663bb5fa720ea5",
         "androidBindingsSha256": "0787300e17a95fb08b1dbf49b9666a5eb84aa7afa10058c43e4566031792e32f",
         "iosBindingsSha256": "4745dc68822d18af6446bdf88acf73ad77a493ddcc4f585552f2dd2808a7b1f8"
+    },
+    "openssl-android": {
+        "version": "v3.6.2-zeus1",
+        "androidSha256": "ea5da32e75f099974c448aa314d4711db0d65a47557487b1f6af795946d03432"
     }
 }

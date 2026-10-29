@@ -84,6 +84,9 @@ android/lndmobile/Lndmobile.aar
 ios/LncMobile/Lndmobile.xcframework
 ios/LndMobileLibZipFile
 
+# OpenSSL for Android (the POM beside it is tracked)
+android/openssl/**/*.aar
+
 # Cashu CDK binaries
 android/cdk/cashudevkit.aar
 android/cdk/cdk-jvm.jar

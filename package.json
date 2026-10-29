@@ -66,6 +66,7 @@
     "@noble/hashes": "1.7.2",
     "@noble/secp256k1": "1.6.3",
     "@nostr-dev-kit/ndk": "3.0.3",
+    "@op-engineering/op-sqlite": "18.2.5",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-clipboard/clipboard": "1.16.3",
     "@react-native-community/datetimepicker": "9.2.1",
@@ -138,6 +139,7 @@
     "react-native-image-picker": "8.2.1",
     "react-native-keychain": "10.0.0",
     "react-native-nfc-manager": "3.17.5",
+    "react-native-nitro-tor": "0.6.1",
     "react-native-notifications": "5.2.2",
     "react-native-print": "0.11.0",
     "react-native-qr-kit": "1.1.6",
@@ -152,7 +154,6 @@
     "react-native-svg": "15.15.5",
     "react-native-svg-transformer": "1.5.3",
     "react-native-system-navigation-bar": "2.8.0",
-    "react-native-nitro-tor": "0.6.1",
     "react-native-udp": "4.1.7",
     "react-native-view-shot": "6.1.1",
     "react-native-vision-camera": "4.7.3",
@@ -267,5 +268,8 @@
     "staticFeatureFlags": {
       "ENABLE_SHARED_ELEMENT_TRANSITIONS": true
     }
+  },
+  "op-sqlite": {
+    "sqlcipher": true
   }
 }
