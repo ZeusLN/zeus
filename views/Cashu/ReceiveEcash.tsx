@@ -18,7 +18,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import cloneDeep from 'lodash/cloneDeep';
 
 import handleAnything from '../../utils/handleAnything';
-import { isUnsafeLnurlError } from '../../utils/LnurlResolveUtils';
+import { isUnsafeLnurlError } from '../../utils/LnurlFetchUtils';
 
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
 
