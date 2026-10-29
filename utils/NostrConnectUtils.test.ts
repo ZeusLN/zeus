@@ -946,6 +946,17 @@ describe('NostrConnectUtils', () => {
                     storeState.incompleteNoError(),
                     true
                 ],
+                [
+                    'CLN pending status, which the outcome flags as an error',
+                    {
+                        status: 'pending',
+                        isIncomplete: true,
+                        error: true,
+                        payment_error: null,
+                        loading: false
+                    },
+                    true
+                ],
                 ['settled', storeState.settled(), false],
                 ['hard failure with error', storeState.failed(), false]
             ])('%s', (_label, state, expected) => {
