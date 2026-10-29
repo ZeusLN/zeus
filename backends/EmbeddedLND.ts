@@ -1,10 +1,7 @@
 import LND from './LND';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
-import {
-    isPaymentLookupInconclusive,
-    markNodeResponded
-} from './../utils/PaymentLookupUtils';
+import { markNodeResponded } from './../utils/PaymentLookupUtils';
 import { TransactionPageRequest } from '../utils/OnchainTransactionUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
@@ -288,29 +285,22 @@ export default class EmbeddedLND extends LND {
             throw markNodeResponded(error, error?.grpcCode);
         });
     // override LND's REST implementation with the on-device
-    // TrackPaymentV2 stream: the first update matching this hash is the
+    // TrackPaymentV2 stream: its latest update for this hash is the
     // payment's current state (no_inflight_updates is false, so an
-    // in-flight payment answers immediately) and NOT_FOUND is a no-record
-    // answer. Because the event channel is shared across concurrent track
-    // streams with no correlation, a NOT_FOUND error may belong to
-    // another lookup's stream: confirm absence against the
-    // dispatch-anchored page scan (which runs against the on-device
-    // listPayments via this backend's getPayments) before answering null.
-    // Any other failure degrades to that scan as well.
+    // in-flight payment answers immediately). Any failure, NOT_FOUND
+    // included, is settled by the dispatch-anchored page scan (run against
+    // the on-device listPayments via this backend's getPayments): the event
+    // channel is shared across concurrent track streams with no
+    // correlation, so a NOT_FOUND may belong to another lookup's stream.
+    // The scan answers null only on a conclusive miss and throws when it
+    // can't tell, so a failed scan never reads as no record.
     lookupPayment = async (data: {
         payment_hash: string;
         creation_date_start?: number;
     }) => {
         try {
             return await trackPaymentV2(data.payment_hash);
-        } catch (error: any) {
-            if (this.isPaymentNotFound(error)) {
-                return await this.scanForPayment(data).catch((e) => {
-                    // a full page that missed can't confirm the absence
-                    if (isPaymentLookupInconclusive(e)) throw e;
-                    return null;
-                });
-            }
+        } catch {
             return await this.scanForPayment(data);
         }
     };

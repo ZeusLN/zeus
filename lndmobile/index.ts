@@ -7,6 +7,10 @@ import Base64Utils from '../utils/Base64Utils';
 import { matchesExpectedPayment } from '../utils/EmbeddedLndPayUtils';
 import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
+import TrackPaymentStreams, {
+    TRACK_PAYMENT_STREAM_MAX_AGE_MS,
+    isTerminalPaymentStatus
+} from '../utils/TrackPaymentStreams';
 import {
     checkLndStreamErrorResponse,
     LndMobileEventEmitter
@@ -75,7 +79,9 @@ export const decodeState = (data: string): lnrpc.SubscribeStateResponse => {
  * @throws
  */
 export const stopLnd = async (): Promise<{ data: string }> => {
-    return await LndMobile.stopLnd();
+    const result = await LndMobile.stopLnd();
+    clearTrackPaymentStreams();
+    return result;
 };
 
 /**
@@ -451,76 +457,71 @@ export const decodeSendPaymentV2Result = (data: string): lnrpc.Payment => {
 // immediately, so this only fires when lnd isn't answering at all
 const TRACK_PAYMENT_TIMEOUT_MS = 10000;
 
+let trackPaymentListener: EmitterSubscription | undefined;
+const trackPaymentStreams = new TrackPaymentStreams<lnrpc.Payment>({
+    maxAgeMs: TRACK_PAYMENT_STREAM_MAX_AGE_MS,
+    onIdle: () => {
+        trackPaymentListener?.remove();
+        trackPaymentListener = undefined;
+    }
+});
+
+const onTrackPaymentEvent = (e: any) => {
+    try {
+        const error = checkLndStreamErrorResponse('RouterTrackPaymentV2', e);
+        if (error === 'EOF') return;
+        if (error) return trackPaymentStreams.fail(error);
+        // a transient (null) error report carries no payload
+        if (!e?.data) return;
+
+        const response = decodeSendPaymentV2Result(e.data);
+        if (!response.payment_hash) return;
+        trackPaymentStreams.update(
+            response.payment_hash,
+            response,
+            isTerminalPaymentStatus(response.status)
+        );
+    } catch (error: any) {
+        trackPaymentStreams.fail(new Error(error?.message || String(error)));
+    }
+};
+
+// forgets every open track stream, e.g. once lnd has stopped and they
+// have all ended
+export const clearTrackPaymentStreams = () => trackPaymentStreams.clear();
+
 /**
- * Resolves with the tracked payment's current state from the first
- * matching TrackPaymentV2 update; the caller decides what a NOT_FOUND
- * ("payment isn't initiated") rejection means. Events on this channel are
- * multiplexed by method name across every concurrent track stream with no
- * per-request correlation, so payment updates are matched by hash; error
- * events carry no hash and may belong to another lookup's stream, which
- * the caller must absorb. The underlying stream can't be cancelled from
- * JS and stays open until the payment reaches a terminal state.
+ * Resolves with the tracked payment's current state: the latest
+ * TrackPaymentV2 update for its hash. One stream per hash is shared by
+ * all lookups (see TrackPaymentStreams), since a stream can't be
+ * cancelled from JS and stays open until the payment is terminal. The
+ * caller decides what a NOT_FOUND ("payment isn't initiated") rejection
+ * means: error events carry no hash and may belong to another hash's
+ * stream.
  * @throws
  */
 export const trackPaymentV2 = (payment_hash: string): Promise<lnrpc.Payment> =>
-    new Promise(async (resolve, reject) => {
-        const expectedHash = payment_hash.toLowerCase();
-        let settled = false;
-        let listener: any;
-        const settle = (fn: () => void) => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            listener?.remove();
-            fn();
-        };
-        const timer = setTimeout(
-            () => settle(() => reject(new Error('Request timeout'))),
-            TRACK_PAYMENT_TIMEOUT_MS
-        );
-        listener = LndMobileEventEmitter.addListener(
-            'RouterTrackPaymentV2',
-            (e: any) => {
-                try {
-                    const error = checkLndStreamErrorResponse(
-                        'RouterTrackPaymentV2',
-                        e
-                    );
-                    if (error === 'EOF') return;
-                    else if (error) return settle(() => reject(error));
-                    // a transient (null) error report carries no payload
-                    if (!e?.data) return;
-
-                    const response = decodeSendPaymentV2Result(e.data);
-                    if (response.payment_hash?.toLowerCase() !== expectedHash)
-                        return;
-                    settle(() => resolve(response));
-                } catch (error: any) {
-                    settle(() =>
-                        reject(new Error(error?.message || String(error)))
-                    );
-                }
-            }
-        );
-
-        try {
-            await sendStreamCommand<
-                routerrpc.ITrackPaymentRequest,
-                routerrpc.TrackPaymentRequest
-            >(
-                {
-                    request: routerrpc.TrackPaymentRequest,
-                    method: 'RouterTrackPaymentV2',
-                    options: {
-                        payment_hash: Base64Utils.hexToBytes(payment_hash),
-                        no_inflight_updates: false
-                    }
-                },
-                false
+    trackPaymentStreams.lookup(payment_hash, TRACK_PAYMENT_TIMEOUT_MS, () => {
+        if (!trackPaymentListener) {
+            trackPaymentListener = LndMobileEventEmitter.addListener(
+                'RouterTrackPaymentV2',
+                onTrackPaymentEvent
             );
-        } catch (error: any) {
-            settle(() => reject(new Error(error?.message || String(error))));
         }
+        return sendStreamCommand<
+            routerrpc.ITrackPaymentRequest,
+            routerrpc.TrackPaymentRequest
+        >(
+            {
+                request: routerrpc.TrackPaymentRequest,
+                method: 'RouterTrackPaymentV2',
+                options: {
+                    payment_hash: Base64Utils.hexToBytes(payment_hash),
+                    no_inflight_updates: false
+                }
+            },
+            false
+        );
     });
 
 export const sendKeysendPaymentV2 = async (

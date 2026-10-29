@@ -20,10 +20,11 @@ import {
     deriveExpectedPaymentHash
 } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
-import {
-    findPaymentByHash,
-    isPaymentLookupInconclusive
-} from '../utils/PaymentLookupUtils';
+import { findPaymentByHash } from '../utils/PaymentLookupUtils';
+import TrackPaymentStreams, {
+    TRACK_PAYMENT_STREAM_MAX_AGE_MS,
+    isTerminalPaymentStatus
+} from '../utils/TrackPaymentStreams';
 import {
     toLnrpcAddressType,
     toWalletrpcAddressTypeName
@@ -48,6 +49,14 @@ export default class LightningNodeConnect {
     private client: any;
     listener: any;
     customMessagesListener: EmitterSubscription | null = null;
+    private trackPaymentSubscription: EmitterSubscription | undefined;
+    private trackPaymentStreams = new TrackPaymentStreams<any>({
+        maxAgeMs: TRACK_PAYMENT_STREAM_MAX_AGE_MS,
+        onIdle: () => {
+            this.trackPaymentSubscription?.remove();
+            this.trackPaymentSubscription = undefined;
+        }
+    });
 
     // Lifecycle code may close an old client, but RPCs must only use the
     // selected wallet's session. A pending native dial can outlive a switch.
@@ -270,6 +279,8 @@ export default class LightningNodeConnect {
         }
     };
     disconnect = async () => {
+        // the session's track streams end with it
+        this.trackPaymentStreams.clear();
         if (!this.client) return;
         await this.closeSession(this.client);
     };
@@ -460,74 +471,54 @@ export default class LightningNodeConnect {
             data.payment_hash,
             data.creation_date_start
         );
-    // trackPaymentV2 gives a real per-payment query: the first update
-    // matching this hash is the payment's current state
-    // (no_inflight_updates is false, so an in-flight payment answers
-    // immediately) and NOT_FOUND is a no-record answer. Like sendPaymentV2,
-    // results arrive on a channel shared by every concurrent track call
-    // with no request correlation, so updates are matched by hash; error
-    // strings carry no hash and may belong to another lookup's stream, so
-    // absence is confirmed against the dispatch-anchored page scan before
-    // answering null, and any other failure degrades to that scan. The
-    // underlying stream can't be cancelled from JS and stays open
-    // node-side until the payment is terminal; only the listener is
-    // removed after the first matching update.
+    // TrackPaymentV2 gives a real per-payment query: the latest update for
+    // this hash is the payment's current state (no_inflight_updates is
+    // false, so an in-flight payment answers immediately). One stream per
+    // hash is shared by all lookups (see TrackPaymentStreams), since a
+    // stream can't be cancelled from JS and stays open node-side until the
+    // payment is terminal. Any failure, NOT_FOUND included, is settled by
+    // the dispatch-anchored page scan: error strings carry no hash and may
+    // belong to another lookup's stream. The scan answers null only on a
+    // conclusive miss and throws when it can't tell, so a failed scan
+    // never reads as no record.
     lookupPayment = async (data: {
         payment_hash: string;
         creation_date_start?: number;
     }) => {
-        const expectedHash = data.payment_hash.toLowerCase();
         try {
-            const decision: any = await new Promise((resolve, reject) => {
-                const streamingCall = this.lnc.lnd.router.trackPaymentV2({
-                    payment_hash: Base64Utils.hexToBase64(data.payment_hash),
-                    no_inflight_updates: false
-                });
-
-                const { LncModule } = NativeModules;
-                const eventEmitter = new NativeEventEmitter(LncModule);
-
-                let settled = false;
-                let subscription: EmitterSubscription;
-                const settle = (fn: () => void) => {
-                    if (settled) return;
-                    settled = true;
-                    clearTimeout(timer);
-                    subscription.remove();
-                    fn();
-                };
-                const timer = setTimeout(
-                    () => settle(() => reject(new Error('Request timeout'))),
-                    TRACK_PAYMENT_TIMEOUT_MS
-                );
-
-                subscription = eventEmitter.addListener(
-                    streamingCall,
-                    (event: any) => {
-                        const trackDecision = decideLncTrackEvent(
-                            event?.result,
-                            expectedHash
-                        );
-                        if (trackDecision.kind === 'payment') {
-                            settle(() => resolve(trackDecision));
-                        } else if (trackDecision.kind === 'not_found') {
-                            settle(() => resolve(trackDecision));
-                        } else if (trackDecision.kind === 'error') {
-                            settle(() => reject(trackDecision.error));
-                        }
-                        // 'ignore': EOF or another payment's update
+            return await this.trackPaymentStreams.lookup(
+                data.payment_hash,
+                TRACK_PAYMENT_TIMEOUT_MS,
+                () => {
+                    const streamingCall = this.lnc.lnd.router.trackPaymentV2({
+                        payment_hash: Base64Utils.hexToBase64(
+                            data.payment_hash
+                        ),
+                        no_inflight_updates: false
+                    });
+                    // every track stream reports on the same event name
+                    if (!this.trackPaymentSubscription) {
+                        const { LncModule } = NativeModules;
+                        this.trackPaymentSubscription = new NativeEventEmitter(
+                            LncModule
+                        ).addListener(streamingCall, this.onTrackPaymentEvent);
                     }
-                );
-            });
-            if (decision.kind === 'payment') return decision.result;
-            // not_found: only answer null when the scan agrees. A full page
-            // that missed can't confirm the absence
-            return await this.scanForPayment(data).catch((e) => {
-                if (isPaymentLookupInconclusive(e)) throw e;
-                return null;
-            });
+                }
+            );
         } catch {
             return await this.scanForPayment(data);
+        }
+    };
+    private onTrackPaymentEvent = (event: any) => {
+        const decision = decideLncTrackEvent(event?.result);
+        if (decision.kind === 'payment') {
+            this.trackPaymentStreams.update(
+                decision.hash,
+                decision.result,
+                isTerminalPaymentStatus(decision.result.status)
+            );
+        } else if (decision.kind === 'error') {
+            this.trackPaymentStreams.fail(decision.error);
         }
     };
     getNewAddress = async (data: any) =>

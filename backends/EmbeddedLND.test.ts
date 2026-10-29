@@ -460,13 +460,15 @@ describe('EmbeddedLND.lookupPayment', () => {
         ).resolves.toBe(payment);
     });
 
-    it('keeps NOT_FOUND as the answer when the confirming scan fails', async () => {
+    // the NOT_FOUND may be another stream's, so an unconfirmed absence
+    // must not read as no record: that counts toward never-dispatched
+    it('rejects when the scan confirming a NOT_FOUND fails', async () => {
         mockTrackPaymentV2.mockRejectedValue(NOT_FOUND);
         mockListPayments.mockRejectedValue(new Error('rpc error'));
 
         await expect(
             new EmbeddedLND().lookupPayment({ payment_hash: HASH })
-        ).resolves.toBeNull();
+        ).rejects.toThrow('rpc error');
     });
 
     it('does not answer null when NOT_FOUND meets a full page that missed', async () => {

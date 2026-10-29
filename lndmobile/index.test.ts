@@ -45,6 +45,7 @@ jest.mock('../stores/Stores', () => ({
 }));
 
 import {
+    clearTrackPaymentStreams,
     listPayments,
     sendKeysendPaymentV2,
     sendPaymentV2Sync,
@@ -74,8 +75,12 @@ const paymentEvent = (
 const emit = (event: any) => emitter.emit('RouterTrackPaymentV2', event);
 
 describe('trackPaymentV2', () => {
+    beforeEach(() => {
+        (sendStreamCommand as jest.Mock).mockClear();
+    });
+
     afterEach(() => {
-        emitter.removeAllListeners('RouterTrackPaymentV2');
+        clearTrackPaymentStreams();
         jest.useRealTimers();
     });
 
@@ -138,11 +143,47 @@ describe('trackPaymentV2', () => {
         await expect(promise).rejects.toThrow('Request timeout');
     });
 
-    it('removes its listener once settled', async () => {
+    it('shares one stream between lookups of a held payment', async () => {
+        const first = trackPaymentV2(HASH_HEX);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT));
+        await first;
+
+        // the stream can't be cancelled and stays open while the payment
+        // is held, so a later poll reads it instead of opening another
+        await expect(trackPaymentV2(HASH_HEX)).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.IN_FLIGHT
+        });
+        expect(sendStreamCommand).toHaveBeenCalledTimes(1);
+        expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(1);
+
+        // a terminal update ends the stream; the next lookup opens a new
+        // one, which lnd answers and closes at once
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(0);
+        const next = trackPaymentV2(HASH_HEX);
+        expect(sendStreamCommand).toHaveBeenCalledTimes(2);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(next).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
+    });
+
+    it('removes its listener once no stream is open', async () => {
         const promise = trackPaymentV2(HASH_HEX);
+        await Promise.resolve();
         expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(1);
         emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
         await promise;
+        expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(0);
+    });
+
+    it('rejects when the stream command fails', async () => {
+        (sendStreamCommand as jest.Mock).mockRejectedValueOnce(
+            new Error('lnd is not running')
+        );
+        await expect(trackPaymentV2(HASH_HEX)).rejects.toThrow(
+            'lnd is not running'
+        );
         expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(0);
     });
 });
