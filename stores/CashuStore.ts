@@ -66,6 +66,7 @@ import CashuUtils, {
     PendingMelt,
     selectUntrackedCdkMelts
 } from '../utils/CashuUtils';
+import BackendUtils from '../utils/BackendUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
 import { maxCashuSweepFeeReserve } from '../utils/FeeUtils';
 import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
@@ -6715,8 +6716,12 @@ export default class CashuStore {
                     this.loading = false;
                     return {
                         success: false,
+                        // Only backends with an ecash wallet can receive the
+                        // token there instead
                         errorMessage: localeString(
-                            'stores.CashuStore.sweepFeeTooHigh',
+                            BackendUtils.supportsCashuWallet()
+                                ? 'stores.CashuStore.sweepFeeTooHigh'
+                                : 'stores.CashuStore.sweepFeeTooHighNoEcash',
                             {
                                 fee: meltQuote.fee_reserve,
                                 amount: tokenAmt
@@ -6991,6 +6996,16 @@ export default class CashuStore {
                 return false;
             }
 
+            // Same limit as a self-custody claim: the reserve comes out of
+            // what the node receives
+            if (feeReserve > maxCashuSweepFeeReserve(amountToSweep)) {
+                console.warn(
+                    `Sweep ${mintUrl}: Fee reserve (${feeReserve}) is above the limit for ${amountToSweep} sats. Not sweeping.`
+                );
+                this.loading = false;
+                return false;
+            }
+
             if (__DEV__) {
                 console.log(
                     `Sweep ${mintUrl}: Creating final invoice for ${receiveAmtSat} sats`
@@ -7016,6 +7031,13 @@ export default class CashuStore {
                 mintUrl,
                 finalInvoice.paymentRequest
             );
+            // The final invoice was sized from the first reserve, so the
+            // quote for it may not reserve more
+            if (finalMeltQuote.fee_reserve > feeReserve) {
+                throw new Error(
+                    `Melt fee reserve ${finalMeltQuote.fee_reserve} exceeds ${feeReserve}`
+                );
+            }
             if (__DEV__) {
                 console.log(`Sweep ${mintUrl}: Executing melt via CDK`);
             }

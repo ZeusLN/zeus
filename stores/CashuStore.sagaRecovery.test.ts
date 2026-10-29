@@ -20,6 +20,10 @@ jest.mock('../utils/NostrUtils', () => ({}));
 jest.mock('../utils/NostrMintBackup', () => ({}));
 jest.mock('../utils/MigrationUtils', () => ({}));
 jest.mock('../utils/ThemeUtils', () => ({}));
+jest.mock('../utils/BackendUtils', () => ({
+    __esModule: true,
+    default: {}
+}));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../NavigationService', () => ({}));
 jest.mock('../cashu-cdk', () => ({
