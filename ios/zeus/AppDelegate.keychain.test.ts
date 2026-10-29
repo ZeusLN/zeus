@@ -42,6 +42,13 @@ static OSStatus FakeSecItemDelete(CFDictionaryRef query) {
 }
 #define SecItemDelete FakeSecItemDelete
 
+// LOCAL_ITEMS=1 stands in for device-local items an earlier install left
+static OSStatus FakeSecItemCopyMatching(CFDictionaryRef query, CFTypeRef *result) {
+  const char *local = getenv("LOCAL_ITEMS");
+  return local && atoi(local) ? errSecSuccess : errSecItemNotFound;
+}
+#define SecItemCopyMatching FakeSecItemCopyMatching
+
 // In-memory stand-in for standardUserDefaults, so runs share no state and
 // write nothing to the developer's ~/Library/Preferences
 @interface FakeDefaults : NSObject
@@ -96,7 +103,8 @@ int main(int argc, const char *argv[]) {
       @"checks": @(checks),
       @"pending": @(pending),
       @"deleted": @(gDeleted.count),
-      @"flag": @([defaults boolForKey:kHasRunBeforeKey])
+      @"flag": @([defaults boolForKey:kHasRunBeforeKey]),
+      @"reinstalled": @([defaults boolForKey:kKeychainSurvivedReinstallKey])
     };
     NSData *json = [NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
     printf("%s\\n", [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding].UTF8String);
@@ -154,7 +162,8 @@ int main(int argc, const char *argv[]) {
             if (dir) fs.rmSync(dir, { recursive: true, force: true });
         });
 
-        const run = (
+        const runWith = (
+            localItems: boolean,
             defaultsFlag: boolean,
             defaultsFile: string,
             ...events: string[]
@@ -163,9 +172,20 @@ int main(int argc, const char *argv[]) {
                 execFileSync(
                     binary,
                     [defaultsFlag ? '1' : '0', defaultsFile, ...events],
-                    { encoding: 'utf8' }
+                    {
+                        encoding: 'utf8',
+                        env: {
+                            ...process.env,
+                            LOCAL_ITEMS: localItems ? '1' : '0'
+                        }
+                    }
                 )
             );
+        const run = (
+            defaultsFlag: boolean,
+            defaultsFile: string,
+            ...events: string[]
+        ) => runWith(false, defaultsFlag, defaultsFile, ...events);
 
         // Before the first unlock after a reboot, a background launch on an
         // install that has run before reads empty defaults
@@ -175,7 +195,8 @@ int main(int argc, const char *argv[]) {
                     checks: 0,
                     pending: true,
                     deleted: 0,
-                    flag: false
+                    flag: false,
+                    reinstalled: false
                 });
             }
         });
@@ -186,7 +207,8 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
             }
         });
@@ -196,7 +218,8 @@ int main(int argc, const char *argv[]) {
                 checks: 1,
                 pending: false,
                 deleted: 0,
-                flag: true
+                flag: true,
+                reinstalled: false
             });
         });
 
@@ -205,7 +228,41 @@ int main(int argc, const char *argv[]) {
                 checks: 1,
                 pending: false,
                 deleted: 0,
-                flag: false
+                flag: false,
+                reinstalled: false
+            });
+        });
+
+        describe('reinstall on the same device', () => {
+            it('marks a fresh install that finds device-local items as a reinstall', () => {
+                expect(runWith(true, false, missing, 'launch:1')).toEqual({
+                    checks: 1,
+                    pending: false,
+                    deleted: 5,
+                    flag: true,
+                    reinstalled: true
+                });
+            });
+
+            it('does not mark a first install on a new device', () => {
+                expect(
+                    runWith(false, false, missing, 'launch:1')
+                ).toMatchObject({ deleted: 5, reinstalled: false });
+            });
+
+            it('does not mark an install that has run before', () => {
+                expect(runWith(true, true, withFlag, 'launch:1')).toMatchObject(
+                    { deleted: 0, reinstalled: false }
+                );
+                expect(
+                    runWith(true, false, withFlag, 'launch:1')
+                ).toMatchObject({ deleted: 0, reinstalled: false });
+            });
+
+            it('marks the reinstall when the check was deferred to unlock', () => {
+                expect(
+                    runWith(true, false, missing, 'launch:0', 'unlock')
+                ).toMatchObject({ checks: 1, deleted: 5, reinstalled: true });
             });
         });
 
@@ -215,13 +272,15 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
                 expect(run(false, withFlag, 'launch:0', 'unlock')).toEqual({
                     checks: 1,
                     pending: false,
                     deleted: 0,
-                    flag: false
+                    flag: false,
+                    reinstalled: false
                 });
             });
 
@@ -230,7 +289,8 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
             });
 
@@ -239,7 +299,8 @@ int main(int argc, const char *argv[]) {
                     checks: 0,
                     pending: true,
                     deleted: 0,
-                    flag: false
+                    flag: false,
+                    reinstalled: false
                 });
                 expect(
                     run(false, missing, 'launch:0', 'active:0', 'active:1')
@@ -247,7 +308,8 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
             });
 
@@ -266,7 +328,8 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
                 expect(
                     run(
@@ -281,7 +344,8 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
             });
 
@@ -292,7 +356,8 @@ int main(int argc, const char *argv[]) {
                     checks: 1,
                     pending: false,
                     deleted: 5,
-                    flag: true
+                    flag: true,
+                    reinstalled: false
                 });
             });
         });
