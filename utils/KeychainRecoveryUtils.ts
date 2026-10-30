@@ -58,6 +58,14 @@ export interface RecoveryResult {
 export interface RecoveryScanResult {
     settingsFound: RecoveryResult[];
     otherDataFound: RecoveryResult[];
+    /**
+     * Legacy copies of a key that current storage can read, whose data differs
+     * from the live value. The app may have rewritten a key after losing it
+     * (a new swaps rescue key, an emptied swap list), leaving the only copy of
+     * the old data here. For the user to review; restoreOtherData must never
+     * be handed these automatically, since that would overwrite live data.
+     */
+    divergentDataFound: RecoveryResult[];
     hasCurrentSettings: boolean;
     error?: string;
 }
@@ -68,26 +76,46 @@ const CRITICAL_KEYS = [
     { key: LEGACY_STORAGE_KEY, description: 'Legacy Wallet Configurations' }
 ];
 
-const OTHER_KEYS = [
-    { key: CONTACTS_KEY, description: 'Contacts' },
-    { key: NOTES_KEY, description: 'Notes' },
+// reviewDivergence: report a legacy copy of a live key whose data differs
+// from it (divergentDataFound). Only for keys whose old data can matter after
+// the app rewrote them; keys that change in normal use (backup time, units,
+// filters, ...) would differ on most installs and bury the ones that matter.
+const OTHER_KEYS: Array<{
+    key: string;
+    description: string;
+    reviewDivergence?: boolean;
+}> = [
+    { key: CONTACTS_KEY, description: 'Contacts', reviewDivergence: true },
+    { key: NOTES_KEY, description: 'Notes', reviewDivergence: true },
     { key: LAST_CHANNEL_BACKUP_STATUS, description: 'Channel Backup Status' },
     { key: LAST_CHANNEL_BACKUP_TIME, description: 'Channel Backup Time' },
     { key: ADDRESS_ACTIVATED_STRING, description: 'Lightning Address Status' },
     { key: HASHES_STORAGE_STRING, description: 'Lightning Address Hashes' },
     { key: POS_HIDDEN_KEY, description: 'POS Hidden Key' },
     { key: POS_STANDALONE_KEY, description: 'POS Standalone Key' },
-    { key: CATEGORY_KEY, description: 'POS Categories' },
-    { key: PRODUCT_KEY, description: 'POS Products' },
+    {
+        key: CATEGORY_KEY,
+        description: 'POS Categories',
+        reviewDivergence: true
+    },
+    { key: PRODUCT_KEY, description: 'POS Products', reviewDivergence: true },
     { key: UNIT_KEY, description: 'Unit Preferences' },
     { key: HIDDEN_ACCOUNTS_KEY, description: 'Hidden Accounts' },
     { key: CURRENCY_CODES_KEY, description: 'Currency Codes' },
     { key: ACTIVITY_FILTERS_KEY, description: 'Activity Filters' },
     { key: IS_BACKED_UP_KEY, description: 'Backup Status' },
-    { key: LSPS_ORDERS_KEY, description: 'LSP Orders' },
-    { key: SWAPS_KEY, description: 'Swaps' },
-    { key: REVERSE_SWAPS_KEY, description: 'Reverse Swaps' },
-    { key: SWAPS_RESCUE_KEY, description: 'Swap Rescue Data' },
+    { key: LSPS_ORDERS_KEY, description: 'LSP Orders', reviewDivergence: true },
+    { key: SWAPS_KEY, description: 'Swaps', reviewDivergence: true },
+    {
+        key: REVERSE_SWAPS_KEY,
+        description: 'Reverse Swaps',
+        reviewDivergence: true
+    },
+    {
+        key: SWAPS_RESCUE_KEY,
+        description: 'Swap Rescue Data',
+        reviewDivergence: true
+    },
     { key: SWAPS_LAST_USED_KEY, description: 'Last Used Swap Provider' }
 ];
 
@@ -220,7 +248,8 @@ class KeychainRecoveryUtils {
      */
     private async scanKey(
         key: string,
-        description: string
+        description: string,
+        includeShadowedCloud = false
     ): Promise<RecoveryResult[]> {
         const results: RecoveryResult[] = [];
         const sources = this.getStorageSources();
@@ -235,8 +264,12 @@ class KeychainRecoveryUtils {
             // startup, so a user whose wallets vanished always has
             // one, and the cloud copy may be the only place left that holds
             // their wallets.
+            //
+            // includeShadowedCloud reads it anyway so the caller can compare it
+            // with the live value instead of offering it as a restore source.
             if (
                 source === 'prefixed-cloud' &&
+                !includeShadowedCloud &&
                 results.some(
                     (r) =>
                         r.source === 'current' &&
@@ -264,6 +297,7 @@ class KeychainRecoveryUtils {
         const result: RecoveryScanResult = {
             settingsFound: [],
             otherDataFound: [],
+            divergentDataFound: [],
             hasCurrentSettings: false
         };
 
@@ -280,18 +314,42 @@ class KeychainRecoveryUtils {
             );
 
             // Scan other data keys
-            for (const { key, description } of OTHER_KEYS) {
-                const keyResults = await this.scanKey(key, description);
-                // A key current storage can read is live, not orphaned.
-                // Legacy copies of it are older snapshots (the migration
-                // never deleted them), so offering them would invite
-                // overwriting live data.
-                if (keyResults.some((r) => r.source === 'current')) continue;
+            for (const { key, description, reviewDivergence } of OTHER_KEYS) {
+                const keyResults = await this.scanKey(
+                    key,
+                    description,
+                    reviewDivergence
+                );
+                // A key current storage can read is live, not orphaned, so
+                // none of its copies are restore candidates. For the keys
+                // that opt in, a legacy copy that differs from the live value
+                // is still reported, for review only: the app rewrites some
+                // keys after losing them, and the old data may exist nowhere
+                // else. One entry per distinct value, from the highest-ranked
+                // source holding it.
+                const live = keyResults.find((r) => r.source === 'current');
+                if (live) {
+                    if (!reviewDivergence) continue;
+                    const seen = new Set<string>([live.data]);
+                    const legacy = keyResults
+                        .filter((r) => r.source !== 'current')
+                        .sort(
+                            (a, b) =>
+                                KeychainRecoveryUtils.rankSource(a.source) -
+                                KeychainRecoveryUtils.rankSource(b.source)
+                        );
+                    for (const r of legacy) {
+                        if (seen.has(r.data)) continue;
+                        seen.add(r.data);
+                        result.divergentDataFound.push(r);
+                    }
+                    continue;
+                }
                 result.otherDataFound.push(...keyResults);
             }
 
             console.log(
-                `[Recovery] Scan complete. Settings found: ${result.settingsFound.length}, Other data: ${result.otherDataFound.length}`
+                `[Recovery] Scan complete. Settings found: ${result.settingsFound.length}, Other data: ${result.otherDataFound.length}, Divergent: ${result.divergentDataFound.length}`
             );
         } catch (error) {
             console.error('[Recovery] Error during scan:', error);
@@ -454,6 +512,18 @@ class KeychainRecoveryUtils {
         ];
 
     /**
+     * Position of a source in SOURCE_PRECEDENCE. An unranked source sorts last
+     * rather than first, so adding a source without updating the list cannot
+     * silently win.
+     */
+    private static rankSource(source: RecoveryResult['source']): number {
+        const index = KeychainRecoveryUtils.SOURCE_PRECEDENCE.indexOf(source);
+        return index === -1
+            ? KeychainRecoveryUtils.SOURCE_PRECEDENCE.length
+            : index;
+    }
+
+    /**
      * Groups recovery results by key: one group per key, most trusted first.
      *
      * Results for a key are returned newest-trusted-first, so `[0]` is the
@@ -474,15 +544,7 @@ class KeychainRecoveryUtils {
             }
         }
 
-        const rank = (source: RecoveryResult['source']) => {
-            const index =
-                KeychainRecoveryUtils.SOURCE_PRECEDENCE.indexOf(source);
-            // An unranked source sorts last rather than first, so adding a
-            // source without updating the list cannot silently win.
-            return index === -1
-                ? KeychainRecoveryUtils.SOURCE_PRECEDENCE.length
-                : index;
-        };
+        const rank = KeychainRecoveryUtils.rankSource;
 
         for (const [, group] of grouped) {
             group.sort((a, b) => rank(a.source) - rank(b.source));

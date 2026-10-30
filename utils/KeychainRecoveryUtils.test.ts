@@ -216,15 +216,21 @@ describe('KeychainRecoveryUtils', () => {
             });
         });
 
-        it('still hides the prefixed-cloud copy of a live non-settings key', async () => {
+        it('reports the prefixed-cloud copy of a live non-settings key for review only', async () => {
             storage.getItem.mockImplementation(async (key: string) =>
                 key === 'contacts' ? '[]' : (false as any)
             );
             rawItem.mockResolvedValue('[{"name":"old"}]' as any);
 
-            await utils.scanForRecoverableData();
+            const result = await utils.scanForRecoverableData();
 
-            expect(rawItem).not.toHaveBeenCalledWith('zeus:contacts', true);
+            const cloudContacts = expect.objectContaining({
+                key: 'contacts',
+                source: 'prefixed-cloud',
+                data: '[{"name":"old"}]'
+            });
+            expect(result.otherDataFound).not.toContainEqual(cloudContacts);
+            expect(result.divergentDataFound).toContainEqual(cloudContacts);
         });
 
         it('offers the prefixed-cloud copy when current storage misses', async () => {
@@ -271,6 +277,132 @@ describe('KeychainRecoveryUtils', () => {
             const result = await utils.scanForRecoverableData();
 
             expect(result.otherDataFound).toEqual([]);
+        });
+
+        // #4711 part 1b. Stuck desync: the current read missed, so the Swaps
+        // screen made a new rescue key, and the old mnemonic that pending
+        // reverse swaps need survives only in the prefixed-cloud copy. It must
+        // be reported for review, but never as a restore candidate.
+        it('reports a legacy copy that differs from the live value', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'new mnemonic' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === 'zeus:swaps-rescue' ? 'old mnemonic' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({
+                    key: 'swaps-rescue',
+                    source: 'prefixed-cloud',
+                    data: 'old mnemonic'
+                })
+            ]);
+            expect(result.otherDataFound).toEqual([]);
+        });
+
+        it('does not report a legacy copy identical to the live value', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps' ? '[{"id":1}]' : (false as any)
+            );
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps' ? '[{"id":1}]' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
+        it('reports only the legacy copies of a live key that differ from it', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'new mnemonic' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === 'zeus:swaps-rescue' ? 'old mnemonic' : (null as any)
+            );
+            keychain.getInternetCredentials.mockImplementation(
+                async (key: string, opts?: any) => {
+                    if (key !== 'swaps-rescue') return false as any;
+                    return {
+                        password: opts?.cloudSync
+                            ? 'new mnemonic'
+                            : 'older mnemonic'
+                    } as any;
+                }
+            );
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'new mnemonic' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(
+                result.divergentDataFound.map((r) => [r.source, r.data])
+            ).toEqual([
+                ['prefixed-cloud', 'old mnemonic'],
+                ['unprefixed-local', 'older mnemonic']
+            ]);
+            expect(result.otherDataFound).toEqual([]);
+        });
+
+        it('reports one entry per distinct legacy value, from the highest-ranked source', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'new mnemonic' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === 'zeus:swaps-rescue' ? 'old mnemonic' : (null as any)
+            );
+            keychain.getInternetCredentials.mockImplementation(
+                async (key: string) =>
+                    key === 'swaps-rescue'
+                        ? ({ password: 'old mnemonic' } as any)
+                        : (false as any)
+            );
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'old mnemonic' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(
+                result.divergentDataFound.map((r) => [r.source, r.data])
+            ).toEqual([['prefixed-cloud', 'old mnemonic']]);
+        });
+
+        it('does not report a differing copy of a key that changes in normal use', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'units' ? 'sats' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === 'zeus:units' ? 'BTC' : (null as any)
+            );
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'units' ? 'fiat' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+            expect(rawItem).not.toHaveBeenCalledWith('zeus:units', true);
+        });
+
+        it('keeps offering legacy copies of a key current storage cannot read', async () => {
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'contacts' ? '[{"name":"bob"}]' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.otherDataFound).toContainEqual(
+                expect.objectContaining({
+                    key: 'contacts',
+                    source: 'encrypted-storage'
+                })
+            );
+            expect(result.divergentDataFound).toEqual([]);
         });
 
         it('does not set hasCurrentSettings from the legacy key alone', async () => {
@@ -764,6 +896,12 @@ describe('KeychainRecoveryUtils', () => {
             await utils.restoreOtherData(scan.otherDataFound);
 
             expect(store.contacts).toBe('["live"]');
+            expect(scan.divergentDataFound).toContainEqual(
+                expect.objectContaining({
+                    key: 'contacts',
+                    data: '["jan-2026"]'
+                })
+            );
         });
 
         it('restores the newer prefixed-cloud copy over the older unprefixed one', async () => {
