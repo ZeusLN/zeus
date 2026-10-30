@@ -568,6 +568,9 @@ export default class Receive extends React.Component<
             }
 
             if (lnurl) {
+                // maxWithdrawable is in msats: show and convert it in sats,
+                // as componentDidMount does, not in the unit the screen had
+                this.props.UnitsStore.resetUnits();
                 let needInbound = false;
                 if (
                     this.state.lspIsActive &&
