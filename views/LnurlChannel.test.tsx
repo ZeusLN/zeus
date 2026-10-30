@@ -31,11 +31,13 @@ jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/BackendUtils', () => ({
     connectPeer: jest.fn(() => Promise.resolve())
 }));
-jest.mock('react-native-blob-util', () => ({
-    fetch: jest.fn(() => Promise.resolve({ json: () => ({ status: 'OK' }) }))
+jest.mock('../utils/LnurlFetchUtils', () => ({
+    fetchLnurlUrl: jest.fn(() =>
+        Promise.resolve({ json: () => ({ status: 'OK' }) })
+    )
 }));
 
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
 import BackendUtils from '../utils/BackendUtils';
 import LnurlChannel from './LnurlChannel';
 
@@ -60,13 +62,13 @@ const connectButton = () =>
     screen.getByRole('button', { name: 'views.LnurlChannel.connect' });
 
 const callbackQuery = () => {
-    const [, url] = (ReactNativeBlobUtil.fetch as jest.Mock).mock.calls[0];
+    const [url] = (fetchLnurlUrl as jest.Mock).mock.calls[0];
     return new URL(url).searchParams;
 };
 
 describe('LnurlChannel', () => {
     beforeEach(() => {
-        (ReactNativeBlobUtil.fetch as jest.Mock).mockClear();
+        (fetchLnurlUrl as jest.Mock).mockClear();
         (BackendUtils.connectPeer as jest.Mock).mockClear();
     });
 
@@ -92,12 +94,12 @@ describe('LnurlChannel', () => {
 
         expect(connectButton()).toBeDisabled();
         await fireEvent.press(connectButton());
-        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+        expect(fetchLnurlUrl).not.toHaveBeenCalled();
 
         await act(async () => connected());
         expect(connectButton()).toBeEnabled();
         await fireEvent.press(connectButton());
-        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+        expect(fetchLnurlUrl).toHaveBeenCalledTimes(1);
     });
 
     it('keeps Connect disabled when the peer connection fails', async () => {
