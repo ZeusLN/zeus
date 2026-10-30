@@ -2,6 +2,8 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
+// the pay screens render PaymentInFlightNotice, which reads screen focus
+jest.mock('@react-navigation/native', () => ({ useIsFocused: () => true }));
 jest.mock('../stores/Stores');
 jest.mock('../utils/LocaleUtils');
 jest.mock('react-native-blob-util', () => ({}));
