@@ -1511,6 +1511,65 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
         expect(connection.activity[0].createdAt).toEqual(createdAt);
     });
 
+    it.each([
+        ['pending', undefined],
+        ['failed', 'views.SendingLightning.paymentTimedOut']
+    ])(
+        'upsertPayInvoiceActivity dates a %s retry of a failed invoice to the retry',
+        async (status, error) => {
+            const { store } = createStore({
+                paymentsStore: {
+                    payments: [],
+                    getPayments: jest.fn(async () => [])
+                }
+            });
+            const connection = addConnection(store, {
+                activity: [
+                    {
+                        id: normalizedInvoice,
+                        type: 'pay_invoice',
+                        payment_source: 'lightning',
+                        status: 'failed',
+                        satAmount: 100,
+                        error: 'error.failureReasonNoRoute',
+                        createdAt: new Date(
+                            Date.now() -
+                                NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS -
+                                1000
+                        )
+                    }
+                ]
+            });
+            const retriedAt = new Date();
+
+            (store as any).upsertPayInvoiceActivity(connection, {
+                id: normalizedInvoice,
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                status,
+                satAmount: 100,
+                error,
+                createdAt: retriedAt
+            });
+
+            expect(connection.activity).toHaveLength(1);
+            expect(connection.activity[0].createdAt).toEqual(retriedAt);
+
+            // The hold of the retry must not be abandoned for the age of
+            // the first attempt.
+            await (store as any).reconcilePendingPayInvoiceActivities(
+                connection
+            );
+
+            expect(connection.activity[0].status).toBe(status);
+            expect(
+                connection.isUnresolvedPayInvoiceActivity(
+                    connection.activity[0]
+                )
+            ).toBe(true);
+        }
+    );
+
     it('upsertPayInvoiceActivity clears error when promoting to success', () => {
         const { store } = createStore();
         const connection = addConnection(store, {
