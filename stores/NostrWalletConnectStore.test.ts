@@ -83,6 +83,7 @@ jest.mock('../storage', () => ({
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { autorun } from 'mobx';
+import { DeviceEventEmitter, NativeModules, Platform } from 'react-native';
 import {
     NWCWalletService,
     NWCWalletServiceKeyPair,
@@ -3863,5 +3864,133 @@ describe('NostrWalletConnectStore wallet deletion', () => {
         expect(storedItems.has(NWC_CONNECTIONS_KEY)).toBe(false);
         expect(storedItems.has(NWC_CLIENT_KEYS)).toBe(false);
         expect(storedItems.has(NWC_SERVICE_KEYS)).toBe(false);
+    });
+});
+
+describe('NostrWalletConnectStore Android Stop Service', () => {
+    const RELAY = 'wss://relay.example';
+    const originalOS = Platform.OS;
+    let unsubscribe: jest.Mock;
+
+    beforeEach(() => {
+        Platform.OS = 'android';
+        unsubscribe = jest.fn();
+        NativeModules.NostrConnectModule = {
+            initialize: jest.fn().mockResolvedValue(0),
+            updateTranslationCache: jest.fn(),
+            stopNostrConnectService: jest.fn().mockResolvedValue(true),
+            unbindNostrConnectService: jest.fn().mockResolvedValue(true)
+        };
+    });
+
+    afterEach(() => {
+        Platform.OS = originalOS;
+        delete NativeModules.NostrConnectModule;
+        DeviceEventEmitter.removeAllListeners('NostrConnectServiceStopped');
+    });
+
+    // A store serving one connection with Persistent Mode on
+    async function buildRunningStore(initialize = true) {
+        const store = new NostrWalletConnectStore(
+            { connecting: false } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        store.persistentNWCServiceEnabled = true;
+        (store as any).isInitialized = true;
+        (store as any).walletServiceKeys = {
+            privateKey: SERVICE_PRIV,
+            publicKey: SERVICE_PUB
+        };
+        (store as any).nwcWalletServices.set(RELAY, { connected: true });
+        (store as any).publishedRelays.add(RELAY);
+        (store as any).activeSubscriptions.set('conn-1', unsubscribe);
+        if (initialize) {
+            await (store as any).initializeAndroidPersistentService();
+        }
+        return store;
+    }
+
+    it('stops answering requests and unbinds when Stop Service is pressed', async () => {
+        const store = await buildRunningStore();
+
+        DeviceEventEmitter.emit('NostrConnectServiceStopped', {});
+        await flushMicrotasks();
+
+        expect(unsubscribe).toHaveBeenCalledTimes(1);
+        expect((store as any).activeSubscriptions.size).toBe(0);
+        expect(store.isServiceReady()).toBe(false);
+        expect((store as any).isInitialized).toBe(false);
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles Stop Service pressed before initialize resolves', async () => {
+        const store = await buildRunningStore(false);
+        NativeModules.NostrConnectModule.initialize.mockImplementation(
+            async () => {
+                DeviceEventEmitter.emit('NostrConnectServiceStopped', {});
+                return 0;
+            }
+        );
+
+        await (store as any).initializeAndroidPersistentService();
+        await flushMicrotasks();
+
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+        expect((store as any).activeSubscriptions.size).toBe(0);
+    });
+
+    it('still unbinds when the reset fails', async () => {
+        const store = await buildRunningStore();
+        jest.spyOn(store, 'reset').mockRejectedValue(new Error('x'));
+
+        DeviceEventEmitter.emit('NostrConnectServiceStopped', {});
+        await flushMicrotasks();
+
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+    });
+
+    it('still handles Stop Service after a node switch reset', async () => {
+        const store = await buildRunningStore();
+        await store.reset(true);
+
+        DeviceEventEmitter.emit('NostrConnectServiceStopped', {});
+        await flushMicrotasks();
+
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+    });
+
+    it('only unbinds when Persistent Mode is switched off', async () => {
+        const store = await buildRunningStore();
+        NativeModules.NostrConnectModule.stopNostrConnectService.mockImplementation(
+            async () => {
+                DeviceEventEmitter.emit('NostrConnectServiceStopped', {});
+                return true;
+            }
+        );
+
+        await store.setPersistentNWCServiceEnabled(false);
+        await flushMicrotasks();
+
+        expect(unsubscribe).not.toHaveBeenCalled();
+        expect(store.isServiceReady()).toBe(true);
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
     });
 });
