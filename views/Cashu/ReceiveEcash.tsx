@@ -744,7 +744,7 @@ export default class ReceiveEcash extends React.Component<
                                                             )}
                                                             onPress={() =>
                                                                 navigation.navigate(
-                                                                    'CashuLightningAddress'
+                                                                    'CreateCashuLightningAddress'
                                                                 )
                                                             }
                                                         />

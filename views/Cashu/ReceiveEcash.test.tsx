@@ -58,6 +58,12 @@ jest.mock('../../stores/LightningAddressStore', () => ({}));
 jest.mock('../../stores/UnitsStore', () => ({}));
 
 import * as React from 'react';
+import {
+    fireEvent,
+    render,
+    screen,
+    waitFor
+} from '@testing-library/react-native';
 import ReceiveEcash from './ReceiveEcash';
 import handleAnything from '../../utils/handleAnything';
 import { scanNfcTag } from '../../utils/NFCUtils';
@@ -544,5 +550,50 @@ describe('ReceiveEcash NFC lookups that were superseded', () => {
 
         expect(view.setState).toHaveBeenCalledWith({ nfcError: true });
         expect(view.subscribeInvoice).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('ReceiveEcash Lightning address tab', () => {
+    // An invoice on screen, the Lightning address tab selected and no
+    // ZEUS Pay address yet
+    const renderTab = async () => {
+        const navigate = jest.fn();
+        await render(
+            <ReceiveEcash
+                {...({
+                    navigation: { navigate },
+                    route: { params: { selectedIndex: 1 } },
+                    CashuStore: {
+                        invoice: 'lnbc1invoice',
+                        clearInvoice: jest.fn()
+                    },
+                    LightningAddressStore: { lightningAddress: '' },
+                    ModalStore: {},
+                    NodeInfoStore: {},
+                    PosStore: {},
+                    SettingsStore: {
+                        settings: {},
+                        getSettings: jest.fn(() => Promise.resolve({}))
+                    },
+                    UnitsStore: {}
+                } as any)}
+            />
+        );
+        return navigate;
+    };
+
+    const createButton = () =>
+        screen.root!.queryAll(
+            (node: any) =>
+                node.props.title === 'views.Receive.createLightningAddress'
+        )[0];
+
+    it('opens the Create Lightning address screen', async () => {
+        const navigate = await renderTab();
+        await waitFor(() => expect(createButton()).toBeTruthy());
+
+        await fireEvent.press(createButton());
+
+        expect(navigate).toHaveBeenCalledWith('CreateCashuLightningAddress');
     });
 });
