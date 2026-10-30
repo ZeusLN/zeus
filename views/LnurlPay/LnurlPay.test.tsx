@@ -31,7 +31,8 @@ jest.mock('../../utils/ThemeUtils', () => ({
 }));
 jest.mock('../../utils/LnurlPayUtils', () => ({
     verifyLnurlPayInvoice: jest.fn(),
-    isLnurlCallbackAllowed: jest.fn(() => ({ ok: true }))
+    isLnurlCallbackAllowed: jest.fn(() => ({ ok: true })),
+    getLnurlHost: jest.requireActual('../../utils/LnurlPayUtils').getLnurlHost
 }));
 // the callback request never settles, so Confirm only shows what it sent
 const mockBlobFetch = jest.fn((..._args: any[]) => new Promise(() => {}));
@@ -276,6 +277,54 @@ describe('LnurlPay fixed and variable requests', () => {
         expect(
             screen.queryByText('views.ClinkPay.fixedAmount', { exact: false })
         ).not.toBeOnTheScreen();
+    });
+});
+
+describe('LnurlPay domain', () => {
+    // js-lnurl's getDomain reads shop.example out of these callbacks
+    it.each([
+        'https://other.example\\@shop.example/callback',
+        'https://other.example#@shop.example/callback'
+    ])('names the host %s is sent to', async (callback) => {
+        await renderView({
+            lnurlParams: {
+                ...lnurlParams(1, 100000),
+                domain: 'shop.example',
+                callback
+            }
+        });
+
+        expect(screen.getByText('other.example')).toBeOnTheScreen();
+        expect(screen.queryByText('shop.example')).toBeNull();
+    });
+
+    it('names the callback host, not a domain sent by the server', async () => {
+        const alertSpy = jest
+            .spyOn(Alert, 'alert')
+            .mockImplementation(() => {});
+        mockBlobFetch.mockResolvedValueOnce({
+            json: () => ({ status: 'ERROR', reason: 'nope' })
+        });
+        await renderView({
+            lnurlParams: {
+                ...lnurlParams(FIXED_SATS, FIXED_SATS),
+                domain: 'shop.example'
+            },
+            lightningAddress: 'tips@example.com'
+        });
+
+        await fireEvent.press(screen.getByRole('button', { name: CONFIRM }));
+        await act(async () => {
+            await new Promise(setImmediate);
+        });
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            '[error] example.com says:',
+            'nope',
+            expect.any(Array),
+            { cancelable: false }
+        );
+        alertSpy.mockRestore();
     });
 });
 

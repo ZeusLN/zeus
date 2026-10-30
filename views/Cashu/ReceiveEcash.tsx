@@ -52,6 +52,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import CashuInvoice from '../../models/CashuInvoice';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { getLnurlHost } from '../../utils/LnurlPayUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { isNfcWithdraw, scanNfcTag } from '../../utils/NFCUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -472,6 +473,7 @@ export default class ReceiveEcash extends React.Component<
         const error_msg = CashuStore.error_msg;
 
         const lnurl = route.params?.lnurlParams;
+        const lnurlDomain = lnurl && getLnurlHost(lnurl.callback);
 
         const ClearButton = () => (
             <Icon
@@ -679,7 +681,7 @@ export default class ReceiveEcash extends React.Component<
                                                         'views.Receive.successCreate'
                                                     )} ${localeString(
                                                         'views.Receive.andSentTo'
-                                                    )} ${lnurl.domain}`
+                                                    )} ${lnurlDomain}`
                                                 }
                                             />
                                         )}
@@ -950,7 +952,7 @@ export default class ReceiveEcash extends React.Component<
                                                     (lnurl
                                                         ? ` ${localeString(
                                                               'views.Receive.andSubmitTo'
-                                                          )} ${lnurl.domain}`
+                                                          )} ${lnurlDomain}`
                                                         : '')
                                                 }
                                                 onPress={() => {
