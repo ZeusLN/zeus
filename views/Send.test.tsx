@@ -71,10 +71,11 @@ jest.mock('../stores/SettingsStore', () => ({
 }));
 
 import * as React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { TestInstance } from 'test-renderer';
 import Send from './Send';
 import BackendUtils from '../utils/BackendUtils';
+import { getRawAmountFromSats } from '../utils/AmountUtils';
 
 const BALANCE = 500000;
 
@@ -248,6 +249,149 @@ describe('Send on-chain fractional sats', () => {
 
         await fireEvent(hosts('AmountInput')[1], 'amountChange', '1000', 1000);
         expect(isProceedDisabled()).toBe(false);
+    });
+});
+
+describe('Send request arriving on the open screen', () => {
+    // what navigate('Send', params) does to a Send that is already mounted:
+    // the same instance gets new route params
+    const renderOpenView = async () => {
+        const ref = React.createRef<any>();
+        const { navigation, BalanceStore } = await renderView();
+        const props = {
+            navigation,
+            BalanceStore,
+            ContactStore: { contacts: [] },
+            InvoicesStore: {},
+            ModalStore: {},
+            NodeInfoStore: { supportsOffers: true },
+            SettingsStore: {
+                implementation: 'lnd',
+                settings: {},
+                getSettings: jest.fn(async () => ({}))
+            },
+            TransactionsStore: {},
+            UTXOsStore: {}
+        };
+        const show = (params: any) =>
+            screen.rerender(
+                <Send {...({ ...props, route: { params } } as any)} ref={ref} />
+            );
+        await show({
+            destination: 'bcrt1qexample',
+            transactionType: 'On-chain',
+            isValid: true
+        });
+        return { navigation, ref, receiveParams: show };
+    };
+
+    beforeEach(() => {
+        (getRawAmountFromSats as jest.Mock).mockImplementation((sats) => ({
+            amount: String(sats)
+        }));
+    });
+
+    const proceedParams = async (navigation: any) => {
+        await fireEvent.press(button('general.proceed'));
+        return navigation.navigate.mock.calls.find(
+            ([route]: [string]) => route === 'VerifyOnChain'
+        )[1];
+    };
+
+    it('turns send max off when another request replaces the one under review', async () => {
+        const { navigation, receiveParams } = await renderOpenView();
+        await turnSendMaxOn();
+
+        await receiveParams({
+            destination: 'bcrt1qother',
+            satAmount: '50000',
+            transactionType: 'On-chain',
+            isValid: true
+        });
+
+        expect(amountInput().props.amount).toBe('50000');
+        expect(await proceedParams(navigation)).toMatchObject({
+            destination: 'bcrt1qother',
+            satAmount: '50000',
+            fundMax: false
+        });
+    });
+
+    it('turns send max off when the same destination comes back with an amount', async () => {
+        const { navigation, receiveParams } = await renderOpenView();
+        await turnSendMaxOn();
+
+        await receiveParams({
+            destination: 'bcrt1qexample',
+            satAmount: '50000',
+            transactionType: 'On-chain',
+            isValid: true
+        });
+
+        expect(await proceedParams(navigation)).toMatchObject({
+            satAmount: '50000',
+            fundMax: false
+        });
+    });
+
+    it('starts over when a request for another destination names no amount', async () => {
+        const { ref, receiveParams } = await renderOpenView();
+        await enterAmount('250000', 250000);
+        await act(async () =>
+            ref.current.setState({
+                message: 'for the first destination',
+                additionalOutputs: [
+                    { address: 'bcrt1qsecond', amount: '1000', satAmount: 1000 }
+                ]
+            })
+        );
+        const { swipeButtonKey } = ref.current.state;
+
+        await receiveParams({
+            destination: '03'.padEnd(66, 'b'),
+            transactionType: 'Keysend',
+            isValid: true
+        });
+
+        expect(ref.current.state.amount).toBe('');
+        expect(ref.current.state.satAmount).toBe('0');
+        expect(ref.current.state.message).toBe('');
+        expect(ref.current.state.additionalOutputs).toEqual([]);
+        expect(ref.current.state.swipeButtonKey).not.toBe(swipeButtonKey);
+    });
+
+    it('keeps what was entered when the request under review is validated again', async () => {
+        const { ref, receiveParams } = await renderOpenView();
+        await enterAmount('250000', 250000);
+
+        await receiveParams({
+            destination: 'bcrt1qexample',
+            transactionType: 'On-chain'
+        });
+
+        expect(ref.current.state.amount).toBe('250000');
+        expect(ref.current.state.satAmount).toBe(250000);
+    });
+
+    it('keeps an amount handed in before any destination', async () => {
+        const { ref, receiveParams } = await renderOpenView();
+        await act(async () =>
+            ref.current.setState({
+                destination: '',
+                transactionType: undefined,
+                amount: '250000',
+                satAmount: '250000'
+            })
+        );
+
+        await receiveParams({
+            destination: '03'.padEnd(66, 'b'),
+            transactionType: 'Keysend',
+            isValid: true
+        });
+
+        expect(ref.current.state.amount).toBe('250000');
+        expect(ref.current.state.satAmount).toBe('250000');
     });
 });
 
