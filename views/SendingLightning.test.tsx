@@ -484,6 +484,23 @@ describe('SendingLightning donation', () => {
         expect(hostProps('DonationGiftIcon').donationHandled).toBe(false);
     });
 
+    it('does not record a donation still in flight as paid', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        // what LdkNode returns for a BOLT 11 payment still pending at its
+        // timeout
+        const sendPaymentSilently = jest
+            .fn()
+            .mockResolvedValue({ status: 'IN_FLIGHT', payment_hash: 'aa' });
+
+        await donate(sendPaymentSilently);
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(sendPaymentSilently).toHaveBeenCalledTimes(1);
+        expect(hostProps('DonationGiftIcon').payingDonation).toBe(false);
+        expect(hostProps('DonationGiftIcon').donationHandled).toBe(false);
+        expect(hostProps('DonationInfoModal').donationPreimage).toBe('');
+    });
+
     describe('when a step throws', () => {
         beforeEach(() => {
             jest.spyOn(console, 'error').mockImplementation(() => {});
