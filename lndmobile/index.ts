@@ -7,6 +7,10 @@ import Base64Utils from '../utils/Base64Utils';
 import { matchesExpectedPayment } from '../utils/EmbeddedLndPayUtils';
 import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
+import TrackPaymentStreams, {
+    TRACK_PAYMENT_STREAM_MAX_AGE_MS,
+    isTerminalPaymentStatus
+} from '../utils/TrackPaymentStreams';
 import {
     checkLndStreamErrorResponse,
     LndMobileEventEmitter
@@ -75,7 +79,9 @@ export const decodeState = (data: string): lnrpc.SubscribeStateResponse => {
  * @throws
  */
 export const stopLnd = async (): Promise<{ data: string }> => {
-    return await LndMobile.stopLnd();
+    const result = await LndMobile.stopLnd();
+    clearTrackPaymentStreams();
+    return result;
 };
 
 /**
@@ -444,6 +450,82 @@ export const decodeSendPaymentV2Result = (data: string): lnrpc.Payment => {
         base64Result: data
     });
 };
+
+// how long trackPaymentV2 waits for the stream's first update before
+// concluding the transport is wedged; an existing payment answers
+// immediately (no_inflight_updates is false) and an unknown hash errors
+// immediately, so this only fires when lnd isn't answering at all
+const TRACK_PAYMENT_TIMEOUT_MS = 10000;
+
+let trackPaymentListener: EmitterSubscription | undefined;
+const trackPaymentStreams = new TrackPaymentStreams<lnrpc.Payment>({
+    maxAgeMs: TRACK_PAYMENT_STREAM_MAX_AGE_MS,
+    onIdle: () => {
+        trackPaymentListener?.remove();
+        trackPaymentListener = undefined;
+    }
+});
+
+const onTrackPaymentEvent = (e: any) => {
+    try {
+        const error = checkLndStreamErrorResponse('RouterTrackPaymentV2', e);
+        if (error === 'EOF') return;
+        if (error) return trackPaymentStreams.fail(error);
+        // a transient (null) error report carries no payload
+        if (!e?.data) return;
+
+        const response = decodeSendPaymentV2Result(e.data);
+        if (!response.payment_hash) return;
+        trackPaymentStreams.update(
+            response.payment_hash,
+            response,
+            isTerminalPaymentStatus(response.status)
+        );
+    } catch (error: any) {
+        trackPaymentStreams.fail(new Error(error?.message || String(error)));
+    }
+};
+
+// forgets every open track stream, e.g. once lnd has stopped and they
+// have all ended
+export const clearTrackPaymentStreams = () => trackPaymentStreams.clear();
+
+/**
+ * Resolves with the tracked payment's current state: the latest
+ * TrackPaymentV2 update for its hash. One stream per hash is shared by
+ * all lookups (see TrackPaymentStreams), since a stream can't be
+ * cancelled from JS and stays open until the payment is terminal. The
+ * caller decides what a NOT_FOUND ("payment isn't initiated") rejection
+ * means: error events carry no hash and may belong to another hash's
+ * stream.
+ * @throws
+ */
+export const trackPaymentV2 = (
+    payment_hash: string,
+    timeoutMs: number = TRACK_PAYMENT_TIMEOUT_MS
+): Promise<lnrpc.Payment> =>
+    trackPaymentStreams.lookup(payment_hash, timeoutMs, () => {
+        if (!trackPaymentListener) {
+            trackPaymentListener = LndMobileEventEmitter.addListener(
+                'RouterTrackPaymentV2',
+                onTrackPaymentEvent
+            );
+        }
+        return sendStreamCommand<
+            routerrpc.ITrackPaymentRequest,
+            routerrpc.TrackPaymentRequest
+        >(
+            {
+                request: routerrpc.TrackPaymentRequest,
+                method: 'RouterTrackPaymentV2',
+                options: {
+                    payment_hash: Base64Utils.hexToBytes(payment_hash),
+                    no_inflight_updates: false
+                }
+            },
+            false
+        );
+    });
 
 export const sendKeysendPaymentV2 = async (
     request: any

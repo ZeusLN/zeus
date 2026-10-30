@@ -530,6 +530,112 @@ describe('LightningNodeConnect', () => {
         });
     });
 
+    describe('lookupPayment', () => {
+        const EVENT = 'routerrpc.Router.TrackPaymentV2';
+        const HASH = 'ab'.repeat(32);
+        const NOT_FOUND =
+            "rpc error: code = NotFound desc = payment isn't initiated";
+        let backend: LightningNodeConnect;
+        let lnc: any;
+        let emit: (result: string) => void;
+
+        const paymentEvent = (status: string) =>
+            JSON.stringify({ payment_hash: HASH, status });
+
+        beforeEach(async () => {
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            const listeners: Array<(event: any) => void> = [];
+            emit = (result) => listeners.forEach((cb) => cb({ result }));
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((_name: string, cb: any) => {
+                listeners.push(cb);
+                return {
+                    remove: () => listeners.splice(listeners.indexOf(cb), 1)
+                } as any;
+            });
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.router = { trackPaymentV2: jest.fn(() => EVENT) };
+            lnc.lnd.lightning.listPayments = jest.fn();
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('shares one stream between lookups of a held payment', async () => {
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            emit(paymentEvent('IN_FLIGHT'));
+            await expect(first).resolves.toMatchObject({
+                status: 'IN_FLIGHT'
+            });
+
+            await expect(
+                backend.lookupPayment({ payment_hash: HASH })
+            ).resolves.toMatchObject({ status: 'IN_FLIGHT' });
+            expect(lnc.lnd.router.trackPaymentV2).toHaveBeenCalledTimes(1);
+            expect(lnc.lnd.lightning.listPayments).not.toHaveBeenCalled();
+        });
+
+        it('rejects when the scan confirming a NOT_FOUND fails', async () => {
+            // the NOT_FOUND may be another stream's, so a failed scan must
+            // not read as no record
+            lnc.lnd.lightning.listPayments.mockRejectedValue(
+                new Error('rpc error')
+            );
+            const lookup = backend.lookupPayment({ payment_hash: HASH });
+            emit(NOT_FOUND);
+            await expect(lookup).rejects.toThrow('rpc error');
+        });
+
+        it('answers null when NOT_FOUND and the scan agrees', async () => {
+            lnc.lnd.lightning.listPayments.mockResolvedValue({ payments: [] });
+            const lookup = backend.lookupPayment({ payment_hash: HASH });
+            emit(NOT_FOUND);
+            await expect(lookup).resolves.toBeNull();
+        });
+
+        it('scans once when NOT_FOUND meets a full page that missed', async () => {
+            lnc.lnd.lightning.listPayments
+                .mockResolvedValueOnce({
+                    payments: Array.from({ length: 50 }, (_, i) => ({
+                        payment_hash: i.toString(16).padStart(64, '0')
+                    }))
+                })
+                .mockResolvedValue({ payments: [] });
+            const lookup = backend.lookupPayment({
+                payment_hash: HASH,
+                creation_date_start: 1700000000
+            });
+            emit(NOT_FOUND);
+            await expect(lookup).rejects.toMatchObject({
+                name: 'PaymentLookupInconclusive'
+            });
+            // the bounded page and the newest page, once each
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledTimes(2);
+        });
+
+        it('opens a new stream after disconnecting', async () => {
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            emit(paymentEvent('IN_FLIGHT'));
+            await first;
+
+            await backend.disconnect();
+            lnc.connected = true;
+            const next = backend.lookupPayment({ payment_hash: HASH });
+            expect(lnc.lnd.router.trackPaymentV2).toHaveBeenCalledTimes(2);
+            emit(paymentEvent('SUCCEEDED'));
+            await expect(next).resolves.toMatchObject({
+                status: 'SUCCEEDED'
+            });
+        });
+    });
+
     describe('getPayments', () => {
         it('passes creation_date_start through to ListPayments', async () => {
             const backend = new LightningNodeConnect();

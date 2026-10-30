@@ -837,6 +837,72 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         expect(store.error).toBe(false);
     });
 
+    it('does not track a CLN keysend by the hash of a preimage CLN never used', async () => {
+        // CLN picks its own keysend preimage, so lookups for ours would
+        // answer no record for a payment that may still be in flight and
+        // conclude it was never sent
+        isLNDBased.mockReturnValue(false);
+        sendKeysend.mockRejectedValue(new Error('connection closed'));
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(null);
+
+        const store = newStore('cln-rest');
+        store.sendPayment({ pubkey: '02' + 'ab'.repeat(32), amount: '1000' });
+        await flush();
+
+        expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('connection closed');
+    });
+
+    it('leaves a timed-out CLN keysend without a hash to the backstop', async () => {
+        isLNDBased.mockReturnValue(false);
+        sendKeysend.mockResolvedValue({
+            payment_error: 'views.SendingLightning.paymentTimedOut',
+            payment_timed_out: true
+        });
+
+        const store = newStore('cln-rest');
+        store.sendPayment({ pubkey: '02' + 'ab'.repeat(32), amount: '1000' });
+        await flush();
+
+        expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
+        expect(store.paymentInFlight).toBe(false);
+    });
+
+    it("tracks an in-flight LDK Node keysend by the node's hash", async () => {
+        const nodeHash = 'cd'.repeat(32);
+        isLNDBased.mockReturnValue(false);
+        sendKeysend.mockResolvedValue({
+            status: 'IN_FLIGHT',
+            payment_hash: nodeHash,
+            payment_preimage: ''
+        });
+        (BackendUtils.lookupPayment as jest.Mock)
+            .mockResolvedValueOnce({
+                status: 'IN_FLIGHT',
+                payment_hash: nodeHash
+            })
+            .mockResolvedValueOnce({
+                status: 'SUCCEEDED',
+                payment_hash: nodeHash,
+                payment_preimage: 'deadbeef'
+            });
+
+        const store = newStore('ldk-node');
+        store.sendPayment({ pubkey: '02' + 'ab'.repeat(32), amount: '1000' });
+        await flush();
+
+        expect(store.paymentInFlight).toBe(true);
+        expect(BackendUtils.lookupPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ payment_hash: nodeHash })
+        );
+
+        await advancePoll();
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe('SUCCEEDED');
+    });
+
     it('shows a timed-out payment the node never recorded as not sent', async () => {
         (BackendUtils.payLightningInvoice as jest.Mock).mockImplementation(() =>
             Promise.resolve({

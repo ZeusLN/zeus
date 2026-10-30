@@ -16,10 +16,15 @@ import Base64Utils from '../utils/Base64Utils';
 import { snakeize } from '../utils/DataFormatUtils';
 import {
     decideLncPayEvent,
+    decideLncTrackEvent,
     deriveExpectedPaymentHash
 } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { findPaymentByHash } from '../utils/PaymentLookupUtils';
+import TrackPaymentStreams, {
+    TRACK_PAYMENT_STREAM_MAX_AGE_MS,
+    isTerminalPaymentStatus
+} from '../utils/TrackPaymentStreams';
 import {
     toLnrpcAddressType,
     toWalletrpcAddressTypeName
@@ -34,10 +39,24 @@ import {
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 
+// how long lookupPayment waits for TrackPaymentV2's first update before
+// concluding the transport is wedged; an existing payment answers
+// immediately (no_inflight_updates is false) and an unknown hash errors
+// immediately, so this only fires when the stream isn't answering at all
+const TRACK_PAYMENT_TIMEOUT_MS = 10000;
+
 export default class LightningNodeConnect {
     private client: any;
     listener: any;
     customMessagesListener: EmitterSubscription | null = null;
+    private trackPaymentSubscription: EmitterSubscription | undefined;
+    private trackPaymentStreams = new TrackPaymentStreams<any>({
+        maxAgeMs: TRACK_PAYMENT_STREAM_MAX_AGE_MS,
+        onIdle: () => {
+            this.trackPaymentSubscription?.remove();
+            this.trackPaymentSubscription = undefined;
+        }
+    });
 
     // Lifecycle code may close an old client, but RPCs must only use the
     // selected wallet's session. A pending native dial can outlive a switch.
@@ -260,6 +279,8 @@ export default class LightningNodeConnect {
         }
     };
     disconnect = async () => {
+        // the session's track streams end with it
+        this.trackPaymentStreams.clear();
         if (!this.client) return;
         await this.closeSession(this.client);
     };
@@ -439,9 +460,9 @@ export default class LightningNodeConnect {
                 })
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
-    // scans payments pages; trackPaymentV2 over LNC is a stream and would
-    // need view-level event plumbing
-    lookupPayment = async (data: {
+    // ListPayments fallback; see findPaymentByHash for when a miss counts
+    // as no record
+    private scanForPayment = async (data: {
         payment_hash: string;
         creation_date_start?: number;
     }) =>
@@ -450,6 +471,57 @@ export default class LightningNodeConnect {
             data.payment_hash,
             data.creation_date_start
         );
+    // TrackPaymentV2 gives a real per-payment query: the latest update for
+    // this hash is the payment's current state (no_inflight_updates is
+    // false, so an in-flight payment answers immediately). One stream per
+    // hash is shared by all lookups (see TrackPaymentStreams), since a
+    // stream can't be cancelled from JS and stays open node-side until the
+    // payment is terminal. Any failure, NOT_FOUND included, is settled by
+    // the dispatch-anchored page scan: error strings carry no hash and may
+    // belong to another lookup's stream. The scan answers null only on a
+    // conclusive miss and throws when it can't tell, so a failed scan
+    // never reads as no record.
+    lookupPayment = async (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+        trackTimeoutMs?: number;
+    }) => {
+        try {
+            return await this.trackPaymentStreams.lookup(
+                data.payment_hash,
+                data.trackTimeoutMs ?? TRACK_PAYMENT_TIMEOUT_MS,
+                () => {
+                    const streamingCall = this.lnc.lnd.router.trackPaymentV2({
+                        payment_hash: Base64Utils.hexToBase64(
+                            data.payment_hash
+                        ),
+                        no_inflight_updates: false
+                    });
+                    // every track stream reports on the same event name
+                    if (!this.trackPaymentSubscription) {
+                        const { LncModule } = NativeModules;
+                        this.trackPaymentSubscription = new NativeEventEmitter(
+                            LncModule
+                        ).addListener(streamingCall, this.onTrackPaymentEvent);
+                    }
+                }
+            );
+        } catch {
+            return await this.scanForPayment(data);
+        }
+    };
+    private onTrackPaymentEvent = (event: any) => {
+        const decision = decideLncTrackEvent(event?.result);
+        if (decision.kind === 'payment') {
+            this.trackPaymentStreams.update(
+                decision.hash,
+                decision.result,
+                isTerminalPaymentStatus(decision.result.status)
+            );
+        } else if (decision.kind === 'error') {
+            this.trackPaymentStreams.fail(decision.error);
+        }
+    };
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
             .newAddress({
