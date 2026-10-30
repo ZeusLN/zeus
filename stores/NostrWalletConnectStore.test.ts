@@ -1210,6 +1210,103 @@ describe('NostrWalletConnectStore concurrent connection changes', () => {
     });
 });
 
+// The edit screen always sends budgetRenewal, and maxAmountSats as the new
+// budget or as undefined when the budget is removed.
+describe('NostrWalletConnectStore updateConnection budget transitions', () => {
+    const never = BudgetRenewalType.Never;
+
+    it('resets the spend counter when an unlimited connection gains a budget', async () => {
+        const { store } = createStore();
+        const connection = addConnection(store, {
+            budgetRenewal: never,
+            totalSpendSats: 400
+        });
+        expect(connection.hasBudgetLimit).toBe(false);
+
+        const result = await store.updateConnection(connection.id, {
+            maxAmountSats: 5000,
+            budgetRenewal: never
+        });
+
+        expect(result.success).toBe(true);
+        expect(connection.maxAmountSats).toBe(5000);
+        expect(connection.totalSpendSats).toBe(0);
+        expect(connection.lastBudgetReset).toBeInstanceOf(Date);
+    });
+
+    it('clears the spend counter when the budget is removed', async () => {
+        const { store } = createStore();
+        const connection = addConnection(store, {
+            maxAmountSats: 5000,
+            budgetRenewal: never,
+            totalSpendSats: 400,
+            lastBudgetReset: new Date('2024-01-01T00:00:00Z')
+        });
+
+        const result = await store.updateConnection(connection.id, {
+            maxAmountSats: undefined,
+            budgetRenewal: never
+        });
+
+        expect(result.success).toBe(true);
+        expect(connection.hasBudgetLimit).toBe(false);
+        expect(connection.totalSpendSats).toBe(0);
+        expect(connection.lastBudgetReset).toBeUndefined();
+    });
+
+    it('keeps the spend counter when an update omits maxAmountSats', async () => {
+        const { store } = createStore();
+        const connection = addConnection(store, {
+            maxAmountSats: 5000,
+            budgetRenewal: never,
+            totalSpendSats: 400
+        });
+
+        const result = await store.updateConnection(connection.id, {
+            name: 'Renamed App'
+        });
+
+        expect(result.success).toBe(true);
+        expect(connection.name).toBe('Renamed App');
+        expect(connection.maxAmountSats).toBe(5000);
+        expect(connection.totalSpendSats).toBe(400);
+    });
+
+    it('keeps the spend counter when only the budget amount changes', async () => {
+        const { store } = createStore();
+        const connection = addConnection(store, {
+            maxAmountSats: 5000,
+            budgetRenewal: never,
+            totalSpendSats: 400
+        });
+
+        await store.updateConnection(connection.id, {
+            maxAmountSats: 8000,
+            budgetRenewal: never
+        });
+
+        expect(connection.maxAmountSats).toBe(8000);
+        expect(connection.totalSpendSats).toBe(400);
+    });
+
+    it('resets the spend counter when the renewal period changes', async () => {
+        const { store } = createStore();
+        const connection = addConnection(store, {
+            maxAmountSats: 5000,
+            budgetRenewal: never,
+            totalSpendSats: 400
+        });
+
+        await store.updateConnection(connection.id, {
+            maxAmountSats: 5000,
+            budgetRenewal: BudgetRenewalType.Daily
+        });
+
+        expect(connection.budgetRenewal).toBe(BudgetRenewalType.Daily);
+        expect(connection.totalSpendSats).toBe(0);
+    });
+});
+
 describe('NostrWalletConnectStore relay release', () => {
     // A request that is still running when its connection expires: the
     // next request drops the subscription, but the first one stays in
