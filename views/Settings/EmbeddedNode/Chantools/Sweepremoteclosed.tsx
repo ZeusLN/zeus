@@ -21,6 +21,7 @@ import Header from '../../../../components/Header';
 import LoadingIndicator from '../../../../components/LoadingIndicator';
 import OnchainFeeInput from '../../../../components/OnchainFeeInput';
 import Screen from '../../../../components/Screen';
+import ShowHideToggle from '../../../../components/ShowHideToggle';
 import { ErrorMessage } from '../../../../components/SuccessErrorMessage';
 import Text from '../../../../components/Text';
 import TextInput from '../../../../components/TextInput';
@@ -68,6 +69,7 @@ interface SweepremoteclosedProps {
 interface SweepremoteclosedState {
     seedType: string;
     externalSeed: string;
+    hidden: boolean;
     sweepAddr: string;
     apiUrl: string;
     customApiUrl: string;
@@ -88,6 +90,7 @@ export default class Sweepremoteclosed extends React.Component<
     state = {
         seedType: 'currentWalletsSeed',
         externalSeed: '',
+        hidden: true,
         sweepAddr: '',
         apiUrl: 'https://api.node-recovery.com',
         customApiUrl: '',
@@ -104,6 +107,7 @@ export default class Sweepremoteclosed extends React.Component<
         const {
             seedType,
             externalSeed,
+            hidden,
             sweepAddr,
             apiUrl,
             customApiUrl,
@@ -190,20 +194,39 @@ export default class Sweepremoteclosed extends React.Component<
                                             'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.seed'
                                         )}
                                     </Text>
-                                    <TextInput
-                                        placeholder={
-                                            'cherry truth mask employ box silver mass bunker fiscal vote'
-                                        }
-                                        value={externalSeed}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                externalSeed: text
-                                            })
-                                        }
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                        locked={loading}
-                                    />
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <TextInput
+                                            placeholder={
+                                                'cherry truth mask employ box silver mass bunker fiscal vote'
+                                            }
+                                            value={externalSeed}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    externalSeed: text
+                                                })
+                                            }
+                                            autoCapitalize="none"
+                                            autoCorrect={false}
+                                            secureTextEntry={hidden}
+                                            style={{
+                                                flex: 1,
+                                                marginRight: 15
+                                            }}
+                                            locked={loading}
+                                        />
+                                        <ShowHideToggle
+                                            onPress={() =>
+                                                this.setState({
+                                                    hidden: !hidden
+                                                })
+                                            }
+                                        />
+                                    </View>
                                 </>
                             )}
                             <>
