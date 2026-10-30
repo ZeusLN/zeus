@@ -81,7 +81,7 @@ import {
     ReverseClaimTransaction,
     SubmarineClaimTransaction
 } from '../../models/ClaimTransaction';
-import { SwapType } from '../../models/Swap';
+import { SwapState, SwapType } from '../../models/Swap';
 
 // builds and signs the claim; the app broadcasts it through the store
 const nativeClaim = lndMobile.swaps.buildReverseClaimTransaction as jest.Mock;
@@ -121,7 +121,8 @@ afterEach(() => {
 const renderView = async (
     swapData: any = {},
     params: any = {},
-    props: any = {}
+    props: any = {},
+    storeOverrides: any = {}
 ) => {
     const store = {
         claimMinerFee: 100,
@@ -129,6 +130,7 @@ const renderView = async (
         getReverseSwapReceiveAmount: jest.fn(() => 0),
         updateSwapStatus: jest.fn().mockResolvedValue(undefined),
         verifyReverseLockup: jest.fn().mockResolvedValue({ status: 'ok' }),
+        isSubmarineSwapInvoicePaid: jest.fn().mockResolvedValue(true),
         resolveClaimAddress: jest.fn(
             async ({ destinationAddress }: any) =>
                 destinationAddress || 'bc1qwallet'
@@ -141,7 +143,8 @@ const renderView = async (
         getReverseLockupTransactionHex: jest
             .fn()
             .mockResolvedValue({ status: 'none' }),
-        checkStoredClaim: jest.fn().mockResolvedValue({ status: 'ok' })
+        checkStoredClaim: jest.fn().mockResolvedValue({ status: 'ok' }),
+        ...storeOverrides
     };
     const view = await render(
         <SwapDetails
@@ -1493,5 +1496,101 @@ describe('SwapDetails submarine pay button', () => {
         await sendStatus('invoice.set');
 
         expect(payButtons()).toHaveLength(1);
+    });
+});
+
+describe('SwapDetails submarine swap reported claimed', () => {
+    const SUBMARINE = {
+        type: SwapType.Submarine,
+        invoice: 'lnbc1swapinvoice',
+        status: SwapState.TransactionMempool
+    };
+
+    const refundOffered = () =>
+        screen.container.queryAll(
+            (node: any) =>
+                node.type === 'Button' &&
+                node.props.title === 'views.Swaps.refundSwap'
+        ).length > 0;
+
+    it('records the claim once the invoice is known to be paid', async () => {
+        const { store } = await renderView(SUBMARINE);
+
+        await sendStatus('transaction.claimed');
+
+        expect(store.isSubmarineSwapInvoicePaid).toHaveBeenCalledWith(
+            'swap',
+            'lnbc1swapinvoice',
+            'https://provider.test/v2'
+        );
+        expect(store.updateSwapStatus).toHaveBeenCalledWith(
+            'swap',
+            'transaction.claimed',
+            true,
+            undefined
+        );
+        expect(errorShown()).toBeUndefined();
+        expect(refundOffered()).toBe(false);
+        expect(socket.close).toHaveBeenCalled();
+    });
+
+    it('keeps the swap open and offers the refund when the payment is not confirmed', async () => {
+        const { store } = await renderView(SUBMARINE);
+        store.isSubmarineSwapInvoicePaid.mockResolvedValue(false);
+
+        await sendStatus('transaction.claimed');
+
+        expect(store.updateSwapStatus).not.toHaveBeenCalled();
+        expect(errorShown()).toBe('views.SwapDetails.claimNotVerified');
+        expect(refundOffered()).toBe(true);
+        expect(socket.close).toHaveBeenCalled();
+    });
+
+    it('does not check a swap without an invoice', async () => {
+        const { store } = await renderView({
+            ...SUBMARINE,
+            invoice: undefined
+        });
+
+        await sendStatus('transaction.claimed');
+
+        expect(store.isSubmarineSwapInvoicePaid).not.toHaveBeenCalled();
+        expect(store.updateSwapStatus).toHaveBeenCalledWith(
+            'swap',
+            'transaction.claimed',
+            true,
+            undefined
+        );
+    });
+
+    it('checks a claim stored earlier when the swap is opened', async () => {
+        const isPaid = jest.fn().mockResolvedValue(false);
+        const { store } = await renderView(
+            { ...SUBMARINE, status: SwapState.TransactionClaimed },
+            {},
+            {},
+            { isSubmarineSwapInvoicePaid: isPaid }
+        );
+        await act(async () => {});
+
+        expect(global.WebSocket).not.toHaveBeenCalled();
+        expect(store.isSubmarineSwapInvoicePaid).toHaveBeenCalledWith(
+            'swap',
+            'lnbc1swapinvoice',
+            'https://provider.test/v2'
+        );
+        expect(errorShown()).toBe('views.SwapDetails.claimNotVerified');
+        expect(refundOffered()).toBe(true);
+    });
+
+    it('shows a stored claim the invoice confirms as done', async () => {
+        await renderView({
+            ...SUBMARINE,
+            status: SwapState.TransactionClaimed
+        });
+        await act(async () => {});
+
+        expect(errorShown()).toBeUndefined();
+        expect(refundOffered()).toBe(false);
     });
 });
