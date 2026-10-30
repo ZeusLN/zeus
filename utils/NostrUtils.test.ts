@@ -1,7 +1,16 @@
 const mockQueryProfile = jest.fn();
 jest.mock('nostr-tools', () => ({
     ...jest.requireActual('nostr-tools'),
-    nip05: { queryProfile: (...args: any[]) => mockQueryProfile(...args) }
+    nip05: {
+        ...jest.requireActual('nostr-tools').nip05,
+        queryProfile: (...args: any[]) => mockQueryProfile(...args)
+    }
+}));
+
+const mockDoTorRequest = jest.fn();
+jest.mock('./TorUtils', () => ({
+    doTorRequest: (...args: any[]) => mockDoTorRequest(...args),
+    RequestMethod: { GET: 'get' }
 }));
 
 import NostrUtils from './NostrUtils';
@@ -345,6 +354,142 @@ describe('NostrUtils', () => {
             }
 
             expect(mockQueryProfile).not.toHaveBeenCalled();
+        });
+
+        describe('with Tor enabled', () => {
+            const mockFetch = jest.fn();
+            const originalFetch = global.fetch;
+
+            beforeEach(() => {
+                mockDoTorRequest.mockReset();
+                mockFetch.mockReset();
+                global.fetch = mockFetch as any;
+            });
+
+            afterAll(() => {
+                global.fetch = originalFetch;
+            });
+
+            it('sends the nostr.json request through Tor', async () => {
+                mockDoTorRequest.mockResolvedValue({
+                    names: { satoshi: validHex },
+                    relays: { [validHex]: ['wss://relay.example.com'] }
+                });
+
+                const result = await NostrUtils.queryNip05Profile(
+                    'SATOSHI@Domain.COM',
+                    true
+                );
+
+                expect(mockDoTorRequest).toHaveBeenCalledWith(
+                    'https://domain.com/.well-known/nostr.json?name=satoshi',
+                    'get'
+                );
+                expect(mockFetch).not.toHaveBeenCalled();
+                expect(mockQueryProfile).not.toHaveBeenCalled();
+                expect(result).toEqual({
+                    pubkey: validHex,
+                    relays: ['wss://relay.example.com']
+                });
+            });
+
+            it('looks up the root name for a bare domain', async () => {
+                mockDoTorRequest.mockResolvedValue({
+                    names: { _: validHex }
+                });
+
+                const result = await NostrUtils.queryNip05Profile(
+                    'domain.com',
+                    true
+                );
+
+                expect(mockDoTorRequest).toHaveBeenCalledWith(
+                    'https://domain.com/.well-known/nostr.json?name=_',
+                    'get'
+                );
+                expect(result).toEqual({
+                    pubkey: validHex,
+                    relays: undefined
+                });
+            });
+
+            it('resolves to null when the Tor request fails', async () => {
+                mockDoTorRequest.mockRejectedValue(new Error('HTTP 404'));
+
+                await expect(
+                    NostrUtils.queryNip05Profile('satoshi@domain.com', true)
+                ).resolves.toBe(null);
+                expect(mockFetch).not.toHaveBeenCalled();
+            });
+
+            it('resolves to null for malformed responses', async () => {
+                for (const body of [
+                    undefined,
+                    'not json',
+                    {},
+                    { names: null },
+                    { names: 'satoshi' },
+                    { names: {} },
+                    { names: { other: validHex } },
+                    { names: { satoshi: 42 } },
+                    { names: { satoshi: 'not-a-pubkey' } },
+                    { names: { satoshi: validHex.toUpperCase() } }
+                ]) {
+                    mockDoTorRequest.mockResolvedValueOnce(body);
+                    await expect(
+                        NostrUtils.queryNip05Profile('satoshi@domain.com', true)
+                    ).resolves.toBe(null);
+                }
+            });
+
+            it('does not read inherited properties as names', async () => {
+                mockDoTorRequest.mockResolvedValue({ names: {} });
+
+                await expect(
+                    NostrUtils.queryNip05Profile('constructor@domain.com', true)
+                ).resolves.toBe(null);
+            });
+
+            it('drops non-string relay entries', async () => {
+                mockDoTorRequest.mockResolvedValue({
+                    names: { satoshi: validHex },
+                    relays: { [validHex]: ['wss://relay.example.com', 1] }
+                });
+
+                await expect(
+                    NostrUtils.queryNip05Profile('satoshi@domain.com', true)
+                ).resolves.toEqual({
+                    pubkey: validHex,
+                    relays: ['wss://relay.example.com']
+                });
+            });
+
+            it('rejects identifiers that are not NIP-05', async () => {
+                await expect(
+                    NostrUtils.queryNip05Profile('not an identifier', true)
+                ).resolves.toBe(null);
+                expect(mockDoTorRequest).not.toHaveBeenCalled();
+            });
+
+            it('does not look up .onion identifiers', async () => {
+                await expect(
+                    NostrUtils.queryNip05Profile(
+                        'satoshi@2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion',
+                        true
+                    )
+                ).resolves.toBe(null);
+                expect(mockDoTorRequest).not.toHaveBeenCalled();
+            });
+        });
+
+        it('does not use Tor when Tor is disabled', async () => {
+            mockDoTorRequest.mockReset();
+            mockQueryProfile.mockResolvedValue({ pubkey: validHex });
+
+            await NostrUtils.queryNip05Profile('satoshi@domain.com', false);
+
+            expect(mockQueryProfile).toHaveBeenCalledWith('satoshi@domain.com');
+            expect(mockDoTorRequest).not.toHaveBeenCalled();
         });
 
         it('still looks up a domain that only contains onion', async () => {

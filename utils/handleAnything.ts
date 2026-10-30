@@ -191,7 +191,10 @@ const confirmBtcPayFetch = (
 
 const attemptNip05Lookup = async (identifier: string) => {
     try {
-        const lookup: any = await NostrUtils.queryNip05Profile(identifier);
+        const lookup: any = await NostrUtils.queryNip05Profile(
+            identifier,
+            settingsStore.enableTor
+        );
         const pubkey = lookup.pubkey;
         return await nostrProfileLookup(pubkey);
     } catch (e) {

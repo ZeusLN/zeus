@@ -170,7 +170,10 @@ jest.mock('nostr-tools', () => ({
         querySync = (...args: any[]) => mockQuerySync(...args);
         close = jest.fn();
     },
-    nip05: { queryProfile: jest.fn() },
+    nip05: {
+        NIP05_REGEX: jest.requireActual('nostr-tools').nip05.NIP05_REGEX,
+        queryProfile: jest.fn()
+    },
     nip19: { decode: (...args: any[]) => mockNip19Decode(...args) }
 }));
 jest.mock('../stores/SettingsStore', () => ({
@@ -1354,6 +1357,41 @@ describe('handleAnything', () => {
             );
             expect(result[0]).toBe('ContactDetails');
             expect(result[1].nostrContact.name).toBe('Satoshi');
+        });
+
+        it('sends the lookup through Tor when Tor is enabled', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'satoshi@domain.com'
+            });
+            mockDoTorRequest.mockResolvedValue({
+                names: { satoshi: PUBKEY }
+            });
+            mockQuerySync.mockResolvedValue([
+                {
+                    id: 'event',
+                    created_at: 1,
+                    content: JSON.stringify({ name: 'Satoshi' })
+                }
+            ]);
+            (settingsStore as any).enableTor = true;
+
+            try {
+                const result = await handleAnything('satoshi@domain.com');
+
+                expect(mockDoTorRequest).toHaveBeenCalledWith(
+                    'https://domain.com/.well-known/nostr.json?name=satoshi',
+                    'GET'
+                );
+                expect(mockQueryProfile).not.toHaveBeenCalled();
+                expect(global.fetch).not.toHaveBeenCalledWith(
+                    expect.stringContaining('nostr.json'),
+                    expect.anything()
+                );
+                expect(result[0]).toBe('ContactDetails');
+            } finally {
+                (settingsStore as any).enableTor = undefined;
+                mockDoTorRequest.mockReset();
+            }
         });
 
         it('looks up the address without its lightning: prefix', async () => {
