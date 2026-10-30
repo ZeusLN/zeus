@@ -7,6 +7,7 @@ jest.mock('@react-native-documents/picker', () => ({
 jest.mock('react-native-randombytes', () => ({
     randomBytes: (length: number) => require('crypto').randomBytes(length)
 }));
+jest.mock('./LockKdf');
 jest.mock('react-native-encrypted-storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn()

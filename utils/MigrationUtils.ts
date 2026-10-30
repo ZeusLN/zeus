@@ -699,7 +699,7 @@ class MigrationsUtils {
         return changed;
     }
 
-    // Replace plaintext app-lock credentials with salted scrypt verifiers and
+    // Replace plaintext app-lock credentials with salted PBKDF2 verifiers and
     // strip the plaintext fields. Historically the PIN, passphrase and their
     // duress variants were stored verbatim in the settings blob alongside every
     // wallet secret, and login was a direct string compare - so anyone who

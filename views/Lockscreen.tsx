@@ -36,7 +36,7 @@ import { restartApp } from '../utils/RestartUtils';
 import {
     verifySecret,
     hasVerifier,
-    DUMMY_VERIFIER,
+    getDummyVerifier,
     VerifierRecord
 } from '../utils/LockVerifierUtils';
 import {
@@ -376,10 +376,11 @@ export default class Lockscreen extends React.Component<
             return;
         }
 
-        // Guard against re-entrancy: scrypt verification is asynchronous
-        // (~1s), so a double tap on the login button or a second submit could
-        // otherwise start a second attempt and double-count the failure
-        // counter. The `verifying` flag also drives the spinner overlay.
+        // Guard against re-entrancy: verification is an asynchronous native
+        // key derivation, so a double tap on the login button or a second
+        // submit could otherwise start a second attempt and double-count the
+        // failure counter. The `verifying` flag also drives the spinner
+        // overlay.
         if (this.state.verifying) return;
 
         this.setState({
@@ -389,13 +390,12 @@ export default class Lockscreen extends React.Component<
         });
 
         // Verify against the salted verifier for the active method. Both the
-        // normal and duress checks always run a full scrypt derivation - a
-        // dummy record stands in when no duress credential is configured -
-        // so response time reveals neither which credential matched nor
-        // whether a duress credential exists at all. (verifySecret would
-        // otherwise return early on a missing record, and scrypt-js is
-        // CPU-bound on the JS thread, so the derivations serialize: one vs
-        // two would be a measurable tell.)
+        // normal and duress checks always run a full derivation (a dummy
+        // record with the primary's KDF stands in when no duress credential
+        // is configured), so response time reveals neither which credential
+        // matched nor whether a duress credential exists at all. verifySecret
+        // would otherwise return early on a missing record, and skipping one
+        // of the two derivations would be a measurable tell.
         const attempt =
             authMethod === 'passphrase' ? passphraseAttempt : pinAttempt;
         const primaryVerifier =
@@ -406,7 +406,7 @@ export default class Lockscreen extends React.Component<
                 : duressPinVerifier;
         const duressVerifier = hasVerifier(configuredDuressVerifier)
             ? configuredDuressVerifier
-            : DUMMY_VERIFIER;
+            : getDummyVerifier(primaryVerifier);
 
         try {
             const [primaryMatch, duressMatch] = await Promise.all([
@@ -963,7 +963,8 @@ const styles = StyleSheet.create({
         bottom: 0,
         alignItems: 'center',
         justifyContent: 'center',
-        // dim + swallow taps so a second submit can't land while scrypt runs
+        // dim + swallow taps so a second submit can't land while the
+        // verification runs
         backgroundColor: 'rgba(0, 0, 0, 0.4)'
     },
     content: {

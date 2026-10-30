@@ -91,10 +91,8 @@ describe('NavigationUtils', () => {
         // must read those, not the removed plaintext pin/passphrase fields.
         const verifier = {
             v: 1,
-            kdf: 'scrypt',
-            n: 32768,
-            r: 8,
-            p: 1,
+            kdf: 'pbkdf2-sha256',
+            iterations: 100000,
             salt: 'aa'.repeat(16),
             hash: 'bb'.repeat(32)
         };

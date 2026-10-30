@@ -213,7 +213,7 @@ export interface Settings {
     duressPassphrase?: string;
     pin?: string;
     duressPin?: string;
-    // Salted scrypt verifiers for the app lock (see utils/LockVerifierUtils).
+    // Salted PBKDF2 verifiers for the app lock (see utils/LockVerifierUtils).
     // Presence of pinVerifier vs passphraseVerifier also selects the lock UI.
     passphraseVerifier?: VerifierRecord;
     duressPassphraseVerifier?: VerifierRecord;

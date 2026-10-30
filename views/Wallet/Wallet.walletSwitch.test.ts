@@ -3,6 +3,7 @@
 // production Wallet/Settings methods and the real WalletRefreshRunner; node
 // calls and stores are controlled.
 jest.mock('../../utils/LocaleUtils');
+jest.mock('../../utils/LockKdf');
 
 import WalletRefreshRunner from '../../utils/WalletRefreshRunner';
 import {

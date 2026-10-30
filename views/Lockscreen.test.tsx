@@ -64,6 +64,7 @@ jest.mock('../utils/DataClearUtils', () => ({
     markWipePending: jest.fn()
 }));
 jest.mock('../utils/LocaleUtils');
+jest.mock('../utils/LockKdf');
 jest.mock('../utils/RestartUtils', () => ({
     restartApp: jest.fn()
 }));
@@ -84,6 +85,7 @@ import {
     markWipePending
 } from '../utils/DataClearUtils';
 import { restartApp } from '../utils/RestartUtils';
+import * as LockKdf from '../utils/LockKdf';
 import * as LockVerifierUtils from '../utils/LockVerifierUtils';
 import { deriveVerifier, VerifierRecord } from '../utils/LockVerifierUtils';
 import Lockscreen from './Lockscreen';
@@ -167,7 +169,7 @@ const submitPin = () =>
 const submitWrongPin = () =>
     fireEvent.press(screen.getByRole('button', { name: 'Submit wrong PIN' }));
 
-// PIN verification is an async scrypt derivation, so a login reaches the
+// PIN verification is an async key derivation, so a login reaches the
 // attempt reset some time after the PIN is submitted
 const untilCalled = (mock: jest.Mock) =>
     waitFor(() => expect(mock).toHaveBeenCalled(), { timeout: 5000 });
@@ -239,8 +241,8 @@ describe('Lockscreen login', () => {
         const verificationsPerAttempt = verify.mock.calls.length;
 
         // the second submit must not start another verification; checking
-        // the count is what makes this deterministic, since a second scrypt
-        // run would otherwise finish after the assertions below
+        // the count is what makes this deterministic, since a second
+        // derivation would otherwise finish after the assertions below
         await submitPin();
         await act(async () => {});
         expect(verify).toHaveBeenCalledTimes(verificationsPerAttempt);
@@ -271,6 +273,74 @@ describe('Lockscreen login', () => {
             'Failed to reset authentication attempts',
             error
         );
+    });
+});
+
+// Each attempt runs two derivations, the second against the duress verifier
+// or a dummy with the same KDF, so the time an attempt takes does not show
+// whether a duress credential exists.
+describe('Lockscreen verification cost', () => {
+    it('starts the primary and dummy duress derivations together', async () => {
+        const realDerive = LockKdf.pbkdf2Sha256;
+        const pending: Array<() => void> = [];
+        const derive = jest
+            .spyOn(LockKdf, 'pbkdf2Sha256')
+            .mockImplementation(
+                (...args) =>
+                    new Promise((resolve, reject) =>
+                        pending.push(() =>
+                            realDerive(...args).then(resolve, reject)
+                        )
+                    )
+            );
+        const updateSettings = makeUpdateSettings({ pinVerifier });
+        const { navigation } = await renderLockscreen(updateSettings);
+
+        await submitPin();
+        await waitFor(() => expect(derive).toHaveBeenCalledTimes(2));
+        // neither derivation has finished, so they run in parallel
+        expect(navigation.pop).not.toHaveBeenCalled();
+        expect(
+            derive.mock.calls.map((call) => call[1].toString('hex'))
+        ).toEqual([pinVerifier.salt, LockVerifierUtils.DUMMY_VERIFIER.salt]);
+
+        await act(async () => pending.forEach((run) => run()));
+        await untilCalled(navigation.pop);
+        expect(derive).toHaveBeenCalledTimes(2);
+        derive.mockRestore();
+    });
+
+    // A lock set up by an earlier build of this change still has a scrypt
+    // record (hash of '1234' under a 0x01 salt)
+    it('unlocks with a scrypt verifier and pairs it with a scrypt dummy', async () => {
+        const scryptVerifier = {
+            v: 1,
+            kdf: 'scrypt',
+            n: 32768,
+            r: 8,
+            p: 1,
+            salt: '01'.repeat(16),
+            hash: 'e46bd81f58f1f7b373c222b44cf978520a563205869f540681b6bcf460c7032d'
+        } as VerifierRecord;
+        const derive = jest.spyOn(LockKdf, 'pbkdf2Sha256');
+        const verify = jest.spyOn(LockVerifierUtils, 'verifySecret');
+        const updateSettings = makeUpdateSettings({
+            pinVerifier: scryptVerifier
+        });
+        const { navigation } = await renderLockscreen(updateSettings, {
+            settings: { pinVerifier: scryptVerifier }
+        });
+
+        await submitPin();
+        await untilCalled(navigation.pop);
+
+        expect(verify.mock.calls.map((call) => call[1]?.kdf)).toEqual([
+            'scrypt',
+            'scrypt'
+        ]);
+        expect(derive).not.toHaveBeenCalled();
+        derive.mockRestore();
+        verify.mockRestore();
     });
 });
 
@@ -305,8 +375,8 @@ describe('Lockscreen header', () => {
     });
 });
 
-// The failed-attempt tests below make many entries in a row. A real scrypt
-// verification per entry would take seconds, so these records are checked by
+// The failed-attempt tests below make many entries in a row. Rather than run
+// two PBKDF2 derivations per entry, these records are checked by
 // a stand-in verifySecret that still resolves asynchronously, as the real one
 // does.
 const DURESS_PIN = '0000';

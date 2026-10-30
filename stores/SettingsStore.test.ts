@@ -1469,7 +1469,7 @@ describe('SettingsStore.getSettings', () => {
         const MigrationUtilsMock: any = jest.requireMock(
             '../utils/MigrationUtils'
         );
-        const verifier = { kdf: 'scrypt', salt: 'aa', hash: 'bb' };
+        const verifier = { kdf: 'pbkdf2-sha256', salt: 'aa', hash: 'bb' };
 
         afterEach(() => {
             MigrationUtilsMock.migrateLockCredentialsToVerifiers.mockClear();
@@ -1679,7 +1679,7 @@ describe('SettingsStore.externalInputAuthRequired', () => {
     const withPin = () => {
         const store = new SettingsStore();
         store.settings = {
-            pinVerifier: { kdf: 'scrypt', salt: 'aa', hash: 'bb' }
+            pinVerifier: { kdf: 'pbkdf2-sha256', salt: 'aa', hash: 'bb' }
         } as any;
         return store;
     };
