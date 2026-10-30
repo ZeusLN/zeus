@@ -80,9 +80,11 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
 
     render() {
         const { ChannelsStore, TransactionsStore, navigation } = this.props;
-        const { pending_chan_ids } = ChannelsStore;
         const { loading } = TransactionsStore;
         const { infoIndex, fundedPsbt, psbtDecoded } = this.state;
+        const pending_chan_ids = ChannelsStore.pendingChanIdsFor({
+            psbt: fundedPsbt
+        });
 
         const qrButton = () => (
             <Text
