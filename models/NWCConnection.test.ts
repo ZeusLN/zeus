@@ -420,6 +420,32 @@ describe('NWCConnection pay_invoice activity lookup', () => {
             })
         ).toBe(false);
     });
+
+    it('isUnresolvedPayInvoiceActivity matches only pending cashu holds', () => {
+        const connection = baseConnection();
+        const pending = {
+            id: 'lnbc1cashu',
+            type: 'pay_invoice' as const,
+            payment_source: 'cashu' as const,
+            status: 'pending' as const,
+            satAmount: 100
+        };
+
+        expect(connection.isUnresolvedPayInvoiceActivity(pending)).toBe(true);
+        expect(
+            connection.isUnresolvedPayInvoiceActivity({
+                ...pending,
+                status: 'failed',
+                error: 'views.SendingLightning.paymentTimedOut'
+            })
+        ).toBe(false);
+        expect(
+            connection.isUnresolvedPayInvoiceActivity({
+                ...pending,
+                isBudgetDebited: true
+            })
+        ).toBe(false);
+    });
 });
 
 describe('NWCConnection expiry', () => {

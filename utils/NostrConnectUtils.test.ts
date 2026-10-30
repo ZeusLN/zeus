@@ -1513,6 +1513,19 @@ describe('NostrConnectUtils', () => {
             ).toBe(true);
         });
 
+        // A cashu melt the wallet has not loaded yet may still have settled,
+        // so its hold is only released when CashuStore resolves the melt
+        it('never abandons a cashu hold by age', () => {
+            const activity = baseActivity();
+            activity.payment_source = 'cashu';
+            activity.createdAt = new Date(
+                now - NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS - 1000
+            );
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(false);
+        });
+
         it('keeps a recent unresolved hold', () => {
             expect(
                 NostrConnectUtils.isPayInvoiceHoldAbandoned(baseActivity(), now)
