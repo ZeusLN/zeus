@@ -5,7 +5,9 @@ import {
     FlatList,
     StyleSheet,
     Text,
-    View
+    View,
+    BackHandler,
+    NativeEventSubscription
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -79,6 +81,7 @@ export default class MultimintPayment extends React.Component<
     MultimintPaymentState
 > {
     private focusListener: (() => void) | undefined;
+    private backPressSubscription: NativeEventSubscription | undefined;
     private paymentAmountSat: number = 0;
     private donationToSend: number = 0;
     private paymentHash?: string;
@@ -192,6 +195,11 @@ export default class MultimintPayment extends React.Component<
                 });
         });
 
+        this.backPressSubscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            this.handleBackPress
+        );
+
         if (this.state.step !== MultinutPaymentStep.FAILED) {
             this.executePayment();
         }
@@ -201,7 +209,21 @@ export default class MultimintPayment extends React.Component<
         if (this.focusListener) {
             this.focusListener();
         }
+        this.backPressSubscription?.remove();
     }
+
+    // The screen below is the review of the same invoice, which offers to
+    // pay it again. Like the header, which has no back button once the
+    // payment starts, keep this screen while the payment is in flight, and
+    // go to the wallet once it has succeeded. A failed payment may go back.
+    private handleBackPress = (): boolean => {
+        const { step } = this.state;
+        if (step === MultinutPaymentStep.COMPLETE) {
+            this.props.navigation.popTo('Wallet');
+            return true;
+        }
+        return step === MultinutPaymentStep.PROCESSING;
+    };
 
     onProgressUpdate = (progressInfo: {
         step: MultinutPaymentStep;

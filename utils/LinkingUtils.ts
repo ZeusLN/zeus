@@ -13,7 +13,8 @@ import { settingsStore } from '../stores/Stores';
 const SENDING_SCREENS = [
     'SendingLightning',
     'SendingOnChain',
-    'CashuSendingLightning'
+    'CashuSendingLightning',
+    'MultimintPayment'
 ];
 
 class LinkingUtils {
