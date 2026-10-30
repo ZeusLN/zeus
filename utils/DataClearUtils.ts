@@ -78,6 +78,7 @@ import {
 import { isValidNodeDir } from './NodeDirUtils';
 import { sleep } from './SleepUtils';
 import hashjs from 'hash.js';
+import { clearTorData } from './TorUtils';
 
 // LNC credentials are persisted by backends/LNC/credentialStore.ts under
 // `lnc-rn:<sha256(pairingPhrase)>` and `...:host`. Reconstruct those keys from
@@ -975,6 +976,15 @@ export async function clearAllData(): Promise<void> {
 
     // 2b. Clear CDK SQLite database (contains mints, proofs, transactions)
     await clearCDKDatabase();
+
+    // 2b2. Stop Tor and delete its data directories. Their guard and
+    // consensus state shows Tor was used. clearTorData bounds its wait for
+    // the daemon to stop, so it cannot hold up the rest of the wipe.
+    try {
+        await clearTorData();
+    } catch (e) {
+        console.warn('[ClearData] Error clearing Tor data:', e);
+    }
 
     // 2c. Stop and delete the on-disk LND/LDK node data directories. These
     // hold channel + wallet state and are not covered by the keychain/Cashu
