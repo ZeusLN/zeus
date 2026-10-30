@@ -524,6 +524,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                             copyValue={
                                                 seedPhrase?.join(' ') || ''
                                             }
+                                            sensitive
                                             icon={{
                                                 name: 'warning',
                                                 size: 25

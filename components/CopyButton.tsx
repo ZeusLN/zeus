@@ -5,6 +5,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import Button from './../components/Button';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
+import { copySensitive } from './../utils/ClipboardUtils';
 
 interface CopyButtonProps {
     title?: string;
@@ -14,6 +15,8 @@ interface CopyButtonProps {
     iconOnly?: boolean;
     iconSize?: number;
     iconContainerStyle?: ViewStyle;
+    // Secrets (seed phrases): clear the clipboard again after a minute
+    sensitive?: boolean;
 }
 
 interface CopyButtonState {
@@ -39,12 +42,16 @@ export default class CopyButton extends React.Component<
     }
 
     copyToClipboard = () => {
-        const { copyValue } = this.props;
+        const { copyValue, sensitive } = this.props;
         this.setState({
             copied: true
         });
 
-        Clipboard.setString(copyValue);
+        if (sensitive) {
+            copySensitive(copyValue);
+        } else {
+            Clipboard.setString(copyValue);
+        }
 
         setTimeout(() => {
             if (this.isComponentMounted) {
