@@ -465,6 +465,84 @@ describe('NostrConnectUtils', () => {
         });
     });
 
+    describe('isAlreadyPaidError', () => {
+        it('matches already-paid refusals', () => {
+            expect(
+                NostrConnectUtils.isAlreadyPaidError('invoice is already paid')
+            ).toBe(true);
+            expect(
+                NostrConnectUtils.isAlreadyPaidError(
+                    'Invoice has already been settled'
+                )
+            ).toBe(true);
+        });
+
+        it('does not match other errors', () => {
+            expect(NostrConnectUtils.isAlreadyPaidError(null)).toBe(false);
+            expect(NostrConnectUtils.isAlreadyPaidError('')).toBe(false);
+            expect(
+                NostrConnectUtils.isAlreadyPaidError('invoice expired')
+            ).toBe(false);
+            expect(
+                NostrConnectUtils.isAlreadyPaidError(
+                    'views.SendingLightning.paymentTimedOut'
+                )
+            ).toBe(false);
+        });
+
+        it('stays part of isIgnorableError', () => {
+            expect(
+                NostrConnectUtils.isIgnorableError('invoice is already paid')
+            ).toBe(true);
+            expect(NostrConnectUtils.isIgnorableError('invoice expired')).toBe(
+                true
+            );
+            expect(NostrConnectUtils.isIgnorableError('no route')).toBe(false);
+        });
+    });
+
+    describe('refusals for a payment made elsewhere', () => {
+        const ldkDuplicate =
+            'A payment with the given hash has already been initiated.';
+        const lndInTransition = 'payment is in transition';
+
+        it('matches the LDK Node duplicate payment error', () => {
+            expect(
+                NostrConnectUtils.isDuplicatePaymentError(ldkDuplicate)
+            ).toBe(true);
+            expect(
+                NostrConnectUtils.isDuplicatePaymentError(
+                    'org.lightningdevkit.ldknode.NodeException.DuplicatePayment: x'
+                )
+            ).toBe(true);
+            expect(NostrConnectUtils.isDuplicatePaymentError(null)).toBe(false);
+            expect(
+                NostrConnectUtils.isDuplicatePaymentError(lndInTransition)
+            ).toBe(false);
+        });
+
+        it('matches the LND in-transition error', () => {
+            expect(
+                NostrConnectUtils.isPaymentInTransitionError(lndInTransition)
+            ).toBe(true);
+            expect(NostrConnectUtils.isPaymentInTransitionError(null)).toBe(
+                false
+            );
+            expect(
+                NostrConnectUtils.isPaymentInTransitionError(ldkDuplicate)
+            ).toBe(false);
+        });
+
+        it('leaves isIgnorableError unchanged', () => {
+            expect(NostrConnectUtils.isIgnorableError(ldkDuplicate)).toBe(
+                false
+            );
+            expect(NostrConnectUtils.isIgnorableError(lndInTransition)).toBe(
+                false
+            );
+        });
+    });
+
     describe('resolveFeeSats', () => {
         it('rounds fractional sats from msat division', () => {
             expect(NostrConnectUtils.resolveFeeSats(1.2)).toBe(1);
