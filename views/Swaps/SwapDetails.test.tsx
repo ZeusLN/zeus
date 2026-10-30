@@ -3,7 +3,20 @@ jest.mock('mobx-react', () => ({
     observer: (component: any) => component
 }));
 jest.mock('@rneui/themed', () => ({ LinearProgress: 'LinearProgress' }));
-jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
+jest.mock('react-native-blob-util', () => ({}));
+const mockNetworkFetch = jest.fn();
+jest.mock('../../utils/NetworkUtils', () => ({
+    networkFetch: (...args: any[]) => mockNetworkFetch(...args)
+}));
+const mockSwapStatusPoller = jest.fn();
+jest.mock('../../utils/SwapStatusPoller', () => ({
+    __esModule: true,
+    default: class {
+        constructor(...args: any[]) {
+            return mockSwapStatusPoller(...args);
+        }
+    }
+}));
 jest.mock('../../stores/Stores', () => ({
     nodeInfoStore: { nodeInfo: {} },
     unitsStore: { resetUnits: jest.fn() }
@@ -72,7 +85,6 @@ jest.mock('../../assets/images/SVG/QR.svg', () => 'QR');
 import * as React from 'react';
 import { Alert } from 'react-native';
 import { act, render, screen } from '@testing-library/react-native';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { crypto } from 'bitcoinjs-lib';
 import SwapDetails from './SwapDetails';
 import lndMobile from '../../lndmobile/LndMobileInjection';
@@ -121,7 +133,8 @@ afterEach(() => {
 const renderView = async (
     swapData: any = {},
     params: any = {},
-    props: any = {}
+    props: any = {},
+    enableTor?: boolean
 ) => {
     const store = {
         claimMinerFee: 100,
@@ -141,7 +154,9 @@ const renderView = async (
         getReverseLockupTransactionHex: jest
             .fn()
             .mockResolvedValue({ status: 'none' }),
-        checkStoredClaim: jest.fn().mockResolvedValue({ status: 'ok' })
+        checkStoredClaim: jest.fn().mockResolvedValue({ status: 'ok' }),
+        settingsStore: { enableTor },
+        getHeaders: { Referral: 'pro' }
     };
     const view = await render(
         <SwapDetails
@@ -360,7 +375,7 @@ describe('SwapDetails reverse claim', () => {
 describe('SwapDetails submarine claim', () => {
     it('builds the cooperative claim for the host without its /v2 suffix', async () => {
         const preimage = '11'.repeat(32);
-        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+        mockNetworkFetch.mockResolvedValue({
             json: () => ({
                 preimage,
                 transactionHash: 'hash',
@@ -377,10 +392,11 @@ describe('SwapDetails submarine claim', () => {
         await sendStatus('transaction.claim.pending');
 
         // the host's own claim details still come from the full API path
-        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledWith(
-            'GET',
-            'https://provider.test/v2/swap/submarine/swap/claim',
-            expect.anything()
+        expect(mockNetworkFetch).toHaveBeenCalledWith(
+            expect.objectContaining({
+                method: 'GET',
+                url: 'https://provider.test/v2/swap/submarine/swap/claim'
+            })
         );
         expect(SubmarineClaimTransaction.build).toHaveBeenCalledWith(
             expect.objectContaining({ endpoint: 'https://provider.test' })
@@ -1493,5 +1509,56 @@ describe('SwapDetails submarine pay button', () => {
         await sendStatus('invoice.set');
 
         expect(payButtons()).toHaveLength(1);
+    });
+});
+
+describe('SwapDetails swap update transport', () => {
+    beforeEach(() => {
+        mockSwapStatusPoller.mockReset();
+        mockSwapStatusPoller.mockImplementation(() => socket);
+        mockNetworkFetch.mockReset();
+        mockNetworkFetch.mockResolvedValue({
+            json: () => ({ preimage: '00' })
+        });
+    });
+
+    it('subscribes over the WebSocket when Tor is disabled', async () => {
+        await renderView({}, {}, {}, false);
+
+        expect(global.WebSocket).toHaveBeenCalledWith('wss://swap.test');
+        expect(mockSwapStatusPoller).not.toHaveBeenCalled();
+    });
+
+    it('polls the status over Tor instead when Tor is enabled', async () => {
+        await renderView({}, {}, {}, true);
+
+        expect(global.WebSocket).not.toHaveBeenCalled();
+        expect(mockSwapStatusPoller).toHaveBeenCalledWith(
+            'https://provider.test/v2',
+            'swap',
+            { Referral: 'pro' }
+        );
+    });
+
+    it('fetches submarine claim details over Tor when Tor is enabled', async () => {
+        await renderView(
+            { type: SwapType.Submarine, status: 'invoice.set' },
+            {},
+            {},
+            true
+        );
+
+        await sendStatus('transaction.claim.pending');
+
+        expect(mockNetworkFetch).toHaveBeenCalledWith({
+            method: 'GET',
+            url: 'https://provider.test/v2/swap/submarine/swap/claim',
+            headers: { 'Content-Type': 'application/json' },
+            enableTor: true
+        });
+        // the stub preimage does not match the invoice, so the claim
+        // stops after the fetch
+        expect(unexpectedErrors).toEqual([['Invalid preimage received']]);
+        unexpectedErrors = [];
     });
 });
