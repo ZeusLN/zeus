@@ -59,6 +59,9 @@ jest.mock('./LdkNodeUtils', () => ({
     getLdkNodeBaseDirectory: jest.fn().mockReturnValue('/docs/ldk-node'),
     stopLdkNode: jest.fn().mockResolvedValue(undefined)
 }));
+jest.mock('./ChannelMigrationUtils', () => ({
+    purgeChannelDbStagingFiles: jest.fn().mockResolvedValue(undefined)
+}));
 
 // Retry backoff - keep the suite from actually waiting on it
 jest.mock('./SleepUtils', () => ({
@@ -171,6 +174,7 @@ import path from 'path';
 import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
+import { purgeChannelDbStagingFiles } from './ChannelMigrationUtils';
 import {
     blockNavigationDuringWipe,
     clearAllData,
@@ -1056,6 +1060,34 @@ describe('clearAllData cookies and notifications', () => {
         await clearAllData();
 
         expect(removedKeys()).toContain('lnc-rn');
+    });
+});
+
+describe('clearAllData channel database staging files', () => {
+    const mockedPurgeChannelDbStagingFiles =
+        purgeChannelDbStagingFiles as jest.Mock;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+    });
+
+    it('deletes staged channel database copies for an embedded LND wallet', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'embedded-lnd', lndDir: 'lnd-abc' }
+            ]).getItem
+        );
+
+        await clearAllData();
+
+        expect(mockedPurgeChannelDbStagingFiles).toHaveBeenCalledTimes(1);
+    });
+
+    it('deletes staged channel database copies when no wallet is configured', async () => {
+        await clearAllData();
+
+        expect(mockedPurgeChannelDbStagingFiles).toHaveBeenCalledTimes(1);
     });
 });
 

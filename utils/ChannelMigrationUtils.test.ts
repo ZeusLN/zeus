@@ -75,7 +75,8 @@ jest.mock('react-native', () => ({
 import {
     graphDataExists,
     validateChannelBackupFile,
-    importChannelDb
+    importChannelDb,
+    purgeChannelDbStagingFiles
 } from './ChannelMigrationUtils';
 
 describe('ChannelMigrationUtils', () => {
@@ -294,6 +295,85 @@ describe('ChannelMigrationUtils', () => {
                 '/output.zip',
                 'my seed phrase'
             );
+        });
+    });
+
+    describe('purgeChannelDbStagingFiles', () => {
+        const cacheEntry = (name: string) => ({
+            name,
+            path: `/cache/${name}`
+        });
+
+        it('deletes the copy staged when a backup is picked from a content URI', async () => {
+            await validateChannelBackupFile(
+                'content://com.android.providers.downloads/document/42',
+                'backup.zip'
+            );
+            const stagedPath = mockCopyFile.mock.calls[0][1];
+            expect(stagedPath).toBe('/cache/zeus-import-temp.zip');
+
+            mockReadDir.mockResolvedValue([cacheEntry('zeus-import-temp.zip')]);
+            await purgeChannelDbStagingFiles();
+
+            expect(mockReadDir).toHaveBeenCalledWith('/cache');
+            expect(mockUnlink).toHaveBeenCalledWith(stagedPath);
+        });
+
+        it('deletes import, Olympus and export staging files and nothing else', async () => {
+            mockReadDir.mockResolvedValue([
+                cacheEntry('zeus-import-temp.zip'),
+                cacheEntry('zeus-import-temp.db'),
+                cacheEntry('zeus-olympus-backup-1736899200000.zip'),
+                cacheEntry('zeus-olympus-backup-1736899200000.enc'),
+                cacheEntry('zeus-olympus-restore-1736899200000.zip'),
+                cacheEntry('zeus-olympus-restore-1736899200000.enc'),
+                cacheEntry('zeus-lnd-mainnet-1736899200000.zip'),
+                cacheEntry('rescue_key.json'),
+                cacheEntry('my-zeus-import-temp.zip'),
+                cacheEntry('http-cache')
+            ]);
+
+            await purgeChannelDbStagingFiles();
+
+            expect(mockUnlink.mock.calls.map((call) => call[0])).toEqual([
+                '/cache/zeus-import-temp.zip',
+                '/cache/zeus-import-temp.db',
+                '/cache/zeus-olympus-backup-1736899200000.zip',
+                '/cache/zeus-olympus-backup-1736899200000.enc',
+                '/cache/zeus-olympus-restore-1736899200000.zip',
+                '/cache/zeus-olympus-restore-1736899200000.enc',
+                '/cache/zeus-lnd-mainnet-1736899200000.zip'
+            ]);
+        });
+
+        it('keeps deleting after one file fails to unlink', async () => {
+            mockReadDir.mockResolvedValue([
+                cacheEntry('zeus-olympus-restore-1.zip'),
+                cacheEntry('zeus-import-temp.zip')
+            ]);
+            mockUnlink.mockRejectedValueOnce(new Error('EBUSY'));
+            const warn = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+
+            await expect(purgeChannelDbStagingFiles()).resolves.toBeUndefined();
+
+            expect(mockUnlink).toHaveBeenCalledWith(
+                '/cache/zeus-import-temp.zip'
+            );
+            warn.mockRestore();
+        });
+
+        it('resolves without deleting anything when the cache cannot be listed', async () => {
+            mockReadDir.mockRejectedValue(new Error('ENOENT'));
+            const warn = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+
+            await expect(purgeChannelDbStagingFiles()).resolves.toBeUndefined();
+
+            expect(mockUnlink).not.toHaveBeenCalled();
+            warn.mockRestore();
         });
     });
 });
