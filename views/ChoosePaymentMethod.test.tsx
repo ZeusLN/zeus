@@ -11,8 +11,21 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsOnchainReceiving: () => false,
     supportsCashuWallet: () => false
 }));
-jest.mock('../utils/Bolt11Utils', () => ({}));
-jest.mock('../models/Invoice', () => ({}));
+// invoice -> amount in sats; anything else fails to decode
+const mockInvoiceSats: Record<string, number> = {};
+jest.mock('../utils/Bolt11Utils', () => ({
+    decode: (pr: string) => {
+        if (!(pr in mockInvoiceSats)) throw new Error('cannot decode');
+        return { num_satoshis: mockInvoiceSats[pr] };
+    }
+}));
+jest.mock(
+    '../models/Invoice',
+    () =>
+        function (this: any, decoded: any) {
+            this.getRequestAmount = Number(decoded.num_satoshis);
+        }
+);
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
@@ -244,5 +257,64 @@ describe('ChoosePaymentMethod sending capacity', () => {
         });
 
         expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
+    });
+});
+
+describe('ChoosePaymentMethod BIP 21 amount check', () => {
+    const MISMATCH = 'views.ChoosePaymentMethod.amountMismatch';
+    const ADDRESS = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+
+    beforeEach(() => {
+        jest.mocked(BackendUtils.supportsChannelManagement).mockReturnValue(
+            false
+        );
+        balances = { lightningBalance: 100000, totalBlockchainBalance: 0 };
+        channels = undefined;
+        mockInvoiceSats.lnbc15k = 15000;
+        mockInvoiceSats.lnbc12k = 12000;
+        mockInvoiceSats.lnbc0 = 0;
+    });
+
+    it('warns when the amount differs from the lightning invoice amount', async () => {
+        await renderView({
+            value: ADDRESS,
+            satAmount: '12000',
+            lightning: 'lnbc15k'
+        });
+
+        expect(screen.queryByText(MISMATCH)).not.toBeNull();
+        // the URI amount is still the one shown and checked
+        expect(list().satAmount).toBe('12000');
+    });
+
+    it('does not warn when the amounts match', async () => {
+        await renderView({
+            value: ADDRESS,
+            satAmount: '12000',
+            lightning: 'lnbc12k'
+        });
+
+        expect(screen.queryByText(MISMATCH)).toBeNull();
+    });
+
+    it('does not warn for an invoice without an amount', async () => {
+        await renderView({
+            value: ADDRESS,
+            satAmount: '12000',
+            lightning: 'lnbc0'
+        });
+
+        expect(screen.queryByText(MISMATCH)).toBeNull();
+    });
+
+    it('uses the invoice amount without warning when the URI has none', async () => {
+        await renderView({
+            value: ADDRESS,
+            satAmount: undefined,
+            lightning: 'lnbc15k'
+        });
+
+        expect(screen.queryByText(MISMATCH)).toBeNull();
+        expect(list().satAmount).toBe('15000');
     });
 });
