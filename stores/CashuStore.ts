@@ -66,6 +66,7 @@ import CashuUtils, {
     PendingMelt
 } from '../utils/CashuUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
+import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
@@ -4360,6 +4361,14 @@ export default class CashuStore {
                 throw new Error(
                     localeString('stores.CashuStore.notProperlyConfigured')
                 );
+            }
+
+            // Never fetch a withdraw callback that would reach internal
+            // infrastructure or leak in cleartext (SSRF-by-callback). Refuse
+            // before requesting a mint quote, so the user is not left holding
+            // an invoice the service will never pay.
+            if (lnurl && !isLnurlCallbackAllowed(lnurl.callback).ok) {
+                throw new Error(localeString('utils.lnurl.unsafeCallback'));
             }
 
             // Pick mint: random if enabled, otherwise selected

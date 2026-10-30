@@ -584,6 +584,26 @@ describe('Receive.validateAddress (Pay via NFC)', () => {
         expect(view.setState).toHaveBeenCalledWith({ nfcError: true });
     });
 
+    it('shows the host policy refusal instead of the NFC error', async () => {
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        (getSatAmount as jest.Mock).mockReturnValue(0);
+        const refusal = Object.assign(new Error('unsafe address'), {
+            name: 'UnsafeLnurlError'
+        });
+        (handleAnything as unknown as jest.Mock).mockRejectedValue(refusal);
+        const { view, navigation } = makeScanView('0');
+
+        view.validateAddress('lnurlw://192.168.1.1/w');
+        await flush();
+
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(Alert.alert).toHaveBeenCalledWith(
+            'general.error',
+            'unsafe address'
+        );
+        expect(view.setState).not.toHaveBeenCalledWith({ nfcError: true });
+    });
+
     it('opens no screen for an LNURL-pay request when invoice creation fails', async () => {
         (getSatAmount as jest.Mock).mockReturnValue(5000);
         (handleAnything as unknown as jest.Mock).mockResolvedValue([
