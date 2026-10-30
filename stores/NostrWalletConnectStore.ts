@@ -2681,7 +2681,8 @@ export default class NostrWalletConnectStore {
                 error
             );
         }
-        const paymentHash = paymentState.payment_hash;
+        // a rejected send request leaves no hash in the payment state
+        const paymentHash = paymentState.payment_hash || decodedPaymentHash;
         const inTransitResult =
             NostrConnectUtils.resolveLightningPaymentInTransit({
                 invoice: request.invoice,
