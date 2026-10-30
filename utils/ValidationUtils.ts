@@ -64,8 +64,11 @@ const isValidServerAddress = (
     }
 };
 
+// Digits only: the backends append the port to the host as text, so
+// '8080@example.com' (which parseInt reads as 8080) would change the host.
 const isValidPort = (port: string): boolean => {
-    const portNum = parseInt(port);
+    if (!/^\d+$/.test(port)) return false;
+    const portNum = parseInt(port, 10);
     return portNum >= 1 && portNum <= 65535;
 };
 
