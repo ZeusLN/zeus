@@ -351,6 +351,31 @@ describe('openChannel', () => {
         expect(shim.base_psbt).toHaveLength(0);
         expect(shim.no_publish).toBe(true);
     });
+
+    it('puts the close address in the request', async () => {
+        LndMobile.sendStreamCommand.mockResolvedValueOnce('');
+
+        await openChannel(
+            PUBKEY,
+            100000,
+            false,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            false,
+            false,
+            undefined,
+            { psbt_shim: { base_psbt: '', pending_chan_id: '' } },
+            'bc1qclose'
+        );
+
+        const req = sentRequest(
+            LndMobile.sendStreamCommand,
+            lnrpc.OpenChannelRequest
+        );
+        expect(req.close_address).toBe('bc1qclose');
+    });
 });
 
 describe('closeChannel', () => {

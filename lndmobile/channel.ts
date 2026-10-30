@@ -137,7 +137,8 @@ export const openChannel = async (
     simpleTaprootChannel?: boolean,
     fund_max?: boolean,
     utxos?: Array<string>,
-    funding_shim?: any
+    funding_shim?: any,
+    close_address?: string
 ): Promise<string> => {
     let options: any = {
         node_pubkey: Base64Utils.hexToBase64(pubkey),
@@ -148,6 +149,7 @@ export const openChannel = async (
         min_confs,
         spend_unconfirmed,
         fund_max,
+        close_address,
         outpoints: utxos
             ? utxos.map((utxo: string) => {
                   const [txid_str, output_index] = utxo.split(':');
