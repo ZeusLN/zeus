@@ -851,6 +851,16 @@ export default class TransactionsStore {
             return;
         }
 
+        // amounts are whole sats: a fractional amount is refused by LND
+        // REST, truncated by embedded LND and sent as msat by CLN and LDK
+        if (amount && !Number.isSafeInteger(Number(amount))) {
+            this.handlePaymentError(
+                new Error(localeString('stores.TransactionsStore.wholeSats')),
+                seq
+            );
+            return;
+        }
+
         const data: any = {};
         if (payment_request) {
             data.payment_request = payment_request;
@@ -1235,6 +1245,10 @@ export default class TransactionsStore {
         max_parts?: string;
         timeout_seconds?: number;
     }) => {
+        if (amount && !Number.isSafeInteger(Number(amount))) {
+            throw new Error(localeString('stores.TransactionsStore.wholeSats'));
+        }
+
         const data: any = {};
 
         if (payment_request) {
