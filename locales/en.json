@@ -2457,6 +2457,7 @@
     "cashu.offlinePending.failedMessage": "token(s) failed to claim — will retry on next reconnect",
     "cashu.offlinePending.title": "Offline Pending",
     "cashu.offlinePending.duplicate": "This token is already queued for claiming",
+    "cashu.offlinePending.selfCustodyUnavailable": "You are offline. Receiving to self-custody needs a connection to the mint. Please reconnect and try again.",
     "cashu.offlineSpent.title": "Spent Tokens Detected",
     "cashu.offlineSpent.message": "The following tokens were already spent by the sender before they could be claimed. These tokens have no value.",
     "cashu.offlineSpent.bannerTitle": "Offline Spent Ecash Tokens",
