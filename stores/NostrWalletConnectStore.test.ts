@@ -2985,6 +2985,64 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(connection.activity[0].error).toBe('no route');
         expect(connection.totalSpendSats).toBe(0);
     });
+
+    it("does not take LND's all-zero preimage as proof of settlement", async () => {
+        const failed = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'FAILED',
+            failure_reason: 'FAILURE_REASON_NO_ROUTE',
+            value_sat: 5000,
+            payment_preimage: hex64('0')
+        });
+        const { store, transactionsStore } = buildHandlerStore([failed]);
+        transactionsStore.getPaymentOutcome.mockReturnValue({
+            payment_hash: paymentHash,
+            payment_preimage: hex64('0'),
+            error: true,
+            payment_error: 'error.failureReasonNoRoute',
+            status: 'FAILED',
+            isIncomplete: true
+        });
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(response.result).toBeUndefined();
+        expect(response.error?.code).toBe('FAILED_TO_PAY_INVOICE');
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity[0].isBudgetDebited).toBeFalsy();
+        expect(connection.totalSpendSats).toBe(0);
+    });
+
+    it('checkPaymentErrors does not take an all-zero preimage as paid', async () => {
+        // a failed outcome without an error message or payment hash reaches
+        // the preimage check in checkPaymentErrors
+        const { store, transactionsStore } = buildHandlerStore([]);
+        transactionsStore.getPaymentOutcome.mockReturnValue({
+            payment_preimage: hex64('0'),
+            error: true,
+            status: 'FAILED',
+            isIncomplete: true
+        });
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(response.result).toBeUndefined();
+        expect(response.error).toEqual({
+            code: 'FAILED_TO_PAY_INVOICE',
+            message: 'stores.NostrWalletConnectStore.error.noPreimageReceived'
+        });
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.totalSpendSats).toBe(0);
+    });
 });
 
 describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
