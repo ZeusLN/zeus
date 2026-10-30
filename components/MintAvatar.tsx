@@ -3,6 +3,7 @@ import { Image, Text, View } from 'react-native';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { getAvatarInitials, getHostnameInitial } from '../utils/DisplayUtils';
+import { isImageSourceAllowed } from '../utils/LnurlPayUtils';
 
 import Ecash from '../assets/images/SVG/Ecash.svg';
 
@@ -33,7 +34,8 @@ const MintAvatar: React.FC<MintAvatarProps> = ({
         setImageError(false);
     }, [iconUrl]);
 
-    const showPlaceholder = !iconUrl || imageError;
+    const showPlaceholder =
+        !isImageSourceAllowed(iconUrl, mintUrl) || imageError;
     const dims = SIZES[size];
 
     if (showPlaceholder) {
