@@ -125,6 +125,9 @@ const renderView = async (
 ) => {
     const store = {
         claimMinerFee: 100,
+        fundedSwapIds: [] as string[],
+        isSwapFunded: (swap: any) =>
+            !!swap.funded || store.fundedSwapIds.includes(swap.id),
         getSwapFees: jest.fn(),
         getReverseSwapReceiveAmount: jest.fn(() => 0),
         updateSwapStatus: jest.fn().mockResolvedValue(undefined),
@@ -1493,5 +1496,63 @@ describe('SwapDetails submarine pay button', () => {
         await sendStatus('invoice.set');
 
         expect(payButtons()).toHaveLength(1);
+    });
+});
+
+describe('SwapDetails submarine swap payment', () => {
+    const SUBMARINE = {
+        type: SwapType.Submarine,
+        address: 'bc1pswap',
+        bip21: 'bitcoin:bc1pswap?amount=0.001004'
+    };
+
+    const payButtons = () => {
+        const found: any[] = [];
+        const walk = (node: any): void => {
+            if (!node || typeof node === 'string') return;
+            if (Array.isArray(node)) return node.forEach(walk);
+            if (
+                node.type === 'Button' &&
+                node.props?.title === 'views.PaymentRequest.payInvoice'
+            ) {
+                found.push(node);
+            }
+            walk(node.children);
+        };
+        walk(screen.toJSON());
+        return found;
+    };
+
+    it('offers the payment while the host waits for it', async () => {
+        await renderView(SUBMARINE);
+        await sendStatus('invoice.set');
+
+        expect(payButtons()).toHaveLength(1);
+        expect(
+            screen.queryByText('views.SwapDetails.waitingForOnchainTx')
+        ).not.toBeNull();
+    });
+
+    it('stops offering it once this wallet has paid, though the host still says invoice.set', async () => {
+        const { store } = await renderView(SUBMARINE);
+        await sendStatus('invoice.set');
+
+        // SendingOnChain has sent the swap's payment
+        store.fundedSwapIds.push('swap');
+        await sendStatus('invoice.set');
+
+        expect(payButtons()).toHaveLength(0);
+        expect(
+            screen.queryByText(
+                'views.SwapDetails.paymentSentWaitingForProvider'
+            )
+        ).not.toBeNull();
+    });
+
+    it('does not offer it for a stored swap this wallet has paid', async () => {
+        await renderView({ ...SUBMARINE, funded: true });
+        await sendStatus('swap.created');
+
+        expect(payButtons()).toHaveLength(0);
     });
 });
