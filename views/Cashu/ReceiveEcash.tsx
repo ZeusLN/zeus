@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     Dimensions,
     Platform,
     ScrollView,
@@ -17,6 +18,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import cloneDeep from 'lodash/cloneDeep';
 
 import handleAnything from '../../utils/handleAnything';
+import { isUnsafeLnurlError } from '../../utils/LnurlFetchUtils';
 
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
 
@@ -362,8 +364,14 @@ export default class ReceiveEcash extends React.Component<
                     }
                 } catch (e) {}
             })
-            .catch(() => {
-                if (lookupIsCurrent()) this.setState({ nfcError: true });
+            .catch((e) => {
+                if (!lookupIsCurrent()) return;
+                // a host policy refusal is not a card that cannot pay
+                if (isUnsafeLnurlError(e)) {
+                    Alert.alert(localeString('general.error'), e.message);
+                    return;
+                }
+                this.setState({ nfcError: true });
             });
     };
 

@@ -1,16 +1,18 @@
 import React, { Component } from 'react';
 import { Alert, View, I18nManager, TouchableOpacity } from 'react-native';
 import { SharedValue } from 'react-native-reanimated';
-import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
+import { LNURLWithdrawParams } from 'js-lnurl';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
-import ReactNativeBlobUtil from 'react-native-blob-util';
-
-import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
+import { fetchLnurlUrl } from './../../utils/LnurlFetchUtils';
+import { getLnurlParams } from './../../utils/LnurlResolveUtils';
 import { localeString } from './../../utils/LocaleUtils';
-import { getLnurlpUrl } from './../../utils/LnurlPayUtils';
+import {
+    getLnurlpUrl,
+    isLightningAddressEndpointAllowed
+} from './../../utils/LnurlPayUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import {
@@ -134,7 +136,26 @@ export default class LightningSwipeableRow extends Component<
         navigation?: any,
         settings?: any
     ): Promise<void> => {
-        const params = lnurlParams || (await getlnurlParams(lightning ?? ''));
+        let params = lnurlParams;
+        if (!params) {
+            try {
+                params = await getLnurlParams(lightning ?? '');
+            } catch (e: any) {
+                // refused by the lnurl host policy (see getLnurlParams)
+                Alert.alert(
+                    localeString('general.error'),
+                    e.message,
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
+                    { cancelable: false }
+                );
+                return;
+            }
+        }
         if (
             params &&
             params.status === 'ERROR' &&
@@ -181,49 +202,48 @@ export default class LightningSwipeableRow extends Component<
         navigation: any,
         settings: any
     ): Promise<void> => {
-        const { url, isOnion } = getLnurlpUrl(lightningAddress);
+        const { url } = getLnurlpUrl(lightningAddress);
+
+        if (!isLightningAddressEndpointAllowed(url).ok) {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('utils.lnurl.unsafeLightningAddress'),
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
+            );
+            return;
+        }
 
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
 
-        if (settingsStore.enableTor && isOnion) {
-            await doTorRequest(url, RequestMethod.GET)
-                .then((response: any) => {
-                    if (!response.callback) {
-                        throw new Error(error);
-                    }
-                    navigation.navigate('LnurlPay', {
-                        lnurlParams: response,
-                        ecash:
-                            BackendUtils.supportsCashuWallet() &&
-                            settings?.ecash?.enableCashu,
-                        lightningAddress
-                    });
-                })
-                .catch((error: any) => {
-                    throw new Error(error);
-                });
-        } else {
-            await ReactNativeBlobUtil.fetch('get', url).then(
-                (response: any) => {
-                    const status = response.info().status;
-                    if (status === 200) {
-                        const data = response.json();
-                        if (!data.callback) {
-                            throw new Error(error);
-                        }
-                        navigation.navigate('LnurlPay', {
-                            lnurlParams: data,
-                            ecash:
-                                BackendUtils.supportsCashuWallet() &&
-                                settings?.ecash?.enableCashu,
-                            lightningAddress
-                        });
-                    } else {
-                        throw new Error(error);
-                    }
-                }
+        try {
+            // fetchLnurlUrl goes over Tor when Use Tor is on, .onion
+            // included, and checks every redirect hop
+            const response = await fetchLnurlUrl(url);
+            if (response.info().status !== 200) {
+                throw new Error(error);
+            }
+            const data = response.json();
+            if (!data.callback) {
+                throw new Error(error);
+            }
+            navigation.navigate('LnurlPay', {
+                lnurlParams: data,
+                ecash:
+                    BackendUtils.supportsCashuWallet() &&
+                    settings?.ecash?.enableCashu,
+                lightningAddress
+            });
+        } catch (e: any) {
+            // fetchLnInvoice does not await this, so anything rethrown
+            // would be lost and the tap would do nothing
+            Alert.alert(
+                localeString('general.error'),
+                e?.message || error,
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
             );
         }
     };
