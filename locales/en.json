@@ -973,6 +973,7 @@
     "views.ClinkPay.errorRelayRejectedPublish": "Relay rejected the CLINK request",
     "views.ClinkPay.errorTimeout": "CLINK request timed out",
     "views.SendingLightning.sending": "Sending Payment",
+    "views.SendingLightning.stillPending": "This payment is still pending. It may be waiting for the recipient, which can take minutes or longer. You can leave this screen while it completes.",
     "views.SendingLightning.success": "Payment successfully sent",
     "views.SendingLightning.paymentHash": "Payment Hash",
     "views.SendingLightning.AddANote": "Add a note",
