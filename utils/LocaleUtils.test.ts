@@ -31,6 +31,7 @@ jest.mock('../locales/en.json', () => ({
     'test.marker': 'en',
     'test.greeting': 'Hello {{name}}',
     'test.repeated': '{{name}} and {{name}}',
+    'test.dotted': '{{a.b}} and {{axb}}',
     'test.emptyInDe': 'English value',
     'androidNotification.nodeRunningBackground': 'nodeRunningBackground',
     'androidNotification.shutdown': 'shutdown',
@@ -141,6 +142,18 @@ describe('localeString substitutions and fallbacks', () => {
 
     it('substitutes numbers as strings', () => {
         expect(localeString('test.greeting', { name: 3 })).toBe('Hello 3');
+    });
+
+    it('does not interpret $ replacement patterns in substitution values', () => {
+        expect(localeString('test.greeting', { name: '$$5 $& x' })).toBe(
+            'Hello $$5 $& x'
+        );
+    });
+
+    it('treats regex metacharacters in substitution keys literally', () => {
+        expect(localeString('test.dotted', { 'a.b': 'first' })).toBe(
+            'first and {{axb}}'
+        );
     });
 
     it('leaves unmatched placeholders as literal text', () => {
