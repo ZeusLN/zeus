@@ -27,6 +27,9 @@ export default function CashuPayment(props: any) {
     const { redeemCashu, deletePayment } = lightningAddressStore;
 
     const date = DateTimeUtils.formatDateTimeShort(item.updated_at);
+    // mint_url comes from the ZEUS Pay status response; an object here
+    // would crash the list, so render only strings
+    const mintUrl = typeof item.mint_url === 'string' ? item.mint_url : '';
 
     const confirmDelete = () => {
         Alert.alert(
@@ -84,14 +87,13 @@ export default function CashuPayment(props: any) {
                     <ListItem.Subtitle>
                         <Text
                             style={{
-                                color: cashuStore.cashuWallets[item.mint_url]
+                                color: cashuStore.cashuWallets[mintUrl]
                                     ?.errorConnecting
                                     ? themeColor('warning')
                                     : themeColor('secondaryText')
                             }}
                         >
-                            {cashuStore.mintInfos[item.mint_url]?.name ||
-                                item.mint_url}
+                            {cashuStore.mintInfos[mintUrl]?.name || mintUrl}
                         </Text>
                     </ListItem.Subtitle>
                     <ListItem.Subtitle>
