@@ -356,6 +356,7 @@ export default class SendingLightning extends React.Component<
             payment_preimage,
             payment_fee,
             payment_error,
+            paymentRejectedByRecipient,
             noteKey,
             paymentDuration,
             paymentOutcomeUnverified,
@@ -475,6 +476,9 @@ export default class SendingLightning extends React.Component<
                             {(!!error || !!payment_error) && (
                                 <PaymentErrorView
                                     errorMessage={payment_error || error_msg}
+                                    rejectedByRecipient={
+                                        paymentRejectedByRecipient
+                                    }
                                 />
                             )}
                             {!!success &&
@@ -602,31 +606,38 @@ export default class SendingLightning extends React.Component<
                                 )}
                                 {(!!payment_error || !!error) && (
                                     <>
-                                        {/* the send guard is still held while
-                                        the node is checked for this payment,
-                                        so a retry would be silently ignored */}
-                                        <Button
-                                            title={localeString(
-                                                paymentInFlight
-                                                    ? 'views.SendingLightning.checkingPayment'
-                                                    : 'views.SendingLightning.tryAgain'
-                                            )}
-                                            icon={{
-                                                name: 'rotate-ccw',
-                                                type: 'feather',
-                                                size: 25
-                                            }}
-                                            disabled={paymentInFlight}
-                                            onPress={() => navigation.goBack()}
-                                            buttonStyle={{
-                                                backgroundColor: 'white',
-                                                height: 40
-                                            }}
-                                            containerStyle={{
-                                                width: '100%',
-                                                margin: 3
-                                            }}
-                                        />
+                                        {/* retrying an invoice the recipient
+                                            rejected or canceled fails the
+                                            same way. The send guard is still
+                                            held while the node is checked for
+                                            this payment, so a retry would be
+                                            silently ignored */}
+                                        {!paymentRejectedByRecipient && (
+                                            <Button
+                                                title={localeString(
+                                                    paymentInFlight
+                                                        ? 'views.SendingLightning.checkingPayment'
+                                                        : 'views.SendingLightning.tryAgain'
+                                                )}
+                                                icon={{
+                                                    name: 'rotate-ccw',
+                                                    type: 'feather',
+                                                    size: 25
+                                                }}
+                                                disabled={paymentInFlight}
+                                                onPress={() =>
+                                                    navigation.goBack()
+                                                }
+                                                buttonStyle={{
+                                                    backgroundColor: 'white',
+                                                    height: 40
+                                                }}
+                                                containerStyle={{
+                                                    width: '100%',
+                                                    margin: 3
+                                                }}
+                                            />
+                                        )}
                                         {BackendUtils.isLocalWallet() && (
                                             <Button
                                                 title={localeString(
