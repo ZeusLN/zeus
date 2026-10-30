@@ -48,6 +48,10 @@ export default class InvoicesStore {
     @observable invoicesCount: number;
     @observable watchedInvoicePaid = false;
     @observable watchedInvoicePaidAmt: number | string | null = null;
+    // bumped by every getPayReq, getWithdrawalReq, clearPayReq and reset,
+    // so a decode or route answer can tell whether its request is still
+    // the current one
+    private payReqRequestId = 0;
     settingsStore: SettingsStore;
     lspStore: LSPStore;
     channelsStore: ChannelsStore;
@@ -106,6 +110,7 @@ export default class InvoicesStore {
     @action
     public reset = () => {
         this.invoiceRequestSeq++;
+        this.payReqRequestId++;
         this.paymentRequest = '';
         this.onChainAddress = '';
         this.loading = false;
@@ -966,8 +971,16 @@ export default class InvoicesStore {
 
     @action
     public clearPayReq = () => {
+        // drop answers still in flight, so leaving PaymentRequest during a
+        // decode doesn't refill pay_req and start route queries or probes.
+        // Clear the loading flags those answers would have cleared
+        this.payReqRequestId++;
         this.pay_req = null;
         this.getPayReqError = null;
+        this.loading = false;
+        this.loadingFeeEstimate = false;
+        this.feeEstimate = null;
+        this.successProbability = null;
     };
 
     @action
@@ -980,13 +993,26 @@ export default class InvoicesStore {
 
     @action
     public getPayReq = (paymentRequest: string) => {
+        const requestId = ++this.payReqRequestId;
         this.loading = true;
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
+        // a route query for the previous pay_req will be dropped, so it
+        // can't clear these
+        this.loadingFeeEstimate = false;
         this.feeEstimate = null;
+        this.successProbability = null;
 
         return BackendUtils.decodePaymentRequest([paymentRequest])
             .then((data: any) => {
+                // drop the response of a superseded request: applying it
+                // would leave pay_req (what the user reviews) describing a
+                // different invoice than paymentRequest (what gets paid).
+                // Compare ids, not strings: two decodes of the same string
+                // can settle out of order on backends without restReq
+                // de-duplication, and an older failure must not clear a
+                // newer success
+                if (requestId !== this.payReqRequestId) return;
                 runInAction(() => {
                     // thread the original bolt11 string through: several
                     // backends' decode responses omit it, leaving the
@@ -998,6 +1024,7 @@ export default class InvoicesStore {
                 return;
             })
             .catch((error: Error) => {
+                if (requestId !== this.payReqRequestId) return;
                 const error_friendly = errorToUserFriendly(error);
                 runInAction(() => {
                     this.pay_req = null;
@@ -1009,13 +1036,18 @@ export default class InvoicesStore {
 
     @action
     public getWithdrawalReq = (withdrawalReq: string) => {
+        const requestId = ++this.payReqRequestId;
         this.loading = true;
         this.withdrawal_req = null;
         this.paymentRequest = withdrawalReq;
+        this.loadingFeeEstimate = false;
         this.feeEstimate = null;
+        this.successProbability = null;
 
         return BackendUtils.decodePaymentRequest([withdrawalReq])
             .then((data: any) => {
+                // same guard as getPayReq: both share paymentRequest
+                if (requestId !== this.payReqRequestId) return;
                 runInAction(() => {
                     this.withdrawal_req = new WithdrawalRequest(data);
                     this.getPayReqError = null;
@@ -1024,6 +1056,7 @@ export default class InvoicesStore {
                 return;
             })
             .catch((error: Error) => {
+                if (requestId !== this.payReqRequestId) return;
                 const error_friendly = errorToUserFriendly(error);
                 runInAction(() => {
                     this.withdrawal_req = null;
@@ -1042,12 +1075,18 @@ export default class InvoicesStore {
 
     @action
     private getRoutes = (destination: string, amount: string | number) => {
+        // runs from the pay_req reaction, so the current id belongs to the
+        // pay_req being queried. Drop answers for a superseded pay_req:
+        // they would show its fee and success probability next to the
+        // newer invoice
+        const requestId = this.payReqRequestId;
         this.loadingFeeEstimate = true;
         this.feeEstimate = null;
         this.successProbability = null;
 
         return BackendUtils.getRoutes([destination, amount])
             .then((data: any) => {
+                if (requestId !== this.payReqRequestId) return;
                 runInAction(() => {
                     this.loadingFeeEstimate = false;
                     this.successProbability = data.success_prob
@@ -1069,7 +1108,10 @@ export default class InvoicesStore {
                     }
                 });
             })
-            .catch(() => this.getRoutesError());
+            .catch(() => {
+                if (requestId !== this.payReqRequestId) return;
+                this.getRoutesError();
+            });
     };
 
     /**
