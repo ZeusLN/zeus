@@ -258,11 +258,19 @@ export default class UTXOsStore {
             addresses_to_generate: _addressesToGenerate,
             ...importRequest
         } = data;
-        if (birthday_height && BackendUtils.supportsAccountImportRescan()) {
-            importRequest.birthday_height = birthday_height;
-        }
+        const supportsBirthday = BackendUtils.supportsAccountImportRescan();
 
-        return BackendUtils.importAccount(importRequest)
+        return (
+            supportsBirthday
+                ? this.getImportBirthdayHeight(birthday_height, data.dry_run)
+                : Promise.resolve(undefined)
+        )
+            .then((height?: number) => {
+                if (height) {
+                    importRequest.birthday_height = height;
+                }
+                return BackendUtils.importAccount(importRequest);
+            })
             .then(async (response: any) => {
                 if (!data.dry_run) {
                     if (this.start_height) {
@@ -344,6 +352,27 @@ export default class UTXOsStore {
                     this.getUtxosError();
                 });
             });
+    };
+
+    // The lnd fork resolves birthday_height on every import and proto3
+    // sends an unset uint32 as 0, so a new account (no birthday entered)
+    // would move the wallet birthday back to genesis (#4640). A new account
+    // has no history, so send the current tip instead: the fork only moves
+    // the wallet birthday backward, so the tip leaves it unchanged. Dry runs
+    // never persist the birthday and keep the old request.
+    private getImportBirthdayHeight = async (
+        birthday_height?: number,
+        dry_run?: boolean
+    ): Promise<number | undefined> => {
+        if (birthday_height || dry_run) return birthday_height;
+        try {
+            const nodeInfo = await BackendUtils.getMyNodeInfo();
+            const tip = Number(nodeInfo?.block_height);
+            return tip > 0 ? tip : undefined;
+        } catch (e) {
+            console.log('error fetching block height for import', e);
+            return undefined;
+        }
     };
 
     @action
