@@ -125,8 +125,8 @@ describe('CLNRest.request', () => {
         await cln.postRequest('/v1/listfunds', undefined, 12000);
 
         expect(mockConfig.mock.calls).toEqual([
-            [{ trusty: true, timeout: 30000 }],
-            [{ trusty: false, timeout: 12000 }]
+            [{ trusty: true, followRedirect: false, timeout: 30000 }],
+            [{ trusty: false, followRedirect: false, timeout: 12000 }]
         ]);
     });
 
@@ -337,6 +337,10 @@ describe('CLNRest.request error fallback', () => {
         expect(await rejectWith(502, 'Bad Gateway')).toBe('Bad Gateway');
     });
 
+    it('fails a 302 instead of following it', async () => {
+        expect(await rejectWith(302, '')).toBe(CONNECTION_ERROR);
+    });
+
     it('treats status 300 as an error', async () => {
         expect(await rejectWith(300, 'Multiple Choices')).toBe(
             'Multiple Choices'
@@ -420,6 +424,7 @@ describe('CLNRest payment timeout race', () => {
 
         expect(mockConfig).toHaveBeenCalledWith({
             trusty: true,
+            followRedirect: false,
             timeout: 35000
         });
     });
@@ -437,6 +442,7 @@ describe('CLNRest payment timeout race', () => {
         expect(result.value).toEqual({ payment_error: PAYMENT_TIMED_OUT });
         expect(mockConfig).toHaveBeenCalledWith({
             trusty: true,
+            followRedirect: false,
             timeout: 65000
         });
     });

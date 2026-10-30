@@ -111,6 +111,8 @@ export default class CLNRest {
 
             const fetchPromise = ReactNativeBlobUtil.config({
                 trusty: !certVerification,
+                // never replay the macaroon / rune headers to a redirect target
+                followRedirect: false,
                 // RNBlobUtil's native default is 60s; without this a
                 // payment request holding the connection open longer than
                 // that dies natively no matter what the race below allows
