@@ -26,6 +26,7 @@ import Text from '../../components/Text';
 
 import CashuToken from '../../models/CashuToken';
 
+import { confirmAction } from '../../utils/ActionUtils';
 import { ZEUS_ECASH_GIFT_URL } from '../../utils/AddressUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { getButtonGroupStyles } from '../../utils/buttonGroupStyles';
@@ -84,6 +85,31 @@ export default class CashuTokenView extends React.Component<
             this.checkInterval = null;
         }
     };
+
+    // Same confirmation as the Add Mint view before a cleartext http://
+    // mint is contacted: the token names the mint, and the token's proofs
+    // and our invoice would be sent to it unencrypted
+    private confirmCleartextMint = (mint: string): Promise<boolean> =>
+        new Promise((resolve) => {
+            if (!UrlUtils.isCleartextHttpTransport(mint)) {
+                resolve(true);
+                return;
+            }
+            confirmAction(
+                localeString('general.warning'),
+                localeString('views.Cashu.AddMint.cleartextHttpWarning'),
+                {
+                    text: localeString('general.proceed'),
+                    style: 'destructive',
+                    onPress: () => resolve(true)
+                },
+                {
+                    text: localeString('general.cancel'),
+                    onPress: () => resolve(false),
+                    isPreferred: true
+                }
+            );
+        });
 
     async componentDidMount() {
         const { route, CashuStore } = this.props;
@@ -474,6 +500,13 @@ export default class CashuTokenView extends React.Component<
                                                     : 'views.Cashu.AddMint.enableAndAdd'
                                             )}
                                             onPress={async () => {
+                                                if (
+                                                    !(await this.confirmCleartextMint(
+                                                        mint
+                                                    ))
+                                                ) {
+                                                    return;
+                                                }
                                                 CashuStore.setLoading(true);
                                                 try {
                                                     if (!enableCashu) {
@@ -562,6 +595,13 @@ export default class CashuTokenView extends React.Component<
                                         : 'general.receive'
                                 )}
                                 onPress={async () => {
+                                    // a mint already in the wallet was chosen by the user
+                                    if (
+                                        !haveMint &&
+                                        !(await this.confirmCleartextMint(mint))
+                                    ) {
+                                        return;
+                                    }
                                     this.setState({
                                         errorMessage: '',
                                         warningMessage: ''
