@@ -164,6 +164,7 @@ import { BackHandler, Networking, Platform } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Notifications } from 'react-native-notifications';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import RNFS from 'react-native-fs';
 
 import fs from 'fs';
 import path from 'path';
@@ -584,6 +585,78 @@ describe('clearAllData orphaned node data directories', () => {
         mockedExists.mockResolvedValue(true);
 
         await expect(clearAllData()).resolves.toBeUndefined();
+    });
+});
+
+describe('clearAllData channel database exports in Downloads', () => {
+    const mockedReadDir = RNFS.readDir as jest.Mock;
+    const mockedUnlink = RNFS.unlink as jest.Mock;
+
+    const file = (name: string, isFile = true) => ({
+        name,
+        path: `/public-downloads/${name}`,
+        isFile: () => isFile
+    });
+    const unlinked = () => mockedUnlink.mock.calls.map((call) => call[0]);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedUnlink.mockResolvedValue(undefined);
+        mockedReadDir.mockResolvedValue([
+            file('zeus-lnd-mainnet-1791995129313.zip'),
+            file('zeus-lnd-testnet-1791995129314.zip'),
+            file('rescue_key.json'),
+            file('holiday-photos.zip'),
+            file('my-zeus-lnd-mainnet-1791995129313.zip'),
+            file('zeus-lnd-mainnet-1791995129313 (1).zip'),
+            file('zeus-lnd-regtest-1791995129313.zip'),
+            file('zeus-lnd-mainnet-1791995129315.zip', false)
+        ]);
+    });
+
+    afterAll(() => {
+        mockedReadDir.mockResolvedValue([]);
+    });
+
+    it('deletes the exports ZEUS saved to Downloads on Android', async () => {
+        setPlatformOS('android');
+
+        await clearAllData();
+
+        expect(mockedReadDir).toHaveBeenCalledWith('/public-downloads');
+        expect(unlinked().sort()).toEqual([
+            '/public-downloads/zeus-lnd-mainnet-1791995129313.zip',
+            '/public-downloads/zeus-lnd-testnet-1791995129314.zip'
+        ]);
+    });
+
+    it('keeps going after a failed unlink', async () => {
+        setPlatformOS('android');
+        mockedUnlink
+            .mockRejectedValueOnce(new Error('EACCES'))
+            .mockResolvedValueOnce(undefined);
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(unlinked()).toHaveLength(2);
+    });
+
+    it('still finishes the wipe when Downloads cannot be listed', async () => {
+        setPlatformOS('android');
+        mockedReadDir.mockRejectedValue(new Error('EACCES'));
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(mockedUnlink).not.toHaveBeenCalled();
+        expect(MigrationUtils.clearConfirmedFlags).toHaveBeenCalled();
+    });
+
+    it('does not list Downloads on iOS, where the export is not saved there', async () => {
+        await clearAllData();
+
+        expect(mockedReadDir).not.toHaveBeenCalledWith('/public-downloads');
+        expect(mockedUnlink).not.toHaveBeenCalled();
     });
 });
 
