@@ -290,6 +290,37 @@ export const isLnurlCallbackAllowed = (callback: string): LnurlCheckResult => {
 };
 
 /**
+ * Whether a LUD-09 url success action may be shown as a link and opened.
+ * Only https URLs with a host are allowed. URLs with userinfo or a backslash
+ * are rejected because the text shown to the user can then name a different
+ * host than the one that is opened. URLs with control characters are
+ * rejected because the URL parser strips tab, LF and CR, so the parsed host
+ * can differ from the raw string that is shown and opened. Anything else is
+ * shown as plain text.
+ */
+export const isSuccessActionUrlAllowed = (successUrl: string): boolean => {
+    if (
+        typeof successUrl !== 'string' ||
+        successUrl.includes('\\') ||
+        /[\u0000-\u001F\u007F]/.test(successUrl)
+    ) {
+        return false;
+    }
+    let parsed: URL;
+    try {
+        parsed = new URL(successUrl);
+    } catch {
+        return false;
+    }
+    return (
+        parsed.protocol === 'https:' &&
+        !!parsed.hostname &&
+        !parsed.username &&
+        !parsed.password
+    );
+};
+
+/**
  * Bind an LNURL-auth callback to the domain that is displayed to the user
  * and used to derive the service-specific linking key. js-lnurl's getDomain
  * and the url parser used for transmission disagree on URLs containing
