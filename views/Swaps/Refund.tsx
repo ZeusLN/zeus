@@ -251,7 +251,6 @@ export default class RefundSwap extends React.Component<
             claimLeaf: swapData?.swapTreeDetails.claimLeaf.output,
             refundLeaf: swapData?.swapTreeDetails.refundLeaf.output,
             transactionHex: swapData.lockupTransaction?.hex,
-            privateKey: swapData.refundPrivateKey,
             servicePubKey: swapData.servicePubKey,
             feeRate: Number(fee),
             timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
