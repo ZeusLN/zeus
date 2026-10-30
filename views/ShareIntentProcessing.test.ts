@@ -14,7 +14,7 @@ jest.mock('react-native', () => ({
     Alert: { alert: jest.fn() },
     NativeModules: {
         MobileTools: {
-            clearSharedIntent: jest.fn().mockResolvedValue(undefined)
+            takeSharedImageBase64: jest.fn().mockResolvedValue('QRIMAGE')
         }
     }
 }));
@@ -189,9 +189,10 @@ describe('ShareIntentProcessing auth gate', () => {
     });
 });
 
-// processSharedQRImageFast clears the intent when it reads it. A second
-// clear after the decode and handleAnything would discard a share that
-// arrived in the meantime, so this screen must not clear on any outcome.
+// processSharedQRImageFast takes the share (reads and clears it) in one
+// native call. A second take after the decode and handleAnything would
+// consume a share that arrived in the meantime, so this screen must not touch
+// the native share on any outcome.
 describe('ShareIntentProcessing intent clearing', () => {
     const { NativeModules } = require('react-native');
     const QRKit = require('react-native-qr-kit').default;
@@ -205,7 +206,7 @@ describe('ShareIntentProcessing intent clearing', () => {
 
     afterEach(() => jest.restoreAllMocks());
 
-    it('does not clear the intent after routing a decoded QR', async () => {
+    it('does not take the share again after routing a decoded QR', async () => {
         const { navigation } = await mount({
             base64Image: 'QRIMAGE',
             requiresAuth: false
@@ -215,22 +216,22 @@ describe('ShareIntentProcessing intent clearing', () => {
             invoice: 'lnbc1invoice'
         });
         expect(
-            NativeModules.MobileTools.clearSharedIntent
+            NativeModules.MobileTools.takeSharedImageBase64
         ).not.toHaveBeenCalled();
     });
 
-    it('does not clear the intent when the image has no QR', async () => {
+    it('does not take the share again when the image has no QR', async () => {
         QRKit.decodeBase64.mockResolvedValueOnce({ success: false });
 
         await mount({ base64Image: 'QRIMAGE', requiresAuth: false });
 
         expect(handleAnything).not.toHaveBeenCalled();
         expect(
-            NativeModules.MobileTools.clearSharedIntent
+            NativeModules.MobileTools.takeSharedImageBase64
         ).not.toHaveBeenCalled();
     });
 
-    it('does not clear the intent when the QR is not recognised', async () => {
+    it('does not take the share again when the QR is not recognised', async () => {
         (handleAnything as jest.Mock).mockResolvedValueOnce(undefined);
 
         const { navigation } = await mount({
@@ -240,17 +241,17 @@ describe('ShareIntentProcessing intent clearing', () => {
 
         expect(navigation.replace).not.toHaveBeenCalled();
         expect(
-            NativeModules.MobileTools.clearSharedIntent
+            NativeModules.MobileTools.takeSharedImageBase64
         ).not.toHaveBeenCalled();
     });
 
-    it('does not clear the intent when processing throws', async () => {
+    it('does not take the share again when processing throws', async () => {
         (handleAnything as jest.Mock).mockRejectedValueOnce(new Error('boom'));
 
         await mount({ base64Image: 'QRIMAGE', requiresAuth: false });
 
         expect(
-            NativeModules.MobileTools.clearSharedIntent
+            NativeModules.MobileTools.takeSharedImageBase64
         ).not.toHaveBeenCalled();
     });
 });

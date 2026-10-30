@@ -1,8 +1,7 @@
 jest.mock('react-native', () => ({
     NativeModules: {
         MobileTools: {
-            getSharedImageBase64: jest.fn(),
-            clearSharedIntent: jest.fn()
+            takeSharedImageBase64: jest.fn()
         }
     }
 }));
@@ -25,16 +24,13 @@ import {
 } from './ShareIntentProcessor';
 import { settingsStore } from '../stores/Stores';
 
-const getSharedImageBase64 = NativeModules.MobileTools
-    .getSharedImageBase64 as jest.Mock;
-const clearSharedIntent = NativeModules.MobileTools
-    .clearSharedIntent as jest.Mock;
+const takeSharedImageBase64 = NativeModules.MobileTools
+    .takeSharedImageBase64 as jest.Mock;
 
 describe('processSharedQRImageFast', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        getSharedImageBase64.mockResolvedValue('QRIMAGE');
-        clearSharedIntent.mockResolvedValue(true);
+        takeSharedImageBase64.mockResolvedValue('QRIMAGE');
         (settingsStore as any).settings = {};
         (settingsStore as any).initialStart = true;
     });
@@ -93,46 +89,51 @@ describe('processSharedQRImageFast', () => {
     });
 
     // Left in place, each resume re-read the same image, which put a POS
-    // terminal back on the PIN screen
-    it('consumes the intent once the image is read', async () => {
+    // terminal back on the PIN screen. Reading and clearing in two native
+    // calls let a share that arrived in between be cleared unread, so the
+    // image is taken in one call.
+    it('takes the share in a single native call', async () => {
         (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
             true
         );
-
-        await processSharedQRImageFast();
-
-        expect(clearSharedIntent).toHaveBeenCalledTimes(1);
-    });
-
-    it('still returns the image when clearing the intent fails', async () => {
-        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
-            true
-        );
-        clearSharedIntent.mockRejectedValue(new Error('no activity'));
-        jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         const result = await processSharedQRImageFast();
 
+        expect(takeSharedImageBase64).toHaveBeenCalledTimes(1);
         expect(result?.params.base64Image).toBe('QRIMAGE');
+    });
 
-        // The intent is still in place, so the next read delivers the same
-        // image again rather than losing it, and the guard has been released
+    // When the native side cannot consume the share it still returns the
+    // image and leaves the share in place, so the next read delivers it again
+    // rather than losing it
+    it('delivers a share again when the native side could not consume it', async () => {
+        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
+            true
+        );
+
+        const result = await processSharedQRImageFast();
         const again = await processSharedQRImageFast();
 
-        expect(getSharedImageBase64).toHaveBeenCalledTimes(2);
+        expect(takeSharedImageBase64).toHaveBeenCalledTimes(2);
+        expect(result?.params.base64Image).toBe('QRIMAGE');
         expect(again?.params.base64Image).toBe('QRIMAGE');
     });
 
     it('returns null when nothing was shared', async () => {
-        getSharedImageBase64.mockResolvedValueOnce(null);
+        takeSharedImageBase64.mockResolvedValueOnce(null);
 
         expect(await processSharedQRImageFast()).toBeNull();
-        expect(clearSharedIntent).not.toHaveBeenCalled();
 
         // An empty read releases the guard too
         const result = await processSharedQRImageFast();
 
         expect(result?.params.base64Image).toBe('QRIMAGE');
+    });
+
+    it('returns null for an empty shared file', async () => {
+        takeSharedImageBase64.mockResolvedValueOnce('');
+
+        expect(await processSharedQRImageFast()).toBeNull();
     });
 
     // On resume two handlers look for the same share at once (iOS:
@@ -150,27 +151,28 @@ describe('processSharedQRImageFast', () => {
             processSharedQRImageFast()
         ]);
 
-        expect(getSharedImageBase64).toHaveBeenCalledTimes(1);
+        expect(takeSharedImageBase64).toHaveBeenCalledTimes(1);
         expect(first?.params.base64Image).toBe('QRIMAGE');
         expect(second).toBeNull();
     });
 
-    it('holds off a concurrent reader until the intent is cleared', async () => {
+    it('holds off a concurrent reader until the take has settled', async () => {
         (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
             false
         );
-        let finishClear: (value: boolean) => void = () => {};
-        clearSharedIntent.mockReturnValueOnce(
-            new Promise((resolve) => (finishClear = resolve))
+        let finishTake: (value: string) => void = () => {};
+        takeSharedImageBase64.mockReturnValueOnce(
+            new Promise((resolve) => (finishTake = resolve))
         );
 
         const first = processSharedQRImageFast();
         await new Promise((resolve) => setImmediate(resolve));
-        expect(clearSharedIntent).toHaveBeenCalledTimes(1);
+        expect(takeSharedImageBase64).toHaveBeenCalledTimes(1);
 
         expect(await processSharedQRImageFast()).toBeNull();
+        expect(takeSharedImageBase64).toHaveBeenCalledTimes(1);
 
-        finishClear(true);
+        finishTake('QRIMAGE');
         expect((await first)?.params.base64Image).toBe('QRIMAGE');
     });
 
@@ -180,7 +182,7 @@ describe('processSharedQRImageFast', () => {
         );
 
         await processSharedQRImageFast();
-        getSharedImageBase64.mockResolvedValue('NEXTIMAGE');
+        takeSharedImageBase64.mockResolvedValue('NEXTIMAGE');
 
         const result = await processSharedQRImageFast();
 
@@ -191,7 +193,7 @@ describe('processSharedQRImageFast', () => {
         (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
             false
         );
-        getSharedImageBase64.mockRejectedValueOnce(new Error('decode failed'));
+        takeSharedImageBase64.mockRejectedValueOnce(new Error('decode failed'));
         jest.spyOn(console, 'error').mockImplementation(() => {});
 
         expect((await processSharedQRImageFast())?.success).toBe(false);
