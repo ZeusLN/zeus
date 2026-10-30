@@ -2,14 +2,23 @@
 import BigNumber from 'bignumber.js';
 import { sha256 } from '@noble/hashes/sha256';
 
+import { bech32 } from 'bech32';
+
 import Base64Utils from './Base64Utils';
 import Bolt11Utils from './Bolt11Utils';
 import {
     getLnurlpUrl,
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed,
-    verifyLnurlAuthCallback
+    verifyLnurlAuthCallback,
+    isLnurlEndpointAllowed,
+    isLightningAddressEndpointAllowed
 } from './LnurlPayUtils';
+
+// Jest resolves 'url' to Node's built-in module, which maps fullwidth and
+// other compatibility characters in a hostname before returning it. The app
+// bundles the npm 'url' package, which does not, so test against that one.
+jest.mock('url', () => jest.requireActual('../node_modules/url/url.js'));
 
 const METADATA = '[["text/plain","Payment to Alice"]]';
 const MATCHING_HASH = Base64Utils.bytesToHex(
@@ -229,6 +238,64 @@ describe('LnurlPayUtils', () => {
             );
         });
 
+        it.each([
+            'https://１２７.０.０.１/x',
+            'https://１９２.１６８.１.１/x',
+            'https://１６９．２５４．１６９．２５４/latest',
+            'https://ｌｏｃａｌｈｏｓｔ/x',
+            'https://ⓛⓞⓒⓐⓛⓗⓞⓢⓣ/x',
+            'https://①②⑦.⓪.⓪.①/x'
+        ])('rejects %s, which native stacks map to a private host', (cb) => {
+            expect(isLnurlCallbackAllowed(cb).ok).toBe(false);
+        });
+
+        // IDNA deletes these code points from a host, and NFKC leaves them
+        // in place, so they have to be stripped separately
+        it.each([
+            'https://12\u00AD7.0.0.1/x',
+            'https://127\u200B.0.0.1/x',
+            'https://127.0.\u20600.1/x',
+            'https://\uFEFF127.0.0.1/x',
+            'https://127.0.0.1\uFE0F/x',
+            'https://12\u034F7.0.0.1/x',
+            'https://12\u180B7.0.0.1/x',
+            'https://12\u31647.0.0.1/x',
+            'https://12\u{E0100}7.0.0.1/x',
+            'https://12\u18067.0.0.1/x',
+            'https://12\u200C7.0.0.1/x',
+            'https://12\u200D7.0.0.1/x',
+            'https://loc\u00ADalhost/x',
+            'https://169.254.\u200B169.254/latest'
+        ])('rejects %j, which IDNA maps to a private host', (cb: string) => {
+            expect(isLnurlCallbackAllowed(cb).ok).toBe(false);
+        });
+
+        // the bundled url package ends the host at '%', while OkHttp
+        // percent-decodes it before dialing
+        it.each([
+            'https://192.168.%31.1/x',
+            'https://l%6fcalhost/x',
+            'https://169.254.%31%36%39.254/latest',
+            'https://%31%32%37.0.0.1/x',
+            'https:\\\\192.168.%31.1\\x',
+            'https:/\\192.168.%31.1/x',
+            'HTTPS://l%6fcalhost/x'
+        ])('rejects %j, which has a percent-encoded authority', (cb) => {
+            expect(isLnurlCallbackAllowed(cb).ok).toBe(false);
+        });
+
+        it('still allows a percent-encoded path and query', () => {
+            expect(
+                isLnurlCallbackAllowed('https://pay.example.com/c%62?q=%31').ok
+            ).toBe(true);
+        });
+
+        it('still allows a non-ASCII public domain', () => {
+            expect(isLnurlCallbackAllowed('https://bücher.example/cb').ok).toBe(
+                true
+            );
+        });
+
         it('rejects an RFC1918 address', () => {
             expect(isLnurlCallbackAllowed('https://10.1.2.3/x').ok).toBe(false);
             expect(isLnurlCallbackAllowed('https://192.168.0.1/x').ok).toBe(
@@ -397,5 +464,86 @@ describe('LnurlPayUtils', () => {
                 verifyLnurlAuthCallback(undefined as any, 'service.example').ok
             ).toBe(false);
         });
+    });
+});
+
+// The callback check alone leaves the step before it open: js-lnurl fetches
+// whatever the bech32 decodes to, so the endpoint needs the same policy.
+describe('isLnurlEndpointAllowed', () => {
+    // what a QR actually carries: the target URL, bech32 encoded
+    const asLnurl = (target: string) =>
+        bech32.encode(
+            'lnurl',
+            bech32.toWords(Base64Utils.utf8ToBytes(target)),
+            20000
+        );
+
+    it('allows a public https endpoint', () => {
+        expect(
+            isLnurlEndpointAllowed(asLnurl('https://example.com/lnurl')).ok
+        ).toBe(true);
+    });
+
+    it('allows an lnurlp:// endpoint, which decodes to https', () => {
+        expect(isLnurlEndpointAllowed('lnurlp://example.com/lnurl').ok).toBe(
+            true
+        );
+    });
+
+    it('allows an onion endpoint over cleartext', () => {
+        expect(isLnurlEndpointAllowed('lnurlp://abcdefg.onion/lnurl').ok).toBe(
+            true
+        );
+    });
+
+    it.each([
+        'https://127.0.0.1/lnurl',
+        'https://10.1.2.3/lnurl',
+        'https://192.168.0.1/lnurl',
+        'https://169.254.169.254/latest',
+        'http://cleartext.example/lnurl',
+        'https://１２７.０.０.１/lnurl',
+        'https://12\u00AD7.0.0.1/lnurl',
+        'https://loc\u200Balhost/lnurl',
+        'https://192.168.%31.1/lnurl',
+        'https://l%6fcalhost/lnurl'
+    ])('refuses a bech32 endpoint pointing at %j', (target) => {
+        expect(isLnurlEndpointAllowed(asLnurl(target)).ok).toBe(false);
+    });
+
+    it('refuses an lnurlw:// endpoint pointing at a LAN host', () => {
+        expect(isLnurlEndpointAllowed('lnurlw://192.168.1.1/cb').ok).toBe(
+            false
+        );
+        expect(isLnurlEndpointAllowed('lnurlw://192.168.%31.1/w').ok).toBe(
+            false
+        );
+    });
+
+    // js-lnurl reports an undecodable value as an error without touching the
+    // network, so there is no request for this check to prevent
+    it('leaves an undecodable value to js-lnurl', () => {
+        expect(isLnurlEndpointAllowed('not an lnurl at all').ok).toBe(true);
+    });
+});
+
+// LUD-16 addresses admit IP-literal domains, so the well-known URL they
+// resolve to needs the same policy.
+describe('isLightningAddressEndpointAllowed', () => {
+    it.each([
+        'https://example.com/.well-known/lnurlp/user',
+        'http://abcdefg.onion/.well-known/lnurlp/user'
+    ])('allows %s', (target) => {
+        expect(isLightningAddressEndpointAllowed(target).ok).toBe(true);
+    });
+
+    it.each([
+        'https://192.168.1.1/.well-known/lnurlp/user',
+        'https://127.0.0.1/.well-known/lnurlp/user',
+        'https://169.254.169.254/.well-known/lnurlp/user',
+        'https://[192.168.1.1]/.well-known/lnurlp/user',
+        'https://192.168\uFEFF.1.1/.well-known/lnurlp/user'
+    ])('refuses %j', (target) => {
+        expect(isLightningAddressEndpointAllowed(target).ok).toBe(false);
     });
 });
