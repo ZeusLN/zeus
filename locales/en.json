@@ -1261,6 +1261,8 @@
     "views.Settings.Theme.orange-cream-soda": "Orange Cream Soda",
     "views.Settings.Theme.red-metallic": "Red Metallic",
     "views.Settings.Theme.radioactive": "Radioactive",
+    "views.Settings.Theme.gilded": "Gilded",
+    "views.Settings.Theme.ember": "Ember",
     "views.Settings.Display.title": "Display",
     "views.Settings.Display.defaultView": "Default view",
     "views.Settings.Display.DefaultView.balance": "Balance",

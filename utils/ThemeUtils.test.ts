@@ -1,11 +1,18 @@
+const mockSettings = { display: { theme: 'dark' } };
 jest.mock('../stores/Stores', () => ({
-    settingsStore: { settings: { display: { theme: 'dark' } } }
+    settingsStore: {
+        get settings() {
+            return mockSettings;
+        }
+    }
 }));
 
 import {
     blendHexColors,
     getUpgradeBackgroundColor,
-    getUpgradeIntensity
+    getUpgradeIntensity,
+    isLightTheme,
+    themeColor
 } from './ThemeUtils';
 
 // Dark theme values
@@ -77,5 +84,104 @@ describe('ThemeUtils', () => {
             ).toBeUndefined();
             expect(getUpgradeBackgroundColor('#fff', 50_000)).toBeUndefined();
         });
+    });
+
+    describe('gilded theme', () => {
+        beforeEach(() => {
+            mockSettings.display.theme = 'gilded';
+        });
+
+        afterEach(() => {
+            mockSettings.display.theme = 'dark';
+        });
+
+        it('anchors a radial background gradient at the top-left corner', () => {
+            const gradient = themeColor('gradientBackground');
+            const locations = themeColor('gradientLocations');
+            expect(gradient[gradient.length - 1]).toBe('#000000');
+            expect(locations).toHaveLength(gradient.length);
+            expect(themeColor('gradientRadial')).toEqual(
+                expect.objectContaining({ cx: 0, cy: 0 })
+            );
+        });
+
+        it('uses the gold accent for buttons and highlights', () => {
+            expect(themeColor('buttonBackground')).toBe('#D5BF8D');
+            expect(themeColor('highlight')).toBe('#D5BF8D');
+        });
+
+        it('falls back to Dark for keys it does not define', () => {
+            expect(themeColor('placeholderText')).toBeUndefined();
+            mockSettings.display.theme = 'dark';
+            const darkFallback = themeColor('generalStyle');
+            mockSettings.display.theme = 'gilded';
+            expect(themeColor('generalStyle')).toBe(darkFallback);
+        });
+
+        it('is treated as a dark theme', () => {
+            expect(isLightTheme()).toBe(false);
+        });
+    });
+
+    describe('ember theme', () => {
+        afterEach(() => {
+            mockSettings.display.theme = 'dark';
+        });
+
+        it('swaps the gold accent for #FFA900', () => {
+            mockSettings.display.theme = 'ember';
+            for (const key of [
+                'highlight',
+                'outbound',
+                'qrLogoBackground',
+                'qrFrame',
+                'buttonBackground'
+            ]) {
+                expect(themeColor(key)).toBe('#FFA900');
+            }
+        });
+
+        it('tints the background gradient with #FFA900', () => {
+            mockSettings.display.theme = 'ember';
+            const gradient = themeColor('gradientBackground');
+            expect(gradient[0].toLowerCase()).toBe(
+                blendHexColors('#000000', '#FFA900', 0.3)
+            );
+            expect(gradient[gradient.length - 1]).toBe('#000000');
+            expect(themeColor('gradientLocations')).toHaveLength(
+                gradient.length
+            );
+        });
+
+        it('keeps the Gilded gradient shape and button text', () => {
+            mockSettings.display.theme = 'gilded';
+            const gilded = ['gradientRadial', 'buttonText'].map((key) =>
+                themeColor(key)
+            );
+            mockSettings.display.theme = 'ember';
+            expect(
+                ['gradientRadial', 'buttonText'].map((key) => themeColor(key))
+            ).toEqual(gilded);
+        });
+
+        it('moves the Gilded surfaces 8% toward #FFA900', () => {
+            mockSettings.display.theme = 'gilded';
+            const surfaces = ['secondary', 'modalBackground', 'separator'];
+            const expected = surfaces.map((key) =>
+                blendHexColors(themeColor(key), '#FFA900', 0.08)
+            );
+            mockSettings.display.theme = 'ember';
+            expect(
+                surfaces.map((key) => themeColor(key).toLowerCase())
+            ).toEqual(expected);
+        });
+    });
+
+    it('defines no radial gradient for other themes', () => {
+        for (const theme of ['dark', 'kyriaki', 'pub', 'radioactive']) {
+            mockSettings.display.theme = theme;
+            expect(themeColor('gradientRadial')).toBeUndefined();
+        }
+        mockSettings.display.theme = 'dark';
     });
 });
