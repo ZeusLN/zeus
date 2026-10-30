@@ -236,16 +236,26 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
    }
 
   // Swaps
+  //
+  // These run on the IO scope because the Go calls can make blocking HTTP
+  // requests to the swap host, which would otherwise hold the shared native
+  // modules thread. Once a block starts, its promise is settled from the
+  // worker thread with no suspension point after the call, so cancelling
+  // the scope cannot leave it pending. A block that has not started when
+  // the scope is cancelled never runs, but the scope is only cancelled in
+  // invalidate(), when the React instance and its JS callers are torn down.
 
   @ReactMethod
   fun createClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, transactionHash: String, pubNonce: String, promise: Promise) {
      Log.d("createClaimTransaction called", "");
 
-     try {
-         Lndmobile.createClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, transactionHash, pubNonce)
-         promise.resolve(null)
-     } catch (e: Exception) {
-         promise.reject("CREATE_CLAIM_ERROR", e.toString())
+     scope.launch {
+         try {
+             Lndmobile.createClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, transactionHash, pubNonce)
+             promise.resolve(null)
+         } catch (e: Throwable) {
+             promise.reject("CREATE_CLAIM_ERROR", e.toString())
+         }
      }
   }
 
@@ -253,11 +263,13 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   // broadcasting it; the app stores it and broadcasts it itself
   @ReactMethod
   fun buildReverseClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, preimageHex: String, transactionHex: String, lockupAddress: String, destinationAddress: String, feeRate: Int, minerFee: Int, network: String, promise: Promise) {
-     try {
-         val txHex = Lndmobile.buildReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, minerFee, network)
-         promise.resolve(txHex)
-     } catch (e: Exception) {
-         promise.reject("BUILD_REVERSE_CLAIM_ERROR", e.toString())
+     scope.launch {
+         try {
+             val txHex = Lndmobile.buildReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, minerFee, network)
+             promise.resolve(txHex)
+         } catch (e: Throwable) {
+             promise.reject("BUILD_REVERSE_CLAIM_ERROR", e.toString())
+         }
      }
   }
 
@@ -265,11 +277,13 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   // broadcasting it
   @ReactMethod
   fun buildRefundTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, transactionHex: String, privateKey: String, servicePubKey: String, feeRate: Int, minerFee: Int, timeoutBlockHeight: Int, destinationAddress: String, lockupAddress: String, cooperative: Boolean?, network: String, promise: Promise) {
-     try {
-         val txHex = Lndmobile.buildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, minerFee, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative ?: false, network)
-         promise.resolve(txHex)
-     } catch (e: Exception) {
-         promise.reject("BUILD_REFUND_ERROR", e.toString())
+     scope.launch {
+         try {
+             val txHex = Lndmobile.buildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, minerFee, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative ?: false, network)
+             promise.resolve(txHex)
+         } catch (e: Throwable) {
+             promise.reject("BUILD_REFUND_ERROR", e.toString())
+         }
      }
   }
 }
