@@ -448,15 +448,7 @@ export default class ChannelsStore {
 
             if (setPendingHtlcs) this.pendingHTLCs = [];
 
-            let haveAnnouncedChannels = false;
             for (const channel of channels) {
-                if (
-                    !haveAnnouncedChannels &&
-                    !channel.private &&
-                    channel.isActive
-                ) {
-                    haveAnnouncedChannels = true;
-                }
                 if (channel.alias == null) {
                     channel.alias =
                         this.nodes[channel.remotePubkey]?.alias ||
@@ -476,8 +468,6 @@ export default class ChannelsStore {
                     this.pendingHTLCs.push(...channel.pending_htlcs);
                 }
             }
-            this.haveAnnouncedChannels = haveAnnouncedChannels;
-
             if (this.pendingHTLCs.length > 0) {
                 console.log('Pending HTLCs', this.pendingHTLCs);
             }
@@ -545,7 +535,14 @@ export default class ChannelsStore {
                 let totalOutbound = new BigNumber(0);
                 let totalOutboundOffline = new BigNumber(0);
                 let totalOffline = new BigNumber(0);
+                // Set here rather than after alias enrichment, which waits on
+                // node info lookups (up to 10s each) and also runs for the
+                // pending and closed lists. Receive reads this flag once when
+                // it mounts to decide whether to add private route hints.
+                let haveAnnouncedChannels = false;
                 channels.forEach((channel: Channel) => {
+                    if (!channel.private && channel.isActive)
+                        haveAnnouncedChannels = true;
                     const channelRemoteBalance = new BigNumber(
                         channel.receivingCapacity
                     );
@@ -571,6 +568,7 @@ export default class ChannelsStore {
                     this.totalOutbound = totalOutbound.toNumber();
                     this.totalOutboundOffline = totalOutboundOffline.toNumber();
                     this.totalOffline = totalOffline.toNumber();
+                    this.haveAnnouncedChannels = haveAnnouncedChannels;
                     this.channels = channels;
                     this.hasChannelData = true;
                 });
