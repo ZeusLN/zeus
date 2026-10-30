@@ -483,6 +483,38 @@ export default class LightningAddressStore {
         }
     };
 
+    // Normalize a mint URL for equality comparison: strip surrounding
+    // whitespace and any trailing slash, and lower-case the scheme and
+    // host, which are the only case-insensitive parts of a URL (RFC 3986).
+    // The path is kept byte-exact: two mints on one host may differ only
+    // by path case. Matched with a regex rather than the URL polyfill,
+    // which does not case-fold hosts. Kept local so the security check
+    // below does not depend on another store's private helper. The URL
+    // comes from the server, so anything that is not a string normalizes
+    // to '' and takes the normal "not approved" path instead of throwing.
+    private normalizeMintUrl = (url?: unknown): string => {
+        if (typeof url !== 'string' || !url) return '';
+        return url
+            .trim()
+            .replace(/\/+$/, '')
+            .replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/i, (schemeAndHost) =>
+                schemeAndHost.toLowerCase()
+            );
+    };
+
+    // Automatic paths (socket events, redeem-all on startup) drop an
+    // untrusted-mint payment silently, but a user tapping Redeem needs to
+    // see why nothing happened.
+    private rejectUntrustedMint = (localNotification?: boolean) => {
+        if (localNotification) return;
+        runInAction(() => {
+            this.error = true;
+            this.error_msg = localeString(
+                'stores.LightningAddressStore.Cashu.mintMismatch'
+            );
+        });
+    };
+
     @action
     public redeemCashu = async (
         quote_id: string,
@@ -494,6 +526,45 @@ export default class LightningAddressStore {
     ) => {
         this.error = false;
         this.error_msg = '';
+
+        // Security: the ZEUS Pay socket is a hint channel, not a command
+        // channel. A `paid` event (and the server-supplied open-payments
+        // list) names the mint URL to redeem from, but the wallet must only
+        // ever mint from a mint the user has approved: the mint this
+        // lightning address was created with (settings.lightningAddress.
+        // mintUrl, set in createCashu) or a mint the user approved in the
+        // wallet (cashuStore.mintUrls: Add Mint, onboarding, Nostr restore;
+        // mints CDK added on demand are kept out of it). These keep quotes
+        // redeemable when the configured mint changes or is overwritten by
+        // an unrelated lightningAddress settings write. Binding here, at
+        // the single chokepoint every caller passes through, stops a
+        // malicious or compromised backend from steering the wallet to an
+        // arbitrary mint (fake-deposit injection, unapproved mint trust,
+        // raw-HTTP fetch of an attacker URL). On a match, the locally
+        // stored URL is forwarded downstream instead of the server-supplied
+        // spelling, so the server cannot influence how the mint is keyed in
+        // CDK either.
+        const configuredMintUrl =
+            this.settingsStore?.settings?.lightningAddress?.mintUrl;
+        const trustedMintUrls: string[] = configuredMintUrl
+            ? [configuredMintUrl, ...(this.cashuStore?.mintUrls || [])]
+            : this.cashuStore?.mintUrls || [];
+        const normalizedEventMintUrl = this.normalizeMintUrl(mint_url);
+        const trustedMintUrl = normalizedEventMintUrl
+            ? trustedMintUrls.find(
+                  (url) => this.normalizeMintUrl(url) === normalizedEventMintUrl
+              )
+            : undefined;
+        if (!trustedMintUrl) {
+            console.warn(
+                'LightningAddressStore.redeemCashu: refusing to redeem against a mint that is neither the configured lightning address mint nor a locally added mint'
+            );
+            // This call has not set `redeeming`, so leave it alone: a
+            // forged event must not clear the flag of a redeem in progress.
+            this.rejectUntrustedMint(localNotification);
+            return false;
+        }
+
         this.redeeming = true;
 
         const fireLocalNotification = () => {
@@ -530,7 +601,7 @@ export default class LightningAddressStore {
         try {
             const response = await this.cashuStore.checkInvoicePaid(
                 quote_id,
-                mint_url,
+                trustedMintUrl,
                 true, // lockedQuote
                 skipMintCheck
             );
@@ -548,6 +619,29 @@ export default class LightningAddressStore {
                             'Receiving token from server for quote:',
                             quote_id
                         );
+                        // Security: CDK's receive adds whatever mint the
+                        // token names, so bind the server's token to the
+                        // approved mint too. Without this a compromised
+                        // backend could reference an already issued quote
+                        // at the approved mint and return a token from any
+                        // mint. A token that fails to decode throws and is
+                        // not received.
+                        const decoded = await this.cashuStore.decodeTokenCDK(
+                            redeemData.token
+                        );
+                        if (
+                            this.normalizeMintUrl(decoded?.mint_url) !==
+                            this.normalizeMintUrl(trustedMintUrl)
+                        ) {
+                            console.warn(
+                                'LightningAddressStore.redeemCashu: refusing a redeem token from a mint other than the approved mint'
+                            );
+                            runInAction(() => {
+                                this.redeeming = false;
+                            });
+                            this.rejectUntrustedMint(localNotification);
+                            return false;
+                        }
                         // Provide our Cashu secret key; CDK will only use it if the token is P2PK-locked.
                         const signingKey =
                             this.cashuStore.deriveCashuSecretKey();
@@ -637,30 +731,44 @@ export default class LightningAddressStore {
     @action
     public redeemAllOpenPaymentsCashu = async (localNotification?: boolean) => {
         this.redeemingAll = true;
+        // Each redeemCashu call clears the error first, so a mint rejection
+        // would be wiped by the next payment. redeemCashu only returns
+        // false on a mint rejection; surface it once the loop is done.
+        let rejected = false;
 
-        const openPaymentsToProcess = this.paid.slice().reverse();
-        const totalPayments = openPaymentsToProcess.length;
+        try {
+            const openPaymentsToProcess = this.paid.slice().reverse();
+            const totalPayments = openPaymentsToProcess.length;
 
-        for (let i = 0; i < totalPayments; i++) {
-            const item = openPaymentsToProcess[i];
-            const isLast = i === totalPayments - 1; // True if this is the last item
+            for (let i = 0; i < totalPayments; i++) {
+                const item = openPaymentsToProcess[i];
+                const isLast = i === totalPayments - 1; // True if this is the last item
 
-            await this.redeemCashu(
-                item.quote_id,
-                item.mint_url,
-                item.amount_msat,
-                true, // skipStatus
-                localNotification,
-                !isLast // skipMintCheck
-            );
+                // The list is server-supplied: one bad item must not stop the
+                // remaining payments from being redeemed.
+                try {
+                    const redeemed = await this.redeemCashu(
+                        item.quote_id,
+                        item.mint_url,
+                        item.amount_msat,
+                        true, // skipStatus
+                        localNotification,
+                        !isLast // skipMintCheck
+                    );
+                    if (redeemed === false) rejected = true;
+                } catch (e) {
+                    console.log('Error redeeming open payment', e);
+                }
+            }
+        } finally {
+            if (rejected) this.rejectUntrustedMint(localNotification);
+            runInAction(() => {
+                this.status(true).catch((e) =>
+                    console.log('Error fetching Lightning address status', e)
+                );
+                this.redeemingAll = false;
+            });
         }
-
-        runInAction(() => {
-            this.status(true).catch((e) =>
-                console.log('Error fetching Lightning address status', e)
-            );
-            this.redeemingAll = false;
-        });
     };
 
     private subscribeUpdatesCashu = async () => {
@@ -677,7 +785,15 @@ export default class LightningAddressStore {
 
         this.socket.on('paid', (data: any) => {
             const { quote_id, mint_url, amount_msat } = data;
-            this.redeemCashu(quote_id, mint_url, amount_msat, false, true);
+            this.redeemCashu(
+                quote_id,
+                mint_url,
+                amount_msat,
+                false,
+                true
+            ).catch((e) =>
+                console.log('Error redeeming Lightning address payment', e)
+            );
         });
     };
 
