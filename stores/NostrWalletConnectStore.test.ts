@@ -81,6 +81,7 @@ jest.mock('../storage', () => ({
     }
 }));
 
+import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { autorun } from 'mobx';
 import {
@@ -3577,6 +3578,24 @@ describe('NostrWalletConnectStore sign_message', () => {
                 signature: 'zbase-signature'
             },
             error: undefined
+        });
+    });
+
+    it('refuses the LNURL-auth canonical phrase without signing', async () => {
+        const signMessage = jest.fn();
+        const store = buildStore(signMessage);
+
+        const response = await (store as any).handleSignMessage({
+            message: `  ${LNURLAUTH_CANONICAL_PHRASE.toLowerCase()}\n`
+        });
+
+        expect(signMessage).not.toHaveBeenCalled();
+        expect(response).toEqual({
+            result: undefined,
+            error: {
+                code: 'RESTRICTED',
+                message: 'views.Settings.SignMessage.reservedMessage'
+            }
         });
     });
 
