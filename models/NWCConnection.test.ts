@@ -325,6 +325,19 @@ describe('NWCConnection feeLimitSatsForPayment', () => {
     });
 });
 
+describe('NWCConnection feeReserveSatsWithoutFeeLimit', () => {
+    it('is 1% of the amount, rounded up', () => {
+        expect(NWCConnection.feeReserveSatsWithoutFeeLimit(5000)).toBe(50);
+        expect(NWCConnection.feeReserveSatsWithoutFeeLimit(250001)).toBe(2501);
+    });
+
+    it('is at least 10 sats', () => {
+        expect(NWCConnection.feeReserveSatsWithoutFeeLimit(1)).toBe(10);
+        expect(NWCConnection.feeReserveSatsWithoutFeeLimit(999)).toBe(10);
+        expect(NWCConnection.feeReserveSatsWithoutFeeLimit(1001)).toBe(11);
+    });
+});
+
 describe('NWCConnection pay_invoice activity lookup', () => {
     it('findPayInvoiceActivityIndex matches by id', () => {
         const connection = baseConnection();

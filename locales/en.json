@@ -1876,6 +1876,7 @@
     "stores.NostrWalletConnectStore.error.cashuInsufficientBalance": "Insufficient balance. You have only {{balance}} sats remaining in Cashu wallet and you are trying to spend {{amount}} sats.",
     "stores.NostrWalletConnectStore.error.lightningInsufficientBalance": "Insufficient balance. You have only {{balance}} sats remaining in Lightning wallet and you are trying to spend {{amount}} sats.",
     "stores.NostrWalletConnectStore.error.feeLimitReducedByBudget": "The remaining budget for this connection limited the routing fee to {{feeLimit}} sats.",
+    "stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget": "This payment ({{amount}} sats) plus a fee reserve of {{feeReserve}} sats exceeds the remaining budget for this connection ({{remaining}} sats).",
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "No Cashu mint selected. Please select a mint first.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Failed to decode invoice - payReq is undefined",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Invoice already paid",
