@@ -609,6 +609,7 @@
     "views.Channel.closed": "Closed",
     "views.Channel.pendingClose": "Pending close",
     "views.Channel.pendingOpen": "Pending open",
+    "views.Channel.waitingForPeer": "Waiting for peer",
     "views.Channel.SortButton.largestFirst": "largest first",
     "views.Channel.SortButton.smallestFirst": "smallest first",
     "views.Channel.SortButton.ascending": "ascending",

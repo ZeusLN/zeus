@@ -68,11 +68,18 @@ jest.mock('../../components/Channels/ChannelItem', () => {
     const { Text } = require('react-native');
     const { useEffect } = require('react');
     return {
-        ChannelItem: ({ title, expirationStatus }: any) => {
+        ChannelItem: ({ title, expirationStatus, statusSuffix }: any) => {
             useEffect(() => {
                 mockRowMounts.count++;
             }, []);
-            return <Text>{`${title}: ${expirationStatus ?? 'none'}`}</Text>;
+            return (
+                <>
+                    <Text>{`${title}: ${expirationStatus ?? 'none'}`}</Text>
+                    {statusSuffix && (
+                        <Text>{`${title} status: ${statusSuffix}`}</Text>
+                    )}
+                </>
+            );
         }
     };
 });
@@ -104,6 +111,7 @@ jest.mock('@react-navigation/bottom-tabs', () => {
 });
 
 import BackendUtils from '../../utils/BackendUtils';
+import Channel from '../../models/Channel';
 import ChannelsPane from './ChannelsPane';
 
 const LSP_SCID = '800000x1x0';
@@ -209,5 +217,44 @@ describe.each([
 
         expect(badge()).toBe('lsp: channel.expirationStatus.expiring');
         expect(mockRowMounts.count).toBe(1);
+    });
+});
+
+describe('ChannelsPane pending channel status', () => {
+    beforeEach(() => {
+        jest.mocked(BackendUtils.supportsPendingChannels).mockReturnValue(true);
+        jest.mocked(BackendUtils.supportsClosedChannels).mockReturnValue(true);
+    });
+
+    // A pending LDK Node channel, as ChannelsStore builds it
+    const ldkPendingOpen = (confirmations: number) =>
+        new Channel({
+            remote_pubkey: 'ldk-peer',
+            displayName: 'ldk',
+            pendingOpen: true,
+            pending_htlcs: [],
+            confirmations,
+            confirmations_required: 6
+        });
+
+    const renderPending = (channel: Channel) => {
+        const stores = makeStores(850000, []);
+        stores.ChannelsStore.channelsType = 1;
+        stores.ChannelsStore.filteredPendingChannels = [channel];
+        return renderPane(stores);
+    };
+
+    it('shows the confirmation count below the required depth', async () => {
+        await renderPending(ldkPendingOpen(3));
+
+        expect(screen.getByText('ldk status: (3/6)')).toBeOnTheScreen();
+    });
+
+    it('says the channel waits for the peer at the required depth', async () => {
+        await renderPending(ldkPendingOpen(6));
+
+        expect(
+            screen.getByText('ldk status: · views.Channel.waitingForPeer')
+        ).toBeOnTheScreen();
     });
 });
