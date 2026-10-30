@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { isUnsafeLnurlError } from '../../utils/LnurlFetchUtils';
 import { getLnurlParams } from '../../utils/LnurlResolveUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -111,19 +112,13 @@ export default class EcashSwipeableRow extends Component<
             try {
                 params = await getLnurlParams(lightning ?? '');
             } catch (e: any) {
-                // refused by the lnurl host policy (see getLnurlParams)
-                Alert.alert(
-                    localeString('general.error'),
-                    e.message,
-                    [
-                        {
-                            text: localeString('general.ok'),
-                            onPress: () => void 0
-                        }
-                    ],
-                    { cancelable: false }
+                // A host policy refusal keeps its own message. Anything else
+                // (a query that does not decode throws URIError) gets the
+                // message handleAnything shows. fetchLnInvoice alerts it.
+                if (isUnsafeLnurlError(e)) throw e;
+                throw new Error(
+                    localeString('utils.handleAnything.invalidLnurlParams')
                 );
-                return;
             }
         }
         if (

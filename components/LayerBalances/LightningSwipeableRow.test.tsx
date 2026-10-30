@@ -264,6 +264,23 @@ describe('LightningSwipeableRow LNURL errors', () => {
         expect(navigation.navigate).not.toHaveBeenCalled();
     });
 
+    // decode-uri-component's `$\`` / `$'` blowup (#4553). The resolve
+    // refuses the query before any request; the row shows the same message
+    // handleAnything does, not the raw URIError.
+    it('alerts that a LNURL with an undecodable query is invalid', async () => {
+        const query = '%24%60x%24%27y'.repeat(100) + '%';
+
+        const navigation = await tapRowWith({
+            lightning: `lnurlp://example.com/pay?x=${query}`
+        });
+
+        expect(alertedMessage()).toBe(
+            'utils.handleAnything.invalidLnurlParams'
+        );
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
     it('keeps the host policy message for a refused LNURL', async () => {
         const navigation = await tapRowWith({
             lightning: 'lnurlp://192.168.1.1/pay'

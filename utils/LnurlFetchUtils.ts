@@ -96,8 +96,9 @@ export const fetchLnurlUrl = async (target: string): Promise<any> => {
  * js-lnurl 0.6.0's getParams, fetching through fetchLnurlUrl. js-lnurl
  * fetches with cross-fetch, which follows redirects with no way to stop it,
  * so the resolve is done here instead. The result has the same shape:
- * decode and network failures resolve to a `status: 'ERROR'` object, and
- * only a refusal by the host policy rejects.
+ * decode and network failures resolve to a `status: 'ERROR'` object. It
+ * rejects for a refusal by the host policy, and with a URIError for a query
+ * string that does not decode.
  */
 export const fetchLnurlParams = async (lnurl: string): Promise<any> => {
     let target: string;

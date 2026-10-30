@@ -57,6 +57,23 @@ describe('EcashSwipeableRow LNURL errors', () => {
         expect(navigation.navigate).not.toHaveBeenCalled();
     });
 
+    // decode-uri-component's `$\`` / `$'` blowup (#4553). The resolve
+    // refuses the query before any request; the row shows the same message
+    // handleAnything does, not the raw URIError.
+    it('alerts that a LNURL with an undecodable query is invalid', async () => {
+        const query = '%24%60x%24%27y'.repeat(100) + '%';
+
+        await expect(
+            press({ lightning: `lnurlw://example.com/withdraw?x=${query}` })
+        ).resolves.toBeUndefined();
+
+        expect(alertedMessage()).toBe(
+            'utils.handleAnything.invalidLnurlParams'
+        );
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
     it('keeps the host policy message for a refused LNURL', async () => {
         await press({ lightning: 'lnurlw://192.168.1.1/withdraw' });
 
