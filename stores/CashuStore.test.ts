@@ -157,6 +157,38 @@ describe('CashuStore synchronizable seed recovery', () => {
         );
     });
 
+    it.each([
+        ['seed phrase write rejects', 'lnd-cashu-seed-phrase', 'reject'],
+        ['seed phrase write returns false', 'lnd-cashu-seed-phrase', false],
+        ['seed version write rejects', 'lnd-cashu-seed-version', 'reject'],
+        ['seed version write returns false', 'lnd-cashu-seed-version', false]
+    ])(
+        'does not initialize with a generated seed when the %s',
+        async (_label, failingKey, result) => {
+            (getRawItem as jest.Mock).mockResolvedValue(null);
+            (Storage.setItem as jest.Mock).mockImplementation(async (key) => {
+                if (key !== failingKey) return true;
+                if (result === 'reject') {
+                    throw new Error('write unavailable');
+                }
+                return result;
+            });
+            const store = newStore();
+
+            expect(await store.initializeCDK()).toBe(false);
+            expect(store.seedPhrase).toBeUndefined();
+            expect(store.seedVersion).toBeUndefined();
+            expect(store.cdkInitialized).toBe(false);
+            expect(CashuDevKit.initializeWallet).not.toHaveBeenCalled();
+            if (failingKey === 'lnd-cashu-seed-phrase') {
+                expect(Storage.setItem).not.toHaveBeenCalledWith(
+                    'lnd-cashu-seed-version',
+                    expect.anything()
+                );
+            }
+        }
+    );
+
     it('keeps using the recovered seed if local persistence fails', async () => {
         (getRawItem as jest.Mock).mockResolvedValue(JSON.stringify(words));
         (Storage.setItem as jest.Mock).mockRejectedValue(
