@@ -100,6 +100,9 @@ const LNDCONNECT_IMPORT =
     'lndconnect://new-node.example.com:8080?macaroon=AgEDbG5k';
 const CLNREST_IMPORT = 'clnrest+https://new-cln.example.com:3010?rune=newrune';
 
+// The node renderView opened the screen on
+let openedNode: any;
+
 // Opens the screen on an existing node at index 1, so a save neither
 // reconnects (the active node is 0) nor creates a new entry. saved: true
 // is how Wallets opens a saved wallet.
@@ -111,6 +114,7 @@ const renderView = async (
         params = {}
     }: { clipboard?: boolean; saved?: boolean; params?: any } = {}
 ) => {
+    openedNode = node;
     const updateSettings = jest.fn(() => Promise.resolve());
     const SettingsStore = {
         settings: { privacy: { clipboard }, selectedNode: 0 },
@@ -134,11 +138,12 @@ const renderView = async (
     return { updateSettings, navigation };
 };
 
-// The node the last save writes into slot 1 of the saved nodes
+// The node the last save writes into slot 1 of the saved nodes, which
+// holds the node the screen was opened on
 const savedNode = (updateSettings: jest.Mock) => {
     const calls = updateSettings.mock.calls as any[];
     const update = calls[calls.length - 1][0];
-    return update({ nodes: [{}, {}] }).nodes[1];
+    return update({ nodes: [{}, openedNode] }).nodes[1];
 };
 
 const pressButton = (name: string) =>
@@ -1070,6 +1075,218 @@ describe('WalletConfiguration', () => {
                     scorerUrl: 'https://scorer.default'
                 })
             );
+        });
+    });
+
+    // The index passed to this screen comes from the wallet list, which can
+    // be older than the stored list
+    describe('stored list changed since the screen was opened', () => {
+        const { Alert } = require('react-native');
+        const {
+            clearCDKDatabaseForNode,
+            deleteNodeDataDirectoryWithRetry
+        } = require('../../utils/DataClearUtils');
+
+        const SPENDING = {
+            implementation: 'ldk-node',
+            nickname: 'Spending',
+            ldkNodeDir: 'dir-spending',
+            ldkMnemonic: 'spending words'
+        };
+        const SAVINGS = {
+            implementation: 'ldk-node',
+            nickname: 'Savings',
+            ldkNodeDir: 'dir-savings',
+            ldkMnemonic: 'savings words'
+        };
+
+        let alert: jest.SpyInstance;
+
+        beforeEach(() => {
+            alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+            (clearNodeKeychainData as jest.Mock).mockClear();
+            (clearCDKDatabaseForNode as jest.Mock).mockClear();
+            (deleteNodeDataDirectoryWithRetry as jest.Mock).mockClear();
+        });
+
+        afterEach(() => {
+            alert.mockRestore();
+        });
+
+        // `stored` is what the settings hold; `params` what the list passed
+        const open = async (stored: any[], params: any) => {
+            const SettingsStore: any = {
+                settings: {
+                    privacy: { clipboard: false },
+                    nodes: stored,
+                    selectedNode: 0
+                },
+                updateSettings: jest.fn((update: any) => {
+                    const patch =
+                        typeof update === 'function'
+                            ? update(SettingsStore.settings)
+                            : update;
+                    SettingsStore.settings = {
+                        ...SettingsStore.settings,
+                        ...patch
+                    };
+                    return Promise.resolve(SettingsStore.settings);
+                }),
+                setConnectingStatus: jest.fn(),
+                setInitialStart: jest.fn(),
+                invalidateConnection: jest.fn()
+            };
+            const navigation = {
+                goBack: jest.fn(),
+                navigate: jest.fn(),
+                popTo: jest.fn(),
+                reset: jest.fn()
+            };
+            const props: any = {
+                navigation,
+                route: { params },
+                SettingsStore,
+                SyncStore: { reset: jest.fn() },
+                NostrWalletConnectStore: {
+                    deleteCurrentWalletConnections: jest.fn(() =>
+                        Promise.resolve()
+                    ),
+                    deleteAllConnectionData: jest.fn(() => Promise.resolve())
+                }
+            };
+            const view = await render(<WalletConfiguration {...props} />);
+            return { SettingsStore, navigation, props, view };
+        };
+
+        const confirmDelete = async () => {
+            await pressButton(
+                'views.Settings.WalletConfiguration.deleteWallet'
+            );
+            const [, , proceed] = (confirmAction as jest.Mock).mock.calls[0];
+            await act(async () => proceed.onPress());
+        };
+
+        it('does not delete the wallet that moved into the index of a deleted one', async () => {
+            // Spending was deleted after the list was loaded
+            const { SettingsStore } = await open([SAVINGS], {
+                node: SPENDING,
+                index: 0,
+                active: true,
+                saved: true
+            });
+
+            await confirmDelete();
+
+            expect(SettingsStore.settings.nodes).toEqual([SAVINGS]);
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+            expect(clearCDKDatabaseForNode).not.toHaveBeenCalled();
+            expect(deleteNodeDataDirectoryWithRetry).not.toHaveBeenCalled();
+            expect(SettingsStore.invalidateConnection).not.toHaveBeenCalled();
+            expect(alert).toHaveBeenCalledWith(
+                'general.error',
+                'views.Settings.WalletConfiguration.walletChanged'
+            );
+        });
+
+        it('deletes the wallet when it is still at its index', async () => {
+            const { SettingsStore } = await open([SPENDING, SAVINGS], {
+                node: SPENDING,
+                index: 0,
+                active: false,
+                saved: true
+            });
+
+            await confirmDelete();
+
+            expect(SettingsStore.settings.nodes).toEqual([SAVINGS]);
+            expect(clearNodeKeychainData).toHaveBeenCalledWith(
+                SPENDING,
+                expect.anything()
+            );
+            expect(alert).not.toHaveBeenCalled();
+        });
+
+        it('does not overwrite the wallet that moved into the index of a deleted one', async () => {
+            const { SettingsStore } = await open([SAVINGS], {
+                node: SPENDING,
+                index: 0,
+                saved: false
+            });
+
+            await save();
+
+            expect(SettingsStore.settings.nodes).toEqual([SAVINGS]);
+            expect(alert).toHaveBeenCalledWith(
+                'general.error',
+                'views.Settings.WalletConfiguration.walletChanged'
+            );
+        });
+
+        it('saves a wallet where it is stored now', async () => {
+            const HOME = { ...LND_NODE, nickname: 'Home' };
+            const WORK = {
+                ...LND_NODE,
+                nickname: 'Work',
+                host: 'https://work.example.com'
+            };
+            // Home moved from index 1 to 0 after the list was loaded
+            const { SettingsStore } = await open([HOME, WORK], {
+                node: HOME,
+                index: 1,
+                saved: false
+            });
+
+            await save();
+
+            expect(SettingsStore.settings.nodes).toHaveLength(2);
+            expect(SettingsStore.settings.nodes[0]).not.toBe(HOME);
+            expect(SettingsStore.settings.nodes[0]).toMatchObject(HOME);
+            expect(SettingsStore.settings.nodes[1]).toBe(WORK);
+            expect(alert).not.toHaveBeenCalled();
+        });
+
+        it('treats a connection string opened over a stored wallet as a new entry', async () => {
+            const { SettingsStore, props, view } = await open(
+                [SPENDING, SAVINGS],
+                { node: SAVINGS, index: 1, active: false, saved: true }
+            );
+            const linked = {
+                implementation: 'lnd',
+                host: 'https://linked.example.com',
+                port: '8080',
+                macaroonHex: 'abcd',
+                certVerification: true
+            };
+
+            await act(async () =>
+                view.rerender(
+                    <WalletConfiguration
+                        {...props}
+                        route={{
+                            params: {
+                                node: linked,
+                                newEntry: true,
+                                isValid: true
+                            }
+                        }}
+                    />
+                )
+            );
+
+            expect(
+                screen.queryByRole('button', {
+                    name: 'views.Settings.WalletConfiguration.deleteWallet'
+                })
+            ).toBeNull();
+
+            await save();
+
+            expect(SettingsStore.settings.nodes).toHaveLength(3);
+            expect(SettingsStore.settings.nodes[0]).toBe(SPENDING);
+            expect(SettingsStore.settings.nodes[1]).toBe(SAVINGS);
+            expect(SettingsStore.settings.nodes[2]).toMatchObject({
+                host: 'https://linked.example.com'
+            });
         });
     });
 });

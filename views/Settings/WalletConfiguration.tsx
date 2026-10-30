@@ -75,6 +75,10 @@ import AddIcon from '../../assets/images/SVG/Add.svg';
 
 import { getPhoto } from '../../utils/PhotoUtils';
 import {
+    isSameWallet,
+    resolveWalletIndex
+} from '../../utils/WalletIdentityUtils';
+import {
     clearNodeKeychainData,
     clearCDKDatabase,
     clearCDKDatabaseForNode,
@@ -484,11 +488,22 @@ export default class WalletConfiguration extends React.Component<
             return;
         }
 
+        // A node passed without its index (a scanned or linked connection
+        // string) is a new entry, even when it replaces the form of a
+        // stored wallet on this screen: it must not take over that
+        // wallet's index, active flag or saved state
+        const unsavedNode = !!route.params.node && route.params.index == null;
         const node = route.params.node ?? this.state.node;
-        const index = route.params.index ?? this.state.index;
-        const active = route.params.active ?? this.state.active;
+        const index = unsavedNode
+            ? null
+            : route.params.index ?? this.state.index;
+        const active = unsavedNode
+            ? false
+            : route.params.active ?? this.state.active;
         const tor = route.params.enableTor ?? this.state.enableTor;
-        const saved = route.params.saved ?? this.state.saved;
+        const saved = unsavedNode
+            ? route.params.saved ?? false
+            : route.params.saved ?? this.state.saved;
         const newEntry = route.params.newEntry ?? this.state.newEntry;
         const newPhoto = route.params.photo ?? this.state.photo;
 
@@ -737,21 +752,27 @@ export default class WalletConfiguration extends React.Component<
             ldkVssServer
         };
 
+        // `index` came from the list that opened this screen and can be
+        // stale, so a stored wallet is written back where the config the
+        // form was loaded from is stored now. New entries are appended.
+        const { newEntry, node: loadedNode } = this.state;
+        const editsStoredWallet = index != null && !newEntry;
+
         // Built inside the queued update so a write still in the queue
         // cannot be undone by a nodes array copied before it landed
         let originalNode: Node;
+        let savedIndex = -1;
         const update = (current: Settings) => {
-            let nodes: Node[];
-            if (current.nodes) {
-                nodes = [...current.nodes];
-                if (index != null) {
-                    originalNode = nodes[index];
-                    nodes[index] = node;
-                } else {
-                    nodes.push(node);
-                }
+            const nodes: Node[] = [...(current.nodes || [])];
+            if (editsStoredWallet) {
+                savedIndex = resolveWalletIndex(nodes, loadedNode, index);
+                // The wallet is no longer stored: write nothing
+                if (savedIndex === -1) return {};
+                originalNode = nodes[savedIndex];
+                nodes[savedIndex] = node;
             } else {
-                nodes = [node];
+                nodes.push(node);
+                savedIndex = nodes.length - 1;
             }
 
             if (newEmbeddedLndWallet) {
@@ -769,6 +790,12 @@ export default class WalletConfiguration extends React.Component<
 
         updateSettings(update)
             .then(async () => {
+                if (savedIndex === -1) {
+                    this.setState({ saving: false });
+                    this.showWalletChangedError();
+                    return;
+                }
+
                 if (recoveryCipherSeed) {
                     await updateSettings({
                         recovery: true
@@ -780,7 +807,8 @@ export default class WalletConfiguration extends React.Component<
                 });
 
                 const activeNodeIndex = settings.selectedNode || 0;
-                if (index === activeNodeIndex) {
+                const writtenIndex = editsStoredWallet ? savedIndex : index;
+                if (writtenIndex === activeNodeIndex) {
                     // updating active node
                     if (originalNode != null) {
                         const diff = differenceBy(
@@ -900,6 +928,15 @@ export default class WalletConfiguration extends React.Component<
             this.state;
         const { nodes } = settings;
         const deletedNode = index != null ? nodes?.[index] : undefined;
+
+        // `index` came from the list that opened this screen. If that list
+        // was out of date, the slot now holds another wallet: delete
+        // nothing rather than that wallet's config, keys and data.
+        if (!isSameWallet(deletedNode, this.state.node)) {
+            this.setState({ deletingWallet: false });
+            this.showWalletChangedError();
+            return;
+        }
 
         try {
             // The next wallet takes this one's index without a reconnect.
@@ -1060,6 +1097,12 @@ export default class WalletConfiguration extends React.Component<
             this.setState({ deletingWallet: false });
         }
     };
+
+    private showWalletChangedError = () =>
+        Alert.alert(
+            localeString('general.error'),
+            localeString('views.Settings.WalletConfiguration.walletChanged')
+        );
 
     // Alert loop for a node data directory that survived deletion retries.
     // Resolves once a retry succeeds or the user explicitly skips, so the
@@ -1232,11 +1275,18 @@ export default class WalletConfiguration extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { updateSettings, setConnectingStatus, setInitialStart } =
             SettingsStore;
-        const { index } = this.state;
+        const { index, node } = this.state;
 
-        await updateSettings({
-            selectedNode: index
+        // Select where this wallet is stored now, not a stale index
+        let selectedIndex = -1;
+        await updateSettings((current: Settings) => {
+            selectedIndex = resolveWalletIndex(current.nodes, node, index);
+            return selectedIndex === -1 ? {} : { selectedNode: selectedIndex };
         });
+        if (selectedIndex === -1) {
+            this.showWalletChangedError();
+            return;
+        }
 
         this.setState({
             active: true
