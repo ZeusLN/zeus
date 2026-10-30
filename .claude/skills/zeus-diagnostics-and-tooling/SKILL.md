@@ -38,7 +38,7 @@ Use a sibling skill instead for:
 | Metro | React Native's JS bundler/dev server (`yarn start`). In dev, all JS `console.*` output appears in the Metro terminal. |
 | logcat | Android's system log stream, read with `adb logcat`. Native (Java/Kotlin) `Log.d/i/e` calls land here, filtered by TAG. |
 | uniffi bindings | Machine-generated Kotlin/Swift glue code for Rust libraries — huge files you must exclude from greps. |
-| Tor | Anonymity network; Zeus routes REST calls through it per-node via `react-native-nitro-tor` (0.6.1 as of 2026-10-24; see package.json). |
+| Tor | Anonymity network; Zeus routes REST calls through it per-node via `react-native-nitro-tor` (1.1.0 as of 2026-10-29; see package.json). |
 
 ## 1) Log access per node type
 
