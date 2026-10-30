@@ -767,8 +767,22 @@ export default class WalletConfiguration extends React.Component<
             return { nodes };
         };
 
+        // LNC credentials are stored under sha256(pairingPhrase), and wallet
+        // deletion and the data wipe find them through the pairing phrase in
+        // the node configs. Once an edit drops a phrase from every config,
+        // nothing can reach its entries again, so clear them here. Checked
+        // against the saved nodes so credentials another config still uses
+        // (a copy of this wallet, or an unchanged phrase) are kept.
+        const clearReplacedLncCredentials = async (savedNodes?: Node[]) => {
+            const replacedPhrase = originalNode?.pairingPhrase;
+            if (!replacedPhrase) return;
+            if (savedNodes?.some((n) => n.pairingPhrase === replacedPhrase))
+                return;
+            await clearNodeKeychainData({ pairingPhrase: replacedPhrase });
+        };
+
         updateSettings(update)
-            .then(async () => {
+            .then(async (newSettings: Settings) => {
                 if (recoveryCipherSeed) {
                     await updateSettings({
                         recovery: true
@@ -803,6 +817,9 @@ export default class WalletConfiguration extends React.Component<
                         // view reinitializes on the same credentials.
                         await BackendUtils.disconnect();
                     }
+                    // After the disconnect: credential writes it flushes
+                    // would otherwise recreate the cleared entries
+                    await clearReplacedLncCredentials(newSettings?.nodes);
                     setConnectingStatus(true);
                     // reset, not popTo: popTo only collapses the stack
                     // when the target route already exists on it. The
@@ -816,6 +833,7 @@ export default class WalletConfiguration extends React.Component<
                         routes: [{ name: 'Wallet' }]
                     });
                 } else {
+                    await clearReplacedLncCredentials(newSettings?.nodes);
                     if (newEmbeddedLndWallet) {
                         // New wallet created - trigger fresh connection
                         // LND was already stopped in createNewWallet(), just navigate

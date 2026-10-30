@@ -20,7 +20,9 @@ jest.mock('../../stores/SettingsStore', () => ({
     MEMPOOL_INSTANCE_KEYS: [],
     getLspConfigForNetwork: jest.fn(() => ({}))
 }));
-jest.mock('../../utils/BackendUtils', () => ({}));
+jest.mock('../../utils/BackendUtils', () => ({
+    disconnect: jest.fn(() => Promise.resolve())
+}));
 jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
@@ -94,6 +96,7 @@ import { createLdkNodeWallet } from '../../utils/LdkNodeUtils';
 import Storage from '../../storage';
 import { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
 import { clearNodeKeychainData } from '../../utils/DataClearUtils';
+import BackendUtils from '../../utils/BackendUtils';
 
 const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
 const LNDCONNECT_IMPORT =
@@ -441,6 +444,102 @@ describe('WalletConfiguration', () => {
             expect(clearNodeKeychainData).toHaveBeenCalledWith(other, {
                 keepLncCredentials: false
             });
+        });
+    });
+
+    describe('replacing an LNC pairing phrase', () => {
+        const OLD_PHRASE =
+            'cherry truth mask employ box silver mass bunker fiscal vote';
+        const NEW_PHRASE =
+            'ozone ozone ozone ozone ozone ozone ozone ozone ozone ozone';
+        const LNC_NODE = {
+            implementation: 'lightning-node-connect',
+            nickname: 'Node at home',
+            pairingPhrase: OLD_PHRASE
+        };
+
+        // Opens the wallet at `index` of nodes, pastes `phrase` into the
+        // pairing phrase field and saves
+        const saveWithPhrase = async (
+            nodes: any[],
+            index: number,
+            phrase: string
+        ) => {
+            const SettingsStore = {
+                settings: {
+                    privacy: { clipboard: false },
+                    nodes,
+                    selectedNode: 0
+                },
+                updateSettings: jest.fn((update: any) =>
+                    Promise.resolve(update({ nodes }))
+                ),
+                setConnectingStatus: jest.fn()
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation: {
+                            goBack: jest.fn(),
+                            navigate: jest.fn(),
+                            reset: jest.fn()
+                        },
+                        route: {
+                            params: { node: nodes[index], index, saved: true }
+                        },
+                        SettingsStore
+                    } as any)}
+                />
+            );
+
+            await act(async () =>
+                fireEvent.changeText(
+                    screen.getByDisplayValue(OLD_PHRASE),
+                    phrase
+                )
+            );
+            await save();
+        };
+
+        beforeEach(() => {
+            (clearNodeKeychainData as jest.Mock).mockClear();
+            (BackendUtils.disconnect as jest.Mock).mockClear();
+        });
+
+        it('clears the credentials of the replaced phrase', async () => {
+            await saveWithPhrase([{}, LNC_NODE], 1, NEW_PHRASE);
+
+            expect(clearNodeKeychainData).toHaveBeenCalledTimes(1);
+            expect(clearNodeKeychainData).toHaveBeenCalledWith({
+                pairingPhrase: OLD_PHRASE
+            });
+        });
+
+        it('clears them after the active wallet is disconnected', async () => {
+            await saveWithPhrase([LNC_NODE], 0, NEW_PHRASE);
+
+            expect(clearNodeKeychainData).toHaveBeenCalledWith({
+                pairingPhrase: OLD_PHRASE
+            });
+            expect(
+                (BackendUtils.disconnect as jest.Mock).mock
+                    .invocationCallOrder[0]
+            ).toBeLessThan(
+                (clearNodeKeychainData as jest.Mock).mock.invocationCallOrder[0]
+            );
+        });
+
+        it('keeps the credentials when the phrase is unchanged', async () => {
+            await saveWithPhrase([{}, LNC_NODE], 1, `  ${OLD_PHRASE}`);
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+        });
+
+        it('keeps the credentials while a copy uses the replaced phrase', async () => {
+            const copy = { ...LNC_NODE, nickname: 'Node at home copy' };
+            await saveWithPhrase([copy, LNC_NODE], 1, NEW_PHRASE);
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
         });
     });
 
