@@ -13,7 +13,8 @@ import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import {
     ErrorMessage,
-    SuccessMessage
+    SuccessMessage,
+    WarningMessage
 } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 
@@ -23,6 +24,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import ValidationUtils from '../../utils/ValidationUtils';
+import { checkNWCConnectionScope } from '../../utils/NWCScopeUtils';
 
 import ZeusPayIcon from '../../assets/images/SVG/zeus-pay.svg';
 
@@ -40,6 +42,8 @@ interface CreateNWCLightningAddressState {
     nwcConnectionString: string;
     tested: boolean;
     loading: boolean;
+    scopeError: string;
+    scopeUnchecked: boolean;
 }
 
 @inject('LightningAddressStore', 'SettingsStore')
@@ -53,12 +57,46 @@ export default class CreateNWCLightningAddress extends React.Component<
     state = {
         nwcConnectionString: '',
         tested: false,
-        loading: false
+        loading: false,
+        scopeError: '',
+        scopeUnchecked: false
+    };
+
+    // Checks the connection's own permissions before the string is sent
+    // to the ZEUS Pay server. Returns true when the test may proceed.
+    checkScope = async (nwcConnectionString: string): Promise<boolean> => {
+        // the user already saw the unchecked-permissions warning
+        if (this.state.scopeUnchecked) return true;
+
+        this.setState({ loading: true, scopeError: '' });
+        const { status, spendMethods } = await checkNWCConnectionScope(
+            nwcConnectionString
+        );
+        this.setState({ loading: false });
+
+        if (status === 'receiveOnly') return true;
+        if (status === 'canSpend') {
+            this.setState({
+                scopeError: localeString(
+                    'views.LightningAddress.NWC.scopeCanSpend'
+                ).replace('{methods}', spendMethods.join(', '))
+            });
+        } else if (status === 'missingMakeInvoice') {
+            this.setState({
+                scopeError: localeString(
+                    'views.LightningAddress.NWC.scopeMissingMakeInvoice'
+                )
+            });
+        } else {
+            this.setState({ scopeUnchecked: true });
+        }
+        return false;
     };
 
     render() {
         const { navigation, LightningAddressStore, route } = this.props;
-        const { nwcConnectionString, tested } = this.state;
+        const { nwcConnectionString, tested, scopeError, scopeUnchecked } =
+            this.state;
         const { createNWC, testNWCConnectionString, update, error_msg } =
             LightningAddressStore;
         const switchTo = route.params?.switchTo;
@@ -111,6 +149,16 @@ export default class CreateNWCLightningAddress extends React.Component<
                         {!loading && !!error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
+                        {!loading && !!scopeError && (
+                            <ErrorMessage message={scopeError} />
+                        )}
+                        {!loading && scopeUnchecked && !tested && (
+                            <WarningMessage
+                                message={localeString(
+                                    'views.LightningAddress.NWC.scopeUnknown'
+                                )}
+                            />
+                        )}
                         {!loading && tested && (
                             <SuccessMessage
                                 message={localeString(
@@ -159,7 +207,10 @@ export default class CreateNWCLightningAddress extends React.Component<
                                                         ) =>
                                                             this.setState({
                                                                 nwcConnectionString:
-                                                                    text.trim()
+                                                                    text.trim(),
+                                                                scopeError: '',
+                                                                scopeUnchecked:
+                                                                    false
                                                             })
                                                         }
                                                         autoCapitalize="none"
@@ -174,7 +225,11 @@ export default class CreateNWCLightningAddress extends React.Component<
                                 <View style={{ bottom: 15, margin: 10 }}>
                                     <Button
                                         title={
-                                            !tested
+                                            !tested && scopeUnchecked
+                                                ? localeString(
+                                                      'views.LightningAddress.NWC.continueUnchecked'
+                                                  )
+                                                : !tested
                                                 ? localeString(
                                                       'views.Settings.LightningAddress.testConnectionString'
                                                   )
@@ -192,6 +247,13 @@ export default class CreateNWCLightningAddress extends React.Component<
                                         }
                                         onPress={async () => {
                                             if (!tested) {
+                                                if (
+                                                    !(await this.checkScope(
+                                                        nwcConnectionString
+                                                    ))
+                                                ) {
+                                                    return;
+                                                }
                                                 testNWCConnectionString(
                                                     nwcConnectionString
                                                 )
