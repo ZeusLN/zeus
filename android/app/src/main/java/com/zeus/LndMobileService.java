@@ -148,6 +148,7 @@ public class LndMobileService extends Service {
             }
 
             boolean streamOnlyOnce = bundle.getBoolean("stream_only_once");
+            final String requestId = bundle.getString("request_id");
 
             if (msg.what == MSG_GRPC_STREAM_COMMAND || msg.what == MSG_GRPC_BIDI_STREAM_COMMAND) {
               if (streamOnlyOnce) {
@@ -165,7 +166,7 @@ public class LndMobileService extends Service {
               if (msg.what == MSG_GRPC_BIDI_STREAM_COMMAND) {
                 lndmobile.SendStream writeStream = (lndmobile.SendStream)m.invoke(
                   null,
-                  new LndStreamCallback(msg.replyTo, method)
+                  new LndStreamCallback(msg.replyTo, method, requestId)
                 );
                 writeStreams.put(method, writeStream);
               } else {
@@ -174,7 +175,7 @@ public class LndMobileService extends Service {
                   b,
                   msg.what == MSG_GRPC_COMMAND
                     ? new LndCallback(msg.replyTo, method, request)
-                    : new LndStreamCallback(msg.replyTo, method)
+                    : new LndStreamCallback(msg.replyTo, method, requestId)
                 );
               }
 
@@ -348,10 +349,14 @@ public class LndMobileService extends Service {
   class LndStreamCallback implements lndmobile.RecvStream {
     private final Messenger recipient;
     private final String method;
+    // Set by the caller to correlate this stream's events; empty for shared
+    // subscriptions
+    private final String requestId;
 
-    LndStreamCallback(Messenger recipient, String method) {
+    LndStreamCallback(Messenger recipient, String method, String requestId) {
       this.recipient = recipient;
       this.method = method;
+      this.requestId = requestId;
     }
 
     @Override
@@ -362,6 +367,7 @@ public class LndMobileService extends Service {
       String message = e.getMessage();
 
       bundle.putString("method", method);
+      bundle.putString("request_id", requestId);
 
       if (message.contains("code = ") && message.contains("desc = ")) {
         bundle.putString("error_code", message.substring(message.indexOf("code = ") + 7, message.indexOf(" desc = ")));
@@ -385,6 +391,7 @@ public class LndMobileService extends Service {
       Bundle bundle = new Bundle();
       bundle.putByteArray("response", bytes);
       bundle.putString("method", method);
+      bundle.putString("request_id", requestId);
       msg.setData(bundle);
 
       sendToClient(recipient, msg);

@@ -1,8 +1,8 @@
 // Import-time scaffolding for the native modules EmbeddedLND.ts and its LND
 // base class pull in. listPeers only touches lndMobile.index.listPeers;
-// closeChannel only uses the injected close call, the stream decoder and
-// the event emitter mocked below; getTransactions and sendCoins only the
-// injected onchain calls.
+// closeChannel and openChannelStream only use the injected stream call, the
+// stream decoder and the event emitter mocked below; getTransactions and
+// sendCoins only the injected onchain calls.
 jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: { fetch: jest.fn(), config: jest.fn() }
@@ -20,6 +20,7 @@ const mockSendKeysendPaymentV2 = jest.fn();
 const mockListPayments = jest.fn();
 const mockGetTransactions = jest.fn();
 const mockSendCoins = jest.fn();
+const mockOpenChannel = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
     default: {
@@ -33,8 +34,10 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
         },
         channel: {
             closeChannel: (...args: any[]) => mockCloseChannel(...args),
+            openChannel: (...args: any[]) => mockOpenChannel(...args),
             // test events carry the decoded update as JSON
-            decodeCloseStatusUpdate: (data: string) => JSON.parse(data)
+            decodeCloseStatusUpdate: (data: string) => JSON.parse(data),
+            decodeOpenStatusUpdate: (data: string) => JSON.parse(data)
         },
         wallet: {},
         onchain: {
@@ -69,7 +72,7 @@ jest.mock('../utils/LndMobileUtils', () => ({
             };
         }
     },
-    // reduced to the two outcomes closeChannel distinguishes: end of stream
+    // reduced to the two outcomes the stream handlers distinguish: end of stream
     // and an error
     checkLndStreamErrorResponse: (_name: string, event: any) => {
         if (!event.error_code) return null;
@@ -226,10 +229,18 @@ describe('EmbeddedLND.getTransactions', () => {
 describe('EmbeddedLND.closeChannel', () => {
     let lnd: EmbeddedLND;
 
-    const emit = (event: any) =>
+    // the request id the backend passed for its nth close
+    const requestIdOf = (n = -1) => mockCloseChannel.mock.calls.at(n)[5];
+    // the native module tags each event with its stream's request id; null
+    // sends an untagged event, as from a stream started without one
+    const emit = (event: any, request_id: string | null = requestIdOf()) =>
         mockListeners
             .filter((l) => l.name === 'CloseChannel' && !l.removed)
-            .forEach((l) => l.handler(event));
+            .forEach((l) =>
+                l.handler(
+                    request_id === null ? event : { ...event, request_id }
+                )
+            );
     const update = (data: any) => ({ data: JSON.stringify(data) });
     const listening = () =>
         mockListeners.some((l) => l.name === 'CloseChannel' && !l.removed);
@@ -284,7 +295,8 @@ describe('EmbeddedLND.closeChannel', () => {
             1,
             false,
             10,
-            'tb1qdelivery'
+            'tb1qdelivery',
+            expect.any(String)
         );
     });
 
@@ -297,7 +309,8 @@ describe('EmbeddedLND.closeChannel', () => {
             1,
             true,
             undefined,
-            undefined
+            undefined,
+            expect.any(String)
         );
     });
 
@@ -328,6 +341,30 @@ describe('EmbeddedLND.closeChannel', () => {
 
         expect(close.settled).toBe(false);
         expect(listening()).toBe(true);
+    });
+
+    it("ignores another close's updates and errors", async () => {
+        const first = track(lnd.closeChannel(['txid', '1', '']));
+        const second = track(lnd.closeChannel(['txid', '2', '']));
+        await jest.advanceTimersByTimeAsync(0);
+        const firstId = requestIdOf(0);
+        const secondId = requestIdOf(1);
+        expect(secondId).not.toEqual(firstId);
+
+        emit({ error_code: 'Error', error_desc: 'peer offline' }, secondId);
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(second.error?.message).toEqual('peer offline');
+        expect(first.settled).toBe(false);
+
+        emit(update({ close_pending: { txid: 'other' } }), null);
+        await jest.advanceTimersByTimeAsync(0);
+        expect(first.settled).toBe(false);
+
+        emit(update({ close_pending: { txid: 'first' } }), firstId);
+        await jest.advanceTimersByTimeAsync(0);
+        expect(first.settled).toBe(true);
+        expect(first.error).toBeUndefined();
     });
 
     it('rejects and stops listening when the native call fails', async () => {
@@ -468,5 +505,93 @@ describe('EmbeddedLND on-chain sends', () => {
             undefined,
             'ZEUS send 0123456789abcdef'
         );
+    });
+});
+
+describe('EmbeddedLND.openChannelStream', () => {
+    let lnd: EmbeddedLND;
+
+    // the request id the backend passed for its nth open, the last argument
+    const requestIdOf = (n: number) => mockOpenChannel.mock.calls[n].at(-1);
+    const emit = (event: any, request_id: string | null) =>
+        mockListeners
+            .filter((l) => l.name === 'OpenChannel' && !l.removed)
+            .forEach((l) =>
+                l.handler(
+                    request_id === null ? event : { ...event, request_id }
+                )
+            );
+    // lets the async wrapper around the stream promise settle
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+    const psbtFund = (psbt: string) => ({
+        data: JSON.stringify({ psbt_fund: { psbt } })
+    });
+
+    const track = (open: Promise<any>) => {
+        const state: { settled: boolean; value?: any; error?: any } = {
+            settled: false
+        };
+        open.then(
+            (value) => {
+                state.settled = true;
+                state.value = value;
+            },
+            (error) => {
+                state.settled = true;
+                state.error = error;
+            }
+        );
+        return state;
+    };
+
+    const request = (node_pubkey_string: string) =>
+        ({
+            node_pubkey_string,
+            local_funding_amount: '100000'
+        } as any);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockListeners.length = 0;
+        lnd = new EmbeddedLND();
+        mockOpenChannel.mockResolvedValue('done');
+    });
+
+    it('passes a distinct request id to each open', async () => {
+        lnd.openChannelStream(request(PUBKEY));
+        lnd.openChannelStream(request(PUBKEY));
+        await flush();
+
+        expect(mockOpenChannel).toHaveBeenCalledTimes(2);
+        expect(requestIdOf(0)).toEqual(expect.any(String));
+        expect(requestIdOf(0)).not.toEqual('');
+        expect(requestIdOf(1)).not.toEqual(requestIdOf(0));
+    });
+
+    it('settles concurrent opens with their own psbt_fund or error', async () => {
+        const first = track(lnd.openChannelStream(request(PUBKEY)));
+        const second = track(lnd.openChannelStream(request(PUBKEY)));
+        await flush();
+        const firstId = requestIdOf(0);
+        const secondId = requestIdOf(1);
+
+        emit(psbtFund('first-psbt'), firstId);
+        await flush();
+
+        expect(first.value).toEqual({
+            result: { psbt_fund: { psbt: 'first-psbt' } }
+        });
+        expect(second.settled).toBe(false);
+
+        // untagged events come from streams started without an id
+        emit(psbtFund('untagged-psbt'), null);
+        emit({ error_code: 'Error', error_desc: 'untagged' }, null);
+        await flush();
+        expect(second.settled).toBe(false);
+
+        emit({ error_code: 'Error', error_desc: 'peer offline' }, secondId);
+        await flush();
+
+        expect(second.error?.message).toEqual('peer offline');
     });
 });

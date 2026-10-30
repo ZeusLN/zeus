@@ -15,9 +15,13 @@
     if (data == nil) {
         return;
     }
-    NSDictionary *body = self.nameSpace
-        ? @{@"result": data, @"namespace": self.nameSpace}
-        : @{@"result": data};
+    NSMutableDictionary *body = [NSMutableDictionary dictionaryWithObject:data forKey:@"result"];
+    if (self.nameSpace) {
+        body[@"namespace"] = self.nameSpace;
+    }
+    if (self.requestId.length > 0) {
+        body[@"request_id"] = self.requestId;
+    }
     [self.delegate sendEventWithName:self.eventId body:body];
 }
 
