@@ -36,6 +36,8 @@ jest.mock('../cashu-cdk', () => ({
     checkMeltQuote: jest.fn(),
     createMeltQuote: jest.fn(),
     getMintBalance: jest.fn(),
+    addMint: jest.fn(),
+    getMintUrls: jest.fn(),
     removeMint: jest.fn().mockResolvedValue(undefined),
     deleteWalletDatabase: jest.fn().mockResolvedValue(undefined)
 }));
@@ -357,6 +359,105 @@ describe('CashuStore checkAndSweepMints', () => {
         });
         await store.checkAndSweepMints();
         expect(sweepMint).toHaveBeenCalledWith('https://mint.example.com');
+    });
+});
+
+describe('CashuStore mint list', () => {
+    const listed = 'https://mint.example.com';
+    // In CDK only through ensureMintAdded, e.g. after a self-custody receive
+    const unlisted = 'https://unlisted.example.com';
+    let cdkMints: string[];
+
+    const storeWith = (mintUrls: string[]) => {
+        const store = newStore();
+        store.cdkInitialized = true;
+        store.mintUrls = mintUrls;
+        jest.spyOn(store, 'initializeWallet').mockResolvedValue({} as any);
+        jest.spyOn(store, 'fetchMintInfo').mockResolvedValue(null as any);
+        jest.spyOn(store, 'syncCDKBalances').mockResolvedValue(undefined);
+        jest.spyOn(store, 'nostrBackupMints').mockResolvedValue(undefined);
+        return store;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        cdkMints = [unlisted];
+        (CashuDevKit.addMint as jest.Mock).mockImplementation(
+            // CDK drops trailing slashes and lowercases scheme and host
+            async (url: string) =>
+                void cdkMints.push(url.replace(/\/+$/, '').toLowerCase())
+        );
+        (CashuDevKit.removeMint as jest.Mock).mockImplementation(
+            async (url: string) =>
+                void (cdkMints = cdkMints.filter((mint) => mint !== url))
+        );
+        (CashuDevKit.getMintUrls as jest.Mock).mockImplementation(async () => [
+            ...cdkMints
+        ]);
+        (Storage.setItem as jest.Mock).mockReset().mockResolvedValue(true);
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        (CashuDevKit.removeMint as jest.Mock).mockReset();
+        (CashuDevKit.removeMint as jest.Mock).mockResolvedValue(undefined);
+        jest.restoreAllMocks();
+    });
+
+    it('addMint lists only the added mint, not other mints CDK holds', async () => {
+        const store = storeWith([]);
+
+        await store.addMint(listed);
+
+        expect(store.mintUrls).toEqual([listed]);
+        expect(store.selectedMintUrl).toBe(listed);
+        expect(Storage.setItem).toHaveBeenCalledWith(
+            'lnd-cashu-mintUrls',
+            JSON.stringify([listed])
+        );
+    });
+
+    it('addMint keeps the mints already listed', async () => {
+        const other = 'https://other.example.com';
+        cdkMints.push(other);
+        const store = storeWith([other]);
+
+        await store.addMint(listed);
+
+        expect(store.mintUrls).toEqual([other, listed]);
+    });
+
+    it("addMint lists CDK's form of the added URL", async () => {
+        const store = storeWith([]);
+
+        await store.addMint('https://Mint.Example.com/');
+
+        expect(store.mintUrls).toEqual([listed]);
+    });
+
+    it('addMint lists a mint that CDK already had', async () => {
+        const store = storeWith([]);
+        (CashuDevKit.addMint as jest.Mock).mockResolvedValue(undefined);
+
+        await store.addMint(unlisted);
+
+        expect(store.mintUrls).toEqual([unlisted]);
+    });
+
+    it('removeMint does not list other mints CDK holds', async () => {
+        const removed = 'https://removed.example.com';
+        cdkMints.push(listed, removed);
+        const store = storeWith([listed, removed]);
+        store.selectedMintUrl = removed;
+
+        await store.removeMint(removed);
+
+        expect(store.mintUrls).toEqual([listed]);
+        expect(store.selectedMintUrl).toBe(listed);
+        expect(Storage.setItem).toHaveBeenCalledWith(
+            'lnd-cashu-mintUrls',
+            JSON.stringify([listed])
+        );
     });
 });
 

@@ -2859,6 +2859,22 @@ export default class CashuStore {
         await this.setMultiMintSelectedUrls(nextSelected);
     };
 
+    /**
+     * CDK's mint URLs, limited to the given list. CDK also holds wallets
+     * for mints the user never added (ensureMintAdded registers the mint of
+     * a token received to self-custody, or of a swept offline token), so
+     * its full list must not replace the user's mint list.
+     */
+    private getListedMintUrls = async (
+        listedMintUrls: string[]
+    ): Promise<string[]> => {
+        // CDK lowercases scheme and host, so compare case-insensitively
+        const key = (url: string) => this.normalizeMintUrl(url).toLowerCase();
+        const listed = new Set(listedMintUrls.map(key));
+        const cdkMintUrls = await CashuDevKit.getMintUrls();
+        return cdkMintUrls.filter((url) => listed.has(key(url)));
+    };
+
     @action
     public addMint = async (
         mintUrl: string,
@@ -2919,8 +2935,11 @@ export default class CashuStore {
             // Sync balances from CDK
             await this.syncCDKBalances();
 
-            // Update local mintUrls from CDK (source of truth)
-            const updatedMintUrls = await CashuDevKit.getMintUrls();
+            // Update local mintUrls with CDK's form of the listed URLs
+            const updatedMintUrls = await this.getListedMintUrls([
+                ...this.mintUrls,
+                mintUrl
+            ]);
             runInAction(() => {
                 this.mintUrls = updatedMintUrls;
             });
@@ -2977,7 +2996,7 @@ export default class CashuStore {
         // Evict from the ensureMintAdded cache so later flows cannot treat
         // the removed mint as still present
         this.addedMintsCache.delete(this.normalizeMintUrl(mintUrl));
-        const updatedMintUrls = await CashuDevKit.getMintUrls();
+        const updatedMintUrls = await this.getListedMintUrls(this.mintUrls);
         runInAction(() => {
             this.mintUrls = updatedMintUrls;
         });
@@ -3994,8 +4013,9 @@ export default class CashuStore {
                     }
                 }
 
-                // Get mint URLs from CDK (source of truth) and populate cache
-                const cdkMints = await CashuDevKit.getMintUrls();
+                // Get mint URLs from CDK and populate cache. A mint that
+                // could not be removed above must not join the list
+                const cdkMints = await this.getListedMintUrls(localMintUrls);
                 runInAction(() => {
                     this.mintUrls = cdkMints;
                 });
