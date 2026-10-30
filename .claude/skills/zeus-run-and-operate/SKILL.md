@@ -80,6 +80,24 @@ Create wallets in-app: Menu → Settings-equivalent wallet list → add wallet (
 
 Remote configs also carry per-node `certVerification` and `enableTor` toggles. For per-backend behavior differences and `supports*` capability gating, load zeus-backends-and-capabilities — do not assume a feature exists on all 7.
 
+### Regtest device rig (`tools/regtest-rig`)
+
+For scripted Android device tests, `tools/regtest-rig/` replaces a hand-built Polar setup. All commands run from that directory; `tools/regtest-rig/README.md` has prerequisites, the script reference and traps.
+
+- **What it runs.** Base: bitcoind and lnd `alice`, `bob`, `carol` in Docker (bob opens 10M-sat channels to alice and carol). Profiles, enabled with `bin/up --profiles <list>` or `PROFILES` in `.env`: `lsp` (stub Olympus Flow LSP host process), `cashu` (cdk-mintd 0.18.1 fakewallet), `nwc` (nostr-rs-relay), `ldk` (electrs esplora for LDK Node regtest), or `all`.
+- **Isolation.** Ports are `PORT_BASE` (default 24600) plus fixed offsets on 127.0.0.1. The app always loads Metro as `localhost:8081`, which `adb reverse` maps to `METRO_PORT`, so another Metro on host 8081 does not interfere. The emulator runs on its own adb server (`ADB_SERVER_PORT`, default 5137) with console port `EMU_PORT` (default 5640).
+- **Which checkout is served.** `ZEUS_DIR` defaults to the checkout containing the rig; `bin/metro start --dir <path>` serves another worktree with the same native build.
+- **Connecting.** `bin/zeus add-lnd alice --select` adds alice as an LND REST wallet at `https://localhost:<port>` with `certVerification: true` (the rig CA is installed as a user CA by `bin/avd install-ca`). After `bin/down` + `bin/up` the nodes have new identities; rerun it.
+
+**Master baseline on the same native build.** To compare a PR against master without a second Gradle build:
+
+1. Keep the emulator, APK and stack running. Run `bin/app terminate` first: with Fast Refresh, a live app hot-loads whatever Metro serves next.
+2. `bin/metro stop && bin/metro start --dir <master checkout>`, where `<master checkout>` is a worktree at upstream/master with `node_modules` installed.
+3. `bin/metro check '<string only the PR adds>'` must print 0 occurrences for master and more than 0 for the PR checkout. This proves which bundle is served.
+4. `bin/app restart --node`, repeat the case, then switch back the same way.
+
+This works only when the APK's native inputs match both checkouts: `git diff --stat <apk-commit> <head> -- android ios package.json yarn.lock zeus_modules patches` must be empty.
+
 ### Embedded wallet networks
 
 Both on-device implementations pick a network at creation (`EMBEDDED_NODE_NETWORK_KEYS`): `mainnet`, `testnet`, `mutinynet`. **Mutinynet** is a custom public Signet test network (Zeus points its esplora default at `https://mutinynet.com/api`) — inside LDK Node it is mapped to network type `signet` (`getNetworkType` in `utils/LdkNodeUtils.ts`). Caveat verified in `WalletConfiguration.tsx`: the network dropdown for NEW embedded-lnd wallets filters out `mutinynet`; only `ldk-node` offers all three. Remote nodes have no network setting — the network is detected from the node itself.

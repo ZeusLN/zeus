@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# down: stop host helpers (stub LSP, LNURL server) and remove the compose
+# stack with its volumes. Keeps state/<RIG_NAME>/tls so certs stay trusted
+# by the AVD. Metro and the emulator are left alone (use bin/teardown).
+#
+# usage: bin/down
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+stop_proc lsp
+stop_proc lnurlw
+compose --profile lsp --profile cashu --profile nwc --profile ldk down -v --remove-orphans
+rm -rf "$STATE/macaroons" "$STATE/pubkeys.json" "$STATE/urls.json" "$STATE/nwc"
+log "stack removed"

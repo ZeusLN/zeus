@@ -1,0 +1,70 @@
+#!/usr/bin/env node
+// Fake docker for rig.test.js: answers the compose, bitcoin-cli and lncli
+// calls bin/up makes from the JSON state in FAKE_DOCKER_STATE and logs
+// every call (one JSON argv array per line) to FAKE_DOCKER_LOG.
+// Mining moves bob's pending channels to active.
+const fs = require('fs');
+
+const args = process.argv.slice(2);
+fs.appendFileSync(process.env.FAKE_DOCKER_LOG, JSON.stringify(args) + '\n');
+const st = JSON.parse(fs.readFileSync(process.env.FAKE_DOCKER_STATE, 'utf8'));
+const save = () =>
+    fs.writeFileSync(process.env.FAKE_DOCKER_STATE, JSON.stringify(st));
+const out = (v) =>
+    process.stdout.write(typeof v === 'string' ? v + '\n' : JSON.stringify(v));
+
+if (args[0] !== 'exec') process.exit(0); // compose
+const node = args[1].replace(/^.*-(\w+)-1$/, '$1');
+const rest = args.slice(2);
+
+if (rest[0] === 'cat') {
+    out('macaroon');
+} else if (rest[0] === 'bitcoin-cli') {
+    const [cmd, n] = rest.slice(1).filter((a) => !a.startsWith('-'));
+    if (cmd === 'getblockcount') out(String(st.blocks));
+    else if (cmd === 'getnewaddress') out('bcrt1qminer');
+    else if (cmd === 'generatetoaddress') {
+        st.blocks += Number(n);
+        st.active.bob.push(...st.pending.bob);
+        st.pending.bob = [];
+        save();
+        out([]);
+    } else out({});
+} else if (rest[0] === 'lncli') {
+    // lncli --network --tlscertpath --macaroonpath <cmd> args...
+    const [cmd, ...cargs] = rest.slice(4);
+    const list = (o) => (o && o[node]) || [];
+    switch (cmd) {
+        case 'getinfo':
+            out({ identity_pubkey: `${node}pk`, synced_to_chain: true });
+            break;
+        case 'listunspent':
+            out({ utxos: Array(st.utxos[node] || 0).fill({}) });
+            break;
+        case 'listchannels':
+            out({
+                channels: list(st.active).map((pk) => ({ remote_pubkey: pk }))
+            });
+            break;
+        case 'pendingchannels':
+            out({
+                pending_open_channels: list(st.pending).map((pk) => ({
+                    channel: { remote_node_pub: pk }
+                }))
+            });
+            break;
+        case 'openchannel':
+            st.pending[node].push(cargs[cargs.indexOf('--node_key') + 1]);
+            save();
+            out({ funding_txid: 'f' });
+            break;
+        case 'walletbalance':
+            out({ confirmed_balance: '1' });
+            break;
+        case 'newaddress':
+            out({ address: 'bcrt1pnode' });
+            break;
+        default:
+            out({});
+    }
+}

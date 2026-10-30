@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# teardown: remove everything this rig started: stub LSP, LNURL server,
+# Metro, emulator, AVD, private adb server, compose stack and volumes.
+#
+# usage: bin/teardown [--keep-avd] [--keep-state]
+#   --keep-avd    stop the emulator but keep the AVD (and its installed CA)
+#   --keep-state  keep state/<RIG_NAME>/ (certs, logs, screenshots)
+# Only touches resources named after this rig's RIG_NAME / AVD_NAME / ports.
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+KEEP_AVD=0; KEEP_STATE=0
+for a in "$@"; do
+    case "$a" in --keep-avd) KEEP_AVD=1 ;; --keep-state) KEEP_STATE=1 ;; esac
+done
+
+stop_proc lsp
+stop_proc lnurlw
+stop_proc metro
+if [ "$KEEP_AVD" = 1 ]; then "$RIG_DIR/bin/avd" stop; else "$RIG_DIR/bin/avd" delete; fi
+"$RIG_DIR/bin/avd" adb-kill
+compose --profile lsp --profile cashu --profile nwc --profile ldk down -v --remove-orphans 2>&1 | grep -v '^ *$' | tail -3 || true
+if [ "$KEEP_STATE" = 0 ]; then
+    rm -rf "$STATE"
+    log "state removed"
+fi
+
+# report leftovers
+left=$(docker ps -a --filter "label=com.docker.compose.project=$RIG_NAME" -q | wc -l | tr -d ' ')
+echo "containers left: $left"
+echo "listening on rig ports: $(for p in $METRO_PORT $LSP_PORT $LNURL_PORT $EMU_PORT $ADB_SERVER_PORT; do lsof -nP -iTCP:$p -sTCP:LISTEN -t 2>/dev/null; done | sort -u | tr '\n' ' ')"
+echo "AVD: $("$EMULATOR" -list-avds | grep -qx "$AVD_NAME" && echo present || echo absent)"

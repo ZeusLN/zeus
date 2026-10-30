@@ -1,0 +1,23 @@
+[info]
+url = "http://localhost:@MINT_PORT@/"
+listen_host = "0.0.0.0"
+listen_port = 8085
+mnemonic = "env:CDK_MINTD_MNEMONIC"
+
+[mint_info]
+name = "@RIG_NAME@ fake mint"
+description = "regtest-rig regtest fakewallet"
+
+[database]
+engine = "sqlite"
+
+[payment_backend]
+backend = "fakewallet"
+
+[fake_wallet]
+supported_units = ["sat"]
+fee_percent = 0.0
+reserve_fee_min = 1
+# seconds between quote creation and the quote turning PAID
+min_delay_time = @MIN@
+max_delay_time = @MAX@
