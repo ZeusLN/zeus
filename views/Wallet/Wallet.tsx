@@ -337,13 +337,26 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.handleAppStateChange
         );
 
-        const {
-            SettingsStore: { updateSettings }
-        } = this.props;
+        const { SettingsStore } = this.props;
+        const { updateSettings } = SettingsStore;
 
         const supportedBiometryType = await getSupportedBiometryType();
 
-        await updateSettings({ supportedBiometryType });
+        // updateSettings is a read-merge-write of the whole settings blob,
+        // which on iOS is a delete-then-add of one keychain item. This runs
+        // on every launch, so skip it when the loaded value already
+        // matches. Before the first load `settings` holds the defaults
+        // (supportedBiometryType undefined), which would match a device
+        // that has since lost biometrics and leave a stale persisted
+        // value, so always go through updateSettings then: it reads, and
+        // applySettingsUpdate skips the write if nothing changed.
+        if (
+            !SettingsStore.settingsLoaded ||
+            SettingsStore.settings?.supportedBiometryType !==
+                supportedBiometryType
+        ) {
+            await updateSettings({ supportedBiometryType });
+        }
 
         this.handleFocus();
     }
