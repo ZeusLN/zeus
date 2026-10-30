@@ -3729,6 +3729,23 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
         expect(connection.totalSpendSats).toBe(0);
     });
 
+    it('ignores a payment error left on the store by another payment', async () => {
+        const { response, connection } = await payWith(
+            {
+                isFailed: false,
+                getPreimage: preimage,
+                getPaymentRequest: invoice,
+                getFee: 1
+            },
+            [],
+            { paymentError: true, paymentErrorMsg: 'Payment failed' }
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(response.result.preimage).toBe(preimage);
+        expect(connection.totalSpendSats).toBe(101);
+    });
+
     it('never returns the invoice as the preimage', async () => {
         // Regression: this used to fall back to getPaymentRequest, handing
         // NIP-47 clients a bolt11 string as proof of payment.
