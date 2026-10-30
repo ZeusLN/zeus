@@ -465,7 +465,9 @@ describe('SettingsStore.startNewRootSession', () => {
     };
 
     it('requires the PIN again when one is set', () => {
-        const store = loggedInStore({ pin: '1234' });
+        const store = loggedInStore({
+            pinVerifier: { kdf: 'pbkdf2-sha256', salt: 'aa', hash: 'bb' }
+        });
 
         store.startNewRootSession();
 
@@ -474,7 +476,13 @@ describe('SettingsStore.startNewRootSession', () => {
     });
 
     it('requires the passphrase again when one is set', () => {
-        const store = loggedInStore({ passphrase: 'hunter2' });
+        const store = loggedInStore({
+            passphraseVerifier: {
+                kdf: 'pbkdf2-sha256',
+                salt: 'aa',
+                hash: 'bb'
+            }
+        });
 
         store.startNewRootSession();
 
