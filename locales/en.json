@@ -1465,6 +1465,7 @@
     "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
     "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
+    "views.Settings.SeedRecovery.clipboardSeedWordsWarning": "Other apps can put text on the clipboard. Only use these words if you copied them yourself.",
     "views.Settings.SeedRecovery.duplicateWallet": "A wallet with the same seed phrase already exists",
     "views.Settings.SeedRecovery.invalidChecksum": "Invalid seed phrase — checksum failed. Please check the word order and spelling.",
     "views.Settings.SeedRecovery.vssRestoreFailed": "Could not download your wallet data from the backup (VSS) server, so your channels were NOT restored. Check your connection and try again.",
