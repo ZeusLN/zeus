@@ -6,6 +6,9 @@ jest.mock('react-native-encrypted-storage', () => ({
     setItem: jest.fn(),
     removeItem: jest.fn()
 }));
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    setItem: jest.fn()
+}));
 jest.mock('../storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn(),
@@ -252,6 +255,69 @@ describe('KeychainPurgeUtils', () => {
             });
 
             expect(result.ok).toBe(true);
+            expect(StorageModule.setRawLocalItem).not.toHaveBeenCalled();
+        });
+
+        it('does not copy back a retired server but still copies the others', async () => {
+            StorageModule.getItem.mockResolvedValue('{"nodes":[]}');
+            EncryptedStorage.getItem.mockImplementation(async (key: string) =>
+                key === 'keychain-retired-servers-v1'
+                    ? '["zeus:swaps-rescue-key","zeus:swaps-last-used-key"]'
+                    : null
+            );
+            const local: Record<string, string> = {};
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    cloudSync ? `sync:${server}` : local[server] ?? null
+            );
+            StorageModule.setRawLocalItem.mockImplementation(
+                async (server: string, value: string) => {
+                    local[server] = value;
+                    return true;
+                }
+            );
+
+            const result = await verifyPurgePreflight({
+                syncServers: [
+                    'zeus:swaps-rescue-key',
+                    'zeus:swaps-last-used-key',
+                    'zeus:zeus-notes-v2'
+                ],
+                legacyLocalServers: [],
+                hasLegacyEncryptedSettings: false
+            });
+
+            expect(result.ok).toBe(true);
+            expect(StorageModule.setRawLocalItem).toHaveBeenCalledTimes(1);
+            expect(StorageModule.setRawLocalItem).toHaveBeenCalledWith(
+                'zeus:zeus-notes-v2',
+                'sync:zeus:zeus-notes-v2'
+            );
+        });
+
+        it('fails without copying when the retired servers cannot be read', async () => {
+            StorageModule.getItem.mockResolvedValue('{"nodes":[]}');
+            EncryptedStorage.getItem.mockImplementation(async (key: string) => {
+                if (key === 'keychain-retired-servers-v1') {
+                    throw new Error('read failed');
+                }
+                return null;
+            });
+            StorageModule.getRawItem.mockImplementation(
+                async (_server: string, cloudSync: boolean) =>
+                    cloudSync ? 'sync-value' : null
+            );
+
+            const result = await verifyPurgePreflight({
+                syncServers: ['zeus:swaps-rescue-key'],
+                legacyLocalServers: [],
+                hasLegacyEncryptedSettings: false
+            });
+
+            expect(result).toEqual({
+                ok: false,
+                reason: 'retired-servers-unreadable'
+            });
             expect(StorageModule.setRawLocalItem).not.toHaveBeenCalled();
         });
     });

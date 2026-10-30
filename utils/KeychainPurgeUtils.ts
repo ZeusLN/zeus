@@ -33,6 +33,7 @@ import {
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY
 } from './SwapUtils';
+import { getRetiredKeychainServers } from './RescueKeyRetirementUtils';
 import {
     LNC_STORAGE_KEY,
     hash as lncHash
@@ -272,7 +273,8 @@ export const scanPurgeCandidates = async (): Promise<PurgeScan> => {
  *   before the purge may proceed, so the synchronizable copy is never the
  *   last copy of anything. Local copies that DIFFER from the synchronizable
  *   ones are expected and fine: after the desync migration all writes go to
- *   the local partition, so local is the fresher of the two.
+ *   the local partition, so local is the fresher of the two;
+ * - servers recorded by getRetiredKeychainServers are never copied back.
  */
 export const verifyPurgePreflight = async (
     scan: PurgeScan
@@ -290,8 +292,19 @@ export const verifyPurgePreflight = async (
         return { ok: false, reason: 'invalid-settings' };
     }
 
+    // Values the app deliberately removed (a swap rescue key that was a
+    // wallet seed) must stay removed: their synchronizable copies are not
+    // restored into the local partition.
+    let retired: Set<string>;
+    try {
+        retired = new Set(await getRetiredKeychainServers());
+    } catch {
+        return { ok: false, reason: 'retired-servers-unreadable' };
+    }
+
     for (const server of scan.syncServers) {
         if (!server.startsWith(KEY_PREFIX)) continue;
+        if (retired.has(server)) continue;
         const local = await getRawItem(server, false);
         if (local !== null) continue;
         const syncValue = await getRawItem(server, true);
