@@ -182,25 +182,67 @@ const invoiceAmountSats = (invoice?: string): number | undefined => {
     }
 };
 
+// The address a stored swap's lockup is paid to: `address` on a submarine
+// swap created here, `lockupAddress` on reverse and rescued swaps
+const lockupAddressOf = (swap: any) => swap?.address || swap?.lockupAddress;
+
 /**
- * Keeps one stored entry per swap ID. Running the rescue again used to
+ * Whether two stored entries are copies of one swap. The host picks the ID
+ * and can give a later swap the ID of an earlier one, so entries with one
+ * ID only count as copies if they also use the same key of ours and the
+ * same lockup address. A field missing from either entry is not compared.
+ */
+const isSameSwap = (a: any, b: any) => {
+    if (a.id !== b.id) return false;
+    if (
+        a.keys &&
+        b.keys &&
+        privateKeyFromKeys(a.keys) !== privateKeyFromKeys(b.keys)
+    ) {
+        return false;
+    }
+    const addressA = lockupAddressOf(a);
+    const addressB = lockupAddressOf(b);
+    return !addressA || !addressB || addressA === addressB;
+};
+
+/**
+ * Keeps one stored entry per swap. Running the rescue again used to
  * append a second copy of a reverse swap already re-filed under
  * REVERSE_SWAPS_KEY; keep the copy with a preimage, else the first.
+ * Different swaps stored under one ID are all kept, since each may be the
+ * only record its refund or claim can be built from.
  */
 const dedupeStoredSwaps = (submarineSwaps: any[], reverseSwaps: any[]) => {
-    const kept = new Map<string, any>();
+    const kept: any[] = [];
     for (const swap of [...reverseSwaps, ...submarineSwaps]) {
         if (!swap?.id) continue;
-        const current = kept.get(swap.id);
-        if (!current || (!hasPreimage(current) && hasPreimage(swap))) {
-            kept.set(swap.id, swap);
+        const index = kept.findIndex((current) => isSameSwap(current, swap));
+        if (index === -1) {
+            kept.push(swap);
+        } else if (!hasPreimage(kept[index]) && hasPreimage(swap)) {
+            kept[index] = swap;
         }
     }
-    const isKept = (swap: any) => !swap?.id || kept.get(swap.id) === swap;
+    const isKept = (swap: any) => !swap?.id || kept.includes(swap);
     return {
         submarineSwaps: submarineSwaps.filter(isKept),
         reverseSwaps: reverseSwaps.filter(isKept)
     };
+};
+
+/**
+ * Whether a swap is already stored under this ID, in either list. The host
+ * picks the ID of a new swap, and stored swaps are looked up and updated by
+ * ID, so a second swap under a stored ID would be mixed up with the first.
+ */
+const isStoredSwapId = async (id: string): Promise<boolean> => {
+    for (const key of [SWAPS_KEY, REVERSE_SWAPS_KEY]) {
+        const storedSwaps = await Storage.getItem(key);
+        const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+        if (swaps.some((swap: any) => swap?.id === id)) return true;
+    }
+    return false;
 };
 
 /**
@@ -717,6 +759,15 @@ export default class SwapStore {
             responseData.refundPrivateKey = refundPrivateKey;
             responseData.refundPublicKey = refundPublicKey;
 
+            if (await isStoredSwapId(responseData.id)) {
+                runInAction(() => {
+                    this.apiError = localeString('views.Swaps.swapIdInUse');
+                    this.loading = false;
+                });
+                console.error('Swap ID already in use:', responseData.id);
+                return;
+            }
+
             await this.saveSubmarineSwap(
                 responseData,
                 keys,
@@ -896,6 +947,15 @@ export default class SwapStore {
                     this.loading = false;
                 });
                 console.error('Error in API response:', responseData.error);
+                return;
+            }
+
+            if (await isStoredSwapId(responseData.id)) {
+                runInAction(() => {
+                    this.apiError = localeString('views.Swaps.swapIdInUse');
+                    this.loading = false;
+                });
+                console.error('Swap ID already in use:', responseData.id);
                 return;
             }
 
