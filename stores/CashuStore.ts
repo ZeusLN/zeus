@@ -798,11 +798,72 @@ export default class CashuStore {
     };
 
     /**
+     * CDK: Store a paid quote fetched from the mint, with the P2PK secret
+     * key ZEUS Pay locks it to, and mint it. Returns the amount minted.
+     */
+    private reseedAndMintExternalQuote = async (
+        mintUrl: string,
+        quoteId: string,
+        externalQuote: any
+    ): Promise<number> => {
+        // Derive the secret key for P2PK-locked quotes
+        // This is needed because ZeusPay locks quotes to our cashu pubkey
+        const secretKey = this.deriveCashuSecretKey();
+        if (secretKey && __DEV__) {
+            console.log(
+                'CDK checkAndMintCDK: Using P2PK secret key for minting'
+            );
+        }
+
+        // NUT-04 GET response may omit amount; fall back to bolt11
+        let amount = externalQuote.amount || 0;
+        if (!amount && externalQuote.request) {
+            try {
+                const decoded = Bolt11Utils.decode(externalQuote.request);
+                amount = decoded.satoshis || 0;
+            } catch (decodeErr) {
+                console.warn('Failed to decode bolt11 for amount:', decodeErr);
+            }
+        }
+
+        // First, add the external quote to CDK's database
+        // with the secret key
+        await CashuDevKit.addExternalMintQuote(
+            mintUrl,
+            quoteId,
+            amount,
+            externalQuote.request || '',
+            externalQuote.state || 'PAID',
+            externalQuote.expiry || 0,
+            secretKey || undefined
+        );
+        if (__DEV__) {
+            console.log(
+                `CDK checkAndMintCDK: Added quote ${quoteId} to database`
+            );
+        }
+
+        // Now mint - the quote is in the database
+        await CashuDevKit.mintExternal(mintUrl, quoteId, amount);
+        await this.syncCDKBalances();
+        if (__DEV__) {
+            console.log(
+                `CDK checkAndMintCDK: External mint succeeded for ${quoteId}`
+            );
+        }
+        return amount;
+    };
+
+    /**
      * CDK: Check mint quote status and mint proofs if paid
+     *
+     * lockedQuote marks a ZEUS Pay quote, locked to this wallet's P2PK key,
+     * which may be re-seeded from the mint if minting the stored copy fails.
      */
     public checkAndMintCDK = async (
         mintUrl: string,
-        quoteId: string
+        quoteId: string,
+        lockedQuote?: boolean
     ): Promise<{
         isPaid: boolean;
         amount?: number;
@@ -840,7 +901,35 @@ export default class CashuStore {
                 console.log(
                     'CDK checkAndMintCDK: Quote is paid, minting proofs'
                 );
-                await CashuDevKit.mint(mintUrl, quoteId);
+                try {
+                    await CashuDevKit.mint(mintUrl, quoteId);
+                } catch (mintError: any) {
+                    // A ZEUS Pay quote stored by an earlier failed attempt
+                    // can be left in a state that fails every mint. Re-seed
+                    // it from the mint, as the first attempt does, and mint
+                    // again; if the mint no longer reports it paid, keep
+                    // the original error
+                    if (!lockedQuote) throw mintError;
+                    if (__DEV__) {
+                        console.log(
+                            `CDK checkAndMintCDK: Mint failed for locked quote ${quoteId}, re-seeding: ${mintError?.message}`
+                        );
+                    }
+                    const externalQuote =
+                        await CashuDevKit.checkExternalMintQuote(
+                            mintUrl,
+                            quoteId
+                        );
+                    if (externalQuote.state?.toUpperCase() !== 'PAID') {
+                        throw mintError;
+                    }
+                    const amount = await this.reseedAndMintExternalQuote(
+                        mintUrl,
+                        quoteId,
+                        externalQuote
+                    );
+                    return { isPaid: true, amount, quote };
+                }
                 await this.syncCDKBalances();
 
                 return { isPaid: true, amount: quote.amount, quote };
@@ -920,60 +1009,12 @@ export default class CashuStore {
                         }
 
                         try {
-                            // Derive the secret key for P2PK-locked quotes
-                            // This is needed because ZeusPay locks quotes to our cashu pubkey
-                            const secretKey = this.deriveCashuSecretKey();
-                            if (secretKey && __DEV__) {
-                                console.log(
-                                    'CDK checkAndMintCDK: Using P2PK secret key for minting'
+                            const amount =
+                                await this.reseedAndMintExternalQuote(
+                                    mintUrl,
+                                    quoteId,
+                                    externalQuote
                                 );
-                            }
-
-                            // NUT-04 GET response may omit amount; fall back to bolt11
-                            let amount = externalQuote.amount || 0;
-                            if (!amount && externalQuote.request) {
-                                try {
-                                    const decoded = Bolt11Utils.decode(
-                                        externalQuote.request
-                                    );
-                                    amount = decoded.satoshis || 0;
-                                } catch (decodeErr) {
-                                    console.warn(
-                                        'Failed to decode bolt11 for amount:',
-                                        decodeErr
-                                    );
-                                }
-                            }
-
-                            // First, add the external quote to CDK's database
-                            // with the secret key
-                            await CashuDevKit.addExternalMintQuote(
-                                mintUrl,
-                                quoteId,
-                                amount,
-                                externalQuote.request || '',
-                                externalQuote.state || 'PAID',
-                                externalQuote.expiry || 0,
-                                secretKey || undefined
-                            );
-                            if (__DEV__) {
-                                console.log(
-                                    `CDK checkAndMintCDK: Added quote ${quoteId} to database`
-                                );
-                            }
-
-                            // Now mint - the quote is in the database
-                            await CashuDevKit.mintExternal(
-                                mintUrl,
-                                quoteId,
-                                amount
-                            );
-                            await this.syncCDKBalances();
-                            if (__DEV__) {
-                                console.log(
-                                    `CDK checkAndMintCDK: External mint succeeded for ${quoteId}`
-                                );
-                            }
                             return {
                                 isPaid: true,
                                 amount,
@@ -4494,7 +4535,7 @@ export default class CashuStore {
     public checkInvoicePaid = async (
         quoteId?: string,
         quoteMintUrl?: string,
-        _lockedQuote?: boolean,
+        lockedQuote?: boolean,
         skipMintCheck?: boolean
     ) => {
         const mintUrl = quoteMintUrl || this.selectedMintUrl;
@@ -4504,7 +4545,7 @@ export default class CashuStore {
                 quoteId,
                 quoteMintUrl,
                 mintUrl,
-                _lockedQuote,
+                lockedQuote,
                 skipMintCheck
             });
         }
@@ -4522,7 +4563,11 @@ export default class CashuStore {
         }
 
         // Check and mint via CDK
-        const result = await this.checkAndMintCDK(mintUrl, invoiceQuoteId);
+        const result = await this.checkAndMintCDK(
+            mintUrl,
+            invoiceQuoteId,
+            lockedQuote
+        );
 
         if (__DEV__) {
             console.log('checkAndMintCDK result:', result);
