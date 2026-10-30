@@ -14,6 +14,14 @@
 static NSString *const kHasRunBeforeKey = @"HAS_RUN_BEFORE";
 
 /**
+ Set when a fresh install finds device-local keychain items left by an earlier install on this
+ device. JS reads it through KeychainAudit.m and then does not copy the iCloud Keychain
+ partition back into the device-local one, so a reinstall starts empty as the first-run clear
+ intends. Never cleared: the install stays a reinstall.
+ */
+static NSString *const kKeychainSurvivedReinstallKey = @"KEYCHAIN_SURVIVED_REINSTALL";
+
+/**
  Path of the file NSUserDefaults persists standardUserDefaults to. Read
  directly so a value cached in this process cannot stand in for it.
  */
@@ -62,6 +70,20 @@ static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defa
         (__bridge id)kSecClassKey,
         (__bridge id)kSecClassIdentity
     ];
+
+    // A query without kSecAttrSynchronizable matches device-local items only, so items that
+    // reached this device through iCloud Keychain do not count. Only this device's earlier
+    // install can have left device-local items behind.
+    for (id secItemClass in secItemClasses) {
+        NSDictionary *query = @{
+            (__bridge id)kSecClass: secItemClass,
+            (__bridge id)kSecMatchLimit: (__bridge id)kSecMatchLimitOne
+        };
+        if (SecItemCopyMatching((__bridge CFDictionaryRef)query, NULL) == errSecSuccess) {
+            [defaults setBool:YES forKey:kKeychainSurvivedReinstallKey];
+            break;
+        }
+    }
 
     // Maps through all Keychain classes and deletes all items that match
     for (id secItemClass in secItemClasses) {

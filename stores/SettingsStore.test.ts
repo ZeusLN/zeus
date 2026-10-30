@@ -11,6 +11,10 @@
 // inside the critical section.
 
 jest.mock('react-native-biometrics', () => ({ BiometryType: {} }));
+const mockKeychainSurvivedReinstall = jest.fn(async () => false);
+jest.mock('../utils/KeychainReinstallUtils', () => ({
+    keychainSurvivedReinstall: () => mockKeychainSurvivedReinstall()
+}));
 jest.mock('react-native-blob-util', () => ({
     fs: {
         dirs: { LibraryDir: '/lib', DocumentDir: '/docs' }
@@ -1390,6 +1394,33 @@ describe('SettingsStore.getSettings', () => {
     afterEach(() => {
         StorageMock.getRawItem.mockReset();
         StorageMock.getRawItem.mockResolvedValue(null);
+        mockKeychainSurvivedReinstall.mockResolvedValue(false);
+    });
+
+    it('does not fall back to the synchronizable blob after a reinstall on the same device', async () => {
+        // The first-run check emptied the local partition on purpose, so a
+        // copy left in iCloud Keychain must not bring the old wallets back
+        mockKeychainSurvivedReinstall.mockResolvedValue(true);
+        StorageMock.getRawItem.mockImplementation(
+            async (server: string, cloudSync: boolean) =>
+                cloudSync && server === `zeus:${STORAGE_KEY}`
+                    ? JSON.stringify({
+                          nodes: [
+                              { implementation: 'lnd', host: 'old.example' }
+                          ],
+                          selectedNode: 0
+                      })
+                    : null
+        );
+        const store = new SettingsStore();
+
+        const settings = await store.getSettings();
+
+        expect(StorageMock.getRawItem).not.toHaveBeenCalledWith(
+            `zeus:${STORAGE_KEY}`,
+            true
+        );
+        expect(settings.nodes ?? []).toEqual([]);
     });
 
     it('falls back to the synchronizable blob when the local partition is empty', async () => {
