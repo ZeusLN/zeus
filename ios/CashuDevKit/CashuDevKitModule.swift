@@ -556,20 +556,22 @@ class CashuDevKitModule: RCTEventEmitter {
                 let dbPath = getDatabasePath(for: mnemonic)
                 // createWalletDb returns a Rust-backed WalletDatabaseImpl,
                 // which WalletStore.custom hands to Rust by cloning its
-                // handle. A Swift-constructed WalletSqliteDatabase would be
-                // passed as a foreign callback object instead, and CDK's
-                // rate limiter writer task can drop the last reference on a
-                // tokio thread. That runs the Swift deinit there, and
-                // freeing the database's owned tokio runtime inside an
-                // async context panics into the deinit's try! (crash on
-                // wallet switch). The runtime drop is fixed upstream in
-                // cashubtc/cdk#2581, backported to 0.18.x in #2731.
+                // handle, so CDK's own database calls stay in Rust. A
+                // Swift-constructed WalletSqliteDatabase would be passed as
+                // a foreign callback object instead: every CDK database call
+                // would round-trip through a Swift Task, and CDK's rate
+                // limiter writer task could release the last reference on a
+                // tokio thread, running the Swift deinit and its try! there.
+                // Before CDK 0.18.3 (cashubtc/cdk#2731) that deinit freed the
+                // database's owned tokio runtime inside an async context,
+                // which panicked and crashed the app on wallet switch.
                 //
-                // Keep this after that bump only if the bump also has
-                // cashubtc/cdk#2769. Direct calls on WalletDatabaseImpl run
-                // outside tokio, and until #2769 a transaction that fails
-                // there (removeProofs) skips its rollback and returns the
-                // connection to the pool with the write lock held
+                // The direct database calls below go through the
+                // WalletDatabase protocol, which the bindings poll outside
+                // tokio. That needs CDK 0.18.3 or later (cashubtc/cdk#2769):
+                // before it, a transaction that failed there (removeProofs)
+                // skipped its rollback and returned the connection to the
+                // pool with the write lock held
                 let sqliteDb = try createWalletDb(backend: .sqlite(path: dbPath))
 
                 let currencyUnit = parseCurrencyUnit(unit)
