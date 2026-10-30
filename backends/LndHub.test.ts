@@ -65,6 +65,7 @@ describe('LndHub requests', () => {
         // The dropdown cleared host but kept port and macaroonHex, which
         // sent the macaroon as Bearer to <lndhubUrl>:8080/auth
         setStore({ port: '8080', macaroonHex: 'deadbeef', accessToken: '' });
+        restReq.mockResolvedValue({ access_token: 'at', refresh_token: 'rt' });
 
         await lndHub.login({ login: 'alice', password: 'secret' });
 
@@ -308,5 +309,55 @@ describe('LndHub capability flags', () => {
             store.username = 'admin';
             expect(lndHub.supportsLightningSends()).toBe(true);
         });
+    });
+});
+
+describe('LndHub.login', () => {
+    let lndHub: LndHub;
+
+    const loginWith = (response: any) => {
+        lndHub = new LndHub();
+        jest.spyOn(lndHub, 'restReq').mockResolvedValue(response);
+        return lndHub.login({ login: 'alice', password: 'secret' });
+    };
+
+    beforeEach(() => {
+        Object.assign(settingsStore, {
+            lndhubUrl: 'https://lndhub.example.com',
+            accessToken: ''
+        });
+    });
+
+    it('resolves with the tokens', async () => {
+        await expect(
+            loginWith({ access_token: 'at', refresh_token: 'rt' })
+        ).resolves.toEqual({ access_token: 'at', refresh_token: 'rt' });
+    });
+
+    // BlueWallet LndHub sends this body with HTTP 200
+    it('rejects a bad auth body with the body as the message', async () => {
+        const body = { error: true, code: 1, message: 'bad auth' };
+
+        const error = await loginWith(body).catch((e: Error) => e);
+
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe(JSON.stringify(body));
+        // SettingsStore.login matches on this to show lndhubLoginError
+        expect(error.message).toContain('"bad auth"');
+    });
+
+    it('rejects an error body even when it has a token', async () => {
+        await expect(
+            loginWith({ error: true, access_token: 'at' })
+        ).rejects.toThrow('"error":true');
+    });
+
+    it.each([
+        ['without access_token', { refresh_token: 'rt' }],
+        ['with an empty access_token', { access_token: '' }],
+        ['empty', {}],
+        ['undefined', undefined]
+    ])('rejects a response %s', async (_label, response) => {
+        await expect(loginWith(response)).rejects.toThrow(Error);
     });
 });
