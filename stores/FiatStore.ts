@@ -742,10 +742,12 @@ export default class FiatStore {
             );
             const status = response.info().status;
             if (status == 200) {
+                const rate = response.json()?.rate;
+                if (!Number.isFinite(rate) || rate <= 0) return undefined;
                 return {
                     cryptoCode: 'BTC',
                     code,
-                    rate: response.json().rate,
+                    rate,
                     currencyPair: `BTC_${code}`
                 };
             }
@@ -765,13 +767,14 @@ export default class FiatStore {
             const status = response.info().status;
             if (status == 200) {
                 // fiatRates is read with .find/.filter during render, so only
-                // keep an array of rows with a code and a numeric rate
+                // keep an array of rows with a code and a positive numeric rate
                 const data = response.json();
                 if (!Array.isArray(data)) return undefined;
                 return data.filter(
                     (entry: any) =>
                         typeof entry?.code === 'string' &&
-                        Number.isFinite(entry?.rate)
+                        Number.isFinite(entry?.rate) &&
+                        entry.rate > 0
                 );
             }
         } catch (error) {
