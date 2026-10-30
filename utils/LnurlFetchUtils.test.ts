@@ -202,6 +202,19 @@ describe('fetchLnurlParams', () => {
         expect(mockBlobFetch).not.toHaveBeenCalled();
     });
 
+    // decode-uri-component, behind js-lnurl's getParams, turns each run of
+    // this into `$\`` / `$'` replacement patterns and grows the string to
+    // hundreds of MB (ajaysehwal's review of #4553). querystring-es3 refuses
+    // it in decodeURIComponent before any request.
+    it('rejects a query that does not decode without a request', async () => {
+        const query = '%24%60x%24%27y'.repeat(100) + '%';
+
+        await expect(
+            fetchLnurlParams(asLnurl(`https://example.com/pay?x=${query}`))
+        ).rejects.toThrow(URIError);
+        expect(mockBlobFetch).not.toHaveBeenCalled();
+    });
+
     it('returns a login link without a request', async () => {
         const target = 'https://example.com/auth?tag=login&k1=K1';
 
