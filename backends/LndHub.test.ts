@@ -13,6 +13,7 @@ jest.mock('../utils/TorUtils', () => ({
 }));
 
 import LndHub from './LndHub';
+import Payment from '../models/Payment';
 import { settingsStore } from '../stores/Stores';
 
 describe('LndHub requests', () => {
@@ -85,6 +86,70 @@ describe('LndHub requests', () => {
         expect(restReq.mock.calls[0][1]).toBe(
             'https://lndhub.example.com/lndhub/ext/route?a=1&b=two'
         );
+    });
+});
+
+describe('LndHub.getPayments', () => {
+    // /gettxs rows as BlueWallet's LndHub lists them: a settled payment,
+    // and a payment whose HTLC is still outstanding (no preimage, memo
+    // 'Payment in transition', value and fee including the fee reserve)
+    const settled = {
+        type: 'paid_invoice',
+        payment_preimage: '11'.repeat(32),
+        fee: 0,
+        value: 10000,
+        timestamp: 1790000000,
+        memo: 'order 1'
+    };
+    const held = {
+        type: 'paid_invoice',
+        fee: 250,
+        value: 25250,
+        timestamp: 1790000060,
+        memo: 'Payment in transition'
+    };
+
+    let hub: LndHub;
+
+    beforeEach(() => {
+        hub = new LndHub();
+    });
+
+    const listPayments = async (rows: any) => {
+        jest.spyOn(hub, 'getRequest').mockResolvedValue(rows);
+        const { payments } = await hub.getPayments();
+        return payments;
+    };
+
+    it('marks a payment the hub lists as in transition as in flight', async () => {
+        const payments = await listPayments([settled, held]);
+
+        expect(payments).toEqual([settled, { ...held, status: 'IN_FLIGHT' }]);
+
+        const [settledPayment, heldPayment] = payments.map(
+            (p: any) => new Payment(p)
+        );
+        expect(heldPayment.isInTransit).toBe(true);
+        expect(heldPayment.isFailed).toBe(false);
+        expect(settledPayment.isInTransit).toBe(false);
+        expect(settledPayment.isFailed).toBe(false);
+    });
+
+    it('leaves a settled payment with the same memo as sent', async () => {
+        const sameMemo = { ...settled, memo: 'Payment in transition' };
+
+        const payments = await listPayments([sameMemo]);
+
+        expect(payments).toEqual([sameMemo]);
+        const payment = new Payment(payments[0]);
+        expect(payment.isInTransit).toBe(false);
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it('passes a non-array response through', async () => {
+        const payments = await listPayments(undefined);
+
+        expect(payments).toBeUndefined();
     });
 });
 
