@@ -698,7 +698,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // Initialize and start LDK Node
         if (implementation === 'ldk-node' && connecting) {
-            const justCreated = SettingsStore.walletJustCreated;
+            // Reuse the node left running by a wallet creation or restore only
+            // for that wallet: those flows can end on the wallet list, where
+            // another wallet can be picked
+            const justCreated =
+                !!ldkNodeDir && SettingsStore.walletJustCreated === ldkNodeDir;
+            SettingsStore.walletJustCreated = undefined;
 
             if (!justCreated) {
                 console.log('[LDK startup] stopping previous instance');
@@ -709,7 +714,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 console.log(
                     '[LDK startup] node already built, skipping stop + init'
                 );
-                SettingsStore.walletJustCreated = false;
             }
 
             if (ldkMnemonic && ldkNodeDir) {
@@ -848,8 +852,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 };
 
                 // If LND is already running (e.g. just created via Quick Start),
-                // skip the stop→init→start cycle entirely
-                if (!SettingsStore.walletJustCreated) {
+                // skip the stop→init→start cycle entirely, but only for the
+                // wallet it was created for
+                const justCreated =
+                    !!lndDir && SettingsStore.walletJustCreated === lndDir;
+                SettingsStore.walletJustCreated = undefined;
+                if (!justCreated) {
                     try {
                         AlertStore.checkNeutrinoPeers();
 
@@ -1030,7 +1038,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     try {
                         // LND was just created and is already running — skip stop→init→start
                         AlertStore.checkNeutrinoPeers();
-                        SettingsStore.walletJustCreated = false;
 
                         if (settings?.ecash?.enableCashu)
                             await CashuStore.initializeWallets();

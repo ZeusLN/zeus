@@ -609,3 +609,60 @@ describe('error-screen Retry', () => {
         }
     });
 });
+
+describe('a node left running by a wallet creation or restore', () => {
+    const connect = async (selectedNode: number, walletJustCreated: string) => {
+        const { settings, view, runner, refresh, ldk, lnd } =
+            setup(selectedNode);
+        Object.assign(settings, {
+            lndDir: 'c',
+            embeddedLndStarted: true,
+            walletJustCreated
+        });
+        view.props.SyncStore.startSyncing = jest.fn();
+        await runner.run(refresh);
+        expect(settings.walletJustCreated).toBeUndefined();
+        expect(settings.connecting).toBe(false);
+        return { ldk, lnd };
+    };
+
+    it('is reused for its own LDK Node wallet', async () => {
+        const { ldk } = await connect(0, 'a');
+        expect(ldk.stopLdkNode).not.toHaveBeenCalled();
+        expect(ldk.startLdkNodeWallet).toHaveBeenCalledWith(
+            expect.objectContaining({ nodeDir: 'a', skipInit: true })
+        );
+    });
+
+    it.each(['created', 'c'])(
+        'is replaced for another LDK Node wallet (left by %s)',
+        async (walletJustCreated) => {
+            const { ldk } = await connect(0, walletJustCreated);
+            expect(ldk.stopLdkNode).toHaveBeenCalledTimes(1);
+            expect(ldk.startLdkNodeWallet).toHaveBeenCalledWith(
+                expect.objectContaining({ nodeDir: 'a', skipInit: false })
+            );
+        }
+    );
+
+    it('is reused for its own embedded LND wallet', async () => {
+        const { lnd } = await connect(2, 'c');
+        expect(lnd.stopLnd).not.toHaveBeenCalled();
+        expect(lnd.initializeLnd).not.toHaveBeenCalled();
+        expect(lnd.startLnd).not.toHaveBeenCalled();
+    });
+
+    it.each(['created', 'a'])(
+        'is replaced for another embedded LND wallet (left by %s)',
+        async (walletJustCreated) => {
+            const { lnd } = await connect(2, walletJustCreated);
+            expect(lnd.stopLnd).toHaveBeenCalledTimes(1);
+            expect(lnd.initializeLnd).toHaveBeenCalledWith(
+                expect.objectContaining({ lndDir: 'c' })
+            );
+            expect(lnd.startLnd).toHaveBeenCalledWith(
+                expect.objectContaining({ lndDir: 'c' })
+            );
+        }
+    );
+});

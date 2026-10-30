@@ -48,7 +48,7 @@ jest.mock('../stores/Stores', () => ({
     settingsStore: {
         settings: { neutrinoPeersMainnet: [] },
         embeddedLndStarted: false,
-        walletJustCreated: false
+        walletJustCreated: undefined as string | undefined
     },
     syncStore: {}
 }));
@@ -106,7 +106,7 @@ describe('createLndWallet password generation', () => {
         jest.clearAllMocks();
         mockRandomBytes.mockReset().mockReturnValue(entropy.slice());
         settingsStore.embeddedLndStarted = false;
-        settingsStore.walletJustCreated = false;
+        settingsStore.walletJustCreated = undefined;
 
         Object.defineProperty(globalThis, 'crypto', {
             configurable: true,
@@ -161,6 +161,13 @@ describe('createLndWallet password generation', () => {
             seed,
             randomBase64: password
         });
+    });
+
+    it('records which wallet the running node was created for', async () => {
+        await createLndWallet({ lndDir: 'new-wallet' });
+
+        expect(settingsStore.embeddedLndStarted).toBe(true);
+        expect(settingsStore.walletJustCreated).toBe('new-wallet');
     });
 
     it('requests fresh entropy for each wallet instead of reusing a password', async () => {
@@ -230,7 +237,7 @@ describe('createLndWallet password generation', () => {
             expect(mockRandomBytes).toHaveBeenCalledTimes(1);
             expect(lndMobile.wallet.initWallet).not.toHaveBeenCalled();
             expect(settingsStore.embeddedLndStarted).toBe(false);
-            expect(settingsStore.walletJustCreated).toBe(false);
+            expect(settingsStore.walletJustCreated).toBeUndefined();
         }
     );
 });
