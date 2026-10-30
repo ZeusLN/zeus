@@ -2,6 +2,12 @@ jest.mock('react-native-blob-util', () => ({}));
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
 }));
+// The native randombytes module cannot init under jest; back it with node crypto
+// so the lock-verifier migration can derive real salts.
+jest.mock('react-native-randombytes', () => ({
+    randomBytes: (length: number) => require('crypto').randomBytes(length)
+}));
+jest.mock('./LockKdf');
 jest.mock('react-native-encrypted-storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn()
@@ -221,6 +227,7 @@ import MigrationUtils from './MigrationUtils';
 import { SETTINGS_VERSION } from './SettingsVersion';
 // resolves to the mocked ../stores/SettingsStore above
 import { DEFAULT_SETTINGS } from '../stores/SettingsStore';
+import { verifySecret } from './LockVerifierUtils';
 
 // Mock console logs to keep test output clean
 const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -2261,6 +2268,380 @@ describe('MigrationUtils', () => {
             await MigrationUtils.keychainCloudSyncMigration();
 
             expect(migratedFlagSet()).toBe(false);
+        });
+    });
+
+    describe('migrateLockCredentialsToVerifiers', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const { settingsStore } = require('../stores/Stores');
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            settingsStore.setSettings.mockReset();
+            settingsStore.setSettings.mockResolvedValue(true);
+            settingsStore.updateSettings.mockReset();
+        });
+
+        it('hashes plaintext pin + duress pin into verifiers and strips the plaintext', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = { pin: '1234', duressPin: '9999' };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(
+                settings,
+                true
+            );
+
+            expect(settings.pin).toBeUndefined();
+            expect(settings.duressPin).toBeUndefined();
+            expect(await verifySecret('1234', settings.pinVerifier)).toBe(true);
+            expect(await verifySecret('9999', settings.duressPinVerifier)).toBe(
+                true
+            );
+            // the duress record is structurally identical to the normal one
+            expect(Object.keys(settings.duressPinVerifier).sort()).toEqual(
+                Object.keys(settings.pinVerifier).sort()
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
+            );
+        });
+
+        it('hashes a passphrase and its duress variant', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                passphrase: 'open sesame',
+                duressPassphrase: 'burn it'
+            };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(
+                settings,
+                true
+            );
+
+            expect(settings.passphrase).toBeUndefined();
+            expect(settings.duressPassphrase).toBeUndefined();
+            expect(
+                await verifySecret('open sesame', settings.passphraseVerifier)
+            ).toBe(true);
+            expect(
+                await verifySecret('burn it', settings.duressPassphraseVerifier)
+            ).toBe(true);
+        });
+
+        it('outside the queue, routes plaintext through a queued update instead of persisting the snapshot', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const queued = { pinVerifier: { v: 1 } };
+            settingsStore.updateSettings.mockResolvedValue(queued);
+            const settings: any = { pin: '1234' };
+
+            const result =
+                await MigrationUtils.migrateLockCredentialsToVerifiers(
+                    settings
+                );
+
+            expect(settingsStore.updateSettings).toHaveBeenCalledWith({});
+            expect(result).toBe(queued);
+            // the snapshot is neither mutated nor persisted, and the flag
+            // is left for the queued pass to stamp
+            expect(settings.pin).toBe('1234');
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('is a no-op with no lock configured but still sets the flag', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = { nodes: [] };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(settings);
+
+            expect(settings).toEqual({ nodes: [] });
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(settingsStore.updateSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
+            );
+        });
+
+        it('is idempotent once the flag is set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = { pin: '1234' };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(
+                settings,
+                true
+            );
+
+            // untouched: plaintext left as-is, nothing persisted
+            expect(settings.pin).toBe('1234');
+            expect(settings.pinVerifier).toBeUndefined();
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('legacy path hashes in memory without persisting or flagging', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+
+            const result = await MigrationUtils.legacySettingsMigrations(
+                JSON.stringify({ pin: '1234', duressPin: '9999' })
+            );
+
+            expect((result as any).pin).toBeUndefined();
+            expect((result as any).duressPin).toBeUndefined();
+            expect(await verifySecret('1234', result.pinVerifier)).toBe(true);
+            expect(await verifySecret('9999', result.duressPinVerifier)).toBe(
+                true
+            );
+            // storageMigrationV2 owns the single legacy-path write
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
+            );
+        });
+
+        it('does not stamp the flag when persisting the settings fails', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            // e.g. the wipe write-latch is engaged or the keychain write
+            // failed; the migration must retry on the next load
+            settingsStore.setSettings.mockResolvedValue(false);
+            const settings: any = { pin: '1234' };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(
+                settings,
+                true
+            );
+
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
+            );
+        });
+
+        it('strips plaintext credentials from the legacy zeus-settings blob', async () => {
+            EncryptedStorage.getItem.mockImplementation((key: string) => {
+                if (key === 'zeus-settings') {
+                    return Promise.resolve(
+                        JSON.stringify({
+                            pin: '1234',
+                            duressPassphrase: 'burn it',
+                            theme: 'dark'
+                        })
+                    );
+                }
+                return Promise.resolve(null);
+            });
+            const settings: any = { pin: '1234' };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(
+                settings,
+                true
+            );
+
+            const legacyWrite = EncryptedStorage.setItem.mock.calls.find(
+                (call: string[]) => call[0] === 'zeus-settings'
+            );
+            expect(legacyWrite).toBeDefined();
+            const rewritten = JSON.parse(legacyWrite[1]);
+            expect(rewritten.pin).toBeUndefined();
+            expect(rewritten.duressPassphrase).toBeUndefined();
+            // everything else survives the rewrite
+            expect(rewritten.theme).toBe('dark');
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
+            );
+        });
+
+        it('strips the legacy blob outside the queue once the v2 blob holds no plaintext', async () => {
+            // second load after a legacy-path upgrade: storageMigrationV2
+            // persisted the hashed blob, the legacy blob still has the PIN
+            EncryptedStorage.getItem.mockImplementation((key: string) =>
+                Promise.resolve(
+                    key === 'zeus-settings'
+                        ? JSON.stringify({ pin: '1234', theme: 'dark' })
+                        : null
+                )
+            );
+            const settings: any = { pinVerifier: { v: 1 } };
+
+            const result =
+                await MigrationUtils.migrateLockCredentialsToVerifiers(
+                    settings
+                );
+
+            expect(result).toBe(settings);
+            expect(settingsStore.updateSettings).not.toHaveBeenCalled();
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            const legacyWrite = EncryptedStorage.setItem.mock.calls.find(
+                (call: string[]) => call[0] === 'zeus-settings'
+            );
+            expect(JSON.parse(legacyWrite[1])).toEqual({ theme: 'dark' });
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
+            );
+        });
+
+        it('leaves the legacy blob alone when it holds no plaintext credentials', async () => {
+            EncryptedStorage.getItem.mockImplementation((key: string) => {
+                if (key === 'zeus-settings') {
+                    return Promise.resolve(JSON.stringify({ theme: 'dark' }));
+                }
+                return Promise.resolve(null);
+            });
+            const settings: any = { nodes: [] };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(settings);
+
+            const legacyWrite = EncryptedStorage.setItem.mock.calls.find(
+                (call: string[]) => call[0] === 'zeus-settings'
+            );
+            expect(legacyWrite).toBeUndefined();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
+            );
+        });
+    });
+
+    describe('restampKeychainAccessibility', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const Storage = require('../storage');
+        const { settingsStore } = require('../stores/Stores');
+        const mockConsoleWarn = jest
+            .spyOn(console, 'warn')
+            .mockImplementation(() => {});
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            Storage.getItem.mockReset();
+            Storage.setItem.mockReset();
+            Storage.setItem.mockResolvedValue(true);
+            settingsStore.setSettings.mockReset();
+            settingsStore.setSettings.mockResolvedValue(true);
+            settingsStore.updateSettings.mockReset();
+            mockConsoleWarn.mockClear();
+            require('react-native').Platform.OS = 'ios';
+        });
+
+        it('rewrites stored items in place and stamps the flag', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            Storage.getItem.mockImplementation((key: string) =>
+                key === 'zeus-contacts-v2'
+                    ? Promise.resolve('CONTACTS')
+                    : Promise.resolve(false)
+            );
+
+            await MigrationUtils.restampKeychainAccessibility(
+                { nodes: [] },
+                true
+            );
+
+            // the stored item is rewritten verbatim (picking up the current
+            // accessibility class); unset keys are left alone
+            expect(Storage.setItem).toHaveBeenCalledWith(
+                'zeus-contacts-v2',
+                'CONTACTS'
+            );
+            expect(Storage.setItem).toHaveBeenCalledTimes(1);
+            // the settings blob goes through the store, not a raw rewrite
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'ios-keychain-accessible-restamp-v1',
+                'true'
+            );
+        });
+
+        it('derives LNC and cashu keys from the node list', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            Storage.getItem.mockResolvedValue(false);
+            const { hash } = require('../backends/LNC/credentialStore');
+
+            await MigrationUtils.restampKeychainAccessibility(
+                {
+                    nodes: [
+                        {
+                            implementation: 'lightning-node-connect',
+                            pairingPhrase: 'cherry truth mask employ'
+                        },
+                        { implementation: 'embedded-lnd', lndDir: 'lnd' },
+                        { implementation: 'ldk-node', ldkNodeDir: 'ldk-2' }
+                    ]
+                },
+                true
+            );
+
+            const readKeys = Storage.getItem.mock.calls.map(
+                (call: string[]) => call[0]
+            );
+            const lncBase = `lnc-rn:${hash('cherry truth mask employ')}`;
+            expect(readKeys).toContain(lncBase);
+            expect(readKeys).toContain(`${lncBase}:host`);
+            expect(readKeys).toContain('lnd-cashu-seed-phrase');
+            expect(readKeys).toContain('ldk-2-cashu-seed');
+        });
+
+        it('does not stamp the flag when a rewrite fails', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            Storage.getItem.mockImplementation((key: string) =>
+                key === 'zeus-contacts-v2'
+                    ? Promise.resolve('CONTACTS')
+                    : Promise.resolve(false)
+            );
+            // e.g. the wipe write-latch is engaged; retry on next launch
+            Storage.setItem.mockResolvedValue(false);
+
+            await MigrationUtils.restampKeychainAccessibility(
+                { nodes: [] },
+                true
+            );
+
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('is a no-op once the flag is set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            await MigrationUtils.restampKeychainAccessibility({ nodes: [] });
+
+            expect(Storage.getItem).not.toHaveBeenCalled();
+            expect(Storage.setItem).not.toHaveBeenCalled();
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+        });
+
+        it('outside the queue, routes through a queued update', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const queued = { nodes: [] };
+            settingsStore.updateSettings.mockResolvedValue(queued);
+
+            const result = await MigrationUtils.restampKeychainAccessibility({
+                nodes: []
+            });
+
+            expect(settingsStore.updateSettings).toHaveBeenCalledWith({});
+            expect(result).toBe(queued);
+            expect(Storage.setItem).not.toHaveBeenCalled();
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('is a no-op off iOS', async () => {
+            require('react-native').Platform.OS = 'android';
+            const settings = { nodes: [] };
+
+            const result = await MigrationUtils.restampKeychainAccessibility(
+                settings
+            );
+
+            expect(result).toBe(settings);
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(settingsStore.updateSettings).not.toHaveBeenCalled();
+            expect(Storage.setItem).not.toHaveBeenCalled();
         });
     });
 });

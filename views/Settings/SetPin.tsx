@@ -11,6 +11,11 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import {
+    deriveVerifier,
+    verifySecret,
+    hasVerifier
+} from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface SetPinProps {
@@ -83,7 +88,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
 
         const settings = await getSettings();
 
-        if (pin === settings.duressPin) {
+        if (await verifySecret(pin, settings.duressPinVerifier)) {
             this.setState({
                 pinInvalidError: true,
                 pin: '',
@@ -93,7 +98,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             return;
         }
 
-        await updateSettings({ pin }).then(() => {
+        const pinVerifier = await deriveVerifier(pin);
+        await updateSettings({ pinVerifier }).then(() => {
             setLoginStatus(true);
             getSettings();
             navigation.popTo('Security', {
@@ -143,7 +149,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                 }}
                             >
                                 {localeString(
-                                    settings.pin
+                                    hasVerifier(settings.pinVerifier)
                                         ? 'views.Settings.SetPin.newPin'
                                         : 'views.Settings.SetPin.createPin'
                                 )}
