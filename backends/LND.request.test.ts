@@ -254,6 +254,25 @@ describe('LND request core', () => {
             );
         });
 
+        it('does not log the node URL or route of a failed request', async () => {
+            const invoice = 'lnbc1500n1pfailedrequestinvoice';
+            mockFetch.mockResolvedValue(response(500, 'internal error'));
+
+            await expect(lnd.decodePaymentRequest([invoice])).rejects.toThrow(
+                'internal error'
+            );
+
+            expect(console.log).toHaveBeenCalledWith(
+                'REST request failed:',
+                expect.any(String)
+            );
+            const logged = JSON.stringify(
+                (console.log as jest.Mock).mock.calls
+            );
+            expect(logged).not.toContain('node.example.com');
+            expect(logged).not.toContain(invoice);
+        });
+
         it('treats status 300 as an error', async () => {
             // valid JSON, so a success branch would resolve instead
             mockFetch.mockResolvedValue(response(300, '{"code":3}'));
