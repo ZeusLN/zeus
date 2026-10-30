@@ -181,6 +181,13 @@ jest.mock('../utils/RatingUtils', () => ({
     PAYMENT_COUNT_KEY: 'successfulPaymentCount',
     RATING_DISMISSED_KEY: 'ratingDismissedPermanently'
 }));
+jest.mock('./ActivityCsvUtils', () => ({
+    purgeLegacyActivityCsvExports: jest.fn().mockResolvedValue(undefined),
+    purgeCsvShareStaging: jest.fn().mockResolvedValue(undefined)
+}));
+jest.mock('./NodeConfigUtils', () => ({
+    purgeLegacyNodeConfigExports: jest.fn().mockResolvedValue(undefined)
+}));
 
 import hashjs from 'hash.js';
 import { NativeModules, Platform } from 'react-native';
