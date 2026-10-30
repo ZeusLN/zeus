@@ -129,6 +129,7 @@ export default class NostrWalletConnect {
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
     supportsOnchainSendMax = () => false;
+    supportsChannelMemo = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsChannelFundMax = () => false;

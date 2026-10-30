@@ -754,6 +754,7 @@ describe('LND capability flags', () => {
         ['supportsTaproot', '0.15.0-beta', '0.14.9-beta'],
         ['supportsChannelCoinControl', '0.17.0-beta', '0.16.9-beta'],
         ['supportsSimpleTaprootChannels', '0.17.0-beta', '0.16.9-beta'],
+        ['supportsChannelMemo', '0.17.0-beta', '0.16.9-beta'],
         ['supportsAddressesWithDerivationPaths', '0.18.0-beta', '0.17.9-beta'],
         ['supportInboundFees', '0.18.0-beta', '0.17.9-beta'],
         ['supportsOnchainSendMax', '0.18.3-beta', '0.18.2-beta'],
