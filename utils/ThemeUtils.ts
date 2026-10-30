@@ -373,7 +373,10 @@ const Ember: { [key: string]: any } = {
     outbound: '#FFA900',
     qrLogoBackground: '#FFA900',
     qrFrame: '#FFA900',
-    buttonBackground: '#FFA900'
+    buttonBackground: '#FFA900',
+    bitcoin: '#FFA900',
+    bolt: '#FFA900',
+    chain: '#FFA900'
 };
 
 export function themeColor(themeString: string): any {

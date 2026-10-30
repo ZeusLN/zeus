@@ -135,7 +135,10 @@ describe('ThemeUtils', () => {
                 'outbound',
                 'qrLogoBackground',
                 'qrFrame',
-                'buttonBackground'
+                'buttonBackground',
+                'bitcoin',
+                'bolt',
+                'chain'
             ]) {
                 expect(themeColor(key)).toBe('#FFA900');
             }
