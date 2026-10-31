@@ -12,8 +12,33 @@ import {
     getUpgradeBackgroundColor,
     getUpgradeIntensity,
     isLightTheme,
-    themeColor
+    themeColor,
+    themeColorFor
 } from './ThemeUtils';
+
+// Every value in THEME_KEYS (stores/SettingsStore.ts)
+const THEMES = [
+    'kyriaki',
+    'dark',
+    'light',
+    'blacked-out',
+    'scarlet',
+    'purple',
+    'blueberry',
+    'deep-purple',
+    'deadpool',
+    'mighty',
+    'green',
+    'pub',
+    'popsicle',
+    'nostrich',
+    'orange-cream-soda',
+    'red-metallic',
+    'radioactive',
+    'gilded',
+    'ember',
+    'orange'
+];
 
 // Dark theme values
 const SECONDARY = '#31363F';
@@ -184,6 +209,79 @@ describe('ThemeUtils', () => {
             expect(
                 surfaces.map((key) => themeColor(key).toLowerCase())
             ).toEqual(expected);
+        });
+    });
+
+    describe('themeColorFor', () => {
+        afterEach(() => {
+            mockSettings.display.theme = 'dark';
+        });
+
+        it('reads the given theme without changing the selected one', () => {
+            expect(themeColorFor('ember', 'highlight')).toBe('#FFA900');
+            expect(themeColorFor('gilded', 'highlight')).toBe('#D5BF8D');
+            expect(themeColor('highlight')).toBe('#ffd24b');
+        });
+
+        it('follows the selected theme when no theme is given', () => {
+            mockSettings.display.theme = 'ember';
+            expect(themeColorFor(undefined, 'highlight')).toBe('#FFA900');
+        });
+
+        it('matches themeColor for every theme', () => {
+            const keys = [
+                'background',
+                'secondary',
+                'text',
+                'secondaryText',
+                'highlight',
+                'buttonBackground',
+                'buttonText',
+                'outbound',
+                'inbound',
+                'qr',
+                'qrBackground',
+                'gradientBackground',
+                'bolt'
+            ];
+            for (const theme of THEMES) {
+                mockSettings.display.theme = theme;
+                for (const key of keys) {
+                    expect(themeColorFor(theme, key)).toEqual(themeColor(key));
+                }
+            }
+        });
+
+        it('keeps the Light fallback for Memberberry and Spooky', () => {
+            // Dark's buttonText is #FFF, Light's is black
+            expect(themeColorFor('purple', 'buttonText')).toBe('black');
+            expect(themeColorFor('dark', 'buttonText')).toBe('#FFF');
+            expect(themeColorFor('orange', 'secondary')).toBe('#31363F');
+        });
+
+        it('uses Dark for an unknown theme', () => {
+            expect(themeColorFor('junkie', 'background')).toBe(
+                themeColorFor('dark', 'background')
+            );
+        });
+    });
+
+    describe('isLightTheme', () => {
+        afterEach(() => {
+            mockSettings.display.theme = 'dark';
+        });
+
+        it('checks the given theme', () => {
+            expect(isLightTheme('light')).toBe(true);
+            expect(isLightTheme('purple')).toBe(true);
+            expect(isLightTheme('ember')).toBe(false);
+            expect(isLightTheme('blueberry')).toBe(false);
+        });
+
+        it('checks the selected theme when none is given', () => {
+            expect(isLightTheme()).toBe(false);
+            mockSettings.display.theme = 'light';
+            expect(isLightTheme()).toBe(true);
         });
     });
 
