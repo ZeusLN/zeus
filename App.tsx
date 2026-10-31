@@ -113,6 +113,8 @@ import Currency from './views/Settings/Currency';
 import SelectCurrency from './views/Settings/SelectCurrency';
 import Display from './views/Settings/Display';
 import DateTime from './views/Settings/DateTime';
+import ThemePicker from './views/Settings/ThemePicker';
+import ThemeDetails from './views/Settings/ThemeDetails';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import Support from './views/Settings/Support';
 import Help from './views/Settings/Help';
@@ -765,6 +767,18 @@ export default class App extends React.PureComponent {
                                                                 name="DateTime" // @ts-ignore:next-line
                                                                 component={
                                                                     DateTime
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="ThemePicker" // @ts-ignore:next-line
+                                                                component={
+                                                                    ThemePicker
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="ThemeDetails" // @ts-ignore:next-line
+                                                                component={
+                                                                    ThemeDetails
                                                                 }
                                                             />
                                                             <Stack.Screen
