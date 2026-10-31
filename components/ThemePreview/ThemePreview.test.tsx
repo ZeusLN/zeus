@@ -48,7 +48,10 @@ import { StyleSheet } from 'react-native';
 import { configure, render, screen } from '@testing-library/react-native';
 
 import ThemePreview, { THEME_PREVIEW_VIEWS, ThemePreviewView } from './index';
+import BalancePreview from './BalancePreview';
+import ReceivePreview from './ReceivePreview';
 import { BASE_WIDTH, PREVIEW_ASPECT_RATIO } from './constants';
+import { themeColorFor } from '../../utils/ThemeUtils';
 
 // The preview hides itself from screen readers, which also hides it from
 // the default queries
@@ -180,6 +183,31 @@ describe('ThemePreview', () => {
             const qr = screen.getByTestId('qr');
             expect(qr).toHaveProp('color', 'black');
             expect(qr).toHaveProp('backgroundColor', 'white');
+        });
+    });
+
+    describe('a theme without buttonText', () => {
+        // Every shipped theme resolves buttonText through its fallback
+        // palette, so this palette is Dark with the key removed
+        const color = (key: string) =>
+            key === 'buttonText' ? undefined : themeColorFor('dark', key);
+
+        // Amount, which the real rows and QR panel use, falls back to text
+        // for the number and secondaryText for the unit
+        it('colors the layer row amounts like Amount does', async () => {
+            await render(<BalancePreview theme="dark" color={color} />);
+            expect(colorOf('845,210')).toBe(color('text'));
+            const units = screen.getAllByText(' general.sats');
+            // The first unit belongs to the total balance
+            expect(StyleSheet.flatten(units[1].props.style).color).toBe(
+                color('secondaryText')
+            );
+        });
+
+        it('colors the QR amount panel like Amount does', async () => {
+            await render(<ReceivePreview color={color} />);
+            expect(colorOf('250,000')).toBe(color('text'));
+            expect(colorOf(' general.sats')).toBe(color('secondaryText'));
         });
     });
 

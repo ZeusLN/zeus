@@ -31,6 +31,8 @@ export default function BalancePreview({
         ? [color('buttonBackground'), color('buttonBackground')]
         : [color('secondary'), color('secondary')];
     const rowText = color('buttonText') || color('text');
+    // Amount falls back to text and secondaryText without buttonText
+    const amountUnit = color('buttonText') || color('secondaryText');
 
     const rows = [
         {
@@ -72,8 +74,8 @@ export default function BalancePreview({
                     </View>
                     <SatAmount
                         sats={row.sats}
-                        color={color('buttonText')}
-                        unitColor={color('buttonText')}
+                        color={rowText}
+                        unitColor={amountUnit}
                     />
                 </LinearGradient>
             ))}

@@ -22,6 +22,9 @@ const QR_SIZE = BASE_WIDTH * 0.75;
 // Mirrors views/Receive.tsx and components/CollapsedQR.tsx
 export default function ReceivePreview({ color }: { color: ThemeColor }) {
     const panelBackground = color('buttonBackground') || color('secondary');
+    // Amount falls back to text and secondaryText without buttonText
+    const amountColor = color('buttonText') || color('text');
+    const amountUnit = color('buttonText') || color('secondaryText');
 
     return (
         <View style={styles.container}>
@@ -51,8 +54,8 @@ export default function ReceivePreview({ color }: { color: ThemeColor }) {
             <View style={[styles.panel, { backgroundColor: panelBackground }]}>
                 <SatAmount
                     sats="250,000"
-                    color={color('buttonText')}
-                    unitColor={color('buttonText')}
+                    color={amountColor}
+                    unitColor={amountUnit}
                     fontSize={40}
                 />
             </View>
