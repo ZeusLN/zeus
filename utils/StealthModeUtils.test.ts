@@ -180,21 +180,14 @@ describe('StealthModeUtils', () => {
 
             const getXmlValue = (name: string) => {
                 const match = xmlContent.match(
-                    new RegExp(`<string name="${name}">(.*?)</string>`)
+                    new RegExp(`<string name="${name}"[^>]*>(.*?)</string>`)
                 );
                 return match ? match[1] : null;
             };
 
-            expect(getXmlValue('stealth_calculator')).toBe(
-                DECOY_APP_NAMES.calculator
-            );
-            expect(getXmlValue('stealth_vpn')).toBe(DECOY_APP_NAMES.vpn);
-            expect(getXmlValue('stealth_qrscanner')).toBe(
-                DECOY_APP_NAMES.qrscanner
-            );
-            expect(getXmlValue('stealth_notepad')).toBe(
-                DECOY_APP_NAMES.notepad
-            );
+            for (const [key, name] of Object.entries(DECOY_APP_NAMES)) {
+                expect(getXmlValue(`stealth_${key}`)).toBe(name);
+            }
         });
     });
 
