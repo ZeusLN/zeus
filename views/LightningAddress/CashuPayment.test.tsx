@@ -75,8 +75,11 @@ const renderPayment = (fields: any) =>
         />
     );
 
-// Without a comment the first subtitle is the mint line
-const mintLine = () => screen.getAllByTestId('list-item-subtitle')[0];
+// The mint line is the subtitle just above the date
+const mintLine = () => {
+    const lines = screen.getAllByTestId('list-item-subtitle');
+    return lines[lines.length - 2];
+};
 
 describe('CashuPayment mint line', () => {
     afterEach(() => {
@@ -130,5 +133,27 @@ describe('CashuPayment mint line', () => {
                 (node) => node.props.style?.color === 'theme:warning'
             )
         ).toHaveLength(0);
+    });
+});
+
+describe('CashuPayment comment line', () => {
+    it('shows the comment above the mint line', async () => {
+        await renderPayment({ mint_url: MINT_URL, comment: 'hi' });
+
+        expect(
+            screen.getByText('views.LnurlPay.LnurlPay.comment: hi')
+        ).toBeOnTheScreen();
+        expect(mintLine()).toHaveTextContent('Example Mint');
+    });
+
+    // comment also comes from the status response; a 0 here was rendered
+    // as bare text outside <Text>
+    it('renders the row without a comment line when comment is 0', async () => {
+        await renderPayment({ mint_url: MINT_URL, comment: 0 });
+
+        expect(mintLine()).toHaveTextContent('Example Mint');
+        expect(
+            screen.queryByText(/views\.LnurlPay\.LnurlPay\.comment/)
+        ).toBeNull();
     });
 });

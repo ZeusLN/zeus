@@ -71,7 +71,7 @@ export default function CashuPayment(props: any) {
                     <ListItem.Title>
                         <Amount sats={item.amount_msat / 1000} />{' '}
                     </ListItem.Title>
-                    {item.comment && (
+                    {!!item.comment && (
                         <ListItem.Subtitle>
                             <Text
                                 style={{
