@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     FlatList,
+    GestureResponderEvent,
     LayoutChangeEvent,
     NativeScrollEvent,
     NativeSyntheticEvent,
@@ -15,6 +16,7 @@ import { RouteProp } from '@react-navigation/native';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
+import { switchThemeWithTransition } from '../../components/ThemeTransition';
 import ThemePreview, {
     PREVIEW_ASPECT_RATIO,
     THEME_PREVIEW_VIEWS,
@@ -76,12 +78,19 @@ export default class ThemeDetails extends React.Component<
         });
     };
 
-    applyTheme = async () => {
+    applyTheme = async (event?: GestureResponderEvent) => {
         const { navigation, route, SettingsStore } = this.props;
         const { theme } = route.params;
 
-        await SettingsStore.updateSettingsGroup('display', { theme });
-        applySystemNavigationBarTheme();
+        // The new theme opens out from where the button was tapped
+        const origin = event?.nativeEvent
+            ? { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY }
+            : undefined;
+
+        await switchThemeWithTransition(async () => {
+            await SettingsStore.updateSettingsGroup('display', { theme });
+            applySystemNavigationBarTheme();
+        }, origin);
         navigation.goBack();
     };
 

@@ -21,6 +21,11 @@ jest.mock('../../utils/LocaleUtils', () => ({
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: (key: string) => `#${key}`
 }));
+jest.mock('../../components/ThemeTransition', () => ({
+    switchThemeWithTransition: jest.fn(async (apply: () => Promise<void>) => {
+        await apply();
+    })
+}));
 jest.mock('../../components/Header', () => 'Header');
 jest.mock('../../components/Screen', () => {
     const { View } = require('react-native');
@@ -56,6 +61,7 @@ import * as React from 'react';
 import { StyleSheet } from 'react-native';
 import { applySystemNavigationBarTheme } from '../../utils/SystemNavigationBarUtils';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { switchThemeWithTransition } from '../../components/ThemeTransition';
 import ThemeDetails from './ThemeDetails';
 
 const renderDetails = async ({
@@ -152,6 +158,31 @@ describe('ThemeDetails', () => {
         expect(applySystemNavigationBarTheme).toHaveBeenCalled();
         // Back only after the setting is saved
         expect(calls).toEqual(['updateSettingsGroup', 'goBack']);
+    });
+
+    it('opens the new theme from where Apply was tapped', async () => {
+        await renderDetails();
+        await fireEvent.press(screen.getByText('views.Settings.Theme.apply'), {
+            nativeEvent: { pageX: 180, pageY: 760 }
+        });
+        expect(switchThemeWithTransition).toHaveBeenCalledWith(
+            expect.any(Function),
+            { x: 180, y: 760 }
+        );
+    });
+
+    it('goes back only after the transition has finished', async () => {
+        const order: string[] = [];
+        (switchThemeWithTransition as jest.Mock).mockImplementationOnce(
+            async (apply: () => Promise<void>) => {
+                await apply();
+                order.push('transition');
+            }
+        );
+        const { navigation } = await renderDetails();
+        navigation.goBack.mockImplementation(() => order.push('goBack'));
+        await fireEvent.press(screen.getByText('views.Settings.Theme.apply'));
+        expect(order).toEqual(['transition', 'goBack']);
     });
 
     it('disables the button on the theme already in use', async () => {
