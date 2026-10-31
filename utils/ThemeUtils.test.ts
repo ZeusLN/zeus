@@ -110,6 +110,12 @@ describe('ThemeUtils', () => {
             expect(themeColor('highlight')).toBe('#D5BF8D');
         });
 
+        it('draws black QR modules on the gold accent', () => {
+            expect(themeColor('qr')).toBe('#000');
+            expect(themeColor('qrBackground')).toBe('#D5BF8D');
+            expect(themeColor('qrLogoBackground')).toBe('#D5BF8D');
+        });
+
         it('falls back to Dark for keys it does not define', () => {
             expect(themeColor('placeholderText')).toBeUndefined();
             mockSettings.display.theme = 'dark';
@@ -133,6 +139,7 @@ describe('ThemeUtils', () => {
             for (const key of [
                 'highlight',
                 'outbound',
+                'qrBackground',
                 'qrLogoBackground',
                 'qrFrame',
                 'buttonBackground',
