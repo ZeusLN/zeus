@@ -92,6 +92,21 @@ export default class CreateCashuLightningAddress extends React.Component<
         }
     };
 
+    // Opened from ReceiveEcash, the ZEUS Pay screen is not in the stack and
+    // popTo would replace this screen with it, so go back to Receive instead
+    leaveAfterSave = () => {
+        const { navigation } = this.props;
+        const lightningAddressInStack = navigation
+            .getState()
+            ?.routes.some((r) => r.name === 'LightningAddress');
+
+        if (lightningAddressInStack) {
+            navigation.popTo('LightningAddress');
+        } else {
+            navigation.goBack();
+        }
+    };
+
     render() {
         const {
             navigation,
@@ -224,9 +239,7 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                                 mintUrl
                                                             }
                                                         );
-                                                        navigation.popTo(
-                                                            'LightningAddress'
-                                                        );
+                                                        this.leaveAfterSave();
                                                         return;
                                                     }
                                                 } catch (e) {
@@ -239,9 +252,7 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                 createCashu(mintUrl)
                                                     .then((response) => {
                                                         if (response.success) {
-                                                            navigation.popTo(
-                                                                'LightningAddress'
-                                                            );
+                                                            this.leaveAfterSave();
                                                         }
                                                     })
                                                     .catch((e) =>
