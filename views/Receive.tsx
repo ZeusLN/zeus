@@ -865,8 +865,17 @@ export default class Receive extends React.Component<
                 try {
                     const [route, props] = response;
                     const { lnurlParams } = props;
-                    // NFC reads here are for LNURL-withdraw (e.g. a Bolt
-                    // Card) only; tell staff about anything else
+                    // outside POS mode a tag can also hold an ecash token:
+                    // open it on the screen a cashu: link opens
+                    if (
+                        route === 'CashuToken' &&
+                        this.props.SettingsStore.posStatus !== 'active'
+                    ) {
+                        navigation.navigate(route, props);
+                        return;
+                    }
+                    // otherwise NFC reads here are for LNURL-withdraw (e.g. a
+                    // Bolt Card) only; tell staff about anything else
                     if (!isNfcWithdraw(route, lnurlParams)) {
                         this.setState({ nfcError: true });
                         return;
