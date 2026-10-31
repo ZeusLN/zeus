@@ -1245,6 +1245,8 @@
     "views.Settings.Currency.selectCurrency": "Select Currency",
     "views.Settings.SelectCurrency.title": "Select Currency",
     "views.Settings.Theme.title": "Theme",
+    "views.Settings.Theme.apply": "Apply theme",
+    "views.Settings.Theme.current": "Current theme",
     "views.Settings.Theme.dark": "Dark",
     "views.Settings.Theme.light": "Light",
     "views.Settings.Theme.spooky": "Spooky",

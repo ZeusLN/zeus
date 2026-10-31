@@ -1,12 +1,20 @@
 import React from 'react';
 import { Svg, Circle, Path } from 'react-native-svg';
-import { themeColor } from '../../utils/ThemeUtils';
+import { themeColorFor } from '../../utils/ThemeUtils';
 
 export default function OnChainSvg({
     width = 70,
     height = 70,
     circle = true,
-    selected = false
+    selected = false,
+    theme
+}: {
+    width?: number;
+    height?: number;
+    circle?: boolean;
+    selected?: boolean;
+    // Draws in this theme's colors instead of the selected theme's
+    theme?: string;
 }) {
     const svgProps = {
         width: `${width}`,
@@ -20,22 +28,28 @@ export default function OnChainSvg({
         cx: '25',
         cy: '25',
         r: '20',
-        fill: themeColor('background')
+        fill: themeColorFor(theme, 'background')
     };
 
     const path1Props = {
         d: 'M28.717,27.892l-1.65-1.652l4.129-4.131l-3.304-3.304l-4.13,4.13l-1.653-1.651l5.783-5.783l6.608,6.608L28.717,27.892z',
-        fill: selected ? themeColor('background') : themeColor('chain')
+        fill: selected
+            ? themeColorFor(theme, 'background')
+            : themeColorFor(theme, 'chain')
     };
 
     const path2Props = {
         d: 'M21.282,22.108l1.652,1.653l-4.13,4.13l3.304,3.304l4.131-4.129l1.652,1.65L22.108,34.5L15.5,27.892L21.282,22.108z',
-        fill: selected ? themeColor('background') : themeColor('chain')
+        fill: selected
+            ? themeColorFor(theme, 'background')
+            : themeColorFor(theme, 'chain')
     };
 
     const path3Props = {
         d: 'M29.544,22.108l-1.652-1.651l-7.435,7.435l1.651,1.652L29.544,22.108z',
-        fill: selected ? themeColor('background') : themeColor('chain')
+        fill: selected
+            ? themeColorFor(theme, 'background')
+            : themeColorFor(theme, 'chain')
     };
 
     return React.createElement(
