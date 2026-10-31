@@ -239,9 +239,10 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                 createCashu(mintUrl)
                                                     .then((response) => {
                                                         if (response.success) {
-                                                            navigation.popTo(
-                                                                'LightningAddress'
-                                                            );
+                                                            // Opened only from ReceiveEcash and
+                                                            // Get started on the ZEUS Pay screen,
+                                                            // so go back to whichever opened it
+                                                            navigation.goBack();
                                                         }
                                                     })
                                                     .catch((e) =>
