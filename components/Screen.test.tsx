@@ -1,6 +1,6 @@
-import React from 'react';
-import { Text } from 'react-native';
-import { render, screen } from '@testing-library/react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, Text } from 'react-native';
+import { render, screen, within } from '@testing-library/react-native';
 
 jest.mock('mobx-react', () => ({
     observer: (component: any) => component
@@ -94,5 +94,88 @@ describe('Screen', () => {
             '#000',
             '#000'
         ]);
+    });
+
+    describe('theme switches', () => {
+        const radialTheme = {
+            background: '#000',
+            gradientBackground: ['#4F473C', '#000000'],
+            gradientLocations: [0, 1],
+            gradientRadial: { cx: 0, cy: 0, rx: 1.4, ry: 0.8 }
+        };
+        const linearTheme = { background: '#1F242D' };
+
+        // Counts mounts and unmounts of the app tree under Screen. A remount
+        // there re-runs every componentDidMount below it, which registered
+        // PushNotificationManager's listeners a second time.
+        const lifecycle = { mounts: 0, unmounts: 0 };
+        const Probe = () => {
+            useEffect(() => {
+                lifecycle.mounts++;
+                return () => {
+                    lifecycle.unmounts++;
+                };
+            }, []);
+            return <Text>content</Text>;
+        };
+        const tree = () => (
+            <Screen>
+                <Probe />
+            </Screen>
+        );
+
+        beforeEach(() => {
+            lifecycle.mounts = 0;
+            lifecycle.unmounts = 0;
+        });
+
+        it('keeps the children mounted when a linear theme becomes radial', async () => {
+            setTheme(linearTheme);
+            const { rerender } = await render(tree());
+            expect(screen.getByTestId('linear')).toBeTruthy();
+
+            setTheme(radialTheme);
+            await rerender(tree());
+            expect(screen.getByTestId('radial')).toBeTruthy();
+            expect(screen.queryByTestId('linear')).toBeNull();
+
+            expect(lifecycle).toEqual({ mounts: 1, unmounts: 0 });
+        });
+
+        it('keeps the children mounted when a radial theme becomes linear', async () => {
+            setTheme(radialTheme);
+            const { rerender } = await render(tree());
+
+            setTheme(linearTheme);
+            await rerender(tree());
+            expect(screen.getByTestId('linear')).toBeTruthy();
+
+            setTheme(radialTheme);
+            await rerender(tree());
+            expect(screen.getByTestId('radial')).toBeTruthy();
+
+            expect(lifecycle).toEqual({ mounts: 1, unmounts: 0 });
+        });
+
+        it.each([
+            ['linear', linearTheme],
+            ['radial', radialTheme]
+        ])(
+            'draws the %s gradient as a full-size background behind the children',
+            async (testID, theme) => {
+                setTheme(theme);
+                await render(tree());
+                const gradient = screen.getByTestId(testID);
+                expect(StyleSheet.flatten(gradient.props.style)).toMatchObject({
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0
+                });
+                expect(within(gradient).queryByText('content')).toBeNull();
+                expect(screen.getByText('content')).toBeTruthy();
+            }
+        );
     });
 });
