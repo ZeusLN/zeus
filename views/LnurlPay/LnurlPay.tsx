@@ -725,8 +725,9 @@ export default class LnurlPay extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.LnurlPay.LnurlPay.comment'
-                                    ) + ` (${lnurl.commentAllowed} char)`}
+                                        'views.LnurlPay.LnurlPay.commentWithLimit',
+                                        { count: lnurl.commentAllowed }
+                                    )}
                                 </Text>
                                 <TextInput
                                     value={comment}
