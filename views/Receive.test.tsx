@@ -301,7 +301,7 @@ describe('Receive LNURL-withdraw LSP fee', () => {
             {
                 lnurlParams: {
                     tag: 'withdrawRequest',
-                    defaultDescription: { memo: '' }
+                    defaultDescription: 'card'
                 }
             }
         ]);
@@ -355,7 +355,11 @@ const makeNfcView = (
         setWatchedInvoicePaid: jest.fn(),
         reset: jest.fn()
     };
-    const PosStore = { recordPayment: jest.fn(), clearOrderInvoice: jest.fn() };
+    const PosStore = {
+        recordPayment: jest.fn(),
+        clearOrderInvoice: jest.fn(),
+        getNodeIdentity: () => 'node-a'
+    };
     const view = new Receive({
         navigation: { navigate },
         route: { params: { amount } },
@@ -396,6 +400,17 @@ describe('Receive NFC scan', () => {
             expect.objectContaining({ value: '25000', lnurl: withdrawParams })
         );
         expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it("uses the card's description as the memo", async () => {
+        const { view, InvoicesStore } = makeNfcView('25.00', 25000);
+
+        await view.scanNfc();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ memo: 'card' })
+        );
     });
 
     it('hands the sats on screen on when creating the invoice fails', async () => {
@@ -520,6 +535,31 @@ describe('Receive.validateAddress (Pay via NFC)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
+
+    it.each([
+        [false, 'card', 'Shop:  card'],
+        [true, 'card', ''],
+        // a card without a description: the receiver name alone
+        [false, '', 'Shop']
+    ])(
+        'creates the withdraw invoice with the receiver name memo (LSP on: %s, card description: %p)',
+        async (lspIsActive, defaultDescription, memo) => {
+            (getSatAmount as jest.Mock).mockReturnValue(1000);
+            (handleAnything as unknown as jest.Mock).mockResolvedValue([
+                'Receive',
+                { lnurlParams: { ...withdrawParams, defaultDescription } }
+            ]);
+            const { view, createUnifiedInvoice } = makeScanView('1000');
+            view.state = { ...view.state, receiverName: 'Shop', lspIsActive };
+
+            view.validateAddress('tag');
+            await flush();
+
+            expect(createUnifiedInvoice).toHaveBeenCalledWith(
+                expect.objectContaining({ memo })
+            );
+        }
+    );
 
     it.each([
         [
@@ -675,6 +715,7 @@ describe('Receive invoice requests that were superseded', () => {
         const PosStore = {
             getOrderInvoiceById: jest.fn(async (): Promise<any> => undefined),
             canReuseInvoice: jest.fn(() => false),
+            getNodeIdentity: () => 'node-a',
             recordInvoice: jest.fn()
         };
         const InvoicesStore: any = {
@@ -1072,6 +1113,42 @@ describe('Receive LSP fee shown with the invoice', () => {
         expect(shown(view)).toEqual({ fee: 10000, qrAmount: '11000' });
     });
 
+    it.each([
+        [false, 'Shop'],
+        [true, '']
+    ])(
+        'Create invoice uses the receiver name alone as the memo when there is no memo (LSP on: %s)',
+        (lspIsActive, memo) => {
+            const createUnifiedInvoice = jest.fn(() => new Promise(() => {}));
+            const view = makeShownView({
+                invoicesStore: { payment_request: null, createUnifiedInvoice },
+                lspStore: { reset: jest.fn() },
+                satAmount: '1000'
+            });
+            view.state = {
+                ...view.state,
+                receiverName: 'Shop',
+                memo: '',
+                expiry: '1',
+                lspIsActive
+            };
+            view.setState = jest.fn();
+
+            const create = collect(view.render()).find(
+                (e) =>
+                    e.type === 'Button' &&
+                    String(e.props.title).startsWith(
+                        'views.Receive.createInvoice'
+                    )
+            );
+            create.props.onPress();
+
+            expect(createUnifiedInvoice).toHaveBeenCalledWith(
+                expect.objectContaining({ memo })
+            );
+        }
+    );
+
     it('shows the recorded fee for a reused POS invoice, not the last quote', async () => {
         // order A (1,000 sats, 10,000 fee on top) is reopened after order B
         // (50,000 sats, 2,000 fee) left its quote and amount in the stores
@@ -1102,7 +1179,8 @@ describe('Receive LSP fee shown with the invoice', () => {
                     expirySeconds: '3600'
                 })
             ),
-            canReuseInvoice: jest.fn(() => true)
+            canReuseInvoice: jest.fn(() => true),
+            getNodeIdentity: () => 'node-a'
         };
         const view = makeShownView({
             invoicesStore,
@@ -1185,5 +1263,399 @@ describe('Receive LSP fee shown with the invoice', () => {
         });
 
         expect(bareText(view.render())).toEqual([]);
+    });
+});
+
+// Order's Pay button opens Receive with the order in route params and
+// autoGenerate. componentDidMount puts them in state and generates the
+// invoice in the same tick; on a device that setState is batched, and in
+// this test (no renderer) setState does nothing, so autoGenerateInvoice
+// has to use the values componentDidMount passes in.
+describe('Receive opened for a POS order', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    afterEach(() => {
+        delete (BackendUtils as any).supportsFlowLSP;
+    });
+
+    const mountForOrder = (
+        extraParams: any = {},
+        UTXOsStore: any = {},
+        {
+            settings: settingsOverrides = {},
+            flowLspNotConfigured = true,
+            totalInbound = 0
+        }: {
+            settings?: any;
+            flowLspNotConfigured?: boolean;
+            totalInbound?: number;
+        } = {}
+    ) => {
+        const PosStore = {
+            getOrderInvoiceById: jest.fn(async (): Promise<any> => undefined),
+            canReuseInvoice: jest.fn(() => false),
+            getNodeIdentity: () => 'node-a',
+            recordInvoice: jest.fn()
+        };
+        const InvoicesStore: any = {
+            createUnifiedInvoice: jest.fn(() =>
+                Promise.resolve({
+                    rHash: 'hash-order',
+                    paymentRequest: 'lnbc-order'
+                })
+            ),
+            showStoredInvoice: jest.fn(),
+            reset: jest.fn()
+        };
+        const settings = {
+            invoices: { receiverName: 'Shop', memo: '' },
+            enableLSP: false,
+            ...settingsOverrides
+        };
+        const view = new Receive({
+            navigation: { navigate: jest.fn(), addListener: jest.fn() },
+            route: {
+                params: {
+                    amount: '1000',
+                    autoGenerate: true,
+                    memo: 'Coffee',
+                    orderId: 'order-1',
+                    orderTip: '0',
+                    orderTotal: '1000',
+                    exchangeRate: '60000',
+                    rate: 60000,
+                    ...extraParams
+                }
+            },
+            InvoicesStore,
+            PosStore,
+            SettingsStore: {
+                settings,
+                getSettings: jest.fn(async () => settings),
+                implementation: 'lnd'
+            },
+            LightningAddressStore: { status: jest.fn(async () => {}) },
+            NodeInfoStore: {
+                nodeInfo: {},
+                flowLspNotConfigured: () => ({ flowLspNotConfigured })
+            },
+            ChannelsStore: { totalInbound },
+            LSPStore: { reset: jest.fn() },
+            UnitsStore: { resetUnits: jest.fn() },
+            UTXOsStore,
+            ModalStore: {}
+        } as unknown as React.ComponentProps<typeof Receive>);
+        view.subscribeInvoice = jest.fn();
+        // what a batched update looks like to code running in the same tick
+        view.setState = jest.fn();
+        return { view, PosStore, InvoicesStore };
+    };
+
+    it('checks for and records the order invoice under the order id', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, PosStore, InvoicesStore } = mountForOrder();
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(PosStore.getOrderInvoiceById).toHaveBeenCalledWith('order-1');
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ memo: 'Shop:  Coffee', value: '1000' })
+        );
+        expect(PosStore.recordInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({
+                orderId: 'order-1',
+                payment_request: 'lnbc-order',
+                rHash: 'hash-order',
+                exchangeRate: '60000',
+                tip: '0',
+                nodeIdentity: 'node-a'
+            })
+        );
+    });
+
+    it("creates the invoice for the account it was opened for, with that account's address type", async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, InvoicesStore } = mountForOrder(
+            { account: 'imported' },
+            { getAccountAddressType: jest.fn(async () => '4') }
+        );
+
+        await view.componentDidMount();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ account: 'imported', addressType: '4' })
+        );
+    });
+
+    it('records the expiry the LSP locked the invoice to, not the expiry setting', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        (BackendUtils as any).supportsFlowLSP = () => true;
+        const { view, PosStore, InvoicesStore } = mountForOrder(
+            {},
+            {},
+            {
+                settings: {
+                    invoices: {
+                        receiverName: 'Shop',
+                        memo: '',
+                        expirySeconds: '86400'
+                    },
+                    enableLSP: true
+                },
+                flowLspNotConfigured: false
+            }
+        );
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({
+                useLsp: true,
+                expirySeconds: '3600',
+                // the LSP wraps the invoice: no memo
+                memo: ''
+            })
+        );
+        // a 24h record would let a reopened order reuse the invoice for
+        // up to 23 hours after the node stopped accepting it
+        expect(PosStore.recordInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ expirySeconds: '3600' })
+        );
+    });
+
+    it('uses the memo from the invoice settings when Receive is opened without one', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, InvoicesStore } = mountForOrder(
+            { memo: undefined },
+            {},
+            { settings: { invoices: { receiverName: '', memo: 'Thanks' } } }
+        );
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ memo: 'Thanks' })
+        );
+    });
+
+    it('uses the receiver name alone as the memo when there is no memo', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, InvoicesStore } = mountForOrder({ memo: '' });
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ memo: 'Shop' })
+        );
+    });
+
+    const lspActive = (totalInbound: number) => {
+        (BackendUtils as any).supportsFlowLSP = () => true;
+        return {
+            settings: {
+                invoices: { receiverName: 'Shop', memo: '' },
+                enableLSP: true
+            },
+            flowLspNotConfigured: false,
+            totalInbound
+        };
+    };
+
+    it('flags an amount above inbound liquidity as needing inbound with the LSP on', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view } = mountForOrder(
+            { autoGenerate: false },
+            {},
+            lspActive(500)
+        );
+
+        await view.componentDidMount();
+
+        expect(view.setState).toHaveBeenCalledWith(
+            expect.objectContaining({ value: '1000', needInbound: true })
+        );
+    });
+
+    it('flags an LNURL withdraw above inbound liquidity as needing inbound with the LSP on', async () => {
+        (getSatAmount as jest.Mock).mockImplementation((a) => Number(a));
+        const { view } = mountForOrder(
+            {
+                amount: undefined,
+                autoGenerate: false,
+                lnurlParams: {
+                    maxWithdrawable: 1000000,
+                    defaultDescription: 'Withdraw'
+                }
+            },
+            {},
+            lspActive(500)
+        );
+
+        await view.componentDidMount();
+
+        expect(view.setState).toHaveBeenCalledWith(
+            expect.objectContaining({ memo: 'Withdraw', needInbound: true })
+        );
+    });
+
+    const unified = {
+        settings: {
+            invoices: {
+                receiverName: 'Shop',
+                memo: '',
+                defaultInvoiceType: 'unified'
+            }
+        }
+    };
+    const lightningOnly = {
+        settings: {
+            invoices: {
+                receiverName: 'Shop',
+                memo: '',
+                defaultInvoiceType: 'lightning'
+            }
+        }
+    };
+
+    // a valid record for this order on this node, of a unified invoice
+    const storedInvoice = (overrides: any = {}) => ({
+        orderId: 'order-1',
+        payment_request: 'lnbc-stored',
+        lspFeeSats: 500,
+        onChainAddress: 'bc1qstored',
+        rHash: 'hash-stored',
+        exchangeRate: '60000',
+        amount: '1000',
+        tip: '0',
+        createdAt: Math.floor(Date.now() / 1000),
+        expirySeconds: '3600',
+        nodeIdentity: 'node-a',
+        ...overrides
+    });
+
+    it('records the on-chain address of a unified order invoice', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, PosStore, InvoicesStore } = mountForOrder(
+            {},
+            {},
+            unified
+        );
+        InvoicesStore.createUnifiedInvoice.mockResolvedValueOnce({
+            rHash: 'hash-order',
+            paymentRequest: 'lnbc-order',
+            onChainAddress: 'bc1qorder'
+        });
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ skipOnchain: false })
+        );
+        expect(PosStore.recordInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ onChainAddress: 'bc1qorder' })
+        );
+        expect(view.subscribeInvoice).toHaveBeenCalledWith(
+            'hash-order',
+            'bc1qorder'
+        );
+    });
+
+    it('reopens the order with its stored unified invoice instead of creating one', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, PosStore, InvoicesStore } = mountForOrder(
+            {},
+            {},
+            unified
+        );
+        const stored = storedInvoice();
+        PosStore.getOrderInvoiceById.mockResolvedValueOnce(stored);
+        PosStore.canReuseInvoice.mockReturnValue(true);
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(PosStore.getOrderInvoiceById).toHaveBeenCalledWith('order-1');
+        expect(PosStore.canReuseInvoice).toHaveBeenCalledWith(
+            stored,
+            '1000',
+            '0',
+            '60000',
+            'node-a'
+        );
+        expect(InvoicesStore.showStoredInvoice).toHaveBeenCalledWith({
+            paymentRequest: 'lnbc-stored',
+            amount: '1000',
+            lspFeeSats: 500,
+            onChainAddress: 'bc1qstored'
+        });
+        expect(InvoicesStore.createUnifiedInvoice).not.toHaveBeenCalled();
+        expect(view.subscribeInvoice).toHaveBeenCalledWith(
+            'hash-stored',
+            'bc1qstored'
+        );
+        expect(PosStore.recordInvoice).not.toHaveBeenCalled();
+    });
+
+    it('reopens a lightning-only order without the on-chain leg', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, PosStore, InvoicesStore } = mountForOrder(
+            {},
+            {},
+            lightningOnly
+        );
+        // stored while the invoice type was unified
+        PosStore.getOrderInvoiceById.mockResolvedValueOnce(storedInvoice());
+        PosStore.canReuseInvoice.mockReturnValue(true);
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(InvoicesStore.showStoredInvoice).toHaveBeenCalledTimes(1);
+        expect(
+            InvoicesStore.showStoredInvoice.mock.calls[0][0].onChainAddress
+        ).toBeUndefined();
+        expect(view.subscribeInvoice).toHaveBeenCalledWith(
+            'hash-stored',
+            undefined
+        );
+    });
+
+    it('reopens an order whose record has no on-chain address with lightning only', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, PosStore, InvoicesStore } = mountForOrder(
+            {},
+            {},
+            unified
+        );
+        PosStore.getOrderInvoiceById.mockResolvedValueOnce(
+            storedInvoice({ onChainAddress: undefined })
+        );
+        PosStore.canReuseInvoice.mockReturnValue(true);
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(
+            InvoicesStore.showStoredInvoice.mock.calls[0][0].onChainAddress
+        ).toBeUndefined();
+        expect(InvoicesStore.createUnifiedInvoice).not.toHaveBeenCalled();
+        expect(view.subscribeInvoice).toHaveBeenCalledWith(
+            'hash-stored',
+            undefined
+        );
     });
 });

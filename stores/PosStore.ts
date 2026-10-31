@@ -2,6 +2,8 @@ import { action, observable, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 import { v4 as uuidv4 } from 'uuid';
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 
 import FiatStore from './FiatStore';
 import SettingsStore, { PosEnabled } from './SettingsStore';
@@ -39,6 +41,12 @@ export interface orderInvoiceInfo {
     tip: string;
     createdAt: number;
     expirySeconds: string;
+    // the on-chain leg of a unified invoice
+    onChainAddress?: string;
+    // getNodeIdentity() of the wallet that created the invoice. POS orders
+    // are shared by all wallets, the invoice is not. Records saved without
+    // it are never reused.
+    nodeIdentity?: string;
 }
 
 export const LEGACY_POS_HIDDEN_KEY = 'pos-hidden';
@@ -241,24 +249,76 @@ export default class PosStore {
         orderId,
         payment_request,
         lspFeeSats,
+        onChainAddress,
         rHash,
         exchangeRate,
         amount,
         tip,
         createdAt,
-        expirySeconds
+        expirySeconds,
+        nodeIdentity
     }: orderInvoiceInfo) => {
         Storage.setItem(`pos-invoice-${orderId}`, {
             orderId,
             payment_request,
             lspFeeSats,
+            onChainAddress,
             rHash,
             exchangeRate,
             amount,
             tip,
             createdAt,
-            expirySeconds
+            expirySeconds,
+            nodeIdentity
         });
+    };
+
+    // Identifies the selected wallet from its connection settings, so an
+    // order invoice is only reused on the node that created it. The node
+    // pubkey is not used: NWC and LndHub have no node info, and it is
+    // empty until getinfo returns. Hashed because the LNC pairing phrase
+    // and the NWC URL are secrets. '' when the wallet can't be told apart.
+    public getNodeIdentity = (): string => {
+        const {
+            implementation,
+            host,
+            port,
+            lndDir,
+            ldkNodeDir,
+            pairingPhrase,
+            lndhubUrl,
+            username,
+            nostrWalletConnectUrl
+        } = this.settingsStore;
+        let parts: Array<string | undefined>;
+        switch (implementation) {
+            case 'lnd':
+            case 'cln-rest':
+                parts = [host, port];
+                break;
+            case 'embedded-lnd':
+                parts = [lndDir];
+                break;
+            case 'ldk-node':
+                // same fallback as CashuStore.getNodeDir
+                parts = [ldkNodeDir || 'ldk'];
+                break;
+            case 'lightning-node-connect':
+                parts = [pairingPhrase];
+                break;
+            case 'lndhub':
+                parts = [lndhubUrl, username];
+                break;
+            case 'nostr-wallet-connect':
+                parts = [nostrWalletConnectUrl];
+                break;
+            default:
+                return '';
+        }
+        if (!parts[0]) return '';
+        return bytesToHex(
+            sha256(utf8ToBytes(JSON.stringify([implementation, ...parts])))
+        );
     };
 
     public clearCurrentOrder = () => (this.currentOrder = null);
@@ -735,9 +795,12 @@ export default class PosStore {
         invoiceInfo: orderInvoiceInfo,
         currentAmount: string,
         currentTip: string,
-        currentExchangeRate: string
+        currentExchangeRate: string,
+        currentNodeIdentity: string
     ): boolean => {
         return (
+            !!currentNodeIdentity &&
+            invoiceInfo.nodeIdentity === currentNodeIdentity &&
             this.isInvoiceValid(invoiceInfo) &&
             invoiceInfo.amount === currentAmount &&
             invoiceInfo.tip === currentTip &&

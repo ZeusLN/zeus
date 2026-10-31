@@ -80,6 +80,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import { numberWithCommas, roundUpToWholeSats } from '../utils/UnitsUtils';
 import { buildOnChainUri, buildUnifiedUri } from '../utils/Bip21Utils';
 import { getAmountFromSats } from '../utils/AmountUtils';
+import { withReceiverName } from '../utils/MemoUtils';
 import {
     ExpirationPreset,
     TimePeriod,
@@ -438,8 +439,9 @@ export default class Receive extends React.Component<
             if (accountAddressType) this.setState({ accountAddressType });
         }
 
-        // POS
-        const memo = route.params?.memo ?? this.state.memo;
+        // POS. this.state still holds the initial values here: the
+        // setState above is batched
+        const memo = route.params?.memo ?? (settings?.invoices?.memo || '');
         const { orderId, orderTotal, orderTip, exchangeRate, rate } =
             route.params ?? {};
 
@@ -457,7 +459,7 @@ export default class Receive extends React.Component<
             this.props.UnitsStore.resetUnits();
             let needInbound = false;
             if (
-                this.state.lspIsActive &&
+                lspIsActive &&
                 new BigNumber(getSatAmount(lnurl.maxWithdrawable / 1000)).gt(
                     this.props.ChannelsStore.totalInbound
                 )
@@ -475,7 +477,7 @@ export default class Receive extends React.Component<
         if (amount && amount != '0') {
             let needInbound = false;
             if (
-                this.state.lspIsActive &&
+                lspIsActive &&
                 getSatAmount(amount) !== 0 &&
                 new BigNumber(getSatAmount(amount)).gt(
                     this.props.ChannelsStore.totalInbound
@@ -511,7 +513,15 @@ export default class Receive extends React.Component<
                 ampInvoice,
                 blindedPaths,
                 addressType,
-                lspIsActive
+                lspIsActive,
+                {
+                    receiverName: settings?.invoices?.receiverName || '',
+                    orderId,
+                    orderTip,
+                    exchangeRate,
+                    account: account || this.state.account,
+                    accountAddressType
+                }
             );
         }
 
@@ -640,15 +650,31 @@ export default class Receive extends React.Component<
         ampInvoice?: boolean,
         blindedPaths?: boolean,
         addressType?: string,
-        lspIsActive?: boolean
+        lspIsActive?: boolean,
+        // componentDidMount sets these in state just before calling this,
+        // and that update is batched, so this.state still holds the
+        // initial values here: it passes them in
+        fromMount?: {
+            receiverName?: string;
+            orderId?: string;
+            orderTip?: string;
+            exchangeRate?: string;
+            account?: string;
+            accountAddressType?: string;
+        }
     ) => {
         const { InvoicesStore, PosStore } = this.props;
-        const { receiverName, orderId, orderTip, exchangeRate } = this.state;
+        const receiverName = fromMount?.receiverName ?? this.state.receiverName;
+        const orderId = fromMount?.orderId ?? this.state.orderId;
+        const orderTip = fromMount?.orderTip ?? this.state.orderTip;
+        const exchangeRate = fromMount?.exchangeRate ?? this.state.exchangeRate;
         // Use passed lspIsActive parameter, fall back to state if not provided
         const effectiveLspIsActive = lspIsActive ?? this.state.lspIsActive;
         const { createUnifiedInvoice } = InvoicesStore;
         const skipOnchain = this.getSkipOnchain();
         const isCurrent = this.startInvoiceRequest();
+        // POS orders are shared by all wallets; their invoices are not
+        const nodeIdentity = orderId ? PosStore.getNodeIdentity() : '';
 
         // Set synchronously so componentDidMount's initialLoad flip sees
         // creatingInvoice=true before the checkExistingInvoice microtask runs.
@@ -668,18 +694,28 @@ export default class Receive extends React.Component<
                             existingInvoice,
                             amount || '0',
                             orderTip,
-                            exchangeRate
+                            exchangeRate,
+                            nodeIdentity
                         )
                     ) {
+                        // the on-chain leg of a unified invoice, unless
+                        // the invoice type has since become lightning only
+                        const onChainAddress = skipOnchain
+                            ? undefined
+                            : existingInvoice.onChainAddress || undefined;
                         // Reuse existing invoice
                         InvoicesStore.showStoredInvoice({
                             paymentRequest: existingInvoice.payment_request,
                             amount: existingInvoice.amount,
                             // records from before the fee was stored
                             // show no fee rather than another quote's
-                            lspFeeSats: existingInvoice.lspFeeSats ?? null
+                            lspFeeSats: existingInvoice.lspFeeSats ?? null,
+                            onChainAddress
                         });
-                        this.subscribeInvoice(existingInvoice.rHash);
+                        this.subscribeInvoice(
+                            existingInvoice.rHash,
+                            onChainAddress
+                        );
                         return true;
                     }
                 } catch (error) {
@@ -696,16 +732,18 @@ export default class Receive extends React.Component<
                 return;
             }
 
+            // the LSP locks the expiry, and the POS record must match the
+            // invoice it was created with
+            const invoiceExpirySeconds = effectiveLspIsActive
+                ? LOCKED_EXPIRY_SECONDS
+                : expirySeconds || '3600';
+
             createUnifiedInvoice({
                 memo: effectiveLspIsActive
                     ? ''
-                    : receiverName
-                    ? `${receiverName}:  ${memo}`
-                    : memo || '',
+                    : withReceiverName(receiverName, memo),
                 value: amount || '0',
-                expirySeconds: effectiveLspIsActive
-                    ? LOCKED_EXPIRY_SECONDS
-                    : expirySeconds || '3600',
+                expirySeconds: invoiceExpirySeconds,
                 ampInvoice: effectiveLspIsActive ? false : ampInvoice || false,
                 blindedPaths: effectiveLspIsActive
                     ? false
@@ -718,7 +756,10 @@ export default class Receive extends React.Component<
                 forceLsp: !!this.props.route.params?.forceLsp,
                 useLsp: effectiveLspIsActive,
                 skipOnchain,
-                ...this.getUnifiedAccountParams()
+                ...this.getUnifiedAccountParams(
+                    fromMount?.account,
+                    fromMount?.accountAddressType
+                )
             })
                 .then(
                     ({
@@ -739,12 +780,14 @@ export default class Receive extends React.Component<
                                 orderId,
                                 payment_request: paymentRequest,
                                 lspFeeSats,
+                                onChainAddress,
                                 rHash,
                                 exchangeRate,
                                 amount: amount || '0',
                                 tip: orderTip,
                                 createdAt: Math.floor(Date.now() / 1000),
-                                expirySeconds: expirySeconds || '3600'
+                                expirySeconds: invoiceExpirySeconds,
+                                nodeIdentity
                             });
                         }
                         this.subscribeInvoice(rHash, onChainAddress);
@@ -758,8 +801,10 @@ export default class Receive extends React.Component<
 
     // For non-default accounts the on-chain leg of a unified invoice must
     // come from that account, with its own address type (ZEUS-2223)
-    private getUnifiedAccountParams = () => {
-        const { account, accountAddressType } = this.state;
+    private getUnifiedAccountParams = (
+        account: string = this.state.account,
+        accountAddressType: string | undefined = this.state.accountAddressType
+    ) => {
         return account !== 'default'
             ? { account, addressType: accountAddressType }
             : {};
@@ -871,7 +916,8 @@ export default class Receive extends React.Component<
                         this.setState({ nfcError: true });
                         return;
                     }
-                    const { memo } = lnurlParams.defaultDescription;
+                    // LUD-03: defaultDescription is a string
+                    const memo: string = lnurlParams.defaultDescription || '';
 
                     // if an amount was entered on the keypad screen before scanning
                     // we will automatically create an invoice and attempt to withdraw
@@ -881,9 +927,7 @@ export default class Receive extends React.Component<
                         createUnifiedInvoice({
                             memo: lspIsActive
                                 ? ''
-                                : receiverName
-                                ? `${receiverName}:  ${memo}`
-                                : memo,
+                                : withReceiverName(receiverName, memo),
                             value: satAmount.toString(),
                             expirySeconds: '3600',
                             lnurl: lnurlParams,
@@ -3082,9 +3126,10 @@ export default class Receive extends React.Component<
                                                         createUnifiedInvoice({
                                                             memo: lspIsActive
                                                                 ? ''
-                                                                : receiverName
-                                                                ? `${receiverName}:  ${memo}`
-                                                                : memo,
+                                                                : withReceiverName(
+                                                                      receiverName,
+                                                                      memo
+                                                                  ),
                                                             value:
                                                                 satAmount.toString() ||
                                                                 '0',

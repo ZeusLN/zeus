@@ -220,6 +220,189 @@ describe('PosStore.recordInvoice', () => {
     });
 });
 
+describe('PosStore.recordInvoice on-chain leg', () => {
+    it('keeps the on-chain address of a unified invoice', () => {
+        makeStore('0').recordInvoice({
+            orderId: 'A',
+            payment_request: 'lnbc-a',
+            onChainAddress: 'bc1qa',
+            rHash: 'hash-a',
+            exchangeRate: '',
+            amount: '1000',
+            tip: '',
+            createdAt: 0,
+            expirySeconds: '3600'
+        });
+
+        expect(Storage.setItem).toHaveBeenLastCalledWith(
+            'pos-invoice-A',
+            expect.objectContaining({ onChainAddress: 'bc1qa' })
+        );
+    });
+});
+
+describe('PosStore order invoice node binding', () => {
+    const storeFor = (node: any) =>
+        new PosStore(
+            { settings: { fiat: 'USD', pos: {} }, ...node } as any,
+            fiatStoreStub,
+            { units: 'sats' } as any
+        );
+
+    const nodes: Array<[string, any, any]> = [
+        [
+            'lnd',
+            { implementation: 'lnd', host: 'node-a.local', port: '8080' },
+            { implementation: 'lnd', host: 'node-b.local', port: '8080' }
+        ],
+        [
+            'cln-rest',
+            { implementation: 'cln-rest', host: 'cln.local', port: '3010' },
+            { implementation: 'cln-rest', host: 'cln.local', port: '3011' }
+        ],
+        [
+            'embedded-lnd',
+            { implementation: 'embedded-lnd', lndDir: 'uuid-a' },
+            { implementation: 'embedded-lnd', lndDir: 'uuid-b' }
+        ],
+        [
+            'ldk-node',
+            { implementation: 'ldk-node', ldkNodeDir: 'ldk-a' },
+            { implementation: 'ldk-node', ldkNodeDir: 'ldk-b' }
+        ],
+        [
+            'lightning-node-connect',
+            {
+                implementation: 'lightning-node-connect',
+                pairingPhrase: 'phrase a'
+            },
+            {
+                implementation: 'lightning-node-connect',
+                pairingPhrase: 'phrase b'
+            }
+        ],
+        [
+            'lndhub',
+            {
+                implementation: 'lndhub',
+                lndhubUrl: 'https://hub.example',
+                username: 'alice'
+            },
+            {
+                implementation: 'lndhub',
+                lndhubUrl: 'https://hub.example',
+                username: 'bob'
+            }
+        ],
+        [
+            'nostr-wallet-connect',
+            {
+                implementation: 'nostr-wallet-connect',
+                nostrWalletConnectUrl: 'nostr+walletconnect://a?secret=1'
+            },
+            {
+                implementation: 'nostr-wallet-connect',
+                nostrWalletConnectUrl: 'nostr+walletconnect://b?secret=2'
+            }
+        ]
+    ];
+
+    it.each(nodes)(
+        '%s: is stable for one wallet and differs between wallets',
+        (_impl, a, b) => {
+            const idA = storeFor(a).getNodeIdentity();
+            expect(idA).toMatch(/^[0-9a-f]{64}$/);
+            expect(storeFor({ ...a }).getNodeIdentity()).toBe(idA);
+            expect(storeFor(b).getNodeIdentity()).not.toBe(idA);
+        }
+    );
+
+    it('is empty when the wallet cannot be told apart', () => {
+        expect(storeFor({ implementation: 'lnd' }).getNodeIdentity()).toBe('');
+        expect(
+            storeFor({
+                implementation: 'lndhub',
+                username: 'alice'
+            }).getNodeIdentity()
+        ).toBe('');
+        expect(storeFor({}).getNodeIdentity()).toBe('');
+    });
+
+    const record = (overrides: any = {}) => ({
+        orderId: 'A',
+        payment_request: 'lnbc-a',
+        rHash: 'hash-a',
+        exchangeRate: '60000',
+        amount: '1000',
+        tip: '0',
+        createdAt: Math.floor(Date.now() / 1000),
+        expirySeconds: '3600',
+        nodeIdentity: 'node-a',
+        ...overrides
+    });
+
+    it('records the identity of the node the invoice was created on', () => {
+        makeStore('0').recordInvoice(record());
+
+        expect(Storage.setItem).toHaveBeenLastCalledWith(
+            'pos-invoice-A',
+            expect.objectContaining({ nodeIdentity: 'node-a' })
+        );
+    });
+
+    it('reuses an invoice on the node that created it', () => {
+        expect(
+            makeStore('0').canReuseInvoice(
+                record(),
+                '1000',
+                '0',
+                '60000',
+                'node-a'
+            )
+        ).toBe(true);
+    });
+
+    it('does not reuse an invoice created on another node', () => {
+        expect(
+            makeStore('0').canReuseInvoice(
+                record(),
+                '1000',
+                '0',
+                '60000',
+                'node-b'
+            )
+        ).toBe(false);
+    });
+
+    it('does not reuse a record saved without a node identity', () => {
+        const legacy: any = record();
+        delete legacy.nodeIdentity;
+        expect(
+            makeStore('0').canReuseInvoice(
+                legacy,
+                '1000',
+                '0',
+                '60000',
+                'node-a'
+            )
+        ).toBe(false);
+        // nor one saved by a wallet that had no identity
+        expect(
+            makeStore('0').canReuseInvoice(
+                record({ nodeIdentity: '' }),
+                '1000',
+                '0',
+                '60000',
+                ''
+            )
+        ).toBe(false);
+        // nor when the current wallet has no identity either
+        expect(
+            makeStore('0').canReuseInvoice(legacy, '1000', '0', '60000', '')
+        ).toBe(false);
+    });
+});
+
 describe('PosStore.getOrdersHistorical', () => {
     // a $10 order with 8% tax, as the Square Orders API returns it
     const squareOrder = (overrides: any = {}) => ({

@@ -1,4 +1,4 @@
-import { decodeMemo } from './MemoUtils';
+import { decodeMemo, withReceiverName } from './MemoUtils';
 
 describe('MemoUtils.decodeMemo', () => {
     it('decodes percent-encoded spaces (#1717)', () => {
@@ -34,5 +34,26 @@ describe('MemoUtils.decodeMemo', () => {
     it('passes through empty and undefined values', () => {
         expect(decodeMemo('')).toBe('');
         expect(decodeMemo(undefined)).toBeUndefined();
+    });
+});
+
+describe('MemoUtils.withReceiverName', () => {
+    it('joins the receiver name and memo', () => {
+        expect(withReceiverName('Shop', 'Coffee')).toBe('Shop:  Coffee');
+    });
+
+    it('is the receiver name alone when there is no memo', () => {
+        expect(withReceiverName('Shop', '')).toBe('Shop');
+        expect(withReceiverName('Shop', undefined)).toBe('Shop');
+    });
+
+    it('is the memo alone when there is no receiver name', () => {
+        expect(withReceiverName('', 'Coffee')).toBe('Coffee');
+        expect(withReceiverName(undefined, 'Coffee')).toBe('Coffee');
+    });
+
+    it('is empty when there is neither', () => {
+        expect(withReceiverName('', '')).toBe('');
+        expect(withReceiverName(undefined, undefined)).toBe('');
     });
 });
