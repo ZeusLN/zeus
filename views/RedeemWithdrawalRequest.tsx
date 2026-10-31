@@ -215,11 +215,14 @@ export default class RedeemWithdrawalRequest extends React.Component<
                                         heading={localeString(
                                             'views.Payment.paymentHash'
                                         )}
-                                        headingCopied={`${localeString(
-                                            'views.Payment.paymentHash'
-                                        )} ${localeString(
-                                            'components.ExternalLinkModal.copied'
-                                        )}`}
+                                        headingCopied={localeString(
+                                            'components.CopyButton.itemCopied',
+                                            {
+                                                item: localeString(
+                                                    'views.Payment.paymentHash'
+                                                )
+                                            }
+                                        )}
                                         theme="dark"
                                         URL={redemptionResult.payment_hash}
                                     />

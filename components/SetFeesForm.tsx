@@ -123,9 +123,9 @@ export default class SetFeesForm extends React.Component<
                         color: themeColor('secondaryText')
                     }}
                 >
-                    {`${localeString(
-                        'components.SetFeesForm.baseFee'
-                    )} (${localeString('general.sats')})`}
+                    {localeString('components.SetFeesForm.outboundBaseFee', {
+                        unit: localeString('general.sats')
+                    })}
                 </Text>
                 <TextInput
                     keyboardType="numeric"
@@ -146,13 +146,14 @@ export default class SetFeesForm extends React.Component<
                         color: themeColor('secondaryText')
                     }}
                 >
-                    {`${localeString('components.SetFeesForm.feeRate')} (${
-                        implementation === 'cln-rest'
-                            ? localeString(
-                                  'components.SetFeesForm.ppmMilliMsat'
-                              )
-                            : localeString('general.percentage')
-                    })`}
+                    {localeString('components.SetFeesForm.outboundFeeRate', {
+                        unit:
+                            implementation === 'cln-rest'
+                                ? localeString(
+                                      'components.SetFeesForm.ppmMilliMsat'
+                                  )
+                                : localeString('general.percentage')
+                    })}
                 </Text>
                 <TextInput
                     keyboardType="numeric"
