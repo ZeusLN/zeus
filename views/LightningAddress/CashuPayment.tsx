@@ -84,18 +84,20 @@ export default function CashuPayment(props: any) {
                             </Text>
                         </ListItem.Subtitle>
                     )}
-                    <ListItem.Subtitle>
-                        <Text
-                            style={{
-                                color: cashuStore.cashuWallets[mintUrl]
-                                    ?.errorConnecting
-                                    ? themeColor('warning')
-                                    : themeColor('secondaryText')
-                            }}
-                        >
-                            {cashuStore.mintInfos[mintUrl]?.name || mintUrl}
-                        </Text>
-                    </ListItem.Subtitle>
+                    {!!mintUrl && (
+                        <ListItem.Subtitle>
+                            <Text
+                                style={{
+                                    color: cashuStore.cashuWallets[mintUrl]
+                                        ?.errorConnecting
+                                        ? themeColor('warning')
+                                        : themeColor('secondaryText')
+                                }}
+                            >
+                                {cashuStore.mintInfos[mintUrl]?.name || mintUrl}
+                            </Text>
+                        </ListItem.Subtitle>
+                    )}
                     <ListItem.Subtitle>
                         <Text
                             style={{

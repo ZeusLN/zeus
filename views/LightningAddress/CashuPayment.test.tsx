@@ -115,12 +115,14 @@ describe('CashuPayment mint line', () => {
         ['an array', [MINT_URL]],
         ['null', null]
     ])(
-        'renders the row with an empty mint line when mint_url is %s',
+        'renders the row without a mint line when mint_url is %s',
         async (_name, mint_url) => {
             await renderPayment({ mint_url });
 
-            expect(screen.getByText(UPDATED_AT)).toBeOnTheScreen();
-            expect(mintLine()).toHaveTextContent('', { exact: true });
+            // Only the date line is left
+            const lines = screen.getAllByTestId('list-item-subtitle');
+            expect(lines).toHaveLength(1);
+            expect(lines[0]).toHaveTextContent(UPDATED_AT);
         }
     );
 
