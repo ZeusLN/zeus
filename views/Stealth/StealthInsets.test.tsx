@@ -1,3 +1,7 @@
+jest.mock('../../utils/LocaleUtils', () => ({
+    localeString: (key: string) => key
+}));
+
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import {

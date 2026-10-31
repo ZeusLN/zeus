@@ -1,4 +1,14 @@
-import type { StealthApp } from './StealthModeUtils';
+import fs from 'fs';
+import path from 'path';
+import {
+    DECOY_APP_NAMES,
+    getUnlockInstructionText,
+    StealthApp
+} from './StealthModeUtils';
+
+jest.mock('../stores/Stores', () => ({
+    settingsStore: { settings: { locale: 'en' } }
+}));
 
 const ALL_APPS: StealthApp[] = [
     'zeus',
@@ -157,6 +167,67 @@ describe('StealthModeUtils', () => {
             const enabled = await utils.enableStealthMode('notepad');
             expect(enabled).toBe(false);
             expect(native.enableStealthMode).toHaveBeenCalledWith('notepad');
+        });
+    });
+
+    describe('DECOY_APP_NAMES sync', () => {
+        it('matches the stealth_* values in strings.xml', () => {
+            const xmlPath = path.resolve(
+                __dirname,
+                '../android/app/src/main/res/values/strings.xml'
+            );
+            const xmlContent = fs.readFileSync(xmlPath, 'utf8');
+
+            const getXmlValue = (name: string) => {
+                const match = xmlContent.match(
+                    new RegExp(`<string name="${name}"[^>]*>(.*?)</string>`)
+                );
+                return match ? match[1] : null;
+            };
+
+            for (const [key, name] of Object.entries(DECOY_APP_NAMES)) {
+                expect(getXmlValue(`stealth_${key}`)).toBe(name);
+            }
+        });
+    });
+
+    describe('getUnlockInstructionText', () => {
+        it('builds the correct instruction for calculator', () => {
+            const text = getUnlockInstructionText('calculator', 5, '', '');
+            expect(text).toContain(DECOY_APP_NAMES.calculator);
+            expect(text).toContain('5 times');
+            expect(text).not.toMatch(/[{}]/);
+        });
+
+        it('builds the correct instruction for notepad', () => {
+            const text = getUnlockInstructionText('notepad', 3, '', '');
+            expect(text).toContain(DECOY_APP_NAMES.notepad);
+            expect(text).toContain('3 times');
+            expect(text).not.toMatch(/[{}]/);
+        });
+
+        it('builds the correct instruction for qrscanner', () => {
+            const text = getUnlockInstructionText('qrscanner', 7, '', '');
+            expect(text).toContain(DECOY_APP_NAMES.qrscanner);
+            expect(text).toContain('7 times');
+            expect(text).not.toMatch(/[{}]/);
+        });
+
+        it('builds the correct instruction for vpn with country and server', () => {
+            const text = getUnlockInstructionText(
+                'vpn',
+                5,
+                'Switzerland',
+                'Geneva'
+            );
+            expect(text).toContain(DECOY_APP_NAMES.vpn);
+            expect(text).toContain('Switzerland');
+            expect(text).toContain('Geneva');
+            expect(text).not.toMatch(/[{}]/);
+        });
+
+        it('returns an empty string for zeus', () => {
+            expect(getUnlockInstructionText('zeus', 5, '', '')).toBe('');
         });
     });
 });
