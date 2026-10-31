@@ -4,16 +4,18 @@ import { observer } from 'mobx-react';
 import LinearGradient from './LinearGradient';
 import RadialGradient from './RadialGradient';
 
-import { themeColor } from '../utils/ThemeUtils';
+import { themeColorFor } from '../utils/ThemeUtils';
 
 interface ScreenProps {
     children?: ReactNode;
+    // Draws this theme's background instead of the selected theme's
+    theme?: string;
 }
 
-const Screen: React.FC<ScreenProps> = observer(({ children }) => {
-    const gradient = themeColor('gradientBackground');
-    const locations = themeColor('gradientLocations');
-    const radial = themeColor('gradientRadial');
+const Screen: React.FC<ScreenProps> = observer(({ children, theme }) => {
+    const gradient = themeColorFor(theme, 'gradientBackground');
+    const locations = themeColorFor(theme, 'gradientLocations');
+    const radial = themeColorFor(theme, 'gradientRadial');
 
     // The gradient is a background sibling, so the children keep the same
     // place in the tree when a theme switches between a linear and a radial
@@ -34,8 +36,8 @@ const Screen: React.FC<ScreenProps> = observer(({ children }) => {
                         gradient
                             ? gradient
                             : [
-                                  themeColor('background'),
-                                  themeColor('background')
+                                  themeColorFor(theme, 'background'),
+                                  themeColorFor(theme, 'background')
                               ]
                     }
                     locations={locations}
