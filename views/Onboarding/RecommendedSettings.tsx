@@ -451,12 +451,12 @@ export default class RecommendedSettings extends React.Component<
                                 }}
                             >
                                 {implementation === 'ldk-node'
-                                    ? `LDK Node (${localeString(
-                                          'views.NodeChoice.speedReliability'
-                                      ).toLowerCase()})`
-                                    : `Embedded LND (${localeString(
-                                          'views.NodeChoice.privacyPower'
-                                      ).toLowerCase()})`}
+                                    ? localeString(
+                                          'views.NodeChoice.ldkNodeDescription'
+                                      )
+                                    : localeString(
+                                          'views.NodeChoice.embeddedLndDescription'
+                                      )}
                             </ListItem.Subtitle>
                         </ListItem.Content>
                         <Icon
