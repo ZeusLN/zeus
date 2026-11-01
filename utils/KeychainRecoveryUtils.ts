@@ -76,17 +76,62 @@ const CRITICAL_KEYS = [
     { key: LEGACY_STORAGE_KEY, description: 'Legacy Wallet Configurations' }
 ];
 
-// reviewDivergence: report a legacy copy of a live key whose data differs
-// from it (divergentDataFound). Only for keys whose old data can matter after
-// the app rewrote them; keys that change in normal use (backup time, units,
-// filters, ...) would differ on most installs and bury the ones that matter.
+// The legacy prefixed-cloud copy is usually a snapshot from the day the desync
+// migration ran (it never deletes it), and these lists change in normal use.
+// So a legacy list is worth reviewing only when it holds an entry the live
+// list lacks: an older snapshot of the same entries is noise. A copy that
+// doesn't parse is reported, since it can't be checked.
+const hasEntryMissingFromLive =
+    (idOf: (entry: any) => unknown) =>
+    (legacy: string, live: string): boolean => {
+        let legacyList: unknown;
+        try {
+            legacyList = JSON.parse(legacy);
+        } catch (e) {
+            return true;
+        }
+        if (!Array.isArray(legacyList)) return true;
+
+        let liveIds = new Set<unknown>();
+        try {
+            const liveList = JSON.parse(live);
+            if (Array.isArray(liveList)) liveIds = new Set(liveList.map(idOf));
+        } catch (e) {
+            // An unreadable live value holds nothing to match against.
+        }
+        return legacyList.some((entry) => {
+            const id = idOf(entry);
+            return id === undefined || !liveIds.has(id);
+        });
+    };
+const anyDifference = (legacy: string, live: string) => legacy !== live;
+const byId = (entry: any) => entry?.id;
+// LSPS orders are stored as an array of JSON strings.
+const lspsOrderId = (entry: any) => {
+    try {
+        const stored = typeof entry === 'string' ? JSON.parse(entry) : entry;
+        return stored?.order?.order_id || stored?.order?.result?.order_id;
+    } catch (e) {
+        return undefined;
+    }
+};
+
+// reviewDivergence: when current storage can read the key, decides whether a
+// legacy copy is still worth showing the user (divergentDataFound). Only for
+// keys whose old data can matter after the app rewrote them; keys that change
+// in normal use (backup time, units, filters, ...) have none. Notes are left
+// out: NOTES_KEY only indexes the note keys, and the scan doesn't read bodies.
 const OTHER_KEYS: Array<{
     key: string;
     description: string;
-    reviewDivergence?: boolean;
+    reviewDivergence?: (legacy: string, live: string) => boolean;
 }> = [
-    { key: CONTACTS_KEY, description: 'Contacts', reviewDivergence: true },
-    { key: NOTES_KEY, description: 'Notes', reviewDivergence: true },
+    {
+        key: CONTACTS_KEY,
+        description: 'Contacts',
+        reviewDivergence: hasEntryMissingFromLive((entry) => entry?.contactId)
+    },
+    { key: NOTES_KEY, description: 'Notes' },
     { key: LAST_CHANNEL_BACKUP_STATUS, description: 'Channel Backup Status' },
     { key: LAST_CHANNEL_BACKUP_TIME, description: 'Channel Backup Time' },
     { key: ADDRESS_ACTIVATED_STRING, description: 'Lightning Address Status' },
@@ -96,25 +141,37 @@ const OTHER_KEYS: Array<{
     {
         key: CATEGORY_KEY,
         description: 'POS Categories',
-        reviewDivergence: true
+        reviewDivergence: hasEntryMissingFromLive(byId)
     },
-    { key: PRODUCT_KEY, description: 'POS Products', reviewDivergence: true },
+    {
+        key: PRODUCT_KEY,
+        description: 'POS Products',
+        reviewDivergence: hasEntryMissingFromLive(byId)
+    },
     { key: UNIT_KEY, description: 'Unit Preferences' },
     { key: HIDDEN_ACCOUNTS_KEY, description: 'Hidden Accounts' },
     { key: CURRENCY_CODES_KEY, description: 'Currency Codes' },
     { key: ACTIVITY_FILTERS_KEY, description: 'Activity Filters' },
     { key: IS_BACKED_UP_KEY, description: 'Backup Status' },
-    { key: LSPS_ORDERS_KEY, description: 'LSP Orders', reviewDivergence: true },
-    { key: SWAPS_KEY, description: 'Swaps', reviewDivergence: true },
+    {
+        key: LSPS_ORDERS_KEY,
+        description: 'LSP Orders',
+        reviewDivergence: hasEntryMissingFromLive(lspsOrderId)
+    },
+    {
+        key: SWAPS_KEY,
+        description: 'Swaps',
+        reviewDivergence: hasEntryMissingFromLive(byId)
+    },
     {
         key: REVERSE_SWAPS_KEY,
         description: 'Reverse Swaps',
-        reviewDivergence: true
+        reviewDivergence: hasEntryMissingFromLive(byId)
     },
     {
         key: SWAPS_RESCUE_KEY,
         description: 'Swap Rescue Data',
-        reviewDivergence: true
+        reviewDivergence: anyDifference
     },
     { key: SWAPS_LAST_USED_KEY, description: 'Last Used Swap Provider' }
 ];
@@ -318,15 +375,15 @@ class KeychainRecoveryUtils {
                 const keyResults = await this.scanKey(
                     key,
                     description,
-                    reviewDivergence
+                    !!reviewDivergence
                 );
                 // A key current storage can read is live, not orphaned, so
                 // none of its copies are restore candidates. For the keys
-                // that opt in, a legacy copy that differs from the live value
-                // is still reported, for review only: the app rewrites some
-                // keys after losing them, and the old data may exist nowhere
-                // else. One entry per distinct value, from the highest-ranked
-                // source holding it.
+                // that opt in, a legacy copy that reviewDivergence accepts is
+                // still reported, for review only: the app rewrites some keys
+                // after losing them, and the old data may exist nowhere else.
+                // One entry per distinct value, from the highest-ranked source
+                // holding it.
                 const live = keyResults.find((r) => r.source === 'current');
                 if (live) {
                     if (!reviewDivergence) continue;
@@ -341,7 +398,9 @@ class KeychainRecoveryUtils {
                     for (const r of legacy) {
                         if (seen.has(r.data)) continue;
                         seen.add(r.data);
-                        result.divergentDataFound.push(r);
+                        if (reviewDivergence(r.data, live.data)) {
+                            result.divergentDataFound.push(r);
+                        }
                     }
                     continue;
                 }
@@ -487,9 +546,11 @@ class KeychainRecoveryUtils {
      * - EncryptedStorage: v0.7.1 to v0.9.4. It never held any of the
      *   `OTHER_KEYS` names, so it can't produce a result here.
      * - Unprefixed keychain: from v0.9.5, which also renamed the keys.
-     * - `zeus:` prefix: from v0.12.2. `prefixed-cloud` only shows up when
-     *   the current read misses (the stuck-desync case), and then it is newer
-     *   than the unprefixed copies.
+     * - `zeus:` prefix: from v0.12.2. As a restore candidate,
+     *   `prefixed-cloud` only shows up when the current read misses (the
+     *   stuck-desync case), and then it is newer than the unprefixed copies.
+     *   For opted-in keys the scan reads it even when current storage has the
+     *   key, but only to compare (divergentDataFound), never to restore.
      *
      * Whether `unprefixed-local` should rank above `unprefixed-cloud` is
      * unverified: before v0.12.2 `Storage` wrote with `cloudSync: false`, but

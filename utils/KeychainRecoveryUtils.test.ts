@@ -389,6 +389,116 @@ describe('KeychainRecoveryUtils', () => {
             expect(rawItem).not.toHaveBeenCalledWith('zeus:units', true);
         });
 
+        // Live in current storage, an older snapshot in the prefixed-cloud copy.
+        const liveAndCloud = (key: string, live: string, cloud: string) => {
+            storage.getItem.mockImplementation(async (k: string) =>
+                k === key ? live : (false as any)
+            );
+            rawItem.mockImplementation(async (k: string) =>
+                k === `zeus:${key}` ? cloud : (null as any)
+            );
+        };
+
+        it('does not report a legacy swaps list whose ids are all still live', async () => {
+            liveAndCloud(
+                'swaps',
+                JSON.stringify([
+                    { id: 'a', status: 'transaction.claimed' },
+                    { id: 'b', status: 'swap.created' }
+                ]),
+                JSON.stringify([{ id: 'a', status: 'swap.created' }])
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
+        it('reports a legacy swaps list with an id live lacks', async () => {
+            liveAndCloud(
+                'swaps',
+                JSON.stringify([{ id: 'b', status: 'swap.created' }]),
+                JSON.stringify([{ id: 'a', status: 'swap.created' }])
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({
+                    key: 'swaps',
+                    source: 'prefixed-cloud'
+                })
+            ]);
+        });
+
+        it('reports a legacy copy that does not parse', async () => {
+            liveAndCloud('reverse-swaps', '[]', '{not json');
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({
+                    key: 'reverse-swaps',
+                    data: '{not json'
+                })
+            ]);
+        });
+
+        it('still reports any difference in the rescue key', async () => {
+            liveAndCloud('swaps-rescue', 'new mnemonic', 'old mnemonic');
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({
+                    key: 'swaps-rescue',
+                    data: 'old mnemonic'
+                })
+            ]);
+        });
+
+        it('matches LSPS orders by their nested order_id', async () => {
+            const order = (id: string, state: string) =>
+                JSON.stringify({ order: { order_id: id, order_state: state } });
+            liveAndCloud(
+                'lsps-orders',
+                JSON.stringify([order('o1', 'COMPLETED')]),
+                JSON.stringify([order('o1', 'CREATED')])
+            );
+            expect(
+                (await utils.scanForRecoverableData()).divergentDataFound
+            ).toEqual([]);
+
+            liveAndCloud(
+                'lsps-orders',
+                JSON.stringify([order('o1', 'COMPLETED')]),
+                JSON.stringify([order('o2', 'CREATED')])
+            );
+            expect(
+                (await utils.scanForRecoverableData()).divergentDataFound
+            ).toEqual([expect.objectContaining({ key: 'lsps-orders' })]);
+        });
+
+        it('matches contacts by contactId', async () => {
+            liveAndCloud(
+                'contacts',
+                JSON.stringify([{ contactId: 'c1', name: 'Bob B.' }]),
+                JSON.stringify([{ contactId: 'c1', name: 'Bob' }])
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
+        it('does not report notes, whose bodies the scan does not read', async () => {
+            liveAndCloud('notes', '["note-1"]', '["note-0"]');
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
         it('keeps offering legacy copies of a key current storage cannot read', async () => {
             encrypted.getItem.mockImplementation(async (key: string) =>
                 key === 'contacts' ? '[{"name":"bob"}]' : (null as any)
