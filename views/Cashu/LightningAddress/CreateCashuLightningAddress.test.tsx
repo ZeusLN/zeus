@@ -145,4 +145,23 @@ describe('CreateCashuLightningAddress after a successful save', () => {
         expect(navigation.goBack).not.toHaveBeenCalled();
         expect(navigation.popTo).not.toHaveBeenCalled();
     });
+
+    it('does not go back when the user left during the create', async () => {
+        const { navigation, LightningAddressStore } = await renderCreate([
+            'Wallet',
+            'ReceiveEcash'
+        ]);
+        let resolveCreate: (value: any) => void = () => {};
+        LightningAddressStore.createCashu.mockImplementation(
+            () => new Promise((resolve) => (resolveCreate = resolve))
+        );
+
+        await pressButton('views.Settings.LightningAddress.create');
+        await screen.unmount();
+        resolveCreate({ success: true });
+        await flush();
+
+        expect(navigation.goBack).not.toHaveBeenCalled();
+        expect(navigation.popTo).not.toHaveBeenCalled();
+    });
 });

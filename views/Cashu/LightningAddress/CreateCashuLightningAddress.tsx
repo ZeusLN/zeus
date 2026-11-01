@@ -48,6 +48,9 @@ export default class CreateCashuLightningAddress extends React.Component<
     CreateCashuLightningAddressState
 > {
     isInitialFocus = true;
+    // The user can leave while createCashu runs, so a late goBack()
+    // must not pop the screen they went back to
+    isUnmounted = false;
 
     state = {
         mintList: [],
@@ -62,6 +65,10 @@ export default class CreateCashuLightningAddress extends React.Component<
 
         // triggers when loaded from navigation or back action
         navigation.addListener('focus', this.handleFocus);
+    }
+
+    componentWillUnmount() {
+        this.isUnmounted = true;
     }
 
     loadMints = () => {
@@ -238,7 +245,10 @@ export default class CreateCashuLightningAddress extends React.Component<
                                             } else {
                                                 createCashu(mintUrl)
                                                     .then((response) => {
-                                                        if (response.success) {
+                                                        if (
+                                                            response.success &&
+                                                            !this.isUnmounted
+                                                        ) {
                                                             // Opened only from ReceiveEcash and
                                                             // Get started on the ZEUS Pay screen,
                                                             // so go back to whichever opened it
