@@ -13,6 +13,7 @@ import Payment from '../../models/Payment';
 import Transaction from '../../models/Transaction';
 import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
+import CashuToken from '../../models/CashuToken';
 import Swap from '../../models/Swap';
 import { LSPActivity } from '../../models/LSP';
 
@@ -29,7 +30,15 @@ import {
     CSV_KEYS
 } from '../../utils/ActivityCsvUtils';
 
-type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
+type ActivityItem =
+    | Invoice
+    | Payment
+    | Transaction
+    | CashuInvoice
+    | CashuPayment
+    | CashuToken
+    | Swap
+    | LSPActivity;
 
 interface ActivityProps {
     filteredActivity: Array<ActivityItem>;
