@@ -945,14 +945,16 @@ export default class ReceiveEcash extends React.Component<
                                         <View style={styles.button}>
                                             <Button
                                                 title={
-                                                    localeString(
-                                                        'views.Receive.createInvoice'
-                                                    ) +
-                                                    (lnurl
-                                                        ? ` ${localeString(
-                                                              'views.Receive.andSubmitTo'
-                                                          )} ${lnurl.domain}`
-                                                        : '')
+                                                    lnurl
+                                                        ? localeString(
+                                                              'views.Receive.createInvoiceAndSubmitTo',
+                                                              {
+                                                                  domain: lnurl.domain
+                                                              }
+                                                          )
+                                                        : localeString(
+                                                              'views.Receive.createInvoice'
+                                                          )
                                                 }
                                                 onPress={() => {
                                                     const isCurrent =
