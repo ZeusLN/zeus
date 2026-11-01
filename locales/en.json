@@ -1481,6 +1481,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.unreachable": "Host could not be reached",
     "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Please enter a hostname or IP address without http:// or https://",
     "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimize peers selection",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.noteRestartHint": "NOTE: Restart ZEUS for changes to take effect",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "Zero conf Peers",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Set the peers you would like to accept zero conf lightning channels from, other than the LSP.",
     "views.Settings.EmbeddedNode.EsploraServer.title": "Esplora Server",
