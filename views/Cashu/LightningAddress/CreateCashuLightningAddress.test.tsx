@@ -37,7 +37,11 @@ const MINT_URL = 'https://mint.example.com';
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 // routes: the stack below this screen, by route name
-const renderCreate = async (routes: string[], params: any = {}) => {
+const renderCreate = async (
+    routes: string[],
+    params: any = {},
+    mintUrls: string[] = [MINT_URL]
+) => {
     const navigation = {
         navigate: jest.fn(),
         addListener: jest.fn(),
@@ -62,7 +66,7 @@ const renderCreate = async (routes: string[], params: any = {}) => {
                 route: { params },
                 CashuStore: {
                     selectedMintUrl: MINT_URL,
-                    mintUrls: [MINT_URL],
+                    mintUrls,
                     mintInfos: { [MINT_URL]: { name: 'Example Mint' } },
                     cashuWallets: { [MINT_URL]: { pubkey: 'pubkey' } }
                 },
@@ -76,12 +80,15 @@ const renderCreate = async (routes: string[], params: any = {}) => {
     return { navigation, LightningAddressStore };
 };
 
+const findButton = (title: string) =>
+    screen.root!.queryAll((node: any) => node.props.title === title)[0];
+
 const pressButton = async (title: string) => {
-    const button = screen.root!.queryAll(
-        (node: any) => node.props.title === title
-    )[0];
-    await fireEvent.press(button);
+    await fireEvent.press(findButton(title));
 };
+
+const mintPickers = () =>
+    screen.root!.queryAll((node: any) => node.type === 'DropdownSetting');
 
 describe('CreateCashuLightningAddress after a successful save', () => {
     it('goes back to Receive when opened from ReceiveEcash', async () => {
@@ -163,5 +170,34 @@ describe('CreateCashuLightningAddress after a successful save', () => {
 
         expect(navigation.goBack).not.toHaveBeenCalled();
         expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+});
+
+describe('CreateCashuLightningAddress mints', () => {
+    it('links to the Mints screen and disables create without mints', async () => {
+        const { navigation } = await renderCreate(
+            ['Wallet', 'ReceiveEcash'],
+            {},
+            []
+        );
+
+        expect(mintPickers()).toHaveLength(0);
+        // fireEvent.press does not check disabled, so read the prop
+        expect(
+            findButton('views.Settings.LightningAddress.create').props.disabled
+        ).toBe(true);
+
+        await pressButton('cashu.tapToConfigure');
+        expect(navigation.navigate).toHaveBeenCalledWith('Mints');
+    });
+
+    it('shows the mint picker and enables create with a mint', async () => {
+        await renderCreate(['Wallet', 'ReceiveEcash']);
+
+        expect(mintPickers()).toHaveLength(1);
+        expect(findButton('cashu.tapToConfigure')).toBeUndefined();
+        expect(
+            findButton('views.Settings.LightningAddress.create').props.disabled
+        ).toBe(false);
     });
 });
