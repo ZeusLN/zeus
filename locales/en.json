@@ -121,7 +121,6 @@
     "general.none": "None",
     "general.noneSelected": "None selected",
     "general.zeusDefaults": "Using Zeus defaults",
-    "general.restartZeusChanges": "Restart Zeus for changes to take effect",
     "general.charge": "Charge",
     "general.clear": "Clear",
     "general.lightningAddress": "Lightning address",
