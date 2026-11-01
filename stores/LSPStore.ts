@@ -283,6 +283,7 @@ export default class LSPStore {
         this.stopFreeOrderStatusPolling();
         this.getInfoResponseResolver?.();
         this.createOrderResponseResolver?.();
+        this.getOrderResponseResolver?.();
         // Invalidate in-flight request ids so a late response or send failure
         // can't write into the next screen's state.
         delete this.customMessageRequestPeers[this.getInfoId];
@@ -293,6 +294,7 @@ export default class LSPStore {
         this.getOrderId = '';
         this.createOrderRequestTerms = {};
         this.createOrderResponse = {};
+        this.getOrderResponse = {};
         this.getInfoData = {};
         this.loadingLSPS1 = false;
         this.error = false;
@@ -303,6 +305,7 @@ export default class LSPStore {
     public resetLSPS7Data = () => {
         this.stopFreeOrderStatusPolling();
         this.createExtensionOrderResponseResolver?.();
+        this.getExtensionOrderResponseResolver?.();
         delete this.customMessageRequestPeers[this.createExtensionOrderId];
         delete this.customMessageRequestPeers[this.getExtensionOrderId];
         this.createExtensionOrderId = '';
@@ -310,6 +313,7 @@ export default class LSPStore {
         // not match the id of a request the reset left behind
         this.getExtensionOrderId = '';
         this.createExtensionOrderResponse = {};
+        this.getExtensionOrderResponse = {};
         this.loadingLSPS7 = false;
         this.error = false;
         this.error_msg = '';
@@ -1518,6 +1522,10 @@ export default class LSPStore {
         orderId: string,
         peer: string
     ): Promise<void> {
+        // Settle any earlier get_order request still waiting so its timer
+        // can't clear this request's resolver.
+        this.getOrderResponseResolver?.();
+
         this.loadingLSPS1 = true;
 
         this.getOrderId = this.newCustomMessageRequestId(this.getOrderId, peer);
@@ -1529,7 +1537,9 @@ export default class LSPStore {
                 if (settled) return;
                 settled = true;
                 clearTimeout(timeoutId);
-                this.getOrderResponseResolver = null;
+                if (this.getOrderResponseResolver === settle) {
+                    this.getOrderResponseResolver = null;
+                }
                 resolve();
             };
             const timeoutId = setTimeout(
@@ -1974,6 +1984,7 @@ export default class LSPStore {
         }
 
         // Fall back to custom message for other backends
+        this.getExtensionOrderResponseResolver?.();
         this.getExtensionOrderId = this.newCustomMessageRequestId(
             this.getExtensionOrderId,
             peer
@@ -1986,7 +1997,9 @@ export default class LSPStore {
                 if (settled) return;
                 settled = true;
                 clearTimeout(timeoutId);
-                this.getExtensionOrderResponseResolver = null;
+                if (this.getExtensionOrderResponseResolver === settle) {
+                    this.getExtensionOrderResponseResolver = null;
+                }
                 resolve();
             };
             const timeoutId = setTimeout(
@@ -2075,9 +2088,12 @@ export default class LSPStore {
                     : this.getOrderResponse;
             if (response && Object.keys(response).length > 0) {
                 const result = response?.result || response;
+                // a timeout or error reply leaves an earlier order's
+                // response in place, so only act on this order's own state
                 if (
-                    result?.order_state === LSPOrderState.COMPLETED ||
-                    result?.order_state === LSPOrderState.FAILED
+                    result?.order_id === orderId &&
+                    (result?.order_state === LSPOrderState.COMPLETED ||
+                        result?.order_state === LSPOrderState.FAILED)
                 ) {
                     runInAction(() => {
                         if (service === LSPService.LSPS7) {

@@ -29,6 +29,7 @@ jest.mock('../utils/BackendUtils', () => ({
     initChanAcceptor: jest.fn(),
     supportsFlowLSP: jest.fn(() => true),
     supportsLSPScustomMessage: () => true,
+    supportsLSPS1rest: jest.fn(() => false),
     supportsLSPS7native: jest.fn(() => false),
     lsps7GetExtendableChannels: jest.fn(),
     requestLsps1Liquidity: jest.fn()
@@ -47,6 +48,8 @@ import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
 import * as LocaleUtils from '../utils/LocaleUtils';
 import LndMobileInjection from '../lndmobile/LndMobileInjection';
+import Storage from '../storage';
+import { LSPService } from '../models/LSP';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 
 const TIMEOUT_MS = 7000;
@@ -57,6 +60,14 @@ const makeStore = (implementation = 'lnd') =>
         { channels: [] } as any,
         { nodeInfo: {}, getNodeInfo: jest.fn() } as any
     );
+
+const customReply = (store: LSPStore, id: string, reply: any) =>
+    store.handleCustomMessages({
+        peer: Buffer.from('aa', 'hex').toString('base64'),
+        data: Buffer.from(
+            JSON.stringify({ jsonrpc: '2.0', id, ...reply })
+        ).toString('base64')
+    });
 
 describe('LSPStore custom-message request timeouts', () => {
     beforeEach(() => {
@@ -247,6 +258,150 @@ describe('LSPStore custom-message request timeouts', () => {
 
         expect(handled).toBe(false);
         expect(store.getExtensionOrderResponse).toEqual({});
+    });
+
+    it('resetLSPS1Data drops a late get_order error reply', () => {
+        const store = makeStore();
+        store.lsps1GetOrderCustomMessage('order-x', 'aa');
+        const lateId = store.getOrderId;
+        store.resetLSPS1Data();
+
+        customReply(store, lateId, { error: { message: 'boom' } });
+
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe('');
+    });
+
+    it('resetLSPS7Data drops a late get_extension_order error reply', () => {
+        const store = makeStore();
+        store.lsps7GetOrderCustomMessage('order-y', 'aa');
+        const lateId = store.getExtensionOrderId;
+        store.resetLSPS7Data();
+
+        customReply(store, lateId, {
+            error: { data: { message: 'boom' } }
+        });
+
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe('');
+    });
+
+    it('accepts the reply to a get_order sent after a reset, not the old one', () => {
+        const store = makeStore();
+        store.lsps1GetOrderCustomMessage('order-a', 'aa');
+        const oldId = store.getOrderId;
+        store.resetLSPS1Data();
+        store.lsps1GetOrderCustomMessage('order-b', 'aa');
+
+        expect(
+            customReply(store, oldId, { result: { order_id: 'order-a' } })
+        ).toBe(false);
+        expect(
+            customReply(store, store.getOrderId, {
+                result: { order_id: 'order-b' }
+            })
+        ).toBe(true);
+        expect(store.getOrderResponse.result.order_id).toBe('order-b');
+    });
+
+    it('resetLSPS1Data releases a pending get_order', async () => {
+        const store = makeStore();
+        const done = jest.fn();
+        store.lsps1GetOrderCustomMessage('order-x', 'aa').then(done);
+        store.resetLSPS1Data();
+
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(done).toHaveBeenCalled();
+    });
+
+    it('resetLSPS7Data releases a pending get_extension_order', async () => {
+        const store = makeStore();
+        const done = jest.fn();
+        store.lsps7GetOrderCustomMessage('order-y', 'aa').then(done);
+        await jest.advanceTimersByTimeAsync(0);
+        store.resetLSPS7Data();
+
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(done).toHaveBeenCalled();
+    });
+
+    it.each([
+        ['LSPS1', 'lsps1GetOrderCustomMessage', 'getOrderId'],
+        ['LSPS7', 'lsps7GetOrderCustomMessage', 'getExtensionOrderId']
+    ] as const)(
+        "an earlier %s get_order timeout doesn't hold up the next request",
+        async (_service, request, idField) => {
+            const store = makeStore();
+            store[request]('order-a', 'aa');
+            await jest.advanceTimersByTimeAsync(3000);
+            const done = jest.fn();
+            store[request]('order-b', 'aa').then(done);
+            await jest.advanceTimersByTimeAsync(0);
+
+            // the first request's timer fires here
+            await jest.advanceTimersByTimeAsync(TIMEOUT_MS - 3000);
+            customReply(store, store[idField], {
+                result: { order_id: 'order-b' }
+            });
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(done).toHaveBeenCalled();
+        }
+    );
+
+    it.each([
+        [
+            LSPService.LSPS1,
+            'getOrderId',
+            'createOrderResponse',
+            'resetLSPS1Data'
+        ],
+        [
+            LSPService.LSPS7,
+            'getExtensionOrderId',
+            'createExtensionOrderResponse',
+            'resetLSPS7Data'
+        ]
+    ] as const)(
+        "%s free-order poll doesn't finish from the previous order's reply",
+        async (service, idField, createField, reset) => {
+            jest.mocked(Storage.getItem).mockResolvedValue(null);
+            const store = makeStore();
+
+            store.startFreeOrderStatusPolling('order-a', service);
+            await jest.advanceTimersByTimeAsync(0);
+            customReply(store, store[idField], {
+                result: { order_id: 'order-a', order_state: 'COMPLETED' }
+            });
+            await jest.advanceTimersByTimeAsync(0);
+            expect(store[createField].result.order_id).toBe('order-a');
+
+            store[reset]();
+            store.startFreeOrderStatusPolling('order-b', service);
+            // order-b's get_order gets no reply and times out
+            await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+
+            expect(store[createField]).toEqual({});
+            store.stopFreeOrderStatusPolling();
+        }
+    );
+
+    it('LSPS1 free-order poll ignores a reply for a different order', async () => {
+        jest.mocked(Storage.getItem).mockResolvedValue(null);
+        const store = makeStore();
+
+        store.startFreeOrderStatusPolling('order-b', LSPService.LSPS1);
+        await jest.advanceTimersByTimeAsync(0);
+        customReply(store, store.getOrderId, {
+            result: { order_id: 'order-a', order_state: 'COMPLETED' }
+        });
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(store.createOrderResponse).toEqual({});
+        expect(Storage.getItem).not.toHaveBeenCalled();
+        store.stopFreeOrderStatusPolling();
     });
 
     it.each([
