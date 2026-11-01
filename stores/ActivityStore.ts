@@ -9,6 +9,11 @@ import Swap, { SwapState } from './../models/Swap';
 //on-chain
 import Transaction from './../models/Transaction';
 
+// ecash
+import CashuInvoice from './../models/CashuInvoice';
+import CashuPayment from './../models/CashuPayment';
+import CashuToken from './../models/CashuToken';
+
 import { LSPActivity, LSPOrderState } from './../models/LSP';
 
 import SettingsStore from './SettingsStore';
@@ -45,7 +50,15 @@ const createSwapStateRecord = (
     }, {} as Record<SwapState, boolean>);
 };
 
-type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
+type ActivityItem =
+    | Invoice
+    | Payment
+    | Transaction
+    | CashuInvoice
+    | CashuPayment
+    | CashuToken
+    | Swap
+    | LSPActivity;
 
 export interface Filter {
     [index: string]: any;
