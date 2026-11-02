@@ -24,6 +24,7 @@ import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier;
 public class NostrConnectService extends Service {
     private static final String TAG = "NostrConnectService";
     private final int ONGOING_NOTIFICATION_ID = 1002;
+    private static final String EXTRA_FROM_NOTIFICATION = "fromNotification";
     private static final long CONNECTION_MONITOR_INTERVAL_MS = 5000; // 5 seconds
     
     private static boolean isServiceRunning = false;
@@ -51,9 +52,12 @@ public class NostrConnectService extends Service {
             if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.STOP_NOSTR_SERVICE")) {
                 // NostrConnectModule stays bound, so stopSelf() alone does not destroy
                 // the service, and the relay subscriptions live in JS. Stop the monitor
-                // and tell JS to tear NWC down and unbind.
+                // and tell JS to unbind, and to tear NWC down if the user pressed
+                // Stop Service rather than turning Persistent Mode off.
                 stopConnectionMonitoring();
-                NostrConnectModule.emitServiceStoppedEvent();
+                NostrConnectModule.emitServiceStoppedEvent(
+                    intent.getBooleanExtra(EXTRA_FROM_NOTIFICATION, false)
+                );
                 stopForeground(STOP_FOREGROUND_REMOVE);
                 stopSelf();
                 return START_NOT_STICKY;
@@ -180,7 +184,14 @@ public class NostrConnectService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         Intent stopIntent = new Intent(this, NostrConnectService.class);
         stopIntent.setAction("app.zeusln.zeus.android.intent.action.STOP_NOSTR_SERVICE");
-        PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE);
+        stopIntent.putExtra(EXTRA_FROM_NOTIFICATION, true);
+        // Extras do not make a PendingIntent distinct, so replace one created without it
+        PendingIntent stopPendingIntent = PendingIntent.getService(
+            this,
+            0,
+            stopIntent,
+            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+        );
         Notification.Builder notificationBuilder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             notificationBuilder = new Notification.Builder(this, BuildConfig.APPLICATION_ID);

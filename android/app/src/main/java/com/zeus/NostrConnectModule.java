@@ -186,12 +186,14 @@ public class NostrConnectModule extends ReactContextBaseJavaModule {
         }
     }
 
-    public static void emitServiceStoppedEvent() {
+    public static void emitServiceStoppedEvent(boolean fromNotification) {
         if (reactContext != null) {
             try {
+                WritableMap params = Arguments.createMap();
+                params.putBoolean("fromNotification", fromNotification);
                 reactContext
                     .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                    .emit(SERVICE_STOPPED_EVENT, Arguments.createMap());
+                    .emit(SERVICE_STOPPED_EVENT, params);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to emit service stopped event: " + e.getMessage());
             }
