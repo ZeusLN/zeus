@@ -23,6 +23,7 @@ export type ConnectionPaymentSourceType = 'lightning' | 'cashu';
 export enum PermissionType {
     FullAccess = 'full_access',
     ReadOnly = 'read_only',
+    InvoiceOnly = 'invoice_only',
     Custom = 'custom'
 }
 export interface ConnectionActivity {
@@ -358,6 +359,25 @@ export default class NWCConnection extends BaseModel {
         }, 0);
     }
 
+    /** Sats of the most recent successful make_invoice activity, 0 if none. */
+    @computed
+    public get lastReceivedActivitySats(): number {
+        if (!this.activity?.length) return 0;
+        let latestTime = -Infinity;
+        let latestSats = 0;
+        for (const a of this.activity) {
+            if (a.type !== 'make_invoice' || a.status !== 'success') continue;
+            const sats = Math.max(0, this.resolveMakeInvoiceActivitySats(a));
+            if (sats <= 0) continue;
+            const time = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            if (time >= latestTime) {
+                latestTime = time;
+                latestSats = sats;
+            }
+        }
+        return latestSats;
+    }
+
     @action
     public addWarning(warningType: ConnectionWarningType): void {
         if (!this._warningTypes.includes(warningType)) {
@@ -619,6 +639,13 @@ export default class NWCConnection extends BaseModel {
             this.permissions?.some((permission) =>
                 NostrConnectUtils.getReadOnlyPermissions().includes(permission)
             ) ?? false
+        );
+    }
+    public isInvoiceOnly(): boolean {
+        return (
+            NostrConnectUtils.determinePermissionType(
+                this.permissions ?? []
+            ) === PermissionType.InvoiceOnly
         );
     }
     public hasPaymentPermissions(): boolean {

@@ -92,6 +92,7 @@ import Storage from '../storage';
 import BackendUtils from '../utils/BackendUtils';
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
 import Invoice from '../models/Invoice';
+import CashuInvoice from '../models/CashuInvoice';
 import Payment from '../models/Payment';
 import CashuPayment from '../models/CashuPayment';
 import Base64Utils from '../utils/Base64Utils';
@@ -1723,7 +1724,7 @@ describe('NostrWalletConnectStore connection data scoping', () => {
         });
     }
 
-    function seedReadOnlyConnection(
+    function seedConnection(
         store: NostrWalletConnectStore,
         overrides: Record<string, unknown> = {}
     ) {
@@ -1738,7 +1739,7 @@ describe('NostrWalletConnectStore connection data scoping', () => {
     it('list_transactions returns only the connection activity for read-only connections', async () => {
         const { store, paymentsStore, invoicesStore, transactionsStore } =
             buildScopedStore();
-        const connection = seedReadOnlyConnection(store, {
+        const connection = seedConnection(store, {
             activity: [
                 {
                     id: CONNECTION_INVOICE,
@@ -1768,7 +1769,7 @@ describe('NostrWalletConnectStore connection data scoping', () => {
 
     it('lookup_invoice rejects hashes outside the connection activity', async () => {
         const { store } = buildScopedStore();
-        const connection = seedReadOnlyConnection(store);
+        const connection = seedConnection(store);
 
         const response = await (store as any).handleLookupInvoice(connection, {
             payment_hash: WALLET_ONLY_HASH
@@ -1780,7 +1781,7 @@ describe('NostrWalletConnectStore connection data scoping', () => {
 
     it('lookup_invoice returns invoices recorded on the connection', async () => {
         const { store } = buildScopedStore();
-        const connection = seedReadOnlyConnection(store, {
+        const connection = seedConnection(store, {
             activity: [
                 {
                     id: CONNECTION_INVOICE,
@@ -1815,7 +1816,7 @@ describe('NostrWalletConnectStore connection data scoping', () => {
             settle_date: String(1_700_000_500),
             r_preimage: Base64Utils.hexToBase64(PREIMAGE)
         });
-        const connection = seedReadOnlyConnection(store, {
+        const connection = seedConnection(store, {
             activity: [
                 {
                     id: CONNECTION_INVOICE,
@@ -1841,7 +1842,7 @@ describe('NostrWalletConnectStore connection data scoping', () => {
     it('lookup_invoice includes preimage after invoice rehydration from storage', async () => {
         const PREIMAGE = hex64('a');
         const { store } = buildScopedStore();
-        const connection = seedReadOnlyConnection(store, {
+        const connection = seedConnection(store, {
             activity: [
                 {
                     id: CONNECTION_INVOICE,
@@ -1871,6 +1872,414 @@ describe('NostrWalletConnectStore connection data scoping', () => {
         expect(response.error).toBeUndefined();
         expect(response.result?.preimage).toBe(PREIMAGE);
         expect(response.result?.state).toBe('settled');
+    });
+
+    describe('refreshPendingMakeInvoices', () => {
+        const buildStore = () => {
+            const built = buildScopedStore();
+            jest.spyOn(built.store as any, 'scheduleSave').mockImplementation(
+                () => undefined
+            );
+            return built;
+        };
+
+        const pendingActivity = (id: string, overrides = {}) => ({
+            id,
+            type: 'make_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 1000,
+            invoice: { payment_request: id },
+            createdAt: new Date(),
+            ...overrides
+        });
+
+        it('promotes a pending invoice that has been paid and persists it', async () => {
+            const { store } = buildStore();
+            const connection = seedConnection(store, {
+                permissions: ['make_invoice', 'lookup_invoice'],
+                activity: [pendingActivity('lnbc1paid')]
+            });
+            jest.spyOn(
+                store as any,
+                'reconcilePendingMakeInvoiceActivity'
+            ).mockImplementation(async (activity: any) => {
+                activity.status = 'success';
+            });
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(connection.activity[0].status).toBe('success');
+            expect(connection.totalReceivedActivitySats).toBe(1000);
+            expect((store as any).scheduleSave).toHaveBeenCalled();
+        });
+
+        it('looks up an expired pending invoice before closing it', async () => {
+            const { store } = buildStore();
+            const connection = seedConnection(store, {
+                permissions: ['make_invoice', 'lookup_invoice'],
+                activity: [
+                    pendingActivity('lnbc1paidthenexpired', {
+                        expiresAt: new Date(Date.now() - 60_000)
+                    }),
+                    pendingActivity('lnbc1unpaidexpired', {
+                        expiresAt: new Date(Date.now() - 60_000)
+                    })
+                ]
+            });
+            jest.spyOn(
+                store as any,
+                'reconcilePendingMakeInvoiceActivity'
+            ).mockImplementation(async (activity: any) => {
+                activity.status =
+                    activity.id === 'lnbc1paidthenexpired'
+                        ? 'success'
+                        : 'expired';
+            });
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(connection.activity[0].status).toBe('success');
+            expect(connection.activity[1].status).toBe('expired');
+            expect(connection.totalReceivedActivitySats).toBe(1000);
+        });
+
+        it('tolerates persisted string dates', async () => {
+            const { store } = buildStore();
+            const connection = seedConnection(store, {
+                activity: [
+                    pendingActivity('lnbc1strdate', {
+                        createdAt: '2024-01-01T00:00:00.000Z',
+                        expiresAt: '2024-01-02T00:00:00.000Z'
+                    })
+                ]
+            });
+            const reconcile = jest
+                .spyOn(store as any, 'reconcilePendingMakeInvoiceActivity')
+                .mockResolvedValue(undefined);
+
+            await expect(
+                store.refreshPendingMakeInvoices({ force: true })
+            ).resolves.toBeUndefined();
+
+            expect(reconcile).toHaveBeenCalledTimes(1);
+            expect(connection.activity[0].status).toBe('pending');
+        });
+
+        it('rotates through more than 20 pending invoices across refreshes', async () => {
+            const { store } = buildStore();
+            const base = Date.now();
+            seedConnection(store, {
+                activity: Array.from({ length: 25 }, (_, i) =>
+                    pendingActivity(`lnbc1inv${i}`, {
+                        createdAt: new Date(base - i * 1000)
+                    })
+                )
+            });
+            const reconcile = jest
+                .spyOn(store as any, 'reconcilePendingMakeInvoiceActivity')
+                .mockResolvedValue(undefined);
+            const idsOf = () =>
+                reconcile.mock.calls.map((call: any[]) => call[0].id);
+
+            await store.refreshPendingMakeInvoices({ force: true });
+            expect(reconcile).toHaveBeenCalledTimes(20);
+            expect(idsOf()).toContain('lnbc1inv0');
+            expect(idsOf()).not.toContain('lnbc1inv24');
+
+            await store.refreshPendingMakeInvoices({ force: true });
+            expect(idsOf()).toContain('lnbc1inv24');
+            expect(new Set(idsOf()).size).toBe(25);
+        });
+
+        it('does not let unconfigured Cashu invoices use the lookup limit', async () => {
+            const { store } = buildStore();
+            const base = Date.now();
+            seedConnection(store, {
+                activity: [
+                    ...Array.from({ length: 20 }, (_, i) =>
+                        pendingActivity(`cashu${i}`, {
+                            payment_source: 'cashu',
+                            createdAt: new Date(base + i * 1000)
+                        })
+                    ),
+                    pendingActivity('lnbc1older', {
+                        createdAt: new Date(base - 100_000)
+                    })
+                ]
+            });
+            expect(store.isCashuConfigured).toBe(false);
+            const reconcile = jest
+                .spyOn(store as any, 'reconcilePendingMakeInvoiceActivity')
+                .mockResolvedValue(undefined);
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(reconcile).toHaveBeenCalledTimes(1);
+            expect((reconcile.mock.calls[0] as any[])[0].id).toBe('lnbc1older');
+        });
+
+        it('runs one refresh at a time and does not re-check the same invoices on the trailing run', async () => {
+            const { store } = buildStore();
+            seedConnection(store, {
+                activity: [pendingActivity('lnbc1single')]
+            });
+            let release: () => void = () => undefined;
+            const gate = new Promise<void>((resolve) => {
+                release = resolve;
+            });
+            const reconcile = jest
+                .spyOn(store as any, 'reconcilePendingMakeInvoiceActivity')
+                .mockImplementation(() => gate);
+
+            const first = store.refreshPendingMakeInvoices({ force: true });
+            const second = store.refreshPendingMakeInvoices({ force: true });
+            const third = store.refreshPendingMakeInvoices({ force: true });
+            await Promise.resolve();
+            expect(reconcile).toHaveBeenCalledTimes(1);
+
+            release();
+            await Promise.all([first, second, third]);
+
+            // trailing run found the same objects already checked
+            expect(reconcile).toHaveBeenCalledTimes(1);
+
+            // a fresh cycle checks them again
+            await store.refreshPendingMakeInvoices({ force: true });
+            expect(reconcile).toHaveBeenCalledTimes(2);
+        });
+
+        it('re-checks invoices on the trailing run when connections were reloaded mid-flight', async () => {
+            const { store } = buildStore();
+            seedConnection(store, {
+                activity: [pendingActivity('lnbc1reloaded')]
+            });
+            let release: () => void = () => undefined;
+            const gate = new Promise<void>((resolve) => {
+                release = resolve;
+            });
+            const reconcile = jest
+                .spyOn(store as any, 'reconcilePendingMakeInvoiceActivity')
+                .mockImplementationOnce(() => gate)
+                .mockResolvedValue(undefined);
+
+            const first = store.refreshPendingMakeInvoices({ force: true });
+            await Promise.resolve();
+            // loadConnections replaces the connection (and activity) objects
+            seedConnection(store, {
+                activity: [pendingActivity('lnbc1reloaded')]
+            });
+            const second = store.refreshPendingMakeInvoices({ force: true });
+
+            release();
+            await Promise.all([first, second]);
+
+            expect(reconcile).toHaveBeenCalledTimes(2);
+        });
+
+        describe('with Cashu configured', () => {
+            const cashuPending = (id: string, overrides = {}) =>
+                pendingActivity(id, {
+                    payment_source: 'cashu',
+                    // older than the min age gate
+                    createdAt: new Date(Date.now() - 60_000),
+                    invoice: { paymentRequest: id, quote: `quote-${id}` },
+                    ...overrides
+                });
+
+            const enableCashu = (store: any) => {
+                store.settingsStore.settings.ecash.enableCashu = true;
+                store.cashuEnabled = true;
+                store.cashuStore = {
+                    isProperlyConfigured: () => true,
+                    invoices: []
+                };
+            };
+
+            it('skips Cashu invoices inside the per-connection debounce', async () => {
+                const { store } = buildStore();
+                const connection = seedConnection(store, {
+                    activity: [cashuPending('cashu-debounced')]
+                });
+                enableCashu(store);
+                expect(store.isCashuConfigured).toBe(true);
+                const reconcile = jest
+                    .spyOn(store as any, 'reconcilePendingMakeInvoiceActivity')
+                    .mockResolvedValue(undefined);
+                (store as any).lastPendingInvoiceStatusFetchByConnection.set(
+                    connection.id,
+                    Date.now()
+                );
+
+                await store.refreshPendingMakeInvoices({ force: true });
+                expect(reconcile).not.toHaveBeenCalled();
+
+                (store as any).lastPendingInvoiceStatusFetchByConnection.set(
+                    connection.id,
+                    Date.now() - 31_000
+                );
+                await store.refreshPendingMakeInvoices({ force: true });
+                expect(reconcile).toHaveBeenCalledTimes(1);
+            });
+
+            it('stamps the debounce so an immediate second refresh skips Cashu', async () => {
+                const { store } = buildStore();
+                seedConnection(store, {
+                    activity: [cashuPending('cashu-stamped')]
+                });
+                enableCashu(store);
+                const reconcile = jest
+                    .spyOn(store as any, 'reconcilePendingMakeInvoiceActivity')
+                    .mockResolvedValue(undefined);
+
+                await store.refreshPendingMakeInvoices({ force: true });
+                await store.refreshPendingMakeInvoices({ force: true });
+
+                expect(reconcile).toHaveBeenCalledTimes(1);
+            });
+
+            it('rehydrates a stored Cashu invoice before reconciling', async () => {
+                const { store } = buildStore();
+                seedConnection(store, {
+                    activity: [cashuPending('cashu-rehydrate')]
+                });
+                enableCashu(store);
+                let seen: unknown;
+                jest.spyOn(
+                    store as any,
+                    'reconcilePendingMakeInvoiceActivity'
+                ).mockImplementation(async (activity: any) => {
+                    seen = activity.invoice;
+                });
+
+                await store.refreshPendingMakeInvoices({ force: true });
+
+                expect(seen).toBeInstanceOf(CashuInvoice);
+            });
+        });
+
+        it('skips non-forced refreshes inside the throttle window', async () => {
+            const { store } = buildStore();
+            seedConnection(store, {
+                activity: [pendingActivity('lnbc1throttle')]
+            });
+            const reconcile = jest
+                .spyOn(store as any, 'reconcilePendingMakeInvoiceActivity')
+                .mockResolvedValue(undefined);
+
+            await store.refreshPendingMakeInvoices();
+            expect(reconcile).toHaveBeenCalledTimes(1);
+
+            await store.refreshPendingMakeInvoices();
+            expect(reconcile).toHaveBeenCalledTimes(1);
+
+            await store.refreshPendingMakeInvoices({ force: true });
+            expect(reconcile).toHaveBeenCalledTimes(2);
+        });
+
+        it('promotes an expired lightning invoice the node reports as paid', async () => {
+            const { store } = buildStore();
+            const expiredInvoice = {
+                payment_request: 'lnbc1expiredpaid',
+                r_hash: Base64Utils.hexToBase64(CONNECTION_HASH),
+                creation_date: String(1_700_000_000),
+                expiry: String(60),
+                value: '1000'
+            };
+            const connection = seedConnection(store, {
+                permissions: ['make_invoice', 'lookup_invoice'],
+                activity: [
+                    pendingActivity('lnbc1expiredpaid', {
+                        invoice: expiredInvoice,
+                        expiresAt: new Date(Date.now() - 60_000)
+                    })
+                ]
+            });
+            const lookup = jest
+                .spyOn(NostrConnectUtils, 'lookupInvoicePaidFromNode')
+                .mockResolvedValue(true);
+            jest.spyOn(
+                store as any,
+                'refreshLightningInvoiceFromNode'
+            ).mockResolvedValue(undefined);
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(lookup).toHaveBeenCalledTimes(1);
+            expect(connection.activity[0].status).toBe('success');
+            expect(connection.totalReceivedActivitySats).toBe(1000);
+            lookup.mockRestore();
+        });
+
+        it('closes an expired lightning invoice the node reports as unpaid', async () => {
+            const { store } = buildStore();
+            const connection = seedConnection(store, {
+                activity: [
+                    pendingActivity('lnbc1expiredunpaid', {
+                        expiresAt: new Date(Date.now() - 60_000)
+                    })
+                ]
+            });
+            const lookup = jest
+                .spyOn(NostrConnectUtils, 'lookupInvoicePaidFromNode')
+                .mockResolvedValue(false);
+            const coerce = jest
+                .spyOn(NostrConnectUtils, 'coerceLightningInvoice')
+                .mockReturnValue({
+                    isPaid: false,
+                    isExpired: true,
+                    getPaymentRequest: 'lnbc1expiredunpaid',
+                    getRHash: CONNECTION_HASH
+                } as any);
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(lookup).toHaveBeenCalledTimes(1);
+            expect(connection.activity[0].status).toBe('expired');
+            expect(connection.totalReceivedActivitySats).toBe(0);
+            lookup.mockRestore();
+            coerce.mockRestore();
+        });
+
+        it('flushes a pending debounced save before reloading from storage', async () => {
+            const { store } = buildStore();
+            const order: string[] = [];
+            jest.spyOn(store as any, 'flushScheduledSave').mockImplementation(
+                async () => {
+                    order.push('flush');
+                }
+            );
+            jest.spyOn(Storage, 'getItem').mockImplementation(async () => {
+                order.push('read');
+                return null;
+            });
+
+            await store.loadConnections();
+
+            expect(order).toEqual(['flush', 'read']);
+        });
+
+        it('does not save when nothing changed and survives lookup errors', async () => {
+            const { store } = buildStore();
+            const connection = seedConnection(store, {
+                activity: [pendingActivity('lnbc1stillpending')]
+            });
+            jest.spyOn(
+                store as any,
+                'reconcilePendingMakeInvoiceActivity'
+            ).mockRejectedValue(new Error('node unavailable'));
+            const errorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => undefined);
+
+            await expect(
+                store.refreshPendingMakeInvoices({ force: true })
+            ).resolves.toBeUndefined();
+
+            expect(connection.activity[0].status).toBe('pending');
+            expect((store as any).scheduleSave).not.toHaveBeenCalled();
+            errorSpy.mockRestore();
+        });
     });
 });
 
