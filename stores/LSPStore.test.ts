@@ -33,7 +33,7 @@ jest.mock('../utils/LocaleUtils');
 jest.mock('./SettingsStore', () => ({
     __esModule: true,
     default: class {},
-    getLspConfigForNetwork: () => ({ lsps1Pubkey: 'lsp-pubkey' })
+    getLspConfigForNetwork: () => ({ lsps1Pubkey: 'aa' })
 }));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -238,6 +238,180 @@ describe('LSPStore custom-message request timeouts', () => {
                 data: Buffer.from('null').toString('base64')
             })
         ).toBe(false);
+    });
+
+    it('ignores a get_info reply from a peer the request was not sent to', () => {
+        const store = makeStore();
+        store.lsps1GetInfoCustomMessage();
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('bb', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getInfoId,
+                    result: { min_channel_size: 777777 }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(false);
+        expect(store.getInfoData).toEqual({});
+    });
+
+    it('accepts a get_info reply from the peer the request was sent to', () => {
+        const store = makeStore();
+        store.lsps1GetInfoCustomMessage();
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getInfoId,
+                    result: { min_channel_size: 100000 }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(true);
+        expect(store.getInfoData?.result?.min_channel_size).toBe(100000);
+    });
+
+    it('ignores an extendable_channels reply from a peer the request was not sent to', () => {
+        const store = makeStore();
+        store.getExtendableChannels();
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('bb', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getExtendableChannelsId,
+                    result: {
+                        extendable_channels: [{ short_channel_id: '1x1x1' }]
+                    }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(false);
+        expect(store.getExtendableChannelsData).toEqual([]);
+    });
+
+    it('ignores a create_extension_order reply from a peer the request was not sent to', () => {
+        const store = makeStore();
+        store.lsps7CreateOrderCustomMessage({});
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('bb', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.createExtensionOrderId,
+                    result: { order_id: 'other-order' }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(false);
+        expect(store.createExtensionOrderResponse).toEqual({});
+    });
+
+    it('accepts a get_info reply when the configured pubkey is uppercase', () => {
+        const store = makeStore();
+        jest.spyOn(store, 'getLSPSPubkey').mockReturnValue('AA');
+        store.lsps1GetInfoCustomMessage();
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getInfoId,
+                    result: { min_channel_size: 100000 }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(true);
+        expect(store.getInfoData?.result?.min_channel_size).toBe(100000);
+    });
+
+    it.each([
+        [
+            'lsps1.get_order',
+            (store: LSPStore) =>
+                store.lsps1GetOrderCustomMessage('order-1', 'cc'),
+            (store: LSPStore) => store.getOrderId,
+            (store: LSPStore) => store.getOrderResponse
+        ],
+        [
+            'lsps7.get_order',
+            (store: LSPStore) =>
+                store.lsps7GetOrderCustomMessage('order-1', 'cc'),
+            (store: LSPStore) => store.getExtensionOrderId,
+            (store: LSPStore) => store.getExtensionOrderResponse
+        ]
+    ])(
+        'binds %s to the peer stored with the order, not the configured LSP',
+        (_method, getOrder, requestId, response) => {
+            const store = makeStore();
+            getOrder(store);
+            const reply = (peer: string) =>
+                store.handleCustomMessages({
+                    peer: Buffer.from(peer, 'hex').toString('base64'),
+                    data: Buffer.from(
+                        JSON.stringify({
+                            jsonrpc: '2.0',
+                            id: requestId(store),
+                            result: { order_state: 'COMPLETED' }
+                        })
+                    ).toString('base64')
+                });
+
+            // 'aa' is the configured LSP pubkey
+            expect(reply('aa')).toBe(false);
+            expect(response(store)).toEqual({});
+
+            expect(reply('cc')).toBe(true);
+            expect(response(store)?.result?.order_state).toBe('COMPLETED');
+        }
+    );
+
+    it('resetLSPS1Data drops a late get_order reply', () => {
+        const store = makeStore();
+        store.lsps1GetOrderCustomMessage('order-1', 'aa');
+        store.resetLSPS1Data();
+
+        const handled = store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getOrderId,
+                    result: { order_state: 'COMPLETED' }
+                })
+            ).toString('base64')
+        });
+
+        expect(handled).toBe(false);
+        expect(store.getOrderResponse).toEqual({});
+    });
+
+    it('drops the peer binding of a timed-out get_order once the next poll replaces it', async () => {
+        const store = makeStore();
+        const peers = (store as any).customMessageRequestPeers;
+
+        const first = store.lsps7GetOrderCustomMessage('order-1', 'aa');
+        await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+        await first;
+        const firstId = store.getExtensionOrderId;
+
+        store.lsps7GetOrderCustomMessage('order-1', 'aa');
+
+        expect(peers[firstId]).toBeUndefined();
+        expect(Object.keys(peers)).toEqual([store.getExtensionOrderId]);
     });
 
     it('background probe send failure only sets the lease error', async () => {
@@ -1428,7 +1602,7 @@ describe('LSPStore lease fetch waits for the custom message subscription', () =>
             (this.listeners[event] || []).forEach((fn) => fn());
         }
     }
-    const lspChannel = { remotePubkey: 'lsp-pubkey' };
+    const lspChannel = { remotePubkey: 'aa' };
     const otherChannel = { remotePubkey: 'other-pubkey' };
 
     let sockets: FakeSocket[];
