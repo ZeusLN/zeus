@@ -542,6 +542,57 @@ describe('CashuStore sweepOfflinePendingTokens', () => {
             mint
         );
     });
+
+    it('still receives a token when there is no seed to derive a key from', async () => {
+        const { store, receiveTokenCDK } = storeWithQueuedToken([]);
+        (store.deriveCashuSecretKey as jest.Mock).mockReturnValue(null);
+
+        await store.sweepOfflinePendingTokens();
+
+        expect(receiveTokenCDK).toHaveBeenCalledWith(
+            'cashuBtoken',
+            undefined,
+            mint
+        );
+        expect(store.offlinePendingTokens).toEqual([]);
+    });
+});
+
+describe('CashuStore receiveTokenCDK', () => {
+    const newInitializedStore = () => {
+        const store = newStore();
+        store.cdkInitialized = true;
+        jest.spyOn(store, 'syncCDKBalances').mockResolvedValue(undefined);
+        return store;
+    };
+
+    beforeEach(() =>
+        (CashuDevKit.receive as jest.Mock).mockReset().mockResolvedValue(21)
+    );
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('passes the offered key to CDK as a P2PK signing key', async () => {
+        const store = newInitializedStore();
+
+        await expect(
+            store.receiveTokenCDK('cashuBtoken', 'aa'.repeat(32))
+        ).resolves.toBe(21);
+
+        expect(CashuDevKit.receive).toHaveBeenCalledWith('cashuBtoken', {
+            p2pk_signing_keys: ['aa'.repeat(32)]
+        });
+    });
+
+    it('passes no signing keys when no key is offered', async () => {
+        const store = newInitializedStore();
+
+        await store.receiveTokenCDK('cashuBtoken');
+
+        expect(CashuDevKit.receive).toHaveBeenCalledWith('cashuBtoken', {
+            p2pk_signing_keys: []
+        });
+    });
 });
 
 describe('CashuStore melting into our own invoice', () => {
