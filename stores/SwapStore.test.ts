@@ -88,10 +88,10 @@ const LOCKUP = {
     timeoutEta: 1700000000
 };
 
-const buildStore = () =>
+const buildStore = (swaps: any = {}, isTestNet = false) =>
     new SwapStore(
-        { nodeInfo: { isTestNet: false } } as any,
-        { settings: { swaps: {} } } as any
+        { nodeInfo: { isTestNet } } as any,
+        { settings: { swaps } } as any
     );
 
 /** Returns the swap array handed to Storage.setItem by the call. */
@@ -218,14 +218,8 @@ describe('SwapStore.getLockupTransaction', () => {
 describe('SwapStore Pro referral gating', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    const store = (swaps: any, isTestNet = false) =>
-        new SwapStore(
-            { nodeInfo: { isTestNet } } as any,
-            { settings: { swaps } } as any
-        );
-
     it('sends the Referral header on a pro host', () => {
-        const s = store({ hostMainnet: 'Custom', proEnabled: true });
+        const s = buildStore({ hostMainnet: 'Custom', proEnabled: true });
 
         expect(s.isProHost).toBe(true);
         expect(s.getHeaders).toEqual({
@@ -239,7 +233,7 @@ describe('SwapStore Pro referral gating', () => {
         // A migration can move a user onto a non-pro host without clearing
         // proEnabled, and the Pro switch only renders for pro hosts, so the
         // stale flag would otherwise be both live and unreachable.
-        const s = store({
+        const s = buildStore({
             hostMainnet: 'https://satsrouting.exchange/v2',
             proEnabled: true
         });
@@ -250,7 +244,7 @@ describe('SwapStore Pro referral gating', () => {
     });
 
     it('resolves an unset host to the default, which has no pro tier', () => {
-        const s = store({ proEnabled: true });
+        const s = buildStore({ proEnabled: true });
 
         expect(s.isProHost).toBe(false);
         expect(s.getHeaders).toBeUndefined();
@@ -266,12 +260,12 @@ describe('SwapStore Pro referral gating', () => {
             proEnabled: true
         };
 
-        expect(store(swaps, true).isProHost).toBe(true);
-        expect(store(swaps, false).isProHost).toBe(false);
+        expect(buildStore(swaps, true).isProHost).toBe(true);
+        expect(buildStore(swaps, false).isProHost).toBe(false);
     });
 
     it('withholds the header when proEnabled is off, pro host or not', () => {
-        const s = store({ hostMainnet: 'Custom', proEnabled: false });
+        const s = buildStore({ hostMainnet: 'Custom', proEnabled: false });
 
         expect(s.isProHost).toBe(true);
         expect(s.getHeaders).toBeUndefined();
@@ -282,12 +276,6 @@ describe('SwapStore Pro referral gating', () => {
 describe('SwapStore host selection', () => {
     const CUSTOM_HOST = 'https://my-boltz.local/v2';
 
-    const store = (swaps: any, isTestNet = false) =>
-        new SwapStore(
-            { nodeInfo: { isTestNet } } as any,
-            { settings: { swaps } } as any
-        );
-
     it('uses the custom host only on the network that selected it', () => {
         // customHost is one value shared across networks, and the settings
         // screen only shows the active network's selection.
@@ -297,8 +285,8 @@ describe('SwapStore host selection', () => {
             customHost: CUSTOM_HOST
         };
 
-        expect(store(testnetCustom, true).getHost).toBe(CUSTOM_HOST);
-        expect(store(testnetCustom, false).getHost).toBe(
+        expect(buildStore(testnetCustom, true).getHost).toBe(CUSTOM_HOST);
+        expect(buildStore(testnetCustom, false).getHost).toBe(
             'https://satsrouting.exchange/v2'
         );
 
@@ -308,8 +296,8 @@ describe('SwapStore host selection', () => {
             customHost: CUSTOM_HOST
         };
 
-        expect(store(mainnetCustom, false).getHost).toBe(CUSTOM_HOST);
-        expect(store(mainnetCustom, true).getHost).toBe(
+        expect(buildStore(mainnetCustom, false).getHost).toBe(CUSTOM_HOST);
+        expect(buildStore(mainnetCustom, true).getHost).toBe(
             'https://api.testnet.boltz.exchange/v2'
         );
     });
