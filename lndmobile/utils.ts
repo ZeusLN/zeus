@@ -34,6 +34,9 @@ export interface IStreamCommandOptions<IReq, Req> {
     request: ISendRequestClass<IReq, Req>;
     method: string;
     options: IReq;
+    // Echoed as `request_id` on every event of this stream. Leave unset for
+    // shared subscriptions.
+    requestId?: string;
 }
 
 export interface IStreamResultOptions<Res> {
@@ -63,25 +66,33 @@ export const sendCommand = async <IReq, Req, Res>({
 };
 
 export const sendStreamCommand = async <IReq, Req>(
-    { request, method, options }: IStreamCommandOptions<IReq, Req>,
+    {
+        request,
+        method,
+        options,
+        requestId = ''
+    }: IStreamCommandOptions<IReq, Req>,
     streamOnlyOnce: boolean = false
 ): Promise<string> => {
     const instance = request.create(options);
     const response = await LndMobile.sendStreamCommand(
         method,
         Base64Utils.bytesToBase64(request.encode(instance).finish()),
-        streamOnlyOnce
+        streamOnlyOnce,
+        requestId
     );
     return response;
 };
 
 export const sendBidiStreamCommand = async (
     method: string,
-    streamOnlyOnce: boolean = false
+    streamOnlyOnce: boolean = false,
+    requestId: string = ''
 ): Promise<string> => {
     const response = await LndMobile.sendBidiStreamCommand(
         method,
-        streamOnlyOnce
+        streamOnlyOnce,
+        requestId
     );
     return response;
 };

@@ -66,7 +66,11 @@ export default class LNC {
      * @param request the GRPC request message to send
      * @param onMessage the callback function to execute when a new message is received
      * @param onError the callback function to execute when an error is received
+     * @param requestId optional id the native module adds to every event of
+     * this stream as `request_id`. Every stream of a method emits under the
+     * method name, so concurrent streams can only be told apart by this id.
+     * @returns the event name to listen on
      */
-    subscribe(method: string, request?: object): string;
+    subscribe(method: string, request?: object, requestId?: string): string;
 }
 //# sourceMappingURL=lnc.d.ts.map

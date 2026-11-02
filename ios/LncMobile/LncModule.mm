@@ -196,19 +196,21 @@ RCT_EXPORT_METHOD(invokeRPC:(NSString *)nameSpace
 -(void)stopObserving {}
 
 RCT_EXPORT_METHOD(initListener:(NSString *)nameSpace
-                  eventName:(NSString *)eventName
-                  request:(NSString *)request)
+                  method:(NSString *)method
+                  request:(NSString *)request
+                  requestId:(NSString *)requestId)
 {
     StreamingCallback * gocb = [[StreamingCallback alloc] init];
     gocb.delegate = self;
-    [gocb setEventName:eventName];
+    [gocb setEventName:method];
+    gocb.requestId = requestId;
     NSError *error;
-    LndmobileInvokeRPC(nameSpace, eventName, request, gocb, &error);
+    LndmobileInvokeRPC(nameSpace, method, request, gocb, &error);
     if (error) {
         // Same synchronous-failure path as invokeRPC. Emit the message on the
         // stream's own event so subscribers reject rather than wait forever;
         // they already treat a non-JSON result as a raw Go error string.
-        NSLog(@"%@ error   %@", eventName, error);
+        NSLog(@"%@ error   %@", method, error);
         [gocb sendResult:error.localizedDescription];
     }
 }

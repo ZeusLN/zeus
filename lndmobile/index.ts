@@ -1,5 +1,9 @@
 import { EmitterSubscription, NativeModules } from 'react-native';
 import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
+import {
+    isEventForRequest,
+    newStreamRequestId
+} from '../utils/StreamRequestUtils';
 import { lnrpc, routerrpc, invoicesrpc } from './../proto/lightning';
 import Long from 'long';
 
@@ -303,19 +307,22 @@ const forcedTimeout = async (time_ms: number, response: any) => {
 
 // Sends one RouterSendPaymentV2 request and waits for its terminal event,
 // or for timeout_seconds + 1 with an outcome-unknown result. Every in-flight
-// call shares the stream's events, so each listener skips events for other
-// payment hashes.
+// call shares the stream's events, so each listener skips events tagged with
+// another call's request id, and payment updates for other payment hashes.
 const sendPaymentV2Stream = async (
     options: routerrpc.ISendPaymentRequest,
     expectedPaymentHash: string | undefined,
     timeout_seconds: number
 ): Promise<lnrpc.Payment> => {
     let listener: EmitterSubscription | undefined;
+    const requestId = newStreamRequestId();
     const call = () =>
         new Promise<lnrpc.Payment>((resolve, reject) => {
             listener = LndMobileEventEmitter.addListener(
                 'RouterSendPaymentV2',
                 (e) => {
+                    // other payments' errors and EOFs arrive on the same event
+                    if (!isEventForRequest(e, requestId)) return;
                     try {
                         const error = checkLndStreamErrorResponse(
                             'RouterSendPaymentV2',
@@ -359,7 +366,8 @@ const sendPaymentV2Stream = async (
                 {
                     request: routerrpc.SendPaymentRequest,
                     method: 'RouterSendPaymentV2',
-                    options
+                    options,
+                    requestId
                 },
                 false
             ).catch((error) => {

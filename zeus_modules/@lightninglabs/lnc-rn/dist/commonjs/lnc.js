@@ -238,11 +238,15 @@ class LNC {
    * @param request the GRPC request message to send
    * @param onMessage the callback function to execute when a new message is received
    * @param onError the callback function to execute when an error is received
+   * @param requestId optional id the native module adds to every event of
+   * this stream as `request_id`. Every stream of a method emits under the
+   * method name, so concurrent streams can only be told apart by this id.
+   * @returns the event name to listen on
    */
-  subscribe(method, request) {
+  subscribe(method, request, requestId = '') {
     _log.log.debug(`${method} request`, request);
     const reqJSON = JSON.stringify(request || {});
-    _reactNative.NativeModules.LncModule.initListener(this._namespace, method, reqJSON);
+    _reactNative.NativeModules.LncModule.initListener(this._namespace, method, reqJSON, requestId);
     return method;
   }
 }
