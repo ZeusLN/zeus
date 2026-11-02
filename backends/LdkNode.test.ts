@@ -2,6 +2,7 @@ const mockListPayments = jest.fn();
 const mockReceiveBolt11 = jest.fn();
 const mockReceiveVariableAmountBolt11 = jest.fn();
 const mockSendBolt11 = jest.fn();
+const mockSendBolt11UsingAmount = jest.fn();
 const mockSendSpontaneousPayment = jest.fn();
 const mockBolt12SendUsingAmount = jest.fn();
 const mockBolt12InitiateRefund = jest.fn();
@@ -24,6 +25,8 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
         },
         bolt11: {
             sendBolt11: (...args: any[]) => mockSendBolt11(...args),
+            sendBolt11UsingAmount: (...args: any[]) =>
+                mockSendBolt11UsingAmount(...args),
             receiveBolt11: (...args: any[]) => mockReceiveBolt11(...args),
             receiveVariableAmountBolt11: (...args: any[]) =>
                 mockReceiveVariableAmountBolt11(...args)
@@ -46,6 +49,8 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
 jest.mock('../stores/Stores');
 
 jest.mock('../utils/LocaleUtils');
+
+import { bech32 } from 'bech32';
 
 import LdkNode from './LdkNode';
 import Payment from '../models/Payment';
@@ -113,6 +118,80 @@ describe('LdkNode payment results', () => {
             expect(result.fee_msat).toEqual('0');
             expect(new Payment(result).getFee).toEqual('0');
         });
+    });
+});
+
+describe('LdkNode.payLightningInvoice with an explicit amount', () => {
+    // BOLT11 spec reference vectors: 2500u (250,000 sats) and no amount
+    const FIXED_AMOUNT_INVOICE =
+        'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+    const NO_AMOUNT_INVOICE =
+        'lnbc1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq9qrsgq357wnc5r2ueh7ck6q93dj32dlqnls087fxdwk8qakdyafkq3yap2r09nt4ndd0unm3z9u5t48y6ucv4r5sg7lk98c77ctvjczkspk5qprc90gx';
+    // 15010p is 1501 msat: a fixed amount below one sat. Zero timestamp,
+    // zero payment hash and a zeroed signature, which decode never checks.
+    const SUB_SAT_INVOICE = bech32.encode(
+        'lnbc15010p',
+        [
+            ...new Array(7).fill(0),
+            ...[1, 1, 20, ...new Array(52).fill(0)],
+            ...new Array(104).fill(0)
+        ],
+        Infinity
+    );
+
+    let ldk: LdkNode;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ldk = new LdkNode();
+        ldk.subscribeToEvents = () => () => {};
+        mockSendBolt11.mockResolvedValue(PAYMENT_ID);
+        mockSendBolt11UsingAmount.mockResolvedValue(PAYMENT_ID);
+        mockListPayments.mockResolvedValue([succeededPayment(0)]);
+    });
+
+    it.each([
+        ['a fixed-amount invoice', FIXED_AMOUNT_INVOICE],
+        ['a sub-satoshi fixed-amount invoice', SUB_SAT_INVOICE]
+    ])('pays %s at its own amount and ignores amt', async (_name, invoice) => {
+        await ldk.payLightningInvoice({
+            payment_request: invoice,
+            amt: '500000'
+        });
+
+        expect(mockSendBolt11UsingAmount).not.toHaveBeenCalled();
+        expect(mockSendBolt11).toHaveBeenCalledWith(
+            expect.objectContaining({ invoice })
+        );
+    });
+
+    it('pays a no-amount invoice with amt', async () => {
+        await ldk.payLightningInvoice({
+            payment_request: NO_AMOUNT_INVOICE,
+            amt: '5000'
+        });
+
+        expect(mockSendBolt11).not.toHaveBeenCalled();
+        expect(mockSendBolt11UsingAmount).toHaveBeenCalledWith(
+            expect.objectContaining({
+                invoice: NO_AMOUNT_INVOICE,
+                amountMsat: 5_000_000
+            })
+        );
+    });
+
+    it('leaves an invoice it cannot decode to ldk-node', async () => {
+        await ldk.payLightningInvoice({
+            payment_request: 'lnbcrt1...',
+            amt: '5000'
+        });
+
+        expect(mockSendBolt11UsingAmount).toHaveBeenCalledWith(
+            expect.objectContaining({
+                invoice: 'lnbcrt1...',
+                amountMsat: 5_000_000
+            })
+        );
     });
 });
 
