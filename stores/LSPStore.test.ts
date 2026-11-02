@@ -27,7 +27,9 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsFlowLSP: jest.fn(() => true),
     supportsLSPScustomMessage: () => true,
     supportsLSPS7native: jest.fn(() => false),
-    lsps7GetExtendableChannels: jest.fn()
+    lsps7GetExtendableChannels: jest.fn(),
+    requestLsps1Liquidity: jest.fn(),
+    lsps7CreateOrder: jest.fn()
 }));
 jest.mock('../utils/LocaleUtils');
 jest.mock('./SettingsStore', () => ({
@@ -1887,5 +1889,117 @@ describe('LSPStore get_extendable_channels response', () => {
                 extendableChannel
             ])
         ).toEqual([extendableChannel]);
+    });
+});
+
+describe('LSPStore late REST and native responses', () => {
+    const createOrderState = { lspBalanceSat: 0, clientBalanceSat: 0 };
+    let answers: {
+        resolve: (response: any) => void;
+        reject: (error: any) => void;
+    }[];
+
+    const holdRequests = () =>
+        new Promise((resolve, reject) => {
+            answers.push({ resolve, reject });
+        }) as any;
+
+    const body = (data: any) => ({
+        info: () => ({ status: 200 }),
+        data: JSON.stringify(data)
+    });
+
+    beforeEach(() => {
+        answers = [];
+        jest.clearAllMocks();
+        jest.mocked(ReactNativeBlobUtil.fetch).mockImplementation(holdRequests);
+        jest.mocked(BackendUtils.requestLsps1Liquidity).mockImplementation(
+            holdRequests
+        );
+        jest.mocked(BackendUtils.lsps7CreateOrder).mockImplementation(
+            holdRequests
+        );
+        jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(false);
+    });
+
+    it('resetLSPS1Data drops a late REST create_order response', async () => {
+        const store = makeStore();
+        const request = store.lsps1CreateOrderREST(createOrderState);
+        store.resetLSPS1Data();
+        answers[0].resolve(body({ order_id: 'late' }));
+        await request;
+
+        expect(store.createOrderResponse).toEqual({});
+    });
+
+    it('resetLSPS1Data drops a late REST create_order failure', async () => {
+        const store = makeStore();
+        const rejected = store.lsps1CreateOrderREST(createOrderState);
+        store.resetLSPS1Data();
+        const failed = store.lsps1CreateOrderREST(createOrderState);
+        store.resetLSPS1Data();
+        answers[0].resolve(body({ error: true, message: 'late error' }));
+        answers[1].reject('timeout');
+        await rejected;
+        await failed;
+
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe('');
+    });
+
+    it('keeps the order under review when an older REST create_order is answered', async () => {
+        const store = makeStore();
+        const first = store.lsps1CreateOrderREST(createOrderState);
+        store.resetLSPS1Data();
+        const second = store.lsps1CreateOrderREST(createOrderState);
+        answers[1].resolve(body({ order_id: 'current' }));
+        await second;
+        answers[0].resolve(body({ order_id: 'late' }));
+        await first;
+
+        expect(store.createOrderResponse).toEqual({ order_id: 'current' });
+    });
+
+    it('resetLSPS1Data drops a late REST get_info response', async () => {
+        const store = makeStore();
+        const request = store.lsps1GetInfoREST();
+        store.resetLSPS1Data();
+        answers[0].resolve(body({ options: {} }));
+        await request;
+
+        expect(store.getInfoData).toEqual({});
+    });
+
+    it('resetLSPS1Data drops a late native create_order response', async () => {
+        const store = makeStore();
+        const request = store.lsps1CreateOrderNative(createOrderState);
+        store.resetLSPS1Data();
+        answers[0].resolve({ order_id: 'late' });
+        await request;
+
+        expect(store.createOrderResponse).toEqual({});
+    });
+
+    it('resetLSPS7Data drops a late native create_order response', async () => {
+        jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(true);
+        const store = makeStore();
+        const request = store.lsps7CreateOrderCustomMessage({});
+        store.resetLSPS7Data();
+        answers[0].resolve({ order_id: 'late' });
+        await request;
+
+        expect(store.createExtensionOrderResponse).toEqual({});
+    });
+
+    it('keeps the latest REST get_order response when an older one is answered later', async () => {
+        const store = makeStore();
+        const first = store.lsps1GetOrderREST('order-a', 'https://lsp-a');
+        const second = store.lsps1GetOrderREST('order-b', 'https://lsp-b');
+        answers[1].resolve(body({ order_id: 'order-b' }));
+        await second;
+        answers[0].resolve(body({ order_id: 'order-a' }));
+        await first;
+
+        expect(store.getOrderResponse).toEqual({ order_id: 'order-b' });
     });
 });
