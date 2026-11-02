@@ -7,7 +7,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.Inet4Address
+import java.net.InetAddress
 import java.net.URL
+import java.net.URLEncoder
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
@@ -46,6 +49,25 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     private val handleLock = Any()
 
     companion object {
+        // Internal / non-routable IPv4 ranges as (network, prefix length):
+        // 0/8 this network, 10/8 private, 100.64/10 shared CGNAT,
+        // 127/8 loopback, 169.254/16 link-local, 172.16/12 private,
+        // 192.0.0/24 IETF protocol assignments, 192.168/16 private,
+        // 198.18/15 benchmarking, 224/4 multicast, 240/4 reserved
+        private val DISALLOWED_IPV4_RANGES = listOf(
+            0x00000000L to 8,
+            0x0a000000L to 8,
+            0x64400000L to 10,
+            0x7f000000L to 8,
+            0xa9fe0000L to 16,
+            0xac100000L to 12,
+            0xc0000000L to 24,
+            0xc0a80000L to 16,
+            0xc6120000L to 15,
+            0xe0000000L to 4,
+            0xf0000000L to 4
+        )
+
         private const val TAG = "CashuDevKitModule"
     }
 
@@ -931,6 +953,92 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     /**
+     * Reject loopback, private (RFC1918), link-local and other internal hosts
+     * for server-supplied mint URLs. Matches on the literal host only (no DNS
+     * resolution) to avoid a rebinding/latency side channel; this is
+     * defense-in-depth on top of the JS-side configured-mint binding.
+     */
+    private fun isDisallowedMintHost(host: String?): Boolean {
+        if (host.isNullOrBlank()) return true
+        // A single trailing dot is the fully qualified spelling of the same
+        // host (localhost., 127.0.0.1.), so drop it before matching
+        val h = host.trim().trimStart('[').trimEnd(']').lowercase()
+            .removeSuffix(".")
+        if (h == "localhost" || h.endsWith(".localhost")) return true
+        // A host containing ':' can only be an IPv6 literal (hostnames
+        // cannot contain it), so parse it numerically instead of
+        // prefix-matching one spelling: mapped (::ffff:127.0.0.1),
+        // hex-mapped (::ffff:7f00:1) and zero-expanded (0:0:0:0:0:0:0:1)
+        // forms of the same internal address all normalize to the same
+        // bytes. This still involves no DNS - the brackets force
+        // InetAddress to treat the input as a literal or throw.
+        if (h.contains(':')) return isDisallowedIpv6Literal(h)
+        return isDisallowedIpv4(h)
+    }
+
+    // Parse the host the way inet_aton (and so the OS resolver) does, so
+    // decimal (2130706433), hex (0x7f.1), octal (0177.0.0.1) and shortened
+    // (127.1) spellings of an internal address are caught as well as the
+    // dotted-quad one. A host that does not parse is a hostname and is not
+    // an internal literal.
+    private fun isDisallowedIpv4(h: String): Boolean {
+        val addr = parseIpv4(h) ?: return false
+        return DISALLOWED_IPV4_RANGES.any { (network, prefix) ->
+            val mask = (0xffffffffL shl (32 - prefix)) and 0xffffffffL
+            (addr and mask) == network
+        }
+    }
+
+    private fun parseIpv4(h: String): Long? {
+        val parts = h.split('.')
+        if (parts.size > 4) return null
+        val values = parts.map { parseIpv4Part(it) ?: return null }
+        var addr = 0L
+        for (i in 0 until values.size - 1) {
+            if (values[i] > 0xff) return null
+            addr = addr or (values[i] shl (24 - 8 * i))
+        }
+        // The last part fills all remaining bytes: a.b.c.d, a.b.c(16 bits),
+        // a.b(24 bits), a(32 bits)
+        if (values.last() > (1L shl (8 * (5 - values.size))) - 1) return null
+        return addr or values.last()
+    }
+
+    private fun parseIpv4Part(part: String): Long? {
+        val (digits, radix) = when {
+            part.startsWith("0x") -> part.substring(2) to 16
+            part.length > 1 && part.startsWith("0") -> part.substring(1) to 8
+            else -> part to 10
+        }
+        if (digits.isEmpty()) return if (radix == 16) 0L else null
+        if (!digits.all { Character.digit(it, radix) >= 0 }) return null
+        val value = digits.toLongOrNull(radix) ?: return null
+        return if (value > 0xffffffffL) null else value
+    }
+
+    private fun isDisallowedIpv6Literal(literal: String): Boolean {
+        val addr = try {
+            InetAddress.getByName("[$literal]")
+        } catch (e: Exception) {
+            // Not parseable as an IPv6 literal and not a valid hostname
+            // either: fail closed
+            return true
+        }
+        // IPv4-mapped literals parse to an Inet4Address in any spelling;
+        // hold the embedded address to the same rules as a dotted host
+        if (addr is Inet4Address) {
+            return isDisallowedIpv4(addr.hostAddress ?: return true)
+        }
+        if (addr.isLoopbackAddress || addr.isLinkLocalAddress ||
+            addr.isSiteLocalAddress || addr.isAnyLocalAddress
+        ) {
+            return true
+        }
+        // fc00::/7 unique-local: no InetAddress predicate covers it
+        return (addr.address[0].toInt() and 0xfe) == 0xfc
+    }
+
+    /**
      * Check mint quote status directly from the mint's HTTP API.
      * This bypasses the local database check and works for external quotes
      * (e.g., quotes created by ZeusPay server).
@@ -941,7 +1049,36 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             try {
                 // Normalize mint URL and construct the quote endpoint
                 val normalizedUrl = mintUrl.trimEnd('/')
-                val quoteUrl = "$normalizedUrl/v1/mint/quote/bolt11/$quoteId"
+
+                // Security: this issues a raw HTTP GET against a mint URL that
+                // originates from a ZEUS Pay socket event. Refuse cleartext and
+                // internal/loopback/link-local targets so a forged event cannot
+                // downgrade the fetch or drive the device into an SSRF against
+                // the local network. quoteId is percent-encoded so it cannot
+                // alter the request path.
+                val parsed = try {
+                    URL(normalizedUrl)
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        promise.reject("INVALID_URL", "Invalid mint URL: $mintUrl")
+                    }
+                    return@launch
+                }
+                if (!parsed.protocol.equals("https", ignoreCase = true) ||
+                    isDisallowedMintHost(parsed.host)
+                ) {
+                    Log.e(TAG, "checkExternalMintQuote: refusing unsafe mint URL $mintUrl")
+                    withContext(Dispatchers.Main) {
+                        promise.reject(
+                            "UNSAFE_MINT_URL",
+                            "Refusing to contact non-HTTPS or internal mint host: $mintUrl"
+                        )
+                    }
+                    return@launch
+                }
+
+                val encodedQuoteId = URLEncoder.encode(quoteId, "UTF-8")
+                val quoteUrl = "$normalizedUrl/v1/mint/quote/bolt11/$encodedQuoteId"
 
                 Log.d(TAG, "checkExternalMintQuote: Fetching $quoteUrl")
 
@@ -1023,7 +1160,16 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     "PAID" -> QuoteState.PAID
                     "PENDING" -> QuoteState.PENDING
                     "ISSUED" -> QuoteState.ISSUED
-                    else -> QuoteState.PAID // Default to PAID for external quotes
+                    // Fail closed: never assume PAID for an unrecognized state.
+                    else -> {
+                        withContext(Dispatchers.Main) {
+                            promise.reject(
+                                "INVALID_QUOTE_STATE",
+                                "Unrecognized mint quote state: $state"
+                            )
+                        }
+                        return@launch
+                    }
                 }
 
                 // Storing a key equal to cdk's seed prefix on the quote
