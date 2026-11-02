@@ -48,6 +48,7 @@ import SettingsStore, {
 
 import Storage from '../storage';
 
+import Invoice from '../models/Invoice';
 import Swap, { SwapState, SwapType } from '../models/Swap';
 import {
     privateKeyFromKeys,
@@ -232,6 +233,31 @@ const repairRescuedPreimage = (stored: any, rescued: any) => {
 
     stored.preimage = rescued.preimage;
     if (!stored.keys) stored.keys = rescued.keys;
+};
+
+// Each request that confirms a claimed submarine swap's invoice is paid
+// (the node's invoice lookup, then the host's preimage) gets this long,
+// so the two together stay within the 10s the swap status poll is given.
+// A request that runs out counts as not confirmed.
+const SWAP_CLAIM_CHECK_TIMEOUT_MS = 5000;
+
+// Rejects when the request has not settled after ms, after calling
+// onTimeout (to cancel it, where it can be)
+const withTimeout = <T>(
+    request: Promise<T>,
+    ms: number,
+    onTimeout?: () => void
+): Promise<T> => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    return Promise.race([
+        request,
+        new Promise<never>((_, reject) => {
+            timer = setTimeout(() => {
+                onTimeout?.();
+                reject(new Error('Request timeout'));
+            }, ms);
+        })
+    ]).finally(() => clearTimeout(timer));
 };
 
 export default class SwapStore {
@@ -1507,6 +1533,69 @@ export default class SwapStore {
         }
     };
 
+    /**
+     * Whether the invoice of a submarine swap is known to be paid. The host
+     * can only claim the lockup with the invoice's preimage, which it learns
+     * by paying the invoice, and a swap stored as claimed is not polled or
+     * offered a refund again, so the host's transaction.claimed is only
+     * recorded once this is true: the node reports the invoice paid, or the
+     * preimage the host gives for the swap hashes to the payment hash. False
+     * when neither confirms it, also when the node or host can't be reached
+     * or does not answer within SWAP_CLAIM_CHECK_TIMEOUT_MS.
+     */
+    public isSubmarineSwapInvoicePaid = async (
+        id: string,
+        invoice: string,
+        endpoint?: string
+    ): Promise<boolean> => {
+        let paymentHash: string | undefined;
+        try {
+            paymentHash = Bolt11Utils.decode(invoice).payment_hash;
+        } catch (e) {
+            return false;
+        }
+        if (!paymentHash) return false;
+        paymentHash = paymentHash.toLowerCase();
+
+        try {
+            const response = await withTimeout(
+                BackendUtils.lookupInvoice({ r_hash: paymentHash }),
+                SWAP_CLAIM_CHECK_TIMEOUT_MS
+            );
+            if (
+                response &&
+                typeof response === 'object' &&
+                new Invoice(response).isPaid
+            ) {
+                return true;
+            }
+        } catch (e) {
+            // backends throw for an invoice the node did not issue
+        }
+
+        try {
+            const request = ReactNativeBlobUtil.fetch(
+                'GET',
+                `${endpoint || this.getHost}/swap/submarine/${id}/preimage`,
+                this.getHeaders
+            );
+            const response = await withTimeout(
+                request,
+                SWAP_CLAIM_CHECK_TIMEOUT_MS,
+                () => request.cancel?.()
+            );
+            const preimage = response.json()?.preimage;
+            return (
+                typeof preimage === 'string' &&
+                /^[0-9a-f]{64}$/i.test(preimage) &&
+                crypto.sha256(Buffer.from(preimage, 'hex')).toString('hex') ===
+                    paymentHash
+            );
+        } catch (e) {
+            return false;
+        }
+    };
+
     @action
     public fetchAndUpdateSwaps = async () => {
         const { implementation } = this.settingsStore;
@@ -1565,7 +1654,22 @@ export default class SwapStore {
                     );
 
                     const result = await response.json();
-                    if (result?.status) {
+                    if (
+                        result?.status === SwapState.TransactionClaimed &&
+                        swap.type === SwapType.Submarine &&
+                        swap.invoice &&
+                        !(await this.isSubmarineSwapInvoicePaid(
+                            swap.id,
+                            swap.invoice,
+                            host
+                        ))
+                    ) {
+                        // keep the stored status, so the swap is polled
+                        // again and SwapDetails can offer the refund
+                        console.warn(
+                            `Swap ${swap.id} reported claimed, but its invoice is not known to be paid`
+                        );
+                    } else if (result?.status) {
                         statuses.set(swap.id, result.status);
                     }
                 } catch (err: any) {
