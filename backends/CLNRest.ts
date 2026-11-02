@@ -24,6 +24,7 @@ import {
     RequestMethod
 } from '../utils/TorUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
+import { inFlightRequestKey } from '../utils/InFlightRequestUtils';
 
 const calls = new Map<string, Promise<any>>();
 
@@ -63,9 +64,7 @@ export default class CLNRest {
         useTor?: boolean,
         timeout?: number
     ) => {
-        // use body data as an identifier too, we don't want to cancel when we
-        // are making multiples calls to get all the node names, for example
-        const id = data ? `${url}${JSON.stringify(data)}` : url;
+        const id = inFlightRequestKey(headers, url, data);
         if (calls.has(id)) {
             return calls.get(id);
         }

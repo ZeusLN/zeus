@@ -22,6 +22,7 @@ import {
     TransactionPageRequest
 } from './../utils/OnchainTransactionUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
+import { inFlightRequestKey } from './../utils/InFlightRequestUtils';
 import BigNumber from 'bignumber.js';
 
 interface Headers {
@@ -48,9 +49,7 @@ export default class LND {
         useTor?: boolean,
         timeout?: number
     ) => {
-        // use body data as an identifier too, we don't want to cancel when we
-        // are making multiples calls to get all the node names, for example
-        const id = data ? `${url}${JSON.stringify(data)}` : url;
+        const id = inFlightRequestKey(headers, url, data);
         if (calls.has(id)) {
             return calls.get(id);
         }
