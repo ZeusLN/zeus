@@ -66,23 +66,24 @@ const renderCreate = async (
     const SettingsStore = {
         updateSettingsGroup: jest.fn(() => Promise.resolve())
     };
+    const CashuStore = {
+        selectedMintUrl: MINT_URL,
+        mintUrls,
+        mintInfos: { [MINT_URL]: { name: 'Example Mint' } },
+        cashuWallets: { [MINT_URL]: { pubkey: 'pubkey' } }
+    };
     await render(
         <CreateCashuLightningAddress
             {...({
                 navigation,
                 route: { params },
-                CashuStore: {
-                    selectedMintUrl: MINT_URL,
-                    mintUrls,
-                    mintInfos: { [MINT_URL]: { name: 'Example Mint' } },
-                    cashuWallets: { [MINT_URL]: { pubkey: 'pubkey' } }
-                },
+                CashuStore,
                 LightningAddressStore,
                 SettingsStore
             } as any)}
         />
     );
-    return { navigation, LightningAddressStore, SettingsStore };
+    return { navigation, LightningAddressStore, SettingsStore, CashuStore };
 };
 
 const findButton = (title: string) =>
@@ -275,5 +276,79 @@ describe('CreateCashuLightningAddress focus listener', () => {
         await screen.unmount();
 
         expect(unsubscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('reloads the mints when the screen is focused again', async () => {
+        const { navigation, CashuStore } = await renderCreate(
+            ['Wallet', 'ReceiveEcash'],
+            {},
+            []
+        );
+        expect(mintPickers()).toHaveLength(0);
+        const handleFocus = (navigation.addListener.mock.calls[0] as any[])[1];
+
+        // a mint is added on the Mints screen, then the user comes back
+        CashuStore.mintUrls = [MINT_URL];
+        // the first focus is the screen opening, so it does not reload
+        await act(async () => handleFocus());
+        await act(async () => handleFocus());
+
+        expect(mintPickers()).toHaveLength(1);
+        expect(findButton('cashu.tapToConfigure')).toBeUndefined();
+    });
+});
+
+describe('CreateCashuLightningAddress when the server call fails', () => {
+    beforeEach(() => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it.each([
+        ['returns success: false', () => Promise.resolve({ success: false })],
+        ['throws', () => Promise.reject(new Error('update failed'))]
+    ])(
+        'stays on the screen when the switch update %s',
+        async (_name: string, update: () => Promise<any>) => {
+            const { navigation, LightningAddressStore, SettingsStore } =
+                await renderCreate(
+                    ['Wallet', 'LightningAddress', 'LightningAddressSettings'],
+                    { switchTo: true }
+                );
+            LightningAddressStore.update.mockImplementation(update);
+
+            await pressButton('views.Settings.LightningAddress.switchToCashu');
+            await flush();
+
+            expect(LightningAddressStore.update).toHaveBeenCalled();
+            expect(SettingsStore.updateSettingsGroup).not.toHaveBeenCalled();
+            expect(navigation.popTo).not.toHaveBeenCalled();
+            expect(navigation.goBack).not.toHaveBeenCalled();
+            expect(
+                findButton('views.Settings.LightningAddress.switchToCashu')
+            ).toBeDefined();
+        }
+    );
+
+    it('does not navigate when the create is rejected', async () => {
+        const { navigation, LightningAddressStore } = await renderCreate([
+            'Wallet',
+            'ReceiveEcash'
+        ]);
+        LightningAddressStore.createCashu.mockImplementation(() =>
+            Promise.reject(new Error('create failed'))
+        );
+
+        await pressButton('views.Settings.LightningAddress.create');
+        // let the createCashu().catch() run before checking
+        await flush();
+
+        expect(LightningAddressStore.createCashu).toHaveBeenCalled();
+        expect(navigation.goBack).not.toHaveBeenCalled();
+        expect(navigation.popTo).not.toHaveBeenCalled();
     });
 });
