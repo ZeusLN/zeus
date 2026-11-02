@@ -1,5 +1,6 @@
 import { settingsStore } from '../stores/Stores';
 import { parseLdkNodeError } from './ErrorUtils';
+import { isReservedSigningMessage } from './LnurlAuthUtils';
 // LND
 import LND from '../backends/LND';
 import LightningNodeConnect from '../backends/LightningNodeConnect';
@@ -125,7 +126,17 @@ class BackendUtils {
     listAccounts = (...args: any[]) => this.call('listAccounts', args);
     importAccount = (...args: any[]) => this.call('importAccount', args);
     listAddresses = (...args: any[]) => this.call('listAddresses', args);
-    signMessage = (...args: any[]) => this.call('signMessage', args);
+    // Backstop for every caller of the node-key signer. Each backend's
+    // lnurlAuth calls its own signMessage directly, so LNURL-auth is not
+    // affected.
+    signMessage = (...args: any[]) =>
+        isReservedSigningMessage(args[0])
+            ? Promise.reject(
+                  new Error(
+                      'Refusing to sign the LNURL-auth key derivation phrase'
+                  )
+              )
+            : this.call('signMessage', args);
     verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
     signMessageWithAddr = (...args: any[]) =>
         this.call('signMessageWithAddr', args);
