@@ -30,6 +30,7 @@ public class NostrConnectModule extends ReactContextBaseJavaModule {
     private static final String MODULE_NAME = "NostrConnectModule";
     private static final String RECONNECTION_CHECK_EVENT = "NostrConnectReconnectionCheck";
     private static final String LOG_EVENT = "NostrConnectLog";
+    private static final String SERVICE_STOPPED_EVENT = "NostrConnectServiceStopped";
     
     private static ReactApplicationContext reactContext;
     private boolean nostrConnectServiceBound = false;
@@ -181,6 +182,18 @@ public class NostrConnectModule extends ReactContextBaseJavaModule {
                     .emit(RECONNECTION_CHECK_EVENT, params);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to emit reconnection check event: " + e.getMessage());
+            }
+        }
+    }
+
+    public static void emitServiceStoppedEvent() {
+        if (reactContext != null) {
+            try {
+                reactContext
+                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                    .emit(SERVICE_STOPPED_EVENT, Arguments.createMap());
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to emit service stopped event: " + e.getMessage());
             }
         }
     }
