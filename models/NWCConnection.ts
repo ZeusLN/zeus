@@ -77,6 +77,7 @@ export interface NWCConnectionData {
     customExpiryUnit?: TimeUnit;
     nodePubkey: string;
     implementation: string;
+    walletConfigId?: string;
     activity?: ConnectionActivity[];
     metadata?: any;
 }
@@ -130,6 +131,9 @@ export default class NWCConnection extends BaseModel {
     @observable customExpiryUnit?: TimeUnit;
     @observable nodePubkey: string;
     @observable implementation: Implementations;
+    // NostrConnectUtils.getWalletConfigId of the wallet config that last
+    // loaded this connection
+    walletConfigId?: string;
     @observable metadata?: any;
     @observable activity: ConnectionActivity[] = [];
     @observable private _warningTypes: ConnectionWarningType[] = [];
