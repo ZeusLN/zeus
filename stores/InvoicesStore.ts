@@ -15,6 +15,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -421,6 +422,20 @@ export default class InvoicesStore {
             if (!unified) this.creatingInvoice = true;
             this.creatingInvoiceError = false;
             this.error_msg = null;
+        }
+
+        // Never fetch a withdraw callback that would reach internal
+        // infrastructure or leak in cleartext (SSRF-by-callback). Refuse
+        // before creating anything, so the user is not left holding an
+        // invoice the service will never pay. getLnurlParams already refuses
+        // these at resolve time; this covers params that arrive another way.
+        if (lnurl && !isLnurlCallbackAllowed(lnurl.callback).ok) {
+            if (shared()) {
+                this.creatingInvoice = false;
+                this.creatingInvoiceError = true;
+                this.error_msg = localeString('utils.lnurl.unsafeCallback');
+            }
+            return;
         }
 
         const req: any = {
