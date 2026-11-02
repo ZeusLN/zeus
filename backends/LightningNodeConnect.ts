@@ -8,7 +8,10 @@ import LNC from '../zeus_modules/@lightninglabs/lnc-rn';
 import { lnrpc, walletrpc } from '../zeus_modules/@lightninglabs/lnc-core';
 
 import { settingsStore, nodeInfoStore } from '../stores/Stores';
-import CredentialStore, { hash } from './LNC/credentialStore';
+import CredentialStore, {
+    hash,
+    rememberCredentials
+} from './LNC/credentialStore';
 
 import OpenChannelRequest from '../models/OpenChannelRequest';
 
@@ -99,6 +102,10 @@ export default class LightningNodeConnect {
             mailboxServer === 'custom-defined'
                 ? customMailboxServer
                 : mailboxServer;
+
+        // This wallet is configured, so its credentials may be written again
+        // even if an earlier wallet with the same phrase was deleted
+        if (pairingPhrase) rememberCredentials(pairingPhrase);
 
         // Same wallet and mailbox with a native client that is connected or
         // still dialing: keep it. The native client redials on its own, and

@@ -184,6 +184,9 @@ import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
 import MigrationUtils from './MigrationUtils';
+import LncCredentialStore, {
+    rememberCredentials
+} from '../backends/LNC/credentialStore';
 
 const mockedDeleteLndWallet = deleteLndWallet as jest.Mock;
 const mockedDeleteLdkNodeWallet = deleteLdkNodeWallet as jest.Mock;
@@ -718,6 +721,76 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
         expect(removedKeys()).not.toContain(baseKey);
         expect(removedKeys()).not.toContain(`${baseKey}:host`);
+    });
+
+    // The deleted wallet's LNC client can still report keys (a pending
+    // dial cannot be cancelled); its store must not write them back
+    it('stops a live LNC credential store from writing the cleared keys back', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        const credentials = new LncCredentialStore(pairingPhrase);
+        credentials.localKey = 'local-abc';
+        await credentials.flushWrites();
+
+        await clearNodeKeychainData({
+            implementation: 'lightning-node-connect',
+            pairingPhrase
+        });
+        credentials.remoteKey = 'remote-def';
+        await credentials.flushWrites();
+
+        const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
+        expect(Storage.setItem).not.toHaveBeenCalledWith(
+            baseKey,
+            expect.anything()
+        );
+        rememberCredentials(pairingPhrase);
+    });
+
+    // On Android a keychain write runs off the JS thread and can finish
+    // after a reset that started later, so a write already in flight when
+    // the wallet is deleted must not leave its entry behind
+    it('removes a credential that an in-flight write restored after the clear', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        const hostKey = `lnc-rn:${lncHash(pairingPhrase)}:host`;
+        const stored: Record<string, any> = {};
+        const mockedSetItem = Storage.setItem as jest.Mock;
+        let release: () => void = () => {};
+        let started: () => void = () => {};
+        const entered = new Promise<void>((resolve) => (started = resolve));
+        mockedSetItem.mockImplementationOnce(
+            async (key: string, value: any) => {
+                started();
+                await new Promise<void>((resolve) => (release = resolve));
+                stored[key] = value;
+                return true;
+            }
+        );
+        mockedStorageGetItem.mockImplementation(
+            async (key: string) => stored[key] ?? null
+        );
+        mockedStorageRemoveItem.mockImplementation(async (key: string) => {
+            delete stored[key];
+            return true;
+        });
+
+        try {
+            const credentials = new LncCredentialStore(pairingPhrase);
+            credentials.serverHost = 'lnc.zeusln.app:443';
+            await entered;
+
+            await clearNodeKeychainData({
+                implementation: 'lightning-node-connect',
+                pairingPhrase
+            });
+            release();
+            await credentials.flushWrites();
+
+            expect(stored[hostKey]).toBeUndefined();
+        } finally {
+            mockedStorageGetItem.mockResolvedValue(null);
+            mockedStorageRemoveItem.mockResolvedValue(true);
+            rememberCredentials(pairingPhrase);
+        }
     });
 
     it('is a no-op for a null node', async () => {
