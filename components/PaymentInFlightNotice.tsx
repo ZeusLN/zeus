@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { observer } from 'mobx-react';
+import { useIsFocused } from '@react-navigation/native';
 
 import Button from './Button';
 
@@ -21,7 +22,12 @@ interface PaymentInFlightNoticeProps {
 function PaymentInFlightNotice({
     TransactionsStore: transactionsStore
 }: PaymentInFlightNoticeProps) {
-    if (!transactionsStore.paymentInFlight) return null;
+    // The screen that dispatched a payment sets the guard and then navigates
+    // to SendingLightning in the same tick, so it renders once more while
+    // animating out. Showing the notice there would describe the payment
+    // just sent as "a previous payment".
+    const isFocused = useIsFocused();
+    if (!transactionsStore.paymentInFlight || !isFocused) return null;
 
     const confirmed = transactionsStore.paymentInFlightConfirmed;
 
