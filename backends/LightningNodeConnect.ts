@@ -1013,8 +1013,13 @@ export default class LightningNodeConnect {
         const { LncModule } = NativeModules;
         const eventName = this.subscribeInvoice(rHash);
         const eventEmitter = new NativeEventEmitter(LncModule);
+        // Every SubscribeSingleInvoice stream of the session reports on the
+        // same event name, so only count updates for this invoice. rHash is
+        // base64url, the node reports standard base64.
+        const watchedHash = Base64Utils.base64UrlToHex(rHash);
         const listener = eventEmitter.addListener(eventName, (event: any) => {
-            if (event.result) {
+            // the end of a stream ('EOF') doesn't say which invoice it was for
+            if (event.result && event.result !== 'EOF') {
                 if (
                     typeof event.result === 'string' &&
                     event.result.includes('rpc error: code = Canceled')
@@ -1024,11 +1029,12 @@ export default class LightningNodeConnect {
                 }
                 try {
                     const result = JSON.parse(event.result);
-                    if (result === 'EOF') {
-                        listener.remove();
-                        return;
-                    }
-                    if (result.settled) {
+                    if (
+                        result.settled &&
+                        typeof result.r_hash === 'string' &&
+                        Base64Utils.base64UrlToHex(result.r_hash) ===
+                            watchedHash
+                    ) {
                         listener.remove();
                         onPaid({
                             amountSat: Number(result.amt_paid_sat),
@@ -1037,8 +1043,8 @@ export default class LightningNodeConnect {
                         });
                     }
                 } catch (error) {
+                    // likely an error string of another stream: keep watching
                     console.error(error);
-                    listener.remove();
                 }
             }
         });
