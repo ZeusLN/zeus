@@ -470,7 +470,7 @@ describe('SwapStore.getRescuableSwaps, run again (#4821)', () => {
         expect(getStored(SWAPS_KEY)).toEqual([withPreimage]);
     });
 
-    const submarineAt = (keyIndex: number, lockupAddress: string) => ({
+    const submarineAt = (keyIndex: number, lockupAddress?: string) => ({
         id: 'reused',
         type: 'submarine',
         refundDetails: { keyIndex, lockupAddress }
@@ -478,7 +478,7 @@ describe('SwapStore.getRescuableSwaps, run again (#4821)', () => {
 
     const storedSubmarineAt = async (
         keyIndex: number,
-        lockupAddress: string
+        lockupAddress?: string
     ) => {
         setStored(SWAPS_KEY, []);
         restoreResponse([submarineAt(keyIndex, lockupAddress)]);
@@ -488,11 +488,12 @@ describe('SwapStore.getRescuableSwaps, run again (#4821)', () => {
     };
 
     it('keeps two swaps stored under one ID with different keys', async () => {
-        // the host gave a later swap the ID of an earlier, funded one
-        const funded = await storedSubmarineAt(0, 'bc1pfunded');
-        const later = await storedSubmarineAt(1, 'bc1plater');
+        // the host gave a later swap the ID of an earlier, funded one, and
+        // sent no lockup address, so only the keys tell them apart
+        const funded = await storedSubmarineAt(0);
+        const later = await storedSubmarineAt(1);
         setStored(SWAPS_KEY, [later, funded]);
-        restoreResponse([submarineAt(0, 'bc1pfunded')]);
+        restoreResponse([submarineAt(0)]);
 
         await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
 
