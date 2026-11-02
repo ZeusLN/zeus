@@ -17,7 +17,10 @@ import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
-import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
+import {
+    deriveExpectedPaymentHash,
+    normalizePaymentHash
+} from '../utils/LncPayUtils';
 import {
     isNodeResponse,
     isPaymentLookupInconclusive,
@@ -931,13 +934,20 @@ export default class TransactionsStore {
         // Record the dispatched payment's hash (lowercase hex) so an
         // ambiguous outcome can be tracked to a terminal state. Undefined
         // for AMP payments, which settle under per-attempt hashes and stay
-        // on the timed backstop.
+        // on the timed backstop. Only LND-based backends send the keysend
+        // preimage generated above: CLN and LDK Node pick their own, so the
+        // hash derived from ours is one the node never saw and lookups
+        // would answer no record for a payment that may be in flight.
+        // handlePayment adopts the node's hash from an in-flight result
+        // instead; without one, a keysend stays on the timed backstop.
         this.inFlightPaymentHash =
-            deriveExpectedPaymentHash({
-                payment_hash: data.payment_hash,
-                payment_request,
-                amp
-            }) || null;
+            pubkey && !BackendUtils.isLNDBased()
+                ? null
+                : deriveExpectedPaymentHash({
+                      payment_hash: data.payment_hash,
+                      payment_request,
+                      amp
+                  }) || null;
 
         // Backstop for the in-flight guard: if the completion callback is
         // lost (e.g. a dropped LNC stream, or a hung request on a backend
@@ -1293,6 +1303,19 @@ export default class TransactionsStore {
         this.loading = false;
 
         const status = this.getResultStatus(result);
+
+        // a keysend on a backend that picks its own preimage is only
+        // trackable by the hash the node reports (LDK Node includes it in
+        // an in-flight result)
+        if (
+            seq !== undefined &&
+            this.inFlightOwnerSeq === seq &&
+            this.inFlightIsKeysend &&
+            !this.inFlightPaymentHash
+        ) {
+            this.inFlightPaymentHash =
+                normalizePaymentHash(result?.payment_hash) || null;
+        }
 
         // A non-terminal result (the send stream ended while HTLCs are
         // still pending) or a client-side timeout (outcome unknown on the

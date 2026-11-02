@@ -1,10 +1,7 @@
 import LND from './LND';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
-import {
-    findPaymentByHash,
-    markNodeResponded
-} from './../utils/PaymentLookupUtils';
+import { markNodeResponded } from './../utils/PaymentLookupUtils';
 import { TransactionPageRequest } from '../utils/OnchainTransactionUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
@@ -25,6 +22,7 @@ const {
     decodePayReq,
     sendPaymentV2Sync,
     sendKeysendPaymentV2,
+    trackPaymentV2,
     listPayments,
     getNetworkInfo,
     getRecoveryInfo,
@@ -286,16 +284,27 @@ export default class EmbeddedLND extends LND {
         }).catch((error) => {
             throw markNodeResponded(error, error?.grpcCode);
         });
-    // override LND's REST implementation with an on-device lookup
+    // override LND's REST implementation with the on-device
+    // TrackPaymentV2 stream: its latest update for this hash is the
+    // payment's current state (no_inflight_updates is false, so an
+    // in-flight payment answers immediately). Any failure, NOT_FOUND
+    // included, is settled by the dispatch-anchored page scan (run against
+    // the on-device listPayments via this backend's getPayments): the event
+    // channel is shared across concurrent track streams with no
+    // correlation, so a NOT_FOUND may belong to another lookup's stream.
+    // The scan answers null only on a conclusive miss and throws when it
+    // can't tell, so a failed scan never reads as no record.
     lookupPayment = async (data: {
         payment_hash: string;
         creation_date_start?: number;
-    }) =>
-        await findPaymentByHash(
-            (request) => listPayments(request),
-            data.payment_hash,
-            data.creation_date_start
-        );
+        trackTimeoutMs?: number;
+    }) => {
+        try {
+            return await trackPaymentV2(data.payment_hash, data.trackTimeoutMs);
+        } catch {
+            return await this.scanForPayment(data);
+        }
+    };
     // The native call returns once the request is handed to LND, before LND
     // has processed it. The outcome arrives on the CloseChannel stream: an
     // error, or close_pending once the closing transaction is published.

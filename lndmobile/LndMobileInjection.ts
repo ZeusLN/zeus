@@ -32,6 +32,7 @@ import {
     listPeers,
     readLndLog,
     sendPaymentV2Sync,
+    trackPaymentV2,
     IReadLndLogResponse,
     listPayments,
     listInvoices,
@@ -247,6 +248,10 @@ export interface ILndMobileInjections {
             amp: boolean;
             dest: string;
         }) => Promise<lnrpc.Payment>;
+        trackPaymentV2: (
+            paymentHash: string,
+            timeoutMs?: number
+        ) => Promise<lnrpc.Payment>;
         queryRoutes: (
             pubkey: string,
             amount?: Long,
@@ -658,6 +663,7 @@ export default {
         listPeers,
         readLndLog,
         sendPaymentV2Sync,
+        trackPaymentV2,
         queryRoutes,
         listPayments,
         listInvoices,

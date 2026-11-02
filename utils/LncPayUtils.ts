@@ -99,3 +99,42 @@ export const decideLncPayEvent = (
 
     return { kind: 'terminal', result };
 };
+
+export type LncTrackEventDecision =
+    | { kind: 'ignore' }
+    | { kind: 'payment'; hash: string; result: any }
+    | { kind: 'error'; error: Error };
+
+// Classifies one raw `event.result` string from the shared
+// 'routerrpc.Router.TrackPaymentV2' LNC event channel. Every update,
+// whatever its status, is an answer for the hash it carries (IN_FLIGHT
+// included); updates without a parseable hash can't be attributed to any
+// stream and are dropped. Error strings (lnd's NOT_FOUND "payment isn't
+// initiated" among them) carry no hash at all, so the caller can't tell
+// which stream they ended.
+export const decideLncTrackEvent = (
+    eventResult: unknown
+): LncTrackEventDecision => {
+    if (
+        !eventResult ||
+        typeof eventResult !== 'string' ||
+        eventResult === 'EOF'
+    ) {
+        return { kind: 'ignore' };
+    }
+
+    let result: any;
+    try {
+        result = JSON.parse(eventResult);
+    } catch {
+        return { kind: 'error', error: new Error(eventResult) };
+    }
+    if (typeof result !== 'object' || result === null) {
+        return { kind: 'error', error: new Error(eventResult) };
+    }
+
+    const hash = normalizePaymentHash(result.payment_hash);
+    if (!hash) return { kind: 'ignore' };
+
+    return { kind: 'payment', hash, result };
+};
