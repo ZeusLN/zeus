@@ -1639,6 +1639,7 @@ export default class LdkNode {
             funding_confirms_within_blocks:
                 response.orderParams?.fundingConfirmsWithinBlocks,
             channel_expiry_blocks: response.orderParams?.channelExpiryBlocks,
+            announce_channel: response.orderParams?.announceChannel,
             payment: {
                 state: paymentInfo.state || bolt11?.state || onchain?.state,
                 fee_total_sat:
