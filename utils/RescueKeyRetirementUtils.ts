@@ -11,8 +11,9 @@ import {
 } from './SwapUtils';
 
 // EncryptedStorage: JSON list of zeus:-prefixed servers whose values were
-// retired. KeychainPurgeUtils.verifyPurgePreflight does not copy their
-// synchronizable copies back into the device-local partition.
+// retired. KeychainPurgeUtils.verifyPurgePreflight and
+// MigrationUtils.keychainDesyncMigration do not copy their synchronizable
+// copies back into the device-local partition.
 export const RETIRED_KEYCHAIN_SERVERS_KEY = 'keychain-retired-servers-v1';
 
 export const getRetiredKeychainServers = async (): Promise<string[]> => {

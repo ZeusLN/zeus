@@ -2340,6 +2340,72 @@ describe('MigrationUtils', () => {
             );
         });
 
+        it('does not copy back retired servers but copies the others and flags', async () => {
+            EncryptedStorage.getItem.mockImplementation(async (key: string) =>
+                key === 'keychain-retired-servers-v1'
+                    ? JSON.stringify([
+                          'zeus:swaps-rescue-key',
+                          'zeus:swaps-last-used-key'
+                      ])
+                    : null
+            );
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:swaps-rescue-key',
+                'zeus:swaps-last-used-key',
+                'zeus:zeus-settings-v2'
+            ]);
+            // the seed written back into iCloud by an older build after
+            // retirement removed every copy
+            const partitions: Record<string, Record<string, string>> = {
+                sync: {
+                    'zeus:swaps-rescue-key': 'wallet seed words',
+                    'zeus:swaps-last-used-key': '3',
+                    'zeus:zeus-settings-v2': '{"nodes":[]}'
+                },
+                local: {}
+            };
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    partitions[cloudSync ? 'sync' : 'local'][server] ?? null
+            );
+            StorageModule.setRawLocalItem.mockImplementation(
+                async (server: string, value: string) => {
+                    partitions.local[server] = value;
+                    return true;
+                }
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(partitions.local).toEqual({
+                'zeus:zeus-settings-v2': '{"nodes":[]}'
+            });
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'keychain-desync-v1',
+                'true'
+            );
+        });
+
+        it('copies nothing and leaves the flag unset when the retired list cannot be read', async () => {
+            EncryptedStorage.getItem.mockImplementation(async (key: string) => {
+                if (key === 'keychain-retired-servers-v1')
+                    throw new Error('EncryptedStorage unavailable');
+                return null;
+            });
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:swaps-rescue-key'
+            ]);
+            StorageModule.getRawItem.mockImplementation(
+                async (_server: string, cloudSync: boolean) =>
+                    cloudSync ? 'wallet seed words' : null
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(StorageModule.setRawLocalItem).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
         it('aborts on enumeration failure without setting the flag or throwing', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             StorageModule.getInternetPasswordServers.mockRejectedValue(
