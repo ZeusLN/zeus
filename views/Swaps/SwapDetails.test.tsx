@@ -1495,3 +1495,22 @@ describe('SwapDetails submarine pay button', () => {
         expect(payButtons()).toHaveLength(1);
     });
 });
+
+describe('SwapDetails swap without an ID', () => {
+    it.each([
+        [SwapType.Submarine, { refundPrivateKey: 'refund-secret' }],
+        [SwapType.Reverse, { preimage: 'preimage-secret' }]
+    ])(
+        'shows an error for a %s swap without logging the swap',
+        async (type, secret) => {
+            await renderView({ id: undefined, type, ...secret });
+
+            expect(errorShown()).toBe('Invalid response received.');
+            expect(unexpectedErrors).toEqual([
+                ['Invalid response: swap has no ID']
+            ]);
+            unexpectedErrors = [];
+            expect(global.WebSocket).not.toHaveBeenCalled();
+        }
+    );
+});
