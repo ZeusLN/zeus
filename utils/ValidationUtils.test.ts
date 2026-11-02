@@ -706,6 +706,28 @@ describe('isValidNwcServiceRelayUrl', () => {
         ).toBe(true);
     });
 
+    // URL accepts these and normalizes them to wss://relay.example.com/, but
+    // the raw string is what gets stored, and nostr-tools' normalizeURL turns
+    // wss:relay.example.com into an invalid URL and wss:/relay.example.com
+    // into a relay on host "wss".
+    it('rejects relays without exactly two slashes after the scheme', () => {
+        const onion =
+            '2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion';
+        for (const relay of [
+            'wss:relay.example.com',
+            'wss:/relay.example.com',
+            'wss:///relay.example.com',
+            'wss:\\\\relay.example.com',
+            'wss://\\relay.example.com',
+            `ws:${onion}`,
+            `ws:/${onion}`
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(
+                false
+            );
+        }
+    });
+
     it('rejects anything that is not a relay URL', () => {
         for (const relay of [
             '',

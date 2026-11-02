@@ -102,6 +102,9 @@ const isValidNwcRelayUrl = (relay: string): boolean => {
 // hosts, where the onion address authenticates the relay.
 const isValidNwcServiceRelayUrl = (relay: string): boolean => {
     if (typeof relay !== 'string' || /\s/.test(relay)) return false;
+    // URL normalizes wss:relay.example.com and wss:/relay.example.com, but the
+    // raw string is stored and nostr-tools only recognizes "://".
+    if (!/^wss?:\/\/[^/\\]/i.test(relay)) return false;
     let parsed: URL;
     try {
         parsed = new URL(relay);
