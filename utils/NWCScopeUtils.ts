@@ -12,17 +12,35 @@ export const NWC_SPEND_METHODS = [
     'create_connection'
 ];
 
+// NIP-47 methods that cannot move funds or sign. Any method outside
+// this list and NWC_SPEND_METHODS is reported as unrecognized, so a
+// new or vendor-specific spend method is not mistaken for receive-only.
+export const NWC_RECEIVE_ONLY_METHODS = [
+    'get_info',
+    'get_balance',
+    'get_budget',
+    'make_invoice',
+    'lookup_invoice',
+    'list_transactions',
+    'make_hold_invoice',
+    'settle_hold_invoice',
+    'cancel_hold_invoice'
+];
+
 export const NWC_SCOPE_CHECK_TIMEOUT_MS = 20000;
 
 export type NWCScopeStatus =
     | 'receiveOnly'
     | 'canSpend'
     | 'missingMakeInvoice'
+    | 'unrecognized'
     | 'unknown';
 
 export interface NWCScopeResult {
     status: NWCScopeStatus;
-    spendMethods: string[];
+    // the spend methods for canSpend, the unlisted methods for
+    // unrecognized, otherwise empty
+    methods: string[];
 }
 
 const isSpendMethod = (method: string) =>
@@ -33,25 +51,33 @@ const isSpendMethod = (method: string) =>
 /**
  * Classifies the methods a NIP-47 connection is allowed to call, as
  * reported by its own get_info response. A missing or empty list is
- * treated as unknown rather than as receive-only.
+ * treated as unknown rather than as receive-only. Spend methods take
+ * precedence over a missing make_invoice, which takes precedence over
+ * unrecognized methods.
  */
 export const classifyNWCConnectionMethods = (
     methods?: unknown
 ): NWCScopeResult => {
     if (!Array.isArray(methods) || methods.length === 0) {
-        return { status: 'unknown', spendMethods: [] };
+        return { status: 'unknown', methods: [] };
     }
     const names = methods.filter(
         (method): method is string => typeof method === 'string'
     );
     const spendMethods = names.filter(isSpendMethod);
     if (spendMethods.length > 0) {
-        return { status: 'canSpend', spendMethods };
+        return { status: 'canSpend', methods: spendMethods };
     }
     if (!names.includes('make_invoice')) {
-        return { status: 'missingMakeInvoice', spendMethods: [] };
+        return { status: 'missingMakeInvoice', methods: [] };
     }
-    return { status: 'receiveOnly', spendMethods: [] };
+    const unrecognizedMethods = names.filter(
+        (method) => !NWC_RECEIVE_ONLY_METHODS.includes(method)
+    );
+    if (unrecognizedMethods.length > 0) {
+        return { status: 'unrecognized', methods: unrecognizedMethods };
+    }
+    return { status: 'receiveOnly', methods: [] };
 };
 
 /**
@@ -78,7 +104,7 @@ export const checkNWCConnectionScope = async (
         ]);
         return classifyNWCConnectionMethods(info?.methods);
     } catch (e) {
-        return { status: 'unknown', spendMethods: [] };
+        return { status: 'unknown', methods: [] };
     } finally {
         if (timer) clearTimeout(timer);
         try {

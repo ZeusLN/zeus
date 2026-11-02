@@ -43,7 +43,8 @@ interface CreateNWCLightningAddressState {
     tested: boolean;
     loading: boolean;
     scopeError: string;
-    scopeUnchecked: boolean;
+    // set when the user must confirm before the server test runs
+    scopeWarning: string;
 }
 
 @inject('LightningAddressStore', 'SettingsStore')
@@ -59,17 +60,17 @@ export default class CreateNWCLightningAddress extends React.Component<
         tested: false,
         loading: false,
         scopeError: '',
-        scopeUnchecked: false
+        scopeWarning: ''
     };
 
     // Checks the connection's own permissions before the string is sent
     // to the ZEUS Pay server. Returns true when the test may proceed.
     checkScope = async (nwcConnectionString: string): Promise<boolean> => {
-        // the user already saw the unchecked-permissions warning
-        if (this.state.scopeUnchecked) return true;
+        // the user already saw the warning and chose to continue
+        if (this.state.scopeWarning) return true;
 
         this.setState({ loading: true, scopeError: '' });
-        const { status, spendMethods } = await checkNWCConnectionScope(
+        const { status, methods } = await checkNWCConnectionScope(
             nwcConnectionString
         );
         this.setState({ loading: false });
@@ -79,7 +80,7 @@ export default class CreateNWCLightningAddress extends React.Component<
             this.setState({
                 scopeError: localeString(
                     'views.LightningAddress.NWC.scopeCanSpend'
-                ).replace('{methods}', spendMethods.join(', '))
+                ).replace('{methods}', methods.join(', '))
             });
         } else if (status === 'missingMakeInvoice') {
             this.setState({
@@ -87,15 +88,25 @@ export default class CreateNWCLightningAddress extends React.Component<
                     'views.LightningAddress.NWC.scopeMissingMakeInvoice'
                 )
             });
+        } else if (status === 'unrecognized') {
+            this.setState({
+                scopeWarning: localeString(
+                    'views.LightningAddress.NWC.scopeUnrecognized'
+                ).replace('{methods}', methods.join(', '))
+            });
         } else {
-            this.setState({ scopeUnchecked: true });
+            this.setState({
+                scopeWarning: localeString(
+                    'views.LightningAddress.NWC.scopeUnknown'
+                )
+            });
         }
         return false;
     };
 
     render() {
         const { navigation, LightningAddressStore, route } = this.props;
-        const { nwcConnectionString, tested, scopeError, scopeUnchecked } =
+        const { nwcConnectionString, tested, scopeError, scopeWarning } =
             this.state;
         const { createNWC, testNWCConnectionString, update, error_msg } =
             LightningAddressStore;
@@ -152,12 +163,8 @@ export default class CreateNWCLightningAddress extends React.Component<
                         {!loading && !!scopeError && (
                             <ErrorMessage message={scopeError} />
                         )}
-                        {!loading && scopeUnchecked && !tested && (
-                            <WarningMessage
-                                message={localeString(
-                                    'views.LightningAddress.NWC.scopeUnknown'
-                                )}
-                            />
+                        {!loading && !!scopeWarning && !tested && (
+                            <WarningMessage message={scopeWarning} />
                         )}
                         {!loading && tested && (
                             <SuccessMessage
@@ -209,8 +216,7 @@ export default class CreateNWCLightningAddress extends React.Component<
                                                                 nwcConnectionString:
                                                                     text.trim(),
                                                                 scopeError: '',
-                                                                scopeUnchecked:
-                                                                    false
+                                                                scopeWarning: ''
                                                             })
                                                         }
                                                         autoCapitalize="none"
@@ -225,7 +231,7 @@ export default class CreateNWCLightningAddress extends React.Component<
                                 <View style={{ bottom: 15, margin: 10 }}>
                                     <Button
                                         title={
-                                            !tested && scopeUnchecked
+                                            !tested && scopeWarning
                                                 ? localeString(
                                                       'views.LightningAddress.NWC.continueUnchecked'
                                                   )

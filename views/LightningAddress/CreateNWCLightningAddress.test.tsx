@@ -161,6 +161,24 @@ describe('CreateNWCLightningAddress connection permission check', () => {
         expect(store.testNWCConnectionString).toHaveBeenCalledWith(NWC_URL);
     });
 
+    it('asks for confirmation when the connection has unrecognized methods', async () => {
+        mockGetInfo.mockResolvedValue({
+            methods: ['get_info', 'make_invoice', 'sign_psbt']
+        });
+        const store = makeStore();
+        await renderView(store);
+        await press(TEST_TITLE);
+
+        expect(store.testNWCConnectionString).not.toHaveBeenCalled();
+        expect(
+            screen.getByText('views.LightningAddress.NWC.scopeUnrecognized')
+        ).toBeTruthy();
+
+        await press(CONTINUE_TITLE);
+        expect(mockGetInfo).toHaveBeenCalledTimes(1);
+        expect(store.testNWCConnectionString).toHaveBeenCalledWith(NWC_URL);
+    });
+
     it('checks again after the connection string is edited', async () => {
         mockGetInfo.mockRejectedValueOnce(new Error('timeout'));
         mockGetInfo.mockResolvedValueOnce({

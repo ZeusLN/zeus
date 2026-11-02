@@ -27,10 +27,10 @@ describe('classifyNWCConnectionMethods', () => {
                 'make_invoice',
                 'lookup_invoice'
             ])
-        ).toEqual({ status: 'receiveOnly', spendMethods: [] });
+        ).toEqual({ status: 'receiveOnly', methods: [] });
         expect(classifyNWCConnectionMethods(['make_invoice'])).toEqual({
             status: 'receiveOnly',
-            spendMethods: []
+            methods: []
         });
     });
 
@@ -43,9 +43,42 @@ describe('classifyNWCConnectionMethods', () => {
                 'make_invoice',
                 'lookup_invoice',
                 'list_transactions',
-                'make_hold_invoice'
+                'make_hold_invoice',
+                'settle_hold_invoice',
+                'cancel_hold_invoice'
             ]).status
         ).toBe('receiveOnly');
+    });
+
+    it('flags methods it does not recognize', () => {
+        expect(
+            classifyNWCConnectionMethods([
+                'get_info',
+                'make_invoice',
+                'sign_psbt',
+                'lookup_invoice',
+                'vendor_method'
+            ])
+        ).toEqual({
+            status: 'unrecognized',
+            methods: ['sign_psbt', 'vendor_method']
+        });
+    });
+
+    it('reports spend methods before unrecognized ones', () => {
+        expect(
+            classifyNWCConnectionMethods([
+                'make_invoice',
+                'sign_psbt',
+                'pay_invoice'
+            ])
+        ).toEqual({ status: 'canSpend', methods: ['pay_invoice'] });
+    });
+
+    it('reports a missing make_invoice before unrecognized methods', () => {
+        expect(classifyNWCConnectionMethods(['get_info', 'sign_psbt'])).toEqual(
+            { status: 'missingMakeInvoice', methods: [] }
+        );
     });
 
     it.each([
@@ -61,7 +94,7 @@ describe('classifyNWCConnectionMethods', () => {
     ])('rejects a connection that grants %s', (method) => {
         expect(classifyNWCConnectionMethods(['make_invoice', method])).toEqual({
             status: 'canSpend',
-            spendMethods: [method]
+            methods: [method]
         });
     });
 
@@ -80,7 +113,7 @@ describe('classifyNWCConnectionMethods', () => {
             ])
         ).toEqual({
             status: 'canSpend',
-            spendMethods: [
+            methods: [
                 'pay_invoice',
                 'pay_keysend',
                 'multi_pay_invoice',
@@ -102,7 +135,7 @@ describe('classifyNWCConnectionMethods', () => {
                 'get_balance',
                 'lookup_invoice'
             ])
-        ).toEqual({ status: 'missingMakeInvoice', spendMethods: [] });
+        ).toEqual({ status: 'missingMakeInvoice', methods: [] });
     });
 
     it.each([
@@ -114,7 +147,7 @@ describe('classifyNWCConnectionMethods', () => {
     ])('treats %s as unknown', (_, methods) => {
         expect(classifyNWCConnectionMethods(methods)).toEqual({
             status: 'unknown',
-            spendMethods: []
+            methods: []
         });
     });
 
@@ -139,10 +172,21 @@ describe('checkNWCConnectionScope', () => {
         });
         await expect(checkNWCConnectionScope(NWC_URL)).resolves.toEqual({
             status: 'receiveOnly',
-            spendMethods: []
+            methods: []
         });
         expect(mockConstructor).toHaveBeenCalledWith({
             nostrWalletConnectUrl: NWC_URL
+        });
+        expect(mockClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports unrecognized methods from get_info', async () => {
+        mockGetInfo.mockResolvedValue({
+            methods: ['make_invoice', 'sign_psbt']
+        });
+        await expect(checkNWCConnectionScope(NWC_URL)).resolves.toEqual({
+            status: 'unrecognized',
+            methods: ['sign_psbt']
         });
         expect(mockClose).toHaveBeenCalledTimes(1);
     });
@@ -153,7 +197,7 @@ describe('checkNWCConnectionScope', () => {
         });
         await expect(checkNWCConnectionScope(NWC_URL)).resolves.toEqual({
             status: 'canSpend',
-            spendMethods: ['pay_invoice']
+            methods: ['pay_invoice']
         });
         expect(mockClose).toHaveBeenCalledTimes(1);
     });
@@ -166,7 +210,7 @@ describe('checkNWCConnectionScope', () => {
         );
         await expect(checkNWCConnectionScope(NWC_URL)).resolves.toEqual({
             status: 'unknown',
-            spendMethods: []
+            methods: []
         });
         expect(mockClose).toHaveBeenCalledTimes(1);
     });
@@ -178,7 +222,7 @@ describe('checkNWCConnectionScope', () => {
         jest.advanceTimersByTime(5000);
         await expect(result).resolves.toEqual({
             status: 'unknown',
-            spendMethods: []
+            methods: []
         });
         expect(mockClose).toHaveBeenCalledTimes(1);
     });
@@ -189,7 +233,7 @@ describe('checkNWCConnectionScope', () => {
         });
         await expect(checkNWCConnectionScope('nonsense')).resolves.toEqual({
             status: 'unknown',
-            spendMethods: []
+            methods: []
         });
         expect(mockGetInfo).not.toHaveBeenCalled();
     });
@@ -201,7 +245,7 @@ describe('checkNWCConnectionScope', () => {
         });
         await expect(checkNWCConnectionScope(NWC_URL)).resolves.toEqual({
             status: 'receiveOnly',
-            spendMethods: []
+            methods: []
         });
     });
 });
