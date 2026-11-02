@@ -1969,7 +1969,8 @@ export default class CashuStore {
             await this.ensureMintAdded(mintUrl);
         }
 
-        // p2pk_signing_keys when the token is P2PK-locked.
+        // Our key, if the caller offered one. CDK only uses it for proofs
+        // locked to it.
         const options: { p2pk_signing_keys: string[] } = {
             p2pk_signing_keys: signingKey ? [signingKey] : []
         };
