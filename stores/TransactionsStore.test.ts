@@ -1429,6 +1429,11 @@ describe('TransactionsStore payment preimage check', () => {
         );
         expect(store.paymentInFlight).toBe(false);
         expect(store.paymentDuration).toBeNull();
+        // the preimage isn't kept as proof of payment, and the hash is the
+        // invoice's rather than one derived from that preimage
+        expect(store.payment_preimage).toBeNull();
+        expect(store.payment_hash).toBe(HASH);
+        expect(store).not.toHaveProperty('preimageMismatch');
     });
 
     it('reports a success whose preimage matches the invoice as a success', async () => {
@@ -1555,6 +1560,39 @@ describe('TransactionsStore payment preimage check', () => {
         );
 
         expect(outcome.error).toBeUndefined();
+    });
+
+    it('leaves the preimage out of a mismatched outcome', () => {
+        const store = newStore('lnd');
+
+        const outcome = store.getPaymentOutcome(
+            {
+                status: 'SUCCEEDED',
+                payment_hash: HASH,
+                payment_preimage: OTHER_PREIMAGE,
+                fee_sat: '3'
+            },
+            HASH.toUpperCase()
+        );
+
+        expect(outcome.error).toBe(true);
+        expect(outcome.preimageMismatch).toBe(true);
+        expect(outcome).not.toHaveProperty('payment_preimage');
+        expect(outcome.payment_hash).toBe(HASH);
+        expect(outcome.payment_fee).toBe('3');
+        expect(outcome.status).toBe('SUCCEEDED');
+    });
+
+    it('does not flag a matching preimage as a mismatch', () => {
+        const store = newStore('lnd');
+
+        const outcome = store.getPaymentOutcome(
+            { status: 'SUCCEEDED', payment_preimage: PREIMAGE },
+            HASH
+        );
+
+        expect(outcome.preimageMismatch).toBeUndefined();
+        expect(outcome.payment_preimage).toBe(PREIMAGE);
     });
 
     it('leaves an outcome alone when no hash is expected or no preimage was returned', () => {

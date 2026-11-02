@@ -102,7 +102,8 @@ export interface SendPaymentReq {
 // it to. Keys that don't apply to the outcome are left unset.
 export interface PaymentOutcome {
     noteKey: string;
-    payment_preimage: string;
+    // unset when the preimage doesn't match the expected payment hash
+    payment_preimage?: string;
     payment_hash?: string;
     payment_fee: string;
     isIncomplete: boolean;
@@ -110,6 +111,9 @@ export interface PaymentOutcome {
     error?: boolean;
     error_msg?: string;
     payment_error?: string;
+    // the node reported a success whose preimage doesn't hash to the
+    // expected payment hash
+    preimageMismatch?: boolean;
 }
 
 // true when sha256(preimage) is paymentHash (hex). The preimage may be
@@ -1447,7 +1451,9 @@ export default class TransactionsStore {
                 : null;
         this.clearPaymentInFlight(seq);
         this.payment_route = result.payment_route;
-        const outcome = this.getPaymentOutcome(result, expectedPaymentHash);
+        // preimageMismatch has no observable; outcome.error covers it here
+        const { preimageMismatch: _mismatch, ...outcome } =
+            this.getPaymentOutcome(result, expectedPaymentHash);
         // keys the outcome leaves unset keep their current values
         Object.assign(this, outcome);
 
@@ -1472,7 +1478,9 @@ export default class TransactionsStore {
     //
     // expectedPaymentHash (hex) is the hash the payment was sent for. When
     // given, a returned preimage that doesn't hash to it is reported as an
-    // error rather than a success: the node's answer can't be trusted.
+    // error rather than a success: the node's answer can't be trusted. The
+    // outcome then leaves out the preimage, so nothing shows it as proof of
+    // payment, and carries the expected hash instead of one derived from it.
     public getPaymentOutcome = (
         result: any,
         expectedPaymentHash?: string | null
@@ -1542,6 +1550,9 @@ export default class TransactionsStore {
             outcome.error_msg = localeString(
                 'stores.TransactionsStore.preimageMismatch'
             );
+            outcome.preimageMismatch = true;
+            delete outcome.payment_preimage;
+            outcome.payment_hash = expectedPaymentHash.toLowerCase();
         }
 
         return outcome;

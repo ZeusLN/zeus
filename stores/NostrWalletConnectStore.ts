@@ -174,6 +174,7 @@ interface LightningPaymentState {
     payment_hash: string | null;
     payment_preimage: string | null;
     payment_fee: string | null;
+    preimageMismatch?: boolean;
 }
 
 export interface CreateConnectionParams {
@@ -3781,6 +3782,31 @@ export default class NostrWalletConnectStore {
                 paymentHash
             );
 
+        // The node says it paid, but the preimage it returned doesn't hash
+        // to the invoice's payment hash. Debit the budget as for a payment
+        // that went out, but answer with an error: the client must not get
+        // that preimage (or the one in the node's payment list) as proof.
+        if (paymentState.preimageMismatch) {
+            const errorMessage =
+                paymentState.error_msg ||
+                localeString('stores.TransactionsStore.preimageMismatch');
+            await this.finalizePayment({
+                rawInvoice: request.invoice,
+                type: 'pay_invoice',
+                decoded: payment || null,
+                payment_source: 'lightning',
+                connection,
+                amountSats,
+                feeSats: Number(payment?.getFee) || Number(fees_paid) || 0,
+                paymentHash: paymentHash || undefined,
+                unverifiedError: errorMessage
+            });
+            return NostrConnectUtils.createNip47Error(
+                errorMessage,
+                Nip47ErrorCode.FAILED_TO_PAY_INVOICE
+            );
+        }
+
         // Deliberate: debit when the node shows this invoice settled even if
         // Zeus did not initiate the pay via this NWC connection. Without that,
         // a wallet-paid invoice retried over NWC would escape the budget cap.
@@ -4642,7 +4668,10 @@ export default class NostrWalletConnectStore {
     }
 
     /**
-     * Processes payment completion: tracks spending, saves, and shows notification
+     * Processes payment completion: tracks spending, saves, and shows notification.
+     * With unverifiedError the node reported the payment as sent but it can't
+     * be verified: the budget is still debited, the activity is recorded
+     * as failed with that error, and no payment_sent notification is sent.
      */
     private async finalizePayment({
         rawInvoice,
@@ -4652,7 +4681,8 @@ export default class NostrWalletConnectStore {
         connection: requestConnection,
         amountSats,
         feeSats = 0,
-        paymentHash: paymentHashParam
+        paymentHash: paymentHashParam,
+        unverifiedError
     }: {
         rawInvoice: string;
         type: ConnectionActivityType;
@@ -4662,6 +4692,7 @@ export default class NostrWalletConnectStore {
         amountSats: number;
         feeSats?: number;
         paymentHash?: string;
+        unverifiedError?: string;
     }): Promise<void> {
         const { paymentRequest, paymentHash: decodedPaymentHash } =
             await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
@@ -4678,6 +4709,7 @@ export default class NostrWalletConnectStore {
         const budgetFeeSats = NostrConnectUtils.resolveFeeSats(feeSats);
         let notifyActivity: ConnectionActivity | undefined;
 
+        let applied = false;
         runInAction(() => {
             const existing = connection.findPayInvoiceActivity(id, paymentHash);
             const alreadyDebited =
@@ -4690,14 +4722,15 @@ export default class NostrWalletConnectStore {
                 );
             }
 
-            this.upsertPayInvoiceActivity(connection, {
+            applied = this.upsertPayInvoiceActivity(connection, {
                 id,
                 type,
                 payment: this.toConnectionActivityPayment(
                     payment_source,
                     decoded
                 ),
-                status: 'success',
+                status: unverifiedError ? 'failed' : 'success',
+                ...(unverifiedError ? { error: unverifiedError } : {}),
                 payment_source,
                 satAmount: amountSats,
                 // Stored internally in sats (may be fractional). NIP-47 `fees_paid` is
@@ -4716,12 +4749,24 @@ export default class NostrWalletConnectStore {
             }
         });
         this.scheduleMaxBudgetRefresh();
-        NostrConnectUtils.notifyOutgoingNwcPayment(amountSats, connection.name);
-        if (notifyActivity) {
-            void this.notifyConnection(
-                connection,
-                'payment_sent',
-                notifyActivity
+        if (!unverifiedError) {
+            NostrConnectUtils.notifyOutgoingNwcPayment(
+                amountSats,
+                connection.name
+            );
+            if (notifyActivity) {
+                void this.notifyConnection(
+                    connection,
+                    'payment_sent',
+                    notifyActivity
+                );
+            }
+        } else if (applied) {
+            NostrConnectUtils.notifyOutgoingNwcPaymentFailed(
+                amountSats,
+                connection.name,
+                connection.id,
+                id
             );
         }
     }
