@@ -1735,11 +1735,12 @@ export default class Receive extends React.Component<
                                             <SuccessMessage
                                                 message={
                                                     !!lnurl &&
-                                                    `${localeString(
-                                                        'views.Receive.successCreate'
-                                                    )} ${localeString(
-                                                        'views.Receive.andSentTo'
-                                                    )} ${lnurl.domain}`
+                                                    localeString(
+                                                        'views.Receive.successCreateAndSentTo',
+                                                        {
+                                                            domain: lnurl.domain
+                                                        }
+                                                    )
                                                 }
                                             />
                                         )}
@@ -3044,16 +3045,16 @@ export default class Receive extends React.Component<
                                             <View style={styles.button}>
                                                 <Button
                                                     title={
-                                                        localeString(
-                                                            'views.Receive.createInvoice'
-                                                        ) +
-                                                        (lnurl
-                                                            ? ` ${localeString(
-                                                                  'views.Receive.andSubmitTo'
-                                                              )} ${
-                                                                  lnurl.domain
-                                                              }`
-                                                            : '')
+                                                        lnurl
+                                                            ? localeString(
+                                                                  'views.Receive.createInvoiceAndSubmitTo',
+                                                                  {
+                                                                      domain: lnurl.domain
+                                                                  }
+                                                              )
+                                                            : localeString(
+                                                                  'views.Receive.createInvoice'
+                                                              )
                                                     }
                                                     disabled={
                                                         (lspIsActive &&
