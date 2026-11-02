@@ -7,6 +7,12 @@ import {
     isPaymentRefusedAsDuplicate,
     markNodeResponded,
     markRestErrorResponse,
+    markHttpStatus,
+    httpStatusOf,
+    markJsonRpcCode,
+    hasJsonRpcCode,
+    markRequestNotSent,
+    isRequestNotSent,
     paymentCreationTimeMs
 } from './PaymentLookupUtils';
 
@@ -201,6 +207,83 @@ describe('markRestErrorResponse', () => {
         expect(isNodeResponse(error)).toBe(false);
         expect(
             isNodeResponse(markRestErrorResponse(new Error('x'), null))
+        ).toBe(false);
+    });
+});
+
+describe('markHttpStatus', () => {
+    it('records an integer status on the error', () => {
+        const error = new Error('Bad Gateway');
+        expect(markHttpStatus(error, 502)).toBe(error);
+        expect(httpStatusOf(error)).toBe(502);
+    });
+
+    it('records nothing without an integer status', () => {
+        expect(httpStatusOf(markHttpStatus(new Error('x'), undefined))).toBe(
+            undefined
+        );
+        expect(httpStatusOf(markHttpStatus(new Error('x'), '502'))).toBe(
+            undefined
+        );
+        expect(httpStatusOf(new Error('x'))).toBeUndefined();
+        expect(httpStatusOf(undefined)).toBeUndefined();
+    });
+
+    it('is recorded by markRestErrorResponse with or without a gRPC code', () => {
+        expect(
+            httpStatusOf(markRestErrorResponse(new Error('x'), 2, 500))
+        ).toBe(500);
+        expect(
+            httpStatusOf(markRestErrorResponse(new Error('x'), undefined, 502))
+        ).toBe(502);
+    });
+});
+
+describe('markRequestNotSent', () => {
+    it('tags an Error in place', () => {
+        const error = new Error('Failed to connect the LNC client');
+        expect(markRequestNotSent(error)).toBe(error);
+        expect(isRequestNotSent(error)).toBe(true);
+    });
+
+    it('wraps a string rejection in a tagged Error', () => {
+        const tagged = markRequestNotSent('Tor not running') as Error;
+        expect(tagged).toBeInstanceOf(Error);
+        expect(isRequestNotSent(tagged)).toBe(true);
+    });
+
+    it('leaves other errors untagged', () => {
+        expect(isRequestNotSent(new Error('x'))).toBe(false);
+        expect(isRequestNotSent(undefined)).toBe(false);
+    });
+});
+
+describe('markJsonRpcCode', () => {
+    it('records a top-level JSON-RPC code', () => {
+        const error = markJsonRpcCode(new Error('x'), {
+            code: 301,
+            message: 'x'
+        });
+        expect(hasJsonRpcCode(error)).toBe(true);
+        expect((error as any).jsonRpcCode).toBe(301);
+    });
+
+    it('records a nested JSON-RPC code', () => {
+        const error = markJsonRpcCode(new Error('x'), {
+            error: { code: -32602, message: 'x' }
+        });
+        expect((error as any).jsonRpcCode).toBe(-32602);
+    });
+
+    it('records nothing without an integer code', () => {
+        expect(hasJsonRpcCode(markJsonRpcCode(new Error('x'), undefined))).toBe(
+            false
+        );
+        expect(
+            hasJsonRpcCode(markJsonRpcCode(new Error('x'), { code: 'E1' }))
+        ).toBe(false);
+        expect(
+            hasJsonRpcCode(markJsonRpcCode(new Error('x'), 'Bad Gateway'))
         ).toBe(false);
     });
 });

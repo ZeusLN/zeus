@@ -358,6 +358,42 @@ describe('CLNRest.request error fallback', () => {
             'Network request failed'
         );
     });
+
+    it.each([
+        ['a JSON-RPC error', 500, JSON.stringify({ code: 301, message: 'x' })],
+        ['a non-JSON body', 502, 'Bad Gateway'],
+        ['an empty body', 500, '']
+    ])('records the HTTP status of %s', async (_, status, body) => {
+        mockFetch.mockResolvedValue(blobResponse(status, body));
+        const error = await cln.postRequest('/v1/withdraw').catch((e) => e);
+
+        expect(error.httpStatus).toBe(status);
+    });
+
+    it.each([
+        ['a top-level', { code: 301, message: 'Could not afford' }, 301],
+        ['a nested', { error: { code: -32602, message: 'bad' } }, -32602]
+    ])('records %s JSON-RPC code', async (_, body, code) => {
+        mockFetch.mockResolvedValue(blobResponse(500, JSON.stringify(body)));
+        const error = await cln.postRequest('/v1/withdraw').catch((e) => e);
+
+        expect(error.jsonRpcCode).toBe(code);
+    });
+
+    it("records no JSON-RPC code for a proxy's page", async () => {
+        mockFetch.mockResolvedValue(blobResponse(520, 'error code: 520'));
+        const error = await cln.postRequest('/v1/withdraw').catch((e) => e);
+
+        expect(error.jsonRpcCode).toBeUndefined();
+        expect(error.httpStatus).toBe(520);
+    });
+
+    it('records no HTTP status for a transport failure', async () => {
+        mockFetch.mockRejectedValue(new Error('unexpected end of stream'));
+        const error = await cln.postRequest('/v1/withdraw').catch((e) => e);
+
+        expect(error.httpStatus).toBeUndefined();
+    });
 });
 
 describe('CLNRest payment timeout race', () => {

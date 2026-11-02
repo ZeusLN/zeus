@@ -11,12 +11,17 @@ jest.mock('react-native-nitro-tor', () => ({
 jest.mock('react-native-fs', () => ({
     DocumentDirectoryPath: '/tmp'
 }));
+jest.mock('react-native-randombytes', () => ({
+    randomBytes: jest.fn()
+}));
 
 import { RnTor } from 'react-native-nitro-tor';
 import { doTorRequest, isOnionHttpsUrl, RequestMethod } from './TorUtils';
+import { mayHaveBeenSent } from './OnchainSendUtils';
 import {
     isNodeResponse,
-    isPaymentRefusedAsDuplicate
+    isPaymentRefusedAsDuplicate,
+    isRequestNotSent
 } from './PaymentLookupUtils';
 
 describe('TorUtils', () => {
@@ -189,6 +194,36 @@ describe('doTorRequest errors', () => {
         }
     );
 
+    it('tags a failure to start Tor as not sent', async () => {
+        // a fresh module, so Tor isn't already started from earlier tests
+        let fresh: any;
+        let tor: any;
+        jest.isolateModules(() => {
+            tor = require('react-native-nitro-tor').RnTor;
+            fresh = require('./TorUtils');
+        });
+        tor.startTorIfNotRunning.mockResolvedValueOnce({
+            is_success: false,
+            error_message: 'bootstrap timed out'
+        });
+
+        const error = await fresh
+            .doTorRequest(
+                'https://node.onion:8080/v1/transactions',
+                fresh.RequestMethod.POST,
+                '{}'
+            )
+            .catch((e: any) => e);
+
+        expect(error.message).toBe('bootstrap timed out');
+        expect(isRequestNotSent(error)).toBe(true);
+        expect(tor.httpPost).not.toHaveBeenCalledWith(
+            expect.objectContaining({
+                url: 'https://node.onion:8080/v1/transactions'
+            })
+        );
+    });
+
     it('does not tag a transport failure', async () => {
         (RnTor.httpPost as jest.Mock).mockResolvedValue({
             error: 'circuit closed'
@@ -202,5 +237,82 @@ describe('doTorRequest errors', () => {
 
         expect(error.message).toBe('circuit closed');
         expect(isNodeResponse(error)).toBe(false);
+        expect(error.httpStatus).toBeUndefined();
+    });
+
+    it.each([
+        ['a gRPC error', 500, '{"code":2,"message":"invoice expired"}'],
+        ["a proxy's error page", 502, '<html>Bad Gateway</html>']
+    ])('records the HTTP status of %s', async (_, status_code, body) => {
+        (RnTor.httpPost as jest.Mock).mockResolvedValue({ status_code, body });
+
+        const error = await doTorRequest(
+            'https://node.onion:8080/v1/transactions',
+            RequestMethod.POST,
+            '{}'
+        ).catch((e: any) => e);
+
+        expect(error.httpStatus).toBe(status_code);
+    });
+});
+
+describe('doTorRequest errors for a CLNRest send', () => {
+    beforeEach(() => {
+        (RnTor.startTorIfNotRunning as jest.Mock).mockResolvedValue({
+            is_success: true
+        });
+    });
+
+    const torError = async (status_code: number, body: string) => {
+        (RnTor.httpPost as jest.Mock).mockResolvedValueOnce({
+            status_code,
+            body
+        });
+        return doTorRequest(
+            'https://node.onion:3010/v1/withdraw',
+            RequestMethod.POST,
+            '{}'
+        ).catch((e: any) => e);
+    };
+
+    it.each([
+        ['an unaffordable withdraw', 301, 'Could not afford 500000000sat'],
+        ['an invalid parameter', -32602, 'destination: should be an address'],
+        ['a code inside the gRPC range', 4, 'some CLN error']
+    ])(
+        "keeps clnrest's JSON-RPC code for %s, which offers Try Again",
+        async (_, code, message) => {
+            const error = await torError(
+                500,
+                JSON.stringify({ code, message })
+            );
+
+            expect(error.message).toBe(message);
+            expect(error.jsonRpcCode).toBe(code);
+            expect(mayHaveBeenSent(error, 'cln-rest')).toBe(false);
+        }
+    );
+
+    it.each([
+        ["a proxy's 520", 520, 'error code: 520'],
+        [
+            'a 500 without a JSON-RPC body',
+            500,
+            '<html>Internal Server Error</html>'
+        ]
+    ])('treats %s as possibly sent', async (_, status, body) => {
+        const error = await torError(status, body);
+
+        expect(error.jsonRpcCode).toBeUndefined();
+        expect(mayHaveBeenSent(error, 'cln-rest')).toBe(true);
+    });
+
+    it("still reads lnd's gRPC transport code over Tor as possibly sent", async () => {
+        const error = await torError(
+            503,
+            JSON.stringify({ code: 14, message: 'transport is closing' })
+        );
+
+        expect(mayHaveBeenSent(error, 'lnd')).toBe(true);
     });
 });

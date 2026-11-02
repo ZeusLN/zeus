@@ -1,6 +1,11 @@
 import { RnTor } from 'react-native-nitro-tor';
 import RNFS from 'react-native-fs';
-import { grpcErrorCode, markRestErrorResponse } from './PaymentLookupUtils';
+import {
+    grpcErrorCode,
+    markJsonRpcCode,
+    markRequestNotSent,
+    markRestErrorResponse
+} from './PaymentLookupUtils';
 
 const SOCKS_PORT = 9056;
 const TARGET_PORT = 9057;
@@ -53,7 +58,10 @@ const ensureTorStarted = (): Promise<void> => {
                 timeout_ms: START_TIMEOUT_MS
             });
             if (!result.is_success) {
-                throw new Error(result.error_message || 'Failed to start Tor');
+                // the request that needed Tor never went out
+                throw markRequestNotSent(
+                    new Error(result.error_message || 'Failed to start Tor')
+                );
             }
         })().catch((e) => {
             startPromise = null;
@@ -142,9 +150,15 @@ const doTorRequest = async (
                     parsedBody.error)) ||
             (typeof parsedBody === 'string' && parsedBody) ||
             `HTTP ${response.status_code}`;
-        throw markRestErrorResponse(
-            new Error(message),
-            grpcErrorCode(parsedBody)
+        // also keeps a Core Lightning error body's JSON-RPC code, which
+        // shows clnrest itself answered
+        throw markJsonRpcCode(
+            markRestErrorResponse(
+                new Error(message),
+                grpcErrorCode(parsedBody),
+                response.status_code
+            ),
+            parsedBody
         );
     }
 
