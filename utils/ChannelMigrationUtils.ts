@@ -61,6 +61,45 @@ const stopLndSafely = async (): Promise<void> => {
     }
 };
 
+// Copies of the channel database that the import, export and Olympus flows
+// stage in app cache. Matched by prefix because the Olympus and export
+// names embed a timestamp.
+const CHANNEL_DB_STAGING_PREFIXES = [
+    'zeus-import-temp',
+    'zeus-olympus-backup-',
+    'zeus-olympus-restore-',
+    'zeus-lnd-'
+];
+
+/**
+ * Deletes every channel database copy staged in app cache, including a
+ * backup that was picked but never imported. Never throws.
+ */
+export const purgeChannelDbStagingFiles = async (): Promise<void> => {
+    let entries: RNFS.ReadDirItem[];
+    try {
+        entries = await RNFS.readDir(RNFS.CachesDirectoryPath);
+    } catch (e) {
+        console.warn('Failed to list app cache for staged channel data:', e);
+        return;
+    }
+
+    for (const entry of entries) {
+        if (
+            !CHANNEL_DB_STAGING_PREFIXES.some((prefix) =>
+                entry.name.startsWith(prefix)
+            )
+        ) {
+            continue;
+        }
+        try {
+            await RNFS.unlink(entry.path);
+        } catch (e) {
+            console.warn('Failed to delete staged channel data:', e);
+        }
+    }
+};
+
 const resolveToLocalPath = async (uri: string): Promise<string> => {
     const ext = uri.toLowerCase().endsWith('.db') ? '.db' : '.zip';
     const tempPath = `${RNFS.CachesDirectoryPath}/zeus-import-temp${ext}`;
