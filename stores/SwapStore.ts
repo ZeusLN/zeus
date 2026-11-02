@@ -4,7 +4,7 @@ import BigNumber from 'bignumber.js';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
 import { crypto, initEccLib, Transaction } from 'bitcoinjs-lib';
-import { HDKey } from '@scure/bip32';
+import { HDKey, HARDENED_OFFSET } from '@scure/bip32';
 import { mnemonicToSeedSync, generateMnemonic } from '@scure/bip39';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -2061,9 +2061,9 @@ export default class SwapStore {
 
     /**
      * Builds the stored form of one swap from a /swap/restore response, or
-     * returns null for an entry without an ID or key details, for an entry
-     * with an unusable keyIndex, and for a reverse swap whose preimage hash
-     * doesn't match the key at its keyIndex.
+     * returns null for an entry that is not an object or has no ID or key
+     * details, for an entry with an unusable keyIndex, and for a reverse
+     * swap whose preimage hash doesn't match the key at its keyIndex.
      */
     private buildRescuedSwap = (
         swap: any,
@@ -2074,9 +2074,11 @@ export default class SwapStore {
             host
         }: { implementation: string; nodePubkey: string; host: string }
     ): any | null => {
+        // a null entry would throw below and fail the whole restore
+        if (!swap || typeof swap !== 'object') return null;
         const isReverseSwap = swap.type === 'reverse';
         const details = isReverseSwap ? swap.claimDetails : swap.refundDetails;
-        if (!swap?.id || !details) return null;
+        if (!swap.id || !details) return null;
 
         // Only fields describing the host's side of the swap are taken from
         // the response. The claim address, keys and preimage are ours to set:
@@ -2098,7 +2100,7 @@ export default class SwapStore {
         if (
             !Number.isSafeInteger(keyIndex) ||
             keyIndex < 0 ||
-            keyIndex >= 2 ** 31
+            keyIndex >= HARDENED_OFFSET
         ) {
             console.error(
                 `Skipping rescued swap ${swap.id}: unusable key index ${details.keyIndex}`
