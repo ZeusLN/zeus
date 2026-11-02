@@ -20,6 +20,7 @@ import {
     LayoutChangeEvent
 } from 'react-native';
 import {
+    EdgeInsets,
     SafeAreaInsetsContext,
     initialWindowMetrics
 } from 'react-native-safe-area-context';
@@ -127,6 +128,8 @@ export default class ModalBox extends React.PureComponent<
         onClosingState: PropTypes.func,
         children: PropTypes.node
     };
+
+    static contextType = SafeAreaInsetsContext;
 
     static defaultProps = {
         startOpen: false,
@@ -343,12 +346,23 @@ export default class ModalBox extends React.PureComponent<
                     let positionDest = this.calculateModalPosition(
                         this.state.containerHeight - this.state.keyboardOffset
                     );
+                    // A sheet pushed up by the keyboard stops at
+                    // keyboardTopOffset, and a bottom sheet also stays below
+                    // the top inset, as its height clamp does without the
+                    // keyboard
                     if (
                         this.state.keyboardOffset &&
-                        positionDest !== undefined &&
-                        positionDest < (this.props.keyboardTopOffset ?? 0)
+                        positionDest !== undefined
                     ) {
-                        positionDest = this.props.keyboardTopOffset ?? 0;
+                        const minPosition = Math.max(
+                            this.props.keyboardTopOffset ?? 0,
+                            this.props.position === 'bottom'
+                                ? this.topInsetOverlap()
+                                : 0
+                        );
+                        if (positionDest < minPosition) {
+                            positionDest = minPosition;
+                        }
                     }
 
                     // Fallback for undefined positionDest
@@ -609,6 +623,15 @@ export default class ModalBox extends React.PureComponent<
     }
 
     /*
+     * The part of the top safe-area inset the container overlaps
+     */
+    topInsetOverlap() {
+        const insets = this.context as EdgeInsets | null;
+        const topInset = insets?.top ?? initialWindowMetrics?.insets.top ?? 0;
+        return Math.max(0, topInset - this.state.containerTop);
+    }
+
+    /*
      * Render the backdrop element
      */
     renderBackdrop() {
@@ -646,7 +669,7 @@ export default class ModalBox extends React.PureComponent<
         return backdrop;
     }
 
-    renderContent(topInset: number) {
+    renderContent() {
         const { style }: { style?: StyleProp<ViewStyle> } = this.props;
         const size = {
             height: this.state.containerHeight,
@@ -673,8 +696,7 @@ export default class ModalBox extends React.PureComponent<
             this.props.position === 'bottom'
                 ? Math.max(
                       0,
-                      this.state.containerHeight -
-                          Math.max(0, topInset - this.state.containerTop)
+                      this.state.containerHeight - this.topInsetOverlap()
                   )
                 : this.state.containerHeight;
         const customHeightStyle =
@@ -744,17 +766,7 @@ export default class ModalBox extends React.PureComponent<
                     onLayout={this.onContainerLayout}
                 >
                     {visible && this.renderBackdrop()}
-                    {visible && (
-                        <SafeAreaInsetsContext.Consumer>
-                            {(insets) =>
-                                this.renderContent(
-                                    insets?.top ??
-                                        initialWindowMetrics?.insets.top ??
-                                        0
-                                )
-                            }
-                        </SafeAreaInsetsContext.Consumer>
-                    )}
+                    {visible && this.renderContent()}
                 </View>
             </View>
         );

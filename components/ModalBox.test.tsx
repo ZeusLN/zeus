@@ -4,7 +4,7 @@ jest.mock('mobx-react', () => ({
 }));
 
 import * as React from 'react';
-import { Dimensions, StyleSheet, Text } from 'react-native';
+import { Animated, Dimensions, StyleSheet, Text } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -23,7 +23,12 @@ const mockWindow = (fontScale: number) =>
         fontScale
     });
 
-const renderSheet = async (props: any, containerTop = 0) => {
+type MeasureInWindow = (cb: (...args: number[]) => void) => void;
+
+const renderSheet = async (
+    props: any,
+    containerTop: number | MeasureInWindow = 0
+) => {
     const ref = React.createRef<any>();
     await render(
         <SafeAreaProvider
@@ -45,8 +50,11 @@ const renderSheet = async (props: any, containerTop = 0) => {
     // Where the container starts in the window
     ref.current.containerRef = {
         current: {
-            measureInWindow: (cb: (...args: number[]) => void) =>
-                cb(0, containerTop, 400, WINDOW_HEIGHT - containerTop)
+            measureInWindow:
+                typeof containerTop === 'function'
+                    ? containerTop
+                    : (cb: (...args: number[]) => void) =>
+                          cb(0, containerTop, 400, WINDOW_HEIGHT - containerTop)
         }
     };
     // The container measures the area the sheet is positioned in
@@ -56,11 +64,38 @@ const renderSheet = async (props: any, containerTop = 0) => {
             nativeEvent: { layout: { width: 400, height: WINDOW_HEIGHT } }
         });
     });
+    return ref;
 };
 
-const sheetHeight = () =>
-    StyleSheet.flatten(screen.getByTestId('sheet-content').parent!.props.style)
-        .height;
+const sheet = () => screen.getByTestId('sheet-content').parent!;
+
+const sheetHeight = () => StyleSheet.flatten(sheet().props.style).height;
+
+// Report the sheet's rendered height, as the native layout pass would
+const layoutSheet = async () => {
+    await act(async () => {
+        fireEvent(sheet(), 'layout', {
+            nativeEvent: { layout: { width: 400, height: sheetHeight() } }
+        });
+    });
+};
+
+// Run the requestAnimationFrame in animateOpen that computes the position
+const flushOpen = async () => {
+    await act(async () => {
+        jest.runOnlyPendingTimers();
+    });
+};
+
+// The offset the last open animation moved the sheet to
+const lastPositionDest = (
+    ref: React.RefObject<any>,
+    timing: jest.SpyInstance
+) =>
+    timing.mock.calls
+        .filter(([value]) => value === ref.current.state.position)
+        .map(([, config]) => config.toValue)
+        .pop();
 
 // The open animation is scheduled with requestAnimationFrame; fake timers keep
 // it from firing after the test environment is torn down
@@ -114,5 +149,43 @@ describe('ModalBox sheet height', () => {
         mockWindow(1.3);
         await renderSheet({ position: 'center', style: { height: 700 } });
         expect(sheetHeight()).toBe(WINDOW_HEIGHT);
+    });
+});
+
+describe('ModalBox keyboard position', () => {
+    const KEYBOARD_TOP = 500;
+
+    const openKeyboard = async (ref: React.RefObject<any>) => {
+        await act(async () => {
+            ref.current.onKeyboardChange({
+                endCoordinates: { screenY: KEYBOARD_TOP }
+            });
+        });
+        await flushOpen();
+    };
+
+    it('keeps a bottom sheet below the top inset when the keyboard pushes it up', async () => {
+        mockWindow(1);
+        const timing = jest.spyOn(Animated, 'timing');
+        const ref = await renderSheet({
+            position: 'bottom',
+            style: { height: WINDOW_HEIGHT * 0.9 }
+        });
+        await layoutSheet();
+        await openKeyboard(ref);
+        // keyboardTopOffset alone (22 on iOS) would put the top under the inset
+        expect(lastPositionDest(ref, timing)).toBe(TOP_INSET);
+    });
+
+    it('sits a bottom sheet on the keyboard when it fits above it', async () => {
+        mockWindow(1);
+        const timing = jest.spyOn(Animated, 'timing');
+        const ref = await renderSheet({
+            position: 'bottom',
+            style: { height: 200 }
+        });
+        await layoutSheet();
+        await openKeyboard(ref);
+        expect(lastPositionDest(ref, timing)).toBe(KEYBOARD_TOP - 200);
     });
 });
