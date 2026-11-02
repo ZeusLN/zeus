@@ -24,7 +24,6 @@ import ShowHideToggle from '../components/ShowHideToggle';
 
 import SettingsStore from '../stores/SettingsStore';
 
-import { verifyBiometry } from '../utils/BiometricUtils';
 import {
     blockNavigationDuringWipe,
     clearAllData,
@@ -66,6 +65,8 @@ interface LockscreenState {
     hidden: boolean;
     error: boolean;
     attemptNotSaved: boolean;
+    deleteFailed: boolean;
+    biometryInvalidated: boolean;
     modifySecurityScreen: string;
     deletePin: boolean;
     deleteDuressPin: boolean;
@@ -111,6 +112,8 @@ export default class Lockscreen extends React.Component<
             hidden: true,
             error: false,
             attemptNotSaved: false,
+            deleteFailed: false,
+            biometryInvalidated: false,
             modifySecurityScreen: '',
             deletePin: false,
             deleteDuressPin: false,
@@ -249,14 +252,21 @@ export default class Lockscreen extends React.Component<
             !deleteDuressPassword &&
             !modifySecurityScreen
         ) {
-            const isVerified = await verifyBiometry(
+            const result = await SettingsStore.authenticateWithBiometry(
                 localeString('views.Lockscreen.Biometrics.prompt').replace(
                     'Zeus',
                     'ZEUS'
                 )
-            );
+            ).catch((error) => {
+                console.error('Biometric unlock failed', error);
+                return 'failed' as const;
+            });
 
-            if (isVerified) {
+            if (result === 'invalidated') {
+                this.setState({ biometryInvalidated: true });
+            }
+
+            if (result === 'success') {
                 SettingsStore.setPosStatus('inactive');
                 await this.resetAuthenticationAttempts();
                 SettingsStore.setLoginStatus(true);
@@ -394,7 +404,8 @@ export default class Lockscreen extends React.Component<
 
         this.setState({
             error: false,
-            attemptNotSaved: false
+            attemptNotSaved: false,
+            deleteFailed: false
         });
 
         // Save the attempt before checking the entry. An entry that is
@@ -432,22 +443,26 @@ export default class Lockscreen extends React.Component<
             try {
                 SettingsStore.setLoginStatus(true);
 
+                if (!this.isSecurityManagementFlow) {
+                    SettingsStore.bindLegacyBiometryKey();
+                }
+
                 // Check if we're modifying security settings first
                 if (modifySecurityScreen) {
                     await this.resetAuthenticationAttempts();
                     navigation.popTo(modifySecurityScreen);
                     return;
                 } else if (deletePassword) {
-                    this.deletePassword();
+                    await this.deletePassword();
                     return;
                 } else if (deletePin) {
-                    this.deletePin();
+                    await this.deletePin();
                     return;
                 } else if (deleteDuressPassword) {
-                    this.deleteDuressPassword();
+                    await this.deleteDuressPassword();
                     return;
                 } else if (deleteDuressPin) {
-                    this.deleteDuressPin();
+                    await this.deleteDuressPin();
                     return;
                 } else if (route.params?.pendingNavigation) {
                     // must be handled before selectNodeOnStartup, which would
@@ -531,60 +546,85 @@ export default class Lockscreen extends React.Component<
         });
     };
 
-    deletePassword = () => {
-        const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
-
-        // duress passphrase is also deleted when passphrase is deleted
-        // biometry is also disabled when passphrase is deleted
-        updateSettings({
-            passphrase: '',
-            duressPassphrase: '',
-            authenticationAttempts: 0,
-            isBiometryEnabled: false
-        }).then(() => {
-            navigation.popTo('Security');
-        });
+    // A failed settings write leaves the credential in place. The user
+    // stays on the Lockscreen with a message and can try again.
+    onDeleteFailed = (error: unknown) => {
+        console.error('Failed to delete credential', error);
+        this.setState({ deleteFailed: true, pinAttempt: '' });
     };
 
-    deleteDuressPassword = () => {
+    deletePassword = async () => {
         const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { disableBiometry, updateSettings } = SettingsStore;
 
-        updateSettings({
-            duressPassphrase: '',
-            authenticationAttempts: 0
-        }).then(() => {
-            navigation.popTo('Security');
-        });
+        // duress passphrase is also deleted when passphrase is deleted. Biometry is
+        // disabled first, so an interrupted delete never leaves biometrics
+        // enabled without a password
+        try {
+            await disableBiometry();
+            await updateSettings({
+                passphrase: '',
+                duressPassphrase: '',
+                authenticationAttempts: 0
+            });
+        } catch (error) {
+            this.onDeleteFailed(error);
+            return;
+        }
+        navigation.popTo('Security');
     };
 
-    deletePin = () => {
+    deleteDuressPassword = async () => {
         const { SettingsStore, navigation } = this.props;
         const { updateSettings } = SettingsStore;
 
-        // duress pin is also deleted when pin is deleted
-        // biometry is also disabled when pin is deleted
-        updateSettings({
-            pin: '',
-            duressPin: '',
-            authenticationAttempts: 0,
-            isBiometryEnabled: false
-        }).then(() => {
-            navigation.popTo('Security');
-        });
+        try {
+            await updateSettings({
+                duressPassphrase: '',
+                authenticationAttempts: 0
+            });
+        } catch (error) {
+            this.onDeleteFailed(error);
+            return;
+        }
+        navigation.popTo('Security');
     };
 
-    deleteDuressPin = () => {
+    deletePin = async () => {
+        const { SettingsStore, navigation } = this.props;
+        const { disableBiometry, updateSettings } = SettingsStore;
+
+        // duress pin is also deleted when pin is deleted. Biometry is
+        // disabled first, so an interrupted delete never leaves biometrics
+        // enabled without a PIN
+        try {
+            await disableBiometry();
+            await updateSettings({
+                pin: '',
+                duressPin: '',
+                authenticationAttempts: 0
+            });
+        } catch (error) {
+            this.onDeleteFailed(error);
+            return;
+        }
+        navigation.popTo('Security');
+    };
+
+    deleteDuressPin = async () => {
         const { SettingsStore, navigation } = this.props;
         const { updateSettings } = SettingsStore;
 
-        updateSettings({
-            duressPin: '',
-            authenticationAttempts: 0
-        }).then(() => {
-            navigation.popTo('Security');
-        });
+        try {
+            await updateSettings({
+                duressPin: '',
+                authenticationAttempts: 0
+            });
+        } catch (error) {
+            this.onDeleteFailed(error);
+            return;
+        }
+        navigation.popTo('Security');
     };
 
     deleteNodes = async () => {
@@ -681,6 +721,8 @@ export default class Lockscreen extends React.Component<
             pin,
             hidden,
             error,
+            deleteFailed,
+            biometryInvalidated,
             modifySecurityScreen,
             deletePin,
             deleteDuressPin,
@@ -741,6 +783,21 @@ export default class Lockscreen extends React.Component<
                         {error && (
                             <ErrorMessage
                                 message={this.generateErrorMessage()}
+                            />
+                        )}
+                        {deleteFailed && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.Security.deleteFailed'
+                                )}
+                            />
+                        )}
+                        {biometryInvalidated && !error && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Lockscreen.biometricsChanged'
+                                )}
+                                fontSize={16}
                             />
                         )}
                         <View style={{ marginBottom: 40 }}>
@@ -826,6 +883,13 @@ export default class Lockscreen extends React.Component<
                                                 message={this.generateErrorMessage()}
                                             />
                                         )}
+                                        {deleteFailed && (
+                                            <ErrorMessage
+                                                message={localeString(
+                                                    'views.Settings.Security.deleteFailed'
+                                                )}
+                                            />
+                                        )}
                                     </View>
                                 )}
                                 {!modifySecurityScreen &&
@@ -841,6 +905,14 @@ export default class Lockscreen extends React.Component<
                                             {error && (
                                                 <ErrorMessage
                                                     message={this.generateErrorMessage()}
+                                                />
+                                            )}
+                                            {biometryInvalidated && !error && (
+                                                <ErrorMessage
+                                                    message={localeString(
+                                                        'views.Lockscreen.biometricsChanged'
+                                                    )}
+                                                    fontSize={16}
                                                 />
                                             )}
                                         </View>
