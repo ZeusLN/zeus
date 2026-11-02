@@ -558,6 +558,107 @@ describe('CashuStore.checkInvoicePaid', () => {
             'outputs already signed'
         );
         expect(store.invoices![0].isPaid).toBe(false);
+        // only ZEUS Pay quotes are re-seeded from the mint
+        expect(cdk.checkExternalMintQuote).not.toHaveBeenCalled();
+        expect(cdk.addExternalMintQuote).not.toHaveBeenCalled();
+    });
+
+    describe('ZEUS Pay quotes stored by an earlier attempt', () => {
+        beforeEach(() => {
+            cdk.checkMintQuote.mockResolvedValue(mintQuote('Paid'));
+            cdk.mint.mockRejectedValue(new Error('ConcurrentUpdate'));
+        });
+
+        it('re-seeds the quote with the P2PK key and mints it when the stored copy fails', async () => {
+            const store = await storeWithInvoice();
+            store.seedPhrase = MNEMONIC;
+            jest.spyOn(store, 'checkAndSweepMints').mockResolvedValue(
+                undefined
+            );
+            cdk.checkExternalMintQuote.mockResolvedValue({
+                state: 'PAID',
+                amount: 1000,
+                request: REQUEST,
+                expiry: 1234
+            });
+
+            const result = await store.checkInvoicePaid('quote-1', A, true);
+
+            expect(cdk.mint).toHaveBeenCalledWith(A, 'quote-1');
+            expect(cdk.checkExternalMintQuote).toHaveBeenCalledWith(
+                A,
+                'quote-1'
+            );
+            expect(cdk.addExternalMintQuote).toHaveBeenCalledWith(
+                A,
+                'quote-1',
+                1000,
+                REQUEST,
+                'PAID',
+                1234,
+                store.deriveCashuSecretKey()
+            );
+            expect(cdk.mintExternal).toHaveBeenCalledWith(A, 'quote-1', 1000);
+            expect(result).toMatchObject({ isPaid: true, amtSat: 1000 });
+            expect(store.invoices![0].isPaid).toBe(true);
+        });
+
+        it('surfaces the error of the re-seeded mint when it also fails', async () => {
+            const store = await storeWithInvoice();
+            cdk.checkExternalMintQuote.mockResolvedValue({
+                state: 'PAID',
+                amount: 1000,
+                request: REQUEST
+            });
+            cdk.mintExternal.mockRejectedValue(new Error('witness invalid'));
+
+            await expect(
+                store.checkInvoicePaid('quote-1', A, true)
+            ).rejects.toThrow('witness invalid');
+            expect(store.invoices![0].isPaid).toBe(false);
+        });
+
+        it('surfaces the lookup error when the mint cannot be reached', async () => {
+            const store = await storeWithInvoice();
+            cdk.checkExternalMintQuote.mockRejectedValue(
+                new Error('error sending request')
+            );
+
+            await expect(
+                store.checkInvoicePaid('quote-1', A, true)
+            ).rejects.toThrow('error sending request');
+            expect(cdk.addExternalMintQuote).not.toHaveBeenCalled();
+            expect(cdk.mintExternal).not.toHaveBeenCalled();
+        });
+
+        it('keeps the mint error when the mint no longer reports the quote paid', async () => {
+            const store = await storeWithInvoice();
+            cdk.checkExternalMintQuote.mockResolvedValue({
+                state: 'ISSUED',
+                amount: 1000
+            });
+
+            await expect(
+                store.checkInvoicePaid('quote-1', A, true)
+            ).rejects.toThrow('ConcurrentUpdate');
+            expect(cdk.addExternalMintQuote).not.toHaveBeenCalled();
+            expect(cdk.mintExternal).not.toHaveBeenCalled();
+            expect(store.invoices![0].isPaid).toBe(false);
+        });
+
+        it('mints the stored copy without a mint lookup when it succeeds', async () => {
+            const store = await storeWithInvoice();
+            jest.spyOn(store, 'checkAndSweepMints').mockResolvedValue(
+                undefined
+            );
+            cdk.mint.mockResolvedValue(undefined);
+
+            const result = await store.checkInvoicePaid('quote-1', A, true);
+
+            expect(result.isPaid).toBe(true);
+            expect(cdk.checkExternalMintQuote).not.toHaveBeenCalled();
+            expect(cdk.addExternalMintQuote).not.toHaveBeenCalled();
+        });
     });
 
     it('refuses to check with no mint configured', async () => {
