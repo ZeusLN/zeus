@@ -85,7 +85,11 @@ import SettingsStore, {
 } from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
-import { SWAPS_RESCUE_KEY, isValidRescueKey } from '../../utils/SwapUtils';
+import {
+    SWAPS_RESCUE_KEY,
+    isValidRescueKey,
+    rescueKeyRestoreError
+} from '../../utils/SwapUtils';
 import { addRecoveryWallet } from '../../utils/WalletRecoveryUtils';
 
 import Storage from '../../storage';
@@ -1517,11 +1521,18 @@ export default class SeedRecovery extends React.PureComponent<
                                             const mnemonic =
                                                 normalizedSeedArray.join(' ');
 
-                                            if (!isValidRescueKey(mnemonic)) {
+                                            const restoreError =
+                                                rescueKeyRestoreError(
+                                                    mnemonic,
+                                                    this.props.SettingsStore
+                                                        .settings?.nodes
+                                                );
+                                            if (restoreError) {
                                                 this.setState({
-                                                    errorMsg: localeString(
-                                                        'views.Settings.SeedRecovery.invalidChecksum'
-                                                    )
+                                                    errorMsg:
+                                                        localeString(
+                                                            restoreError
+                                                        )
                                                 });
                                                 return;
                                             }
