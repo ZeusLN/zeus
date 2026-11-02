@@ -1869,6 +1869,7 @@
     "stores.NostrWalletConnectStore.error.cashuInsufficientBalance": "Solde insuffisant. Il ne vous reste que {{balance}} sats dans votre portefeuille Cashu et vous essayez de dépenser {{amount}} sats.",
     "stores.NostrWalletConnectStore.error.lightningInsufficientBalance": "Solde insuffisant. Il ne vous reste que {{balance}} sats dans votre portefeuille Lightning et vous essayez de dépenser {{amount}} sats.",
     "stores.NostrWalletConnectStore.error.feeLimitReducedByBudget": "The remaining budget for this connection limited the routing fee to {{feeLimit}} sats.",
+    "stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget": "This payment ({{amount}} sats) plus a fee reserve of {{feeReserve}} sats exceeds the remaining budget for this connection ({{remaining}} sats).",
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Aucun atelier monétaire de Cashu n'a été sélectionné. Veuillez d'abord en sélectionner un.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Échec du décodage de la facture - payReq est indéfini",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Facture déjà payée",
