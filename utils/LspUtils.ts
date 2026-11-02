@@ -24,8 +24,10 @@ const fail = (error: WrappedInvoiceError): WrappedInvoiceCheck => ({
 // Olympus sets the wrapped invoice to expire one hour after the inner
 // invoice (olympus-flow hodlExpiry). Payments that arrive after the inner
 // invoice expires fail anyway; this only bounds how far past it the LSP
-// can go.
-const MAX_WRAPPED_EXTRA_EXPIRY_SECONDS = 3600;
+// can go. The extra minute covers rounding: the LSP turns the expiry time
+// into a relative expiry against its own clock, and its node stamps the
+// invoice with a creation time taken later, possibly on another host.
+const MAX_WRAPPED_EXTRA_EXPIRY_SECONDS = 3600 + 60;
 
 // The wrap's final CLTV must cover the inner one plus the LSP's own
 // delta (Olympus adds 40). Anything far above that only lengthens how

@@ -1,3 +1,4 @@
+import Bolt11Utils from './Bolt11Utils';
 import { verifyWrappedInvoice } from './LspUtils';
 
 // Deterministic fixtures signed with throwaway test keys. The scenario:
@@ -41,9 +42,13 @@ const WRAPPED_TESTNET =
 const WRAPPED_EXPIRY_PLUS_HOUR =
     'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyzhuscqpj9qypqsqvnuxannkaxcm5y73tcmvc3rtdwjdtvqph8pzaze6lvu8kqhrty6zzpzdru9nx8y4ce7da2feut8m0vwj8zudenm2au8rze634xwlhrqp7dwd9t';
 
-// WRAPPED_EXACT expiring 3601 s after INNER
+// WRAPPED_EXACT expiring 3660 s after INNER (one hour plus the margin)
+const WRAPPED_EXPIRY_SLACK =
+    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyzh7vcqpj9qypqsqrn7dsueu3yxpkccv5yc4t6lsgs4mhqyfmy6sthfplx56w28sdj2p3ru6n8ejggumuxmmx08kwt6l72rwza6lm3ln7w90d9fqquneygcp0arjz5';
+
+// WRAPPED_EXACT expiring 3661 s after INNER
 const WRAPPED_EXPIRY_OVER =
-    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyzhu3cqpj9qypqsqma0lz3ug0mnnt05vw4lhfn3p4ls45mepyrh5dtp9d67ar8fu06sj8es8mp64zkl87qqejgqag00cc8e5e39x6uqaavdt9e46d83837gp7pj4mp';
+    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyzh7dcqpj9qypqsq62rk7nf86jwjalvylhj8xtrqrl4mngkl5c0zglqpxfdqlh7qqja8xwpvlhtghkf3edzeyjn0e2z4k9fusxzvkcq8tmts9dnxm5cl0fqq2gq0sf';
 
 // WRAPPED_EXACT with no x field (BOLT 11 default 3600 s)
 const WRAPPED_NO_EXPIRY =
@@ -171,6 +176,47 @@ describe('verifyWrappedInvoice', () => {
         });
     });
 
+    // keeps the comments on the fixtures above honest: each variant differs
+    // from its base only in the field its name says
+    describe('fixtures', () => {
+        it.each([
+            ['INNER', INNER, 86400, 18],
+            ['WRAPPED_EXACT', WRAPPED_EXACT, 86400, 18],
+            ['WRAPPED_EXPIRY_PLUS_HOUR', WRAPPED_EXPIRY_PLUS_HOUR, 90000, 18],
+            ['WRAPPED_EXPIRY_SLACK', WRAPPED_EXPIRY_SLACK, 90060, 18],
+            ['WRAPPED_EXPIRY_OVER', WRAPPED_EXPIRY_OVER, 90061, 18],
+            ['WRAPPED_NO_EXPIRY', WRAPPED_NO_EXPIRY, 3600, 18],
+            ['WRAPPED_CLTV_58', WRAPPED_CLTV_58, 86400, 58],
+            ['WRAPPED_CLTV_162', WRAPPED_CLTV_162, 86400, 162],
+            ['WRAPPED_CLTV_163', WRAPPED_CLTV_163, 86400, 163],
+            ['WRAPPED_NO_CLTV', WRAPPED_NO_CLTV, 86400, undefined],
+            ['INNER_NO_EXPIRY', INNER_NO_EXPIRY, 3600, 18],
+            ['INNER_CLTV_40', INNER_CLTV_40, 86400, 40],
+            ['INNER_NO_CLTV', INNER_NO_CLTV, 86400, undefined]
+        ])('%s has expiry %p and final CLTV %p', (_, invoice, expiry, cltv) => {
+            const inner = Bolt11Utils.decode(INNER);
+            const decoded = Bolt11Utils.decode(invoice);
+            expect(decoded.expiry).toBe(expiry);
+            expect(decoded.cltv_expiry).toBe(cltv);
+            expect(decoded.timestamp).toBe(inner.timestamp);
+            expect(decoded.payment_hash).toBe(inner.payment_hash);
+        });
+
+        it('has no x or c field where the name says so', () => {
+            const tags = (invoice: string) =>
+                Bolt11Utils.decode(invoice).sections.map((s) => s.name);
+            expect(tags(WRAPPED_NO_EXPIRY)).not.toContain('expiry');
+            expect(tags(INNER_NO_EXPIRY)).not.toContain('expiry');
+            expect(tags(WRAPPED_NO_CLTV)).not.toContain(
+                'min_final_cltv_expiry'
+            );
+            expect(tags(INNER_NO_CLTV)).not.toContain('min_final_cltv_expiry');
+            expect(tags(WRAPPED_EXACT)).toEqual(
+                expect.arrayContaining(['expiry', 'min_final_cltv_expiry'])
+            );
+        });
+    });
+
     describe('expiry', () => {
         it('accepts a wrap expiring one hour after the inner invoice', () => {
             expect(
@@ -182,7 +228,17 @@ describe('verifyWrappedInvoice', () => {
             ).toEqual({ valid: true });
         });
 
-        it('rejects a wrap expiring more than one hour after the inner invoice', () => {
+        it('accepts a wrap up to a minute past the hour', () => {
+            expect(
+                verifyWrappedInvoice(
+                    INNER,
+                    WRAPPED_EXPIRY_SLACK,
+                    QUOTED_FEE_SATS
+                )
+            ).toEqual({ valid: true });
+        });
+
+        it('rejects a wrap expiring more than an hour and a minute after the inner invoice', () => {
             expect(
                 verifyWrappedInvoice(
                     INNER,
