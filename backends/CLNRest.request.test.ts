@@ -162,6 +162,37 @@ describe('CLNRest.request', () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
+    it('does not share requests made with different runes', async () => {
+        const pending: Array<(v: any) => void> = [];
+        mockFetch.mockImplementation(() => new Promise((r) => pending.push(r)));
+
+        const first = cln.postRequest('/v1/listfunds');
+        mockSettingsStore.rune = 'rune-def';
+        const second = cln.postRequest('/v1/listfunds');
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(fetchArgs(1)[2].Rune).toBe('rune-def');
+        pending[0](blobResponse(200, '{"wallet":"a"}'));
+        pending[1](blobResponse(200, '{"wallet":"b"}'));
+        await expect(first).resolves.toEqual({ wallet: 'a' });
+        await expect(second).resolves.toEqual({ wallet: 'b' });
+    });
+
+    it('does not share Tor requests made with different runes', async () => {
+        mockSettingsStore.enableTor = true;
+        mockDoTorRequest
+            .mockResolvedValueOnce({ wallet: 'a' })
+            .mockResolvedValueOnce({ wallet: 'b' });
+
+        const first = cln.postRequest('/v1/listfunds');
+        mockSettingsStore.rune = 'rune-def';
+        const second = cln.postRequest('/v1/listfunds');
+
+        await expect(first).resolves.toEqual({ wallet: 'a' });
+        await expect(second).resolves.toEqual({ wallet: 'b' });
+        expect(mockDoTorRequest).toHaveBeenCalledTimes(2);
+    });
+
     it('issues a fresh request after a failed one', async () => {
         mockFetch
             .mockResolvedValueOnce(blobResponse(500, 'boom'))

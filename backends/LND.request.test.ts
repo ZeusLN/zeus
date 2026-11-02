@@ -373,6 +373,51 @@ describe('LND request core', () => {
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
+        it('does not share a request between two credentials on one host', async () => {
+            const pending: Array<(v: any) => void> = [];
+            mockFetch.mockImplementation(
+                () => new Promise((res) => pending.push(res))
+            );
+
+            const a = lnd.getChannels();
+            settings.macaroonHex = 'cafebabe';
+            const b = lnd.getChannels();
+
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            expect(mockFetch.mock.calls[0][2]['Grpc-Metadata-macaroon']).toBe(
+                'deadbeef'
+            );
+            expect(mockFetch.mock.calls[1][2]['Grpc-Metadata-macaroon']).toBe(
+                'cafebabe'
+            );
+            pending[0](response(200, '{"wallet":"a"}'));
+            pending[1](response(200, '{"wallet":"b"}'));
+            await expect(a).resolves.toEqual({ wallet: 'a' });
+            await expect(b).resolves.toEqual({ wallet: 'b' });
+        });
+
+        it('does not share a request between two LndHub accounts on one host', async () => {
+            settings.host = undefined;
+            settings.port = undefined;
+            settings.macaroonHex = undefined;
+            settings.lndhubUrl = 'https://hub.example.com';
+            settings.accessToken = 'token-a';
+            const pending: Array<(v: any) => void> = [];
+            mockFetch.mockImplementation(
+                () => new Promise((res) => pending.push(res))
+            );
+
+            const a = lnd.getRequest('/balance');
+            settings.accessToken = 'token-b';
+            const b = lnd.getRequest('/balance');
+
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            pending[0](response(200, '{"wallet":"a"}'));
+            pending[1](response(200, '{"wallet":"b"}'));
+            await expect(a).resolves.toEqual({ wallet: 'a' });
+            await expect(b).resolves.toEqual({ wallet: 'b' });
+        });
+
         it('issues a fresh request once the previous one resolved', async () => {
             mockFetch
                 .mockResolvedValueOnce(response(200, '{"n":1}'))
