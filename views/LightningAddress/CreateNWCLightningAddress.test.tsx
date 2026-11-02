@@ -1,5 +1,10 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import {
+    fireEvent,
+    render,
+    screen,
+    waitFor
+} from '@testing-library/react-native';
 
 const mockGetInfo = jest.fn();
 const mockClose = jest.fn();
@@ -78,7 +83,7 @@ const makeStore = () => ({
 });
 
 const renderView = async (store: any) => {
-    await render(
+    const view = await render(
         <CreateNWCLightningAddress
             navigation={{ navigate: jest.fn(), popTo: jest.fn() } as any}
             route={{ params: {} } as any}
@@ -90,6 +95,7 @@ const renderView = async (store: any) => {
         screen.getByPlaceholderText('nostr+walletconnect://'),
         NWC_URL
     );
+    return view;
 };
 
 const press = async (title: string) =>
@@ -177,6 +183,27 @@ describe('CreateNWCLightningAddress connection permission check', () => {
         await press(CONTINUE_TITLE);
         expect(mockGetInfo).toHaveBeenCalledTimes(1);
         expect(store.testNWCConnectionString).toHaveBeenCalledWith(NWC_URL);
+    });
+
+    it('does not test with the server after the screen is left', async () => {
+        let resolveGetInfo: (info: any) => void = () => {};
+        mockGetInfo.mockReturnValue(
+            new Promise((resolve) => {
+                resolveGetInfo = resolve;
+            })
+        );
+        const store = makeStore();
+        const view = await renderView(store);
+        // the press settles only once get_info answers
+        const pressing = press(TEST_TITLE);
+        await waitFor(() => expect(mockGetInfo).toHaveBeenCalledTimes(1));
+
+        await view.unmount();
+        resolveGetInfo({ methods: ['get_info', 'make_invoice'] });
+        await pressing;
+
+        expect(mockClose).toHaveBeenCalledTimes(1);
+        expect(store.testNWCConnectionString).not.toHaveBeenCalled();
     });
 
     it('checks again after the connection string is edited', async () => {

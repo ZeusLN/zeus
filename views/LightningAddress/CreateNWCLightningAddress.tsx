@@ -54,6 +54,7 @@ export default class CreateNWCLightningAddress extends React.Component<
     CreateNWCLightningAddressState
 > {
     isInitialFocus = true;
+    private unmounted = false;
 
     state = {
         nwcConnectionString: '',
@@ -62,6 +63,10 @@ export default class CreateNWCLightningAddress extends React.Component<
         scopeError: '',
         scopeWarning: ''
     };
+
+    componentWillUnmount() {
+        this.unmounted = true;
+    }
 
     // Checks the connection's own permissions before the string is sent
     // to the ZEUS Pay server. Returns true when the test may proceed.
@@ -73,6 +78,8 @@ export default class CreateNWCLightningAddress extends React.Component<
         const { status, methods } = await checkNWCConnectionScope(
             nwcConnectionString
         );
+        // the user left while get_info was pending
+        if (this.unmounted) return false;
         this.setState({ loading: false });
 
         if (status === 'receiveOnly') return true;
