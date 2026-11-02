@@ -9,7 +9,10 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
-import { getLnurlParams } from './../../utils/LnurlResolveUtils';
+import {
+    getLnurlParams,
+    isUnsafeLnurlError
+} from './../../utils/LnurlResolveUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import {
     getLnurlpUrl,
@@ -143,10 +146,15 @@ export default class LightningSwipeableRow extends Component<
             try {
                 params = await getLnurlParams(lightning ?? '');
             } catch (e: any) {
-                // refused by the lnurl host policy (see getLnurlParams)
+                // a host policy refusal carries its own message; anything
+                // else is js-lnurl failing on a malformed link
                 Alert.alert(
                     localeString('general.error'),
-                    e.message,
+                    isUnsafeLnurlError(e)
+                        ? e.message
+                        : localeString(
+                              'utils.handleAnything.invalidLnurlParams'
+                          ),
                     [
                         {
                             text: localeString('general.ok'),

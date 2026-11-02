@@ -30,6 +30,9 @@ jest.mock('./SwipeableRowContainer', () => 'SwipeableRowContainer');
 import * as React from 'react';
 import { Alert, Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { bech32 } from 'bech32';
+import { getParams } from 'js-lnurl';
+import Base64Utils from '../../utils/Base64Utils';
 import { settingsStore } from '../../stores/Stores';
 import LightningSwipeableRow from './LightningSwipeableRow';
 
@@ -40,13 +43,23 @@ const mockSettingsStore = settingsStore as {
 
 const ONION = 'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
 
+const mockGetParams = getParams as jest.Mock;
+
+const asLnurl = (target: string) =>
+    bech32.encode(
+        'lnurl',
+        bech32.toWords(Base64Utils.utf8ToBytes(target)),
+        20000
+    );
+
 // A locked row pays its destination when tapped
-const tapRow = async (lightningAddress: string) => {
+const tapRow = async (lightningAddress?: string, lightning?: string) => {
     const navigation = { navigate: jest.fn() };
     await render(
         <LightningSwipeableRow
             {...({
                 lightningAddress,
+                lightning,
                 locked: true,
                 navigation,
                 SyncStore: { isSyncing: false }
@@ -226,5 +239,87 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             );
             expect(navigation.navigate).not.toHaveBeenCalled();
         });
+    });
+});
+
+// A BIP21 lightning= lnurl reaches the row without passing through
+// handleAnything, so the row's own resolve is the only policy check
+describe('LightningSwipeableRow lnurl resolve', () => {
+    let alertSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        mockGetParams.mockReset();
+        alertSpy = jest.spyOn(Alert, 'alert').mockImplementation();
+    });
+
+    afterEach(() => alertSpy.mockRestore());
+
+    const expectAlert = (message: string) =>
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            message,
+            expect.anything(),
+            expect.anything()
+        );
+
+    it('opens Receive for a public withdraw', async () => {
+        const params = {
+            tag: 'withdrawRequest',
+            k1: 'k1',
+            callback: 'https://example.com/cb'
+        };
+        mockGetParams.mockResolvedValue(params);
+
+        const navigation = await tapRow(
+            undefined,
+            asLnurl('https://example.com/lnurl')
+        );
+
+        expect(navigation.navigate).toHaveBeenCalledWith('Receive', {
+            lnurlParams: params
+        });
+        expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('refuses an lnurl on a private host without resolving it', async () => {
+        const navigation = await tapRow(
+            undefined,
+            asLnurl('https://192.168.1.1/lnurl')
+        );
+
+        expectAlert('utils.lnurl.unsafeEndpoint');
+        expect(mockGetParams).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('refuses a withdraw whose callback is on a private host', async () => {
+        mockGetParams.mockResolvedValue({
+            tag: 'withdrawRequest',
+            k1: 'k1',
+            callback: 'https://10.0.0.1/cb'
+        });
+
+        const navigation = await tapRow(
+            undefined,
+            asLnurl('https://example.com/lnurl')
+        );
+
+        expectAlert('utils.lnurl.unsafeCallback');
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    // js-lnurl throws this for a withdraw link with a repeated callback=
+    it('shows the generic message, not the raw error, for a malformed link', async () => {
+        mockGetParams.mockRejectedValue(
+            new TypeError('url.split is not a function')
+        );
+
+        const navigation = await tapRow(
+            undefined,
+            asLnurl('https://example.com/lnurl')
+        );
+
+        expectAlert('utils.handleAnything.invalidLnurlParams');
+        expect(navigation.navigate).not.toHaveBeenCalled();
     });
 });
