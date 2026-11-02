@@ -1502,6 +1502,31 @@ class CashuDevKitModule: RCTEventEmitter {
         }
     }
 
+    @objc(recoverIncompleteSagas:resolver:rejecter:)
+    func recoverIncompleteSagas(_ mintUrl: String,
+                                resolve: @escaping RCTPromiseResolveBlock,
+                                reject: @escaping RCTPromiseRejectBlock) {
+        guard getInitializedRepo(reject: reject) != nil else { return }
+
+        Task {
+            do {
+                let wallet = try await getWallet(mintUrl)
+                let report = try await wallet.recoverIncompleteSagas()
+                resolve(encodeToJson([
+                    "recovered": NSNumber(value: report.recovered),
+                    "compensated": NSNumber(value: report.compensated),
+                    "skipped": NSNumber(value: report.skipped),
+                    "failed": NSNumber(value: report.failed)
+                ]))
+            } catch let error as FfiError {
+                let (code, message) = mapFfiError(error)
+                reject(code, message, error)
+            } catch {
+                reject("RECOVER_SAGAS_ERROR", error.localizedDescription, error)
+            }
+        }
+    }
+
     // MARK: - Proof Management
 
     @objc(checkProofsState:proofsJson:resolver:rejecter:)

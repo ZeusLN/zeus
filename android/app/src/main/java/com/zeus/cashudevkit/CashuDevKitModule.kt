@@ -1673,6 +1673,43 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     // ========================================================================
+    // Saga Recovery
+    // ========================================================================
+
+    @ReactMethod
+    fun recoverIncompleteSagas(mintUrl: String, promise: Promise) {
+        getInitializedRepo(promise) ?: return
+
+        scope.launch {
+            try {
+                val wallet = getWallet(mintUrl)
+                val report = wallet.recoverIncompleteSagas()
+                val json = JSONObject().apply {
+                    put("recovered", report.recovered.toLong())
+                    put("compensated", report.compensated.toLong())
+                    put("skipped", report.skipped.toLong())
+                    put("failed", report.failed.toLong())
+                }
+
+                withContext(Dispatchers.Main) {
+                    promise.resolve(json.toString())
+                }
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "recoverIncompleteSagas error: $message", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "recoverIncompleteSagas error", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("RECOVER_SAGAS_ERROR", e.message, e)
+                }
+            }
+        }
+    }
+
+    // ========================================================================
     // Proof Management
     // ========================================================================
 
