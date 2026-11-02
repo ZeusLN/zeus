@@ -1231,7 +1231,7 @@ export default class TransactionsStore {
     }: {
         payment_request: string;
         amount?: string;
-        fee_limit_sat?: number;
+        fee_limit_sat?: number | string;
         max_parts?: string;
         timeout_seconds?: number;
     }) => {
@@ -1254,12 +1254,14 @@ export default class TransactionsStore {
             this.settingsStore.implementation === 'cln-rest' ||
             this.settingsStore.implementation === 'ldk-node'
         ) {
-            // a cap of 0 is valid (e.g. an NWC budget with no room left
-            // for fees), so only a missing cap gets the default
-            data.fee_limit_sat =
-                fee_limit_sat != null && !isNaN(Number(fee_limit_sat))
+            // A limit of 0 is a limit the caller set, not a missing value.
+            // Callers bound the limit themselves: an NWC budget can allow
+            // more than the default, a donation never can.
+            const feeLimitSat =
+                fee_limit_sat != null && fee_limit_sat !== ''
                     ? Number(fee_limit_sat)
-                    : 100;
+                    : NaN;
+            data.fee_limit_sat = feeLimitSat >= 0 ? feeLimitSat : 100;
             data.timeout_seconds = Number(timeout_seconds) || 60;
         }
 
