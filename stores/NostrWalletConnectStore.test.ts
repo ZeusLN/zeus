@@ -2985,6 +2985,32 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(connection.activity[0].error).toBe('no route');
         expect(connection.totalSpendSats).toBe(0);
     });
+
+    it('holds the budget when the send request is rejected but the node lists the payment in flight', async () => {
+        // listed by hash only; the rejected request left no hash in the state
+        const inFlight = new Payment({
+            payment_hash: paymentHash,
+            value_sat: 5000,
+            status: 'IN_FLIGHT'
+        });
+        const { store, transactionsStore } = buildHandlerStore([inFlight]);
+        transactionsStore.sendPaymentSilently.mockRejectedValue(
+            new Error('unexpected end of stream')
+        );
+        const connection = addConnection(store, { maxAmountSats: 5000 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(transactionsStore.sendPaymentSilently).toHaveBeenCalled();
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe('');
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(5000);
+        expect(connection.remainingBudget).toBe(0);
+    });
 });
 
 describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
