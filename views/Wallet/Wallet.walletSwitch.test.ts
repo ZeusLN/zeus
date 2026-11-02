@@ -620,10 +620,16 @@ describe('recovery after a restore from seed', () => {
     const run = async (
         selectedNode: number,
         recoverySettings: Record<string, any>,
-        recoverError?: Error
+        recoverError?: Error,
+        storeState: Record<string, any> = {}
     ) => {
         const ctx = setup(selectedNode);
-        Object.assign(ctx.settings, { lndDir: 'c', ldkNodeDir: 'a' });
+        Object.assign(ctx.settings, {
+            lndDir: 'c',
+            ldkNodeDir: 'a',
+            ...storeState
+        });
+        ctx.view.props.SyncStore.startSyncing = jest.fn();
         if (nodes[selectedNode].implementation === 'ldk-node') {
             ctx.settings.lndDir = undefined;
         }
@@ -703,6 +709,46 @@ describe('recovery after a restore from seed', () => {
         );
         expect(recovery).toBe(true);
         expect(recoveryWalletDirs).toEqual(['c']);
+    });
+
+    it("stops another wallet's running daemon before starting a restored wallet", async () => {
+        const { lnd, ChannelBackupStore, recoveryWalletDirs } = await run(
+            2,
+            { recovery: true, recoveryWalletDirs: ['c'] },
+            undefined,
+            { embeddedLndStarted: true, walletJustCreated: false }
+        );
+        expect(lnd.stopLnd).toHaveBeenCalledTimes(1);
+        expect(lnd.stopLnd.mock.invocationCallOrder[0]).toBeLessThan(
+            lnd.startLnd.mock.invocationCallOrder[0]
+        );
+        expect(lnd.startLnd).toHaveBeenCalledWith(
+            expect.objectContaining({ lndDir: 'c', isRecovery: true })
+        );
+        expect(
+            ChannelBackupStore.recoverStaticChannelBackup
+        ).toHaveBeenCalledTimes(1);
+        expect(recoveryWalletDirs).toBeUndefined();
+    });
+
+    it('keeps the daemon a restore just started and still recovers', async () => {
+        const { lnd, ChannelBackupStore, settings, recoveryWalletDirs } =
+            await run(
+                2,
+                { recovery: true, recoveryWalletDirs: ['c'] },
+                undefined,
+                {
+                    embeddedLndStarted: true,
+                    walletJustCreated: true
+                }
+            );
+        expect(lnd.stopLnd).not.toHaveBeenCalled();
+        expect(lnd.startLnd).not.toHaveBeenCalled();
+        expect(settings.walletJustCreated).toBe(false);
+        expect(
+            ChannelBackupStore.recoverStaticChannelBackup
+        ).toHaveBeenCalledTimes(1);
+        expect(recoveryWalletDirs).toBeUndefined();
     });
 
     describe('flag written by a version without the wallet list', () => {

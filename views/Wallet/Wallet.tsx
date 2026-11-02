@@ -896,8 +896,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             return;
                         }
 
-                        // Skip stopLnd when wallet is already closed (e.g. after delete)
-                        if (!recovery && SettingsStore.embeddedLndStarted) {
+                        // Skip stopLnd when wallet is already closed (e.g. after delete).
+                        // Stop even while this wallet's recovery is pending:
+                        // a running daemon here belongs to another wallet or an
+                        // earlier connect, since a restore that left lnd running
+                        // sets walletJustCreated and skips this branch
+                        if (SettingsStore.embeddedLndStarted) {
                             await stopLnd();
                             if (!isCurrent()) return;
                         }
