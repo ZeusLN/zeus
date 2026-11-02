@@ -143,12 +143,14 @@ export default class ChoosePaymentMethod extends React.Component<
         const resolvedSatAmount =
             !satAmount && lightning ? invoiceSatAmount : satAmount;
         // a BIP 21 URI can carry an amount that differs from the amount
-        // of its lightning invoice; the amount shown here is the former
+        // of its lightning invoice; the amount shown here is the former.
+        // amount= holds whole sats, so a sub-sat invoice amount matches
+        // when amount= is within 1 sat of it (rounded down or up)
         const amountMismatch =
             !!satAmount &&
             !!invoiceSatAmount &&
             Number(invoiceSatAmount) > 0 &&
-            Number(invoiceSatAmount) !== Number(satAmount);
+            Math.abs(Number(invoiceSatAmount) - Number(satAmount)) >= 1;
 
         const stateUpdate: Partial<ChoosePaymentMethodState> = {
             ...(value && { value }),

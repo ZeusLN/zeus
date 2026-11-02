@@ -272,6 +272,7 @@ describe('ChoosePaymentMethod BIP 21 amount check', () => {
         channels = undefined;
         mockInvoiceSats.lnbc15k = 15000;
         mockInvoiceSats.lnbc12k = 12000;
+        mockInvoiceSats.lnbc12k5 = 12000.5;
         mockInvoiceSats.lnbc0 = 0;
     });
 
@@ -295,6 +296,31 @@ describe('ChoosePaymentMethod BIP 21 amount check', () => {
         });
 
         expect(screen.queryByText(MISMATCH)).toBeNull();
+    });
+
+    // amount= holds whole sats, so a 12000.5 sat invoice is written as
+    // 12000 (rounded down) or 12001 (rounded up, as ZEUS Receive does)
+    it.each(['12000', '12001'])(
+        'does not warn when the amount is %s for a 12000.5 sat invoice',
+        async (satAmount) => {
+            await renderView({
+                value: ADDRESS,
+                satAmount,
+                lightning: 'lnbc12k5'
+            });
+
+            expect(screen.queryByText(MISMATCH)).toBeNull();
+        }
+    );
+
+    it('warns when the amount is 1 sat or more off a sub-sat invoice amount', async () => {
+        await renderView({
+            value: ADDRESS,
+            satAmount: '11999',
+            lightning: 'lnbc12k5'
+        });
+
+        expect(screen.queryByText(MISMATCH)).not.toBeNull();
     });
 
     it('does not warn for an invoice without an amount', async () => {
