@@ -422,7 +422,7 @@ export default class NostrConnectUtils {
      * Receive-only grant (cf. LND's invoice macaroon): can create and look up
      * invoices but cannot read the wallet balance or pay.
      */
-    static getInvoiceOnlyPermissions(): Nip47SingleMethod[] {
+    static getInvoiceOnlyPermissions(): Nip47Method[] {
         return [
             'get_info',
             'make_invoice',
