@@ -1869,6 +1869,7 @@
     "stores.NostrWalletConnectStore.error.cashuInsufficientBalance": "Nedostatečný zůstatek. Na Cashu peněžence vám zbývá pouze {{balance}} satů, ale snažíte se utratit {{amount}} satů.",
     "stores.NostrWalletConnectStore.error.lightningInsufficientBalance": "Nedostatečný zůstatek. Na Lightning peněžence vám zbývá pouze {{balance}} satů, ale snažíte se utratit {{amount}} satů.",
     "stores.NostrWalletConnectStore.error.feeLimitReducedByBudget": "Zbývající rozpočet pro toto spojení omezil poplatek za směrování na {{feeLimit}} satů.",
+    "stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget": "This payment ({{amount}} sats) plus a fee reserve of {{feeReserve}} sats exceeds the remaining budget for this connection ({{remaining}} sats).",
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Nebyl vybrán žádný Cashu mint. Vyberte prosím nejdříve mint.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Nepodařilo se dekódovat fakturu – payReq není definován",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Faktura již byla zaplacena",
