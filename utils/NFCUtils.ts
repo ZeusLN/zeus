@@ -2,21 +2,97 @@ import { Platform } from 'react-native';
 import NfcManager, {
     NfcEvents,
     TagEvent,
-    Ndef
+    Ndef,
+    NdefRecord
 } from 'react-native-nfc-manager';
 import ModalStore from '../stores/ModalStore';
+
+const decodeUtf8 = (data: Uint8Array): string | null => {
+    try {
+        return new global.TextDecoder('utf-8', { fatal: true }).decode(data);
+    } catch {
+        return null;
+    }
+};
 
 export function decodeNdefTextPayload(data: Uint8Array): string | null {
     if (data.length === 0) return '';
     const langCodeLen = data[0] & 0x3f;
-    const textData = data.slice(1 + langCodeLen);
-    try {
-        return new global.TextDecoder('utf-8', { fatal: true }).decode(
-            textData
-        );
-    } catch {
-        return null;
+    return decodeUtf8(data.slice(1 + langCodeLen));
+}
+
+/**
+ * Decodes the payload of an NDEF URI record. Its first byte is not text:
+ * it stands for one of the URI prefixes the NFC Forum abbreviates (0x04 is
+ * "https://"), and 0x00 means the URI is written out in full.
+ */
+export function decodeNdefUriPayload(data: Uint8Array): string | null {
+    if (data.length === 0) return null;
+    const rest = decodeUtf8(data.slice(1));
+    if (rest === null) return null;
+    return (Ndef.RTD_URI_PROTOCOLS[data[0]] || '') + rest;
+}
+
+const recordType = (record: NdefRecord): string =>
+    typeof record.type === 'string'
+        ? record.type
+        : String.fromCharCode(...(record.type || []));
+
+/**
+ * The text an NDEF record carries, read according to the record's type, or
+ * null for records that carry none (e.g. an Android application record).
+ */
+export function decodeNdefRecord(record: NdefRecord): string | null {
+    const payload = new Uint8Array(record.payload || []);
+    const type = recordType(record);
+    switch (record.tnf) {
+        case Ndef.TNF_WELL_KNOWN:
+            if (type === Ndef.RTD_TEXT) return decodeNdefTextPayload(payload);
+            if (type === Ndef.RTD_URI) return decodeNdefUriPayload(payload);
+            return null;
+        case Ndef.TNF_ABSOLUTE_URI:
+            // the URI is the record type, the payload is unused
+            return type || null;
+        case Ndef.TNF_MIME_MEDIA: {
+            if (type === 'text/plain') return decodeUtf8(payload);
+            if (!type.startsWith('cdf/')) return null;
+            // Crypto Data Format records (github.com/agama-point/cdf-rfc)
+            // can put a label in front of the value: "Wallet 1;https://..."
+            const text = decodeUtf8(payload);
+            return text === null ? null : text.slice(text.lastIndexOf(';') + 1);
+        }
+        default:
+            return null;
     }
+}
+
+// A record holding something for a wallet rather than, say, a web page
+// telling people without one where to get one
+const WALLET_RECORD = new RegExp(
+    [
+        // URI schemes, including those Zeus registers for NFC on Android
+        '^(lightning|bitcoin|lnurl[wcp]?|keyauth|web\\+cashu|cashu|lndconnect):',
+        // bare LNURLs, BOLT 11 invoices, BOLT 12 offers and ecash tokens
+        '^(lnurl1|ln(bc|tbs|tb|bcrt)\\w*1|lno1|cashu[AB])',
+        // LNURLs and ecash tokens behind a web address
+        '^https?://\\S*(/lnurl|lnurl1|cashu[AB])'
+    ].join('|'),
+    'i'
+);
+
+/**
+ * Which of a tag's records to act on. A tag can hold several (e.g. a web
+ * page first, for phones without a wallet, and the wallet data after it),
+ * so the first that looks like wallet data wins. Without one, the first
+ * record that has text is used.
+ */
+export function pickNfcRecord(
+    records: Array<string | null>
+): string | undefined {
+    const texts = records
+        .map((text) => text?.trim())
+        .filter((text): text is string => !!text);
+    return texts.find((text) => WALLET_RECORD.test(text)) ?? texts[0];
 }
 
 /**
@@ -69,24 +145,10 @@ export async function scanNfcTag(
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
 
         NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: TagEvent) => {
-            if (!tag.ndefMessage?.[0]?.payload) {
-                if (Platform.OS === 'android')
-                    modalStore.toggleAndroidNfcModal(false);
-                resolve(undefined);
-                NfcManager.unregisterTagEvent().catch(() => 0);
-                return;
-            }
-
             tagFound = tag;
-            const bytes = new Uint8Array(tag.ndefMessage[0].payload);
-
-            let str: string;
-            const decoded = Ndef.text.decodePayload(bytes);
-            if (decoded.match(/^(https?|lnurl)/)) {
-                str = decoded;
-            } else {
-                str = decodeNdefTextPayload(bytes) || '';
-            }
+            const str = pickNfcRecord(
+                (tag.ndefMessage || []).map(decodeNdefRecord)
+            );
 
             if (Platform.OS === 'android')
                 modalStore.toggleAndroidNfcModal(false);
