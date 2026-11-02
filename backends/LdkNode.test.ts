@@ -286,19 +286,54 @@ describe('LdkNode payment timeouts', () => {
         });
     });
 
-    // BOLT 11 retries reuse the payment hash, which LDK rejects as a
-    // duplicate, and NWC relies on the timeout error for this path
-    it('payLightningInvoice still throws on timeout', async () => {
-        mockListPayments.mockResolvedValue([pendingPayment('hash')]);
-
-        const { error }: any = await settle(
+    describe('payLightningInvoice', () => {
+        const pay = () =>
             ldk.payLightningInvoice({
                 payment_request: 'lnbcrt1...',
                 timeout_seconds: '1'
-            })
-        );
+            });
 
-        expect(error.message).toEqual('error.paymentTimedOut');
+        it('reports a payment still pending at timeout as in flight', async () => {
+            mockListPayments.mockResolvedValue([pendingPayment('hash')]);
+
+            const { result, error }: any = await settle(pay());
+
+            expect(error).toBeUndefined();
+            expect(result.status).toEqual('IN_FLIGHT');
+            expect(result.payment_hash).toEqual('hash');
+            expect(result.payment_preimage).toEqual('');
+            // SendingLightning reads any payment_route as success
+            expect(result.payment_route).toBeUndefined();
+        });
+
+        it('reports a payment not yet listed at timeout as in flight, keyed by the payment id', async () => {
+            mockListPayments.mockResolvedValue([]);
+
+            const { result }: any = await settle(pay());
+
+            expect(result.status).toEqual('IN_FLIGHT');
+            expect(result.payment_hash).toEqual(PAYMENT_ID);
+        });
+
+        it('still reports a succeeded payment with a route', async () => {
+            mockListPayments.mockResolvedValue([succeededPayment(1000)]);
+
+            const { result }: any = await settle(pay());
+
+            expect(result.status).toEqual('SUCCEEDED');
+            expect(result.payment_hash).toEqual('hash');
+            expect(result.payment_route).toEqual({});
+        });
+
+        it('still fails a payment LDK marked failed', async () => {
+            mockListPayments.mockResolvedValue([
+                { ...pendingPayment('hash'), status: 'failed' }
+            ]);
+
+            const { error }: any = await settle(pay());
+
+            expect(error.message).toEqual('PAYMENT_FAILED_UNKNOWN');
+        });
     });
 });
 
