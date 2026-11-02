@@ -1300,10 +1300,10 @@
   resolved "https://registry.yarnpkg.com/@getalby/lightning-tools/-/lightning-tools-9.0.2.tgz#6d5bf6575c6149354f73f3089157ce640efbab91"
   integrity sha512-h58Bw8oQg9MXdGud5agfRnjGVY24Hzj8hCljdIEZyijXjfkVdSXet2Mpjc3lz/BpIdZz51uM8CXuwnXi0BOqFg==
 
-"@getalby/sdk@8.1.1":
-  version "8.1.1"
-  resolved "https://registry.yarnpkg.com/@getalby/sdk/-/sdk-8.1.1.tgz#17aac5f7938e5aa2625bb47d9215055f56eab142"
-  integrity sha512-2Y+5bpSkqlUAh5azEjJl1BZ7hp52Yxy/Gaa1esAXJw6D0UszbycKO1WViX2FWGjqq1gW/wmRNkXWdwgaUk9qrg==
+"@getalby/sdk@9.0.0":
+  version "9.0.0"
+  resolved "https://registry.yarnpkg.com/@getalby/sdk/-/sdk-9.0.0.tgz#3b8d261a4fb9bc997fae3957a79fd646261efd11"
+  integrity sha512-lUepv1KWXVAuycHsl3qYMkgvwol1fgjjyPDKEfpeQ9soNN3nupf8YAX+mbldK+w+caGai3iXfykzFmT7kmSfBw==
   dependencies:
     "@getalby/lightning-tools" "^9.0.2"
     "@webbtc/webln-types" "^3.0.0"

@@ -4,7 +4,7 @@ import { Relay, generateSecretKey, getPublicKey } from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils';
 import {
     Nip47NotificationType,
-    Nip47SingleMethod,
+    Nip47Method,
     Nip47Transaction,
     Nip47ListTransactionsRequest,
     Nip47LookupInvoiceRequest,
@@ -39,7 +39,7 @@ export interface PermissionOption {
 }
 
 export interface IndividualPermissionOption {
-    key: Nip47SingleMethod;
+    key: Nip47Method;
     title: string;
     description: string;
 }
@@ -356,8 +356,8 @@ export default class NostrConnectUtils {
      * Methods this wallet service implements (NIP-47 info event).
      * Includes `sign_message`; that method is not part of the default grant.
      */
-    static getWalletServiceMethods(): Nip47SingleMethod[] {
-        const methods: Nip47SingleMethod[] = [
+    static getWalletServiceMethods(): Nip47Method[] {
+        const methods: Nip47Method[] = [
             ...NostrConnectUtils.getFullAccessPermissions()
         ];
         if (BackendUtils.supportsMessageSigning()) {
@@ -372,8 +372,8 @@ export default class NostrConnectUtils {
      * advertised methods match the registered handlers.
      */
     static advertisedConnectionMethods(
-        permissions: Nip47SingleMethod[] = []
-    ): Nip47SingleMethod[] {
+        permissions: Nip47Method[] = []
+    ): Nip47Method[] {
         if (BackendUtils.supportsMessageSigning()) {
             return permissions;
         }
@@ -385,7 +385,7 @@ export default class NostrConnectUtils {
      * arbitrary text with the Lightning node identity key and must be
      * opted into per connection, on top of a preset.
      */
-    static getFullAccessPermissions(): Nip47SingleMethod[] {
+    static getFullAccessPermissions(): Nip47Method[] {
         return [
             'get_info',
             'get_balance',
@@ -400,7 +400,7 @@ export default class NostrConnectUtils {
         return typeof message === 'string' && message.length > 0;
     }
 
-    static getReadOnlyPermissions(): Nip47SingleMethod[] {
+    static getReadOnlyPermissions(): Nip47Method[] {
         return [
             'get_info',
             'get_balance',
@@ -430,27 +430,22 @@ export default class NostrConnectUtils {
         );
     }
 
-    static withoutSignMessage(
-        permissions: Nip47SingleMethod[]
-    ): Nip47SingleMethod[] {
+    static withoutSignMessage(permissions: Nip47Method[]): Nip47Method[] {
         return permissions.filter(
             (permission) => permission !== 'sign_message'
         );
     }
 
     static withPreservedSignMessage(
-        base: Nip47SingleMethod[],
-        current: Nip47SingleMethod[] = []
-    ): Nip47SingleMethod[] {
+        base: Nip47Method[],
+        current: Nip47Method[] = []
+    ): Nip47Method[] {
         return current.includes('sign_message')
             ? [...base, 'sign_message']
             : base;
     }
 
-    static samePermissionSet(
-        a: Nip47SingleMethod[],
-        b: Nip47SingleMethod[]
-    ): boolean {
+    static samePermissionSet(a: Nip47Method[], b: Nip47Method[]): boolean {
         if (a.length !== b.length) return false;
         const sortedA = a.slice().sort();
         const sortedB = b.slice().sort();
@@ -459,9 +454,7 @@ export default class NostrConnectUtils {
         );
     }
 
-    static getPermissionShortDescription(
-        permission: Nip47SingleMethod
-    ): string {
+    static getPermissionShortDescription(permission: Nip47Method): string {
         const descriptions: { [key: string]: string } = {
             get_info: localeString(
                 'views.Settings.NostrWalletConnect.permissions.getInfoShort'
@@ -490,8 +483,8 @@ export default class NostrConnectUtils {
 
     static getPermissionsForType(
         permissionType: PermissionType,
-        currentPermissions: Nip47SingleMethod[] = []
-    ): { permissions: Nip47SingleMethod[] } {
+        currentPermissions: Nip47Method[] = []
+    ): { permissions: Nip47Method[] } {
         switch (permissionType) {
             case PermissionType.FullAccess:
                 return {
@@ -518,9 +511,7 @@ export default class NostrConnectUtils {
         }
     }
 
-    static determinePermissionType(
-        permissions: Nip47SingleMethod[]
-    ): PermissionType {
+    static determinePermissionType(permissions: Nip47Method[]): PermissionType {
         const walletPermissions =
             NostrConnectUtils.withoutSignMessage(permissions);
         if (
@@ -543,7 +534,7 @@ export default class NostrConnectUtils {
     }
 
     /** True when `pay_invoice` is among granted methods (budget / payment UI applies). */
-    static hasPaymentPermissions(permissions: Nip47SingleMethod[]): boolean {
+    static hasPaymentPermissions(permissions: Nip47Method[]): boolean {
         return permissions.includes('pay_invoice');
     }
 

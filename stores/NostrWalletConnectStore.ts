@@ -13,7 +13,7 @@ import {
     Nip47Transaction,
     Nip47SignMessageResponse,
     Nip47SignMessageRequest,
-    Nip47SingleMethod,
+    Nip47Method,
     NWCWalletServiceRequestHandler,
     NWCWalletServiceResponsePromise
 } from '@getalby/sdk';
@@ -138,7 +138,7 @@ export interface CreateConnectionParams {
     id?: string; // For Regenerating connections with the same Id
     name: string;
     relayUrl: string;
-    permissions?: Nip47SingleMethod[];
+    permissions?: Nip47Method[];
     budgetAmount?: number;
     budgetRenewal?: BudgetRenewalType;
     expiresAt?: Date;
