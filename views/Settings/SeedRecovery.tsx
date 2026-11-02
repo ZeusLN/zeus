@@ -1610,6 +1610,28 @@ export default class SeedRecovery extends React.PureComponent<
                                     'views.Settings.SeedRecovery.clipboardSeedWordsPrompt'
                                 )}
                             </ZeusText>
+                            <View style={styles.clipboardWords}>
+                                {this.state.clipboardSeedArray.map(
+                                    (word, index) => (
+                                        <ZeusText
+                                            key={index}
+                                            style={styles.clipboardWord}
+                                        >
+                                            {`${index + 1}. ${word}`}
+                                        </ZeusText>
+                                    )
+                                )}
+                            </View>
+                            <ZeusText
+                                style={{
+                                    ...styles.modalBody,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.SeedRecovery.clipboardSeedWordsWarning'
+                                )}
+                            </ZeusText>
                             <View style={{ marginBottom: 12 }}>
                                 <Button
                                     title={localeString('general.yes')}
@@ -1721,5 +1743,15 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 16,
         marginBottom: 24
+    },
+    clipboardWords: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginBottom: 24
+    },
+    clipboardWord: {
+        width: '50%',
+        fontSize: 16,
+        marginBottom: 4
     }
 });
