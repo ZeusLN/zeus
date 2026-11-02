@@ -1702,13 +1702,32 @@ export default class NostrWalletConnectStore {
                 // Captured here so a pay request can be held to the wallet
                 // this connection was subscribed for; see payRequestRejection
                 const isCurrent = this.settingsStore.getConnectionGuard();
-                const payHandler = this.isCashuConfigured
-                    ? this.handleCashuPayInvoice.bind(this, connection)
-                    : this.handleLightningPayInvoice.bind(this, connection);
+                const payWithCashu = this.isCashuConfigured;
+                // loadConnections replaces the stored connection objects
+                // without resubscribing, so pay with the one stored when the
+                // request starts. If there is none, the subscribed object is
+                // passed and payRequestRejection rejects it.
+                const pay = (request: Nip47PayInvoiceRequest) => {
+                    const { connection: stored } = this.getConnection({
+                        connectionId: connection.id
+                    });
+                    const current = stored ?? connection;
+                    return payWithCashu
+                        ? this.handleCashuPayInvoice(
+                              current,
+                              request,
+                              isCurrent
+                          )
+                        : this.handleLightningPayInvoice(
+                              current,
+                              request,
+                              isCurrent
+                          );
+                };
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
                     this.withGlobalHandler(connection.id, () =>
                         this.enqueuePayment(
-                            () => payHandler(request, isCurrent),
+                            () => pay(request),
                             () =>
                                 NostrConnectUtils.createNip47Error(
                                     localeString(

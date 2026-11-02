@@ -3908,6 +3908,35 @@ describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
         expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(1);
     });
 
+    // The connections list reloads the connections on every focus, which
+    // replaces the stored objects without resubscribing
+    it('pays and debits the stored connection after the connections are reloaded', async () => {
+        const collaborators = payCollaborators();
+        collaborators.transactionsStore.getPaymentOutcome.mockReturnValue({
+            payment_preimage: 'aa'.repeat(32),
+            payment_fee: 3
+        });
+        const {
+            store,
+            transactionsStore,
+            connections: [subscribed]
+        } = await startService(
+            [{ permissions: ['pay_invoice'], maxAmountSats: 100000 }],
+            collaborators
+        );
+        await store.loadConnections();
+        const [reloaded] = store.connections;
+        expect(reloaded).not.toBe(subscribed);
+
+        const response = await clientFor(subscribed).payInvoice({ invoice });
+
+        expect(response.error).toBeUndefined();
+        expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(1);
+        expect(reloaded.totalSpendSats).toBe(5003);
+        expect(reloaded.activity).toHaveLength(1);
+        expect(subscribed.activity).toEqual([]);
+    });
+
     it('does not melt ecash when the wallet is switched before the request starts', async () => {
         const payLnInvoiceFromEcash = jest.fn();
         const { store, settingsStore } = createStore({
