@@ -305,3 +305,155 @@ describe('AmountInput unit button', () => {
         expect(unitButton()).toBeUndefined();
     });
 });
+
+describe('AmountInput units changed outside of the input', () => {
+    // A parent that, like PaymentRequest, feeds the reported amount back in
+    // and keeps the reported sats to pay with
+    const renderWithParent = async (amount: string) => {
+        const parent = { amount, satAmount: '' as string | number };
+        const onAmountChange = jest.fn(
+            (newAmount: string, satAmount: string | number) => {
+                parent.amount = newAmount;
+                parent.satAmount = satAmount;
+            }
+        );
+        const element = () => (
+            <AmountInput
+                {...({
+                    amount: parent.amount,
+                    onAmountChange,
+                    FiatStore: fiatStore,
+                    SettingsStore: settingsStore,
+                    UnitsStore: unitsStore
+                } as any)}
+            />
+        );
+        const view = await render(element());
+        const rerender = () => view.rerender(element());
+        // observer() is mocked, so re-render as a store write would, then
+        // again with whatever the parent now holds
+        const storeChanged = async (change: () => void) => {
+            change();
+            await rerender();
+            await rerender();
+        };
+        return { parent, onAmountChange, storeChanged };
+    };
+
+    it('converts the amount when the unit is switched in the keypad and the keypad is left without confirming', async () => {
+        unitsStore.units = 'fiat';
+        const { parent, storeChanged } = await renderWithParent('25');
+        expect(parent.satAmount).toBe('50000');
+
+        await storeChanged(() => (unitsStore.units = 'sats'));
+
+        expect(parent).toEqual({ amount: '50000', satAmount: 50000 });
+        expect(screen.getByText('50,000 sats')).toBeOnTheScreen();
+    });
+
+    it('converts the amount when a toggleable Amount changes the unit', async () => {
+        const { parent, storeChanged } = await renderWithParent('150000');
+
+        await storeChanged(() => (unitsStore.units = 'BTC'));
+
+        expect(parent).toEqual({ amount: '0.0015', satAmount: 150000 });
+        expect(screen.getByText('₿0.00 15')).toBeOnTheScreen();
+    });
+
+    it('converts the amount when the fiat currency changes', async () => {
+        unitsStore.units = 'fiat';
+        fiatStore.fiatRates = [
+            { code: 'USD', rate: 50_000 },
+            { code: 'EUR', rate: 40_000 }
+        ];
+        const { parent, storeChanged } = await renderWithParent('25');
+
+        await storeChanged(() => (settingsStore.settings.fiat = 'EUR'));
+
+        expect(parent).toEqual({ amount: '20.00', satAmount: 50000 });
+    });
+
+    it('keeps the digits and reports their sats when there is no fiat rate', async () => {
+        const { parent, storeChanged } = await renderWithParent('1000');
+
+        await storeChanged(() => {
+            fiatStore.fiatRates = [];
+            unitsStore.units = 'fiat';
+        });
+
+        expect(parent).toEqual({ amount: '1000', satAmount: 0 });
+    });
+
+    it('converts from the last known sats when the unit changes back after a missing fiat rate', async () => {
+        const { parent, storeChanged } = await renderWithParent('1000');
+
+        await storeChanged(() => {
+            fiatStore.fiatRates = [];
+            unitsStore.units = 'fiat';
+        });
+        await storeChanged(() => (unitsStore.units = 'sats'));
+
+        expect(parent).toEqual({ amount: '1000', satAmount: 1000 });
+        expect(screen.getByText('1,000 sats')).toBeOnTheScreen();
+    });
+
+    it('does not bring back old sats after the digits are edited without a fiat rate', async () => {
+        const { parent, storeChanged } = await renderWithParent('1000');
+        await storeChanged(() => {
+            fiatStore.fiatRates = [];
+            unitsStore.units = 'fiat';
+        });
+
+        // the user types a new fiat amount that cannot be converted
+        await openKeypad('$1000');
+        await act(() => keypadParams().onConfirm('5'));
+        await storeChanged(() => undefined);
+        expect(parent).toEqual({ amount: '5', satAmount: 0 });
+
+        await storeChanged(() => (unitsStore.units = 'sats'));
+
+        expect(parent).toEqual({ amount: '0', satAmount: 0 });
+    });
+
+    it('does nothing on a re-render without a unit change', async () => {
+        const { onAmountChange, storeChanged } = await renderWithParent('1000');
+        onAmountChange.mockClear();
+
+        await storeChanged(() => undefined);
+
+        expect(onAmountChange).not.toHaveBeenCalled();
+    });
+
+    it('ignores the store unit when a unit is forced', async () => {
+        const onAmountChange = jest.fn();
+        const view = await render(
+            <AmountInput
+                {...({
+                    amount: '1000',
+                    forceUnit: 'sats',
+                    onAmountChange,
+                    FiatStore: fiatStore,
+                    SettingsStore: settingsStore,
+                    UnitsStore: unitsStore
+                } as any)}
+            />
+        );
+        onAmountChange.mockClear();
+        unitsStore.units = 'BTC';
+        await view.rerender(
+            <AmountInput
+                {...({
+                    amount: '1000',
+                    forceUnit: 'sats',
+                    onAmountChange,
+                    FiatStore: fiatStore,
+                    SettingsStore: settingsStore,
+                    UnitsStore: unitsStore
+                } as any)}
+            />
+        );
+
+        expect(onAmountChange).not.toHaveBeenCalled();
+        expect(screen.getByText('1,000 sats')).toBeOnTheScreen();
+    });
+});
