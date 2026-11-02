@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { Notifications } from 'react-native-notifications';
 import { Relay, generateSecretKey, getPublicKey } from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils';
+import { sha256 } from '@noble/hashes/sha256';
 import {
     Nip47NotificationType,
     Nip47SingleMethod,
@@ -126,7 +127,74 @@ export enum Nip47ErrorCode {
     OTHER = 'OTHER'
 }
 
+export interface WalletConfigFields {
+    implementation?: string;
+    host?: string;
+    port?: string;
+    url?: string;
+    lndhubUrl?: string;
+    username?: string;
+    password?: string;
+    pairingPhrase?: string;
+    nostrWalletConnectUrl?: string;
+    lndDir?: string;
+    ldkNodeDir?: string;
+}
+
 export default class NostrConnectUtils {
+    /**
+     * Identifies a wallet config by the fields that select its node or
+     * account, so NWC connections can be matched to a config that is not
+     * the current wallet (the config does not store the node pubkey).
+     * Hashed because the fields include LNC pairing phrases and LndHub
+     * passwords. Applies the same default node dirs as SettingsStore and
+     * getNodeDir. Returns undefined when the config has none of these
+     * fields.
+     */
+    static getWalletConfigId(node?: WalletConfigFields): string | undefined {
+        if (!node) return undefined;
+        const implementation = node.implementation || 'lnd';
+        let fields: Array<string | undefined>;
+        switch (implementation) {
+            case 'embedded-lnd':
+                fields = [node.lndDir || 'lnd'];
+                break;
+            case 'ldk-node':
+                fields = [node.ldkNodeDir || 'ldk'];
+                break;
+            case 'lndhub':
+                // On LNbits every wallet logs in as "admin" (or "invoice")
+                // and the password, the wallet's API key, selects the
+                // wallet.
+                fields = [
+                    node.lndhubUrl,
+                    node.username && node.password
+                        ? bytesToHex(
+                              sha256(`${node.username}:${node.password}`)
+                          )
+                        : node.username
+                ];
+                break;
+            case 'lightning-node-connect':
+                fields = [node.pairingPhrase];
+                break;
+            case 'nostr-wallet-connect':
+                fields = [node.nostrWalletConnectUrl];
+                break;
+            default:
+                fields = [node.host, node.port, node.url];
+        }
+        if (!fields.some(Boolean)) return undefined;
+        return bytesToHex(
+            sha256(
+                JSON.stringify([
+                    implementation,
+                    ...fields.map((field) => field || '')
+                ])
+            )
+        );
+    }
+
     static getNotifications(): Nip47NotificationType[] {
         return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
     }
