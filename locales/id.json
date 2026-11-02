@@ -1869,6 +1869,7 @@
     "stores.NostrWalletConnectStore.error.cashuInsufficientBalance": "Saldo tidak mencukupi. Anda hanya memiliki sisa {{balance}} sat di dompet Cashu dan Anda mencoba membelanjakan {{amount}} sat.",
     "stores.NostrWalletConnectStore.error.lightningInsufficientBalance": "Saldo tidak mencukupi. Anda hanya memiliki sisa {{balance}} sat di dompet Lightning dan Anda mencoba membelanjakan {{amount}} sat.",
     "stores.NostrWalletConnectStore.error.feeLimitReducedByBudget": "The remaining budget for this connection limited the routing fee to {{feeLimit}} sats.",
+    "stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget": "This payment ({{amount}} sats) plus a fee reserve of {{feeReserve}} sats exceeds the remaining budget for this connection ({{remaining}} sats).",
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Mint Cashu belum dipilih. Mohon pilih mint terlebih dahulu.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Gagal membaca faktur - payReq tidak ditemukan",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Faktur sudah dibayar",

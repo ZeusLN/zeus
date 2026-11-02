@@ -1869,6 +1869,7 @@
     "stores.NostrWalletConnectStore.error.cashuInsufficientBalance": "余额不足。您的 Cashu 钱包中仅剩 {{balance}} 聪，而您正尝试花费 {{amount}} 聪。",
     "stores.NostrWalletConnectStore.error.lightningInsufficientBalance": "余额不足。您的闪电网络钱包中仅剩 {{balance}} 聪，而您正尝试花费 {{amount}} 聪。",
     "stores.NostrWalletConnectStore.error.feeLimitReducedByBudget": "The remaining budget for this connection limited the routing fee to {{feeLimit}} sats.",
+    "stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget": "This payment ({{amount}} sats) plus a fee reserve of {{feeReserve}} sats exceeds the remaining budget for this connection ({{remaining}} sats).",
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "未选择 Cashu 铸币厂。请先选择一家铸币厂。",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "无法解码发票——payReq 未定义",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "发票已支付",

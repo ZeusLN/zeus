@@ -1869,6 +1869,7 @@
     "stores.NostrWalletConnectStore.error.cashuInsufficientBalance": "Ανεπαρκές υπόλοιπο. Σας απομένουν μόνο {{balance}} sats στο πορτοφόλι Cashu και προσπαθείτε να ξοδέψετε {{amount}} sats.",
     "stores.NostrWalletConnectStore.error.lightningInsufficientBalance": "Ανεπαρκές υπόλοιπο. Σας απομένουν μόνο {{balance}} sats στο πορτοφόλι Lightning και προσπαθείτε να ξοδέψετε {{amount}} sats.",
     "stores.NostrWalletConnectStore.error.feeLimitReducedByBudget": "The remaining budget for this connection limited the routing fee to {{feeLimit}} sats.",
+    "stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget": "This payment ({{amount}} sats) plus a fee reserve of {{feeReserve}} sats exceeds the remaining budget for this connection ({{remaining}} sats).",
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Δεν έχει επιλεγεί κανένα Cashu mint. Παρακαλώ, επιλέξτε πρώτα ένα mint.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Αποτυχία αποκωδικοποίησης τιμολογίου – το payReq δεν έχει οριστεί",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Το τιμολόγιο έχει ήδη πληρωθεί",

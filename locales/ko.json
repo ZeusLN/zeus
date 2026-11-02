@@ -1869,6 +1869,7 @@
     "stores.NostrWalletConnectStore.error.cashuInsufficientBalance": "잔액 부족. Cashu 월렛에 {{balance}} sats만 남아 있으며 {{amount}} sats를 사용하려고 합니다.",
     "stores.NostrWalletConnectStore.error.lightningInsufficientBalance": "잔액 부족. 라이트닝 월렛에 {{balance}} sats만 남아 있으며 {{amount}} sats를 사용하려고 합니다.",
     "stores.NostrWalletConnectStore.error.feeLimitReducedByBudget": "The remaining budget for this connection limited the routing fee to {{feeLimit}} sats.",
+    "stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget": "This payment ({{amount}} sats) plus a fee reserve of {{feeReserve}} sats exceeds the remaining budget for this connection ({{remaining}} sats).",
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "선택된 Cashu 민트가 없습니다. 먼저 민트를 선택하세요.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "인보이스 디코딩 실패 - payReq가 정의되지 않았습니다",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "이미 결제된 인보이스입니다",
