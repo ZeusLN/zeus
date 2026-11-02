@@ -533,10 +533,13 @@ export default class CLNRest {
         if (formatResult) call = call.then(formatResult);
 
         return Promise.race([
+            // payment_timed_out marks the outcome as unknown on the node,
+            // as in LND's payLightningInvoice
             forcedTimeout((timeoutSeconds + 1) * 1000, {
                 payment_error: localeString(
                     'views.SendingLightning.paymentTimedOut'
-                )
+                ),
+                payment_timed_out: true
             }),
             call
         ]);
