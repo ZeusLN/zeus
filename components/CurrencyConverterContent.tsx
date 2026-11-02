@@ -510,6 +510,8 @@ export default class CurrencyConverterContent extends React.Component<
                 <ScrollView
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
+                    // iOS: let the rows the keyboard covers scroll above it
+                    automaticallyAdjustKeyboardInsets
                     scrollEnabled={!this.state.isDragging}
                 >
                     {showToolbar && (
