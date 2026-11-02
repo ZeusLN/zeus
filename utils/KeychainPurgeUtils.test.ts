@@ -67,7 +67,8 @@ import {
     scanPurgeCandidates,
     verifyPurgePreflight,
     executePurge,
-    autoPurgeLegacyKeychain
+    autoPurgeLegacyKeychain,
+    liveSettingsCoverLegacy
 } from './KeychainPurgeUtils';
 
 const EncryptedStorage = require('react-native-encrypted-storage');
@@ -264,7 +265,8 @@ describe('KeychainPurgeUtils', () => {
                     order.push(`${cloudSync ? 'sync' : 'local'}:${server}`);
                 }
             );
-            StorageModule.getRawItem.mockResolvedValue('value');
+            StorageModule.getRawItem.mockResolvedValue('{"nodes":[]}');
+            EncryptedStorage.getItem.mockResolvedValue('{"nodes":[]}');
             EncryptedStorage.removeItem.mockImplementation(async () => {
                 order.push('encrypted-storage:zeus-settings');
             });
@@ -331,7 +333,7 @@ describe('KeychainPurgeUtils', () => {
                 async (server: string) =>
                     server === 'zeus:zeus-settings-v2' ||
                     server === 'zeus-settings'
-                        ? 'value'
+                        ? '{"nodes":[]}'
                         : null
             );
 
@@ -474,6 +476,405 @@ describe('KeychainPurgeUtils', () => {
             expect(result.deleted).toBe(1);
             expect(result.failures).toEqual(['bad-key']);
             expect(result.skipped).toEqual([]);
+        });
+    });
+
+    describe('legacy settings blobs', () => {
+        const first = {
+            nickname: 'first',
+            implementation: 'embedded-lnd',
+            seedPhrase: ['a', 'b'],
+            walletPassword: 'pw1',
+            lndDir: 'dir-1'
+        };
+        const second = {
+            nickname: 'second',
+            implementation: 'embedded-lnd',
+            seedPhrase: ['c', 'd'],
+            walletPassword: 'pw2',
+            lndDir: 'dir-2'
+        };
+        const remote = {
+            nickname: 'remote',
+            implementation: 'lnd',
+            host: 'node.example',
+            macaroonHex: 'abcd'
+        };
+        const blob = (...nodes: any[]) => JSON.stringify({ nodes });
+
+        describe('liveSettingsCoverLegacy', () => {
+            it('is true when every legacy wallet is in the live blob', () => {
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(first),
+                        blob({ ...first, nickname: 'renamed' }, second)
+                    )
+                ).toBe(true);
+            });
+
+            it('is false when a legacy wallet is missing from the live blob', () => {
+                expect(
+                    liveSettingsCoverLegacy(blob(first, second), blob(first))
+                ).toBe(false);
+            });
+
+            it('is false when a wallet secret differs', () => {
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(remote),
+                        blob({ ...remote, macaroonHex: 'other' })
+                    )
+                ).toBe(false);
+            });
+
+            it('matches secrets per wallet, not across wallets', () => {
+                // each secret of the legacy wallet exists in some live
+                // wallet, but no live wallet has both
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob({ username: 'u', password: 'p' }),
+                        blob(
+                            { username: 'u', password: 'x' },
+                            { username: 'y', password: 'p' }
+                        )
+                    )
+                ).toBe(false);
+            });
+
+            it('is false for a legacy wallet with no secrets', () => {
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob({ implementation: 'lnd', host: 'h' }),
+                        blob(remote)
+                    )
+                ).toBe(false);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob({ implementation: 'lnd', host: 'h' }),
+                        blob({ implementation: 'lnd', host: 'h' })
+                    )
+                ).toBe(false);
+            });
+
+            it('is false for the same lndhub login on another hub', () => {
+                const hub = {
+                    implementation: 'lndhub',
+                    lndhubUrl: 'https://a',
+                    username: 'u',
+                    password: 'p'
+                };
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob({ ...hub, lndhubUrl: 'https://b' }),
+                        blob(hub)
+                    )
+                ).toBe(false);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(hub),
+                        blob({ ...hub, nickname: 'renamed' })
+                    )
+                ).toBe(true);
+            });
+
+            it('compares host and port for lnd and cln-rest', () => {
+                const lnd = { ...remote, port: '8080' };
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(lnd),
+                        blob({ ...lnd, nickname: 'renamed' })
+                    )
+                ).toBe(true);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(lnd),
+                        blob({ ...lnd, host: 'other.example' })
+                    )
+                ).toBe(false);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(lnd),
+                        blob({ ...lnd, port: '10009' })
+                    )
+                ).toBe(false);
+                const cln = {
+                    implementation: 'cln-rest',
+                    host: 'cln.example',
+                    port: '3010',
+                    rune: 'r'
+                };
+                expect(liveSettingsCoverLegacy(blob(cln), blob(cln))).toBe(
+                    true
+                );
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(cln),
+                        blob({ ...cln, port: '3011' })
+                    )
+                ).toBe(false);
+            });
+
+            it('requires the same implementation', () => {
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(remote),
+                        blob({ ...remote, implementation: 'cln-rest' })
+                    )
+                ).toBe(false);
+            });
+
+            it('treats a missing implementation as lnd', () => {
+                const { implementation, ...noImplementation } = remote;
+                expect(implementation).toBe('lnd');
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(noImplementation),
+                        blob(remote)
+                    )
+                ).toBe(true);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(remote),
+                        blob(noImplementation)
+                    )
+                ).toBe(true);
+            });
+
+            it('treats a missing lndDir as lnd for embedded-lnd', () => {
+                const { lndDir, ...noDir } = first;
+                expect(lndDir).toBe('dir-1');
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(noDir),
+                        blob({ ...first, lndDir: 'lnd' })
+                    )
+                ).toBe(true);
+                expect(liveSettingsCoverLegacy(blob(noDir), blob(first))).toBe(
+                    false
+                );
+            });
+
+            it('compares ldkNodeDir for ldk-node', () => {
+                const ldk = {
+                    implementation: 'ldk-node',
+                    ldkNodeDir: 'ldk-1',
+                    ldkMnemonic: 'm'
+                };
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(ldk),
+                        blob({ ...ldk, nickname: 'renamed' })
+                    )
+                ).toBe(true);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(ldk),
+                        blob({ ...ldk, ldkNodeDir: 'ldk-2' })
+                    )
+                ).toBe(false);
+            });
+
+            it('uses the secret as identity for LNC and NWC', () => {
+                const lnc = {
+                    implementation: 'lightning-node-connect',
+                    pairingPhrase: 'phrase'
+                };
+                const nwc = {
+                    implementation: 'nostr-wallet-connect',
+                    nostrWalletConnectUrl: 'nostr+walletconnect://x'
+                };
+                expect(liveSettingsCoverLegacy(blob(lnc), blob(lnc))).toBe(
+                    true
+                );
+                expect(liveSettingsCoverLegacy(blob(nwc), blob(nwc))).toBe(
+                    true
+                );
+            });
+
+            it('is true for a legacy blob without wallets', () => {
+                expect(liveSettingsCoverLegacy('{}', blob(first))).toBe(true);
+                expect(liveSettingsCoverLegacy(blob(), blob())).toBe(true);
+            });
+
+            it('throws on a blob that does not parse', () => {
+                expect(() =>
+                    liveSettingsCoverLegacy('{"nodes":', blob(first))
+                ).toThrow();
+                expect(() =>
+                    liveSettingsCoverLegacy('"text"', blob(first))
+                ).toThrow();
+            });
+        });
+
+        describe('executePurge', () => {
+            let local: Record<string, string>;
+            let sync: Record<string, string>;
+
+            beforeEach(() => {
+                local = { 'zeus:zeus-settings-v2': blob(first) };
+                sync = {};
+                StorageModule.getRawItem.mockImplementation(
+                    async (server: string, cloudSync: boolean) =>
+                        (cloudSync ? sync : local)[server] ?? null
+                );
+                StorageModule.removeRawItem.mockImplementation(
+                    async (server: string, cloudSync: boolean) => {
+                        delete (cloudSync ? sync : local)[server];
+                    }
+                );
+            });
+
+            const purge = (hasLegacyEncryptedSettings = false) =>
+                executePurge({
+                    syncServers: Object.keys(sync),
+                    legacyLocalServers: Object.keys(local).filter(
+                        (server) => !server.startsWith('zeus:')
+                    ),
+                    hasLegacyEncryptedSettings
+                });
+
+            it('keeps a synchronizable blob holding a wallet the live blob lacks', async () => {
+                // v0.11 original, which the zeus: migration copied; the
+                // wallet added on v0.12.0 is only in the synchronizable blob
+                local['zeus-settings-v2'] = blob(first);
+                sync['zeus-settings-v2'] = blob(first, second);
+
+                const result = await purge();
+
+                expect(local['zeus-settings-v2']).toBeUndefined();
+                expect(sync['zeus-settings-v2']).toBe(blob(first, second));
+                expect(result.deleted).toBe(1);
+                expect(result.failures).toEqual([]);
+                expect(result.skipped).toEqual(['zeus-settings-v2']);
+            });
+
+            it('keeps a device-local blob holding a wallet the live blob lacks', async () => {
+                local['zeus-settings'] = blob(first, remote);
+
+                const result = await purge();
+
+                expect(local['zeus-settings']).toBe(blob(first, remote));
+                expect(result.deleted).toBe(0);
+                expect(result.skipped).toEqual(['zeus-settings']);
+            });
+
+            it('deletes legacy blobs once the live blob holds their wallets', async () => {
+                local['zeus:zeus-settings-v2'] = blob(
+                    { ...first, nickname: 'renamed' },
+                    second
+                );
+                local['zeus-settings-v2'] = blob(first);
+                sync['zeus-settings-v2'] = blob(first, second);
+
+                const result = await purge();
+
+                expect(local['zeus-settings-v2']).toBeUndefined();
+                expect(sync).toEqual({});
+                expect(result.deleted).toBe(2);
+                expect(result.skipped).toEqual([]);
+            });
+
+            it('keeps a legacy blob holding a wallet with no secrets', async () => {
+                const bare = { implementation: 'lnd', host: 'h' };
+                local['zeus-settings-v2'] = blob(bare);
+
+                const result = await purge();
+
+                expect(local['zeus-settings-v2']).toBe(blob(bare));
+                expect(result.deleted).toBe(0);
+                expect(result.skipped).toEqual(['zeus-settings-v2']);
+            });
+
+            it('keeps a legacy blob that does not parse', async () => {
+                local['zeus-settings-v2'] = '{"nodes":';
+
+                const result = await purge();
+
+                expect(local['zeus-settings-v2']).toBe('{"nodes":');
+                expect(result.deleted).toBe(0);
+                expect(result.skipped).toEqual(['zeus-settings-v2']);
+            });
+
+            it('keeps a legacy blob when the live blob cannot be read', async () => {
+                local['zeus-settings-v2'] = blob(first);
+                StorageModule.getRawItem.mockImplementation(
+                    async (server: string, cloudSync: boolean) => {
+                        if (server === 'zeus:zeus-settings-v2') {
+                            throw new Error('keychain error');
+                        }
+                        return (cloudSync ? sync : local)[server] ?? null;
+                    }
+                );
+
+                const result = await purge();
+
+                expect(local['zeus-settings-v2']).toBe(blob(first));
+                expect(result.skipped).toEqual(['zeus-settings-v2']);
+            });
+
+            it('keeps the EncryptedStorage blob holding a wallet the live blob lacks', async () => {
+                EncryptedStorage.getItem.mockResolvedValue(blob(second));
+
+                const result = await purge(true);
+
+                expect(EncryptedStorage.removeItem).not.toHaveBeenCalled();
+                expect(result.deleted).toBe(0);
+                expect(result.skipped).toEqual(['zeus-settings']);
+            });
+
+            it('deletes the EncryptedStorage blob once the live blob holds its wallets', async () => {
+                EncryptedStorage.getItem.mockResolvedValue(blob(first));
+
+                const result = await purge(true);
+
+                expect(EncryptedStorage.removeItem).toHaveBeenCalledWith(
+                    'zeus-settings'
+                );
+                expect(result.deleted).toBe(1);
+                expect(result.skipped).toEqual([]);
+            });
+
+            it('still deletes other legacy keys by name', async () => {
+                local['zeus:zeus-contacts-v2'] = '[]';
+                local['zeus-contacts-v2'] = '[{"name":"old"}]';
+
+                const result = await purge();
+
+                expect(local['zeus-contacts-v2']).toBeUndefined();
+                expect(result.deleted).toBe(1);
+            });
+        });
+
+        it('keeps the only copy of a wallet through the automatic purge', async () => {
+            const local: Record<string, string> = {
+                'zeus:zeus-settings-v2': blob(first),
+                'zeus-settings-v2': blob(first)
+            };
+            const sync: Record<string, string> = {
+                'zeus-settings-v2': blob(first, second)
+            };
+            EncryptedStorage.getItem.mockImplementation(async (key: string) =>
+                key === 'keychain-desync-v1' ? 'true' : null
+            );
+            StorageModule.getInternetPasswordServers.mockImplementation(
+                async (synchronizable: boolean) =>
+                    Object.keys(synchronizable ? sync : local)
+            );
+            StorageModule.getItem.mockResolvedValue(blob(first));
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    (cloudSync ? sync : local)[server] ?? null
+            );
+            StorageModule.removeRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) => {
+                    delete (cloudSync ? sync : local)[server];
+                }
+            );
+
+            await autoPurgeLegacyKeychain();
+
+            const stored = [...Object.values(local), ...Object.values(sync)];
+            expect(stored.some((value) => value.includes('"pw2"'))).toBe(true);
         });
     });
 
