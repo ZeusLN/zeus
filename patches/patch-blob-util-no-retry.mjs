@@ -52,8 +52,8 @@
 // Upstream: react-native-blob-util 0.25.1 (latest at time of writing).
 // Reported at https://github.com/RonRadtke/react-native-blob-util/issues/504.
 // Fixed upstream in pull/505 (master, 1.1.0) and pull/506 (support/0.25),
-// which do not change the pool keep-alive. Once the release Zeus uses
-// includes the fix, the pool edit is the only part of this patch left.
+// including the pool keep-alive; drop this patch once the release Zeus uses
+// includes the fix.
 //
 // Like the keychain patches this THROWS when the expected source is missing,
 // so a dependency bump cannot silently bring the resend back.
