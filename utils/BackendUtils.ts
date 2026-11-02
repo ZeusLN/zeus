@@ -126,9 +126,10 @@ class BackendUtils {
     listAccounts = (...args: any[]) => this.call('listAccounts', args);
     importAccount = (...args: any[]) => this.call('importAccount', args);
     listAddresses = (...args: any[]) => this.call('listAddresses', args);
-    // Backstop for every caller of the node-key signer. Each backend's
-    // lnurlAuth calls its own signMessage directly, so LNURL-auth is not
-    // affected.
+    // Backstop for every caller that signs with the node key through
+    // BackendUtils. Each backend's lnurlAuth calls its own signMessage
+    // directly, so LNURL-auth is not affected. The Olympus restore flow in
+    // ChannelMigrationUtils signs through lndmobile and checks separately.
     signMessage = (...args: any[]) =>
         isReservedSigningMessage(args[0])
             ? Promise.reject(
