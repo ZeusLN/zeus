@@ -15,6 +15,11 @@ jest.mock('../../storage', () => ({
     __esModule: true,
     default: { getItem: jest.fn().mockResolvedValue('rescue words') }
 }));
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    getItem: jest.fn(async () => null),
+    setItem: jest.fn(async () => {}),
+    removeItem: jest.fn(async () => {})
+}));
 jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
 jest.mock('../../utils/NavigationUtils', () => ({
