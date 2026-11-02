@@ -405,28 +405,35 @@ export default class CashuStore {
                 const derivedSeedPhrase = mnemonic.split(' ');
                 const nodeDir = this.getNodeDir();
 
-                // Set in-memory state first so ensureSeed() / deriveCashuPubkey()
-                // work even if Keychain storage throws below
+                // Do not initialize with a seed that is not persisted: ecash
+                // received under it would be unrecoverable after a restart
+                try {
+                    const seedStored = await Storage.setItem(
+                        nodeDir + '-cashu-seed-phrase',
+                        derivedSeedPhrase
+                    );
+                    if (!seedStored) {
+                        throw new Error('Seed phrase write returned false');
+                    }
+                    const versionStored = await Storage.setItem(
+                        nodeDir + '-cashu-seed-version',
+                        'v2-bip39'
+                    );
+                    if (!versionStored) {
+                        throw new Error('Seed version write returned false');
+                    }
+                } catch (storageErr) {
+                    console.error(
+                        'CDK: Failed to persist generated mnemonic, not initializing:',
+                        storageErr
+                    );
+                    return false;
+                }
+
                 runInAction(() => {
                     this.seedPhrase = derivedSeedPhrase;
                     this.seedVersion = 'v2-bip39';
                 });
-
-                try {
-                    await Storage.setItem(
-                        nodeDir + '-cashu-seed-phrase',
-                        derivedSeedPhrase
-                    );
-                    await Storage.setItem(
-                        nodeDir + '-cashu-seed-version',
-                        'v2-bip39'
-                    );
-                } catch (storageErr) {
-                    console.warn(
-                        'CDK: Failed to persist mnemonic to Keychain, will retry on next launch:',
-                        storageErr
-                    );
-                }
 
                 console.log(
                     'CDK: Generated and stored mnemonic for remote node'
