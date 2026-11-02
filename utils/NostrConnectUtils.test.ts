@@ -19,7 +19,9 @@ jest.mock('../stores/Stores', () => ({
 }));
 
 jest.mock('./LocaleUtils', () => ({
-    localeString: (key: string) => key
+    localeString: (key: string) => key,
+    allLocaleStrings: (key: string) =>
+        jest.requireActual('./LocaleUtils').allLocaleStrings(key)
 }));
 
 jest.mock('./BackendUtils', () => ({
@@ -462,6 +464,167 @@ describe('NostrConnectUtils', () => {
             expect(expiresAt!.getTime()).toBeLessThanOrEqual(
                 after + fourteenDaysMs + 1000
             );
+        });
+    });
+
+    describe('custom expiry units in a translated app', () => {
+        const german: { [key: string]: string } = {
+            'time.hours': 'Stunden',
+            'time.days': 'Tage',
+            'time.weeks': 'Wochen',
+            'time.months': 'Monate',
+            'time.years': 'Jahre'
+        };
+        const HOUR_MS = 60 * 60 * 1000;
+        let localeStringSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            jest.useFakeTimers().setSystemTime(
+                new Date('2024-01-15T12:00:00Z')
+            );
+            localeStringSpy = jest
+                .spyOn(jest.requireMock('./LocaleUtils'), 'localeString')
+                .mockImplementation((key: any) => german[key] ?? key);
+        });
+
+        afterEach(() => {
+            localeStringSpy.mockRestore();
+            jest.useRealTimers();
+        });
+
+        it('makes 2 of the first unit in the dropdown 2 hours, not 2 days', () => {
+            const expiresAt = NostrConnectUtils.calculateCustomExpiryDate(
+                2,
+                NostrConnectUtils.TIME_UNITS[0]
+            );
+            expect(expiresAt.getTime() - Date.now()).toBe(2 * HOUR_MS);
+        });
+
+        it('translates the labels but not the values', () => {
+            expect(NostrConnectUtils.getTimeUnitOptions()).toEqual([
+                { key: 'Stunden', value: 'Hours' },
+                { key: 'Tage', value: 'Days' },
+                { key: 'Wochen', value: 'Weeks' },
+                { key: 'Monate', value: 'Months' },
+                { key: 'Jahre', value: 'Years' }
+            ]);
+            expect(NostrConnectUtils.TIME_UNITS).toEqual([
+                'Hours',
+                'Days',
+                'Weeks',
+                'Months',
+                'Years'
+            ]);
+        });
+
+        it('gives every option of the dropdown its own duration', () => {
+            const hours = NostrConnectUtils.getTimeUnitOptions().map(
+                ({ value }) =>
+                    (NostrConnectUtils.calculateCustomExpiryDate(
+                        2,
+                        value
+                    ).getTime() -
+                        Date.now()) /
+                    HOUR_MS
+            );
+            expect(hours.slice(0, 3)).toEqual([2, 48, 336]);
+            // calendar units: a DST change may move these by an hour
+            expect(hours.slice(3).map((h) => Math.round(h / 24))).toEqual([
+                60, 731
+            ]);
+        });
+
+        it('reads a label stored by an earlier version as its unit', () => {
+            const regenerate = (customExpiryUnit: any) =>
+                NostrConnectUtils.refreshExpiryForRegenerate({
+                    expiresAt: new Date('2024-01-17T12:00:00Z'),
+                    createdAt: new Date('2024-01-15T12:00:00Z'),
+                    customExpiryValue: 2,
+                    customExpiryUnit
+                });
+
+            const hours = regenerate('Stunden');
+            expect(hours.expiresAt!.getTime() - Date.now()).toBe(2 * HOUR_MS);
+            expect(hours.customExpiryUnit).toBe('Hours');
+
+            const weeks = regenerate('Wochen');
+            expect(weeks.expiresAt!.getTime() - Date.now()).toBe(336 * HOUR_MS);
+            expect(weeks.customExpiryUnit).toBe('Weeks');
+        });
+
+        it('reads a label stored in another language as its unit', () => {
+            expect(NostrConnectUtils.normalizeTimeUnit('Heures')).toBe('Hours');
+            expect(NostrConnectUtils.normalizeTimeUnit('Ans')).toBe('Years');
+        });
+
+        it('gives a label it cannot map back the shortest unit', () => {
+            expect(NostrConnectUtils.normalizeTimeUnit('xyz')).toBe('Hours');
+            expect(NostrConnectUtils.normalizeTimeUnit('')).toBe('Hours');
+            expect(
+                NostrConnectUtils.calculateCustomExpiryDate(
+                    2,
+                    'xyz' as any
+                ).getTime() - Date.now()
+            ).toBe(2 * HOUR_MS);
+        });
+    });
+
+    describe('custom expiry units after a language change', () => {
+        const english: { [key: string]: string } = {
+            'time.hours': 'Hours',
+            'time.days': 'Days',
+            'time.weeks': 'Weeks',
+            'time.months': 'Months',
+            'time.years': 'Years'
+        };
+        const HOUR_MS = 60 * 60 * 1000;
+        let localeStringSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            jest.useFakeTimers().setSystemTime(
+                new Date('2024-01-15T12:00:00Z')
+            );
+            localeStringSpy = jest
+                .spyOn(jest.requireMock('./LocaleUtils'), 'localeString')
+                .mockImplementation((key: any) => english[key] ?? key);
+        });
+
+        afterEach(() => {
+            localeStringSpy.mockRestore();
+            jest.useRealTimers();
+        });
+
+        it('regenerates a German label saved before the switch to English', () => {
+            const { expiresAt, customExpiryUnit } =
+                NostrConnectUtils.refreshExpiryForRegenerate({
+                    expiresAt: new Date('2024-01-17T12:00:00Z'),
+                    createdAt: new Date('2024-01-15T12:00:00Z'),
+                    customExpiryValue: 2,
+                    customExpiryUnit: 'Tage' as any
+                });
+            expect(expiresAt!.getTime() - Date.now()).toBe(48 * HOUR_MS);
+            expect(customExpiryUnit).toBe('Days');
+        });
+
+        it('maps labels from any locale to their unit', () => {
+            expect(NostrConnectUtils.normalizeTimeUnit('Jahre')).toBe('Years');
+            expect(NostrConnectUtils.normalizeTimeUnit('일')).toBe('Days');
+            expect(NostrConnectUtils.normalizeTimeUnit('Wochen')).toBe('Weeks');
+            expect(NostrConnectUtils.normalizeTimeUnit('xyz')).toBe('Hours');
+        });
+
+        it('has no label that means two different units', () => {
+            const { allLocaleStrings } = jest.requireActual('./LocaleUtils');
+            const unitByLabel: { [label: string]: string } = {};
+            NostrConnectUtils.TIME_UNITS.forEach((unit) => {
+                allLocaleStrings(`time.${unit.toLowerCase()}`).forEach(
+                    (label: string) => {
+                        expect([undefined, unit]).toContain(unitByLabel[label]);
+                        unitByLabel[label] = unit;
+                    }
+                );
+            });
+            expect(Object.keys(unitByLabel).length).toBeGreaterThan(5);
         });
     });
 

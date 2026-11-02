@@ -74,6 +74,42 @@ const TaiwaneseMandarin: any = zh_TW;
 const Bulgarian: any = BG;
 const Indonesian: any = ID;
 
+const ALL_LOCALES = [
+    English,
+    Czech,
+    German,
+    Spanish,
+    BrazilianPortuguese,
+    Slovak,
+    Turkish,
+    Persian,
+    Greek,
+    French,
+    Dutch,
+    Hungarian,
+    Swahili,
+    SimplifiedChinese,
+    NorwegianBokmal,
+    Swedish,
+    Thai,
+    Ukranian,
+    Romanian,
+    Polish,
+    Slovenian,
+    Russian,
+    Finnish,
+    Italian,
+    Vietnamese,
+    Japanese,
+    Hebrew,
+    Croatian,
+    Korean,
+    Hindi,
+    TaiwaneseMandarin,
+    Bulgarian,
+    Indonesian
+];
+
 // strings that are needed on the java layer
 const JAVA_LAYER_STRINGS = [
     'androidNotification.nodeRunningBackground',
@@ -175,6 +211,18 @@ export function localeString(
     }
 
     return translation;
+}
+
+// The translations of a key in every locale, without duplicates. For reading
+// back a label that was stored while the app was in another language.
+export function allLocaleStrings(key: string): string[] {
+    return Array.from(
+        new Set(
+            ALL_LOCALES.map((locale) => locale[key]).filter(
+                (value) => typeof value === 'string' && value !== ''
+            )
+        )
+    );
 }
 
 export const languagesWithNounCapitalization = ['de', 'pl', 'cs', 'sk'];
