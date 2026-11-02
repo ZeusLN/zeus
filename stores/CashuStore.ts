@@ -470,9 +470,13 @@ export default class CashuStore {
         if (this.addedMintsCache.has(normalizedUrl)) {
             return;
         }
+        // reset() clears the cache for the next wallet, whose CDK database
+        // this addMint did not reach
+        const session = this.walletSession;
 
         try {
             await CashuDevKit.addMint(normalizedUrl);
+            if (session !== this.walletSession) return;
             this.addedMintsCache.add(normalizedUrl);
             runInAction(() => {
                 if (this.cashuWallets[normalizedUrl]) {
@@ -485,7 +489,10 @@ export default class CashuStore {
             // a later, more confusing one.
             console.error(`CDK: Failed to add mint ${normalizedUrl}:`, e);
             runInAction(() => {
-                if (this.cashuWallets[normalizedUrl]) {
+                if (
+                    session === this.walletSession &&
+                    this.cashuWallets[normalizedUrl]
+                ) {
                     this.cashuWallets[normalizedUrl].errorConnecting = true;
                 }
             });

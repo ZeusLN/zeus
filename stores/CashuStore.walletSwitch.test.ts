@@ -35,7 +35,14 @@ const mockCdk = {
     // The first receive() waits on the mint until the test releases it
     answerFirstClaim: undefined as (() => void) | undefined,
     // Claims of these tokens fail as already spent
-    spentTokens: [] as string[]
+    spentTokens: [] as string[],
+    // The first claim of each of these tokens waits until the test answers
+    // it through heldClaims
+    holdTokens: [] as string[],
+    heldClaims: {} as Record<string, () => void>,
+    // addMint() of this mint waits until the test releases it
+    holdMint: '',
+    answerAddMint: undefined as (() => void) | undefined
 };
 const mockOpenDatabase = () => mockCdk.databases[mockCdk.openMnemonic];
 jest.mock('../cashu-cdk', () => ({
@@ -46,6 +53,11 @@ jest.mock('../cashu-cdk', () => ({
     },
     addMint: async (mintUrl: string) => {
         const { mints } = mockOpenDatabase();
+        if (mintUrl === mockCdk.holdMint && !mockCdk.answerAddMint) {
+            await new Promise<void>((resolve) => {
+                mockCdk.answerAddMint = resolve;
+            });
+        }
         if (!mints.includes(mintUrl)) mints.push(mintUrl);
     },
     removeMint: async () => {},
@@ -55,6 +67,14 @@ jest.mock('../cashu-cdk', () => ({
         if (!mockCdk.answerFirstClaim) {
             await new Promise<void>((resolve) => {
                 mockCdk.answerFirstClaim = resolve;
+            });
+        }
+        if (mockCdk.holdTokens.includes(encodedToken)) {
+            mockCdk.holdTokens = mockCdk.holdTokens.filter(
+                (token) => token !== encodedToken
+            );
+            await new Promise<void>((resolve) => {
+                mockCdk.heldClaims[encodedToken] = resolve;
             });
         }
         if (mockCdk.spentTokens.includes(encodedToken)) {
@@ -101,7 +121,8 @@ const storeWallet = (
     lndDir: string,
     seed: string,
     mint: string,
-    queuedTokens: string[]
+    queuedTokens: string[],
+    tokenMint = mint
 ) => {
     mockKeychain[`${lndDir}-cashu-seed-phrase`] = JSON.stringify(
         seed.split(' ')
@@ -111,7 +132,7 @@ const storeWallet = (
     mockKeychain[`${lndDir}-cashu-selectedMintUrl`] = mint;
     mockKeychain[`${lndDir}-cashu-offline-pending-tokens`] = JSON.stringify(
         queuedTokens.map((encodedToken) => ({
-            mint,
+            mint: tokenMint,
             unit: 'sat',
             proofs: [
                 { amount: 100, id: '00ad', secret: encodedToken, C: '02' }
@@ -128,62 +149,76 @@ const storedTokens = (key: string) =>
         (token: any) => token.encodedToken
     );
 
-describe('CashuStore offline-token sweep across a wallet switch', () => {
-    let settingsStore: any;
-    let store: CashuStore;
-    let sweeps: jest.SpyInstance;
+let settingsStore: any;
+let store: CashuStore;
+let sweeps: jest.SpyInstance;
 
-    // What Wallet.fetchDataCore() does when the user selects wallet B:
-    // SettingsStore has already loaded B's node, then the store is reset
-    const switchToWalletB = () => {
-        settingsStore.lndDir = 'walletB';
-        store.reset();
+// What Wallet.fetchDataCore() does when the user selects wallet B:
+// SettingsStore has already loaded B's node, then the store is reset
+const switchToWalletB = () => {
+    settingsStore.lndDir = 'walletB';
+    store.reset();
+};
+
+// Wallet B is stored with one queued token; queue wallet A's tokens and
+// open the store on wallet A, which starts A's sweep. With newMint, A's
+// tokens come from a mint A has not added, and adding it waits until the
+// test calls answerAddMint
+const startOnWalletA = async (queuedTokens: string[], newMint?: string) => {
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    Object.keys(mockKeychain).forEach((key) => delete mockKeychain[key]);
+    mockCdk.databases = {};
+    mockCdk.openMnemonic = '';
+    mockCdk.answerFirstClaim = undefined;
+    mockCdk.spentTokens = [];
+    mockCdk.holdTokens = [];
+    mockCdk.heldClaims = {};
+    mockCdk.holdMint = newMint ?? '';
+    mockCdk.answerAddMint = undefined;
+
+    storeWallet(
+        'walletA',
+        SEED_A,
+        'https://mint-a.example',
+        queuedTokens,
+        newMint
+    );
+    storeWallet('walletB', SEED_B, 'https://mint-b.example', [
+        'token-for-wallet-B'
+    ]);
+
+    settingsStore = {
+        implementation: 'embedded-lnd',
+        lndDir: 'walletA',
+        settings: { ecash: { enableCashu: true } },
+        updateSettingsGroup: jest.fn()
     };
+    store = new CashuStore(
+        settingsStore,
+        {} as any,
+        { channels: [] } as any,
+        {} as any
+    );
+    sweeps = jest.spyOn(store, 'sweepOfflinePendingTokens');
+    // the background mint-info fetch arms a timer that would outlive
+    // the test
+    jest.spyOn(store, 'fetchMintInfo').mockResolvedValue(null);
 
+    await store.initializeWallets();
+    await new Promise(setImmediate);
+    expect(mockCdk.openMnemonic).toBe(SEED_A);
+};
+
+afterEach(() => jest.restoreAllMocks());
+
+describe('CashuStore offline-token sweep across a wallet switch', () => {
     beforeEach(async () => {
-        jest.spyOn(console, 'log').mockImplementation(() => {});
-        jest.spyOn(console, 'warn').mockImplementation(() => {});
-        jest.spyOn(console, 'error').mockImplementation(() => {});
-        Object.keys(mockKeychain).forEach((key) => delete mockKeychain[key]);
-        mockCdk.databases = {};
-        mockCdk.openMnemonic = '';
-        mockCdk.answerFirstClaim = undefined;
-        mockCdk.spentTokens = [];
-
-        storeWallet('walletA', SEED_A, 'https://mint-a.example', [
-            'token-1-for-wallet-A',
-            'token-2-for-wallet-A'
-        ]);
-        storeWallet('walletB', SEED_B, 'https://mint-b.example', [
-            'token-for-wallet-B'
-        ]);
-
-        settingsStore = {
-            implementation: 'embedded-lnd',
-            lndDir: 'walletA',
-            settings: { ecash: { enableCashu: true } },
-            updateSettingsGroup: jest.fn()
-        };
-        store = new CashuStore(
-            settingsStore,
-            {} as any,
-            { channels: [] } as any,
-            {} as any
-        );
-        sweeps = jest.spyOn(store, 'sweepOfflinePendingTokens');
-        // the background mint-info fetch arms a timer that would outlive
-        // the test
-        jest.spyOn(store, 'fetchMintInfo').mockResolvedValue(null);
-
-        // Start on wallet A; its sweep runs until A's first claim, which
-        // then waits on the mint
-        await store.initializeWallets();
-        await new Promise(setImmediate);
-        expect(mockCdk.openMnemonic).toBe(SEED_A);
+        // A's sweep runs until A's first claim, which then waits on the mint
+        await startOnWalletA(['token-1-for-wallet-A', 'token-2-for-wallet-A']);
         expect(mockCdk.answerFirstClaim).toBeDefined();
     });
-
-    afterEach(() => jest.restoreAllMocks());
 
     it("leaves wallet B's stored offline queue alone", async () => {
         switchToWalletB();
@@ -268,5 +303,73 @@ describe('CashuStore offline-token sweep across a wallet switch', () => {
         // Nothing of A's reaches the store, which now belongs to B
         expect(store.offlineSpentTokens).toEqual([]);
         expect(store.showOfflineSpentAlert).toBe(false);
+    });
+
+    it("keeps wallet B's sweep the only one running after wallet A's stopped sweep ends", async () => {
+        mockCdk.holdTokens = ['token-for-wallet-B'];
+        switchToWalletB();
+        await store.initializeWallets();
+        await new Promise(setImmediate);
+        expect(mockCdk.heldClaims['token-for-wallet-B']).toBeDefined();
+
+        // A's stopped sweep ends while B's sweep waits on its claim
+        mockCdk.answerFirstClaim!();
+        await sweeps.mock.results[0].value;
+
+        // Another trigger, such as a reconnect, must not start a second
+        // sweep that submits B's token again
+        await store.sweepOfflinePendingTokens();
+        mockCdk.heldClaims['token-for-wallet-B']();
+        await sweeps.mock.results[1].value;
+
+        expect(mockCdk.databases[SEED_B].received).toEqual([
+            'token-for-wallet-B'
+        ]);
+    });
+});
+
+describe('CashuStore offline-token sweep across a wallet switch during addMint', () => {
+    const MINT_C = 'https://mint-c.example';
+
+    beforeEach(async () => {
+        // A's sweep waits in addMint() instead of the claim
+        await startOnWalletA(['token-from-mint-C'], MINT_C);
+        expect(mockCdk.answerAddMint).toBeDefined();
+        // Claims are answered at once in these tests
+        mockCdk.answerFirstClaim = () => {};
+    });
+
+    it("does not claim wallet A's token into wallet B's CDK database", async () => {
+        switchToWalletB();
+        await store.initializeWallets();
+        await sweeps.mock.results[1].value;
+        expect(mockCdk.openMnemonic).toBe(SEED_B);
+
+        mockCdk.answerAddMint!();
+        await sweeps.mock.results[0].value;
+
+        expect(mockCdk.databases[SEED_B].received).toEqual([
+            'token-for-wallet-B'
+        ]);
+        expect(mockCdk.databases[SEED_A].received).toEqual([]);
+        expect(storedTokens('walletA-cashu-offline-pending-tokens')).toEqual([
+            'token-from-mint-C'
+        ]);
+    });
+
+    it("does not count wallet A's addMint as added for wallet B", async () => {
+        switchToWalletB();
+        await store.initializeWallets();
+        await sweeps.mock.results[1].value;
+
+        mockCdk.answerAddMint!();
+        await sweeps.mock.results[0].value;
+
+        await store.receiveTokenCDK(
+            'token-from-mint-C-for-B',
+            undefined,
+            MINT_C
+        );
+        expect(mockCdk.databases[SEED_B].mints).toContain(MINT_C);
     });
 });
