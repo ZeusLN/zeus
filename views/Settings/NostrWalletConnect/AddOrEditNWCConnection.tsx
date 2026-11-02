@@ -44,6 +44,8 @@ import NWCConnection, {
     TimeUnit
 } from '../../../models/NWCConnection';
 
+const MAX_BUDGET = 2_100_000_000_000_000; // 21M BTC in sats
+
 interface AddOrEditNWCConnectionProps {
     navigation: NativeStackNavigationProp<any, any>;
     route: Route<
@@ -87,7 +89,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             connectionName: '',
             selectedRelayUrl: DEFAULT_NOSTR_RELAYS[0],
             customRelayUrl: '',
-            selectedPermissions: NostrConnectUtils.getFullAccessPermissions(),
+            selectedPermissions:
+                NostrConnectUtils.getFullAccessPermissions() as Nip47Method[],
             selectedBudgetRenewalIndex: 0,
             expiresAt: NostrConnectUtils.getExpiryDateFromPreset(0),
             error: '',
@@ -493,6 +496,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         }
 
         const value = parseInt(numericText, 10);
+        if (value > MAX_BUDGET) return;
 
         if (value < 0) {
             this.updateStateWithChangeTracking({
@@ -1100,7 +1104,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     </Body>
                                 </View>
 
-                                {/* Budget Input and Slider */}
+                                {/* Budget Input */}
                                 <View
                                     style={{
                                         marginHorizontal: 5,
