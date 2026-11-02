@@ -1480,7 +1480,7 @@
     "views.Settings.EmbeddedNode.NeutrinoPeers.unreachable": "S hostitelem se nepodařilo spojit",
     "views.Settings.EmbeddedNode.NeutrinoPeers.invalidHost": "Zadejte prosím hostname nebo IP adresu bez http:// nebo https://",
     "views.Settings.EmbeddedNode.NeutrinoPeers.optimize": "Optimalizovat výběr peerů",
-    "views.Settings.EmbeddedNode.NeutrinoPeers.noteRestartHint": "NOTE: Restart ZEUS for changes to take effect",
+    "views.Settings.EmbeddedNode.NeutrinoPeers.noteRestartHint": "POZNÁMKA: Restartujte ZEUS, aby se změny projevily",
     "views.Settings.EmbeddedNode.ZeroConfPeers.title": "0-conf peery",
     "views.Settings.EmbeddedNode.ZeroConfPeers.subtitle": "Nastavte peery, od kterých byste chtěli přijímat 0-conf lightningové kanály. Jiné než LSP.",
     "views.Settings.EmbeddedNode.EsploraServer.title": "Server Esplora",
