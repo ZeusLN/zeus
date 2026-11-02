@@ -2365,6 +2365,7 @@
     "views.Cashu.CashuPaymentRequest.sendingFrom": "Sending from",
     "views.Cashu.CashuPaymentRequest.noBalance": "No ecash balance available. Receive a payment first.",
     "views.Cashu.CashuPaymentRequest.multiMint": "Multi-mint",
+    "views.Cashu.CashuPaymentRequest.donationMayFail": "What is left after this payment may not cover the donation and its fee, so the donation may not go through. Pay again to send both anyway, or lower the donation.",
     "views.Cashu.MultimintPayment.noMintsSelected": "No mints selected. Please select at least one mint to proceed.",
     "views.Cashu.MultimintPayment.paying": "Paying...",
     "views.Cashu.MultimintPayment.requesting": "Requesting...",
