@@ -1,0 +1,282 @@
+import { execFileSync } from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { pathToFileURL } from 'url';
+
+// The patches are plain ESM run by node at postinstall, so drive them through
+// a node child process instead of Jest's transform. Each run works on a copy
+// of the 0.25.1 excerpt laid out where the patch expects node_modules.
+
+const FIXTURE = path.join(
+    __dirname,
+    'fixtures',
+    'ReactNativeBlobUtilReq-0.25.1-excerpt.java'
+);
+const REQ_DIR =
+    'node_modules/react-native-blob-util/android/src/main/java/com/ReactNativeBlobUtil';
+const MARKER = '// ZEUS PATCH: blob-util-no-retry';
+const HTTP_RETRY_MARKER = '// ZEUS PATCH: blob-util-no-503-retry';
+
+const patchUrl = pathToFileURL(
+    path.join(__dirname, 'patch-blob-util-no-retry.mjs')
+).href;
+
+const roots: string[] = [];
+
+const makeTree = (source = fs.readFileSync(FIXTURE, 'utf8')) => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'blob-util-patch-'));
+    roots.push(root);
+    fs.mkdirSync(path.join(root, REQ_DIR), { recursive: true });
+    fs.writeFileSync(
+        path.join(root, REQ_DIR, 'ReactNativeBlobUtilReq.java'),
+        source
+    );
+    return root;
+};
+
+const readRaw = (root: string) =>
+    fs.readFileSync(
+        path.join(root, REQ_DIR, 'ReactNativeBlobUtilReq.java'),
+        'utf8'
+    );
+
+// the upstream file has CRLF line endings; compare with LF
+const read = (root: string) => readRaw(root).replace(/\r\n/g, '\n');
+
+const run = (root: string) =>
+    execFileSync(
+        process.execPath,
+        [
+            '--input-type=module',
+            '-e',
+            `const m = await import(${JSON.stringify(
+                patchUrl
+            )}); m.patchBlobUtilNoRetry();`
+        ],
+        { cwd: root, encoding: 'utf8', stdio: 'pipe' }
+    );
+
+// The upload progress interceptor, from its proceed(req) call to the end of
+// its intercept method
+const interceptor = (source: string) => {
+    const start = source.indexOf('originalResponse = chain.proceed(req);');
+    expect(start).toBeGreaterThanOrEqual(0);
+    return source.slice(start, source.indexOf('\n            });', start));
+};
+
+describe('patch-blob-util-no-retry', () => {
+    afterAll(() => {
+        roots.forEach((root) =>
+            fs.rmSync(root, { recursive: true, force: true })
+        );
+    });
+
+    it('resends the request after a failure before the patch', () => {
+        const body = interceptor(
+            fs.readFileSync(FIXTURE, 'utf8').replace(/\r\n/g, '\n')
+        );
+        expect(body).toContain('return chain.proceed(chain.request());');
+    });
+
+    it('rethrows a failure instead of resending the request', () => {
+        const root = makeTree();
+        run(root);
+        const body = interceptor(read(root));
+
+        expect(body).toContain(MARKER);
+        expect(body).not.toContain('chain.proceed(chain.request())');
+        expect(body.split('chain.proceed(')).toHaveLength(2);
+        expect(body).toContain('} catch (IOException e) {');
+        expect(body).toContain('throw e;');
+    });
+
+    it('wraps other exceptions so OkHttp reports them through onFailure', () => {
+        const root = makeTree();
+        run(root);
+        const body = interceptor(read(root));
+        const other = body.slice(body.indexOf('} catch (Exception ex) {'));
+
+        expect(other).toContain('originalResponse.close();');
+        expect(other).toContain('throw new IOException(ex);');
+    });
+
+    it('limits OkHttp connection failure retries to GET and HEAD', () => {
+        const root = makeTree();
+        run(root);
+        const patched = read(root);
+
+        expect(patched).not.toContain(
+            'clientBuilder.retryOnConnectionFailure(true);'
+        );
+        expect(patched).toContain(
+            'clientBuilder.retryOnConnectionFailure("GET".equals(method) || "HEAD".equals(method));'
+        );
+        // the earlier retryOnConnectionFailure(false) is left as it was
+        expect(patched).toContain(
+            'clientBuilder.retryOnConnectionFailure(false);\n            clientBuilder.followRedirects'
+        );
+        expect(patched.split('retryOnConnectionFailure(')).toHaveLength(3);
+    });
+
+    it('drops Retry-After from 503 responses to methods other than GET and HEAD', () => {
+        const root = makeTree();
+        run(root);
+        const patched = read(root);
+        const start = patched.indexOf('addNetworkInterceptor');
+        const network = patched.slice(
+            start,
+            patched.indexOf('\n            });', start)
+        );
+
+        expect(network).toContain(
+            'redirects.add(chain.request().url().toString());'
+        );
+        expect(network).toContain(HTTP_RETRY_MARKER);
+        expect(network.split('chain.proceed(')).toHaveLength(2);
+        expect(network).toContain(
+            'if (response.code() == 503 && !("GET".equals(requestMethod) || "HEAD".equals(requestMethod))) {\n                        return response.newBuilder().removeHeader("Retry-After").build();'
+        );
+        expect(network).toContain('return response;');
+    });
+
+    it('keeps the CRLF line endings of the upstream file', () => {
+        const root = makeTree();
+        run(root);
+
+        expect(readRaw(root)).not.toMatch(/[^\r]\n/);
+    });
+
+    it('patches a copy with LF line endings', () => {
+        const root = makeTree(
+            fs.readFileSync(FIXTURE, 'utf8').replace(/\r\n/g, '\n')
+        );
+        run(root);
+
+        expect(readRaw(root)).not.toContain('\r');
+        expect(interceptor(readRaw(root))).not.toContain(
+            'chain.proceed(chain.request())'
+        );
+    });
+
+    it('is idempotent', () => {
+        const root = makeTree();
+        run(root);
+        const once = read(root);
+        const output = run(root);
+
+        expect(read(root)).toBe(once);
+        expect(output).toContain('Already patched');
+        expect(once.split(MARKER)).toHaveLength(2);
+    });
+
+    it('fails the install when the interceptor has changed', () => {
+        const root = makeTree(
+            fs
+                .readFileSync(FIXTURE, 'utf8')
+                .replace(
+                    '} catch (SocketException e) {',
+                    '} catch (java.net.SocketException e) {'
+                )
+        );
+
+        expect(() => run(root)).toThrow(/does not match the expected pattern/);
+    });
+
+    it('fails the install when the retry call has changed', () => {
+        const root = makeTree(
+            fs
+                .readFileSync(FIXTURE, 'utf8')
+                .replace(
+                    'clientBuilder.retryOnConnectionFailure(true);',
+                    'clientBuilder.retryOnConnectionFailure(options.retry);'
+                )
+        );
+
+        expect(() => run(root)).toThrow(
+            /retryOnConnectionFailure\(true\) call in ReactNativeBlobUtilReq.java does not match/
+        );
+    });
+
+    it('adds the later edits to a copy that only has the interceptor edit', () => {
+        const root = makeTree();
+        run(root);
+        const onlyInterceptor = readRaw(root)
+            .replace(/\r\n/g, '\n')
+            .replace(
+                / {12}\/\/ ZEUS PATCH: blob-util-no-connection-retry\n.*\n.*\n.*\n/,
+                '            clientBuilder.retryOnConnectionFailure(true);\n'
+            )
+            .replace(
+                / {20}\/\/ ZEUS PATCH: blob-util-no-503-retry\n[\s\S]*?return response;\n/,
+                '                    return chain.proceed(chain.request());\n'
+            )
+            .replace(/\n/g, '\r\n');
+        expect(onlyInterceptor).not.toContain(HTTP_RETRY_MARKER);
+        expect(onlyInterceptor).toContain(MARKER);
+        expect(onlyInterceptor).toContain(
+            'clientBuilder.retryOnConnectionFailure(true);'
+        );
+
+        const again = makeTree(onlyInterceptor);
+        run(again);
+
+        expect(read(again)).toBe(read(root));
+    });
+
+    it('fails the install when the redirect interceptor has changed', () => {
+        const root = makeTree(
+            fs
+                .readFileSync(FIXTURE, 'utf8')
+                .replace(
+                    'redirects.add(chain.request().url().toString());',
+                    'redirects.add(chain.request().url().redact());'
+                )
+        );
+
+        expect(() => run(root)).toThrow(
+            /redirect network interceptor in ReactNativeBlobUtilReq.java does not match/
+        );
+    });
+
+    it('adds the 503 edit to a copy patched at 8f029cd88', () => {
+        // the interceptor and retry edits as that version wrote them,
+        // without the 503 edit
+        const root = makeTree(
+            fs.readFileSync(
+                path.join(
+                    __dirname,
+                    'fixtures',
+                    'ReactNativeBlobUtilReq-0.25.1-excerpt-patched-8f029cd88.java'
+                ),
+                'utf8'
+            )
+        );
+        const before = read(root);
+        expect(before).not.toContain(HTTP_RETRY_MARKER);
+
+        run(root);
+        const after = read(root);
+
+        expect(after.split(HTTP_RETRY_MARKER)).toHaveLength(2);
+        expect(after.split(MARKER)).toHaveLength(2);
+        expect(
+            after.split('// ZEUS PATCH: blob-util-no-connection-retry')
+        ).toHaveLength(2);
+        expect(after).toContain(
+            'return response.newBuilder().removeHeader("Retry-After").build();'
+        );
+        // the earlier edits are left as that version wrote them
+        expect(interceptor(after)).toBe(interceptor(before));
+        expect(readRaw(root)).not.toMatch(/[^\r]\n/);
+    });
+
+    it('fails the install when the file is missing', () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'blob-util-patch-'));
+        roots.push(root);
+
+        expect(() => run(root)).toThrow(
+            /ReactNativeBlobUtilReq.java not found/
+        );
+    });
+});
