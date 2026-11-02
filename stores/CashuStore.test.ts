@@ -13,6 +13,7 @@ jest.mock('../utils/BackendUtils', () => ({
         createInvoice: jest.fn(),
         getNewAddress: jest.fn(),
         isLNDBased: jest.fn(() => false),
+        supportsCashuWallet: jest.fn(() => true),
         supportsFlowLSP: jest.fn(() => false),
         supportsOnchainReceiving: jest.fn(() => false)
     }
@@ -428,7 +429,11 @@ describe('CashuStore melting into our own invoice', () => {
             false
         );
 
-        expect(result).toEqual({ success: true, errorMessage: '' });
+        expect(result).toEqual({
+            success: true,
+            errorMessage: '',
+            receivedAmtSat: 1000
+        });
         expect(isInvoicePaid).not.toHaveBeenCalled();
     });
 
@@ -459,7 +464,11 @@ describe('CashuStore melting into our own invoice', () => {
             true
         );
 
-        expect(result).toEqual({ success: true, errorMessage: '' });
+        expect(result).toEqual({
+            success: true,
+            errorMessage: '',
+            receivedAmtSat: 1000
+        });
         expect(isInvoicePaid).toHaveBeenCalledWith(paymentHash);
     });
 
@@ -481,7 +490,11 @@ describe('CashuStore melting into our own invoice', () => {
                 true
             );
 
-            expect(result).toEqual({ success: true, errorMessage: '' });
+            expect(result).toEqual({
+                success: true,
+                errorMessage: '',
+                receivedAmtSat: 1000
+            });
             expect(isInvoicePaid).toHaveBeenCalledWith(paymentHash);
         }
     );
@@ -1318,6 +1331,26 @@ describe('CashuStore meltCDK and sweepMint melt state', () => {
         expect(store.syncCDKBalances).toHaveBeenCalled();
     });
 
+    it('meltCDK refuses a quote that reserves more than the given limit', async () => {
+        const store = meltingStore();
+
+        await expect(
+            store.meltCDK(mintUrl, 'lnbc10n1pclaiminvoice', 9)
+        ).rejects.toThrow('Melt fee reserve 10 exceeds 9');
+
+        expect(CashuDevKit.melt).not.toHaveBeenCalled();
+        expect(store.pendingMelts).toEqual([]);
+    });
+
+    it('meltCDK melts a quote within the given limit', async () => {
+        const store = meltingStore();
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({ state: 'Paid' });
+
+        await store.meltCDK(mintUrl, 'lnbc10n1pclaiminvoice', 10);
+
+        expect(CashuDevKit.melt).toHaveBeenCalled();
+    });
+
     it.each([
         ['Pending', 1],
         ['Unpaid', 0],
@@ -1358,6 +1391,64 @@ describe('CashuStore meltCDK and sweepMint melt state', () => {
 
         expect(store.pendingMelts).toEqual([]);
         expect(store.syncCDKBalances).toHaveBeenCalledWith(true);
+    });
+
+    describe('sweepMint fee reserve', () => {
+        const quote = (id: string, feeReserve: number) => ({
+            id,
+            amount: 1000,
+            fee_reserve: feeReserve,
+            expiry: 9999999999
+        });
+
+        // 5% of 1000 is 50
+        it.each([999, 51])(
+            'does not sweep when the mint reserves %i sats',
+            async (feeReserve) => {
+                const store = meltingStore();
+                (CashuDevKit.createMeltQuote as jest.Mock).mockResolvedValue(
+                    quote('quote-1', feeReserve)
+                );
+
+                await expect(store.sweepMint(mintUrl)).resolves.toBe(false);
+
+                expect(store.invoicesStore.createInvoice).toHaveBeenCalledTimes(
+                    1
+                );
+                expect(CashuDevKit.melt).not.toHaveBeenCalled();
+                expect(store.pendingMelts).toEqual([]);
+                expect(store.loading).toBe(false);
+            }
+        );
+
+        it('sweeps with a reserve exactly at the limit', async () => {
+            const store = meltingStore();
+            (CashuDevKit.createMeltQuote as jest.Mock).mockResolvedValue(
+                quote('quote-1', 50)
+            );
+            (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+                state: 'Paid'
+            });
+
+            await expect(store.sweepMint(mintUrl)).resolves.toBe(true);
+
+            expect(store.invoicesStore.createInvoice).toHaveBeenLastCalledWith(
+                expect.objectContaining({ value: '950' })
+            );
+        });
+
+        it('refuses a final quote that reserves more than the first', async () => {
+            const store = meltingStore();
+            (CashuDevKit.createMeltQuote as jest.Mock)
+                .mockResolvedValueOnce(quote('quote-1', 10))
+                .mockResolvedValueOnce(quote('quote-2', 11));
+
+            await expect(store.sweepMint(mintUrl)).resolves.toBe(false);
+
+            expect(CashuDevKit.melt).not.toHaveBeenCalled();
+            expect(store.pendingMelts).toEqual([]);
+            expect(store.error).toBe(true);
+        });
     });
 });
 
@@ -1434,6 +1525,101 @@ describe('CashuStore self-custody claim', () => {
 
         expect(result.success).toBe(true);
         expect(result.warningMessage).toBeUndefined();
+    });
+
+    describe('mint fee reserve', () => {
+        const bigToken = { mint: mintUrl, getAmount: 65536, proofs: [] } as any;
+
+        const claimWithReserve = async (feeReserve: number, tok = bigToken) => {
+            const store = claimingStore();
+            store.createMeltQuoteCDK = jest.fn().mockResolvedValue({
+                id: 'quote-1',
+                amount: tok.getAmount,
+                fee_reserve: feeReserve,
+                expiry: 9999999999
+            });
+            store.receiveTokenCDK = jest.fn().mockResolvedValue(tok.getAmount);
+            store.meltCDK = jest.fn().mockResolvedValue({ state: 'Paid' });
+            const result = await store.claimToken('cashuAtoken', tok, true);
+            return { store, result };
+        };
+
+        it('reports the amount paid to the node after the reserve', async () => {
+            const { store, result } = await claimWithReserve(656);
+
+            expect(result).toEqual({
+                success: true,
+                errorMessage: '',
+                receivedAmtSat: 64880
+            });
+            expect(store.invoicesStore.createInvoice).toHaveBeenLastCalledWith(
+                expect.objectContaining({ value: '64880' })
+            );
+            // the quote for the smaller invoice may not reserve more
+            expect(store.meltCDK).toHaveBeenCalledWith(
+                mintUrl,
+                'lnbc10n1ptestinvoice',
+                656
+            );
+        });
+
+        it('reports the full amount when the mint reserves nothing', async () => {
+            const { result } = await claimWithReserve(0);
+
+            expect(result).toEqual({
+                success: true,
+                errorMessage: '',
+                receivedAmtSat: 65536
+            });
+        });
+
+        // The cap is checked before the receive, so a refused sweep leaves
+        // the token unclaimed and still claimable into the ecash wallet
+        it.each([65535, 3277])(
+            'leaves the token unclaimed when the mint reserves %i sats',
+            async (feeReserve) => {
+                const { store, result } = await claimWithReserve(feeReserve);
+
+                expect(store.receiveTokenCDK).not.toHaveBeenCalled();
+                expect(store.meltCDK).not.toHaveBeenCalled();
+                expect(result).toEqual({
+                    success: false,
+                    errorMessage: 'stores.CashuStore.sweepFeeTooHigh'
+                });
+            }
+        );
+
+        // Remote backends have no ecash wallet to receive the token into
+        it('does not point to the ecash wallet on backends without one', async () => {
+            (BackendUtils.supportsCashuWallet as jest.Mock).mockReturnValueOnce(
+                false
+            );
+
+            const { result } = await claimWithReserve(3277);
+
+            expect(result).toEqual({
+                success: false,
+                errorMessage: 'stores.CashuStore.sweepFeeTooHighNoEcash'
+            });
+        });
+
+        it('pays out a reserve exactly at the cap', async () => {
+            // 5% of 65536, rounded down
+            const { store, result } = await claimWithReserve(3276);
+
+            expect(store.receiveTokenCDK).toHaveBeenCalled();
+            expect(result.receivedAmtSat).toBe(65536 - 3276);
+        });
+
+        it('accepts a small fixed reserve on a small token', async () => {
+            const { store, result } = await claimWithReserve(10, {
+                ...bigToken,
+                getAmount: 100
+            });
+
+            expect(store.meltCDK).toHaveBeenCalled();
+            expect(result.receivedAmtSat).toBe(90);
+        });
     });
 });
 

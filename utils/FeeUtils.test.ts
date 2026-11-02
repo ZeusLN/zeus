@@ -1,4 +1,5 @@
 import FeeUtils, {
+    maxCashuSweepFeeReserve,
     isPlausibleSatPerVbyte,
     reverseClaimMinerFee,
     sanitizeRecommendedFees,
@@ -37,6 +38,21 @@ describe('FeeUtils', () => {
             expect(FeeUtils.calculateDefaultRoutingFee(999.001)).toEqual(
                 '1000'
             );
+        });
+    });
+
+    describe('maxCashuSweepFeeReserve', () => {
+        it('allows 5% of the amount', () => {
+            expect(maxCashuSweepFeeReserve(65536)).toEqual(3276);
+            expect(maxCashuSweepFeeReserve(1000)).toEqual(50);
+            expect(maxCashuSweepFeeReserve(1001)).toEqual(50);
+        });
+
+        it('allows at least 10 sats', () => {
+            expect(maxCashuSweepFeeReserve(0)).toEqual(10);
+            expect(maxCashuSweepFeeReserve(100)).toEqual(10);
+            expect(maxCashuSweepFeeReserve(219)).toEqual(10);
+            expect(maxCashuSweepFeeReserve(220)).toEqual(11);
         });
     });
 
