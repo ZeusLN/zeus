@@ -336,3 +336,67 @@ export const verifyLnurlAuthCallback = (
 
     return { ok: true };
 };
+
+// url.parse keeps a trailing root dot ("x.onion."), which still resolves
+// to the same host, so strip it before matching the onion suffix.
+const isOnionHostname = (hostname?: string | null): boolean =>
+    (hostname || '').toLowerCase().replace(/\.+$/, '').endsWith('.onion');
+
+/**
+ * Policy for an image URL named by a third party (a Nostr profile picture or
+ * banner, a mint icon) that the wallet loads without asking: the callback
+ * policy above, plus no .onion hosts, since neither RNFS nor the platform
+ * image loader goes through Tor, and no backslashes, since native URL parsers
+ * and url.parse disagree on which side of a "\@" the host is.
+ */
+export const isRemoteImageAllowed = (imageUrl: string): LnurlCheckResult => {
+    if (typeof imageUrl === 'string' && imageUrl.includes('\\')) {
+        return { ok: false, reason: 'image URL contains a backslash' };
+    }
+
+    const allowed = isLnurlCallbackAllowed(imageUrl);
+    if (!allowed.ok) return allowed;
+
+    if (isOnionHostname(url.parse(imageUrl).hostname)) {
+        return { ok: false, reason: 'image URL targets an onion host' };
+    }
+
+    return { ok: true };
+};
+
+/**
+ * Whether an <Image> may load a third-party image source. Inline data:image
+ * URIs make no request. An image served from the same origin as
+ * trustedOrigin (e.g. a mint's icon on the mint itself) is allowed, unless
+ * that origin is an onion host.
+ */
+export const isImageSourceAllowed = (
+    imageUrl?: string | null,
+    trustedOrigin?: string | null
+): imageUrl is string => {
+    if (typeof imageUrl !== 'string' || imageUrl.length === 0) return false;
+    if (/^data:image\//i.test(imageUrl)) return true;
+    if (isRemoteImageAllowed(imageUrl).ok) return true;
+    if (typeof trustedOrigin !== 'string' || imageUrl.includes('\\')) {
+        return false;
+    }
+
+    let image: url.UrlWithStringQuery;
+    let trusted: url.UrlWithStringQuery;
+    try {
+        image = url.parse(imageUrl);
+        trusted = url.parse(trustedOrigin);
+    } catch {
+        // e.g. "URI malformed" from a bad percent escape in the userinfo
+        return false;
+    }
+    const host = (image.host || '').toLowerCase();
+    return (
+        !!host &&
+        !image.auth &&
+        !isOnionHostname(image.hostname) &&
+        (image.protocol === 'https:' || image.protocol === 'http:') &&
+        image.protocol === trusted.protocol &&
+        host === (trusted.host || '').toLowerCase()
+    );
+};

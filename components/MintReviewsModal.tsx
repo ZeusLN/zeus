@@ -21,6 +21,7 @@ import CashuStore, { MintReview, MintReviewRating } from '../stores/CashuStore';
 
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { font } from '../utils/FontUtils';
+import { isImageSourceAllowed } from '../utils/LnurlPayUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -184,7 +185,7 @@ export default class MintReviewsModal extends React.Component<
         return (
             <View style={styles.reviewItem} key={`review-${index}`}>
                 <View style={styles.reviewHeader}>
-                    {profile?.picture ? (
+                    {isImageSourceAllowed(profile?.picture) ? (
                         <Image
                             source={{ uri: profile.picture }}
                             style={styles.profileImage}
