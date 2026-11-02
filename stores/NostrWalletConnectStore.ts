@@ -415,10 +415,16 @@ export default class NostrWalletConnectStore {
      * The SDK passes handlers only the decrypted params, so a request
      * event's created_at and NIP-40 expiration tag are checked here, on the
      * service's relay pool, before the SDK decrypts and dispatches it.
+     * The test file checks this hook against the real SDK.
      */
     private gateRequestEvents(service: NWCWalletService): void {
         const pool: any = (service as any)?.pool;
-        if (typeof pool?.subscribe !== 'function') return;
+        if (typeof pool?.subscribe !== 'function') {
+            console.warn(
+                'NWC: SDK service has no pool.subscribe, request event age and expiration are not checked'
+            );
+            return;
+        }
         const subscribe = pool.subscribe.bind(pool);
         pool.subscribe = (relays: string[], filter: any, params: any) => {
             const onevent = params?.onevent;
