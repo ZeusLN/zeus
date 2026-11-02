@@ -189,3 +189,30 @@ describe('ModalBox keyboard position', () => {
         expect(lastPositionDest(ref, timing)).toBe(KEYBOARD_TOP - 200);
     });
 });
+
+describe('ModalBox late container measurement', () => {
+    it('repositions an open sheet when the container turns out to start below the inset', async () => {
+        mockWindow(1.3);
+        const timing = jest.spyOn(Animated, 'timing');
+        let reportTop: (y: number) => void = () => {};
+        const ref = await renderSheet(
+            { position: 'bottom', style: { height: WINDOW_HEIGHT } },
+            (cb) => {
+                reportTop = (y) => cb(0, y, 400, WINDOW_HEIGHT - y);
+            }
+        );
+        // Opened before measureInWindow answers: the full inset is given up
+        await layoutSheet();
+        await flushOpen();
+        expect(sheetHeight()).toBe(WINDOW_HEIGHT - TOP_INSET);
+        expect(lastPositionDest(ref, timing)).toBe(TOP_INSET);
+
+        // The container starts below the inset, so the sheet grows to fill it
+        // and has to move back up to stay inside it
+        await act(async () => reportTop(120));
+        expect(sheetHeight()).toBe(WINDOW_HEIGHT);
+        await layoutSheet();
+        await flushOpen();
+        expect(lastPositionDest(ref, timing)).toBe(0);
+    });
+});

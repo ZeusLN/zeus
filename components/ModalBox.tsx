@@ -576,9 +576,22 @@ export default class ModalBox extends React.PureComponent<
         };
         if (height !== this.state.height) newState.height = height;
         if (width !== this.state.width) newState.width = width;
+        const heightChanged = height !== this.state.height;
         this.setState(newState);
 
-        if (this.onViewLayoutCalculated) this.onViewLayoutCalculated();
+        if (this.onViewLayoutCalculated) {
+            this.onViewLayoutCalculated();
+        } else if (
+            heightChanged &&
+            this.state.isOpen &&
+            !this.state.isAnimateClose
+        ) {
+            // The height changed after the open position was computed, e.g.
+            // once measureContainerTop reports a container below the top
+            // inset, so recompute it or the sheet's bottom runs off the
+            // container
+            this.animateOpen();
+        }
     }
 
     /*
