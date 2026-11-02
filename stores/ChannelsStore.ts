@@ -726,9 +726,15 @@ export default class ChannelsStore {
             ];
         }
 
-        if (implementation === 'lightning-node-connect') {
+        if (
+            implementation === 'lightning-node-connect' ||
+            implementation === 'ldk-node'
+        ) {
             // the LNC backend settles on close_pending, on an error, or after
-            // its own timeout, so no forced resolution is needed here
+            // its own timeout, and the LDK Node backend on the channelClosed
+            // event or after its own timeout, so no forced resolution is
+            // needed here. Forcing one would drop a cooperative close that
+            // LDK turned into a force close after six seconds
             return await BackendUtils.closeChannel(urlParams)
                 .then(() => {
                     this.handleChannelClose();
