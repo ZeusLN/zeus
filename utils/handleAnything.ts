@@ -800,10 +800,12 @@ const handleAnything = async (
                 .catch(async (e: any) => {
                     const hasMultipleB12 = b12Value || b12Lightning;
 
-                    // A redirect refused by the lnurl host policy is
-                    // reported, not treated as a missing address, so the
-                    // NIP-05 fallback does not contact the same host again.
-                    // A BIP 353 offer came from DNS and is still usable.
+                    // A redirect refused by the lnurl host policy is reported
+                    // here instead of falling through to the NIP-05 lookup on
+                    // the same host. Other failures (non-200, too many
+                    // redirects) still fall through, and that lookup follows
+                    // redirects without checking them (#5570). A BIP 353
+                    // offer came from DNS and is still usable.
                     if (isUnsafeLnurlError(e) && !b12Offer) throw e;
 
                     if (b12Offer) {
