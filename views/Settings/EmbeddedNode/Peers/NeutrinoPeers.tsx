@@ -192,11 +192,9 @@ export default class NeutrinoPeers extends React.Component<
                                             color: themeColor('secondaryText')
                                         }}
                                     >
-                                        {`${localeString(
-                                            'general.note'
-                                        ).toUpperCase()}: ${localeString(
-                                            'general.restartZeusChanges'
-                                        ).replace('Zeus', 'ZEUS')}`}
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.NeutrinoPeers.noteRestartHint'
+                                        )}
                                     </Text>
                                 </View>
                                 <ListItem
