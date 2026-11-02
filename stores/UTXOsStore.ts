@@ -274,11 +274,8 @@ export default class UTXOsStore {
                                 type: toWalletrpcAddressTypeName(
                                     this.accountToImport.account.address_type
                                 )
-                            }).then((response: any) => {
-                                console.log(
-                                    `generated address ${i}`,
-                                    response.address
-                                );
+                            }).then(() => {
+                                console.log(`generated address ${i}`);
                             });
                             await BackendUtils.getNewChangeAddress({
                                 account: this.accountToImport.account.name,
@@ -286,11 +283,8 @@ export default class UTXOsStore {
                                     this.accountToImport.account.address_type
                                 ),
                                 change: true
-                            }).then((response: any) => {
-                                console.log(
-                                    `generated change address ${i}`,
-                                    response.addr
-                                );
+                            }).then(() => {
+                                console.log(`generated change address ${i}`);
                             });
                         }
 
