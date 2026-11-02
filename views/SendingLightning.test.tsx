@@ -459,6 +459,26 @@ describe('SendingLightning donation', () => {
         expect(hostProps('DonationInfoModal').amountDonated).toBe(25);
     });
 
+    it('does not report an in-flight donation as donated', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        // what the NWC backend returns on a wallet reply timeout
+        const sendPaymentSilently = jest.fn().mockResolvedValue({
+            status: 'IN_FLIGHT',
+            payment_hash: 'ab'.repeat(32)
+        });
+
+        await donate(sendPaymentSilently);
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(sendPaymentSilently).toHaveBeenCalledTimes(1);
+        expect(hostProps('DonationGiftIcon')).toMatchObject({
+            payingDonation: false,
+            donationHandled: false
+        });
+        expect(hostProps('DonationInfoModal').donationPreimage).toBe('');
+        expect(hostProps('DonationInfoModal').amountDonated).toBeNull();
+    });
+
     it('tries once when the donation LNURL returns no invoice', async () => {
         (loadDonationLnurl as jest.Mock).mockResolvedValue(undefined);
         const sendPaymentSilently = jest.fn();
