@@ -6,6 +6,10 @@ jest.mock('../utils/ThemeUtils', () => ({
     themeColor: (key: string) => `theme:${key}`
 }));
 jest.mock('../stores/TransactionsStore', () => ({}));
+const mockUseIsFocused = jest.fn(() => true);
+jest.mock('@react-navigation/native', () => ({
+    useIsFocused: () => mockUseIsFocused()
+}));
 jest.mock('./Button', () => {
     const { Pressable, Text } = require('react-native');
     return ({ title, onPress }: any) => (
@@ -40,6 +44,7 @@ describe('PaymentInFlightNotice', () => {
 
     afterEach(() => {
         jest.restoreAllMocks();
+        mockUseIsFocused.mockReturnValue(true);
     });
 
     it('renders nothing when no payment is in flight', async () => {
@@ -62,6 +67,21 @@ describe('PaymentInFlightNotice', () => {
             screen.queryByText('components.PaymentInFlightNotice.payAnyway')
         ).toBeNull();
     });
+
+    // the screen that just dispatched the payment renders again while it
+    // navigates away to SendingLightning; it must not call that payment
+    // "a previous payment"
+    it.each([false, true])(
+        'renders nothing on an unfocused screen (confirmed: %s)',
+        async (paymentInFlightConfirmed) => {
+            mockUseIsFocused.mockReturnValue(false);
+            await renderNotice({
+                paymentInFlight: true,
+                paymentInFlightConfirmed
+            });
+            expect(screen.toJSON()).toBeNull();
+        }
+    );
 
     it('releases the guard only after the user confirms Pay anyway', async () => {
         const store = await renderNotice({
