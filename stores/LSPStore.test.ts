@@ -18,7 +18,10 @@ jest.mock('../utils/LndMobileUtils', () => ({
         addListener: jest.fn(() => ({ remove: jest.fn() }))
     }
 }));
-jest.mock('../utils/LspUtils', () => ({ verifyWrappedInvoice: jest.fn() }));
+jest.mock('../utils/LspUtils', () => ({
+    ...jest.requireActual('../utils/LspUtils'),
+    verifyWrappedInvoice: jest.fn()
+}));
 jest.mock('../utils/ClientInfoUtils', () => ({ getClientInfo: jest.fn() }));
 jest.mock('../utils/BackendUtils', () => ({
     sendCustomMessage: jest.fn(),
@@ -27,7 +30,8 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsFlowLSP: jest.fn(() => true),
     supportsLSPScustomMessage: () => true,
     supportsLSPS7native: jest.fn(() => false),
-    lsps7GetExtendableChannels: jest.fn()
+    lsps7GetExtendableChannels: jest.fn(),
+    requestLsps1Liquidity: jest.fn()
 }));
 jest.mock('../utils/LocaleUtils');
 jest.mock('./SettingsStore', () => ({
@@ -446,6 +450,16 @@ describe('LSPStore custom-message request timeouts', () => {
                 channelExpiryBlocks: 13000
             });
 
+        // an order with the terms createOrder asked for
+        const lateOrder = {
+            order_id: 'late',
+            lsp_balance_sat: '100000',
+            client_balance_sat: '0',
+            required_channel_confirmations: 0,
+            funding_confirms_within_blocks: 6,
+            channel_expiry_blocks: 13000
+        };
+
         it('a late get_info reply fills the info and clears the timeout error', () => {
             const store = makeStore();
             store.lsps1GetInfoCustomMessage();
@@ -470,9 +484,7 @@ describe('LSPStore custom-message request timeouts', () => {
             jest.advanceTimersByTime(TIMEOUT_MS);
             expect(store.error).toBe(true);
 
-            expect(reply(store, { id, result: { order_id: 'late' } })).toBe(
-                true
-            );
+            expect(reply(store, { id, result: lateOrder })).toBe(true);
 
             expect(store.createOrderResponse.result.order_id).toBe('late');
             expect(store.error).toBe(false);
@@ -532,7 +544,7 @@ describe('LSPStore custom-message request timeouts', () => {
                 expect(store.error_msg).toBe('views.LSPS1.timeoutError');
                 changeLanguage();
 
-                reply(store, { id, result: { order_id: 'late' } });
+                reply(store, { id, result: lateOrder });
 
                 expect(store.error).toBe(false);
                 expect(store.error_msg).toBe('');
@@ -617,7 +629,7 @@ describe('LSPStore custom-message request timeouts', () => {
             expect(store.error).toBe(true);
             expect(infoError).not.toBe('views.LSPS1.timeoutError');
 
-            reply(store, { id: orderId, result: { order_id: 'late' } });
+            reply(store, { id: orderId, result: lateOrder });
 
             expect(store.createOrderResponse.result.order_id).toBe('late');
             expect(store.error).toBe(true);
@@ -2357,5 +2369,178 @@ describe('LSPStore.updateOrderInStorage', () => {
 
         expect(Storage.setItem).not.toHaveBeenCalled();
         warn.mockRestore();
+    });
+});
+
+describe('LSPStore LSPS1 create_order terms', () => {
+    // LSPS1 screen state with Olympus's get_info defaults filled in
+    const STATE = {
+        lspBalanceSat: 1000000,
+        clientBalanceSat: 0,
+        requiredChannelConfirmations: '3',
+        confirmsWithinBlocks: '6',
+        channelExpiryBlocks: 13140,
+        token: '',
+        refundOnchainAddress: '',
+        announceChannel: false
+    };
+    const ORDER = {
+        order_id: 'order-1',
+        order_state: 'CREATED',
+        lsp_balance_sat: '1000000',
+        client_balance_sat: '0',
+        required_channel_confirmations: 3,
+        funding_confirms_within_blocks: 6,
+        channel_expiry_blocks: 13140,
+        announce_channel: false,
+        payment: { bolt11: { invoice: 'lnbc1', order_total_sat: '2000' } }
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({});
+    });
+
+    describe('REST', () => {
+        const createOrder = async (order: any) => {
+            const store = makeStore();
+            jest.mocked(ReactNativeBlobUtil.fetch).mockReset();
+            jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({
+                data: JSON.stringify(order)
+            } as any);
+            await store.lsps1CreateOrderREST(STATE);
+            return store;
+        };
+
+        it('keeps an order with the requested terms', async () => {
+            const store = await createOrder(ORDER);
+            expect(store.error).toBe(false);
+            expect(store.createOrderResponse).toEqual(ORDER);
+            expect(store.loadingLSPS1).toBe(false);
+        });
+
+        it('refuses an order with a smaller channel', async () => {
+            const store = await createOrder({
+                ...ORDER,
+                lsp_balance_sat: '500000'
+            });
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('stores.LSPStore.orderTermsMismatch');
+            expect(store.createOrderResponse).toEqual({});
+            expect(store.loadingLSPS1).toBe(false);
+        });
+
+        it('refuses an order that announces a private channel', async () => {
+            const store = await createOrder({
+                ...ORDER,
+                announce_channel: true
+            });
+            expect(store.error).toBe(true);
+            expect(store.createOrderResponse).toEqual({});
+        });
+    });
+
+    describe('custom message', () => {
+        const createOrder = async (order: any) => {
+            const store = makeStore();
+            const promise = store.lsps1CreateOrderCustomMessage(STATE);
+            const payload = {
+                jsonrpc: '2.0',
+                id: store.createOrderId,
+                result: order
+            };
+            store.handleCustomMessages({
+                peer: Buffer.from('aa', 'hex').toString('base64'),
+                data: Buffer.from(JSON.stringify(payload)).toString('base64')
+            });
+            await promise;
+            return { store, payload };
+        };
+
+        it('keeps an order with the requested terms', async () => {
+            const { store, payload } = await createOrder(ORDER);
+            expect(store.error).toBe(false);
+            expect(store.createOrderResponse).toEqual(payload);
+        });
+
+        it('refuses an order with fewer confirmations than requested', async () => {
+            const { store } = await createOrder({
+                ...ORDER,
+                required_channel_confirmations: 0
+            });
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('stores.LSPStore.orderTermsMismatch');
+            expect(store.createOrderResponse).toEqual({});
+            expect(store.loadingLSPS1).toBe(false);
+        });
+
+        it('refuses an order with a shorter channel lifetime', async () => {
+            const { store } = await createOrder({
+                ...ORDER,
+                channel_expiry_blocks: 4380
+            });
+            expect(store.error).toBe(true);
+            expect(store.createOrderResponse).toEqual({});
+        });
+    });
+
+    describe('LDK Node', () => {
+        // shape returned by LdkNode.requestLsps1Liquidity
+        const LDK_ORDER = {
+            order_id: 'order-1',
+            lsp_balance_sat: 1000000,
+            client_balance_sat: 0,
+            funding_confirms_within_blocks: 6,
+            channel_expiry_blocks: 13140,
+            announce_channel: false,
+            payment: {
+                state: 'ExpectPayment',
+                fee_total_sat: 2000,
+                order_total_sat: 2000,
+                bolt11_invoice: 'lnbc1'
+            }
+        };
+
+        const createOrder = async (order: any) => {
+            const store = makeStore('ldk-node');
+            jest.mocked(BackendUtils.requestLsps1Liquidity).mockResolvedValue(
+                order
+            );
+            await store.lsps1CreateOrderNative(STATE);
+            return store;
+        };
+
+        it('keeps an order with the requested terms', async () => {
+            const store = await createOrder(LDK_ORDER);
+            expect(store.error).toBe(false);
+            expect(store.createOrderResponse.result.order_id).toBe('order-1');
+            expect(store.createOrderResponse.result.announce_channel).toBe(
+                false
+            );
+        });
+
+        it('refuses an order with a different client balance', async () => {
+            const store = await createOrder({
+                ...LDK_ORDER,
+                client_balance_sat: 100000
+            });
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('stores.LSPStore.orderTermsMismatch');
+            expect(store.createOrderResponse).toEqual({});
+            expect(store.loadingLSPS1).toBe(false);
+        });
+
+        it('does not check expiry when the screen left it unset', async () => {
+            const store = makeStore('ldk-node');
+            jest.mocked(BackendUtils.requestLsps1Liquidity).mockResolvedValue({
+                ...LDK_ORDER,
+                channel_expiry_blocks: 52560
+            });
+            await store.lsps1CreateOrderNative({
+                ...STATE,
+                channelExpiryBlocks: 'N/A'
+            });
+            expect(store.error).toBe(false);
+        });
     });
 });
