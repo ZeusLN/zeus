@@ -241,6 +241,9 @@ export default class SwapStore {
     @observable public apiError = '';
     @observable public swaps: any = [];
     @observable public swapsLoading = false;
+    // submarine swaps whose payment this wallet sent this session, so an
+    // open SwapDetails sees the mark without reading storage again
+    @observable public fundedSwapIds: string[] = [];
     @observable public DERIVATION_PATH = 'm/44/0/0/0';
     @observable ECPair: ECPairAPI;
     // host the swap rates were last fetched from; rates are only
@@ -1666,6 +1669,51 @@ export default class SwapStore {
         } catch (error) {
             console.error('Error updating swap status in storage:', error);
         }
+    };
+
+    /**
+     * Whether this wallet has sent a submarine swap's on-chain payment. The
+     * host's status can't tell: a host that never reports the payment
+     * leaves the swap at invoice.set, and paying the same address again
+     * does not pay the invoice twice.
+     */
+    public isSwapFunded = (swap: { id?: string; funded?: boolean }) =>
+        !!swap?.funded || (!!swap?.id && this.fundedSwapIds.includes(swap.id));
+
+    /**
+     * Records that this wallet has sent a submarine swap's on-chain payment,
+     * so the swap is not offered for payment again. The in-memory mark
+     * covers this session; the stored one is what survives a restart, so a
+     * failed write is tried once more.
+     */
+    @action
+    public markSwapFunded = async (swapId: string): Promise<boolean> => {
+        if (!this.fundedSwapIds.includes(swapId)) {
+            this.fundedSwapIds.push(swapId);
+        }
+
+        const persist = async (): Promise<boolean> => {
+            try {
+                return await this.updateStoredSwap(swapId, { funded: true });
+            } catch (error) {
+                console.error(
+                    'Error marking swap as funded in storage:',
+                    error
+                );
+                return false;
+            }
+        };
+
+        if (await persist()) return true;
+
+        console.warn('Could not store swap funded mark, retrying');
+        const persisted = await persist();
+        if (!persisted) {
+            console.error(
+                'Swap funded mark not stored; it will be lost on restart'
+            );
+        }
+        return persisted;
     };
 
     /**
