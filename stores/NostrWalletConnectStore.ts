@@ -2127,11 +2127,8 @@ export default class NostrWalletConnectStore {
                 // Unresolved pay_invoice (pending or timeout-failed) must survive
                 // until reconcilePendingPayInvoiceActivities can debit. Active
                 // pending make_invoice must stay for the outstanding cap.
-                // Cashu pay_invoice is excluded: melt never records pending today;
-                // extend this guard if that changes (pendingSpendSats counts it too).
                 if (
                     activity.type === 'pay_invoice' &&
-                    activity.payment_source !== 'cashu' &&
                     connection.isUnresolvedPayInvoiceActivity(activity)
                 ) {
                     continue;
@@ -2385,7 +2382,6 @@ export default class NostrWalletConnectStore {
     ): Promise<boolean> {
         if (
             activity.type === 'pay_invoice' &&
-            activity.payment_source !== 'cashu' &&
             connection.isUnresolvedPayInvoiceActivity(activity)
         ) {
             return this.reconcilePendingPayInvoiceActivities(connection);
@@ -2937,6 +2933,34 @@ export default class NostrWalletConnectStore {
             paymentRequest: request.invoice
         });
 
+        // The mint took the melt but has not settled it. Hold the amount
+        // plus the fee reserve, as the lightning leg holds an in-transit
+        // payment, until reconcile sees CashuStore settle or drop it.
+        const inFlightPayment = this.cashuStore.inFlightPayment;
+        if (inFlightPayment && inFlightPayment.bolt11 === request.invoice) {
+            await this.recordPendingPayment({
+                rawInvoice: request.invoice,
+                connection,
+                amountSats,
+                feeLimitSats:
+                    Math.ceil(
+                        Number(inFlightPayment.meltResponse?.quote?.fee_reserve)
+                    ) || 0,
+                payment_source: 'cashu',
+                payment: inFlightPayment
+            });
+
+            // NIP-47 requires preimage; empty string means the payment is
+            // in flight, as on the lightning leg
+            return {
+                result: {
+                    preimage: '',
+                    fees_paid: 0
+                },
+                error: undefined
+            };
+        }
+
         if (
             !cashuInvoice ||
             cashuInvoice.isFailed ||
@@ -2964,9 +2988,6 @@ export default class NostrWalletConnectStore {
             (p) => p.getPaymentRequest === request.invoice
         );
 
-        // CashuStore does not surface IN_FLIGHT melts yet; add recordPendingPayment
-        // plus getActivities cashu reconciliation when it does.
-        //
         // The melt succeeded (failure returned above), so debit the budget
         // unconditionally: gating on the payments-list lookup would let the
         // spend escape the budget when the list misses the fresh melt.
@@ -3128,12 +3149,25 @@ export default class NostrWalletConnectStore {
         );
         if (pending.length === 0) return false;
 
-        const payments = await this.getPaymentsForPendingPayInvoiceRefresh(
-            connection.id,
-            pending
-        );
-
         for (const activity of pending) {
+            if (activity.payment_source !== 'cashu') continue;
+            if (this.applyCashuPayInvoiceReconcile(activity, connection)) {
+                changed = true;
+            }
+        }
+
+        const lightningPending = pending.filter(
+            (a) => a.payment_source !== 'cashu'
+        );
+        const payments =
+            lightningPending.length > 0
+                ? await this.getPaymentsForPendingPayInvoiceRefresh(
+                      connection.id,
+                      lightningPending
+                  )
+                : [];
+
+        for (const activity of lightningPending) {
             const payment = NostrConnectUtils.findPaymentForInvoice(
                 activity.id,
                 payments,
@@ -3177,6 +3211,84 @@ export default class NostrWalletConnectStore {
         runInAction(() => {
             activity.status = 'failed';
             activity.error = 'error.paymentFailed';
+        });
+        return true;
+    }
+
+    /**
+     * Settles a pending cashu pay_invoice from CashuStore, where
+     * reconcilePendingMelts marks an in-flight melt SUCCEEDED or drops it.
+     */
+    private applyCashuPayInvoiceReconcile(
+        activity: ConnectionActivity,
+        connection: NWCConnection
+    ): boolean {
+        if (activity.isBudgetDebited || activity.status !== 'pending') {
+            return false;
+        }
+
+        const cashuPayments = this.cashuStore.payments;
+        const quote = (activity.payment as CashuPayment | null | undefined)
+            ?.meltResponse?.quote?.quote;
+        const payment = cashuPayments?.find(
+            (p) =>
+                (!!quote && p.meltResponse?.quote?.quote === quote) ||
+                p.getPaymentRequest === activity.id ||
+                (!!activity.paymentHash &&
+                    p.paymentHash === activity.paymentHash)
+        );
+
+        if (!payment) {
+            // CashuStore drops an in-flight payment once the mint settles
+            // the melt without paying it. Only trust its absence once the
+            // wallet is loaded and the melt is no longer tracked.
+            const dropped =
+                this.cashuStore.cdkInitialized &&
+                !!cashuPayments &&
+                (!quote ||
+                    !this.cashuStore.pendingMelts.some(
+                        (melt) => melt.quote === quote
+                    ));
+            if (dropped) {
+                runInAction(() => {
+                    activity.status = 'failed';
+                    activity.error = 'error.paymentFailed';
+                });
+                return true;
+            }
+            // No age limit: a melt the wallet has not loaded yet may have
+            // settled, and a released hold would never be debited
+            return false;
+        }
+
+        if (payment.isInTransit) return false;
+
+        runInAction(() => {
+            if (payment.isFailed) {
+                activity.status = 'failed';
+                activity.error = 'error.paymentFailed';
+            } else {
+                // A melt settled from its quote has no known fee, and the
+                // mint may have spent up to the fee reserve
+                const feeSats = payment.fee_unknown
+                    ? Number(payment.meltResponse?.quote?.fee_reserve) ||
+                      Number(activity.feeLimitSats) ||
+                      0
+                    : Number(payment.getFee) || 0;
+                const amountSats =
+                    Math.floor(Number(activity.satAmount)) ||
+                    Math.floor(Number(payment.getAmount) || 0);
+                activity.status = 'success';
+                activity.error = undefined;
+                activity.fees_paid = feeSats;
+                const spendSats =
+                    amountSats + NostrConnectUtils.resolveFeeSats(feeSats);
+                if (spendSats > 0) {
+                    connection.trackSpending(spendSats, this.maxBudgetLimit);
+                    activity.isBudgetDebited = true;
+                }
+            }
+            activity.payment = payment;
         });
         return true;
     }
