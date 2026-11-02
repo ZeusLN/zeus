@@ -48,6 +48,7 @@ export default class CreateCashuLightningAddress extends React.Component<
     CreateCashuLightningAddressState
 > {
     isInitialFocus = true;
+    focusListener: any = null;
 
     state = {
         mintList: [],
@@ -61,7 +62,13 @@ export default class CreateCashuLightningAddress extends React.Component<
         this.loadMints();
 
         // triggers when loaded from navigation or back action
-        navigation.addListener('focus', this.handleFocus);
+        this.focusListener = navigation.addListener('focus', this.handleFocus);
+    }
+
+    componentWillUnmount(): void {
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     loadMints = () => {

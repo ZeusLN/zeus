@@ -45,7 +45,8 @@ const renderCreate = async (
 ) => {
     const navigation = {
         navigate: jest.fn(),
-        addListener: jest.fn(),
+        // returns the unsubscribe function, as the navigator does
+        addListener: jest.fn(() => jest.fn()),
         getState: () => ({
             routes: [...routes, 'CreateCashuLightningAddress'].map((name) => ({
                 name
@@ -258,5 +259,21 @@ describe('CreateCashuLightningAddress mints', () => {
         expect(
             findButton('views.Settings.LightningAddress.create').props.disabled
         ).toBe(false);
+    });
+});
+
+describe('CreateCashuLightningAddress focus listener', () => {
+    it('is removed on unmount', async () => {
+        const { navigation } = await renderCreate(['Wallet', 'ReceiveEcash']);
+        expect(navigation.addListener).toHaveBeenCalledWith(
+            'focus',
+            expect.any(Function)
+        );
+        const unsubscribe = navigation.addListener.mock.results[0].value;
+        expect(unsubscribe).not.toHaveBeenCalled();
+
+        await screen.unmount();
+
+        expect(unsubscribe).toHaveBeenCalledTimes(1);
     });
 });
