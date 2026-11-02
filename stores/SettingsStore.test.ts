@@ -39,6 +39,7 @@ jest.mock('../utils/MigrationUtils', () => ({
     keychainDesyncMigration: jest.fn().mockResolvedValue(undefined),
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),
     purgeRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
+    purgeNodeConfigStagingFiles: jest.fn().mockResolvedValue(undefined),
     // getSettings adopts the return value (the queue's authoritative
     // object when consolidation routes through updateSettings), so the
     // stub must hand the settings back rather than resolve undefined
@@ -116,6 +117,7 @@ import SettingsStore, {
 import { themeColor } from '../utils/ThemeUtils';
 
 const StorageMock: any = jest.requireMock('../storage');
+const MigrationsUtils: any = jest.requireMock('../utils/MigrationUtils');
 
 const seedSettings = (settings: any) => {
     StorageMock._backing[STORAGE_KEY] = JSON.stringify(settings);
@@ -1456,6 +1458,37 @@ describe('SettingsStore.getSettings', () => {
 
         expect(fired).toEqual(1);
         expect(store.settings.fiat).toEqual('EUR');
+    });
+
+    // A killed node-config export/import leaves a plaintext copy of every
+    // node config, seed phrases included, in app cache. Sweep it at launch
+    // rather than leaving it until the next export
+    it('sweeps node-config staging leftovers on boot', async () => {
+        MigrationsUtils.purgeNodeConfigStagingFiles.mockClear();
+
+        await new SettingsStore().getSettings();
+
+        expect(
+            MigrationsUtils.purgeNodeConfigStagingFiles
+        ).toHaveBeenCalledTimes(1);
+    });
+
+    it('sweeps node-config staging before a migration failure', async () => {
+        MigrationsUtils.purgeNodeConfigStagingFiles.mockClear();
+        MigrationsUtils.keychainDesyncMigration.mockRejectedValueOnce(
+            new Error('migration failed')
+        );
+
+        await new SettingsStore().getSettings();
+
+        expect(
+            MigrationsUtils.purgeNodeConfigStagingFiles
+        ).toHaveBeenCalledTimes(1);
+        expect(errorSpy).toHaveBeenCalledWith(
+            'Could not load settings',
+            expect.any(Error)
+        );
+        errorSpy.mockClear();
     });
 });
 
