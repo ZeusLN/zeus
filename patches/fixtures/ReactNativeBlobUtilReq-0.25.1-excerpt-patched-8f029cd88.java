@@ -1,8 +1,10 @@
 // Excerpt of react-native-blob-util 0.25.1
 // android/src/main/java/com/ReactNativeBlobUtil/ReactNativeBlobUtilReq.java
-// lines 559-643 as patched by patches/patch-blob-util-no-retry.mjs at
+// lines 116 and 559-643 as patched by patches/patch-blob-util-no-retry.mjs at
 // 8f029cd88 (interceptor and retry edits, no 503 edit), used by
 // patches/patch-blob-util-no-retry.test.ts
+    static ConnectionPool pool = new ConnectionPool();
+// lines 117-558 left out
             // #156 fix cookie issue
             final Request req = builder.build();
             clientBuilder.addNetworkInterceptor(new Interceptor() {

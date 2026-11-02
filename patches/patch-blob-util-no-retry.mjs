@@ -23,12 +23,19 @@
 // pooled connections. Other methods also lose OkHttp's silent recovery
 // from failures before the request was sent: falling back to the next IP
 // or TLS spec after a connect failure, retrying an HTTP/2 refused stream,
-// and reusing a pooled socket the server has just closed (OkHttp only
-// checks non-GET sockets idle for 10s or more, so a server with a 5s
-// keep-alive leaves a 5-10s window). Those now fail with an error the user
-// sees, and the server never got the request. For a wallet that is better
-// than a payment sent twice. Every CLNRest call is a POST, so its reads
-// lose this recovery too.
+// and reusing a pooled socket the server has just closed. Those now fail
+// with an error the user sees, and the server never got the request. For a
+// wallet that is better than a payment sent twice. Every CLNRest call is a
+// POST, so its reads lose this recovery too.
+//
+// The last case is common, so the shared pool keeps idle sockets for 4s
+// instead of OkHttp's default 5 minutes. OkHttp only checks that a pooled
+// socket is still open before a non-GET request once it has been idle for
+// 10s or more. Servers that close idle sockets after 5s, such as Node
+// (BlueWallet LndHub) and uvicorn (LNbits), would otherwise get a POST sent
+// 5 to 10s after the previous request on a socket they already closed.
+// The cost is a new connection for requests more than 4s apart. A server
+// that closes idle sockets in under 4s still leaves a window.
 //
 // A 503 with Retry-After: 0 is resent by OkHttp whatever
 // retryOnConnectionFailure says. The network interceptor drops Retry-After
@@ -44,8 +51,9 @@
 //
 // Upstream: react-native-blob-util 0.25.1 (latest at time of writing).
 // Reported at https://github.com/RonRadtke/react-native-blob-util/issues/504.
-// Fixed upstream in pull/505 (master, 1.1.0) and pull/506 (support/0.25);
-// drop this patch once the release Zeus uses includes the fix.
+// Fixed upstream in pull/505 (master, 1.1.0) and pull/506 (support/0.25),
+// which do not change the pool keep-alive. Once the release Zeus uses
+// includes the fix, the pool edit is the only part of this patch left.
 //
 // Like the keychain patches this THROWS when the expected source is missing,
 // so a dependency bump cannot silently bring the resend back.
@@ -55,6 +63,7 @@ import fs from 'fs';
 export const MARKER = '// ZEUS PATCH: blob-util-no-retry';
 export const RETRY_MARKER = '// ZEUS PATCH: blob-util-no-connection-retry';
 export const HTTP_RETRY_MARKER = '// ZEUS PATCH: blob-util-no-503-retry';
+export const POOL_MARKER = '// ZEUS PATCH: blob-util-pool-keep-alive';
 
 const REQ_PATH =
     './node_modules/react-native-blob-util/android/src/main/java/com/ReactNativeBlobUtil/ReactNativeBlobUtilReq.java';
@@ -119,6 +128,14 @@ const HTTP_RETRY_PATCHED = `                    redirects.add(chain.request().ur
                     }
                     return response;`;
 
+const POOL_ORIGINAL = `    static ConnectionPool pool = new ConnectionPool();`;
+
+const POOL_PATCHED = `    ${POOL_MARKER}
+    // Close idle sockets after 4s, before servers with a 5s keep-alive do.
+    // OkHttp only checks that a pooled socket is still open before a
+    // non-GET request after 10s idle, and no longer resends those.
+    static ConnectionPool pool = new ConnectionPool(5, 4, TimeUnit.SECONDS);`;
+
 const countOf = (content, needle) => content.split(needle).length - 1;
 
 // Pure transform, exported for tests. Returns the patched source, or the
@@ -145,7 +162,8 @@ export function applyBlobUtilNoRetry(content) {
             HTTP_RETRY_MARKER,
             HTTP_RETRY_ORIGINAL,
             HTTP_RETRY_PATCHED
-        ]
+        ],
+        ['the connection pool', POOL_MARKER, POOL_ORIGINAL, POOL_PATCHED]
     ]) {
         if (patched.includes(marker)) continue;
 
@@ -186,6 +204,6 @@ export function patchBlobUtilNoRetry() {
 
     fs.writeFileSync(REQ_PATH, patched);
     console.log(
-        '  - Patched ReactNativeBlobUtilReq.java interceptors and retry'
+        '  - Patched ReactNativeBlobUtilReq.java interceptors, retry and pool'
     );
 }

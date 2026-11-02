@@ -17,6 +17,8 @@ const REQ_DIR =
     'node_modules/react-native-blob-util/android/src/main/java/com/ReactNativeBlobUtil';
 const MARKER = '// ZEUS PATCH: blob-util-no-retry';
 const HTTP_RETRY_MARKER = '// ZEUS PATCH: blob-util-no-503-retry';
+const POOL_MARKER = '// ZEUS PATCH: blob-util-pool-keep-alive';
+const DEFAULT_POOL = 'static ConnectionPool pool = new ConnectionPool();';
 
 const patchUrl = pathToFileURL(
     path.join(__dirname, 'patch-blob-util-no-retry.mjs')
@@ -140,6 +142,21 @@ describe('patch-blob-util-no-retry', () => {
         expect(network).toContain('return response;');
     });
 
+    it('keeps idle pooled sockets for 4s instead of 5 minutes', () => {
+        expect(fs.readFileSync(FIXTURE, 'utf8')).toContain(DEFAULT_POOL);
+
+        const root = makeTree();
+        run(root);
+        const patched = read(root);
+
+        expect(patched).not.toContain(DEFAULT_POOL);
+        expect(patched).toContain(`    ${POOL_MARKER}\n`);
+        expect(patched).toContain(
+            '    static ConnectionPool pool = new ConnectionPool(5, 4, TimeUnit.SECONDS);'
+        );
+        expect(patched.split('new ConnectionPool(')).toHaveLength(2);
+    });
+
     it('keeps the CRLF line endings of the upstream file', () => {
         const root = makeTree();
         run(root);
@@ -168,6 +185,7 @@ describe('patch-blob-util-no-retry', () => {
         expect(read(root)).toBe(once);
         expect(output).toContain('Already patched');
         expect(once.split(MARKER)).toHaveLength(2);
+        expect(once.split(POOL_MARKER)).toHaveLength(2);
     });
 
     it('fails the install when the interceptor has changed', () => {
@@ -211,8 +229,14 @@ describe('patch-blob-util-no-retry', () => {
                 / {20}\/\/ ZEUS PATCH: blob-util-no-503-retry\n[\s\S]*?return response;\n/,
                 '                    return chain.proceed(chain.request());\n'
             )
+            .replace(
+                / {4}\/\/ ZEUS PATCH: blob-util-pool-keep-alive\n[\s\S]*?TimeUnit\.SECONDS\);\n/,
+                `    ${DEFAULT_POOL}\n`
+            )
             .replace(/\n/g, '\r\n');
         expect(onlyInterceptor).not.toContain(HTTP_RETRY_MARKER);
+        expect(onlyInterceptor).not.toContain(POOL_MARKER);
+        expect(onlyInterceptor).toContain(DEFAULT_POOL);
         expect(onlyInterceptor).toContain(MARKER);
         expect(onlyInterceptor).toContain(
             'clientBuilder.retryOnConnectionFailure(true);'
@@ -239,9 +263,24 @@ describe('patch-blob-util-no-retry', () => {
         );
     });
 
-    it('adds the 503 edit to a copy patched at 8f029cd88', () => {
+    it('fails the install when the connection pool has changed', () => {
+        const root = makeTree(
+            fs
+                .readFileSync(FIXTURE, 'utf8')
+                .replace(
+                    DEFAULT_POOL,
+                    'static ConnectionPool pool = new ConnectionPool(10, 5, TimeUnit.MINUTES);'
+                )
+        );
+
+        expect(() => run(root)).toThrow(
+            /connection pool in ReactNativeBlobUtilReq.java does not match/
+        );
+    });
+
+    it('adds the 503 and pool edits to a copy patched at 8f029cd88', () => {
         // the interceptor and retry edits as that version wrote them,
-        // without the 503 edit
+        // without the 503 and pool edits
         const root = makeTree(
             fs.readFileSync(
                 path.join(
@@ -254,6 +293,8 @@ describe('patch-blob-util-no-retry', () => {
         );
         const before = read(root);
         expect(before).not.toContain(HTTP_RETRY_MARKER);
+        expect(before).not.toContain(POOL_MARKER);
+        expect(before).toContain(DEFAULT_POOL);
 
         run(root);
         const after = read(root);
@@ -265,6 +306,10 @@ describe('patch-blob-util-no-retry', () => {
         ).toHaveLength(2);
         expect(after).toContain(
             'return response.newBuilder().removeHeader("Retry-After").build();'
+        );
+        expect(after.split(POOL_MARKER)).toHaveLength(2);
+        expect(after).toContain(
+            'static ConnectionPool pool = new ConnectionPool(5, 4, TimeUnit.SECONDS);'
         );
         // the earlier edits are left as that version wrote them
         expect(interceptor(after)).toBe(interceptor(before));
