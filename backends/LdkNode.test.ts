@@ -6,6 +6,7 @@ const mockSendSpontaneousPayment = jest.fn();
 const mockBolt12SendUsingAmount = jest.fn();
 const mockBolt12InitiateRefund = jest.fn();
 const mockBolt12DecodeOffer = jest.fn();
+const mockBolt12RequestRefundPayment = jest.fn();
 const mockListChannels = jest.fn();
 const mockCloseChannel = jest.fn();
 const mockForceCloseChannel = jest.fn();
@@ -38,7 +39,9 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
             bolt12InitiateRefund: (...args: any[]) =>
                 mockBolt12InitiateRefund(...args),
             bolt12DecodeOffer: (...args: any[]) =>
-                mockBolt12DecodeOffer(...args)
+                mockBolt12DecodeOffer(...args),
+            bolt12RequestRefundPayment: (...args: any[]) =>
+                mockBolt12RequestRefundPayment(...args)
         }
     }
 }));
@@ -562,6 +565,163 @@ describe('LdkNode.createWithdrawalRequest', () => {
         expect(mockBolt12InitiateRefund).toHaveBeenCalledWith(
             expect.objectContaining({ amountMsat: 100_000 })
         );
+    });
+});
+
+describe('LdkNode.redeemWithdrawalRequest', () => {
+    let ldk: LdkNode;
+    let payments: any[];
+
+    // ldk-node keys a refund payment by its payment hash
+    const refundPayment = (
+        hash: string,
+        status: string,
+        direction = 'inbound'
+    ) => ({
+        id: hash,
+        direction,
+        status,
+        amountMsat: 250_000_000,
+        latestUpdateTimestamp: 0,
+        kind: { type: 'bolt12Refund', hash }
+    });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        ldk = new LdkNode();
+        ldk.subscribeToEvents = () => () => {};
+        // A withdrawal request redeemed earlier, still pending
+        payments = [refundPayment('earlier-hash', 'pending')];
+        mockListPayments.mockImplementation(async () => [...payments]);
+        // ldk-node lists the new payment as pending and returns at once
+        mockBolt12RequestRefundPayment.mockImplementation(
+            async (invreq: string) => {
+                const paymentHash = `${invreq}-hash`;
+                payments.push(refundPayment(paymentHash, 'pending'));
+                return { invoice: `lni-${invreq}`, paymentHash };
+            }
+        );
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    const redeem = (invreq = 'lnr1') => {
+        const outcome: any = {};
+        ldk.redeemWithdrawalRequest({ invreq, label: '' }).then(
+            (result) => (outcome.result = result),
+            (error) => (outcome.error = error)
+        );
+        return outcome;
+    };
+
+    it('does not resolve before the payment is received', async () => {
+        const outcome = redeem();
+
+        await jest.advanceTimersByTimeAsync(5_000);
+
+        expect(mockBolt12RequestRefundPayment).toHaveBeenCalledWith('lnr1');
+        expect(outcome).toEqual({});
+    });
+
+    it('resolves once the payment has been received', async () => {
+        const outcome = redeem();
+        await jest.advanceTimersByTimeAsync(5_000);
+
+        payments[1] = refundPayment('lnr1-hash', 'succeeded');
+        await jest.advanceTimersByTimeAsync(1_000);
+
+        expect(outcome.error).toBeUndefined();
+        expect(outcome.result).toEqual({
+            bolt12: 'lni-lnr1',
+            payment_hash: 'lnr1-hash'
+        });
+    });
+
+    it('ignores an earlier refund payment that succeeds meanwhile', async () => {
+        const outcome = redeem();
+        await jest.advanceTimersByTimeAsync(1_000);
+
+        payments[0] = refundPayment('earlier-hash', 'succeeded');
+        await jest.advanceTimersByTimeAsync(5_000);
+
+        expect(outcome).toEqual({});
+    });
+
+    it('waits for its own payment when redeemed concurrently', async () => {
+        const first = redeem('lnr1');
+        const second = redeem('lnr2');
+        await jest.advanceTimersByTimeAsync(1_000);
+
+        payments = payments.map((p) =>
+            p.id === 'earlier-hash' ? p : refundPayment(p.id, 'succeeded')
+        );
+        await jest.advanceTimersByTimeAsync(1_000);
+
+        expect([
+            first.result?.payment_hash,
+            second.result?.payment_hash
+        ]).toEqual(['lnr1-hash', 'lnr2-hash']);
+        expect(first.result).toEqual({
+            bolt12: 'lni-lnr1',
+            payment_hash: 'lnr1-hash'
+        });
+        expect(second.result).toEqual({
+            bolt12: 'lni-lnr2',
+            payment_hash: 'lnr2-hash'
+        });
+    });
+
+    it('waits for a payment that is listed after the request returns', async () => {
+        mockBolt12RequestRefundPayment.mockResolvedValue({
+            invoice: 'lni-lnr1',
+            paymentHash: 'lnr1-hash'
+        });
+
+        const outcome = redeem();
+        await jest.advanceTimersByTimeAsync(2_000);
+
+        expect(outcome).toEqual({});
+
+        payments.push(refundPayment('lnr1-hash', 'succeeded'));
+        await jest.advanceTimersByTimeAsync(1_000);
+
+        expect(outcome.result).toEqual({
+            bolt12: 'lni-lnr1',
+            payment_hash: 'lnr1-hash'
+        });
+    });
+
+    it('rejects when the invoice is not paid in time', async () => {
+        const outcome = redeem();
+
+        await jest.advanceTimersByTimeAsync(100_000);
+
+        expect(outcome.result).toBeUndefined();
+        expect(outcome.error.message).toEqual(
+            'backends.LdkNode.withdrawalRequestNotPaid'
+        );
+    });
+
+    it('rejects when the payment fails', async () => {
+        const outcome = redeem();
+        await jest.advanceTimersByTimeAsync(1_000);
+
+        payments[1] = refundPayment('lnr1-hash', 'failed');
+        await jest.advanceTimersByTimeAsync(1_000);
+
+        expect(outcome.error.message).toEqual('PAYMENT_FAILED_UNKNOWN');
+    });
+
+    it('rejects when ldk-node refuses the request', async () => {
+        mockBolt12RequestRefundPayment.mockRejectedValue(new Error('refused'));
+
+        const outcome = redeem();
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(outcome.error.message).toEqual('refused');
     });
 });
 
