@@ -170,6 +170,7 @@ describe('LND request core', () => {
             await lnd.getChannels();
             expect(mockConfig).toHaveBeenLastCalledWith({
                 trusty: true,
+                followRedirect: false,
                 timeout: 30000
             });
 
@@ -177,6 +178,7 @@ describe('LND request core', () => {
             await lnd.getPendingChannels();
             expect(mockConfig).toHaveBeenLastCalledWith({
                 trusty: false,
+                followRedirect: false,
                 timeout: 30000
             });
         });
@@ -188,6 +190,7 @@ describe('LND request core', () => {
 
             expect(mockConfig).toHaveBeenLastCalledWith({
                 trusty: true,
+                followRedirect: false,
                 timeout: 12345
             });
         });
@@ -251,6 +254,17 @@ describe('LND request core', () => {
 
             await expect(lnd.getRequest('/v1/x')).rejects.toThrow(
                 'Bad Gateway'
+            );
+        });
+
+        it('refuses redirects and fails a 302 instead of following it', async () => {
+            mockFetch.mockResolvedValue(response(302, ''));
+
+            await expect(lnd.getRequest('/v1/x')).rejects.toThrow(
+                CONNECTION_ERROR
+            );
+            expect(mockConfig).toHaveBeenLastCalledWith(
+                expect.objectContaining({ followRedirect: false })
             );
         });
 
@@ -563,6 +577,7 @@ describe('LND.payLightningInvoice timeout race', () => {
 
         expect(mockConfig).toHaveBeenLastCalledWith({
             trusty: true,
+            followRedirect: false,
             timeout: 15000
         });
     });
@@ -608,6 +623,7 @@ describe('LND.payLightningInvoice timeout race', () => {
             await expect(result).resolves.toEqual(timedOut(start, 60));
             expect(mockConfig).toHaveBeenLastCalledWith({
                 trusty: true,
+                followRedirect: false,
                 timeout: 65000
             });
         }
