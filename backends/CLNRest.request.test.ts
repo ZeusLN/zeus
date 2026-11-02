@@ -626,6 +626,48 @@ describe('CLNRest payment request bodies', () => {
         });
     });
 
+    it('omits amount_msat on legacy pay when no amount is given', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.payLightningInvoice({ payment_request: 'lnbc1' });
+
+        expect(fetchArgs()[3]).not.toContain('amount_msat');
+    });
+
+    it('sends amount_msat on legacy pay for an amountless invoice', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.payLightningInvoice({ payment_request: 'lnbc1', amt: 7 });
+
+        expect(sentBody().body.amount_msat).toBe(7000);
+    });
+
+    it('omits amount_msat on keysend and xkeysend when no amount is given', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v25.02' };
+        await cln.sendKeysend({ pubkey: '02ab' });
+        expect(fetchArgs()[3]).not.toContain('amount_msat');
+
+        cln.clearCachedCalls();
+        mockFetch.mockClear();
+        mockNodeInfoStore.nodeInfo = { version: 'v26.06' };
+        await cln.sendKeysend({ pubkey: '02ab', amt: '' });
+        expect(sentBody().url).toBe(
+            'https://node.example.com:3010/v1/xkeysend'
+        );
+        expect(fetchArgs()[3]).not.toContain('amount_msat');
+    });
+
+    it('sends amount_msat on xkeysend', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v26.06' };
+
+        await cln.sendKeysend({ pubkey: '02ab', amt: 100 });
+
+        expect(sentBody().body).toEqual({
+            destination: '02ab',
+            amount_msat: 100000
+        });
+    });
+
     it('converts the fee cap to a percent on keysend before v24.11', async () => {
         mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
 
