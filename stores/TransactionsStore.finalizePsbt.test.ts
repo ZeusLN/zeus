@@ -10,6 +10,12 @@ jest.mock('../stores/Stores', () => ({ alertStore: {} }));
 // TransactionsStore imports BackendUtils, which pulls in LND → TorUtils →
 // react-native-nitro-tor (ESM). Mock BackendUtils so Jest never loads it.
 jest.mock('../utils/BackendUtils', () => ({ __esModule: true, default: {} }));
+// It also imports TorUtils itself, through NetworkUtils.
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequest: jest.fn(),
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
+}));
 
 // The real bitcoinjs-lib, so these cases pin how its PSBT finalizer and
 // extractor treat the UTXO data of an externally signed PSBT.
