@@ -24,6 +24,11 @@ jest.mock('../storage', () => ({
 }));
 jest.mock('./NodeInfoStore', () => ({}));
 jest.mock('./SettingsStore', () => ({}));
+// NetworkUtils imports TorUtils, which loads the ESM-only native Tor module
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: {}
+}));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
