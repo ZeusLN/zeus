@@ -1153,6 +1153,8 @@
     "views.Tools.migration.import.invalidExtension": "Invalid file type. Please select a .zip file.",
     "views.Tools.migration.import.emptyFile": "The selected file is empty.",
     "views.Tools.migration.import.fileNotFound": "Could not read the selected file.",
+    "views.Tools.migration.import.databaseMismatch": "This backup is from a wallet using the {{backupType}} database, but {{selectedType}} is selected. Select {{backupType}} as the database type and restore again.",
+    "views.Tools.migration.import.databaseMissing": "The backup does not contain {{file}}. Check that the file is a ZEUS channel backup.",
     "views.Tools.migration.export.existingBackupFound": "Existing Backup Found",
     "views.Tools.migration.export.replaceBackup": "You already have a backup from {{date}}. Do you want to replace it?",
     "views.Tools.migration.export.replace": "Replace",
