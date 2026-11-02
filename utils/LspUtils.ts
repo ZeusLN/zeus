@@ -7,7 +7,9 @@ export type WrappedInvoiceError =
     | 'network_mismatch'
     | 'payment_hash_mismatch'
     | 'amount_missing'
-    | 'amount_mismatch';
+    | 'amount_mismatch'
+    | 'expiry_mismatch'
+    | 'cltv_mismatch';
 
 export interface WrappedInvoiceCheck {
     valid: boolean;
@@ -19,13 +21,30 @@ const fail = (error: WrappedInvoiceError): WrappedInvoiceCheck => ({
     error
 });
 
+// Olympus sets the wrapped invoice to expire one hour after the inner
+// invoice (olympus-flow hodlExpiry). Payments that arrive after the inner
+// invoice expires fail anyway; this only bounds how far past it the LSP
+// can go.
+const MAX_WRAPPED_EXTRA_EXPIRY_SECONDS = 3600;
+
+// The wrap's final CLTV must cover the inner one plus the LSP's own
+// delta (Olympus adds 40). Anything far above that only lengthens how
+// long the payer's HTLC can be held.
+const MAX_WRAPPED_EXTRA_CLTV_BLOCKS = 144;
+
+// BOLT 11: min_final_cltv_expiry defaults to 18 when the c field is absent
+const DEFAULT_MIN_FINAL_CLTV_EXPIRY = 18;
+
 /**
  * Verifies a Flow 2.0 wrapped invoice (jit_bolt11) against the inner
  * invoice it is supposed to wrap. The wrap is only trust-minimized when
  * it commits to the same payment hash: the LSP cannot settle the payer's
  * HTLC without forwarding to us, because only our node holds the
  * preimage. The amount bound stops the LSP from charging the payer more
- * than the fee it quoted.
+ * than the fee it quoted. The expiry bound limits how long after our
+ * invoice expires the wrap still takes payments, and the final CLTV bound
+ * stops the LSP from asking the payer to lock funds for much longer than
+ * the forward needs.
  */
 export function verifyWrappedInvoice(
     innerBolt11: string,
@@ -72,6 +91,25 @@ export function verifyWrappedInvoice(
         .plus(fee.gt(0) ? 999 : 0);
     if (wrappedMsat.lt(innerMsat) || wrappedMsat.gt(maxWrappedMsat)) {
         return fail('amount_mismatch');
+    }
+
+    // decode() fills in the BOLT 11 default expiry, so both are set
+    if (
+        inner.timeExpireDate == null ||
+        wrapped.timeExpireDate == null ||
+        wrapped.timeExpireDate >
+            inner.timeExpireDate + MAX_WRAPPED_EXTRA_EXPIRY_SECONDS
+    ) {
+        return fail('expiry_mismatch');
+    }
+
+    const innerCltv = inner.cltv_expiry ?? DEFAULT_MIN_FINAL_CLTV_EXPIRY;
+    const wrappedCltv = wrapped.cltv_expiry ?? DEFAULT_MIN_FINAL_CLTV_EXPIRY;
+    if (
+        wrappedCltv < innerCltv ||
+        wrappedCltv > innerCltv + MAX_WRAPPED_EXTRA_CLTV_BLOCKS
+    ) {
+        return fail('cltv_mismatch');
     }
 
     return { valid: true };
