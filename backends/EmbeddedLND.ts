@@ -297,11 +297,10 @@ export default class EmbeddedLND extends LND {
     // payment's current state (no_inflight_updates is false, so an
     // in-flight payment answers immediately). Any failure, NOT_FOUND
     // included, is settled by the dispatch-anchored page scan (run against
-    // the on-device listPayments via this backend's getPayments): the event
-    // channel is shared across concurrent track streams with no
-    // correlation, so a NOT_FOUND may belong to another lookup's stream.
-    // The scan answers null only on a conclusive miss and throws when it
-    // can't tell, so a failed scan never reads as no record.
+    // the on-device listPayments via this backend's getPayments), so no
+    // record is confirmed by a second source before the tracker acts on
+    // it. The scan answers null only on a conclusive miss and throws when
+    // it can't tell, so a failed scan never reads as no record.
     lookupPayment = async (data: {
         payment_hash: string;
         creation_date_start?: number;

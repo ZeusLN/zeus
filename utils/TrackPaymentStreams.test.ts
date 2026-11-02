@@ -91,37 +91,91 @@ describe('TrackPaymentStreams', () => {
         await expect(fresh).resolves.toEqual({ status: 'SUCCEEDED' });
     });
 
-    it('fails only lookups whose stream has not answered yet', async () => {
-        const answered = streams.lookup(OTHER_HASH, 10000, jest.fn());
-        streams.update(OTHER_HASH, { status: 'IN_FLIGHT' }, false);
-        await answered;
+    it('starts each stream with its own request id', () => {
+        const open = jest.fn();
+        streams.lookup(HASH, 10000, open);
+        streams.lookup(OTHER_HASH, 10000, open);
 
-        const waiting = streams.lookup(HASH, 10000, jest.fn());
-        const error = new Error("payment isn't initiated");
-        streams.fail(error);
-
-        await expect(waiting).rejects.toBe(error);
-        // the answered stream exists on the node and keeps serving
-        await expect(
-            streams.lookup(OTHER_HASH, 10000, jest.fn())
-        ).resolves.toEqual({ status: 'IN_FLIGHT' });
-        expect(streams.size).toBe(1);
+        expect(open.mock.calls[0][0]).toEqual(expect.any(String));
+        expect(open.mock.calls[1][0]).not.toEqual(open.mock.calls[0][0]);
     });
 
-    it('takes back a stream that answers after an error forgot it', async () => {
-        // the error was another stream's NOT_FOUND, delivered before this
-        // stream's first update
+    it('fails only the stream an error names', async () => {
+        const openHeld = jest.fn();
+        const openUnknown = jest.fn();
+        const held = streams.lookup(HASH, 10000, openHeld);
+        const unknown = streams.lookup(OTHER_HASH, 10000, openUnknown);
+        const error = new Error("payment isn't initiated");
+
+        streams.fail(error, openUnknown.mock.calls[0][0]);
+        await expect(unknown).rejects.toBe(error);
+        expect(streams.size).toBe(1);
+
+        // the held payment's lookup still gets its own stream's answer
+        streams.update(HASH, { status: 'IN_FLIGHT' }, false);
+        await expect(held).resolves.toEqual({ status: 'IN_FLIGHT' });
+        expect(openHeld).toHaveBeenCalledTimes(1);
+    });
+
+    it('ends an answered stream on its error, so the next lookup reopens', async () => {
         const open = jest.fn();
-        const waiting = streams.lookup(HASH, 10000, open);
-        streams.fail(new Error("payment isn't initiated"));
-        await expect(waiting).rejects.toThrow("payment isn't initiated");
+        const lookup = streams.lookup(HASH, 10000, open);
+        streams.update(HASH, { status: 'IN_FLIGHT' }, false);
+        await lookup;
+
+        streams.fail(new Error('stream ended'), open.mock.calls[0][0]);
+        expect(streams.size).toBe(0);
+        expect(onIdle).toHaveBeenCalledTimes(1);
+
+        streams.lookup(HASH, 10000, open);
+        expect(open).toHaveBeenCalledTimes(2);
+    });
+
+    it('drops errors that name no tracked stream', async () => {
+        const lookup = streams.lookup(HASH, 10000, jest.fn());
+
+        streams.fail(new Error('untagged'), undefined);
+        streams.fail(new Error('untagged'), '');
+        streams.fail(new Error('gone'), 'not-a-stream');
+        expect(streams.size).toBe(1);
+
+        streams.update(HASH, { status: 'IN_FLIGHT' }, false);
+        await expect(lookup).resolves.toEqual({ status: 'IN_FLIGHT' });
+    });
+
+    it('ignores the error of a stream replaced after the max age', async () => {
+        const open = jest.fn();
+        const first = streams.lookup(HASH, 10000, open);
+        streams.update(HASH, { status: 'IN_FLIGHT' }, false);
+        await first;
+
+        jest.advanceTimersByTime(MAX_AGE_MS);
+        const fresh = streams.lookup(HASH, 10000, open);
+        streams.fail(new Error('old stream ended'), open.mock.calls[0][0]);
+        expect(streams.size).toBe(1);
+
+        streams.update(HASH, { status: 'SUCCEEDED' }, true);
+        await expect(fresh).resolves.toEqual({ status: 'SUCCEEDED' });
+    });
+
+    it('takes back a replaced stream that answers after its replacement failed', async () => {
+        const open = jest.fn();
+        const first = streams.lookup(HASH, 10000, open);
+        streams.update(HASH, { status: 'IN_FLIGHT' }, false);
+        await first;
+
+        jest.advanceTimersByTime(MAX_AGE_MS);
+        const fresh = streams.lookup(HASH, 10000, open);
+        streams.fail(new Error('transport dropped'), open.mock.calls[1][0]);
+        await expect(fresh).rejects.toThrow('transport dropped');
         expect(streams.size).toBe(0);
 
+        // the first stream is still open on the node
         streams.update(HASH, { status: 'IN_FLIGHT' }, false);
         await expect(streams.lookup(HASH, 10000, open)).resolves.toEqual({
             status: 'IN_FLIGHT'
         });
-        expect(open).toHaveBeenCalledTimes(1);
+        expect(open).toHaveBeenCalledTimes(2);
     });
 
     it('ignores a terminal update for a hash with no stream', () => {

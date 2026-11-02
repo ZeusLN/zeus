@@ -74,6 +74,9 @@ const paymentEvent = (
 });
 
 const emit = (event: any) => emitter.emit('RouterTrackPaymentV2', event);
+// the request id the latest track stream was started with
+const trackRequestId = () =>
+    (sendStreamCommand as jest.Mock).mock.calls.at(-1)[0].requestId;
 
 describe('trackPaymentV2', () => {
     beforeEach(() => {
@@ -97,6 +100,7 @@ describe('trackPaymentV2', () => {
             HASH_HEX
         );
         expect(call.options.no_inflight_updates).toBe(false);
+        expect(call.requestId).toEqual(expect.any(String));
     });
 
     it('resolves with the first update carrying its hash, whatever the status', async () => {
@@ -122,8 +126,41 @@ describe('trackPaymentV2', () => {
 
     it('rejects with the stream error (NOT_FOUND surfaces to the caller)', async () => {
         const promise = trackPaymentV2(HASH_HEX);
-        emit({ error_code: 5, error_desc: "payment isn't initiated" });
+        emit({
+            error_code: 5,
+            error_desc: "payment isn't initiated",
+            request_id: trackRequestId()
+        });
         await expect(promise).rejects.toThrow("payment isn't initiated");
+    });
+
+    it('rejects only the lookup whose stream the error came from', async () => {
+        const held = trackPaymentV2(HASH_HEX);
+        const heldId = trackRequestId();
+        const unknown = trackPaymentV2(OTHER_HASH_HEX);
+        const unknownId = trackRequestId();
+        expect(unknownId).not.toEqual(heldId);
+
+        emit({
+            error_code: 5,
+            error_desc: "payment isn't initiated",
+            request_id: unknownId
+        });
+        await expect(unknown).rejects.toThrow("payment isn't initiated");
+
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT));
+        await expect(held).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.IN_FLIGHT
+        });
+    });
+
+    it('ignores an error without a request id', async () => {
+        const promise = trackPaymentV2(HASH_HEX);
+        emit({ error_code: 5, error_desc: "payment isn't initiated" });
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(promise).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
     });
 
     it('ignores EOF, transient errors, and payload-less events', async () => {
