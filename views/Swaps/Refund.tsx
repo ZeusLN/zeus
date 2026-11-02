@@ -494,8 +494,9 @@ export default class RefundSwap extends React.Component<
                         containerStyle={{ marginTop: 20 }}
                         secondary
                         disabled={
-                            !AddressUtils.isValidBitcoinAddressForNode(
-                                destinationAddress
+                            !AddressUtils.isAddressForNodeNetwork(
+                                destinationAddress,
+                                this.props.NodeInfoStore!.nodeInfo
                             ) ||
                             this.state.loading ||
                             fetchingAddress

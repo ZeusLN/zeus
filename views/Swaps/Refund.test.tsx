@@ -84,6 +84,8 @@ const getMyNodeInfo = BackendUtils.getMyNodeInfo as jest.Mock;
 
 const TIMEOUT = 900000;
 const DESTINATION = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+const TESTNET = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
+const REGTEST = 'bcrt1qqgdrlt97x4847rf85utak8gre5q7k83uwh3ajj';
 const NEXT_DESTINATION = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
 const NOT_COSIGNED = 'could not create refund transaction: all outputs invalid';
 // broadcastSwapTransaction's error when neither the mempool instance nor
@@ -115,8 +117,9 @@ let broadcast: jest.Mock;
 // the uncooperative switch on if asked, and presses Initiate refund
 const refund = async ({
     uncooperative = false,
-    nodeInfo = {}
-}: { uncooperative?: boolean; nodeInfo?: any } = {}) => {
+    nodeInfo = {},
+    destination = DESTINATION
+}: { uncooperative?: boolean; nodeInfo?: any; destination?: string } = {}) => {
     const store = {
         updateSwapOnRefund: jest.fn().mockResolvedValue(true),
         broadcastSwapTransaction: broadcast
@@ -132,7 +135,7 @@ const refund = async ({
             } as any)}
         />
     );
-    await fireEvent.changeText(hostOfType('AddressInput'), DESTINATION);
+    await fireEvent.changeText(hostOfType('AddressInput'), destination);
     await fireEvent(hostOfType('OnchainFeeInput'), 'changeFee', '3');
     if (uncooperative) {
         await fireEvent(hostOfType('Switch'), 'valueChange', true);
@@ -236,15 +239,15 @@ describe('RefundSwap refund button', () => {
     });
 
     it.each([
-        [{ isTestNet: true }, 'testnet'],
-        [{ isSigNet: true }, 'testnet'],
-        [{ isRegTest: true }, 'regtest']
+        [{ isTestNet: true }, 'testnet', TESTNET],
+        [{ isSigNet: true }, 'testnet', TESTNET],
+        [{ isRegTest: true }, 'regtest', REGTEST]
     ])(
         'builds the refund for the node network %j as %s',
-        async (nodeInfo, network) => {
+        async (nodeInfo, network, destination) => {
             broadcast.mockResolvedValue('txid');
 
-            await refund({ nodeInfo });
+            await refund({ nodeInfo, destination });
 
             expect(nativeBuild.mock.calls[0][0].network).toBe(network);
         }
@@ -432,8 +435,6 @@ describe('RefundSwap raw details', () => {
 });
 
 describe('RefundSwap destination', () => {
-    const TESTNET = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
-
     afterEach(() => {
         (nodeInfoStore as any).nodeInfo = {};
     });
@@ -467,11 +468,15 @@ describe('RefundSwap destination', () => {
 
     it.each([
         ['a testnet address', TESTNET],
-        ['a regtest address', 'bcrt1qqgdrlt97x4847rf85utak8gre5q7k83uwh3ajj'],
+        ['a regtest address', REGTEST],
         ['a testnet base58 address', 'mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn'],
         [
             'a public key',
             '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
+        ],
+        [
+            'an address with a bad checksum',
+            'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5'
         ]
     ])('refuses %s on a mainnet node', async (_, destination) => {
         expect(await enter(destination)).toBeDisabled();
@@ -480,5 +485,20 @@ describe('RefundSwap destination', () => {
     it('refuses a mainnet address on a testnet node', async () => {
         (nodeInfoStore as any).nodeInfo = { isTestNet: true };
         expect(await enter(DESTINATION)).toBeDisabled();
+    });
+
+    it('accepts a regtest address on a regtest node', async () => {
+        (nodeInfoStore as any).nodeInfo = { isRegTest: true };
+        expect(await enter(REGTEST)).toBeEnabled();
+    });
+
+    it('refuses a testnet address on a regtest node', async () => {
+        (nodeInfoStore as any).nodeInfo = { isRegTest: true };
+        expect(await enter(TESTNET)).toBeDisabled();
+    });
+
+    it('refuses a regtest address on a signet node', async () => {
+        (nodeInfoStore as any).nodeInfo = { isSigNet: true };
+        expect(await enter(REGTEST)).toBeDisabled();
     });
 });
