@@ -1869,6 +1869,7 @@
     "stores.NostrWalletConnectStore.error.cashuInsufficientBalance": "Nicht genügend Guthaben. In deiner Cashu-Wallet sind nur noch {{balance}} Sats verfügbar, aber du versuchst {{amount}} Sats auszugeben.",
     "stores.NostrWalletConnectStore.error.lightningInsufficientBalance": "Nicht genügend Guthaben. In deiner Lightning-Wallet sind nur noch {{balance}} Sats verfügbar, aber du versuchst {{amount}} Sats auszugeben.",
     "stores.NostrWalletConnectStore.error.feeLimitReducedByBudget": "Das verbleibende Budget dieser Verbindung hat die Routing-Gebühr auf {{feeLimit}} Sats begrenzt.",
+    "stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget": "This payment ({{amount}} sats) plus a fee reserve of {{feeReserve}} sats exceeds the remaining budget for this connection ({{remaining}} sats).",
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Keine Cashu-Mint ausgewählt. Bitte erst eine Mint auswählen.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Rechnung konnte nicht dekodiert werden - payReq ist nicht definiert",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Rechnung bereits bezahlt",
