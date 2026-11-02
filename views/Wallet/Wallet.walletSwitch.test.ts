@@ -107,6 +107,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
     jest.spyOn(settings, 'setConnectingStatus');
 
     const repairMissingChannelEdges = jest.fn(async () => {});
+    const Storage = { getItem: jest.fn(async (): Promise<any> => false) };
     const LinkingUtils = {
         handleInitialUrl: jest.fn(),
         processPendingDeepLink: jest.fn()
@@ -138,7 +139,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             retryOnTransientError,
             restartNeeded: jest.fn(),
             LinkingUtils,
-            Storage: { getItem: async () => false },
+            Storage,
             CHANNEL_MIGRATION_ACTIVE: 'test-migration-flag',
             processSharedQRImageFast: async () => null,
             Platform: { OS: 'ios' },
@@ -215,7 +216,8 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
         lnd,
         repairMissingChannelEdges,
         LinkingUtils,
-        isWipePending
+        isWipePending,
+        Storage
     };
 }
 
@@ -609,3 +611,25 @@ describe('error-screen Retry', () => {
         }
     });
 });
+
+it.each([
+    [{ lndDirs: ['c', 'other'], lndDir: 'other' }, true],
+    [{ lndDirs: ['other', 'c'], lndDir: 'c' }, true],
+    // written by versions that could lock only one wallet
+    [{ lndDir: 'c' }, true],
+    [{ lndDirs: ['other'], lndDir: 'other' }, false],
+    [{ lndDir: 'other' }, false]
+])(
+    'migration lock %j: embedded LND wallet "c" locked = %s',
+    async (record, locked) => {
+        const { settings, view, runner, refresh, lnd, Storage } = setup(2);
+        settings.lndDir = 'c';
+        Storage.getItem.mockResolvedValue(
+            JSON.stringify({ migrationStatus: true, ...record })
+        );
+        await runner.run(refresh);
+        expect(view.state.isChannelMigrating).toBe(locked);
+        expect(settings.setChannelMigrating).toHaveBeenLastCalledWith(locked);
+        expect(lnd.startLnd).toHaveBeenCalledTimes(locked ? 0 : 1);
+    }
+);
