@@ -30,6 +30,7 @@ import {
     fetchBlockHeight,
     isValidRescueKey,
     isWalletSeed,
+    rescueKeyRestoreError,
     refundFailureAction,
     nativeSwapEndpoint,
     swapWebSocketUrl,
@@ -285,6 +286,47 @@ describe('SwapUtils', () => {
                     { implementation: 'ldk-node', ldkMnemonic: '' } as any
                 ])
             ).toBe(false);
+        });
+    });
+
+    describe('rescueKeyRestoreError', () => {
+        const ldkMnemonic =
+            'legal winner thank year wave sausage worth useful legal winner thank yellow';
+        const independentKey =
+            'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+        const nodes = [
+            { implementation: 'lnd' },
+            { implementation: 'ldk-node', ldkMnemonic }
+        ];
+
+        it("refuses a configured wallet's seed", () => {
+            expect(rescueKeyRestoreError(ldkMnemonic, nodes)).toBe(
+                'views.Swaps.rescueKey.walletSeed'
+            );
+            expect(
+                rescueKeyRestoreError(
+                    ` ${ldkMnemonic.replace(/ /g, '  ')} `,
+                    nodes
+                )
+            ).toBe('views.Swaps.rescueKey.walletSeed');
+        });
+
+        it('accepts an independent rescue key', () => {
+            expect(rescueKeyRestoreError(independentKey, nodes)).toBeNull();
+        });
+
+        it('accepts the seed when that wallet is not configured', () => {
+            expect(rescueKeyRestoreError(ldkMnemonic, [])).toBeNull();
+            expect(rescueKeyRestoreError(ldkMnemonic, undefined)).toBeNull();
+        });
+
+        it('reports a bad checksum before the wallet seed check', () => {
+            const badChecksum = independentKey.replace(/about$/, 'abandon');
+            expect(
+                rescueKeyRestoreError(badChecksum, [
+                    { ldkMnemonic: badChecksum }
+                ])
+            ).toBe('views.Settings.SeedRecovery.invalidChecksum');
         });
     });
 

@@ -833,6 +833,23 @@ export const isWalletSeed = (
     );
 };
 
+// Locale key of the error for a mnemonic entered under "Restore rescue
+// key", or null when it can be stored. A configured wallet's seed is
+// refused: the retirement migration removed it as the rescue key together
+// with its key index, so storing it again would bring back the xpub
+// exposure and restart key derivation at index 0, reusing the keys and
+// preimages of the swaps made with it.
+export const rescueKeyRestoreError = (
+    mnemonic: string,
+    nodes?: Array<{ ldkMnemonic?: string }>
+): string | null => {
+    if (!isValidRescueKey(mnemonic))
+        return 'views.Settings.SeedRecovery.invalidChecksum';
+    if (isWalletSeed(mnemonic, nodes))
+        return 'views.Swaps.rescueKey.walletSeed';
+    return null;
+};
+
 export const calculateReceiveAmount = (
     sendAmount: BigNumber,
     serviceFee: number,
