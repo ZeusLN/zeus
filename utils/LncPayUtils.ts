@@ -110,8 +110,8 @@ export type LncTrackEventDecision =
 // whatever its status, is an answer for the hash it carries (IN_FLIGHT
 // included); updates without a parseable hash can't be attributed to any
 // stream and are dropped. Error strings (lnd's NOT_FOUND "payment isn't
-// initiated" among them) carry no hash at all, so the caller can't tell
-// which stream they ended.
+// initiated" among them) carry no hash at all; the caller matches them to
+// a stream by the event's request_id.
 export const decideLncTrackEvent = (
     eventResult: unknown
 ): LncTrackEventDecision => {

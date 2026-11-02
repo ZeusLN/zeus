@@ -480,10 +480,10 @@ export default class LightningNodeConnect {
     // hash is shared by all lookups (see TrackPaymentStreams), since a
     // stream can't be cancelled from JS and stays open node-side until the
     // payment is terminal. Any failure, NOT_FOUND included, is settled by
-    // the dispatch-anchored page scan: error strings carry no hash and may
-    // belong to another lookup's stream. The scan answers null only on a
-    // conclusive miss and throws when it can't tell, so a failed scan
-    // never reads as no record.
+    // the dispatch-anchored page scan, so no record is confirmed by a
+    // second source before the tracker acts on it. The scan answers null
+    // only on a conclusive miss and throws when it can't tell, so a failed
+    // scan never reads as no record.
     lookupPayment = async (data: {
         payment_hash: string;
         creation_date_start?: number;
@@ -493,13 +493,19 @@ export default class LightningNodeConnect {
             return await this.trackPaymentStreams.lookup(
                 data.payment_hash,
                 data.trackTimeoutMs ?? TRACK_PAYMENT_TIMEOUT_MS,
-                () => {
-                    const streamingCall = this.lnc.lnd.router.trackPaymentV2({
-                        payment_hash: Base64Utils.hexToBase64(
-                            data.payment_hash
-                        ),
-                        no_inflight_updates: false
-                    });
+                (requestId) => {
+                    // started through subscribe() rather than the typed lnd
+                    // proxy so the request id reaches the native module
+                    const streamingCall = this.lnc.subscribe(
+                        'routerrpc.Router.TrackPaymentV2',
+                        {
+                            payment_hash: Base64Utils.hexToBase64(
+                                data.payment_hash
+                            ),
+                            no_inflight_updates: false
+                        },
+                        requestId
+                    );
                     // every track stream reports on the same event name
                     if (!this.trackPaymentSubscription) {
                         const { LncModule } = NativeModules;
@@ -522,7 +528,7 @@ export default class LightningNodeConnect {
                 isTerminalPaymentStatus(decision.result.status)
             );
         } else if (decision.kind === 'error') {
-            this.trackPaymentStreams.fail(decision.error);
+            this.trackPaymentStreams.fail(decision.error, event?.request_id);
         }
     };
     getNewAddress = async (data: any) =>

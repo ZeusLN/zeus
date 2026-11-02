@@ -478,7 +478,7 @@ const onTrackPaymentEvent = (e: any) => {
     try {
         const error = checkLndStreamErrorResponse('RouterTrackPaymentV2', e);
         if (error === 'EOF') return;
-        if (error) return trackPaymentStreams.fail(error);
+        if (error) return trackPaymentStreams.fail(error, e?.request_id);
         // a transient (null) error report carries no payload
         if (!e?.data) return;
 
@@ -490,7 +490,10 @@ const onTrackPaymentEvent = (e: any) => {
             isTerminalPaymentStatus(response.status)
         );
     } catch (error: any) {
-        trackPaymentStreams.fail(new Error(error?.message || String(error)));
+        trackPaymentStreams.fail(
+            new Error(error?.message || String(error)),
+            e?.request_id
+        );
     }
 };
 
@@ -502,17 +505,16 @@ export const clearTrackPaymentStreams = () => trackPaymentStreams.clear();
  * Resolves with the tracked payment's current state: the latest
  * TrackPaymentV2 update for its hash. One stream per hash is shared by
  * all lookups (see TrackPaymentStreams), since a stream can't be
- * cancelled from JS and stays open until the payment is terminal. The
- * caller decides what a NOT_FOUND ("payment isn't initiated") rejection
- * means: error events carry no hash and may belong to another hash's
- * stream.
+ * cancelled from JS and stays open until the payment is terminal. A
+ * rejection is this hash's stream's own error; the caller decides what a
+ * NOT_FOUND ("payment isn't initiated") means.
  * @throws
  */
 export const trackPaymentV2 = (
     payment_hash: string,
     timeoutMs: number = TRACK_PAYMENT_TIMEOUT_MS
 ): Promise<lnrpc.Payment> =>
-    trackPaymentStreams.lookup(payment_hash, timeoutMs, () => {
+    trackPaymentStreams.lookup(payment_hash, timeoutMs, (requestId) => {
         if (!trackPaymentListener) {
             trackPaymentListener = LndMobileEventEmitter.addListener(
                 'RouterTrackPaymentV2',
@@ -529,7 +531,8 @@ export const trackPaymentV2 = (
                 options: {
                     payment_hash: Base64Utils.hexToBytes(payment_hash),
                     no_inflight_updates: false
-                }
+                },
+                requestId
             },
             false
         );

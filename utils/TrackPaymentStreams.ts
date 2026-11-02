@@ -1,4 +1,5 @@
 import { lnrpc } from '../proto/lightning';
+import { newStreamRequestId } from './StreamRequestUtils';
 
 // how long a TrackPaymentV2 stream's latest update is served before a
 // lookup opens a fresh stream. A stream that dies without a terminal
@@ -21,6 +22,8 @@ type Waiter<P> = {
 
 type Stream<P> = {
     openedAt: number;
+    // the id the stream was started with, echoed on each of its events
+    requestId?: string;
     latest?: P;
     waiters: Set<Waiter<P>>;
 };
@@ -33,14 +36,12 @@ type Stream<P> = {
  * poll). Here the first lookup opens a stream and later lookups get its
  * latest update until it ends or ages out.
  *
- * Both transports multiplex every track stream onto one event channel
- * with no request correlation. Updates are attributed by the hash they
- * carry. Errors carry none, so an error fails every lookup still waiting
- * for its stream's first update (any of those streams may be the one that
- * errored) and forgets those streams; a forgotten stream that later
- * delivers an update is taken back. Streams that already answered keep
- * serving their latest update: they exist on the node, and an error from
- * one can only mean it ended early, which the max age covers.
+ * Both transports emit every track stream's events under one name. Each
+ * stream is started with its own request id, which the native modules
+ * echo on all of its events, so an error (which carries no hash) ends
+ * only the stream it names. Updates are attributed by the hash they
+ * carry, so one from a stream replaced after the max age still counts
+ * for its hash.
  */
 export default class TrackPaymentStreams<P> {
     private streams = new Map<string, Stream<P>>();
@@ -59,12 +60,13 @@ export default class TrackPaymentStreams<P> {
 
     // Resolves with the latest update for `hash`, opening a stream with
     // `open` when none is live, and rejects with 'Request timeout' if the
-    // stream hasn't answered within `timeoutMs`. `open` may attach the
-    // shared listener before starting the stream.
+    // stream hasn't answered within `timeoutMs`. `open` starts the stream
+    // with the request id it is given and may attach the shared listener
+    // first.
     lookup = (
         hash: string,
         timeoutMs: number,
-        open: () => unknown
+        open: (requestId: string) => unknown
     ): Promise<P> => {
         const key = hash.toLowerCase();
         let stream = this.streams.get(key);
@@ -108,10 +110,10 @@ export default class TrackPaymentStreams<P> {
 
     // An update for `hash` arrived. A terminal update ends the stream, so
     // the next lookup opens a new one (which answers and closes at once).
-    // An in-flight update for a hash with no stream comes from one that
-    // was forgotten when an error arrived before its first update (the
-    // error may have been another stream's): it is still open, so serve
-    // from it again instead of opening another on the next lookup.
+    // An in-flight update for a hash with no stream comes from one that is
+    // still open but no longer tracked, e.g. a stream replaced after the
+    // max age whose replacement then failed: serve from it again instead
+    // of opening another on the next lookup.
     update = (hash: string, payment: P, terminal: boolean) => {
         const key = hash.toLowerCase();
         let stream = this.streams.get(key);
@@ -127,15 +129,18 @@ export default class TrackPaymentStreams<P> {
         waiters.forEach((waiter) => waiter.resolve(payment));
     };
 
-    // An error with no hash arrived on the shared channel.
-    fail = (error: any) => {
-        const failed: Waiter<P>[] = [];
-        for (const [key, stream] of [...this.streams]) {
-            if (stream.latest !== undefined) continue;
-            failed.push(...stream.waiters);
-            this.forget(key);
+    // An error event arrived. It ends the stream started with
+    // `requestId`: that stream's waiting lookups fail and the next lookup
+    // opens a new one. Errors without the id of a tracked stream belong to
+    // streams already replaced or forgotten and are dropped.
+    fail = (error: any, requestId: unknown) => {
+        if (typeof requestId !== 'string' || requestId === '') return;
+        for (const [key, stream] of this.streams) {
+            if (stream.requestId === requestId) {
+                this.end(key, stream, error);
+                return;
+            }
         }
-        failed.forEach((waiter) => waiter.reject(error));
     };
 
     // Forgets every stream, e.g. when the node stops and they all end.
@@ -145,25 +150,35 @@ export default class TrackPaymentStreams<P> {
         this.options.onIdle?.();
     };
 
-    private start = (key: string, stream: Stream<P>, open: () => unknown) => {
-        const failOpen = (error: any) => {
-            if (this.streams.get(key) !== stream) return;
-            this.forget(key);
-            const failed = [...stream.waiters];
-            stream.waiters.clear();
-            failed.forEach((waiter) =>
-                waiter.reject(
-                    error instanceof Error
-                        ? error
-                        : new Error(error?.message || String(error))
-                )
+    private start = (
+        key: string,
+        stream: Stream<P>,
+        open: (requestId: string) => unknown
+    ) => {
+        const requestId = newStreamRequestId();
+        stream.requestId = requestId;
+        const failOpen = (error: any) =>
+            this.end(
+                key,
+                stream,
+                error instanceof Error
+                    ? error
+                    : new Error(error?.message || String(error))
             );
-        };
         try {
-            Promise.resolve(open()).catch(failOpen);
+            Promise.resolve(open(requestId)).catch(failOpen);
         } catch (error) {
             failOpen(error);
         }
+    };
+
+    // Forgets a stream that has ended and fails the lookups waiting on it.
+    private end = (key: string, stream: Stream<P>, error: any) => {
+        if (this.streams.get(key) !== stream) return;
+        this.forget(key);
+        const failed = [...stream.waiters];
+        stream.waiters.clear();
+        failed.forEach((waiter) => waiter.reject(error));
     };
 
     private forget = (key: string) => {
