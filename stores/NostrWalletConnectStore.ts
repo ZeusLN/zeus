@@ -913,16 +913,17 @@ export default class NostrWalletConnectStore {
                 runInAction(() => {
                     const oldBudgetRenewal = connection.budgetRenewal;
                     const newBudgetRenewal = updates.budgetRenewal;
-                    const newMaxAmountSats = updates.maxAmountSats;
 
+                    // Read before the assign, or an added or removed budget
+                    // is never seen as a change
+                    const hadBudget = connection.hasBudgetLimit;
                     Object.assign(connection, updates);
                     if (rotatedSecret) {
                         connection.pubkey = rotatedSecret.connectionPublicKey;
                     }
 
-                    const hadBudget = connection.hasBudgetLimit;
-                    const hasBudget =
-                        newMaxAmountSats !== undefined && newMaxAmountSats > 0;
+                    // An update that omits maxAmountSats leaves the limit as is
+                    const hasBudget = connection.hasBudgetLimit;
                     const budgetRenewalChanged =
                         newBudgetRenewal !== undefined &&
                         newBudgetRenewal !== oldBudgetRenewal;
