@@ -48,9 +48,6 @@ export default class CreateCashuLightningAddress extends React.Component<
     CreateCashuLightningAddressState
 > {
     isInitialFocus = true;
-    // The user can leave while createCashu runs, so a late goBack()
-    // must not pop the screen they went back to
-    isUnmounted = false;
 
     state = {
         mintList: [],
@@ -65,10 +62,6 @@ export default class CreateCashuLightningAddress extends React.Component<
 
         // triggers when loaded from navigation or back action
         navigation.addListener('focus', this.handleFocus);
-    }
-
-    componentWillUnmount() {
-        this.isUnmounted = true;
     }
 
     loadMints = () => {
@@ -231,10 +224,17 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                                 mintUrl
                                                             }
                                                         );
-                                                        navigation.popTo(
-                                                            'LightningAddress'
-                                                        );
-                                                        return;
+                                                        // popTo() has no target and acts on the top
+                                                        // route, so only while this screen is on
+                                                        // top; otherwise turn the spinner off below
+                                                        if (
+                                                            navigation.isFocused()
+                                                        ) {
+                                                            navigation.popTo(
+                                                                'LightningAddress'
+                                                            );
+                                                            return;
+                                                        }
                                                     }
                                                 } catch (e) {
                                                     console.error(e);
@@ -247,11 +247,14 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                     .then((response) => {
                                                         if (
                                                             response.success &&
-                                                            !this.isUnmounted
+                                                            navigation.isFocused()
                                                         ) {
                                                             // Opened only from ReceiveEcash and
                                                             // Get started on the ZEUS Pay screen,
-                                                            // so go back to whichever opened it
+                                                            // so go back to whichever opened it.
+                                                            // goBack() has no target and pops the
+                                                            // top route, so only while this screen
+                                                            // is on top
                                                             navigation.goBack();
                                                         }
                                                     })

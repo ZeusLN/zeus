@@ -25,6 +25,7 @@ jest.mock('../../../stores/SettingsStore', () => ({}));
 
 import * as React from 'react';
 import {
+    act,
     fireEvent,
     render,
     screen,
@@ -51,13 +52,18 @@ const renderCreate = async (
             }))
         }),
         popTo: jest.fn(),
-        goBack: jest.fn()
+        goBack: jest.fn(),
+        // false once the route is removed or another screen is on top
+        isFocused: jest.fn(() => true)
     };
     const LightningAddressStore = {
         createCashu: jest.fn(() => Promise.resolve({ success: true })),
         update: jest.fn(() => Promise.resolve({ success: true })),
         loading: false,
         error_msg: ''
+    };
+    const SettingsStore = {
+        updateSettingsGroup: jest.fn(() => Promise.resolve())
     };
     await render(
         <CreateCashuLightningAddress
@@ -71,13 +77,11 @@ const renderCreate = async (
                     cashuWallets: { [MINT_URL]: { pubkey: 'pubkey' } }
                 },
                 LightningAddressStore,
-                SettingsStore: {
-                    updateSettingsGroup: jest.fn(() => Promise.resolve())
-                }
+                SettingsStore
             } as any)}
         />
     );
-    return { navigation, LightningAddressStore };
+    return { navigation, LightningAddressStore, SettingsStore };
 };
 
 const findButton = (title: string) =>
@@ -165,11 +169,66 @@ describe('CreateCashuLightningAddress after a successful save', () => {
 
         await pressButton('views.Settings.LightningAddress.create');
         await screen.unmount();
+        navigation.isFocused.mockReturnValue(false);
         resolveCreate({ success: true });
         await flush();
 
         expect(navigation.goBack).not.toHaveBeenCalled();
         expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+
+    it('does not go back when the Lockscreen covers it', async () => {
+        const { navigation, LightningAddressStore } = await renderCreate([
+            'Wallet',
+            'ReceiveEcash'
+        ]);
+        let resolveCreate: (value: any) => void = () => {};
+        LightningAddressStore.createCashu.mockImplementation(
+            () => new Promise((resolve) => (resolveCreate = resolve))
+        );
+
+        await pressButton('views.Settings.LightningAddress.create');
+        navigation.isFocused.mockReturnValue(false);
+        resolveCreate({ success: true });
+        await flush();
+
+        expect(navigation.goBack).not.toHaveBeenCalled();
+        expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+
+    it('stays on the screen after a switch when the Lockscreen covers it', async () => {
+        const { navigation, LightningAddressStore, SettingsStore } =
+            await renderCreate(
+                ['Wallet', 'LightningAddress', 'LightningAddressSettings'],
+                { switchTo: true }
+            );
+        let resolveUpdate: (value: any) => void = () => {};
+        LightningAddressStore.update.mockImplementation(
+            () => new Promise((resolve) => (resolveUpdate = resolve))
+        );
+
+        // the switch handler awaits update(), so start it without waiting
+        await act(async () => {
+            findButton(
+                'views.Settings.LightningAddress.switchToCashu'
+            ).props.onPress();
+        });
+        expect(
+            findButton('views.Settings.LightningAddress.switchToCashu')
+        ).toBeUndefined();
+        navigation.isFocused.mockReturnValue(false);
+        await act(async () => {
+            resolveUpdate({ success: true });
+            await flush();
+        });
+
+        expect(SettingsStore.updateSettingsGroup).toHaveBeenCalled();
+        expect(navigation.popTo).not.toHaveBeenCalled();
+        expect(navigation.goBack).not.toHaveBeenCalled();
+        // no spinner left on the screen after the unlock
+        expect(
+            findButton('views.Settings.LightningAddress.switchToCashu')
+        ).toBeDefined();
     });
 });
 
