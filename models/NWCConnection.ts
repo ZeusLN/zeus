@@ -1,5 +1,5 @@
 import { action, computed, observable } from 'mobx';
-import { Nip47SingleMethod } from '@getalby/sdk';
+import { Nip47Method } from '@getalby/sdk';
 import { localeString } from '../utils/LocaleUtils';
 
 import BaseModel from './BaseModel';
@@ -65,7 +65,7 @@ export interface NWCConnectionData {
     description?: string;
     pubkey: string;
     relayUrl: string;
-    permissions: Nip47SingleMethod[];
+    permissions: Nip47Method[];
     createdAt: Date;
     lastUsed?: Date;
     totalSpendSats: number;
@@ -118,7 +118,7 @@ export default class NWCConnection extends BaseModel {
     @observable description?: string;
     pubkey: string;
     relayUrl: string;
-    @observable permissions: Nip47SingleMethod[];
+    @observable permissions: Nip47Method[];
     createdAt: Date;
     @observable lastUsed?: Date;
     @observable totalSpendSats: number;
@@ -611,7 +611,7 @@ export default class NWCConnection extends BaseModel {
         this.syncWarnings(maxBudgetLimit);
     }
 
-    public hasPermission(permission: Nip47SingleMethod): boolean {
+    public hasPermission(permission: Nip47Method): boolean {
         return this.permissions?.includes(permission) || false;
     }
     public hasReadOnlyPermissions(): boolean {

@@ -13,7 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import isEqual from 'lodash/isEqual';
 import Slider from '@react-native-community/slider';
-import { Nip47SingleMethod } from '@getalby/sdk';
+import { Nip47Method } from '@getalby/sdk';
 
 import Screen from '../../../components/Screen';
 import Accordion from '../../../components/Accordion';
@@ -59,7 +59,7 @@ interface AddOrEditNWCConnectionState {
     connectionName: string;
     selectedRelayUrl: string;
     customRelayUrl: string;
-    selectedPermissions: Nip47SingleMethod[];
+    selectedPermissions: Nip47Method[];
     selectedBudgetRenewalIndex: number;
     expiresAt: Date | undefined;
     error: string;
@@ -376,7 +376,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         });
     };
 
-    togglePermission = (permission: Nip47SingleMethod) => {
+    togglePermission = (permission: Nip47Method) => {
         const { selectedPermissions } = this.state;
         const isAdding = !selectedPermissions.includes(permission);
 
