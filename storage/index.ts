@@ -49,7 +49,9 @@ export const getRawItem = async (
  * Writes a raw server into the non-synchronizable (device-local)
  * partition. No cloudSync option is passed: with the patched
  * react-native-keychain, absent and false both mean local, and omitting
- * the option keeps this correct even on an unpatched build.
+ * the option keeps this correct even on an unpatched build. Uses the same
+ * this-device-only accessibility class as Storage.setItem, so items copied
+ * here (keychain desync, purge restore) do not migrate through backups.
  */
 export const setRawLocalItem = async (
     server: string,
@@ -58,7 +60,8 @@ export const setRawLocalItem = async (
     const response = await Keychain.setInternetCredentials(
         server,
         server,
-        value
+        value,
+        { accessible: Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY }
     );
     return !!response;
 };
@@ -123,7 +126,17 @@ class Storage {
             prefixedKey,
             stringValue,
             {
-                cloudSync: false
+                cloudSync: false,
+                // iOS: keep keychain items on this device only. The default
+                // (AFTER_FIRST_UNLOCK) migrates to a new device through
+                // encrypted iCloud/Finder backups, carrying the settings blob
+                // (wallet seeds, LND password, macaroons, lock verifiers) with
+                // it. THIS_DEVICE_ONLY blocks that migration while staying
+                // readable at boot after first unlock, and (unlike
+                // WHEN_PASSCODE_SET) never requires a device passcode, so it
+                // cannot lock a user out of their own wallet. No-op on Android.
+                accessible:
+                    Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY
             }
         );
         return response;

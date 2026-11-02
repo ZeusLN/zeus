@@ -3,6 +3,7 @@
 // production Wallet/Settings methods and the real WalletRefreshRunner; node
 // calls and stores are controlled.
 jest.mock('../../utils/LocaleUtils');
+jest.mock('../../utils/LockKdf');
 
 import WalletRefreshRunner from '../../utils/WalletRefreshRunner';
 import {
@@ -13,6 +14,7 @@ import {
     retryOnTransientError
 } from '../../utils/LndMobileErrors';
 import { sourceMethods } from '../../backends/lncTestUtils';
+import { deriveVerifier, hasVerifier } from '../../utils/LockVerifierUtils';
 
 const deferred = <T = void>() => {
     let resolve!: (value: T) => void;
@@ -73,7 +75,8 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
                   ]
                 : [])
         ],
-        { BackendUtils }
+        // loginMethodConfigured checks the stored verifiers with hasVerifier
+        { BackendUtils, hasVerifier }
     );
     const settings = new Settings();
     Object.assign(settings, {
@@ -504,7 +507,11 @@ describe('session start', () => {
         const { settings, view, runner, refresh } = setup(1, {
             realLogin: true
         });
-        settings.settings = { ...settings.settings, pin: '1234' };
+        settings.settings = {
+            ...settings.settings,
+            // a fixed salt: the test env has no native randombytes
+            pinVerifier: await deriveVerifier('1234', Buffer.alloc(16, 1))
+        };
 
         await runner.run(refresh);
 

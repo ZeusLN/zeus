@@ -9,6 +9,7 @@ import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { deriveVerifier, verifySecret } from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
@@ -85,7 +86,7 @@ export default class SetDuressPin extends React.Component<
 
         const settings = await getSettings();
 
-        if (duressPin === settings.pin) {
+        if (await verifySecret(duressPin, settings.pinVerifier)) {
             this.setState({
                 duressPinInvalidError: true,
                 duressPin: '',
@@ -95,7 +96,8 @@ export default class SetDuressPin extends React.Component<
             return;
         }
 
-        await updateSettings({ duressPin }).then(() => {
+        const duressPinVerifier = await deriveVerifier(duressPin);
+        await updateSettings({ duressPinVerifier }).then(() => {
             getSettings();
             navigation.popTo('Security');
         });

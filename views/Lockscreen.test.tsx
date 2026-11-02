@@ -1,5 +1,11 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import {
+    act,
+    fireEvent,
+    render,
+    screen,
+    waitFor
+} from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
 jest.mock('mobx-react', () => ({
@@ -58,11 +64,18 @@ jest.mock('../utils/DataClearUtils', () => ({
     markWipePending: jest.fn()
 }));
 jest.mock('../utils/LocaleUtils');
+jest.mock('../utils/LockKdf');
 jest.mock('../utils/RestartUtils', () => ({
     restartApp: jest.fn()
 }));
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: jest.fn(() => '#000')
+}));
+
+// The native randombytes module cannot init under jest; back it with node
+// crypto so a real PIN verifier can be derived
+jest.mock('react-native-randombytes', () => ({
+    randomBytes: (length: number) => require('crypto').randomBytes(length)
 }));
 
 import { verifyBiometry } from '../utils/BiometricUtils';
@@ -72,9 +85,17 @@ import {
     markWipePending
 } from '../utils/DataClearUtils';
 import { restartApp } from '../utils/RestartUtils';
+import * as LockKdf from '../utils/LockKdf';
+import * as LockVerifierUtils from '../utils/LockVerifierUtils';
+import { deriveVerifier, VerifierRecord } from '../utils/LockVerifierUtils';
 import Lockscreen from './Lockscreen';
 
 const PIN = '1234';
+let pinVerifier: VerifierRecord;
+
+beforeAll(async () => {
+    pinVerifier = await deriveVerifier(PIN);
+});
 
 const deferred = () => {
     let resolve!: () => void;
@@ -108,7 +129,7 @@ const renderLockscreen = async (
         biometry = false,
         posStatus = 'inactive',
         params = {},
-        settings = { pin: PIN }
+        settings = { pinVerifier }
     }: {
         biometry?: boolean;
         posStatus?: string;
@@ -148,6 +169,11 @@ const submitPin = () =>
 const submitWrongPin = () =>
     fireEvent.press(screen.getByRole('button', { name: 'Submit wrong PIN' }));
 
+// PIN verification is an async key derivation, so a login reaches the
+// attempt reset some time after the PIN is submitted
+const untilCalled = (mock: jest.Mock) =>
+    waitFor(() => expect(mock).toHaveBeenCalled(), { timeout: 5000 });
+
 let errorSpy: jest.SpyInstance;
 
 beforeEach(() => {
@@ -167,11 +193,12 @@ afterEach(() => {
 describe('Lockscreen login', () => {
     it('navigates only once the attempt reset has resolved', async () => {
         const reset = deferred();
-        const updateSettings = makeUpdateSettings({ pin: PIN }, (patch) =>
+        const updateSettings = makeUpdateSettings({ pinVerifier }, (patch) =>
             isReset(patch) ? reset.promise : Promise.resolve()
         );
         const { navigation } = await renderLockscreen(updateSettings);
         await submitPin();
+        await untilCalled(updateSettings);
 
         expect(updateSettings).toHaveBeenCalledWith({
             authenticationAttempts: 0
@@ -185,13 +212,14 @@ describe('Lockscreen login', () => {
 
     it('still unlocks when the attempt reset fails', async () => {
         const error = new Error('keychain unavailable');
-        const updateSettings = makeUpdateSettings({ pin: PIN }, (patch) =>
+        const updateSettings = makeUpdateSettings({ pinVerifier }, (patch) =>
             isReset(patch) ? Promise.reject(error) : Promise.resolve()
         );
         const { SettingsStore, navigation } = await renderLockscreen(
             updateSettings
         );
         await submitPin();
+        await untilCalled(navigation.pop);
 
         expect(SettingsStore.setLoginStatus).toHaveBeenCalledWith(true);
         expect(navigation.pop).toHaveBeenCalledTimes(1);
@@ -203,13 +231,25 @@ describe('Lockscreen login', () => {
 
     it('navigates once when a second submit arrives while the reset is pending', async () => {
         const reset = deferred();
-        const updateSettings = makeUpdateSettings({ pin: PIN }, (patch) =>
+        const updateSettings = makeUpdateSettings({ pinVerifier }, (patch) =>
             isReset(patch) ? reset.promise : Promise.resolve()
         );
         const { navigation } = await renderLockscreen(updateSettings);
+        const verify = jest.spyOn(LockVerifierUtils, 'verifySecret');
         await submitPin();
+        await untilCalled(updateSettings);
+        const verificationsPerAttempt = verify.mock.calls.length;
+
+        // the second submit must not start another verification; checking
+        // the count is what makes this deterministic, since a second
+        // derivation would otherwise finish after the assertions below
         await submitPin();
+        await act(async () => {});
+        expect(verify).toHaveBeenCalledTimes(verificationsPerAttempt);
+
         await act(async () => reset.resolve());
+        await untilCalled(navigation.pop);
+        verify.mockRestore();
 
         // the first entry's attempt and its reset; the second entry is
         // dropped
@@ -233,6 +273,74 @@ describe('Lockscreen login', () => {
             'Failed to reset authentication attempts',
             error
         );
+    });
+});
+
+// Each attempt runs two derivations, the second against the duress verifier
+// or a dummy with the same KDF, so the time an attempt takes does not show
+// whether a duress credential exists.
+describe('Lockscreen verification cost', () => {
+    it('starts the primary and dummy duress derivations together', async () => {
+        const realDerive = LockKdf.pbkdf2Sha256;
+        const pending: Array<() => void> = [];
+        const derive = jest
+            .spyOn(LockKdf, 'pbkdf2Sha256')
+            .mockImplementation(
+                (...args) =>
+                    new Promise((resolve, reject) =>
+                        pending.push(() =>
+                            realDerive(...args).then(resolve, reject)
+                        )
+                    )
+            );
+        const updateSettings = makeUpdateSettings({ pinVerifier });
+        const { navigation } = await renderLockscreen(updateSettings);
+
+        await submitPin();
+        await waitFor(() => expect(derive).toHaveBeenCalledTimes(2));
+        // neither derivation has finished, so they run in parallel
+        expect(navigation.pop).not.toHaveBeenCalled();
+        expect(
+            derive.mock.calls.map((call) => call[1].toString('hex'))
+        ).toEqual([pinVerifier.salt, LockVerifierUtils.DUMMY_VERIFIER.salt]);
+
+        await act(async () => pending.forEach((run) => run()));
+        await untilCalled(navigation.pop);
+        expect(derive).toHaveBeenCalledTimes(2);
+        derive.mockRestore();
+    });
+
+    // A lock set up by an earlier build of this change still has a scrypt
+    // record (hash of '1234' under a 0x01 salt)
+    it('unlocks with a scrypt verifier and pairs it with a scrypt dummy', async () => {
+        const scryptVerifier = {
+            v: 1,
+            kdf: 'scrypt',
+            n: 32768,
+            r: 8,
+            p: 1,
+            salt: '01'.repeat(16),
+            hash: 'e46bd81f58f1f7b373c222b44cf978520a563205869f540681b6bcf460c7032d'
+        } as VerifierRecord;
+        const derive = jest.spyOn(LockKdf, 'pbkdf2Sha256');
+        const verify = jest.spyOn(LockVerifierUtils, 'verifySecret');
+        const updateSettings = makeUpdateSettings({
+            pinVerifier: scryptVerifier
+        });
+        const { navigation } = await renderLockscreen(updateSettings, {
+            settings: { pinVerifier: scryptVerifier }
+        });
+
+        await submitPin();
+        await untilCalled(navigation.pop);
+
+        expect(verify.mock.calls.map((call) => call[1]?.kdf)).toEqual([
+            'scrypt',
+            'scrypt'
+        ]);
+        expect(derive).not.toHaveBeenCalled();
+        derive.mockRestore();
+        verify.mockRestore();
     });
 });
 
@@ -267,12 +375,39 @@ describe('Lockscreen header', () => {
     });
 });
 
+// The failed-attempt tests below make many entries in a row. Rather than run
+// two PBKDF2 derivations per entry, these records are checked by
+// a stand-in verifySecret that still resolves asynchronously, as the real one
+// does.
+const DURESS_PIN = '0000';
+const testVerifier = (secret: string): VerifierRecord => ({
+    ...LockVerifierUtils.DUMMY_VERIFIER,
+    salt: 'aa',
+    hash: Buffer.from(secret, 'utf8').toString('hex')
+});
+const useTestVerifiers = () => {
+    let verify: jest.SpyInstance;
+    beforeEach(() => {
+        verify = jest
+            .spyOn(LockVerifierUtils, 'verifySecret')
+            .mockImplementation(
+                async (secret: string, record?: VerifierRecord | null) =>
+                    !!secret &&
+                    record?.salt === 'aa' &&
+                    record.hash === Buffer.from(secret, 'utf8').toString('hex')
+            );
+    });
+    afterEach(() => verify.mockRestore());
+};
+
 // Each entry is counted in storage before it is checked, so the wipe after
 // five wrong entries cannot be avoided by a failed write or by closing the
 // app before the count is saved.
 describe('Lockscreen failed attempts', () => {
+    useTestVerifiers();
+
     it('saves the fifth wrong attempt before starting the wipe', async () => {
-        const saved: any = { pin: PIN };
+        const saved: any = { pinVerifier: testVerifier(PIN) };
         const updateSettings = makeUpdateSettings(saved, async () => {
             // the wipe must not have started before the write lands
             expect(clearAllData).not.toHaveBeenCalled();
@@ -293,7 +428,7 @@ describe('Lockscreen failed attempts', () => {
     });
 
     it('does not check entries while attempts cannot be saved', async () => {
-        const saved: any = { pin: PIN };
+        const saved: any = { pinVerifier: testVerifier(PIN) };
         const updateSettings = makeUpdateSettings(saved, async (patch) => {
             if (!isReset(patch)) throw new Error('no space left on device');
         });
@@ -314,7 +449,10 @@ describe('Lockscreen failed attempts', () => {
     });
 
     it('runs the duress wipe while attempts cannot be saved', async () => {
-        const saved: any = { pin: PIN, duressPin: '0000' };
+        const saved: any = {
+            pinVerifier: testVerifier(PIN),
+            duressPinVerifier: testVerifier(DURESS_PIN)
+        };
         const updateSettings = makeUpdateSettings(saved, async () => {
             throw new Error('no space left on device');
         });
@@ -332,7 +470,10 @@ describe('Lockscreen failed attempts', () => {
     });
 
     it('treats the duress PIN as a wrong entry in a security flow while attempts cannot be saved', async () => {
-        const saved: any = { pin: PIN, duressPin: '0000' };
+        const saved: any = {
+            pinVerifier: testVerifier(PIN),
+            duressPinVerifier: testVerifier(DURESS_PIN)
+        };
         const updateSettings = makeUpdateSettings(saved, async () => {
             throw new Error('no space left on device');
         });
@@ -353,8 +494,17 @@ describe('Lockscreen failed attempts', () => {
     });
 
     it.each([
-        ['the fifth wrong entry', { pin: PIN, authenticationAttempts: 4 }],
-        ['the duress PIN', { pin: PIN, duressPin: '0000' }]
+        [
+            'the fifth wrong entry',
+            { pinVerifier: testVerifier(PIN), authenticationAttempts: 4 }
+        ],
+        [
+            'the duress PIN',
+            {
+                pinVerifier: testVerifier(PIN),
+                duressPinVerifier: testVerifier(DURESS_PIN)
+            }
+        ]
     ])(
         'starts one wipe when an entry arrives while the pending wipe for %s is saved',
         async (_case, settings) => {
@@ -376,7 +526,7 @@ describe('Lockscreen failed attempts', () => {
     );
 
     it('drops an entry made while the previous attempt is being saved', async () => {
-        const saved: any = { pin: PIN };
+        const saved: any = { pinVerifier: testVerifier(PIN) };
         const write = deferred();
         const updateSettings = makeUpdateSettings(saved, () => write.promise);
         const { SettingsStore } = await renderLockscreen(updateSettings, {
@@ -394,7 +544,10 @@ describe('Lockscreen failed attempts', () => {
     });
 
     it('saves the pending wipe before the wiping screen shows', async () => {
-        const saved: any = { pin: PIN, authenticationAttempts: 4 };
+        const saved: any = {
+            pinVerifier: testVerifier(PIN),
+            authenticationAttempts: 4
+        };
         const record = deferred();
         (markWipePending as jest.Mock).mockReturnValue(record.promise);
         await renderLockscreen(makeUpdateSettings(saved), { settings: saved });
@@ -412,7 +565,10 @@ describe('Lockscreen failed attempts', () => {
     });
 
     it('saves the pending wipe before the wiping screen shows for the duress PIN', async () => {
-        const saved: any = { pin: PIN, duressPin: '0000' };
+        const saved: any = {
+            pinVerifier: testVerifier(PIN),
+            duressPinVerifier: testVerifier(DURESS_PIN)
+        };
         const record = deferred();
         (markWipePending as jest.Mock).mockReturnValue(record.promise);
         await renderLockscreen(makeUpdateSettings(saved), { settings: saved });
@@ -434,8 +590,13 @@ describe('Lockscreen failed attempts', () => {
 // reset can fail or be cut short. A saved count at the limit therefore does
 // not show that the last entry was wrong, and must not wipe by itself.
 describe('Lockscreen with a saved count at the limit', () => {
+    useTestVerifiers();
+
     it('does not wipe on the next launch when a correct entry could not reset the count', async () => {
-        const saved: any = { pin: PIN, authenticationAttempts: 4 };
+        const saved: any = {
+            pinVerifier: testVerifier(PIN),
+            authenticationAttempts: 4
+        };
         let resetFails = true;
         const updateSettings = makeUpdateSettings(saved, async (patch) => {
             if (isReset(patch) && resetFails) {
@@ -471,7 +632,10 @@ describe('Lockscreen with a saved count at the limit', () => {
 
     it('does not wipe on launch after a correct entry ended before its reset, and still offers biometrics', async () => {
         // the app ended between saving the fifth attempt and the reset
-        const saved: any = { pin: PIN, authenticationAttempts: 5 };
+        const saved: any = {
+            pinVerifier: testVerifier(PIN),
+            authenticationAttempts: 5
+        };
         (verifyBiometry as jest.Mock).mockResolvedValue(true);
         const { SettingsStore } = await renderLockscreen(
             makeUpdateSettings(saved),
@@ -485,7 +649,10 @@ describe('Lockscreen with a saved count at the limit', () => {
     });
 
     it('wipes on the next wrong entry', async () => {
-        const saved: any = { pin: PIN, authenticationAttempts: 5 };
+        const saved: any = {
+            pinVerifier: testVerifier(PIN),
+            authenticationAttempts: 5
+        };
         const { SettingsStore, navigation } = await renderLockscreen(
             makeUpdateSettings(saved),
             { settings: saved }
@@ -509,7 +676,7 @@ describe('Lockscreen with a saved count at the limit', () => {
 describe('Lockscreen with a wipe that did not finish', () => {
     it('finishes the wipe and restarts instead of asking for a credential', async () => {
         (isWipePending as jest.Mock).mockResolvedValue(true);
-        const updateSettings = makeUpdateSettings({ pin: PIN });
+        const updateSettings = makeUpdateSettings({ pinVerifier });
         const { SettingsStore } = await renderLockscreen(updateSettings, {
             biometry: true
         });
@@ -523,9 +690,9 @@ describe('Lockscreen with a wipe that did not finish', () => {
 
     it('finishes the wipe before the POS waiver applies', async () => {
         (isWipePending as jest.Mock).mockResolvedValue(true);
-        const updateSettings = makeUpdateSettings({ pin: PIN });
+        const updateSettings = makeUpdateSettings({ pinVerifier });
         const SettingsStore = {
-            settings: { pin: PIN },
+            settings: { pinVerifier },
             posStatus: 'active',
             isBiometryConfigured: jest.fn(() => false),
             isPosEnabled: jest.fn(() => true),
@@ -546,5 +713,66 @@ describe('Lockscreen with a wipe that did not finish', () => {
         expect(clearAllData).toHaveBeenCalledTimes(1);
         expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
         expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+});
+
+// Deleting a PIN or password has to clear the stored verifier, since that is
+// the only thing the lock checks now. A delete that leaves it in place keeps
+// the lock on.
+describe('Lockscreen delete handlers', () => {
+    const renderForDelete = async () => {
+        const ref = React.createRef<any>();
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const SettingsStore = {
+            settings: { pinVerifier },
+            posStatus: 'inactive',
+            triggerSettingsRefresh: false,
+            isBiometryConfigured: jest.fn(() => false),
+            isPosEnabled: jest.fn(() => false),
+            loginRequired: jest.fn(() => true),
+            setLoginStatus: jest.fn(),
+            setPosStatus: jest.fn(),
+            getSettings: jest.fn(),
+            disableBiometry: jest.fn(() => Promise.resolve()),
+            updateSettings
+        };
+        const navigation = {
+            pop: jest.fn(),
+            popTo: jest.fn(),
+            replace: jest.fn()
+        };
+        await render(
+            <Lockscreen
+                ref={ref}
+                SettingsStore={SettingsStore as any}
+                navigation={navigation as any}
+                route={{ params: {} } as any}
+            />
+        );
+        return { lockscreen: ref.current, updateSettings, navigation };
+    };
+
+    it.each([
+        ['deletePin', ['pinVerifier', 'duressPinVerifier']],
+        ['deleteDuressPin', ['duressPinVerifier']],
+        ['deletePassword', ['passphraseVerifier', 'duressPassphraseVerifier']],
+        ['deleteDuressPassword', ['duressPassphraseVerifier']]
+    ])('%s clears %j', async (handler, verifierKeys) => {
+        const { lockscreen, updateSettings, navigation } =
+            await renderForDelete();
+
+        await act(async () => {
+            await lockscreen[handler]();
+        });
+
+        expect(navigation.popTo).toHaveBeenCalledWith('Security');
+        const writes = updateSettings.mock.calls.map((call: any[]) => call[0]);
+        for (const key of verifierKeys) {
+            expect(
+                writes.some(
+                    (patch: any) => key in patch && patch[key] === undefined
+                )
+            ).toBe(true);
+        }
     });
 });
