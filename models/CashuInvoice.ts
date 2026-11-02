@@ -2,6 +2,7 @@ import { observable, computed } from 'mobx';
 import humanizeDuration from 'humanize-duration';
 
 import BaseModel from './BaseModel';
+import type { CDKTransaction } from '../cashu-cdk';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { localeString } from '../utils/LocaleUtils';
@@ -31,27 +32,21 @@ export default class CashuInvoice extends BaseModel {
     public cdkAmount?: number;
     public cdkMemo?: string;
     public cdkFee?: number;
+    public cdkQuoteId?: string;
 
     /**
      * Create CashuInvoice from CDK transaction (incoming)
      */
-    static fromCDKTransaction(tx: {
-        id: string;
-        amount: number;
-        fee?: number;
-        mint_url: string;
-        timestamp: number;
-        memo?: string;
-        // absent before CDK 0.18, when every recorded transaction is completed
-        state?: string;
-    }): CashuInvoice {
-        // only a completed record is paid; an unrecognised state (the iOS
-        // bridge reports "Unknown" for a status it does not know) stays
-        // unpaid so it cannot show as received without being in the balance
+    static fromCDKTransaction(tx: CDKTransaction): CashuInvoice {
+        // state is absent before CDK 0.18, when every recorded transaction is
+        // completed. Only a completed record is paid; an unrecognised state
+        // (the iOS bridge reports "Unknown" for a status it does not know)
+        // stays unpaid so it cannot show as received without being in the
+        // balance
         const completed = tx.state === undefined || tx.state === 'Completed';
         const invoice = new CashuInvoice({
             quote: tx.id,
-            request: '',
+            request: tx.payment_request || '',
             state: completed
                 ? 'PAID'
                 : tx.state === 'Failed'
@@ -64,7 +59,8 @@ export default class CashuInvoice extends BaseModel {
             cdkTimestamp: tx.timestamp,
             cdkAmount: tx.amount,
             cdkMemo: tx.memo,
-            cdkFee: tx.fee || 0
+            cdkFee: tx.fee || 0,
+            cdkQuoteId: tx.quote_id
         });
         return invoice;
     }
@@ -112,6 +108,10 @@ export default class CashuInvoice extends BaseModel {
     @computed public get getAmount(): number {
         if (this.fromCDK) return this.cdkAmount || 0;
         return this.decoded?.satoshis ? this.decoded.satoshis : 0;
+    }
+
+    @computed public get getFee(): number {
+        return this.cdkFee || 0;
     }
 
     // return amount in satoshis

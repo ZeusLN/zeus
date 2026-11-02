@@ -9,6 +9,7 @@ jest.mock('../stores/Stores', () => ({
 }));
 
 import Payment from '../models/Payment';
+import CashuPayment from '../models/CashuPayment';
 import Invoice from '../models/Invoice';
 import Transaction from '../models/Transaction';
 import CashuToken from '../models/CashuToken';
@@ -512,6 +513,45 @@ describe('ActivityFilterUtils', () => {
             '600',
             700
         ]);
+    });
+
+    it('hides in-flight CDK melts unless in-transit payments are shown', () => {
+        const cdkMelt = {
+            direction: 'outgoing' as const,
+            fee: 1,
+            mint_url: 'https://mint.example.com',
+            timestamp: 1756200000,
+            quote_id: 'quote-1'
+        };
+        const activities: any[] = [
+            CashuPayment.fromCDKTransaction({
+                ...cdkMelt,
+                id: 'settled',
+                amount: 200,
+                state: 'Completed'
+            }),
+            CashuPayment.fromCDKTransaction({
+                ...cdkMelt,
+                id: 'in-flight',
+                amount: 300,
+                state: 'Pending'
+            })
+        ];
+
+        const filter = getDefaultFilter();
+        filter.inTransit = false;
+        expect(
+            ActivityFilterUtils.filterActivities(activities, filter).map(
+                (a) => a.getAmount
+            )
+        ).toEqual([200]);
+
+        filter.inTransit = true;
+        expect(
+            ActivityFilterUtils.filterActivities(activities, filter).map(
+                (a) => a.getAmount
+            )
+        ).toEqual([200, 300]);
     });
 
     const getDefaultFilter = () =>
