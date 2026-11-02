@@ -24,6 +24,13 @@ import Invoice from '../models/Invoice';
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 import { SimplePool } from 'nostr-tools';
 import wifUtils from './WIFUtils';
+import { walletrpc } from '../proto/lightning';
+
+const SUPPORTED_IMPORT_ADDRESS_TYPES: number[] = [
+    walletrpc.AddressType.WITNESS_PUBKEY_HASH,
+    walletrpc.AddressType.NESTED_WITNESS_PUBKEY_HASH,
+    walletrpc.AddressType.TAPROOT_PUBKEY
+];
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
@@ -1101,12 +1108,17 @@ const handleAnything = async (
         BackendUtils.supportsAccounts() &&
         AddressUtils.isJsonWalletExport(value)
     ) {
-        const { MasterFingerprint, ExtPubKey } = JSON.parse(value);
+        const { MasterFingerprint, ExtPubKey, AddressType } = JSON.parse(value);
         return [
             'ImportAccount',
             {
                 extended_public_key: ExtPubKey,
-                master_key_fingerprint: MasterFingerprint
+                master_key_fingerprint: MasterFingerprint,
+                // set by the BC-UR crypto-account scanner from the
+                // descriptor's script type
+                ...(SUPPORTED_IMPORT_ADDRESS_TYPES.includes(AddressType) && {
+                    address_type: AddressType
+                })
             }
         ];
     } else if (
