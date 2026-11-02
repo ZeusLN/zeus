@@ -1869,6 +1869,7 @@
     "stores.NostrWalletConnectStore.error.cashuInsufficientBalance": "Saldo insuficiente. Solo te quedan {{balance}} sats en la billetera Cashu y estás intentando gastar {{amount}} sats.",
     "stores.NostrWalletConnectStore.error.lightningInsufficientBalance": "Saldo insuficiente. Solo te quedan {{balance}} sats en la billetera Lightning y estás intentando gastar {{amount}} sats.",
     "stores.NostrWalletConnectStore.error.feeLimitReducedByBudget": "The remaining budget for this connection limited the routing fee to {{feeLimit}} sats.",
+    "stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget": "This payment ({{amount}} sats) plus a fee reserve of {{feeReserve}} sats exceeds the remaining budget for this connection ({{remaining}} sats).",
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "No se ha seleccionado ninguna menta Cashu. Seleccione una primero.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "No se pudo decodificar la factura: payReq no está definido",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Factura ya pagada",
