@@ -140,7 +140,7 @@ const parseIPv4Literal = (host: string): number[] | null => {
 const isPrivateIPv4 = (host: string): boolean => {
     const octets = parseIPv4Literal(host);
     if (!octets) return false;
-    const [a, b] = octets;
+    const [a, b, c] = octets;
     if (a === 0) return true; // "this network"
     if (a === 10) return true; // RFC1918
     if (a === 127) return true; // loopback
@@ -148,6 +148,9 @@ const isPrivateIPv4 = (host: string): boolean => {
     if (a === 172 && b >= 16 && b <= 31) return true; // RFC1918
     if (a === 192 && b === 168) return true; // RFC1918
     if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT (RFC6598)
+    if (a === 192 && b === 0 && c === 0) return true; // IETF protocol assignments
+    if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking
+    if (a >= 224) return true; // multicast, reserved, and broadcast
     return false;
 };
 
@@ -230,6 +233,7 @@ const isPrivateIPv6 = (host: string): boolean => {
     }
     if ((groups[0] & 0xfe00) === 0xfc00) return true; // fc00::/7 unique-local
     if ((groups[0] & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
+    if ((groups[0] & 0xffc0) === 0xfec0) return true; // fec0::/10 site-local
     return false;
 };
 

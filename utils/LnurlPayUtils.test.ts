@@ -312,6 +312,31 @@ describe('LnurlPayUtils', () => {
             );
         });
 
+        // same ranges as the native mint-host filter (#4364)
+        it.each([
+            'https://192.0.0.170/x', // IETF protocol assignments
+            'https://198.18.0.1/x', // benchmarking
+            'https://198.19.255.254/x',
+            'https://224.0.0.1/x', // multicast
+            'https://239.255.255.250/x',
+            'https://240.0.0.1/x', // reserved
+            'https://255.255.255.255/x', // broadcast
+            'https://[fec0::1]/x', // IPv6 site-local
+            'https://[::ffff:198.18.0.1]/x'
+        ])('rejects the special-purpose address %s', (cb) => {
+            expect(isLnurlCallbackAllowed(cb).ok).toBe(false);
+        });
+
+        it.each([
+            'https://192.0.1.1/x',
+            'https://198.17.255.254/x',
+            'https://198.20.0.1/x',
+            'https://223.255.255.254/x',
+            'https://[fe00::1]/x'
+        ])('still allows %s, just outside those ranges', (cb) => {
+            expect(isLnurlCallbackAllowed(cb).ok).toBe(true);
+        });
+
         it('rejects IPv6 loopback', () => {
             expect(isLnurlCallbackAllowed('http://[::1]/x').ok).toBe(false);
         });
