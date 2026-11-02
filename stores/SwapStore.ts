@@ -48,7 +48,7 @@ import SettingsStore, {
 
 import Storage from '../storage';
 
-import Swap, { SwapState, SwapType } from '../models/Swap';
+import Swap, { SwapState, SwapType, SWAP_GETTERS } from '../models/Swap';
 import {
     privateKeyFromKeys,
     preimageHexFrom
@@ -145,15 +145,6 @@ const REVERSE_SWAP_FIELDS = [
     'timeoutBlockHeight',
     'onchainAmount'
 ];
-
-// Names of the Swap model's getters. new Swap() throws on a stored member
-// with one of these names (swaps saved before #5334 can have `model` or
-// `qrCodeValue`), so they are dropped from the copy each Swap is built from.
-const SWAP_GETTERS = new Set(
-    Object.entries(Object.getOwnPropertyDescriptors(Swap.prototype))
-        .filter(([, descriptor]) => descriptor.get)
-        .map(([name]) => name)
-);
 
 // The fields a rescued swap takes from the host's /swap/restore response,
 // at the top level and inside claimDetails/refundDetails
