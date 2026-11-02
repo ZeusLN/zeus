@@ -1305,6 +1305,23 @@ describe('NostrWalletConnectStore updateConnection budget transitions', () => {
         expect(connection.budgetRenewal).toBe(BudgetRenewalType.Daily);
         expect(connection.totalSpendSats).toBe(0);
     });
+
+    it('keeps the spend counter when the renewal period changes without a budget', async () => {
+        const { store } = createStore();
+        const connection = addConnection(store, {
+            budgetRenewal: never,
+            totalSpendSats: 400
+        });
+
+        await store.updateConnection(connection.id, {
+            maxAmountSats: undefined,
+            budgetRenewal: BudgetRenewalType.Daily
+        });
+
+        expect(connection.budgetRenewal).toBe(BudgetRenewalType.Daily);
+        expect(connection.totalSpendSats).toBe(400);
+        expect(connection.lastBudgetReset).toBeUndefined();
+    });
 });
 
 describe('NostrWalletConnectStore relay release', () => {
