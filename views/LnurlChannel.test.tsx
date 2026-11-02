@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
@@ -46,11 +47,11 @@ const lnurlParams = {
     uri: '03864ef025fde8fb587d989186ce6a4a186895ee44a926bfc370e2c366597a3f8f@3.33.236.230:9735'
 };
 
-const renderView = () =>
+const renderView = (params: typeof lnurlParams = lnurlParams) =>
     render(
         <LnurlChannel
             navigation={{} as any}
-            route={{ params: { lnurlParams } } as any}
+            route={{ params: { lnurlParams: params } } as any}
             ChannelsStore={{} as any}
             NodeInfoStore={{ nodeInfo: { getPubkey: 'localpubkey' } } as any}
         />
@@ -138,5 +139,24 @@ describe('LnurlChannel', () => {
 
         await fireEvent.press(connectButton());
         expect(callbackQuery().get('private')).toBe('0');
+    });
+
+    it('refuses a callback on a private host without fetching it', async () => {
+        const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation();
+        await renderView({
+            ...lnurlParams,
+            callback: 'https://192.168.1.1/channel'
+        });
+
+        await fireEvent.press(connectButton());
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'utils.lnurl.unsafeCallback',
+            expect.anything(),
+            expect.anything()
+        );
+        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+        alertSpy.mockRestore();
     });
 });

@@ -28,7 +28,7 @@ jest.mock('./SwipeableRowAction', () => 'SwipeableRowAction');
 jest.mock('./SwipeableRowContainer', () => 'SwipeableRowContainer');
 
 import * as React from 'react';
-import { Text } from 'react-native';
+import { Alert, Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { settingsStore } from '../../stores/Stores';
 import LightningSwipeableRow from './LightningSwipeableRow';
@@ -124,6 +124,23 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             'get',
             `http://${ONION}/.well-known/lnurlp/satoshi`
         );
+    });
+
+    it('refuses an address on a private host without fetching it', async () => {
+        const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation();
+
+        const navigation = await tapRow('user@192.168.1.1');
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'utils.lnurl.unsafeLightningAddress',
+            expect.anything(),
+            expect.anything()
+        );
+        expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+        expect(mockDoTorRequest).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        alertSpy.mockRestore();
     });
 
     it('fetches a clearnet domain with an .onion label over https', async () => {
