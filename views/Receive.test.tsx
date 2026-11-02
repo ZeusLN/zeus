@@ -1187,3 +1187,52 @@ describe('Receive LSP fee shown with the invoice', () => {
         expect(bareText(view.render())).toEqual([]);
     });
 });
+
+// An LNURL-withdraw that reaches an already open Receive (new route params)
+describe('Receive.componentDidUpdate LNURL-withdraw', () => {
+    afterEach(() => (getSatAmount as jest.Mock).mockReset());
+
+    it('converts maxWithdrawable in sats, not in the unit the screen was showing', async () => {
+        // the screen shows USD; getSatAmount reads its input in that unit
+        // until resetUnits() switches it to sats
+        let units = 'fiat';
+        (getSatAmount as jest.Mock).mockImplementation((x: string | number) =>
+            units === 'fiat' ? Number(x) * 1000 : Number(x)
+        );
+        const UnitsStore = { resetUnits: jest.fn(() => (units = 'sats')) };
+        const prevProps: any = { route: { params: {} } };
+        const view = new Receive({
+            navigation: { navigate: jest.fn() },
+            route: {
+                params: {
+                    amount: '',
+                    lnurlParams: {
+                        tag: 'withdrawRequest',
+                        maxWithdrawable: 25000000,
+                        minWithdrawable: 1000,
+                        defaultDescription: 'card'
+                    }
+                }
+            },
+            InvoicesStore: { reset: jest.fn() },
+            UnitsStore,
+            ChannelsStore: { totalInbound: 30000 },
+            SettingsStore: { settings: {} }
+        } as unknown as React.ComponentProps<typeof Receive>);
+        view.state = { ...view.state, lspIsActive: true };
+        view.setState = jest.fn();
+
+        await view.componentDidUpdate(prevProps);
+
+        expect(UnitsStore.resetUnits).toHaveBeenCalled();
+        expect(view.setState).toHaveBeenCalledWith(
+            expect.objectContaining({
+                memo: 'card',
+                value: '25000',
+                satAmount: 25000,
+                // 25,000 sats fit in the 30,000 sats of inbound liquidity
+                needInbound: false
+            })
+        );
+    });
+});
