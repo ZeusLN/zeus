@@ -532,13 +532,26 @@ describe('SwapStore.fetchAndUpdateSwaps', () => {
         );
 
     // the silent host accepts the request and never answers; the other
-    // one answers at once
+    // one answers at once. Like RNBlobUtil, cancel() rejects the request
+    // synchronously.
     const cancel = jest.fn();
+    const heldRequest = () => {
+        let rejectRequest!: (err: Error) => void;
+        const request = new Promise((_, reject) => {
+            rejectRequest = reject;
+        });
+        return Object.assign(request, {
+            cancel: () => {
+                cancel();
+                rejectRequest(new Error('canceled'));
+            }
+        });
+    };
     const mockHosts = () =>
         (ReactNativeBlobUtil.fetch as jest.Mock).mockImplementation(
             (_method: string, url: string) =>
                 url.startsWith(SILENT_HOST)
-                    ? Object.assign(new Promise(() => undefined), { cancel })
+                    ? heldRequest()
                     : Promise.resolve({
                           json: () => ({ status: SwapState.InvoicePaid })
                       })
@@ -567,6 +580,14 @@ describe('SwapStore.fetchAndUpdateSwaps', () => {
 
         expect(store.swapsLoading).toBe(false);
         expect(cancel).toHaveBeenCalledTimes(2);
+        // logged as a timeout, not as the cancel that follows it
+        const warned = (console.warn as jest.Mock).mock.calls.map(
+            ([message, err]) => [message, err?.message]
+        );
+        expect(warned).toEqual([
+            ['Failed to fetch status for swap held-1', 'Request timeout'],
+            ['Failed to fetch status for swap held-2', 'Request timeout']
+        ]);
         expect(
             Object.fromEntries(store.swaps.map((s: any) => [s.id, s.status]))
         ).toEqual({

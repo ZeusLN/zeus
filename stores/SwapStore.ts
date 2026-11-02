@@ -1573,8 +1573,11 @@ export default class SwapStore {
                         request,
                         new Promise<never>((_, reject) => {
                             timer = setTimeout(() => {
-                                request.cancel?.();
+                                // reject first: cancel() rejects request
+                                // with 'canceled' synchronously, and the
+                                // race would settle with that instead
                                 reject(new Error('Request timeout'));
+                                request.cancel?.();
                             }, SWAP_STATUS_TIMEOUT_MS);
                         })
                     ]);
