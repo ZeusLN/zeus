@@ -1700,3 +1700,76 @@ describe('NostrConnectUtils pay_invoice amount resolution', () => {
         ).resolves.toBe(0);
     });
 });
+
+describe('NostrConnectUtils request event checks', () => {
+    const NOW = 1_800_000_000;
+    const window = NostrConnectUtils.PAY_REQUEST_MAX_CLOCK_DIFFERENCE_SECONDS;
+
+    it('uses a 10 minute window', () => {
+        expect(window).toBe(600);
+    });
+
+    it('is not expired without an expiration tag', () => {
+        expect(NostrConnectUtils.isRequestEventExpired({ tags: [] }, NOW)).toBe(
+            false
+        );
+        expect(NostrConnectUtils.isRequestEventExpired({}, NOW)).toBe(false);
+    });
+
+    it('is expired once the expiration time is reached', () => {
+        const at = (expiration: string) => ({
+            tags: [
+                ['p', 'x'],
+                ['expiration', expiration]
+            ]
+        });
+        expect(
+            NostrConnectUtils.isRequestEventExpired(at(String(NOW + 1)), NOW)
+        ).toBe(false);
+        expect(
+            NostrConnectUtils.isRequestEventExpired(at(String(NOW)), NOW)
+        ).toBe(true);
+        expect(
+            NostrConnectUtils.isRequestEventExpired(at(String(NOW - 1)), NOW)
+        ).toBe(true);
+    });
+
+    it('treats an expiration that is not a number as expired', () => {
+        expect(
+            NostrConnectUtils.isRequestEventExpired(
+                { tags: [['expiration', 'soon']] },
+                NOW
+            )
+        ).toBe(true);
+        expect(
+            NostrConnectUtils.isRequestEventExpired(
+                { tags: [['expiration']] },
+                NOW
+            )
+        ).toBe(true);
+    });
+
+    it('is recent within the window either way', () => {
+        for (const createdAt of [NOW, NOW - window, NOW + window]) {
+            expect(
+                NostrConnectUtils.isRequestEventRecent(
+                    { created_at: createdAt },
+                    NOW
+                )
+            ).toBe(true);
+        }
+    });
+
+    it('is not recent outside the window or without created_at', () => {
+        for (const event of [
+            { created_at: NOW - window - 1 },
+            { created_at: NOW + window + 1 },
+            { created_at: undefined },
+            { created_at: NaN }
+        ]) {
+            expect(NostrConnectUtils.isRequestEventRecent(event, NOW)).toBe(
+                false
+            );
+        }
+    });
+});
