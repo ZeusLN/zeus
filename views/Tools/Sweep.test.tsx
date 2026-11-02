@@ -6,10 +6,16 @@ jest.mock('../../stores/Stores');
 jest.mock('../../utils/AddressUtils', () => ({
     isValidBitcoinAddressForNode: () => true
 }));
+// uses the en.json text for the confirmation, substituted the way
+// localeString does, so the test fails if code and placeholders disagree
 jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (key: string) =>
+    localeString: (key: string, substitutions?: { [key: string]: string }) =>
         key === 'views.Sweep.confirm'
-            ? 'Send {amount} to {destination} at {fee}'
+            ? Object.entries(substitutions || {}).reduce(
+                  (text, [subKey, value]) =>
+                      text.split(`{{${subKey}}}`).join(value),
+                  require('../../locales/en.json')[key] as string
+              )
             : key
 }));
 jest.mock('../../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
@@ -97,7 +103,8 @@ describe('Sweep', () => {
         expect(navigation.navigate).not.toHaveBeenCalled();
         expect(Alert.alert).toHaveBeenCalledTimes(1);
         expect((Alert.alert as jest.Mock).mock.calls[0][1]).toBe(
-            `Send 1,750,000 to ${DESTINATION} at 2`
+            'Send the whole on-chain balance (1,750,000 sats, less the ' +
+                `network fee) to ${DESTINATION} at 2 sat/vB?`
         );
     });
 
@@ -141,7 +148,9 @@ describe('Sweep', () => {
     it('sends at a fee rate typed into the fee field', async () => {
         const { TransactionsStore } = await renderSweep('lnd', '15');
 
-        expect((Alert.alert as jest.Mock).mock.calls[0][1]).toContain('at 15');
+        expect((Alert.alert as jest.Mock).mock.calls[0][1]).toContain(
+            'at 15 sat/vB?'
+        );
         await pressAlertButton('general.confirm');
         expect(TransactionsStore.sendCoins).toHaveBeenCalledWith(
             expect.objectContaining({ sat_per_vbyte: '15' })

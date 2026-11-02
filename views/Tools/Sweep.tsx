@@ -88,10 +88,11 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
             ).plus(BalanceStore.unconfirmedBlockchainBalance || 0);
             Alert.alert(
                 localeString('views.Sweep.title'),
-                localeString('views.Sweep.confirm')
-                    .replace('{amount}', numberWithCommas(amount.toString()))
-                    .replace('{destination}', destination)
-                    .replace('{fee}', fee),
+                localeString('views.Sweep.confirm', {
+                    amount: numberWithCommas(amount.toString()),
+                    destination,
+                    fee
+                }),
                 [
                     {
                         text: localeString('general.cancel'),
