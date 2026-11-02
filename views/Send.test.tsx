@@ -267,14 +267,27 @@ describe('Send BOLT 12 Proceed', () => {
     const renderOffer = async ({
         bolt12 = offer,
         satAmount = 2500,
-        paymentInFlight = false
+        paymentInFlight = false,
+        decodedSats
     }: {
         bolt12?: string;
         satAmount?: number | string;
         paymentInFlight?: boolean;
+        // amount the fetched invoice decodes to, as InvoicesStore sets it
+        decodedSats?: number;
     } = {}) => {
         const TransactionsStore = { paymentInFlight, sendPayment: jest.fn() };
-        const InvoicesStore = { getPayReq: jest.fn() };
+        const InvoicesStore: any = {
+            pay_req: null,
+            getPayReq: jest.fn(async () => {
+                if (decodedSats !== undefined) {
+                    InvoicesStore.pay_req = { getRequestAmount: decodedSats };
+                }
+            }),
+            clearPayReq: jest.fn(() => {
+                InvoicesStore.pay_req = null;
+            })
+        };
         const { navigation } = await renderView({
             params: {
                 destination: offer,
@@ -453,6 +466,43 @@ describe('Send BOLT 12 Proceed', () => {
         expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest');
         expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
     });
+
+    it('opens PaymentRequest when the invoice is for the amount entered', async () => {
+        supportsOffersDirectPay.mockReturnValue(false);
+        fetchInvoiceFromOffer.mockResolvedValue({ invoice: 'lni1...' });
+        const { navigation, InvoicesStore } = await renderOffer({
+            decodedSats: 2500
+        });
+
+        await proceed();
+
+        expect(InvoicesStore.getPayReq).toHaveBeenCalledWith('lni1...');
+        expect(InvoicesStore.clearPayReq).not.toHaveBeenCalled();
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest');
+        expect(errorShown()).toBeUndefined();
+    });
+
+    it.each([250000, 2499, 0])(
+        'refuses an invoice for %p sats when 2500 were entered',
+        async (decodedSats) => {
+            supportsOffersDirectPay.mockReturnValue(false);
+            fetchInvoiceFromOffer.mockResolvedValue({ invoice: 'lni1...' });
+            const { navigation, TransactionsStore, InvoicesStore } =
+                await renderOffer({ decodedSats });
+
+            await proceed();
+
+            expect(InvoicesStore.getPayReq).toHaveBeenCalledWith('lni1...');
+            expect(InvoicesStore.clearPayReq).toHaveBeenCalled();
+            expect(InvoicesStore.pay_req).toBeNull();
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
+            expect(errorShown()).toBe(
+                'views.Send.payBolt12.invoiceAmountMismatch'
+            );
+            expect(button('general.proceed').props.disabled).toBe(false);
+        }
+    );
 
     it.each([
         [
