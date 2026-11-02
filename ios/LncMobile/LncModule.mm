@@ -261,20 +261,28 @@ RCT_EXPORT_METHOD(sweepRemoteClosed:(NSString *)seedPhrase
                  resolver:(RCTPromiseResolveBlock)resolve
                  rejecter:(RCTPromiseRejectBlock)reject)
 {
-    NSError *error;
-    NSString *response = LndmobileSweepRemoteClosed(seedPhrase, apiURL, sweepAddr, recoveryWindow, feeRate, sleepSeconds, publish, isTestnet, &error);
-    if (error) {
-        // Create a string representation of the error
-        NSString *errorString = [NSString stringWithFormat:@"%@",
-                                 error.localizedDescription];
+    // Off the module queue: the sweep sleeps and makes network calls
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSError *error;
+        NSString *response = LndmobileSweepRemoteClosed(seedPhrase, apiURL, sweepAddr, recoveryWindow, feeRate, sleepSeconds, publish, isTestnet, &error);
+        if (error) {
+            // Create a string representation of the error
+            NSString *errorString = [NSString stringWithFormat:@"%@",
+                                     error.localizedDescription];
 
-        reject(@"sweepRemoteClosed_failure", errorString, error);
-    } else {
-        resolve(response);
-    }
+            reject(@"sweepRemoteClosed_failure", errorString, error);
+        } else {
+            resolve(response);
+        }
+    });
 }
 
 // Swaps
+//
+// These run on a global queue because the Go calls can make blocking HTTP
+// requests to the swap host. This module has no methodQueue, so its methods
+// share one serial queue with invokeRPC and initListener, and a host that
+// never answers would stall every node call for an LNC wallet.
 
 RCT_EXPORT_METHOD(createClaimTransaction:(NSString *)endpoint
                  swapId:(NSString *)swapId
@@ -287,14 +295,16 @@ RCT_EXPORT_METHOD(createClaimTransaction:(NSString *)endpoint
                  resolver:(RCTPromiseResolveBlock)resolve
                  rejecter:(RCTPromiseRejectBlock)reject)
 {
-    NSError *error;
-    LndmobileCreateClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, transactionHash, pubNonce, &error);
-    if (error) {
-        NSLog(@"createClaimTransaction error   %@",   error);
-        reject(@"createClaimTransaction_error", error.localizedDescription, error);
-    } else {
-        resolve(@"Success");
-    }
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSError *error;
+        LndmobileCreateClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, transactionHash, pubNonce, &error);
+        if (error) {
+            NSLog(@"createClaimTransaction error   %@",   error);
+            reject(@"createClaimTransaction_error", error.localizedDescription, error);
+        } else {
+            resolve(@"Success");
+        }
+    });
 }
 
 // Builds and signs a reverse swap claim and returns its hex without
@@ -315,14 +325,16 @@ RCT_EXPORT_METHOD(buildReverseClaimTransaction:(NSString *)endpoint
                  resolver:(RCTPromiseResolveBlock)resolve
                  rejecter:(RCTPromiseRejectBlock)reject)
 {
-    NSError *error;
-    NSString *txHex = LndmobileBuildReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, (int32_t)feeRate, (int32_t)minerFee, network, &error);
-    if (error) {
-        NSLog(@"buildReverseClaimTransaction error   %@",   error);
-        reject(@"buildReverseClaimTransaction_error", error.localizedDescription, error);
-    } else {
-        resolve(txHex);
-    }
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSError *error;
+        NSString *txHex = LndmobileBuildReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, (int32_t)feeRate, (int32_t)minerFee, network, &error);
+        if (error) {
+            NSLog(@"buildReverseClaimTransaction error   %@",   error);
+            reject(@"buildReverseClaimTransaction_error", error.localizedDescription, error);
+        } else {
+            resolve(txHex);
+        }
+    });
 }
 
 // Builds and signs a submarine swap refund and returns its hex without
@@ -344,14 +356,16 @@ RCT_EXPORT_METHOD(buildRefundTransaction:(NSString *)endpoint
                  resolver:(RCTPromiseResolveBlock)resolve
                  rejecter:(RCTPromiseRejectBlock)reject)
 {
-    NSError *error;
-    NSString *txHex = LndmobileBuildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, (int32_t)feeRate, (int32_t)minerFee, (int32_t)timeoutBlockHeight, destinationAddress, lockupAddress, cooperative, network, &error);
-    if (error) {
-        NSLog(@"buildRefundTransaction error   %@",   error);
-        reject(@"buildRefundTransaction_error", error.localizedDescription, error);
-    } else {
-        resolve(txHex);
-    }
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSError *error;
+        NSString *txHex = LndmobileBuildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, (int32_t)feeRate, (int32_t)minerFee, (int32_t)timeoutBlockHeight, destinationAddress, lockupAddress, cooperative, network, &error);
+        if (error) {
+            NSLog(@"buildRefundTransaction error   %@",   error);
+            reject(@"buildRefundTransaction_error", error.localizedDescription, error);
+        } else {
+            resolve(txHex);
+        }
+    });
 }
 
 // TurboModule support disabled - no codegen spec available
