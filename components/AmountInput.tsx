@@ -158,8 +158,8 @@ export default class AmountInput extends React.Component<
                     .replace(/\.$/, '');
             }
 
-            // Navigate to keypad view with callback
             this.props.onNavigateAway?.();
+            // Navigate to keypad view with callback
             NavigationService.navigate('AmountKeypad', {
                 initialAmount: displayValue || '0',
                 hideUnitChangeButton,

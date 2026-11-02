@@ -676,9 +676,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         this._unsubscribe?.();
     }
 
-    // The amount keypad is a screen of its own: opening it blurs this one,
-    // which must not reset the form
-    keypadOpening = () => {
+    // The amount keypad and the fee editor are screens of their own:
+    // opening one blurs this one, which must not reset the form
+    markNavigatingAway = () => {
         this.isNavigatingAway = true;
     };
 
@@ -1168,7 +1168,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                 >
                                                     <AmountInput
                                                         onNavigateAway={
-                                                            this.keypadOpening
+                                                            this
+                                                                .markNavigatingAway
                                                         }
                                                         prefix={
                                                             <TouchableOpacity
@@ -1387,7 +1388,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         <AmountInput
                                                             onNavigateAway={
                                                                 this
-                                                                    .keypadOpening
+                                                                    .markNavigatingAway
                                                             }
                                                             prefix={
                                                                 <TouchableOpacity
@@ -2525,10 +2526,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 fee: text
                                                             })
                                                         }
-                                                        onNavigateAway={() => {
-                                                            this.isNavigatingAway =
-                                                                true;
-                                                        }}
+                                                        onNavigateAway={
+                                                            this
+                                                                .markNavigatingAway
+                                                        }
                                                         navigation={navigation}
                                                     />
                                                 </>

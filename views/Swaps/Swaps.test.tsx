@@ -65,10 +65,19 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import Swaps from './index';
 import { reverseClaimMinerFee } from '../../utils/FeeUtils';
 
+// the navigator's listeners and the props of the last render, so tests
+// can blur the screen and render it again with new route params
+let listeners: { [event: string]: () => void } = {};
+let viewProps: any;
+
 // A reverse swap with a 0.5% service fee, a 400 sat lockup fee and a 300
 // sat claim quote. At 1 sat/vB the quote is kept, at 25 sat/vB the claim
 // fee is raised to 25 x 152 = 3800 sats.
-const renderView = async (mempoolFees: Promise<any>, claimQuote = 300) => {
+const renderView = async (
+    mempoolFees: Promise<any>,
+    claimQuote = 300,
+    params: any = { initialReverse: true }
+) => {
     const swapStore: any = {
         loading: false,
         apiError: '',
@@ -92,32 +101,35 @@ const renderView = async (mempoolFees: Promise<any>, claimQuote = 300) => {
     swapStore.getReverseClaimMinerFee = (rate: unknown) =>
         reverseClaimMinerFee(swapStore.reverseInfo.fees.minerFees.claim, rate);
 
-    await render(
-        <Swaps
-            {...({
-                navigation: { addListener: jest.fn(() => jest.fn()) },
-                route: { params: { initialReverse: true } },
-                SwapStore: swapStore,
-                UnitsStore: { units: 'sats', getNextUnit: () => 'BTC' },
-                InvoicesStore: {},
-                FiatStore: { fiatRates: [] },
-                SettingsStore: {
-                    settings: {},
-                    getSettings: jest.fn().mockResolvedValue({})
-                },
-                FeeStore: {
-                    getOnchainFeesviaMempool: jest.fn(() => mempoolFees)
-                },
-                NodeInfoStore: {
-                    testnet: false,
-                    flowLspNotConfigured: () => ({
-                        flowLspNotConfigured: true
-                    })
-                },
-                LSPStore: { resetFee: jest.fn() }
-            } as any)}
-        />
-    );
+    listeners = {};
+    viewProps = {
+        navigation: {
+            addListener: jest.fn((event: string, listener: () => void) => {
+                listeners[event] = listener;
+                return jest.fn();
+            }),
+            navigate: jest.fn()
+        },
+        SwapStore: swapStore,
+        UnitsStore: { units: 'sats', getNextUnit: () => 'BTC' },
+        InvoicesStore: {},
+        FiatStore: { fiatRates: [] },
+        SettingsStore: {
+            settings: {},
+            getSettings: jest.fn().mockResolvedValue({})
+        },
+        FeeStore: {
+            getOnchainFeesviaMempool: jest.fn(() => mempoolFees)
+        },
+        NodeInfoStore: {
+            testnet: false,
+            flowLspNotConfigured: () => ({
+                flowLspNotConfigured: true
+            })
+        },
+        LSPStore: { resetFee: jest.fn() }
+    };
+    await render(<Swaps {...viewProps} route={{ params }} />);
     return swapStore;
 };
 
@@ -146,10 +158,10 @@ const enter = async (field: any, sats: string) => {
     await act(async () => field.props.onAmountChange(sats, sats));
 };
 
-const enterAddress = async () => {
-    await act(async () =>
-        byType('AddressInput')[0].props.onChangeText('bc1qdestination')
-    );
+const address = () => byType('AddressInput')[0].props.value;
+
+const enterAddress = async (text = 'bc1qdestination') => {
+    await act(async () => byType('AddressInput')[0].props.onChangeText(text));
 };
 
 const mempool = (fastestFee: number) =>
@@ -294,5 +306,98 @@ describe('Swaps reverse claim fee errors', () => {
         await renderView(mempool(5));
 
         expect(errorsShown()).toEqual([]);
+    });
+});
+
+const SCANNED = 'bc1qscannedfromqrcode';
+const TYPED = 'bc1qtypedbytheuser';
+
+// what SwapsQRScanner puts in the route params after a bitcoin: scan
+const scanOf = (value: string, satAmount?: string) => ({
+    initialInvoice: value,
+    initialAmountSats: satAmount,
+    initialReverse: true
+});
+
+// AmountInput tells the form, then the keypad screen blurs it
+const openKeypad = (field: any) =>
+    act(async () => {
+        field.props.onNavigateAway?.();
+        listeners.blur();
+    });
+
+const leave = () => act(async () => listeners.blur());
+
+const scan = (value: string) =>
+    act(async () =>
+        screen.rerender(
+            <Swaps {...viewProps} route={{ params: scanOf(value) }} />
+        )
+    );
+
+describe('Swaps address after a QR scan', () => {
+    beforeEach(() => {
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
+    afterEach(() => jest.restoreAllMocks());
+
+    it.each([
+        ['send', sendInput],
+        ['receive', receiveInput]
+    ])(
+        'keeps the typed address while the %s amount is entered',
+        async (_, field) => {
+            await renderView(mempool(1), 300, scanOf(SCANNED));
+            expect(address()).toBe(SCANNED);
+
+            await enterAddress(TYPED);
+            await openKeypad(field());
+
+            expect(address()).toBe(TYPED);
+        }
+    );
+
+    // a bitcoin:...?amount= scan fills the amounts in a setState callback
+    it.each([
+        ['send', sendInput],
+        ['receive', receiveInput]
+    ])(
+        'keeps the typed address and the scanned amount while the %s amount is entered',
+        async (_, field) => {
+            await renderView(mempool(1), 300, scanOf(SCANNED, '50000'));
+            expect(address()).toBe(SCANNED);
+            expect(receiveInput().props.amount).toBe('50000');
+
+            await enterAddress(TYPED);
+            await openKeypad(field());
+
+            expect(address()).toBe(TYPED);
+            expect(receiveInput().props.amount).toBe('50000');
+        }
+    );
+
+    it.each([
+        ['without', undefined],
+        ['with', '50000']
+    ])(
+        'does not refill the form %s an amount when it is reset',
+        async (_, satAmount) => {
+            await renderView(mempool(1), 300, scanOf(SCANNED, satAmount));
+
+            await enterAddress(TYPED);
+            await leave();
+
+            expect(address()).toBe('');
+            expect(receiveInput().props.amount).toBe('');
+        }
+    );
+
+    it('applies a new scan after the form was reset', async () => {
+        await renderView(mempool(1), 300, scanOf(SCANNED));
+
+        await leave();
+        await scan(TYPED);
+
+        expect(address()).toBe(TYPED);
     });
 });
