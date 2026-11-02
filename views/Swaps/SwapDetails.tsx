@@ -61,6 +61,23 @@ import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
 
+// The host's WebSocket update can carry any JSON. Its error and failure
+// reason are rendered as text, and String() throws on an object such as
+// {"toString":1}, so only strings are shown. A host that resends such an
+// update on every subscribe would otherwise keep a swap waiting for its
+// refund from being opened.
+const updateText = (data: any) => ({
+    error: !data?.error
+        ? undefined
+        : typeof data.error === 'string'
+        ? data.error
+        : localeString('general.unknownError'),
+    failureReason:
+        typeof data?.failureReason === 'string' && data.failureReason
+            ? data.failureReason
+            : undefined
+});
+
 interface SwapDetailsProps {
     navigation: NativeStackNavigationProp<any, any>;
     route: Route<
@@ -300,10 +317,11 @@ export default class SwapDetails extends React.Component<
             console.log(msg);
 
             const data = msg.args[0];
+            const { error, failureReason } = updateText(data);
 
             // Check for API errors
-            if (data?.error) {
-                if (data.error === 'Operation timeout') {
+            if (error) {
+                if (error === 'Operation timeout') {
                     this.setState({
                         error: 'The operation timed out.',
                         loading: false,
@@ -314,7 +332,7 @@ export default class SwapDetails extends React.Component<
                 }
 
                 this.setState({
-                    error: data.error,
+                    error,
                     loading: false,
                     socketConnected: false
                 });
@@ -325,7 +343,7 @@ export default class SwapDetails extends React.Component<
             // Update the status in the component state
             this.setState({
                 updates: data.status,
-                failureReason: data.failureReason,
+                failureReason,
                 loading: false
             });
 
@@ -334,7 +352,7 @@ export default class SwapDetails extends React.Component<
                 createdResponse.id,
                 data.status,
                 isSubmarineSwap,
-                data.failureReason
+                failureReason
             );
 
             switch (data.status) {
@@ -399,10 +417,10 @@ export default class SwapDetails extends React.Component<
                         }));
                     }
 
-                    if (data?.failureReason) {
+                    if (failureReason) {
                         webSocket.close();
                         this.setState({
-                            error: data?.failureReason,
+                            error: failureReason,
                             socketConnected: false
                         });
                     }
@@ -410,9 +428,9 @@ export default class SwapDetails extends React.Component<
 
                 case SwapState.TransactionClaimed:
                     webSocket.close();
-                    data?.failureReason &&
+                    failureReason &&
                         this.setState({
-                            error: data?.failureReason,
+                            error: failureReason,
                             socketConnected: false
                         });
                     break;
@@ -731,11 +749,12 @@ export default class SwapDetails extends React.Component<
             console.log(msg);
 
             const data = msg.args[0];
+            const { error, failureReason } = updateText(data);
 
             // Check for API errors
-            if (data?.error) {
+            if (error) {
                 stopRechecks();
-                if (data.error === 'Operation timeout') {
+                if (error === 'Operation timeout') {
                     this.setState({
                         error: 'The operation timed out.',
                         loading: false,
@@ -746,7 +765,7 @@ export default class SwapDetails extends React.Component<
                 }
 
                 this.setState({
-                    error: data.error,
+                    error,
                     loading: false,
                     socketConnected: false
                 });
@@ -785,9 +804,9 @@ export default class SwapDetails extends React.Component<
                 case SwapState.SwapExpired:
                     stopRechecks();
                     webSocket.close();
-                    data?.failureReason &&
+                    failureReason &&
                         this.setState({
-                            error: data?.failureReason,
+                            error: failureReason,
                             socketConnected: false
                         });
                     break;
