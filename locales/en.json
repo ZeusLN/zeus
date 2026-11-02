@@ -1074,6 +1074,7 @@
     "views.Tools.nodeConfigExportImport.exportSuccess": "Export successful",
     "views.Tools.nodeConfigExportImport.exportError": "Export failed",
     "views.Tools.nodeConfigExportImport.importSuccess": "Import successful",
+    "views.Tools.nodeConfigExportImport.legacyImportWarning": "This file was exported by an older version of ZEUS and is not protected by the current encryption. Export your wallets again from this version, then delete the old file and any copies of it.",
     "views.Tools.nodeConfigExportImport.importError": "Import failed",
     "views.Tools.nodeConfigExportImport.selectConfigsToImport": "Select Configurations to Import",
     "views.Tools.nodeConfigExportImport.importSelected": "Import Selected",
