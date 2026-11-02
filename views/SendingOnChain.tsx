@@ -83,11 +83,14 @@ export default class SendingOnChain extends React.Component<
     }
 
     // A send started from a submarine swap's pay button is that swap's
-    // payment. Record it once the transaction is out, so SwapDetails stops
-    // offering to pay the swap again while the host has not reported it.
+    // payment. Record it once the transaction is out, or may be out after a
+    // timed out send, so SwapDetails stops offering to pay the swap again
+    // while the host has not reported it.
     private markSwapFunded = () => {
         const { SwapStore, TransactionsStore } = this.props;
-        if (this.swapMarkedFunded || !TransactionsStore.publishSuccess) return;
+        const { publishSuccess, sendOutcomeUnknown } = TransactionsStore;
+        if (this.swapMarkedFunded || !(publishSuccess || sendOutcomeUnknown))
+            return;
 
         const swapId = submarineSwapPaidBySend(getRouteStack());
         if (!swapId) return;

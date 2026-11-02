@@ -89,6 +89,17 @@ describe('SendingOnChain after a swap pay button', () => {
         expect(SwapStore.markSwapFunded.mock.calls).toEqual([['swap']]);
     });
 
+    it('marks the submarine swap as funded when the send may have gone out', async () => {
+        stackFrom(SUBMARINE);
+        const SwapStore = await send({
+            error: true,
+            error_msg: 'stores.TransactionsStore.sendOutcomeUnknown',
+            sendOutcomeUnknown: true
+        });
+
+        expect(SwapStore.markSwapFunded.mock.calls).toEqual([['swap']]);
+    });
+
     it('leaves the swap to be paid after a failed send', async () => {
         stackFrom(SUBMARINE);
         const SwapStore = await send({
