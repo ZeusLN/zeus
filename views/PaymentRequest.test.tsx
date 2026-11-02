@@ -103,14 +103,27 @@ const renderView = async ({
         lightningBalance,
         getLightningBalance: jest.fn()
     };
+    const InvoicesStore = {
+        pay_req: { ...payReq, ...payReqOverrides },
+        paymentRequest: 'lnbc10u1example',
+        clearPayReq: jest.fn()
+    };
+    const listeners: { [event: string]: Array<() => void> } = {};
+    const navigation = {
+        addListener: jest.fn((event: string, callback: () => void) => {
+            (listeners[event] = listeners[event] || []).push(callback);
+            return jest.fn();
+        }),
+        navigate: jest.fn()
+    };
+    // what react-navigation does when the route is removed or focused
+    const emit = (event: string) =>
+        (listeners[event] || []).forEach((callback) => callback());
     const result = await render(
         <PaymentRequest
             ref={ref}
             {...({
-                navigation: {
-                    addListener: jest.fn(() => jest.fn()),
-                    navigate: jest.fn()
-                },
+                navigation,
                 route: { params: {} },
                 BalanceStore,
                 SettingsStore: {
@@ -118,10 +131,7 @@ const renderView = async ({
                     settings: { payments: {} },
                     getSettings
                 },
-                InvoicesStore: {
-                    pay_req: { ...payReq, ...payReqOverrides },
-                    paymentRequest: 'lnbc10u1example'
-                },
+                InvoicesStore,
                 NodeInfoStore: { nodeInfo: {}, isLightningReadyToSend },
                 TransactionsStore,
                 LnurlPayStore: {},
@@ -130,7 +140,7 @@ const renderView = async ({
             } as any)}
         />
     );
-    return { BalanceStore, ...result };
+    return { BalanceStore, InvoicesStore, navigation, emit, ...result };
 };
 
 const payButton = () => screen.getByRole('button', { name: PAY });
@@ -156,6 +166,46 @@ describe('PaymentRequest mount', () => {
         expect(payButton()).toBeEnabled();
         expect(screen.queryByText(GETTING_READY)).not.toBeOnTheScreen();
         expect(isLightningReadyToSend).not.toHaveBeenCalled();
+    });
+});
+
+// header Back, Android hardware back, the iOS swipe and popTo after a payment
+// all remove the route, so the decode is cleared on beforeRemove rather
+// than only from the header's onBack
+describe('PaymentRequest leaving the screen', () => {
+    it('clears the decode when the route is removed', async () => {
+        const { InvoicesStore, emit } = await renderView({
+            implementation: 'lnd'
+        });
+        expect(InvoicesStore.clearPayReq).not.toHaveBeenCalled();
+
+        emit('beforeRemove');
+
+        expect(InvoicesStore.clearPayReq).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears the decode when the route is removed before settings load', async () => {
+        const { InvoicesStore, emit } = await renderView({
+            getSettings: jest.fn(() => new Promise(() => {}))
+        });
+
+        emit('beforeRemove');
+
+        expect(InvoicesStore.clearPayReq).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops listening for removal on unmount', async () => {
+        const { navigation, unmount } = await renderView({
+            implementation: 'lnd'
+        });
+        const index = navigation.addListener.mock.calls.findIndex(
+            ([event]) => event === 'beforeRemove'
+        );
+        const unsubscribe = navigation.addListener.mock.results[index].value;
+
+        await unmount();
+
+        expect(unsubscribe).toHaveBeenCalled();
     });
 });
 
