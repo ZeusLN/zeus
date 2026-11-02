@@ -7,6 +7,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { localeString } from './LocaleUtils';
 import { stopLnd } from './LndMobileUtils';
 import BackendUtils from './BackendUtils';
+import { isValidAuthChallenge } from './AuthChallengeUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import Base64Utils from './Base64Utils';
 import { IN_APP_RESTART } from './InAppRestartUtils';
@@ -173,7 +174,10 @@ export const uploadChannelBackupToOlympus = async (
         }
 
         const statusAuth = statusAuthResponse.json();
-        if (!statusAuth.success || !statusAuth.verification)
+        if (
+            !statusAuth.success ||
+            !isValidAuthChallenge(statusAuth.verification)
+        )
             throw new Error('Invalid auth response');
 
         console.log('Signing status challenge...');
@@ -230,7 +234,10 @@ export const uploadChannelBackupToOlympus = async (
                 }
 
                 const uploadAuth = uploadAuthResponse.json();
-                if (!uploadAuth.success || !uploadAuth.verification)
+                if (
+                    !uploadAuth.success ||
+                    !isValidAuthChallenge(uploadAuth.verification)
+                )
                     throw new Error('Invalid auth response');
 
                 console.log('Signing upload challenge...');
@@ -433,7 +440,10 @@ export const restoreChannelBackupFromOlympus = async (
         }
 
         const statusAuth = statusAuthResponse.json();
-        if (!statusAuth.success || !statusAuth.verification)
+        if (
+            !statusAuth.success ||
+            !isValidAuthChallenge(statusAuth.verification)
+        )
             throw new Error('Invalid auth response');
 
         console.log('Signing status challenge...');
@@ -528,7 +538,10 @@ export const restoreChannelBackupFromOlympus = async (
         }
 
         const restoreAuth = restoreAuthResponse.json();
-        if (!restoreAuth.success || !restoreAuth.verification)
+        if (
+            !restoreAuth.success ||
+            !isValidAuthChallenge(restoreAuth.verification)
+        )
             throw new Error('Invalid auth response');
 
         console.log('Signing restore challenge...');
