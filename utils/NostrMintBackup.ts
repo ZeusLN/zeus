@@ -12,6 +12,18 @@ import Base64Utils from './Base64Utils';
 
 const DOMAIN_SEPARATOR = 'cashu-mint-backup';
 
+const FETCH_TIMEOUT_MS = 10000;
+
+// Thrown by restoreMintsFromNostr when no relay could be asked: every
+// connection failed or timed out. A null result means a relay answered and
+// holds no usable backup.
+export class MintBackupRelaysUnreachableError extends Error {
+    constructor() {
+        super('Failed to fetch mint backup from any relay');
+        this.name = 'MintBackupRelaysUnreachableError';
+    }
+}
+
 interface MintBackupData {
     mints: string[];
     timestamp: number;
@@ -134,6 +146,9 @@ export async function backupMintsToNostr(
  * never roll back behind a backup this device has already seen.
  * The freshest result is returned even if its mint list is empty:
  * a newer empty backup must beat an older non-empty one.
+ *
+ * Returns null if at least one relay answered and none holds a usable
+ * backup. Throws MintBackupRelaysUnreachableError if no relay answered.
  */
 export async function restoreMintsFromNostr(
     privateKeyHex: string,
@@ -154,11 +169,15 @@ export async function restoreMintsFromNostr(
                         `Nostr mint restore: failed to fetch from ${relayUrl}:`,
                         e
                     );
-                    return null;
+                    return undefined;
                 }
             )
         )
     );
+
+    if (results.every((result) => result === undefined)) {
+        throw new MintBackupRelaysUnreachableError();
+    }
 
     let best: MintBackupResult | null = null;
     for (const result of results) {
@@ -175,15 +194,15 @@ function fetchFromRelay(
     publicKeyHex: string,
     conversationKey: Uint8Array
 ): Promise<MintBackupResult | null> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const relay = new Relay(relayUrl);
 
         const timeout = setTimeout(() => {
             try {
                 relay.close();
             } catch {}
-            resolve(null);
-        }, 10000);
+            reject(new Error('Timed out'));
+        }, FETCH_TIMEOUT_MS);
 
         relay
             .connect()
@@ -198,6 +217,10 @@ function fetchFromRelay(
                         }
                     ],
                     {
+                        // nostr-tools otherwise reports EOSE by itself for
+                        // a relay that stays silent, which would read as
+                        // "no backup"; let the timeout above handle it
+                        eoseTimeout: FETCH_TIMEOUT_MS,
                         onevent(event: any) {
                             try {
                                 if (event.pubkey !== publicKeyHex) {
@@ -243,9 +266,9 @@ function fetchFromRelay(
                     }
                 );
             })
-            .catch(() => {
+            .catch((e) => {
                 clearTimeout(timeout);
-                resolve(null);
+                reject(e);
             });
     });
 }

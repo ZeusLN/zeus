@@ -36,7 +36,8 @@ import NostrUtils from '../utils/NostrUtils';
 import {
     deriveMintBackupKeypair,
     backupMintsToNostr,
-    restoreMintsFromNostr
+    restoreMintsFromNostr,
+    MintBackupRelaysUnreachableError
 } from '../utils/NostrMintBackup';
 
 import Invoice from '../models/Invoice';
@@ -311,6 +312,11 @@ export default class CashuStore {
     @observable shownThresholdModals: number[] = [];
     @observable dismissedUpgradeThreshold: number = 0;
     @observable public nostrMintBackupTimestamp?: number;
+    // Set while this wallet's mint list has never been stored and the
+    // restore from Nostr reached no relay. The mint list is then not
+    // stored, so the next initializeWallets() tries the restore again, and
+    // no backup is published over the one that could not be read.
+    private nostrMintRestorePending = false;
 
     // CDK integration state
     @observable public cdkInitialized: boolean = false;
@@ -2028,6 +2034,7 @@ export default class CashuStore {
         this.offlineSpentTokens = [];
         this.showOfflineSpentAlert = false;
         this.isSweeping = false;
+        this.nostrMintRestorePending = false;
         this.stopConnectivityMonitoring();
     };
 
@@ -3075,6 +3082,12 @@ export default class CashuStore {
      */
     @action
     public nostrBackupMints = async () => {
+        if (this.nostrMintRestorePending) {
+            console.warn(
+                'Nostr mint backup skipped: the existing backup was not read yet'
+            );
+            return;
+        }
         const seed = this.getNostrBackupSeed();
         if (!seed) return;
 
@@ -3102,7 +3115,8 @@ export default class CashuStore {
 
     /**
      * Restores mint list from Nostr relays using the seed-derived keypair.
-     * Returns the list of mint URLs found, or null if none.
+     * Returns the list of mint URLs found, or null if none. Throws
+     * MintBackupRelaysUnreachableError if no relay answered.
      */
     @action
     public nostrRestoreMints = async (): Promise<string[] | null> => {
@@ -3134,6 +3148,7 @@ export default class CashuStore {
             return result.mints.length > 0 ? result.mints : null;
         } catch (e) {
             console.warn('Nostr mint restore failed:', e);
+            if (e instanceof MintBackupRelaysUnreachableError) throw e;
             return null;
         }
     };
@@ -3732,6 +3747,7 @@ export default class CashuStore {
         this.startConnectivityMonitoring();
 
         const lndDir = this.getNodeDir();
+        this.nostrMintRestorePending = false;
 
         // Load app-specific data from local storage (activity, preferences, seed)
         const [
@@ -3901,6 +3917,9 @@ export default class CashuStore {
                         }
                     } catch (e) {
                         console.warn('Failed to restore mints from Nostr:', e);
+                        if (e instanceof MintBackupRelaysUnreachableError) {
+                            this.nostrMintRestorePending = true;
+                        }
                     }
                 }
 
@@ -4064,10 +4083,16 @@ export default class CashuStore {
                 // Enrich tokens with proofs if missing (migration for old tokens)
                 await this.enrichTokensWithProofs();
 
-                await Storage.setItem(
-                    `${lndDir}-cashu-mintUrls`,
-                    JSON.stringify(this.mintUrls)
-                );
+                // Any stored list, even an empty one, ends the restore, so
+                // keep it unset while the restore is still owed. The list
+                // can be nonempty here when removing an orphan CDK mint
+                // failed
+                if (!this.nostrMintRestorePending) {
+                    await Storage.setItem(
+                        `${lndDir}-cashu-mintUrls`,
+                        JSON.stringify(this.mintUrls)
+                    );
+                }
                 await Storage.removeItem(`${lndDir}-cashu-totalBalanceSats`);
 
                 // Clean up legacy per-wallet storage keys (now handled by CDK)
@@ -4223,7 +4248,9 @@ export default class CashuStore {
                 // Same fresh-state discriminator as the Nostr restore above:
                 // a stored empty list means the user removed every mint, so
                 // onboarding mints must not come back
-                !storedMintUrls
+                !storedMintUrls &&
+                // and not over a backup that could not be read yet
+                !this.nostrMintRestorePending
             ) {
                 console.log(
                     'Adding initial mints from onboarding:',
