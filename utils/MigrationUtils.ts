@@ -85,7 +85,10 @@ import {
     purgeLegacyRescueKeyFiles,
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
-import { retireWalletSeedRescueKeyCopies } from './RescueKeyRetirementUtils';
+import {
+    getRetiredKeychainServers,
+    retireWalletSeedRescueKeyCopies
+} from './RescueKeyRetirementUtils';
 
 import {
     TimePeriod,
@@ -1632,8 +1635,16 @@ class MigrationsUtils {
 
             console.log('Attempting keychain desync migration...');
 
+            // Retired servers (a swap rescue key that was a wallet seed) are
+            // not copied back, same as in verifyPurgePreflight: an older
+            // build on another device can write the seed into iCloud again
+            // after retirement, and that migration does not run twice. An
+            // unreadable list throws to the catch below, which leaves the
+            // flag unset so the next boot retries.
+            const retired = new Set(await getRetiredKeychainServers());
             const syncServers = (await getInternetPasswordServers(true)).filter(
-                (server) => server.startsWith(KEY_PREFIX)
+                (server) =>
+                    server.startsWith(KEY_PREFIX) && !retired.has(server)
             );
 
             // Failures are contained PER KEY: SecItemCopyMatching returns
