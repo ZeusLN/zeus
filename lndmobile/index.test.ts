@@ -10,7 +10,12 @@ jest.mock('./utils', () => ({
 // the RouterSendPaymentV2 listeners currently registered
 const mockListeners = new Set<(event: any) => void>();
 jest.mock('../utils/LndMobileUtils', () => ({
-    checkLndStreamErrorResponse: jest.fn(),
+    // reduced to the two outcomes the payment listeners distinguish: end of
+    // stream and an error
+    checkLndStreamErrorResponse: jest.fn((_name: string, event: any) => {
+        if (!event.error_code) return null;
+        return event.error_desc === 'EOF' ? 'EOF' : new Error(event.error_desc);
+    }),
     LndMobileEventEmitter: {
         addListener: jest.fn((_event: string, callback: any) => {
             mockListeners.add(callback);
@@ -24,6 +29,17 @@ jest.mock('../utils/LocaleUtils', () => ({
 
 import { listPayments, sendKeysendPaymentV2, sendPaymentV2Sync } from './index';
 import { sendCommand, sendStreamCommand } from './utils';
+
+// the request id the nth stream since the last mockClear was started with
+const requestIdOf = (n: number) =>
+    (sendStreamCommand as jest.Mock).mock.calls[n][0].requestId;
+// the native bridge sends every call's events to every listener, tagged with
+// the request id of the call they belong to
+const emit = (event: object, request_id: string) =>
+    Array.from(mockListeners).forEach((callback) =>
+        callback({ ...event, request_id })
+    );
+const payment = (data: object) => ({ data: JSON.stringify(data) });
 
 describe('sendPaymentV2Sync', () => {
     beforeEach(() => {
@@ -63,6 +79,19 @@ describe('sendPaymentV2Sync', () => {
 
         await jest.advanceTimersByTimeAsync(60_999);
         expect(settled).toBe(false);
+    });
+
+    it('starts the stream with a request id', async () => {
+        (sendStreamCommand as jest.Mock).mockClear();
+        sendPaymentV2Sync({ payment_request: 'lnbc1', timeout_seconds: 60 });
+
+        expect(sendStreamCommand).toHaveBeenCalledWith(
+            expect.objectContaining({
+                method: 'RouterSendPaymentV2',
+                requestId: expect.any(String)
+            }),
+            false
+        );
     });
 });
 
@@ -139,11 +168,6 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
     const SPEC_PAYMENT_HASH =
         '0001020304050607080900010203040506070809000102030405060708090102';
 
-    // the native bridge sends every call's events to every listener
-    const emit = (payment: object) =>
-        Array.from(mockListeners).forEach((callback) =>
-            callback({ data: JSON.stringify(payment) })
-        );
     const keysend = (hashHex: string) =>
         sendKeysendPaymentV2({
             dest: '02'.repeat(33),
@@ -155,7 +179,7 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
         // earlier tests leave calls that never got an event
         mockListeners.clear();
         jest.useFakeTimers();
-        (sendStreamCommand as jest.Mock).mockResolvedValue('');
+        (sendStreamCommand as jest.Mock).mockClear().mockResolvedValue('');
     });
 
     afterEach(() => {
@@ -168,7 +192,10 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
         let aSettled = false;
         a.then(() => (aSettled = true));
 
-        emit({ payment_hash: HASH_B, status: 'SUCCEEDED' });
+        emit(
+            payment({ payment_hash: HASH_B, status: 'SUCCEEDED' }),
+            requestIdOf(1)
+        );
         await expect(b).resolves.toEqual({
             payment_hash: HASH_B,
             status: 'SUCCEEDED'
@@ -179,7 +206,10 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
         expect(aSettled).toBe(false);
         expect(mockListeners.size).toBe(1);
 
-        emit({ payment_hash: HASH_A, status: 'FAILED' });
+        emit(
+            payment({ payment_hash: HASH_A, status: 'FAILED' }),
+            requestIdOf(0)
+        );
         await expect(a).resolves.toEqual({
             payment_hash: HASH_A,
             status: 'FAILED'
@@ -196,12 +226,67 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
         let invoiceSettled = false;
         invoice.then(() => (invoiceSettled = true));
 
-        emit({ payment_hash: HASH_B, status: 'SUCCEEDED' });
+        emit(
+            payment({ payment_hash: HASH_B, status: 'SUCCEEDED' }),
+            requestIdOf(1)
+        );
         await expect(b).resolves.toMatchObject({ payment_hash: HASH_B });
         await jest.advanceTimersByTimeAsync(0);
         expect(invoiceSettled).toBe(false);
 
-        emit({ payment_hash: SPEC_PAYMENT_HASH, status: 'SUCCEEDED' });
+        emit(
+            payment({ payment_hash: SPEC_PAYMENT_HASH, status: 'SUCCEEDED' }),
+            requestIdOf(0)
+        );
+        await expect(invoice).resolves.toMatchObject({
+            payment_hash: SPEC_PAYMENT_HASH
+        });
+    });
+
+    it('rejects only the keysend an error belongs to', async () => {
+        const a = keysend(HASH_A);
+        const b = keysend(HASH_B);
+        let aSettled = false;
+        a.then(
+            () => (aSettled = true),
+            () => (aSettled = true)
+        );
+        expect(requestIdOf(0)).not.toEqual(requestIdOf(1));
+
+        // error events carry no payment hash, only the request id
+        emit({ error_code: 'Error', error_desc: 'no route' }, requestIdOf(1));
+        await expect(b).rejects.toThrow('no route');
+        await jest.advanceTimersByTimeAsync(0);
+        expect(aSettled).toBe(false);
+
+        emit(
+            payment({ payment_hash: HASH_A, status: 'SUCCEEDED' }),
+            requestIdOf(0)
+        );
+        await expect(a).resolves.toMatchObject({ payment_hash: HASH_A });
+    });
+
+    it('rejects only the invoice payment an error belongs to', async () => {
+        const invoice = sendPaymentV2Sync({
+            payment_request: SPEC_PAYMENT_REQUEST,
+            timeout_seconds: 60
+        });
+        const b = keysend(HASH_B);
+        let invoiceSettled = false;
+        invoice.then(
+            () => (invoiceSettled = true),
+            () => (invoiceSettled = true)
+        );
+
+        emit({ error_code: 'Error', error_desc: 'no route' }, requestIdOf(1));
+        await expect(b).rejects.toThrow('no route');
+        await jest.advanceTimersByTimeAsync(0);
+        expect(invoiceSettled).toBe(false);
+
+        emit(
+            payment({ payment_hash: SPEC_PAYMENT_HASH, status: 'SUCCEEDED' }),
+            requestIdOf(0)
+        );
         await expect(invoice).resolves.toMatchObject({
             payment_hash: SPEC_PAYMENT_HASH
         });

@@ -53,6 +53,7 @@ RCT_EXTERN_METHOD(
   sendStreamCommand: (NSString *)method
   payload: (NSString *)payload
   streamOnlyOnce: (BOOL)streamOnlyOnce
+  requestId: (NSString *)requestId
   resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )
@@ -60,6 +61,7 @@ RCT_EXTERN_METHOD(
 RCT_EXTERN_METHOD(
   sendBidiStreamCommand: (NSString *)method
   streamOnlyOnce: (BOOL)streamOnlyOnce
+  requestId: (NSString *)requestId
   resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )
