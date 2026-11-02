@@ -54,8 +54,17 @@ jest.mock('nostr-tools', () => ({
         querySync = (...args: any[]) => mockQuerySync(...args);
         close = jest.fn();
     },
-    nip05: { queryProfile: (...args: any[]) => mockQueryProfile(...args) },
+    nip05: {
+        NIP05_REGEX: jest.requireActual('nostr-tools').nip05.NIP05_REGEX,
+        queryProfile: (...args: any[]) => mockQueryProfile(...args)
+    },
     nip19: {}
+}));
+
+const mockDoTorRequest = jest.fn();
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequest: (...args: any[]) => mockDoTorRequest(...args),
+    RequestMethod: { GET: 'get' }
 }));
 
 import * as React from 'react';
@@ -68,12 +77,13 @@ const PUBKEY =
 const LOOK_UP = 'views.NostrContacts.lookUpContacts';
 
 // Opens the screen, types the identifier and presses Look up contacts
-const lookUp = async (account: string) => {
+const lookUp = async (account: string, enableTor: boolean = false) => {
     await render(
         <NostrContacts
             {...({
                 navigation: { goBack: jest.fn(), navigate: jest.fn() },
-                ContactStore: {}
+                ContactStore: {},
+                SettingsStore: { enableTor }
             } as any)}
         />
     );
@@ -87,6 +97,7 @@ const lookUp = async (account: string) => {
 describe('NostrContacts NIP-05 lookup', () => {
     beforeEach(() => {
         mockQueryProfile.mockReset();
+        mockDoTorRequest.mockReset();
         mockQuerySync.mockReset();
         mockQuerySync.mockResolvedValue([]);
     });
@@ -122,6 +133,34 @@ describe('NostrContacts NIP-05 lookup', () => {
             ['wss://relay.example.com'],
             { authors: [PUBKEY], kinds: [3] }
         );
+    });
+
+    it('sends the NIP-05 lookup through Tor when Tor is enabled', async () => {
+        mockDoTorRequest.mockResolvedValue({ names: { satoshi: PUBKEY } });
+
+        await lookUp('satoshi@domain.com', true);
+        await new Promise(setImmediate);
+
+        expect(mockDoTorRequest).toHaveBeenCalledWith(
+            'https://domain.com/.well-known/nostr.json?name=satoshi',
+            'get'
+        );
+        expect(mockQueryProfile).not.toHaveBeenCalled();
+        expect(mockQuerySync).toHaveBeenCalledWith(
+            ['wss://relay.example.com'],
+            { authors: [PUBKEY], kinds: [3] }
+        );
+    });
+
+    it('shows the NIP-05 error when Tor is enabled and the response is malformed', async () => {
+        mockDoTorRequest.mockResolvedValue({ names: { satoshi: 'bogus' } });
+
+        await lookUp('satoshi@domain.com', true);
+
+        expect(
+            screen.getByText('views.NostrContacts.nip05Error')
+        ).toBeOnTheScreen();
+        expect(mockQuerySync).not.toHaveBeenCalled();
     });
 
     it('shows the NIP-05 error when the lookup finds nothing', async () => {
