@@ -1075,6 +1075,7 @@
     "views.Tools.nodeConfigExportImport.exportError": "Export failed",
     "views.Tools.nodeConfigExportImport.importSuccess": "Import successful",
     "views.Tools.nodeConfigExportImport.importError": "Import failed",
+    "views.Tools.nodeConfigExportImport.skippedOnDevice": "Skipped {count} wallet configuration(s) for wallets already on this device.",
     "views.Tools.nodeConfigExportImport.selectConfigsToImport": "Select Configurations to Import",
     "views.Tools.nodeConfigExportImport.importSelected": "Import Selected",
     "views.Tools.nodeConfigExportImport.recovery.restoreLegacy": "Restore legacy wallet configurations",
