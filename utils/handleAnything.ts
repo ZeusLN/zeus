@@ -1,7 +1,5 @@
 import { Alert, Platform } from 'react-native';
-import { getParams as getlnurlParams } from 'js-lnurl';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
 
@@ -11,11 +9,15 @@ import Bolt11Utils from './Bolt11Utils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
+import {
+    getLnurlpUrl,
+    isLightningAddressEndpointAllowed
+} from './LnurlPayUtils';
+import { fetchLnurlUrl, isUnsafeLnurlError } from './LnurlFetchUtils';
+import { getLnurlParams as getlnurlParams } from './LnurlResolveUtils';
 import { localeString } from './LocaleUtils';
-import { getLnurlpUrl } from './LnurlPayUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
-import { doTorRequest, RequestMethod } from './TorUtils';
 
 import CashuToken from '../models/CashuToken';
 import Invoice from '../models/Invoice';
@@ -641,6 +643,13 @@ const handleAnything = async (
         const normalizedDomain = domain.toLowerCase();
         const isOnion = normalizedDomain.endsWith('.onion');
 
+        const { url } = getLnurlpUrl(value);
+        // Refuse before the BOLT 12 lookup below, which would otherwise send
+        // the address, IP literal included, to the DoH resolver first
+        if (!isLightningAddressEndpointAllowed(url).ok) {
+            throw new Error(localeString('utils.lnurl.unsafeLightningAddress'));
+        }
+
         let bolt12: string | undefined;
         let b12Value: string | undefined,
             b12SatAmount: string | undefined,
@@ -727,96 +736,90 @@ const handleAnything = async (
         }
 
         // try BOLT 11 address
-        const { url } = getLnurlpUrl(value);
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
 
-        // handle Tor LN addresses
-        if (settingsStore.enableTor && isOnion) {
-            return doTorRequest(url, RequestMethod.GET).then(
-                (response: any) => {
-                    if (!response.callback) {
+        // fetchLnurlUrl sends the request over Tor when Use Tor is on, with
+        // the host policy checked on every redirect hop, .onion included.
+        // With Use Tor off an .onion address is fetched like any other, for
+        // devices that route it through Tor themselves (e.g. Orbot).
+        return fetchLnurlUrl(url)
+            .then((response: any) => {
+                const status = response.info().status;
+                if (status == 200) {
+                    const lnurlpData = response.json();
+                    if (!lnurlpData.callback) {
                         throw new Error(error);
+                    }
+
+                    if (b12Offer) {
+                        return [
+                            'ChoosePaymentMethod',
+                            {
+                                value: b12Value,
+                                satAmount: b12SatAmount,
+                                lightning: b12Lightning,
+                                offer: b12Offer,
+                                lightningAddress: value,
+                                locked: true
+                            }
+                        ];
                     }
 
                     return [
                         'LnurlPay',
                         {
-                            lnurlParams: response,
+                            lnurlParams: lnurlpData,
                             satAmount: setAmount,
                             ecash,
                             lightningAddress: value
                         }
                     ];
+                } else {
+                    throw new Error(error);
                 }
-            );
-        } else {
-            return ReactNativeBlobUtil.fetch('get', url)
-                .then((response: any) => {
-                    const status = response.info().status;
-                    if (status == 200) {
-                        const lnurlpData = response.json();
-                        if (!lnurlpData.callback) {
-                            throw new Error(error);
-                        }
+            })
+            .catch(async (e: any) => {
+                const hasMultipleB12 = b12Value || b12Lightning;
 
-                        if (b12Offer) {
-                            return [
-                                'ChoosePaymentMethod',
-                                {
-                                    value: b12Value,
-                                    satAmount: b12SatAmount,
-                                    lightning: b12Lightning,
-                                    offer: b12Offer,
-                                    lightningAddress: value,
-                                    locked: true
-                                }
-                            ];
-                        }
+                // A redirect refused by the lnurl host policy is
+                // reported, not treated as a missing address, so the
+                // NIP-05 fallback does not contact the same host again.
+                // A BIP 353 offer came from DNS and is still usable.
+                if (isUnsafeLnurlError(e) && !b12Offer) throw e;
 
+                if (b12Offer) {
+                    if (hasMultipleB12) {
                         return [
-                            'LnurlPay',
+                            'ChoosePaymentMethod',
                             {
-                                lnurlParams: lnurlpData,
-                                satAmount: setAmount,
-                                ecash,
-                                lightningAddress: value
-                            }
-                        ];
-                    } else {
-                        throw new Error(error);
-                    }
-                })
-                .catch(async () => {
-                    const hasMultipleB12 = b12Value || b12Lightning;
-
-                    if (b12Offer) {
-                        if (hasMultipleB12) {
-                            return [
-                                'ChoosePaymentMethod',
-                                {
-                                    value: b12Value,
-                                    satAmount: b12SatAmount,
-                                    lightning: b12Lightning,
-                                    offer: b12Offer,
-                                    locked: true
-                                }
-                            ];
-                        }
-                        return [
-                            'Send',
-                            {
-                                destination: b12Offer,
-                                bolt12: b12Offer,
-                                transactionType: 'BOLT 12',
-                                isValid: true
+                                value: b12Value,
+                                satAmount: b12SatAmount,
+                                lightning: b12Lightning,
+                                offer: b12Offer,
+                                locked: true
                             }
                         ];
                     }
-                    return await attemptNip05Lookup(value);
-                });
-        }
+                    return [
+                        'Send',
+                        {
+                            destination: b12Offer,
+                            bolt12: b12Offer,
+                            transactionType: 'BOLT 12',
+                            isValid: true
+                        }
+                    ];
+                }
+
+                // The NIP-05 lookup does not go over Tor, so with Use Tor on
+                // an .onion address fails here, as it did before lnurl
+                // requests went through fetchLnurlUrl
+                if (isOnion && settingsStore.enableTor) throw e;
+
+                return await attemptNip05Lookup(value);
+            });
     } else if (value.includes('config=') && value.includes('lnd.config')) {
         // BTCPay pairing QR
         if (isClipboardValue) return true;
@@ -1042,7 +1045,9 @@ const handleAnything = async (
                         );
                 }
             })
-            .catch(() => {
+            .catch((e) => {
+                // a host policy refusal keeps its own message
+                if (isUnsafeLnurlError(e)) throw e;
                 throw new Error(
                     localeString('utils.handleAnything.invalidLnurlParams')
                 );
