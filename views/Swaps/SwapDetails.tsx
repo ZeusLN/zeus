@@ -39,6 +39,7 @@ import { font } from '../../utils/FontUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
+    fetchBlockHeight,
     nativeSwapEndpoint,
     swapNetworkName,
     swapWebSocketUrl
@@ -51,6 +52,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore, { ReverseLockupCheck } from '../../stores/SwapStore';
 import { nodeInfoStore, unitsStore } from '../../stores/Stores';
 
+import NodeInfo from '../../models/NodeInfo';
 import Swap, { SwapState, SwapType } from '../../models/Swap';
 import {
     SubmarineClaimTransaction,
@@ -108,10 +110,40 @@ interface SwapDetailsState {
     lockupNotice: string | null;
     // the current rate, for a reverse swap with none stored
     currentClaimFeeRate?: number;
+    // the chain tip fetched on open, 0 until known
+    fetchedTip: number;
+    // the host has not answered in time, or its socket failed
+    hostQuiet: boolean;
 }
 
 // how often to re-check an unconfirmed or unreachable lockup
 const LOCKUP_RECHECK_MS = 60 * 1000;
+
+// how long a submarine swap waits for the host's first update before
+// trusting its stored status
+const HOST_QUIET_MS = 10 * 1000;
+
+// a submarine swap the host has claimed, or that was refunded
+const SUBMARINE_FINAL_STATUSES: string[] = [
+    SwapState.TransactionRefunded,
+    SwapState.TransactionClaimed
+];
+
+// the host is paying the invoice or claiming the lockup, or is done
+const SUBMARINE_CLAIM_STATUSES: string[] = [
+    SwapState.InvoicePaid,
+    SwapState.TransactionClaimPending,
+    ...SUBMARINE_FINAL_STATUSES
+];
+
+// statuses the host only reports once the lockup was broadcast
+const SUBMARINE_FUNDED_STATUSES: string[] = [
+    SwapState.TransactionMempool,
+    SwapState.TransactionConfirmed,
+    SwapState.InvoicePending,
+    SwapState.InvoiceFailedToPay,
+    SwapState.TransactionLockupFailed
+];
 
 @inject('FeeStore', 'InvoicesStore', 'NodeInfoStore', 'SwapStore')
 @observer
@@ -129,7 +161,9 @@ export default class SwapDetails extends React.Component<
             socketConnected: true,
             swapTreeToggle: false,
             swapData: new Swap(props.route.params.swapData),
-            lockupNotice: null
+            lockupNotice: null,
+            fetchedTip: 0,
+            hostQuiet: false
         };
     }
 
@@ -145,11 +179,6 @@ export default class SwapDetails extends React.Component<
         }
 
         if (swapData.isSubmarineSwap) {
-            const finalStatus = [
-                SwapState.TransactionRefunded,
-                SwapState.TransactionClaimed
-            ];
-
             const failedStatus = [
                 SwapState.InvoiceFailedToPay,
                 SwapState.TransactionLockupFailed,
@@ -157,7 +186,7 @@ export default class SwapDetails extends React.Component<
             ];
 
             if (
-                finalStatus.includes(swapData?.status) ||
+                SUBMARINE_FINAL_STATUSES.includes(swapData?.status) ||
                 (failedStatus.includes(swapData?.status) &&
                     swapData?.lockupTransaction?.hex)
             ) {
@@ -168,6 +197,7 @@ export default class SwapDetails extends React.Component<
                 return;
             }
 
+            this.fetchTip();
             this.getSwapUpdates(swapData, swapData.isSubmarineSwap);
         } else {
             const failedStatus = [
@@ -286,6 +316,13 @@ export default class SwapDetails extends React.Component<
         }
 
         let submitted = false;
+
+        // until the host's first update the stored status may be stale,
+        // so the timeout refund waits for it, for a while
+        const hostQuietTimer = setTimeout(
+            () => this.setState({ hostQuiet: true }),
+            HOST_QUIET_MS
+        );
 
         console.log('Connecting to WebSocket for updates...');
         this.setState({ loading: true });
@@ -441,6 +478,7 @@ export default class SwapDetails extends React.Component<
         };
 
         webSocket.onerror = (error) => {
+            this.setState({ hostQuiet: true });
             if (error.message) {
                 this.setState({
                     error: error.message,
@@ -452,9 +490,11 @@ export default class SwapDetails extends React.Component<
 
         webSocket.onclose = () => {
             console.log('WebSocket connection closed');
+            this.setState({ hostQuiet: true });
         };
 
         this.componentWillUnmount = () => {
+            clearTimeout(hostQuietTimer);
             if (webSocket) {
                 webSocket.close();
             }
@@ -1192,16 +1232,32 @@ export default class SwapDetails extends React.Component<
         }
     };
 
+    // Node info is only refreshed while Wallet is focused, so after the app
+    // resumes on another screen it can be hours old. Not through
+    // NodeInfoStore.getNodeInfo(): on error it clears nodeInfo app-wide.
+    fetchTip = async () => {
+        const tip = await fetchBlockHeight(
+            async () =>
+                new NodeInfo(await BackendUtils.getMyNodeInfo())
+                    .currentBlockHeight
+        );
+        if (tip) this.setState({ fetchedTip: tip });
+    };
+
+    // the newer of the stored and fetched tips, 0 if neither is known
+    currentTip = (): number =>
+        Math.max(
+            Number(nodeInfoStore.nodeInfo.currentBlockHeight) || 0,
+            this.state.fetchedTip
+        );
+
     timelockIndicator = () => {
         const { swapData } = this.state;
+        const currentTip = this.currentTip();
 
-        if (!nodeInfoStore.nodeInfo.currentBlockHeight) return '';
+        if (!currentTip) return '';
 
-        if (
-            new BigNumber(swapData.timeoutBlockHeight).gt(
-                nodeInfoStore.nodeInfo.currentBlockHeight
-            )
-        ) {
+        if (new BigNumber(swapData.timeoutBlockHeight).gt(currentTip)) {
             return '🔒';
         }
 
@@ -1214,41 +1270,32 @@ export default class SwapDetails extends React.Component<
     // swap was funded and the host is not claiming, has not claimed, and
     // the swap has not already been refunded
     refundTimelockPassed = (): boolean => {
-        const { swapData, updates } = this.state;
-        const { currentBlockHeight } = nodeInfoStore.nodeInfo;
-        const statuses = [updates, swapData.status];
-
-        // the host is paying the invoice or claiming the lockup, or is done.
-        // invoice.pending only counts while the host reports it: a stored
-        // one from a host that went away must not hide the refund for good
-        const claimStatus = [
-            SwapState.InvoicePaid,
-            SwapState.TransactionClaimPending,
-            SwapState.TransactionClaimed,
-            SwapState.TransactionRefunded
-        ];
-
-        // statuses the host only reports once the lockup was broadcast
-        const fundedStatus = [
-            SwapState.TransactionMempool,
-            SwapState.TransactionConfirmed,
-            SwapState.InvoicePending,
-            SwapState.InvoiceFailedToPay,
-            SwapState.TransactionLockupFailed
-        ];
+        const { swapData, updates, hostQuiet } = this.state;
+        const currentTip = this.currentTip();
+        const statuses = [updates, swapData.status].filter(Boolean) as string[];
 
         const funded =
             !!swapData.lockupTransaction ||
-            statuses.some((status: any) => fundedStatus.includes(status));
+            statuses.some((status) =>
+                SUBMARINE_FUNDED_STATUSES.includes(status)
+            );
 
         return (
             swapData.isSubmarineSwap &&
+            // the stored status counts once the host has answered or
+            // gone quiet, not while its first update may be on the way
+            (updates !== null || hostQuiet) &&
             funded &&
-            !statuses.some((status: any) => claimStatus.includes(status)) &&
+            !statuses.some((status) =>
+                SUBMARINE_CLAIM_STATUSES.includes(status)
+            ) &&
+            // invoice.pending only counts while the host reports it: a
+            // stored one from a host that went away must not hide the
+            // refund for good
             updates !== SwapState.InvoicePending &&
-            !!currentBlockHeight &&
+            !!currentTip &&
             !!swapData.timeoutBlockHeight &&
-            new BigNumber(currentBlockHeight).gte(swapData.timeoutBlockHeight)
+            new BigNumber(currentTip).gte(swapData.timeoutBlockHeight)
         );
     };
 

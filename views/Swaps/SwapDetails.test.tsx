@@ -10,7 +10,8 @@ jest.mock('../../stores/Stores', () => ({
 }));
 jest.mock('../../utils/handleAnything', () => jest.fn());
 jest.mock('../../utils/BackendUtils', () => ({
-    supportsOnchainReceiving: () => true
+    supportsOnchainReceiving: () => true,
+    getMyNodeInfo: jest.fn()
 }));
 jest.mock('../../utils/UrlUtils', () => ({}));
 // the real SwapUtils below touches the filesystem and save dialog for the
@@ -83,6 +84,7 @@ import {
 } from '../../models/ClaimTransaction';
 import { SwapType } from '../../models/Swap';
 import { nodeInfoStore } from '../../stores/Stores';
+import BackendUtils from '../../utils/BackendUtils';
 
 // builds and signs the claim; the app broadcasts it through the store
 const nativeClaim = lndMobile.swaps.buildReverseClaimTransaction as jest.Mock;
@@ -1621,6 +1623,16 @@ describe('SwapDetails host update text', () => {
 
 describe('SwapDetails submarine refund after the timeout', () => {
     const TIMEOUT = 900000;
+    // how long the view waits for the host's first update
+    const HOST_QUIET_MS = 10000;
+
+    const getMyNodeInfo = BackendUtils.getMyNodeInfo as jest.Mock;
+
+    beforeEach(() => {
+        // the tip fetched on open; unknown unless a test sets one
+        getMyNodeInfo.mockReset();
+        getMyNodeInfo.mockResolvedValue({});
+    });
 
     const SUBMARINE = {
         type: SwapType.Submarine,
@@ -1639,8 +1651,13 @@ describe('SwapDetails submarine refund after the timeout', () => {
 
     const openAt = async (tip: number | undefined, swap: any = {}) => {
         nodeInfoStore.nodeInfo.currentBlockHeight = tip;
-        await renderView({ ...SUBMARINE, ...swap });
+        const view = await renderView({ ...SUBMARINE, ...swap });
+        // let the tip fetch settle
+        await advance(0);
+        return view;
     };
+
+    const hostSilent = () => advance(HOST_QUIET_MS);
 
     it('is offered while the host reports the lockup as confirmed', async () => {
         await openAt(TIMEOUT + 10);
@@ -1651,6 +1668,7 @@ describe('SwapDetails submarine refund after the timeout', () => {
 
     it('is offered when the host says nothing', async () => {
         await openAt(TIMEOUT + 10, { status: 'transaction.confirmed' });
+        await hostSilent();
 
         expect(refundOffered()).toBe(true);
     });
@@ -1660,12 +1678,14 @@ describe('SwapDetails submarine refund after the timeout', () => {
             status: 'invoice.set',
             lockupTransaction: { hex: 'lockuphex' }
         });
+        await hostSilent();
 
         expect(refundOffered()).toBe(true);
     });
 
     it('is not offered for a swap that was never funded', async () => {
         await openAt(TIMEOUT + 10, { status: 'invoice.set' });
+        await hostSilent();
 
         expect(refundOffered()).toBe(false);
     });
@@ -1698,6 +1718,7 @@ describe('SwapDetails submarine refund after the timeout', () => {
                 status,
                 lockupTransaction: { hex: 'lockuphex' }
             });
+            await hostSilent();
 
             expect(refundOffered()).toBe(false);
         }
@@ -1705,8 +1726,101 @@ describe('SwapDetails submarine refund after the timeout', () => {
 
     it('is offered for a swap stored as invoice.pending when the host says nothing', async () => {
         await openAt(TIMEOUT + 10, { status: 'invoice.pending' });
+        await hostSilent();
 
         expect(refundOffered()).toBe(true);
+    });
+
+    it('waits for the host before trusting a stored status', async () => {
+        await openAt(TIMEOUT + 10, { status: 'invoice.pending' });
+        expect(refundOffered()).toBe(false);
+
+        await advance(HOST_QUIET_MS - 1);
+        expect(refundOffered()).toBe(false);
+
+        await advance(1);
+        expect(refundOffered()).toBe(true);
+    });
+
+    it('is hidden when the host answers within the wait', async () => {
+        await openAt(TIMEOUT + 10, { status: 'transaction.confirmed' });
+        await advance(HOST_QUIET_MS - 1);
+        await sendStatus('invoice.pending');
+        await advance(1);
+
+        expect(refundOffered()).toBe(false);
+    });
+
+    it('stops waiting when the host socket closes', async () => {
+        await openAt(TIMEOUT + 10, { status: 'transaction.confirmed' });
+        await act(() => socket.onclose());
+
+        expect(refundOffered()).toBe(true);
+    });
+
+    it('stops waiting when the host socket fails', async () => {
+        await openAt(TIMEOUT + 10, { status: 'transaction.confirmed' });
+        await act(() => socket.onerror({}));
+        unexpectedErrors = unexpectedErrors.filter(
+            (args) => args[0] !== 'WebSocket error:'
+        );
+
+        expect(refundOffered()).toBe(true);
+    });
+
+    it('clears the wait on unmount', async () => {
+        const setTimer = jest.spyOn(global, 'setTimeout');
+        const { unmount } = await openAt(TIMEOUT + 10, {
+            status: 'transaction.confirmed'
+        });
+        const wait =
+            setTimer.mock.results[
+                setTimer.mock.calls.findIndex(([, ms]) => ms === HOST_QUIET_MS)
+            ].value;
+        const clearTimer = jest.spyOn(global, 'clearTimeout');
+        await unmount();
+
+        expect(clearTimer).toHaveBeenCalledWith(wait);
+    });
+
+    it('uses a tip fetched on open over stale node info', async () => {
+        getMyNodeInfo.mockResolvedValue({ block_height: TIMEOUT + 1 });
+        await openAt(TIMEOUT - 5);
+        await sendStatus('transaction.confirmed');
+
+        expect(refundOffered()).toBe(true);
+    });
+
+    it('is offered on a fetched tip when node info has none', async () => {
+        getMyNodeInfo.mockResolvedValue({ block_height: TIMEOUT });
+        await openAt(undefined);
+        await sendStatus('transaction.confirmed');
+
+        expect(refundOffered()).toBe(true);
+    });
+
+    it('keeps the node info tip when the fetched one is older', async () => {
+        getMyNodeInfo.mockResolvedValue({ block_height: TIMEOUT - 3 });
+        await openAt(TIMEOUT);
+        await sendStatus('transaction.confirmed');
+
+        expect(refundOffered()).toBe(true);
+    });
+
+    it('keeps the node info tip when the fetch fails', async () => {
+        getMyNodeInfo.mockRejectedValue(new Error('offline'));
+        await openAt(TIMEOUT + 10);
+        await sendStatus('transaction.confirmed');
+
+        expect(refundOffered()).toBe(true);
+    });
+
+    it('is not offered when the fetched tip is short of the timeout', async () => {
+        getMyNodeInfo.mockResolvedValue({ block_height: TIMEOUT - 1 });
+        await openAt(TIMEOUT - 5);
+        await sendStatus('transaction.confirmed');
+
+        expect(refundOffered()).toBe(false);
     });
 
     it('is offered at the timeout block itself', async () => {
@@ -1734,6 +1848,7 @@ describe('SwapDetails submarine refund after the timeout', () => {
         'is not offered for a swap stored as %s',
         async (status) => {
             await openAt(TIMEOUT + 10, { status });
+            await hostSilent();
 
             expect(refundOffered()).toBe(false);
         }
