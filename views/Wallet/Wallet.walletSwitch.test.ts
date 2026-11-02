@@ -138,7 +138,9 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             retryOnTransientError,
             restartNeeded: jest.fn(),
             LinkingUtils,
-            Storage: { getItem: async () => false },
+            Storage: { getItem: async () => false, setItem: async () => {} },
+            IS_BACKED_UP_KEY: 'test-backed-up-flag',
+            NO_BACKUP_FOUND: 'No backup found',
             CHANNEL_MIGRATION_ACTIVE: 'test-migration-flag',
             processSharedQRImageFast: async () => null,
             Platform: { OS: 'ios' },
@@ -267,6 +269,37 @@ it('a second launch refresh does not connect once the Lockscreen is running the 
     expect(settings.getSettings).not.toHaveBeenCalled();
     expect(view.props.NodeInfoStore.getNodeInfo).not.toHaveBeenCalled();
 });
+
+it.each([
+    ['a backup was recovered', undefined, true],
+    ['the server has no backup', 'No backup found', true],
+    ['the recovery failed', 'Auth response status code: 503', false]
+])(
+    'a restored embedded LND wallet when %s',
+    async (_case, recoverError, backupsStart) => {
+        const { settings, view, runner, refresh } = setup(2);
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        Object.assign(settings.settings, {
+            recovery: true,
+            automaticDisasterRecoveryBackup: true
+        });
+        const { ChannelBackupStore } = view.props;
+        ChannelBackupStore.recoverStaticChannelBackup = jest.fn(async () => {
+            if (recoverError) throw new Error(recoverError);
+        });
+        ChannelBackupStore.initSubscribeChannelEvents = jest.fn();
+        await runner.run(refresh);
+
+        // after a failed recovery, the next launch tries again and nothing
+        // is uploaded that could replace the backup still to be recovered
+        expect(settings.updateSettings.mock.calls).toEqual(
+            backupsStart ? [[{ recovery: false }]] : []
+        );
+        expect(
+            ChannelBackupStore.initSubscribeChannelEvents
+        ).toHaveBeenCalledTimes(backupsStart ? 1 : 0);
+    }
+);
 
 it('switching away from a loading LDK Node leaves its alerts and connect to the next wallet', async () => {
     const { settings, view, runner, refresh, ldk } = setup(0);

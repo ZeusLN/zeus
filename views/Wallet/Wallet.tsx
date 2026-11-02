@@ -92,7 +92,9 @@ import { isWipePending } from '../../utils/DataClearUtils';
 import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
 import CashuStore from '../../stores/CashuStore';
-import ChannelBackupStore from '../../stores/ChannelBackupStore';
+import ChannelBackupStore, {
+    NO_BACKUP_FOUND
+} from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
 import FiatStore from '../../stores/FiatStore';
@@ -1199,7 +1201,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }
                     if (isSyncing || !isCurrent()) return;
                     try {
-                        await ChannelBackupStore.recoverStaticChannelBackup();
+                        await ChannelBackupStore.recoverStaticChannelBackup().catch(
+                            (e: any) => {
+                                // nothing to recover, start backups as usual
+                                if (e?.message !== NO_BACKUP_FOUND) throw e;
+                            }
+                        );
                         if (!isCurrent()) return;
                         await updateSettings({
                             recovery: false

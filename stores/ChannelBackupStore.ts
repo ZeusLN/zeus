@@ -20,6 +20,8 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import Storage from '../storage';
 
 export const BACKUPS_HOST = 'https://backups.lnolymp.us';
+// /api/recover error when the server has no backup for the node
+export const NO_BACKUP_FOUND = 'No backup found';
 
 export const LEGACY_LAST_CHANNEL_BACKUP_STATUS = 'LAST_CHANNEL_BACKUP_STATUS';
 export const LEGACY_LAST_CHANNEL_BACKUP_TIME = 'LAST_CHANNEL_BACKUP_TIME';
