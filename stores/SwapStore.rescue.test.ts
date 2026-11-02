@@ -69,12 +69,20 @@ jest.mock('../storage', () => {
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import SwapStore from './SwapStore';
 import Storage from '../storage';
-import { SWAPS_KEY, REVERSE_SWAPS_KEY } from '../utils/SwapUtils';
+import {
+    SWAPS_KEY,
+    REVERSE_SWAPS_KEY,
+    SWAPS_RESCUE_KEY,
+    buildSubmarineSwapLeaves,
+    deriveReverseSwapOutputKey
+} from '../utils/SwapUtils';
+import Bolt11Utils from '../utils/Bolt11Utils';
+import ecc from '@bitcoinerlab/secp256k1';
 import Swap from '../models/Swap';
 import { ReverseClaimTransaction } from '../models/ClaimTransaction';
 import { mnemonicToSeedSync } from '@scure/bip39';
 import { HDKey } from '@scure/bip32';
-import { crypto } from 'bitcoinjs-lib';
+import { crypto, payments } from 'bitcoinjs-lib';
 
 // BIP39 canonical test mnemonic, used as a swap rescue key
 const RESCUE_MNEMONIC =
@@ -442,6 +450,72 @@ describe('SwapStore.getRescuableSwaps, run again (#4821)', () => {
         expect(getStored(SWAPS_KEY)).toEqual([withPreimage]);
     });
 
+    const submarineAt = (keyIndex: number, lockupAddress: string) => ({
+        id: 'reused',
+        type: 'submarine',
+        refundDetails: { keyIndex, lockupAddress }
+    });
+
+    const storedSubmarineAt = async (
+        keyIndex: number,
+        lockupAddress: string
+    ) => {
+        setStored(SWAPS_KEY, []);
+        restoreResponse([submarineAt(keyIndex, lockupAddress)]);
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+        const [stored] = getStored(SWAPS_KEY);
+        return stored;
+    };
+
+    it('keeps two swaps stored under one ID with different keys', async () => {
+        // the host gave a later swap the ID of an earlier, funded one
+        const funded = await storedSubmarineAt(0, 'bc1pfunded');
+        const later = await storedSubmarineAt(1, 'bc1plater');
+        setStored(SWAPS_KEY, [later, funded]);
+        restoreResponse([submarineAt(0, 'bc1pfunded')]);
+
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+        expect(allStored()).toEqual([later, funded]);
+    });
+
+    it('keeps two swaps stored under one ID and key with different lockup addresses', async () => {
+        // the key index starts again at 0 after a rescue on a new install
+        const funded = await storedSubmarineAt(0, 'bc1pfunded');
+        const later = await storedSubmarineAt(0, 'bc1plater');
+        setStored(SWAPS_KEY, [later, funded]);
+        restoreResponse([submarineAt(0, 'bc1pfunded')]);
+
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+        expect(allStored()).toEqual([later, funded]);
+    });
+
+    it('keeps a swap created here next to a different swap under its ID', async () => {
+        const rescued = await storedSubmarineAt(1, 'bc1prescued');
+        const created = {
+            id: 'reused',
+            type: 'Submarine',
+            address: 'bc1pcreated'
+        };
+        setStored(SWAPS_KEY, [rescued, created]);
+        restoreResponse([submarineAt(1, 'bc1prescued')]);
+
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+        expect(allStored()).toEqual([rescued, created]);
+    });
+
+    it('collapses copies of one submarine swap with the same key and address', async () => {
+        const stored = await storedSubmarineAt(0, 'bc1pfunded');
+        setStored(SWAPS_KEY, [stored, { ...stored }]);
+        restoreResponse([submarineAt(0, 'bc1pfunded')]);
+
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+        expect(allStored()).toEqual([stored]);
+    });
+
     it('stores a swap the host lists twice only once', async () => {
         restoreResponse([reverseAt(0), reverseAt(0)]);
 
@@ -449,6 +523,112 @@ describe('SwapStore.getRescuableSwaps, run again (#4821)', () => {
 
         expect(allStored()).toHaveLength(1);
     });
+});
+
+describe('SwapStore.createSubmarineSwap', () => {
+    // regtest BOLT11 vector: 123 sats
+    const INVOICE =
+        'lnbcrt1230n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
+    const SERVER_PUBKEY = Buffer.from(
+        ecc.pointFromScalar(Buffer.alloc(32, 2), true)!
+    );
+    const TIMEOUT = 900000;
+    afterEach(() => (ReactNativeBlobUtil.fetch as jest.Mock).mockReset());
+
+    // Answers the tip height lookup, and the swap request with the swap
+    // tree a Boltz-style host builds for the request's refund key and the
+    // invoice's payment hash, so the response passes its checks
+    const create = async (id: string) => {
+        storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockImplementation(
+            async (_method: string, url: string, _headers: any, body: any) => {
+                if (url.endsWith('/blocks/tip/height')) {
+                    return {
+                        info: () => ({ status: 200 }),
+                        text: () => String(TIMEOUT - 100)
+                    };
+                }
+                const refundPubKey = Buffer.from(
+                    JSON.parse(body).refundPublicKey,
+                    'hex'
+                );
+                const { claimLeaf, refundLeaf } = buildSubmarineSwapLeaves({
+                    claimPubKey: SERVER_PUBKEY,
+                    refundPubKey,
+                    preimageHash: Buffer.from(
+                        Bolt11Utils.decode(INVOICE).payment_hash || '',
+                        'hex'
+                    ),
+                    timeoutBlockHeight: TIMEOUT
+                });
+                const pubkey = deriveReverseSwapOutputKey({
+                    ourPubKey: refundPubKey,
+                    serverPubKey: SERVER_PUBKEY,
+                    claimLeaf,
+                    refundLeaf
+                });
+                return {
+                    data: JSON.stringify({
+                        id,
+                        address: payments.p2tr({ pubkey }).address,
+                        expectedAmount: 424,
+                        swapTree: {
+                            claimLeaf: {
+                                version: 192,
+                                output: claimLeaf.toString('hex')
+                            },
+                            refundLeaf: {
+                                version: 192,
+                                output: refundLeaf.toString('hex')
+                            }
+                        },
+                        claimPublicKey: SERVER_PUBKEY.toString('hex'),
+                        timeoutBlockHeight: TIMEOUT
+                    })
+                };
+            }
+        );
+        const store = newStore();
+        // 0.5% and 300 sats: up to 424 sats to send for 123
+        store.subInfo = { fees: { percentage: 0.5, minerFees: 300 } };
+        const navigation = { navigate: jest.fn() };
+        await store.createSubmarineSwap(INVOICE, navigation);
+        return { store, navigation };
+    };
+
+    it('saves and opens a swap with a new ID', async () => {
+        setStored(SWAPS_KEY, [{ id: 'funded', address: 'bc1pfunded' }]);
+
+        const { store, navigation } = await create('new');
+
+        expect(store.apiError).toBe('');
+        expect(getStored(SWAPS_KEY).map((s: any) => s.id)).toEqual([
+            'new',
+            'funded'
+        ]);
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'SwapDetails',
+            expect.anything()
+        );
+    });
+
+    it.each([SWAPS_KEY, REVERSE_SWAPS_KEY])(
+        'does not save or open a swap whose ID is already stored under %s',
+        async (key) => {
+            const stored = [{ id: 'funded', address: 'bc1pfunded' }];
+            setStored(key, stored);
+
+            const { store, navigation } = await create('funded');
+
+            expect(store.apiError).toBe('views.Swaps.swapIdInUse');
+            expect(store.loading).toBe(false);
+            expect([
+                ...(getStored(SWAPS_KEY) || []),
+                ...(getStored(REVERSE_SWAPS_KEY) || [])
+            ]).toEqual(stored);
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        }
+    );
 });
 
 describe('SwapStore.updateSwapDestinationAddress', () => {
