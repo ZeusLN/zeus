@@ -258,6 +258,46 @@ describe('TransactionsStore.sendPayment with an offer', () => {
     });
 });
 
+describe('TransactionsStore.sendPayment amount', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        payLightningInvoice.mockReset();
+        sendKeysend.mockReset();
+        isLNDBased.mockReturnValue(false);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it.each(['1000.5', '0.001', 'abc'])(
+        'refuses an amount of %p and releases the guard',
+        (amount) => {
+            const store = newStore('cln-rest');
+            store.sendPayment({ payment_request: 'lnbcrt1...', amount });
+            store.sendPayment({ pubkey: '02ab', amount });
+
+            expect(payLightningInvoice).not.toHaveBeenCalled();
+            expect(sendKeysend).not.toHaveBeenCalled();
+            expect(store.loading).toBe(false);
+            expect(store.paymentInFlight).toBe(false);
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('stores.TransactionsStore.wholeSats');
+        }
+    );
+
+    it('sends a whole number of sats', () => {
+        payLightningInvoice.mockReturnValue(deferred().promise);
+
+        const store = newStore('cln-rest');
+        store.sendPayment({ payment_request: 'lnbcrt1...', amount: '1000' });
+
+        expect(payLightningInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ amt: 1000 })
+        );
+    });
+});
+
 describe('TransactionsStore.sendCoins with selected UTXOs on LND', () => {
     const utxo = `${'cd'.repeat(32)}:0`;
     const request = {
@@ -1376,6 +1416,18 @@ describe('TransactionsStore.sendPaymentSilently', () => {
         expect(store.payment_hash).toBeNull();
         expect(store.payment_preimage).toBeNull();
         expect(store.status).toBeNull();
+    });
+
+    it('refuses an amount that is not a whole number of sats', async () => {
+        const store = newStore('lnd');
+
+        await expect(
+            store.sendPaymentSilently({
+                payment_request: 'lnbcrt1service',
+                amount: '7000.5'
+            })
+        ).rejects.toThrow('stores.TransactionsStore.wholeSats');
+        expect(payLightningInvoice).not.toHaveBeenCalled();
     });
 
     it.each([
