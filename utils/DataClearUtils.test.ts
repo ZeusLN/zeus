@@ -12,6 +12,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     clear: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('react-native-encrypted-storage', () => ({
+    getItem: jest.fn().mockResolvedValue(null),
     removeItem: jest.fn().mockResolvedValue(undefined),
     clear: jest.fn().mockResolvedValue(undefined)
 }));
@@ -641,6 +642,11 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         mockedStorageGetItem.mockResolvedValue(null);
     });
 
+    afterEach(() => {
+        (EncryptedStorage.getItem as jest.Mock).mockResolvedValue(null);
+        (EncryptedStorage.removeItem as jest.Mock).mockResolvedValue(undefined);
+    });
+
     it('clears Cashu data for an embedded-lnd node dir', async () => {
         await clearNodeKeychainData({
             implementation: 'embedded-lnd',
@@ -718,6 +724,57 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
         expect(removedKeys()).not.toContain(baseKey);
         expect(removedKeys()).not.toContain(`${baseKey}:host`);
+    });
+
+    it('removes the legacy EncryptedStorage copies of the LNC credentials', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
+        const legacy = new Map([
+            [baseKey, '{"pairingPhrase":"over hover clever trigger"}'],
+            [`${baseKey}:host`, 'mailbox.terminal.lightning.today:443']
+        ]);
+        (EncryptedStorage.getItem as jest.Mock).mockImplementation(
+            async (key: string) => legacy.get(key) ?? null
+        );
+
+        await clearNodeKeychainData({
+            implementation: 'lightning-node-connect',
+            pairingPhrase
+        });
+
+        expect(EncryptedStorage.removeItem).toHaveBeenCalledWith(baseKey);
+        expect(EncryptedStorage.removeItem).toHaveBeenCalledWith(
+            `${baseKey}:host`
+        );
+    });
+
+    it('does not call removeItem for LNC entries EncryptedStorage does not hold', async () => {
+        // iOS removeItem rejects for an absent item
+        await clearNodeKeychainData({
+            implementation: 'lightning-node-connect',
+            pairingPhrase: 'over hover clever trigger'
+        });
+
+        expect(EncryptedStorage.removeItem).not.toHaveBeenCalled();
+    });
+
+    it('still clears the keychain host entry when a legacy removal fails', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
+        (EncryptedStorage.getItem as jest.Mock).mockResolvedValue('x');
+        (EncryptedStorage.removeItem as jest.Mock).mockRejectedValueOnce(
+            new Error('remove failed')
+        );
+
+        await clearNodeKeychainData({
+            implementation: 'lightning-node-connect',
+            pairingPhrase
+        });
+
+        expect(removedKeys()).toContain(`${baseKey}:host`);
+        expect(EncryptedStorage.removeItem).toHaveBeenCalledWith(
+            `${baseKey}:host`
+        );
     });
 
     it('is a no-op for a null node', async () => {
