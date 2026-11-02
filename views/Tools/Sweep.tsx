@@ -20,6 +20,7 @@ import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 
 import AddressUtils from '../../utils/AddressUtils';
+import { isPlausibleSatPerVbyte } from '../../utils/FeeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -158,7 +159,14 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
             confirmedBlockchainBalance === 0 &&
             unconfirmedBlockchainBalance === 0;
 
-        const disabled = !destination || !isValid || noOnchainBalance;
+        // Send stays off while the fee field shows an error. With an empty
+        // or 0 rate the node picks its own fee, so the rate the user
+        // confirms would not be the one used
+        const disabled =
+            !destination ||
+            !isValid ||
+            noOnchainBalance ||
+            !isPlausibleSatPerVbyte(fee);
 
         return (
             <Screen>

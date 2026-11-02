@@ -16,14 +16,23 @@ jest.mock('../../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
 jest.mock('../../components/Amount', () => 'Amount');
 jest.mock('../../components/Button', () => {
     const { Text, TouchableOpacity } = require('react-native');
-    return ({ title, onPress }: any) => (
-        <TouchableOpacity accessibilityRole="button" onPress={onPress}>
+    return ({ title, onPress, disabled }: any) => (
+        <TouchableOpacity
+            accessibilityRole="button"
+            onPress={onPress}
+            disabled={disabled}
+        >
             <Text>{title}</Text>
         </TouchableOpacity>
     );
 });
 jest.mock('../../components/Header', () => 'Header');
-jest.mock('../../components/OnchainFeeInput', () => 'OnchainFeeInput');
+jest.mock('../../components/OnchainFeeInput', () => {
+    const { TextInput } = require('react-native');
+    return ({ fee, onChangeFee }: any) => (
+        <TextInput testID="fee" value={fee} onChangeText={onChangeFee} />
+    );
+});
 jest.mock('../../components/Screen', () => {
     const { View } = require('react-native');
     return ({ children }: any) => <View>{children}</View>;
@@ -40,7 +49,7 @@ import Sweep from './Sweep';
 
 const DESTINATION = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
 
-const renderSweep = async (implementation = 'lnd') => {
+const renderSweep = async (implementation = 'lnd', fee?: string) => {
     const TransactionsStore = { sendCoins: jest.fn() };
     const navigation = { navigate: jest.fn() };
     await render(
@@ -59,6 +68,9 @@ const renderSweep = async (implementation = 'lnd') => {
             } as any)}
         />
     );
+    if (fee !== undefined) {
+        await fireEvent.changeText(screen.getByTestId('fee'), fee);
+    }
     await fireEvent.press(screen.getByText('views.Send.sendCoins'));
     return { TransactionsStore, navigation };
 };
@@ -114,6 +126,26 @@ describe('Sweep', () => {
             amount: 'all',
             spend_unconfirmed: true
         });
+    });
+
+    it.each(['', '0', '-1', 'abc', '2001'])(
+        'does not offer to send at a fee rate of %p',
+        async (fee) => {
+            const { TransactionsStore } = await renderSweep('lnd', fee);
+
+            expect(Alert.alert).not.toHaveBeenCalled();
+            expect(TransactionsStore.sendCoins).not.toHaveBeenCalled();
+        }
+    );
+
+    it('sends at a fee rate typed into the fee field', async () => {
+        const { TransactionsStore } = await renderSweep('lnd', '15');
+
+        expect((Alert.alert as jest.Mock).mock.calls[0][1]).toContain('at 15');
+        await pressAlertButton('general.confirm');
+        expect(TransactionsStore.sendCoins).toHaveBeenCalledWith(
+            expect.objectContaining({ sat_per_vbyte: '15' })
+        );
     });
 
     it('sends nothing when cancelled', async () => {
