@@ -279,6 +279,42 @@ describe('SwapStore Pro referral gating', () => {
     });
 });
 
+describe('SwapStore host selection', () => {
+    const CUSTOM_HOST = 'https://my-boltz.local/v2';
+
+    const store = (swaps: any, isTestNet = false) =>
+        new SwapStore(
+            { nodeInfo: { isTestNet } } as any,
+            { settings: { swaps } } as any
+        );
+
+    it('uses the custom host only on the network that selected it', () => {
+        // customHost is one value shared across networks, and the settings
+        // screen only shows the active network's selection.
+        const testnetCustom = {
+            hostMainnet: 'https://satsrouting.exchange/v2',
+            hostTestnet: 'Custom',
+            customHost: CUSTOM_HOST
+        };
+
+        expect(store(testnetCustom, true).getHost).toBe(CUSTOM_HOST);
+        expect(store(testnetCustom, false).getHost).toBe(
+            'https://satsrouting.exchange/v2'
+        );
+
+        const mainnetCustom = {
+            hostMainnet: 'Custom',
+            hostTestnet: 'https://api.testnet.boltz.exchange/v2',
+            customHost: CUSTOM_HOST
+        };
+
+        expect(store(mainnetCustom, false).getHost).toBe(CUSTOM_HOST);
+        expect(store(mainnetCustom, true).getHost).toBe(
+            'https://api.testnet.boltz.exchange/v2'
+        );
+    });
+});
+
 describe('SwapStore host-change rate refetch', () => {
     beforeEach(() => jest.clearAllMocks());
 
