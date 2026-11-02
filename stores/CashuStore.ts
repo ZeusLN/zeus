@@ -345,6 +345,12 @@ export default class CashuStore {
     // was started for
     private pendingRestoreRetry?: Promise<void>;
     private pendingRestoreRetrySession?: number;
+    // Per normalized mint URL, settles once the retry is done with that mint
+    private pendingRestoreRetryMints = new Map<string, Promise<void>>();
+    // Normalized URLs of mints removeMint is removing
+    private removingMints = new Set<string>();
+    // Serializes the read-modify-write updates of the pending restore list
+    private pendingRestoreWrites: Promise<void> = Promise.resolve();
 
     // Offline support
     public get isOffline(): boolean {
@@ -746,10 +752,28 @@ export default class CashuStore {
         }
     };
 
-    private setRestorePending = async (
+    /**
+     * Updates are queued so that two of them running at once (the
+     * background retry, removeMint, initializeWallets) cannot each read the
+     * list before the other writes it and drop the other's entry.
+     */
+    private setRestorePending = (
         mintUrl: string,
         pending: boolean,
         nodeDir: string = this.getNodeDir()
+    ): Promise<void> => {
+        const write = this.pendingRestoreWrites.then(() =>
+            this.writeRestorePending(mintUrl, pending, nodeDir)
+        );
+        // A failed write must not block the ones queued after it
+        this.pendingRestoreWrites = write.catch(() => {});
+        return write;
+    };
+
+    private writeRestorePending = async (
+        mintUrl: string,
+        pending: boolean,
+        nodeDir: string
     ) => {
         const normalizedUrl = this.normalizeMintUrl(mintUrl);
         const current = await this.getPendingRestoreMints(nodeDir);
@@ -846,7 +870,9 @@ export default class CashuStore {
      * on them. One retry runs at a time: a second initializeWallets in the
      * same session leaves the running one alone, and a retry started after
      * reset() waits for the stale one to stop first. A stale retry stops at
-     * its next step and writes nothing.
+     * its next step and writes nothing. A mint that is removed stops being
+     * retried at its next step too, so the retry does not add it back to
+     * CDK.
      */
     private startPendingRestoreRetry = (mintUrls: string[]) => {
         const session = this.walletSession;
@@ -859,28 +885,37 @@ export default class CashuStore {
         const nodeDir = this.getNodeDir();
         const isCurrent = () =>
             this.walletSession === session && this.getNodeDir() === nodeDir;
-        const previous = this.pendingRestoreRetry || Promise.resolve();
-        const retry: Promise<void> = previous
-            .then(async () => {
-                let attempted = false;
-                for (const mintUrl of mintUrls) {
-                    if (!isCurrent()) return;
-                    // Skip mints removed since startup, so the retry does
-                    // not add them back to CDK
-                    const configured = this.mintUrls.some(
-                        (url) =>
-                            this.normalizeMintUrl(url) ===
-                            this.normalizeMintUrl(mintUrl)
-                    );
-                    if (!configured) continue;
+        let attempted = false;
+        let steps = this.pendingRestoreRetry || Promise.resolve();
+        const retryMints = new Map<string, Promise<void>>();
+        for (const mintUrl of mintUrls) {
+            const normalizedUrl = this.normalizeMintUrl(mintUrl);
+            const isConfigured = () =>
+                !this.removingMints.has(normalizedUrl) &&
+                this.mintUrls.some(
+                    (url) => this.normalizeMintUrl(url) === normalizedUrl
+                );
+            steps = steps
+                .then(async () => {
+                    if (!isCurrent() || !isConfigured()) return;
+                    attempted = true;
                     await this.addMintAndRestore(
                         mintUrl,
                         nodeDir,
-                        isCurrent,
+                        () => isCurrent() && isConfigured(),
                         false
                     );
-                    attempted = true;
-                }
+                })
+                .catch((e) =>
+                    console.warn(
+                        `CDK: Background restore retry failed for ${mintUrl}:`,
+                        e
+                    )
+                );
+            retryMints.set(normalizedUrl, steps);
+        }
+        const retry: Promise<void> = steps
+            .then(async () => {
                 if (attempted && isCurrent()) {
                     await this.syncCDKBalances(false, isCurrent);
                 }
@@ -892,10 +927,23 @@ export default class CashuStore {
                 if (this.pendingRestoreRetry === retry) {
                     this.pendingRestoreRetry = undefined;
                     this.pendingRestoreRetrySession = undefined;
+                    this.pendingRestoreRetryMints = new Map();
                 }
             });
         this.pendingRestoreRetry = retry;
         this.pendingRestoreRetrySession = session;
+        this.pendingRestoreRetryMints = retryMints;
+    };
+
+    /**
+     * Waits until the background restore retry is done with this mint, if
+     * it is queued or running. CDK's restore writes every proof it finds
+     * back with the state the mint reports, so a proof reserved by a send
+     * or melt on the same mint would become spendable again, and a mint
+     * removed while its restore runs would be added back to CDK.
+     */
+    private waitForRestoreRetry = async (mintUrl: string) => {
+        await this.pendingRestoreRetryMints.get(this.normalizeMintUrl(mintUrl));
     };
 
     /**
@@ -2081,6 +2129,7 @@ export default class CashuStore {
         if (!this.cdkInitialized) {
             throw new Error('CDK not initialized');
         }
+        await this.waitForRestoreRetry(mintUrl);
 
         let conditions: CDKSpendingConditions | undefined;
         if (p2pkPubkey && p2pkPubkey.trim().length > 0) {
@@ -3222,8 +3271,24 @@ export default class CashuStore {
 
     @action
     public removeMint = async (mintUrl: string) => {
+        const normalizedUrl = this.normalizeMintUrl(mintUrl);
+        // Marked before the first await so a background restore retry that
+        // has not reached this mint skips it, and one that is restoring it
+        // stops at its next step
+        this.removingMints.add(normalizedUrl);
+        try {
+            return await this.removeMintFromWallet(mintUrl);
+        } finally {
+            this.removingMints.delete(normalizedUrl);
+        }
+    };
+
+    private removeMintFromWallet = async (mintUrl: string) => {
         this.loading = true;
         try {
+            // A CDK call the retry makes after the removal would add the
+            // mint back
+            await this.waitForRestoreRetry(mintUrl);
             await CashuDevKit.removeMint(mintUrl);
             if (__DEV__) {
                 console.log(`CDK: Removed mint ${mintUrl}`);
@@ -3635,6 +3700,7 @@ export default class CashuStore {
      * unpaid and untrack it just before the melt starts.
      */
     private trackAndMelt = async (melt: PendingMelt) => {
+        await this.waitForRestoreRetry(melt.mintUrl);
         this.meltsInProgress.add(melt.quote);
         try {
             await this.trackPendingMelt(melt);
@@ -5778,6 +5844,7 @@ export default class CashuStore {
                         });
 
                         await this.ensureMintAdded(mintUrl);
+                        await this.waitForRestoreRetry(mintUrl);
 
                         mintProgressInfo[index].status =
                             MintPaymentStatus.PAYING;

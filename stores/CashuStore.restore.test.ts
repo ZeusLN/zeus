@@ -44,6 +44,8 @@ jest.mock('../cashu-cdk', () => ({
     getMintUrls: jest.fn(async () => [...mockCdkMints]),
     restore: jest.fn(),
     restoreFromSeed: jest.fn(),
+    send: jest.fn(),
+    melt: jest.fn(),
     getBalances: jest.fn().mockResolvedValue({}),
     getTotalBalance: jest.fn().mockResolvedValue(0),
     fetchMintInfo: jest.fn().mockResolvedValue(null),
@@ -339,6 +341,194 @@ describe('CashuStore: ecash restore after seed recovery', () => {
         await retryOf(store);
         expect(restoredMints()).toEqual([mintUrl, mintUrl]);
         expect(mockStorage.has(pendingKey)).toBe(false);
+    });
+
+    it('skips a mint that is removed before the retry reaches it', async () => {
+        seedPendingMints(mintUrl, otherMintUrl);
+        const restore = deferred<number>();
+        (CashuDevKit.restore as jest.Mock).mockReturnValueOnce(restore.promise);
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+        expect(restoredMints()).toEqual([mintUrl]);
+
+        const removal = store.removeMint(otherMintUrl);
+        restore.resolve(0);
+        await removal;
+        await retryOf(store);
+
+        expect(restoredMints()).toEqual([mintUrl]);
+        expect(CashuDevKit.addMint).not.toHaveBeenCalledWith(otherMintUrl);
+        expect(mockCdkMints).toEqual([mintUrl]);
+        expect(store.mintUrls).toEqual([mintUrl]);
+        expect(mockStorage.has(pendingKey)).toBe(false);
+    });
+
+    it('removes a mint only after its running restore retry stops', async () => {
+        seedPendingMints(mintUrl);
+        const restore = deferred<number>();
+        (CashuDevKit.restore as jest.Mock).mockReturnValueOnce(restore.promise);
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+
+        // A CDK call the retry makes after the removal would add the mint
+        // back, so the removal waits for the restore to return
+        const removal = store.removeMint(mintUrl);
+        expect(await settlesWithin(removal)).toBe(false);
+        expect(CashuDevKit.removeMint).not.toHaveBeenCalled();
+
+        restore.resolve(21);
+        await removal;
+        await retryOf(store);
+
+        expect(CashuDevKit.removeMint).toHaveBeenCalledWith(mintUrl);
+        expect(mockCdkMints).toEqual([]);
+        expect(store.mintUrls).toEqual([]);
+        expect(mockStorage.get('lnd-cashu-mintUrls')).toBe('[]');
+        expect(mockStorage.has(pendingKey)).toBe(false);
+    });
+
+    it('does not restore a mint that is removed while the retry adds it', async () => {
+        seedPendingMints(mintUrl);
+        const addMint = deferred<void>();
+        (CashuDevKit.addMint as jest.Mock).mockReturnValueOnce(addMint.promise);
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+        expect(CashuDevKit.addMint).toHaveBeenCalledWith(mintUrl);
+
+        const removal = store.removeMint(mintUrl);
+        addMint.resolve();
+        await removal;
+        await retryOf(store);
+
+        expect(CashuDevKit.restore).not.toHaveBeenCalled();
+        expect(mockCdkMints).toEqual([]);
+        expect(mockStorage.has(pendingKey)).toBe(false);
+    });
+
+    it('drops the balance sync of a retry when reset runs during it', async () => {
+        seedPendingMints(mintUrl);
+        const restore = deferred<number>();
+        (CashuDevKit.restore as jest.Mock).mockReturnValueOnce(restore.promise);
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+        const retry = retryOf(store);
+
+        const balances = deferred<Record<string, number>>();
+        (CashuDevKit.getBalances as jest.Mock).mockReturnValueOnce(
+            balances.promise
+        );
+        (CashuDevKit.getTotalBalance as jest.Mock).mockResolvedValue(21);
+        restore.resolve(21);
+        await flush();
+        expect(CashuDevKit.getBalances).toHaveBeenCalled();
+
+        store.reset();
+        balances.resolve({ [mintUrl]: 21 });
+        await retry;
+
+        expect(store.totalBalanceSats).toBe(0);
+        expect(store.mintBalances).toEqual({});
+    });
+
+    it('sends from a mint only after its restore retry finishes', async () => {
+        seedPendingMints(mintUrl);
+        const restore = deferred<number>();
+        (CashuDevKit.restore as jest.Mock).mockReturnValueOnce(restore.promise);
+        (CashuDevKit.send as jest.Mock).mockResolvedValue({ encoded: 'token' });
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+
+        // CDK's restore writes the proofs it finds back as unspent, which
+        // would release proofs a send running alongside it has reserved
+        const send = store.sendTokenCDK(mintUrl, 10);
+        expect(await settlesWithin(send)).toBe(false);
+        expect(CashuDevKit.send).not.toHaveBeenCalled();
+
+        restore.resolve(0);
+        await send;
+        expect(CashuDevKit.send).toHaveBeenCalledTimes(1);
+    });
+
+    it('melts from a mint only after its restore retry finishes', async () => {
+        seedPendingMints(mintUrl);
+        const restore = deferred<number>();
+        (CashuDevKit.restore as jest.Mock).mockReturnValueOnce(restore.promise);
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({ state: 'PAID' });
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+
+        const melt = (store as any).trackAndMelt({ mintUrl, quote: 'q1' });
+        expect(await settlesWithin(melt)).toBe(false);
+        expect(CashuDevKit.melt).not.toHaveBeenCalled();
+
+        restore.resolve(0);
+        await melt;
+        expect(CashuDevKit.melt).toHaveBeenCalledWith(mintUrl, 'q1');
+    });
+
+    it('does not hold a send from a mint that is not being retried', async () => {
+        seedPendingMints(mintUrl);
+        mockCdkMints.push(otherMintUrl);
+        (CashuDevKit.restore as jest.Mock).mockReturnValueOnce(
+            new Promise(() => {})
+        );
+        (CashuDevKit.send as jest.Mock).mockResolvedValue({ encoded: 'token' });
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+
+        expect(await settlesWithin(store.sendTokenCDK(otherMintUrl, 10))).toBe(
+            true
+        );
+    });
+
+    it('keeps every entry when pending list updates overlap', async () => {
+        const store = createStore();
+        const setRestorePending = (url: string, pending: boolean) =>
+            (store as any).setRestorePending(url, pending, 'lnd');
+
+        await Promise.all([
+            setRestorePending(mintUrl, true),
+            setRestorePending(otherMintUrl, true)
+        ]);
+        expect(mockStorage.get(pendingKey)).toBe(
+            JSON.stringify([mintUrl, otherMintUrl])
+        );
+
+        await Promise.all([
+            setRestorePending(mintUrl, false),
+            setRestorePending(otherMintUrl, false)
+        ]);
+        expect(mockStorage.has(pendingKey)).toBe(false);
+    });
+
+    it('applies later pending list updates after a failed write', async () => {
+        const store = createStore();
+        const setRestorePending = (url: string, pending: boolean) =>
+            (store as any).setRestorePending(url, pending, 'lnd');
+        const Storage = jest.requireMock('../storage');
+        Storage.setItem.mockRejectedValueOnce(new Error('keychain'));
+
+        const first = setRestorePending(mintUrl, true);
+        const second = setRestorePending(otherMintUrl, true);
+        await expect(first).rejects.toThrow('keychain');
+        await second;
+        expect(mockStorage.get(pendingKey)).toBe(
+            JSON.stringify([otherMintUrl])
+        );
     });
 
     it('treats an unreadable pending list as empty', async () => {
