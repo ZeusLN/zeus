@@ -666,6 +666,35 @@ describe('LightningNodeConnect', () => {
             expect(transactions).toEqual([]);
         });
     });
+
+    describe('openChannelStream', () => {
+        afterEach(() => jest.restoreAllMocks());
+
+        it('sends the close address, as openChannelSync does', async () => {
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation(() => ({ remove: jest.fn() } as any));
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.lightning.openChannel = jest.fn(() => 'OpenChannel');
+
+            backend.openChannelStream({
+                node_pubkey_string: '02ab',
+                local_funding_amount: '500000',
+                close_address: 'bc1qclose',
+                funding_shim: { psbt_shim: { pending_chan_id: 'id' } }
+            } as any);
+
+            expect(lnc.lnd.lightning.openChannel).toHaveBeenCalledWith(
+                expect.objectContaining({ close_address: 'bc1qclose' })
+            );
+        });
+    });
 });
 
 describe('LightningNodeConnect on-chain sends', () => {
