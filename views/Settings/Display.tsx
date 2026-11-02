@@ -2,17 +2,13 @@ import * as React from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import SystemNavigationBar from 'react-native-system-navigation-bar';
 
 import ClockIcon from '../../assets/images/SVG/Clock.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 
-import SettingsStore, {
-    DEFAULT_VIEW_KEYS,
-    THEME_KEYS
-} from '../../stores/SettingsStore';
+import SettingsStore, { DEFAULT_VIEW_KEYS } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
-import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 import Text from '../../components/Text';
 import DropdownSetting from '../../components/DropdownSetting';
@@ -20,13 +16,14 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
+import { themeLabel } from './ThemePicker';
+
 interface DisplayProps {
     navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
 interface DisplayState {
-    theme: string;
     defaultView: string;
     displayNickname: boolean;
     bigKeypadButtons: boolean;
@@ -43,7 +40,6 @@ export default class Display extends React.Component<
     DisplayState
 > {
     state = {
-        theme: 'Dark',
         defaultView: 'Keypad',
         displayNickname: false,
         bigKeypadButtons: false,
@@ -59,7 +55,6 @@ export default class Display extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            theme: (settings.display && settings.display.theme) || 'Dark',
             defaultView:
                 (settings.display && settings.display.defaultView) || 'Keypad',
             displayNickname:
@@ -96,7 +91,6 @@ export default class Display extends React.Component<
             defaultView,
             displayNickname,
             bigKeypadButtons,
-            theme,
             showAllDecimalPlaces,
             removeDecimalSpaces,
             showMillisatoshiAmounts,
@@ -121,27 +115,38 @@ export default class Display extends React.Component<
                     style={{ flex: 1, paddingHorizontal: 15, marginTop: 5 }}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <DropdownSetting
-                        title={localeString('views.Settings.Theme.title')}
-                        selectedValue={theme}
-                        disabled={SettingsStore.settingsUpdateInProgress}
-                        onValueChange={async (value: string) => {
-                            this.setState({
-                                theme: value
-                            });
-                            await updateSettingsGroup('display', {
-                                theme: value
-                            });
-                            SystemNavigationBar.setNavigationColor(
-                                themeColor('background'),
-                                isLightTheme() ? 'dark' : 'light'
-                            );
-                            SystemNavigationBar.setNavigationBarDividerColor(
-                                themeColor('secondary')
-                            );
+                    <TouchableOpacity
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 10,
+                            marginBottom: 20,
+                            alignItems: 'center'
                         }}
-                        values={THEME_KEYS}
-                    />
+                        onPress={() => navigation.navigate('ThemePicker')}
+                        accessibilityRole="button"
+                    >
+                        <Text
+                            style={{
+                                flex: 1,
+                                color: themeColor('secondaryText'),
+                                fontSize: 17,
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            {localeString('views.Settings.Theme.title')}
+                        </Text>
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontSize: 17,
+                                fontFamily: 'PPNeueMontreal-Book',
+                                marginRight: 10
+                            }}
+                        >
+                            {themeLabel(SettingsStore.settings.display?.theme)}
+                        </Text>
+                        <ForwardIcon stroke={themeColor('secondaryText')} />
+                    </TouchableOpacity>
 
                     <DropdownSetting
                         title={localeString(
