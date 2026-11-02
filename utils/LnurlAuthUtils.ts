@@ -4,6 +4,8 @@ export const LNURLAUTH_CANONICAL_PHRASE =
 // Case and whitespace are normalised before comparing because a signMessage
 // implementation (or a remote requester) may trim, re-case or re-flow the
 // text; any variant that could yield the same hashing key must be refused.
+// The compare is on the string, so it relies on every backend signing the
+// message's UTF-8 bytes (see EmbeddedLND.signMessage).
 const normalize = (message: string): string =>
     message.trim().replace(/\s+/g, ' ').toLowerCase();
 

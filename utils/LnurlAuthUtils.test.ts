@@ -29,4 +29,14 @@ describe('isReservedSigningMessage', () => {
             isReservedSigningMessage(LNURLAUTH_CANONICAL_PHRASE + ' extra')
         ).toBe(false);
     });
+
+    // A look-alike whose chars share the phrase's low bytes is a different
+    // string. Backends must sign UTF-8 so it cannot be signed as the phrase.
+    it('does not match a look-alike that differs only above the low byte', () => {
+        expect(
+            isReservedSigningMessage(
+                '\u0144' + LNURLAUTH_CANONICAL_PHRASE.slice(1)
+            )
+        ).toBe(false);
+    });
 });
