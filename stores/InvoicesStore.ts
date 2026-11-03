@@ -1035,7 +1035,9 @@ export default class InvoicesStore {
     };
 
     @action
-    public getWithdrawalReq = (withdrawalReq: string) => {
+    public getWithdrawalReq = (
+        withdrawalReq: string
+    ): Promise<WithdrawalRequest | null> => {
         const requestId = ++this.payReqRequestId;
         this.loading = true;
         this.withdrawal_req = null;
@@ -1046,23 +1048,27 @@ export default class InvoicesStore {
 
         return BackendUtils.decodePaymentRequest([withdrawalReq])
             .then((data: any) => {
-                // same guard as getPayReq: both share paymentRequest
-                if (requestId !== this.payReqRequestId) return;
+                const decoded = new WithdrawalRequest(data);
+                // same guard as getPayReq: both share paymentRequest. The
+                // decode is still returned, so WithdrawalRequestInfo can
+                // show it after a getPayReq (deep link, NFC) superseded it
+                if (requestId !== this.payReqRequestId) return decoded;
                 runInAction(() => {
-                    this.withdrawal_req = new WithdrawalRequest(data);
+                    this.withdrawal_req = decoded;
                     this.getPayReqError = null;
                     this.loading = false;
                 });
-                return;
+                return decoded;
             })
             .catch((error: Error) => {
-                if (requestId !== this.payReqRequestId) return;
+                if (requestId !== this.payReqRequestId) return null;
                 const error_friendly = errorToUserFriendly(error);
                 runInAction(() => {
                     this.withdrawal_req = null;
                     this.getPayReqError = error_friendly;
                     this.loading = false;
                 });
+                return null;
             });
     };
 

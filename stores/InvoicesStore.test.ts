@@ -269,6 +269,26 @@ describe('InvoicesStore superseded decode requests', () => {
         expect(store.pay_req!.getPaymentRequest).toBe('lnbc-second');
     });
 
+    // WithdrawalRequestInfo shows what getWithdrawalReq resolves with
+    it('still returns a superseded withdrawal decode to its caller', async () => {
+        const store = newStore();
+        const first = store.getWithdrawalReq('lnr-first');
+        store.getPayReq('lnbc-second');
+        settle['lnr-first'].resolve({ invreq_amount_msat: 1000 });
+
+        expect((await first)!.invreq_amount_msat).toBe(1000);
+        expect(store.withdrawal_req).toBeNull();
+    });
+
+    it('returns null for a failed withdrawal decode', async () => {
+        const store = newStore();
+        const request = store.getWithdrawalReq('lnr-first');
+        settle['lnr-first'].reject(new Error('decode failed'));
+
+        expect(await request).toBeNull();
+        expect(store.getPayReqError).not.toBeNull();
+    });
+
     it('ignores a getPayReq response that arrives after a newer getWithdrawalReq', async () => {
         const store = newStore();
         const first = store.getPayReq('lnbc-first');
