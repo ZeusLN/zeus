@@ -54,6 +54,7 @@ import StealthModeUtils from './utils/StealthModeUtils';
 import StealthModeWrapper from './components/StealthModeWrapper';
 import { AppContainer } from './components/layout/AppContainer';
 import CopiedToastHost from './components/CopiedToast';
+import ErrorBannerHost from './components/ErrorBanner';
 import AlertModal from './components/Modals/AlertModal';
 import ExternalLinkModal from './components/Modals/ExternalLinkModal';
 import AndroidNfcModal from './components/Modals/AndroidNfcModal';
@@ -1838,6 +1839,7 @@ export default class App extends React.PureComponent {
                                 {/* @ts-ignore:next-line */}
                                 <RestoreChannelModal />
                                 <CopiedToastHost />
+                                <ErrorBannerHost />
                             </GestureHandlerRootView>
                         </PushNotificationManager>
                     </AppContainer>
