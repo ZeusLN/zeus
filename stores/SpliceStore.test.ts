@@ -8,14 +8,15 @@ jest.mock('../utils/BackendUtils', () => ({
         getBlockchainBalance: jest.fn(),
         getNewAddress: jest.fn(),
         spliceIn: jest.fn(),
-        spliceOut: jest.fn()
+        spliceOut: jest.fn(),
+        watchSpliceEvents: jest.fn()
     }
 }));
 
 import SpliceStore from './SpliceStore';
 import BackendUtils from '../utils/BackendUtils';
 
-const channelsStore = { getChannels: jest.fn() };
+const channelsStore: any = { getChannels: jest.fn(), channels: [] };
 const balanceStore = { getCombinedBalance: jest.fn() };
 
 const newStore = () =>
@@ -295,5 +296,173 @@ describe('SpliceStore.splice', () => {
         expect(store.spliceError).toBeNull();
         expect(store.spliceErrorDetail).toBeNull();
         expect(store.spliceSuccess).toBe(true);
+    });
+});
+
+describe('SpliceStore splice tracking', () => {
+    let emit: (event: any) => void;
+    const unsubscribe = jest.fn();
+
+    const channel = {
+        channel_point: 'funding-txid:0',
+        user_channel_id: 'user-chan'
+    };
+    const pendingEvent = {
+        type: 'splicePending',
+        userChannelId: 'user-chan',
+        channelId: 'chan',
+        txid: 'splice-txid',
+        vout: 1
+    };
+
+    const trackingStore = () => {
+        const store = newStore();
+        store.trackSplices();
+        return store;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        channelsStore.channels = [channel];
+        (BackendUtils.watchSpliceEvents as jest.Mock).mockImplementation(
+            (callback: any) => {
+                emit = callback;
+                return unsubscribe;
+            }
+        );
+    });
+
+    it('subscribes once however often it is asked to track', () => {
+        const store = newStore();
+        store.trackSplices();
+        store.trackSplices();
+
+        expect(BackendUtils.watchSpliceEvents).toHaveBeenCalledTimes(1);
+    });
+
+    it('does nothing on a backend without splice events', () => {
+        (BackendUtils.watchSpliceEvents as jest.Mock).mockReturnValue(false);
+        const store = newStore();
+        store.trackSplices();
+        store.stopTracking();
+        store.trackSplices();
+
+        expect(BackendUtils.watchSpliceEvents).toHaveBeenCalledTimes(2);
+    });
+
+    it('records a splice the peer started and refreshes channels', () => {
+        const store = trackingStore();
+
+        emit(pendingEvent);
+
+        expect(store.pendingSplices).toEqual([
+            expect.objectContaining({
+                userChannelId: 'user-chan',
+                channelId: 'chan',
+                txid: 'splice-txid',
+                vout: 1,
+                initiator: 'remote'
+            })
+        ]);
+        expect(store.pendingSplices[0].direction).toBeUndefined();
+        expect(channelsStore.getChannels).toHaveBeenCalledTimes(1);
+        expect(balanceStore.getCombinedBalance).toHaveBeenCalledTimes(1);
+    });
+
+    it('records our own splice with what we asked for, even after the call timed out', async () => {
+        (BackendUtils.spliceOut as jest.Mock).mockResolvedValue({
+            success: true
+        });
+        const store = trackingStore();
+
+        await store.splice({
+            direction: 'out',
+            fundingTxid: 'funding-txid',
+            amountSats: 30000,
+            address: 'bc1qdest'
+        });
+        emit(pendingEvent);
+
+        expect(store.pendingSplices[0]).toEqual(
+            expect.objectContaining({
+                initiator: 'local',
+                direction: 'out',
+                amountSats: 30000,
+                address: 'bc1qdest'
+            })
+        );
+    });
+
+    it('forgets what we asked for when the node refuses the splice', async () => {
+        (BackendUtils.spliceIn as jest.Mock).mockRejectedValue(
+            new Error('Failed to splice channel.')
+        );
+        const store = trackingStore();
+
+        await store.splice({
+            direction: 'in',
+            fundingTxid: 'funding-txid',
+            amountSats: 50000
+        });
+        emit(pendingEvent);
+
+        expect(store.pendingSplices[0].initiator).toEqual('remote');
+    });
+
+    it.each(['channelReady', 'spliceFailed', 'channelClosed'])(
+        'clears the splice on %s and refreshes channels',
+        (type) => {
+            const store = trackingStore();
+            emit(pendingEvent);
+            jest.clearAllMocks();
+
+            emit({ type, userChannelId: 'user-chan', channelId: 'chan' });
+
+            expect(store.pendingSplices).toEqual([]);
+            expect(channelsStore.getChannels).toHaveBeenCalledTimes(1);
+            expect(balanceStore.getCombinedBalance).toHaveBeenCalledTimes(1);
+        }
+    );
+
+    it('ignores channelReady for a channel with no splice, such as a new channel', () => {
+        const store = trackingStore();
+
+        emit({
+            type: 'channelReady',
+            userChannelId: 'other',
+            channelId: 'other'
+        });
+
+        expect(store.pendingSplices).toEqual([]);
+        expect(channelsStore.getChannels).not.toHaveBeenCalled();
+    });
+
+    it('keeps one splice per channel', () => {
+        const store = trackingStore();
+
+        emit(pendingEvent);
+        emit({ ...pendingEvent, txid: 'later-txid' });
+
+        expect(store.pendingSplices).toHaveLength(1);
+        expect(store.pendingSplices[0].txid).toEqual('later-txid');
+    });
+
+    it('stops listening and forgets splices when tracking stops', () => {
+        const store = trackingStore();
+        emit(pendingEvent);
+
+        store.stopTracking();
+
+        expect(unsubscribe).toHaveBeenCalledTimes(1);
+        expect(store.pendingSplices).toEqual([]);
+    });
+
+    it('keeps tracked splices when the splice form resets', () => {
+        const store = trackingStore();
+        emit(pendingEvent);
+
+        store.reset();
+
+        expect(store.pendingSplices).toHaveLength(1);
     });
 });

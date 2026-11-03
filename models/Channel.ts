@@ -77,6 +77,8 @@ export default class Channel extends BaseModel {
     // LDK: provides direct counts instead of height-based fields
     confirmations?: number;
     confirmations_required?: number;
+    // LDK: stable across splices, unlike chan_id (the SCID)
+    user_channel_id?: string;
 
     // enrichments
     displayName?: string;

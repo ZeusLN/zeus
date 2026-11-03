@@ -121,6 +121,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 import ContactStore from '../../stores/ContactStore';
 import NotesStore from '../../stores/NotesStore';
+import SpliceStore from '../../stores/SpliceStore';
 import SwapStore from '../../stores/SwapStore';
 import NostrWalletConnectStore from '../../stores/NostrWalletConnectStore';
 
@@ -157,6 +158,7 @@ interface WalletProps {
     SyncStore: SyncStore;
     LSPStore: LSPStore;
     NotesStore: NotesStore;
+    SpliceStore: SpliceStore;
     SwapStore: SwapStore;
     ChannelBackupStore: ChannelBackupStore;
     LightningAddressStore: LightningAddressStore;
@@ -193,6 +195,7 @@ interface WalletState {
     'ChannelBackupStore',
     'LightningAddressStore',
     'NotesStore',
+    'SpliceStore',
     'SwapStore',
     'NostrWalletConnectStore'
 )
@@ -625,6 +628,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LightningAddressStore,
             LnurlPayStore,
             NotesStore,
+            SpliceStore,
             SwapStore,
             NostrWalletConnectStore,
             UnitsStore
@@ -699,6 +703,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.reset();
             ChannelBackupStore.reset();
             UTXOsStore.reset();
+            SpliceStore.stopTracking();
             ContactStore.loadContacts();
             NotesStore.loadNoteKeys();
             // Units are first read at store construction, which on iOS can
@@ -1412,6 +1417,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 return;
             }
         }
+
+        if (BackendUtils.supportsSplicing()) SpliceStore.trackSplices();
 
         if (
             lightningAddress.enabled &&

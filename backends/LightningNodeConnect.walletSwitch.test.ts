@@ -106,6 +106,7 @@ function setup() {
         supportsChannelManagement: () => false,
         supportsFlowLSP: () => false,
         supportsNostrWalletConnectService: () => false,
+        supportsSplicing: () => false,
         clearCachedCalls: () => {}
     });
     const Settings = sourceMethods(
@@ -194,6 +195,7 @@ function setup() {
         'LightningAddressStore',
         'LnurlPayStore',
         'NotesStore',
+        'SpliceStore',
         'SwapStore',
         'NostrWalletConnectStore',
         'UnitsStore'
@@ -208,6 +210,7 @@ function setup() {
     view.props.NotesStore.loadNoteKeys = jest.fn();
     view.props.UnitsStore.getUnits = jest.fn();
     view.props.SwapStore.fetchAndUpdateSwaps = jest.fn();
+    view.props.SpliceStore.stopTracking = jest.fn();
     view.state = { initialLoad: false, unlocked: true };
     view.setState = (patch: any) => Object.assign(view.state, patch);
     view.processPendingShareIntent = jest.fn();

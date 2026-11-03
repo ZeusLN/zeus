@@ -6,6 +6,7 @@ import ChannelsStore from './ChannelsStore';
 import BackendUtils from '../utils/BackendUtils';
 import {
     SpliceDirection,
+    SpliceEvent,
     getSpliceErrorMessage,
     getSpliceInAvailableSats
 } from '../utils/SpliceUtils';
@@ -18,7 +19,32 @@ export interface SpliceRequest {
     address?: string;
 }
 
+// What we asked for; the node's events don't say
+interface SpliceIntent {
+    direction: SpliceDirection;
+    amountSats: number;
+    address?: string;
+}
+
+export interface PendingSplice {
+    userChannelId: string;
+    channelId: string;
+    txid: string;
+    vout?: number;
+    // remote: the peer started it, so direction and amount are unknown
+    initiator: 'local' | 'remote';
+    direction?: SpliceDirection;
+    amountSats?: number;
+    address?: string;
+    startedAt: number;
+}
+
 export default class SpliceStore {
+    @observable public pendingSplices: PendingSplice[] = [];
+
+    private intents = new Map<string, SpliceIntent>();
+    private unsubscribeSpliceEvents: (() => void) | null = null;
+
     @observable public spliceInAvailableSats: number | null = null;
     @observable public loadingSpliceInAvailable = false;
     @observable public spliceInAvailableError: string | null = null;
@@ -52,6 +78,74 @@ export default class SpliceStore {
         this.spliceTxid = null;
         this.spliceError = null;
         this.spliceErrorDetail = null;
+    };
+
+    // Follows splices for the connected node, including ones the peer starts.
+    // A splice keeps the channel's old funding and capacity until it locks,
+    // so channels and balances are refreshed on each step. Safe to call on
+    // every refresh: it subscribes once until stopTracking
+    @action
+    public trackSplices = () => {
+        if (this.unsubscribeSpliceEvents) return;
+        const unsubscribe = BackendUtils.watchSpliceEvents(
+            this.handleSpliceEvent
+        );
+        if (typeof unsubscribe === 'function') {
+            this.unsubscribeSpliceEvents = unsubscribe;
+        }
+    };
+
+    @action
+    public stopTracking = () => {
+        this.unsubscribeSpliceEvents?.();
+        this.unsubscribeSpliceEvents = null;
+        this.pendingSplices = [];
+        this.intents.clear();
+    };
+
+    @action
+    private handleSpliceEvent = (event: SpliceEvent) => {
+        const { type, userChannelId } = event;
+        const pending = this.pendingSplices.some(
+            (splice) => splice.userChannelId === userChannelId
+        );
+
+        if (type === 'splicePending' && event.txid) {
+            const intent = this.intents.get(userChannelId);
+            this.intents.delete(userChannelId);
+            this.pendingSplices = [
+                ...this.pendingSplices.filter(
+                    (splice) => splice.userChannelId !== userChannelId
+                ),
+                {
+                    userChannelId,
+                    channelId: event.channelId,
+                    txid: event.txid,
+                    vout: event.vout,
+                    initiator: intent ? 'local' : 'remote',
+                    ...intent,
+                    startedAt: Date.now()
+                }
+            ];
+        } else if (type === 'spliceFailed' || type === 'channelClosed') {
+            const intended = this.intents.delete(userChannelId);
+            if (!pending && !intended) return;
+            this.removePendingSplice(userChannelId);
+        } else if (type === 'channelReady' && pending) {
+            this.removePendingSplice(userChannelId);
+        } else {
+            return;
+        }
+
+        this.channelsStore.getChannels();
+        this.balanceStore.getCombinedBalance();
+    };
+
+    @action
+    private removePendingSplice = (userChannelId: string) => {
+        this.pendingSplices = this.pendingSplices.filter(
+            (splice) => splice.userChannelId !== userChannelId
+        );
     };
 
     // A splice-in can only spend confirmed UTXOs, so the confirmed balance
@@ -107,6 +201,15 @@ export default class SpliceStore {
         this.resetSplice();
         this.splicing = true;
 
+        // Read by handleSpliceEvent, which may only hear back after this
+        // call has timed out
+        const userChannelId = this.channelsStore.channels.find(
+            (channel) => channel.channel_point?.split(':')[0] === fundingTxid
+        )?.user_channel_id;
+        if (userChannelId) {
+            this.intents.set(userChannelId, { direction, amountSats, address });
+        }
+
         try {
             let result: any;
             if (direction === 'in') {
@@ -134,6 +237,7 @@ export default class SpliceStore {
             this.channelsStore.getChannels();
             this.balanceStore.getCombinedBalance();
         } catch (error: any) {
+            if (userChannelId) this.intents.delete(userChannelId);
             const message = error?.message || String(error);
             const friendly = getSpliceErrorMessage(message);
             runInAction(() => {
