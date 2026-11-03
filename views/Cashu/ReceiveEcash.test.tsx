@@ -554,9 +554,11 @@ describe('ReceiveEcash NFC lookups that were superseded', () => {
 });
 
 describe('ReceiveEcash Lightning address tab', () => {
-    // An invoice on screen, the Lightning address tab selected and no
-    // ZEUS Pay address yet
-    const renderTab = async () => {
+    // An invoice on screen and the Lightning address tab selected; by
+    // default no ZEUS Pay address yet
+    const renderTab = async (
+        lightningAddressStore: any = { lightningAddress: '' }
+    ) => {
         const navigate = jest.fn();
         await render(
             <ReceiveEcash
@@ -567,7 +569,7 @@ describe('ReceiveEcash Lightning address tab', () => {
                         invoice: 'lnbc1invoice',
                         clearInvoice: jest.fn()
                     },
-                    LightningAddressStore: { lightningAddress: '' },
+                    LightningAddressStore: lightningAddressStore,
                     ModalStore: {},
                     NodeInfoStore: {},
                     PosStore: {},
@@ -596,4 +598,37 @@ describe('ReceiveEcash Lightning address tab', () => {
 
         expect(navigate).toHaveBeenCalledWith('CreateCashuLightningAddress');
     });
+
+    // On this tab the only CollapsedQR is the address one; the invoice QR is
+    // on the other tab
+    const addressQRs = () =>
+        screen.root!.queryAll((node: any) => node.type === 'CollapsedQR');
+
+    it('shows the address QR and no create button when there is an address', async () => {
+        await renderTab({ lightningAddress: 'user@zeuspay.com' });
+        await waitFor(() => expect(addressQRs()).toHaveLength(1));
+
+        expect(addressQRs()[0].props.value).toBe('lightning:user@zeuspay.com');
+        expect(createButton()).toBeUndefined();
+    });
+
+    it.each([
+        ['without an address', ''],
+        ['with an address', 'user@zeuspay.com']
+    ])(
+        'shows neither the button nor the QR while the address loads, %s',
+        async (_name, lightningAddress) => {
+            await renderTab({ lightningAddress, loading: true });
+            await waitFor(() =>
+                expect(
+                    screen.root!.queryAll(
+                        (node: any) => node.type === 'LoadingIndicator'
+                    )
+                ).toHaveLength(1)
+            );
+
+            expect(createButton()).toBeUndefined();
+            expect(addressQRs()).toHaveLength(0);
+        }
+    );
 });
