@@ -83,12 +83,15 @@ class LdkNodeModule: RCTEventEmitter {
         return old
     }
 
-    /// Invalidates any build in flight and returns the new generation.
-    private func advanceBuildGeneration() -> UInt64 {
+    /// Takes the node like takeNode() and, in the same critical section,
+    /// invalidates any build in flight. Returns the new generation.
+    private func takeNodeAndAdvanceGeneration() -> (node: Node?, generation: UInt64) {
         nodeLock.lock()
         defer { nodeLock.unlock() }
+        let old = node
+        node = nil
         buildGeneration &+= 1
-        return buildGeneration
+        return (old, buildGeneration)
     }
 
     private func isCurrentBuild(_ generation: UInt64) -> Bool {
@@ -98,14 +101,26 @@ class LdkNodeModule: RCTEventEmitter {
     }
 
     /// Publishes a built node and consumes the builder, unless stop() or a
-    /// newer buildNode() ran since the build started.
-    private func publishNode(_ newNode: Node, generation: UInt64) -> Bool {
+    /// newer buildNode() ran since the build started. When the dual-store
+    /// build produced no node, buildLocal runs here, under nodeLock, so that
+    /// stop() and the next buildNode() wait for it instead of opening the
+    /// same storage dir while it is still running. Returns nil, without
+    /// running buildLocal, for a superseded build.
+    private func publishNode(_ builtNode: Node?, generation: UInt64, buildLocal: () throws -> Node) rethrows -> Node? {
         nodeLock.lock()
         defer { nodeLock.unlock() }
-        guard generation == buildGeneration else { return false }
+        guard generation == buildGeneration else { return nil }
+        // buildNode() and stop() clear the node when they advance the
+        // generation, so a current build should never find one here. Do not
+        // replace a node that may be running without stopping it.
+        guard node == nil else {
+            NSLog("LdkNodeModule: buildNode: a node is already published, discarding this build")
+            return nil
+        }
+        let newNode = try builtNode ?? buildLocal()
         node = newNode
         builder = nil // Builder is consumed
-        return true
+        return newNode
     }
 
     /// Drops a node built by a superseded build. The builder and stored
@@ -413,7 +428,8 @@ class LdkNodeModule: RCTEventEmitter {
         // Call stop() on this (non-Tokio) thread, then keep the reference
         // alive briefly so internal Tokio tasks can drop their Arc refs
         // before ours — preventing the Runtime-dropped-on-worker panic.
-        if let existingNode = self.takeNode() {
+        let (existing, generation) = self.takeNodeAndAdvanceGeneration()
+        if let existingNode = existing {
             self.logFileObserver?.stopObserving()
             self.logFileObserver = nil
             do { try existingNode.stop() } catch { /* already released */ }
@@ -421,7 +437,6 @@ class LdkNodeModule: RCTEventEmitter {
                 withExtendedLifetime(existingNode) {}
             }
         }
-        let generation = self.advanceBuildGeneration()
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else {
@@ -573,25 +588,20 @@ class LdkNodeModule: RCTEventEmitter {
                     return
                 }
 
-                if !self.isCurrentBuild(generation) {
-                    self.rejectSupersededBuild(builtNode, reject: reject)
-                    return
-                }
-
-                // Fall back to local SQLite store if dual store failed or VSS was not configured
-                if builtNode == nil {
+                let published = try self.publishNode(builtNode, generation: generation) {
+                    // Fall back to local SQLite store if dual store failed or VSS was not configured
                     if vssError != nil {
                         NSLog("LdkNodeModule: [timing] Falling back to local SQLite store")
                     }
                     let localStart = CFAbsoluteTimeGetCurrent()
                     let localBuilder = Builder.fromConfig(config: config)
                     self.applyBuilderSettings(localBuilder)
-                    builtNode = try localBuilder.build(nodeEntropy: nodeEntropy)
+                    let localNode = try localBuilder.build(nodeEntropy: nodeEntropy)
                     let localMs = Int((CFAbsoluteTimeGetCurrent() - localStart) * 1000)
-                    NSLog("LdkNodeModule: [timing] Local-only build completed in \(localMs)ms")
+                    NSLog("%@", "LdkNodeModule: [timing] Local-only build completed in \(localMs)ms")
+                    return localNode
                 }
-
-                guard let newNode = builtNode, self.publishNode(newNode, generation: generation) else {
+                guard published != nil else {
                     self.rejectSupersededBuild(builtNode, reject: reject)
                     return
                 }
@@ -665,8 +675,7 @@ class LdkNodeModule: RCTEventEmitter {
     @objc(stop:rejecter:)
     func stop(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         // Also cancels a build still in flight (see buildGeneration)
-        _ = self.advanceBuildGeneration()
-        guard let node = self.takeNode() else {
+        guard let node = self.takeNodeAndAdvanceGeneration().node else {
             // No node to stop - that's OK
             resolve(["status": "ok"])
             return

@@ -77,6 +77,28 @@ describe('Android LdkNodeModule build generation (source scan)', () => {
         );
     });
 
+    // stop() and the next buildNode() take nodeLock, so a local build that
+    // holds it cannot overlap them on the same storage dir
+    it('runs the local fallback build under nodeLock after the generation check', () => {
+        const publish = between(
+            buildNode,
+            'val published = synchronized(nodeLock)',
+            'if (!published)'
+        );
+        const check = publish.indexOf(
+            'generation == this@LdkNodeModule.buildGeneration'
+        );
+        const build = publish.indexOf(
+            'builtNode = localBuilder.build(nodeEntropy)'
+        );
+        expect(check).toBeGreaterThanOrEqual(0);
+        expect(build).toBeGreaterThan(check);
+        expect(build).toBeLessThan(
+            publish.indexOf('this@LdkNodeModule.node = builtNode')
+        );
+        expect(buildNode.match(/localBuilder\.build\(/g)).toHaveLength(1);
+    });
+
     it('decides the local fallback on its own build, not the shared node', () => {
         expect(buildNode).toContain('if (builtNode == null)');
         expect(buildNode).not.toContain('if (this@LdkNodeModule.node == null)');
@@ -98,32 +120,47 @@ describe('iOS LdkNodeModule build generation (source scan)', () => {
     );
     const stop = between(source, 'func stop(_ resolve', 'func syncWallets(');
 
-    it('advances the generation in stop() before the null-node early return', () => {
-        expect(
-            stop.indexOf('self.advanceBuildGeneration()')
-        ).toBeGreaterThanOrEqual(0);
-        expect(stop.indexOf('self.advanceBuildGeneration()')).toBeLessThan(
-            stop.indexOf('guard let node = self.takeNode()')
+    it('takes the node and advances the generation in one critical section', () => {
+        const helper = between(
+            source,
+            'private func takeNodeAndAdvanceGeneration()',
+            'private func isCurrentBuild('
         );
+        expect(helper).toContain('node = nil');
+        expect(helper).toContain('buildGeneration &+= 1');
+        expect(helper.match(/nodeLock\.lock\(\)/g)).toHaveLength(1);
+        expect(stop).toContain(
+            'guard let node = self.takeNodeAndAdvanceGeneration().node'
+        );
+        expect(buildNode).toContain(
+            'let (existing, generation) = self.takeNodeAndAdvanceGeneration()'
+        );
+        expect(stop).not.toContain('self.takeNode()');
+        expect(buildNode).not.toContain('self.takeNode()');
     });
 
-    it('publishes the built node only through publishNode', () => {
-        expect(buildNode).toContain(
-            'let generation = self.advanceBuildGeneration()'
-        );
+    it('publishes and runs the local fallback build only through publishNode', () => {
         expect(buildNode).not.toContain('self.setNode(');
-        expect(buildNode).toContain(
-            'self.publishNode(newNode, generation: generation)'
+        const publish = buildNode.indexOf(
+            'try self.publishNode(builtNode, generation: generation)'
         );
-        expect(buildNode).toContain('if builtNode == nil');
+        const build = buildNode.indexOf('localBuilder.build(');
+        expect(publish).toBeGreaterThanOrEqual(0);
+        expect(build).toBeGreaterThan(publish);
+        expect(build).toBeLessThan(buildNode.indexOf('guard published != nil'));
         const publishNode = between(
             source,
             'private func publishNode(',
             'private func rejectSupersededBuild('
         );
-        expect(publishNode).toContain(
-            'guard generation == buildGeneration else { return false }'
+        const check = publishNode.indexOf(
+            'guard generation == buildGeneration else { return nil }'
         );
+        expect(check).toBeGreaterThanOrEqual(0);
+        expect(publishNode.indexOf('guard node == nil else')).toBeGreaterThan(
+            check
+        );
+        expect(publishNode.indexOf('buildLocal()')).toBeGreaterThan(check);
     });
 
     it('reads restore settings before waiting on VSS', () => {
@@ -134,7 +171,7 @@ describe('iOS LdkNodeModule build generation (source scan)', () => {
 });
 
 // Compiles the iOS build/stop code out of LdkNodeModule.swift against fake
-// LDK Node types and runs the stop-during-VSS race. Needs swiftc and the
+// LDK Node types and runs the build/stop races. Needs swiftc and the
 // macOS SDK, so it is skipped on the Linux CI runners.
 const hasSwiftc = (() => {
     if (process.platform !== 'darwin') return false;
@@ -203,11 +240,33 @@ struct NodeEntropy {
 }
 struct NotRunning: Error {}
 
-// argv[1]: "stop" to call stop() while the dual-store build is blocked
-let stopDuringBuild = CommandLine.arguments.count > 1 && CommandLine.arguments[1] == "stop"
 let vssEntered = DispatchSemaphore(value: 0)
 let vssRelease = DispatchSemaphore(value: 0)
+var blockLocalBuild = false
+let localEntered = DispatchSemaphore(value: 0)
+let localRelease = DispatchSemaphore(value: 0)
 let builtNodes = NSMutableArray()
+
+// Shadows Foundation's NSLock for the module code, so a scenario can run
+// code right after its own thread releases nodeLock
+let hookLock = Foundation.NSLock()
+var afterUnlock: (() -> Void)?
+var hookThread: Thread?
+final class NSLock {
+    private let inner = Foundation.NSLock()
+    func lock() { inner.lock() }
+    func unlock() {
+        inner.unlock()
+        hookLock.lock()
+        var hook: (() -> Void)? = nil
+        if Thread.current == hookThread {
+            hook = afterUnlock
+            afterUnlock = nil
+        }
+        hookLock.unlock()
+        hook?()
+    }
+}
 
 final class Node: NSObject {
     var started = false
@@ -237,6 +296,10 @@ final class Builder {
         return node
     }
     func build(nodeEntropy: NodeEntropy) throws -> Node {
+        if blockLocalBuild {
+            localEntered.signal()
+            localRelease.wait()
+        }
         let node = Node()
         builtNodes.add(node)
         return node
@@ -249,50 +312,120 @@ ${module}
 }
 
 extension LdkNodeModule {
-    func configureForTest() {
+    func configureForTest(vss: Bool) {
         builder = Builder()
         storedStorageDirPath = NSTemporaryDirectory()
-        storedVssUrl = "https://vss.invalid"
-        storedVssStoreId = "store"
+        storedVssUrl = vss ? "https://vss.invalid" : nil
+        storedVssStoreId = vss ? "store" : nil
         storedVssBuildTimeout = 30
     }
-    var hasNode: Bool { getNode() != nil }
+    var currentNode: Node? { getNode() }
 }
 
-let module = LdkNodeModule()
-module.configureForTest()
-let settled = DispatchSemaphore(value: 0)
-var outcome = "pending"
-module.buildNode("mnemonic", passphrase: nil, resolver: { _ in
-    outcome = "resolved"
-    settled.signal()
-}, rejecter: { code, _, _ in
-    outcome = "rejected:\\(code ?? "")"
-    settled.signal()
-})
-guard vssEntered.wait(timeout: .now() + 5) == .success else {
-    print("{\\"error\\":\\"build never reached VSS\\"}")
-    exit(1)
+final class BuildCall {
+    let settled = DispatchSemaphore(value: 0)
+    var outcome = "pending"
+    init(_ module: LdkNodeModule) {
+        module.buildNode("mnemonic", passphrase: nil, resolver: { _ in
+            self.outcome = "resolved"
+            self.settled.signal()
+        }, rejecter: { code, _, _ in
+            self.outcome = "rejected:\\(code ?? "")"
+            self.settled.signal()
+        })
+    }
 }
-if stopDuringBuild {
-    let stopped = DispatchSemaphore(value: 0)
-    module.stop({ _ in stopped.signal() }, rejecter: { _, _, _ in stopped.signal() })
-    _ = stopped.wait(timeout: .now() + 5)
+
+func waitOrFail(_ semaphore: DispatchSemaphore, _ what: String) {
+    if semaphore.wait(timeout: .now() + 5) == .timedOut {
+        print("{\\"error\\":\\"timed out waiting for \\(what)\\"}")
+        exit(1)
+    }
 }
-vssRelease.signal()
-_ = settled.wait(timeout: .now() + 5)
-let stale = builtNodes.firstObject as? Node
-let report: [String: Any] = [
-    "outcome": outcome,
-    "published": module.hasNode,
-    "builtNodeStopped": (stale?.stopCalls ?? 0) > 0
-]
-let json = try! JSONSerialization.data(withJSONObject: report, options: [.sortedKeys])
-print(String(data: json, encoding: .utf8)!)
+
+func node(_ index: Int) -> Node? {
+    index < builtNodes.count ? builtNodes[index] as? Node : nil
+}
+
+// argv[1]:
+//   (none)      dual-store build, nothing interferes
+//   stop        stop() while the dual-store build waits on VSS
+//   overlap     an older build finishes while a newer buildNode() is
+//               taking the old node, right after it releases nodeLock
+//   local-stop  stop() while a local-only build is running
+func scenario(_ mode: String) -> [String: Any] {
+    let module = LdkNodeModule()
+    if mode == "local-stop" {
+        module.configureForTest(vss: false)
+        blockLocalBuild = true
+        let a = BuildCall(module)
+        waitOrFail(localEntered, "local build")
+        let stopped = DispatchSemaphore(value: 0)
+        DispatchQueue.global().async {
+            module.stop({ _ in stopped.signal() }, rejecter: { _, _, _ in stopped.signal() })
+        }
+        let stopReturnedEarly = stopped.wait(timeout: .now() + 0.3) == .success
+        localRelease.signal()
+        waitOrFail(a.settled, "build")
+        if !stopReturnedEarly { waitOrFail(stopped, "stop") }
+        return [
+            "stopReturnedDuringBuild": stopReturnedEarly,
+            "outcome": a.outcome,
+            "published": module.currentNode != nil,
+            "builtNodeStopped": (node(0)?.stopCalls ?? 0) > 0
+        ]
+    }
+
+    module.configureForTest(vss: true)
+    let a = BuildCall(module)
+    waitOrFail(vssEntered, "first build to reach VSS")
+    if mode == "overlap" {
+        hookLock.lock()
+        hookThread = Thread.current
+        afterUnlock = {
+            vssRelease.signal()
+            waitOrFail(a.settled, "first build")
+        }
+        hookLock.unlock()
+        let b = BuildCall(module)
+        waitOrFail(vssEntered, "second build to reach VSS")
+        vssRelease.signal()
+        waitOrFail(b.settled, "second build")
+        return [
+            "first": a.outcome,
+            "firstNodeStopped": (node(0)?.stopCalls ?? 0) > 0,
+            "second": b.outcome,
+            "publishedIsSecond": module.currentNode != nil && module.currentNode === node(1)
+        ]
+    }
+    if mode == "stop" {
+        let stopped = DispatchSemaphore(value: 0)
+        module.stop({ _ in stopped.signal() }, rejecter: { _, _, _ in stopped.signal() })
+        waitOrFail(stopped, "stop")
+    }
+    vssRelease.signal()
+    waitOrFail(a.settled, "build")
+    return [
+        "outcome": a.outcome,
+        "published": module.currentNode != nil,
+        "builtNodeStopped": (node(0)?.stopCalls ?? 0) > 0
+    ]
+}
+
+// stop() resolves on the main queue once it has stopped a published node,
+// so the scenario runs off the main thread
+let mode = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : ""
+DispatchQueue.global().async {
+    let report = scenario(mode)
+    let json = try! JSONSerialization.data(withJSONObject: report, options: [.sortedKeys])
+    print(String(data: json, encoding: .utf8)!)
+    exit(0)
+}
+dispatchMain()
 `;
 
 (hasSwiftc ? describe : describe.skip)(
-    'iOS LdkNodeModule stop during a VSS build (compiled, macOS only)',
+    'iOS LdkNodeModule build and stop races (compiled, macOS only)',
     () => {
         let dir: string;
         let binary: string;
@@ -331,6 +464,24 @@ print(String(data: json, encoding: .utf8)!)
         it('discards the node of a build that stop() overtook', () => {
             expect(run('stop')).toEqual({
                 outcome: 'rejected:build_cancelled',
+                published: false,
+                builtNodeStopped: true
+            });
+        });
+
+        it('does not let an older build publish while a newer one takes the node', () => {
+            expect(run('overlap')).toEqual({
+                first: 'rejected:build_cancelled',
+                firstNodeStopped: true,
+                second: 'resolved',
+                publishedIsSecond: true
+            });
+        });
+
+        it('makes stop() wait for a local build instead of overlapping it', () => {
+            expect(run('local-stop')).toEqual({
+                stopReturnedDuringBuild: false,
+                outcome: 'resolved',
                 published: false,
                 builtNodeStopped: true
             });
