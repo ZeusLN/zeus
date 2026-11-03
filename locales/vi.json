@@ -1225,6 +1225,7 @@
     "views.Settings.SignMessage.signingMethod": "Cách Ký",
     "views.Settings.SignMessage.selectAddressSigning": "Chọn Địa chỉ để Ký",
     "views.Settings.SignMessage.selectAddressVerification": "Nhập Địa chỉ để Xác thực",
+    "views.Settings.SignMessage.reservedMessage": "This message is reserved for LNURL-auth key derivation and cannot be signed. Signing it would expose your LNURL-auth identity for every site.",
     "views.Settings.SignMessage.fullAddress": "Địa chỉ đầy đủ",
     "views.Settings.SignMessage.tapToSelectAddress": "Nhấn vào đây để chọn địa chỉ",
     "views.Settings.SignMessage.signatureType": "Loại Chữ ký",
