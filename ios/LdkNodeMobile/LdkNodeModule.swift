@@ -218,14 +218,14 @@ class LdkNodeModule: RCTEventEmitter {
     @objc(setVssBuildTimeout:resolver:rejecter:)
     func setVssBuildTimeout(_ timeoutSeconds: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         self.storedVssBuildTimeout = timeoutSeconds.doubleValue
-        NSLog("LdkNodeModule: VSS build timeout set to \(self.storedVssBuildTimeout)s")
+        NSLog("%@", "LdkNodeModule: VSS build timeout set to \(self.storedVssBuildTimeout)s")
         resolve(["status": "ok"])
     }
 
     @objc(setVssFailOnError:resolver:rejecter:)
     func setVssFailOnError(_ enabled: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         self.storedVssFailOnError = enabled.boolValue
-        NSLog("LdkNodeModule: VSS fail-on-error set to \(self.storedVssFailOnError)")
+        NSLog("%@", "LdkNodeModule: VSS fail-on-error set to \(self.storedVssFailOnError)")
         resolve(["status": "ok"])
     }
 
@@ -423,7 +423,7 @@ class LdkNodeModule: RCTEventEmitter {
                 var vssBuildPending = false
 
                 if let vssUrl = self.storedVssUrl, let vssStoreId = self.storedVssStoreId {
-                    NSLog("LdkNodeModule: Building node with dual store (VSS + local): \(vssUrl)")
+                    NSLog("%@", "LdkNodeModule: Building node with dual store (VSS + local): \(vssUrl)")
 
                     let semaphore = DispatchSemaphore(value: 0)
                     let doneSemaphore = DispatchSemaphore(value: 0)
@@ -453,10 +453,10 @@ class LdkNodeModule: RCTEventEmitter {
                             self.applyBuilderSettings(dualBuilder)
                             buildResult = try dualBuilder.buildWithDualStoreAndFixedHeaders(nodeEntropy: nodeEntropy, vssUrl: vssUrl, storeId: vssStoreId, fixedHeaders: self.storedVssHeaders)
                             let ffiMs = Int((CFAbsoluteTimeGetCurrent() - ffiStart) * 1000)
-                            NSLog("LdkNodeModule: [timing] FFI buildWithDualStore completed in \(ffiMs)ms")
+                            NSLog("%@", "LdkNodeModule: [timing] FFI buildWithDualStore completed in \(ffiMs)ms")
                         } catch {
                             let ffiMs = Int((CFAbsoluteTimeGetCurrent() - ffiStart) * 1000)
-                            NSLog("LdkNodeModule: [timing] FFI buildWithDualStore failed in \(ffiMs)ms: \(error)")
+                            NSLog("%@", "LdkNodeModule: [timing] FFI buildWithDualStore failed in \(ffiMs)ms: \(error)")
                             buildError = error
                         }
                         semaphore.signal()
@@ -469,7 +469,7 @@ class LdkNodeModule: RCTEventEmitter {
                         // when the blocking FFI call has actually finished.
                         if !claimResult() {
                             let totalMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
-                            NSLog("LdkNodeModule: [timing] Cleaning up orphaned dual-store build after timeout (FFI actually finished in \(totalMs)ms)")
+                            NSLog("%@", "LdkNodeModule: [timing] Cleaning up orphaned dual-store build after timeout (FFI actually finished in \(totalMs)ms)")
                             if let orphan = buildResult {
                                 do { try orphan.stop() } catch {}
                             }
@@ -495,15 +495,15 @@ class LdkNodeModule: RCTEventEmitter {
                         self.pendingBuildDoneSemaphore = doneSemaphore
                         let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
                         vssError = "VSS server at \(vssUrl) did not respond within \(Int(self.storedVssBuildTimeout))s"
-                        NSLog("LdkNodeModule: [timing] Dual store timed out at \(elapsedMs)ms — \(vssError!)")
+                        NSLog("%@", "LdkNodeModule: [timing] Dual store timed out at \(elapsedMs)ms — \(vssError!)")
                     } else if let error = buildError {
                         let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
                         vssError = "Dual store setup failed: \(self.errorMessage(error))"
-                        NSLog("LdkNodeModule: [timing] Dual store failed at \(elapsedMs)ms — \(vssError!)")
+                        NSLog("%@", "LdkNodeModule: [timing] Dual store failed at \(elapsedMs)ms — \(vssError!)")
                     } else {
                         let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
                         self.setNode(buildResult)
-                        NSLog("LdkNodeModule: [timing] Node built with dual store successfully in \(elapsedMs)ms")
+                        NSLog("%@", "LdkNodeModule: [timing] Node built with dual store successfully in \(elapsedMs)ms")
                     }
                 }
 
@@ -533,7 +533,7 @@ class LdkNodeModule: RCTEventEmitter {
                     self.applyBuilderSettings(localBuilder)
                     self.setNode(try localBuilder.build(nodeEntropy: nodeEntropy))
                     let localMs = Int((CFAbsoluteTimeGetCurrent() - localStart) * 1000)
-                    NSLog("LdkNodeModule: [timing] Local-only build completed in \(localMs)ms")
+                    NSLog("%@", "LdkNodeModule: [timing] Local-only build completed in \(localMs)ms")
                 }
 
                 self.builder = nil // Builder is consumed
@@ -550,15 +550,15 @@ class LdkNodeModule: RCTEventEmitter {
 
     private func applyBuilderSettings(_ builder: Builder) {
         if let esploraUrl = self.storedEsploraServerUrl {
-            NSLog("LdkNodeModule: applyBuilderSettings: Esplora server = \(esploraUrl)")
+            NSLog("%@", "LdkNodeModule: applyBuilderSettings: Esplora server = \(esploraUrl)")
             builder.setChainSourceEsplora(serverUrl: esploraUrl, config: createEsploraSyncConfig())
         }
         if let rgsUrl = self.storedRgsServerUrl {
-            NSLog("LdkNodeModule: applyBuilderSettings: RGS server = \(rgsUrl)")
+            NSLog("%@", "LdkNodeModule: applyBuilderSettings: RGS server = \(rgsUrl)")
             builder.setGossipSourceRgs(rgsServerUrl: rgsUrl)
         }
         if let scorerUrl = self.storedScorerUrl {
-            NSLog("LdkNodeModule: applyBuilderSettings: Scorer URL = \(scorerUrl)")
+            NSLog("%@", "LdkNodeModule: applyBuilderSettings: Scorer URL = \(scorerUrl)")
             builder.setPathfindingScoresSource(url: scorerUrl)
         }
         if let lsps1NodeId = self.storedLsps1NodeId, let lsps1Address = self.storedLsps1Address {

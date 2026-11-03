@@ -39,8 +39,8 @@ class LndmobileCallback: NSObject, LndmobileCallbackProtocol {
   }
 
   func onError(_ p0: Error?) {
-    NSLog("Inside onError " + self.method)
-    NSLog(p0?.localizedDescription ?? "unknown error")
+    NSLog("%@", "Inside onError " + self.method)
+    NSLog("%@", p0?.localizedDescription ?? "unknown error")
     self.callback(nil, p0)
   }
 }
@@ -59,8 +59,8 @@ class LndmobileReceiveStream: NSObject, LndmobileRecvStreamProtocol {
   }
 
   func onError(_ p0: Error?) {
-    NSLog("LndmobileReceiveStream onError " + self.method)
-    NSLog(p0?.localizedDescription ?? "unknown error")
+    NSLog("%@", "LndmobileReceiveStream onError " + self.method)
+    NSLog("%@", p0?.localizedDescription ?? "unknown error")
     self.callback(nil, p0)
   }
 }
@@ -265,7 +265,7 @@ open class Lnd {
     let block = Lnd.syncMethods[method]
 
     if block == nil {
-      NSLog("method not found" + method)
+      NSLog("%@", "method not found" + method)
       callback(nil, LndError(msg: "Lnd method not found: " + method))
       return
     }
@@ -277,7 +277,7 @@ open class Lnd {
   func sendStreamCommand(_ method: String, payload: String, streamOnlyOnce: Bool, callback: @escaping StreamCallback) {
     if (streamOnlyOnce) {
       if (self.activeStreams.contains(method)) {
-        NSLog("Attempting to stream " + method + " twice, not allowing")
+        NSLog("%@", "Attempting to stream " + method + " twice, not allowing")
         return
       } else {
         self.activeStreams.append(method)
@@ -285,7 +285,7 @@ open class Lnd {
     }
     let block = Lnd.streamMethods[method]
     if block == nil {
-      NSLog("method not found" + method)
+      NSLog("%@", "method not found" + method)
       callback(nil, LndError(msg: "Lnd method not found: " + method))
       return
     }
@@ -297,7 +297,7 @@ open class Lnd {
   func sendBidiStreamCommand(_ method: String, streamOnlyOnce: Bool, callback: @escaping StreamCallback) {
     if (streamOnlyOnce) {
       if (self.activeStreams.contains(method)) {
-        NSLog("Attempting to stream " + method + " twice, not allowing")
+        NSLog("%@", "Attempting to stream " + method + " twice, not allowing")
         return
       } else {
         self.activeStreams.append(method)
@@ -305,14 +305,14 @@ open class Lnd {
     }
     let block = Lnd.biStreamMethods[method]
     if block == nil {
-      NSLog("method not found" + method)
+      NSLog("%@", "method not found" + method)
       callback(nil, LndError(msg: "Lnd method not found: " + method))
       return
     }
 
     let writeStream = block?(LndmobileReceiveStream(method: method, callback: callback))
     guard let sendStream = writeStream as? LndmobileSendStream else {
-      NSLog("Failed to create write stream for " + method)
+      NSLog("%@", "Failed to create write stream for " + method)
       if streamOnlyOnce {
         self.activeStreams.removeAll { $0 == method }
       }
@@ -325,7 +325,7 @@ open class Lnd {
   func writeToStream(_ method: String, payload: String, callback: @escaping StreamCallback) {
     let write = Lnd.shared.writeStreams[method]
     if write == nil {
-      NSLog("method not found" + method)
+      NSLog("%@", "method not found" + method)
       callback(nil, LndError(msg: "Lnd method not found: " + method))
       return
     }

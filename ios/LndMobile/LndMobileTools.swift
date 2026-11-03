@@ -32,21 +32,22 @@ class LndMobileTools: RCTEventEmitter {
     do {
       let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
       let url = paths[0].appendingPathComponent(lndDir, isDirectory: true).appendingPathComponent("lnd.conf", isDirectory: false)
-      NSLog(url.relativeString)
+      NSLog("%@", url.relativeString)
 
+      // The config can hold a custom fee.url with an API key, so log only
+      // its size
       try config.write(to: url, atomically: true, encoding: .utf8)
-      let input = try String(contentsOf: url)
-      NSLog("Read config: " + input)
+      NSLog("Wrote config (%ld bytes)", config.utf8.count)
       resolve("Config written")
     } catch let error {
-      NSLog(error.localizedDescription)
+      NSLog("%@", error.localizedDescription)
       reject("error", error.localizedDescription, error)
     }
   }
 
   @objc(log:tag:msg:)
   func log(level: String, tag: String, msg: String) {
-    NSLog("[" + tag + "] " + msg)
+    NSLog("[%@] %@", tag, msg)
   }
 
   @objc(DEBUG_getWalletPasswordFromKeychain:rejecter:)
@@ -87,9 +88,9 @@ class LndMobileTools: RCTEventEmitter {
           savePanel.nameFieldStringValue = "zeus-channel-backup.dat"
           if (savePanel.runModal() == NSApplication.ModalResponse.OK) {
             let saveUrl = savePanel.url
-            NSLog(saveUrl?.path ?? "")
-            NSLog(saveUrl?.absoluteString ?? "")
-            NSLog(saveUrl?.relativeString ?? "")
+            NSLog("%@", saveUrl?.path ?? "")
+            NSLog("%@", saveUrl?.absoluteString ?? "")
+            NSLog("%@", saveUrl?.relativeString ?? "")
 
             if let saveUrlUnwrapped = saveUrl {
               try data.write(to: saveUrlUnwrapped)
@@ -143,9 +144,9 @@ class LndMobileTools: RCTEventEmitter {
         savePanel.nameFieldStringValue = "zeus-channel-backup.dat"
         if (savePanel.runModal() == NSApplication.ModalResponse.OK) {
           let saveUrl = savePanel.url
-          NSLog(saveUrl?.path ?? "")
-          NSLog(saveUrl?.absoluteString ?? "")
-          NSLog(saveUrl?.relativeString ?? "")
+          NSLog("%@", saveUrl?.path ?? "")
+          NSLog("%@", saveUrl?.absoluteString ?? "")
+          NSLog("%@", saveUrl?.relativeString ?? "")
 
           if let saveUrlUnwrapped = saveUrl {
             try data.write(to: saveUrlUnwrapped)
@@ -697,8 +698,8 @@ class LndMobileTools: RCTEventEmitter {
     let newlndDataPath = newLndFolder.appendingPathComponent("data")
     let newLndConfigPath = newLndFolder.appendingPathComponent("lnd.conf")
 
-    NSLog("FROM: \(lndData.path)")
-    NSLog("TO: \(newlndDataPath.path)")
+    NSLog("%@", "FROM: \(lndData.path)")
+    NSLog("%@", "TO: \(newlndDataPath.path)")
 
     do {
       if FileManager.default.fileExists(atPath: newLndFolder.path) {
@@ -710,7 +711,7 @@ class LndMobileTools: RCTEventEmitter {
         reject("error", error.localizedDescription, error)
       }
     } catch let error {
-      NSLog("Failed moving lnd files: \(error)")
+      NSLog("%@", "Failed moving lnd files: \(error)")
       reject("error", error.localizedDescription, error)
     }
   }
