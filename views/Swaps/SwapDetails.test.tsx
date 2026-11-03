@@ -1514,3 +1514,106 @@ describe('SwapDetails swap without an ID', () => {
         }
     );
 });
+
+describe('SwapDetails host update text', () => {
+    // titles of the (mocked) Buttons on screen
+    const buttonTitles = () => {
+        const titles: string[] = [];
+        const walk = (node: any) => {
+            if (!node || typeof node !== 'object') return;
+            if (Array.isArray(node)) return node.forEach(walk);
+            if (node.type === 'Button') titles.push(node.props.title);
+            walk(node.children);
+        };
+        walk(screen.toJSON());
+        return titles;
+    };
+
+    // a submarine swap with its lockup known, so the refund button can
+    // show without the view looking the lockup up
+    const renderSubmarine = () =>
+        renderView({
+            type: SwapType.Submarine,
+            lockupTransaction: { hex: 'lockuphex' }
+        });
+
+    it('shows a failure reason the host sends as text', async () => {
+        const { store } = await renderSubmarine();
+
+        await sendUpdate({
+            status: 'transaction.lockupFailed',
+            failureReason: 'locked 1000 sats instead of 2000'
+        });
+
+        expect(errorShown()).toBe('locked 1000 sats instead of 2000');
+        expect(store.updateSwapStatus).toHaveBeenCalledWith(
+            'swap',
+            'transaction.lockupFailed',
+            true,
+            'locked 1000 sats instead of 2000'
+        );
+        expect(buttonTitles()).toContain('views.Swaps.refundSwap');
+    });
+
+    it.each([
+        ['an object without a callable toString', { toString: 1 }],
+        ['an object with a message', { message: 'not text' }],
+        ['a number', 7]
+    ])(
+        'still offers the refund for a failure reason that is %s',
+        async (_, failureReason) => {
+            const { store } = await renderSubmarine();
+
+            await sendUpdate({
+                status: 'transaction.lockupFailed',
+                failureReason
+            });
+
+            expect(errorShown()).toBeUndefined();
+            expect(store.updateSwapStatus).toHaveBeenCalledWith(
+                'swap',
+                'transaction.lockupFailed',
+                true,
+                undefined
+            );
+            expect(buttonTitles()).toContain('views.Swaps.refundSwap');
+        }
+    );
+
+    it('ignores a failure reason that is not text on a reverse swap', async () => {
+        await renderView();
+
+        await sendUpdate({
+            status: 'invoice.expired',
+            failureReason: { toString: 1 }
+        });
+
+        expect(errorShown()).toBeUndefined();
+        expect(socket.close).toHaveBeenCalled();
+    });
+
+    it.each([
+        [SwapType.Submarine, { toString: 1 }],
+        [SwapType.Submarine, { message: { toString: 1 } }],
+        [SwapType.Reverse, { toString: 1 }],
+        [SwapType.Reverse, { message: { toString: 1 } }]
+    ])(
+        'shows a fixed error for a %s swap error that is not text: %j',
+        async (type, error) => {
+            await renderView({ type });
+
+            await sendUpdate({ error });
+
+            expect(errorShown()).toBe('general.unknownError');
+            expect(socket.close).toHaveBeenCalled();
+        }
+    );
+
+    it('shows an error the host sends as text', async () => {
+        await renderView({ type: SwapType.Submarine });
+
+        await sendUpdate({ error: 'swap not found' });
+
+        expect(errorShown()).toBe('swap not found');
+    });
+});
