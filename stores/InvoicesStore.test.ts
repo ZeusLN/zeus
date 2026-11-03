@@ -1671,39 +1671,55 @@ describe('InvoicesStore superseded invoice requests', () => {
         expect(store.loading).toBe(false);
     });
 
-    it('leaves the next screen alone when the on-chain address arrives after reset()', async () => {
-        (BackendUtils.supportsOnchainReceiving as jest.Mock).mockReturnValue(
-            true
-        );
-        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
-            payment_request: 'lnbc-old',
-            r_hash: 'aa'
-        });
-        const address = deferred();
-        const failedAddress = deferred();
-        (BackendUtils.getNewAddress as jest.Mock)
-            .mockReturnValueOnce(address.promise)
-            .mockReturnValueOnce(failedAddress.promise);
-        const store = newStore();
+    // The second request ends both ways a failed address request can: a
+    // rejection, and a response with no address, which reaches the
+    // missing-address check only after the writesShared() check
+    it.each([
+        [
+            'rejects',
+            (request: ReturnType<typeof deferred>) =>
+                request.reject(new Error('wallet locked'))
+        ],
+        [
+            'resolves without an address',
+            (request: ReturnType<typeof deferred>) => request.resolve({})
+        ]
+    ])(
+        'leaves the next screen alone when the on-chain address arrives after reset() (second request %s)',
+        async (_outcome, endSecondRequest) => {
+            (
+                BackendUtils.supportsOnchainReceiving as jest.Mock
+            ).mockReturnValue(true);
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-old',
+                r_hash: 'aa'
+            });
+            const address = deferred();
+            const failedAddress = deferred();
+            (BackendUtils.getNewAddress as jest.Mock)
+                .mockReturnValueOnce(address.promise)
+                .mockReturnValueOnce(failedAddress.promise);
+            const store = newStore();
 
-        const pending = store.createUnifiedInvoice(params);
-        const failing = store.createUnifiedInvoice(params);
-        await flush();
-        expect(BackendUtils.getNewAddress).toHaveBeenCalledTimes(2);
-        store.reset();
-        seedNextScreen(store);
-        address.resolve({ address: 'bcrt1-old' });
-        failedAddress.reject(new Error('wallet locked'));
+            const pending = store.createUnifiedInvoice(params);
+            const failing = store.createUnifiedInvoice(params);
+            await flush();
+            expect(BackendUtils.getNewAddress).toHaveBeenCalledTimes(2);
+            store.reset();
+            seedNextScreen(store);
+            address.resolve({ address: 'bcrt1-old' });
+            endSecondRequest(failedAddress);
 
-        await expect(pending).resolves.toEqual({
-            rHash: 'aa',
-            paymentRequest: 'lnbc-old',
-            onChainAddress: 'bcrt1-old',
-            lspFeeSats: null
-        });
-        await failing;
-        expectNextScreenKept(store);
-    });
+            await expect(pending).resolves.toEqual({
+                rHash: 'aa',
+                paymentRequest: 'lnbc-old',
+                onChainAddress: 'bcrt1-old',
+                lspFeeSats: null
+            });
+            await failing;
+            expectNextScreenKept(store);
+        }
+    );
 
     it('does not let a silent call and a Receive call supersede each other', async () => {
         const receive = deferred();
