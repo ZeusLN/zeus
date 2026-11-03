@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     AccessibilityInfo,
     Animated,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -14,6 +15,8 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 const DURATION = 8000;
+// about how long it takes to read a message too long for the minimum above
+const DURATION_PER_CHARACTER = 60;
 export const ANIMATION_DURATION = 200;
 const ERROR_COLOR = '#E14C4C';
 const ERROR_TINT = 'rgba(225, 76, 76, 0.2)';
@@ -27,8 +30,11 @@ interface BannerEntry {
 let entries: BannerEntry[] = [];
 let listeners: Array<(entry: BannerEntry | null) => void> = [];
 
+const getCurrentEntry = () =>
+    entries.length ? entries[entries.length - 1] : null;
+
 const notify = () => {
-    const current = entries.length ? entries[entries.length - 1] : null;
+    const current = getCurrentEntry();
     listeners.forEach((l) => l(current));
 };
 
@@ -60,6 +66,8 @@ export default function ErrorBannerHost() {
 
     React.useEffect(() => {
         listeners.push(setCurrent);
+        // an error can be raised before this host has subscribed
+        setCurrent(getCurrentEntry());
         return () => {
             listeners = listeners.filter((l) => l !== setCurrent);
         };
@@ -85,7 +93,10 @@ export default function ErrorBannerHost() {
             duration: ANIMATION_DURATION,
             useNativeDriver: true
         }).start();
-        const timeout = setTimeout(() => hideErrorBanner(current.id), DURATION);
+        const timeout = setTimeout(
+            () => hideErrorBanner(current.id),
+            Math.max(DURATION, current.message.length * DURATION_PER_CHARACTER)
+        );
         return () => clearTimeout(timeout);
     }, [current, progress]);
 
@@ -122,12 +133,11 @@ export default function ErrorBannerHost() {
                     color={ERROR_COLOR}
                     containerStyle={styles.icon}
                 />
-                <Text
-                    numberOfLines={4}
-                    style={[styles.text, { color: themeColor('text') }]}
-                >
-                    {displayed.message}
-                </Text>
+                <ScrollView style={styles.scroll}>
+                    <Text style={[styles.text, { color: themeColor('text') }]}>
+                        {displayed.message}
+                    </Text>
+                </ScrollView>
                 <TouchableOpacity
                     accessibilityRole="button"
                     accessibilityLabel={localeString('general.close')}
@@ -178,8 +188,12 @@ const styles = StyleSheet.create({
     icon: {
         marginRight: 10
     },
-    text: {
+    // the message scrolls past this height, which keeps the close button in reach
+    scroll: {
         flex: 1,
+        maxHeight: 200
+    },
+    text: {
         fontFamily: 'PPNeueMontreal-Book',
         fontSize: 15,
         lineHeight: 20

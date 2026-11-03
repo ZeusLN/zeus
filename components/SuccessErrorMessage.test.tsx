@@ -16,7 +16,10 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 import { ErrorMessage, WarningMessage } from './SuccessErrorMessage';
-import ErrorBannerHost from './ErrorBanner';
+import ErrorBannerHost, {
+    hideErrorBanner,
+    showErrorBanner
+} from './ErrorBanner';
 
 const BANNER_ID = 'error-banner';
 let measuredY = 300;
@@ -250,6 +253,42 @@ describe('SuccessErrorMessage', () => {
         await rerender(<Host />);
         await advance(300);
 
+        expect(screen.queryByTestId(BANNER_ID)).toBeNull();
+    });
+
+    it('shows an error raised before the host subscribed', async () => {
+        showErrorBanner(9001, 'Early', () => {});
+        await render(<ErrorBannerHost />);
+        await flushFrame();
+
+        expect(screen.getByTestId(BANNER_ID)).toBeTruthy();
+        expect(screen.getByText('Early')).toBeTruthy();
+
+        await act(async () => hideErrorBanner(9001));
+    });
+
+    it('does not truncate a long error in the banner', async () => {
+        const message = 'Long error. '.repeat(40);
+        showErrorBanner(9002, message, () => {});
+        await render(<ErrorBannerHost />);
+        await flushFrame();
+
+        expect(screen.getByText(message.trim())).not.toHaveProp(
+            'numberOfLines'
+        );
+
+        await act(async () => hideErrorBanner(9002));
+    });
+
+    it('keeps a long error up for longer before timing out', async () => {
+        const message = 'Long error. '.repeat(40);
+        showErrorBanner(9003, message, () => {});
+        await render(<ErrorBannerHost />);
+        await advance(8300);
+        expect(screen.getByTestId(BANNER_ID)).toBeTruthy();
+
+        await advance(21000);
+        await advance(300);
         expect(screen.queryByTestId(BANNER_ID)).toBeNull();
     });
 
