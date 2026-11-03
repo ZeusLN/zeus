@@ -1225,6 +1225,7 @@
     "views.Settings.SignMessage.signingMethod": "Signiermethode",
     "views.Settings.SignMessage.selectAddressSigning": "Adresse zum Signieren auswählen",
     "views.Settings.SignMessage.selectAddressVerification": "Adresse zur Verifizierung eingeben",
+    "views.Settings.SignMessage.reservedMessage": "This message is reserved for LNURL-auth key derivation and cannot be signed. Signing it would expose your LNURL-auth identity for every site.",
     "views.Settings.SignMessage.fullAddress": "Vollständige Adresse",
     "views.Settings.SignMessage.tapToSelectAddress": "Tippe hier, um eine Adresse auszuwählen",
     "views.Settings.SignMessage.signatureType": "Signatur-Typ",
