@@ -98,6 +98,22 @@ function mapCDKError(error: any): CDKError {
 }
 
 /**
+ * The native modules only convert P2PK conditions with a pubkey. Refuse
+ * anything else before the native call so a requested lock can never turn
+ * into an unlocked bearer token. HTLC is not wired up on either platform.
+ */
+function assertSupportedConditions(conditions: CDKSpendingConditions): void {
+    const kind = (conditions as any)?.kind;
+    if (kind !== 'P2PK') {
+        throw new Error(`Unsupported spending condition kind: ${kind}`);
+    }
+    const pubkey = (conditions as any).data?.pubkey;
+    if (typeof pubkey !== 'string' || pubkey.length === 0) {
+        throw new Error('P2PK spending conditions require a pubkey');
+    }
+}
+
+/**
  * CashuDevKit class providing high-level wallet operations
  */
 class CashuDevKit {
@@ -407,6 +423,7 @@ class CashuDevKit {
     ): Promise<CDKProof[]> {
         return this.gate.runOperation(mintUrl, async () => {
             try {
+                if (conditions != null) assertSupportedConditions(conditions);
                 const json = await CashuDevKitModule.mint(
                     mintUrl,
                     quoteId,
@@ -533,6 +550,9 @@ class CashuDevKit {
         options?: CDKSendOptions
     ): Promise<CDKPreparedSend> {
         try {
+            if (options?.conditions != null) {
+                assertSupportedConditions(options.conditions);
+            }
             const result = await CashuDevKitModule.prepareSend(
                 mintUrl,
                 amount,
