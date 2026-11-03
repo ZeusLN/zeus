@@ -2648,6 +2648,7 @@
     "views.Splice.available": "Available",
     "views.Splice.error.availableLoad": "Couldn't load your on-chain balance",
     "views.Splice.error.channelInactive": "This channel isn't active. Its peer needs to be online to splice.",
+    "views.Splice.error.alreadySplicing": "This channel is already being spliced. You can splice it again once that splice confirms.",
     "views.Splice.startedByPeer": "Splice started by your peer",
     "views.Splice.lessTheFee": "Less the on-chain fee",
     "views.Splice.waitingToConfirm": "Waiting to confirm",

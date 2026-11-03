@@ -69,6 +69,16 @@ export const getSpliceAmountError = (
     return null;
 };
 
+// A splice needs the peer online, and a channel takes one splice at a time
+export const getSpliceChannelError = (
+    isActive: boolean,
+    splicing: boolean
+): string | null => {
+    if (!isActive) return localeString('views.Splice.error.channelInactive');
+    if (splicing) return localeString('views.Splice.error.alreadySplicing');
+    return null;
+};
+
 export const getSpliceErrorMessage = (message: string): string => {
     if (message.includes(NODE_ERROR_SPLICING_FAILED)) {
         return localeString('views.Splice.error.spliceRefused');
