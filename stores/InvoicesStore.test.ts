@@ -244,7 +244,7 @@ describe('InvoicesStore superseded decode requests', () => {
         expect(store.pay_req!.getPaymentRequest).toBe('lnbc-second');
     });
 
-    it('ignores a getWithdrawalReq outcome that arrives after a newer getPayReq', async () => {
+    it('ignores a getWithdrawalReq error that arrives after a newer getPayReq', async () => {
         const store = newStore();
         const first = store.getWithdrawalReq('lnr-first');
         const second = store.getPayReq('lnbc-second');
@@ -253,6 +253,19 @@ describe('InvoicesStore superseded decode requests', () => {
         await Promise.all([first, second]);
 
         expect(store.getPayReqError).toBeNull();
+        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-second');
+    });
+
+    it('ignores a getWithdrawalReq answer that arrives after a newer getPayReq', async () => {
+        const store = newStore();
+        const first = store.getWithdrawalReq('lnr-first');
+        const second = store.getPayReq('lnbc-second');
+        settle['lnbc-second'].resolve({ num_satoshis: '1000000' });
+        settle['lnr-first'].resolve({ invreq_amount_msat: 1000 });
+        await Promise.all([first, second]);
+
+        expect(store.paymentRequest).toBe('lnbc-second');
+        expect(store.withdrawal_req).toBeNull();
         expect(store.pay_req!.getPaymentRequest).toBe('lnbc-second');
     });
 
