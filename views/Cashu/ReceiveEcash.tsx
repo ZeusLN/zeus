@@ -305,7 +305,7 @@ export default class ReceiveEcash extends React.Component<
     };
 
     scanNfc = async () => {
-        const str = await scanNfcTag(this.props.ModalStore);
+        const str = await scanNfcTag(this.props.ModalStore, 'withdraw');
         if (!str || this.isUnmounted) return;
         this.setState({ nfcError: false });
         this.validateAddress(str);

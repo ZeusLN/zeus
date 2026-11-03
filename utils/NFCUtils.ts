@@ -33,6 +33,22 @@ export function decodeNdefUriPayload(data: Uint8Array): string | null {
     return (Ndef.RTD_URI_PROTOCOLS[data[0]] || '') + rest;
 }
 
+/**
+ * An LNURL request a screen can ask scanNfcTag to prefer when a tag holds
+ * more than one
+ */
+export type NfcRequestKind = 'pay' | 'withdraw';
+
+// The Crypto Data Format records (github.com/agama-point/cdf-rfc, CDF-003)
+// Zeus can act on, with the LNURL request each holds. A bitcoin private key
+// opens the sweeper. The base URL and suffix records (cdf/lnpb, cdf/lnpp,
+// cdf/lnpw) are not read: neither part is a request on its own.
+const CDF_TYPES = new Map<string, NfcRequestKind | undefined>([
+    ['cdf/lnp', 'pay'],
+    ['cdf/lnw', 'withdraw'],
+    ['cdf/pkbitcoin', undefined]
+]);
+
 const recordType = (record: NdefRecord): string =>
     typeof record.type === 'string'
         ? record.type
@@ -54,10 +70,11 @@ export function decodeNdefRecord(record: NdefRecord): string | null {
             // the URI is the record type, the payload is unused
             return type || null;
         case Ndef.TNF_MIME_MEDIA: {
-            if (type === 'text/plain') return decodeUtf8(payload);
-            if (!type.startsWith('cdf/')) return null;
-            // Crypto Data Format records (github.com/agama-point/cdf-rfc)
-            // can put a label in front of the value: "Wallet 1;https://..."
+            const mimeType = type.toLowerCase();
+            if (mimeType === 'text/plain') return decodeUtf8(payload);
+            if (!CDF_TYPES.has(mimeType)) return null;
+            // CDF records can put a label in front of the value:
+            // "Wallet 1;https://..."
             const text = decodeUtf8(payload);
             return text === null ? null : text.slice(text.lastIndexOf(';') + 1);
         }
@@ -80,19 +97,50 @@ const WALLET_RECORD = new RegExp(
     'i'
 );
 
+interface TagRecord {
+    text: string;
+    isWallet: boolean;
+    kind?: NfcRequestKind;
+}
+
+const readTagRecord = (record: NdefRecord): TagRecord | null => {
+    const text = decodeNdefRecord(record)?.trim();
+    if (!text) return null;
+    if (record.tnf === Ndef.TNF_MIME_MEDIA) {
+        const mimeType = recordType(record).toLowerCase();
+        if (CDF_TYPES.has(mimeType)) {
+            return { text, isWallet: true, kind: CDF_TYPES.get(mimeType) };
+        }
+    }
+    const scheme = text.match(/^lnurl([pw]):/i)?.[1].toLowerCase();
+    return {
+        text,
+        isWallet: WALLET_RECORD.test(text),
+        kind: scheme === 'p' ? 'pay' : scheme === 'w' ? 'withdraw' : undefined
+    };
+};
+
 /**
  * Which of a tag's records to act on. A tag can hold several (e.g. a web
  * page first, for phones without a wallet, and the wallet data after it),
- * so the first that looks like wallet data wins. Without one, the first
- * record that has text is used.
+ * so the first that looks like wallet data wins. A CDF record counts as
+ * wallet data whatever its URL looks like. With `prefer`, an LNURL request
+ * of that kind (by CDF type or lnurlp:/lnurlw: scheme) wins over the
+ * others, for a card that can be both paid and withdrawn from. Without
+ * wallet data, the first record that has text is used.
  */
 export function pickNfcRecord(
-    records: Array<string | null>
+    records: NdefRecord[],
+    prefer?: NfcRequestKind
 ): string | undefined {
-    const texts = records
-        .map((text) => text?.trim())
-        .filter((text): text is string => !!text);
-    return texts.find((text) => WALLET_RECORD.test(text)) ?? texts[0];
+    const read = records
+        .map(readTagRecord)
+        .filter((record): record is TagRecord => !!record);
+    return (
+        (prefer && read.find((record) => record.kind === prefer)) ||
+        read.find((record) => record.isWallet) ||
+        read[0]
+    )?.text;
 }
 
 /**
@@ -131,7 +179,8 @@ export async function checkNfcEnabled(
 }
 
 export async function scanNfcTag(
-    modalStore: ModalStore
+    modalStore: ModalStore,
+    prefer?: NfcRequestKind
 ): Promise<string | undefined> {
     if (!(await checkNfcEnabled(modalStore))) return undefined;
 
@@ -146,9 +195,7 @@ export async function scanNfcTag(
 
         NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: TagEvent) => {
             tagFound = tag;
-            const str = pickNfcRecord(
-                (tag.ndefMessage || []).map(decodeNdefRecord)
-            );
+            const str = pickNfcRecord(tag.ndefMessage || [], prefer);
 
             if (Platform.OS === 'android')
                 modalStore.toggleAndroidNfcModal(false);

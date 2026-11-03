@@ -386,6 +386,15 @@ describe('Receive NFC scan', () => {
         );
     });
 
+    it('asks for the withdraw record of a tag that can also be paid', async () => {
+        const { view } = makeNfcView('25.00', 25000);
+
+        await view.scanNfc();
+        await flush();
+
+        expect(scanNfcTag).toHaveBeenCalledWith(expect.anything(), 'withdraw');
+    });
+
     it('withdraws the sats of the invoice on screen, not the route param', async () => {
         const { view, navigate, InvoicesStore } = makeNfcView('25.00', 25000);
 

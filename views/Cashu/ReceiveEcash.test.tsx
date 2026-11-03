@@ -124,6 +124,15 @@ describe('ReceiveEcash NFC scan', () => {
         );
     });
 
+    it('asks for the withdraw record of a tag that can also be paid', async () => {
+        const { view } = makeView('25.00', 25000);
+
+        await view.scanNfc();
+        await flush();
+
+        expect(scanNfcTag).toHaveBeenCalledWith(expect.anything(), 'withdraw');
+    });
+
     it('withdraws the sats of the invoice on screen, not the route param', async () => {
         // opened with 25.00 in fiat (25,000 sats); by the time the tag is
         // read the amount under the QR code was tapped and converting the

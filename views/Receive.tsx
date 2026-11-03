@@ -840,7 +840,7 @@ export default class Receive extends React.Component<
     };
 
     scanNfc = async () => {
-        const str = await scanNfcTag(this.props.ModalStore);
+        const str = await scanNfcTag(this.props.ModalStore, 'withdraw');
         if (!str || this.unmounted) return;
         this.setState({ nfcError: false });
         this.validateAddress(str);
