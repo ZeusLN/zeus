@@ -323,6 +323,15 @@ describe('NostrConnectUtils', () => {
         });
     });
 
+    describe('getNotifications', () => {
+        it('advertises only the notifications that are published', () => {
+            expect(NostrConnectUtils.getNotifications()).toEqual([
+                'payment_received',
+                'payment_sent'
+            ]);
+        });
+    });
+
     describe('generateConnectionSecret', () => {
         it('returns all three fields: connectionUrl, connectionPrivateKey, connectionPublicKey', () => {
             const out = NostrConnectUtils.generateConnectionSecret(

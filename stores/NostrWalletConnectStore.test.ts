@@ -93,6 +93,7 @@ import BackendUtils from '../utils/BackendUtils';
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
 import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
+import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
@@ -2046,6 +2047,130 @@ describe('NostrWalletConnectStore payment notifications', () => {
             await jest.advanceTimersByTimeAsync(0);
 
             expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
+        describe('Cashu invoices', () => {
+            const MINT = 'https://mint.example';
+            const cashuRequest = 'lnbc1notify-cashu';
+
+            const cashuInvoice = (paid = false) =>
+                new CashuInvoice({
+                    quote: 'quote-1',
+                    request: cashuRequest,
+                    state: paid ? 'PAID' : 'UNPAID',
+                    paid,
+                    mintUrl: MINT,
+                    expiry: Math.floor(Date.now() / 1000) + 3600
+                } as any);
+
+            async function startWithCashuInvoice() {
+                const cashuStore = new CashuStore(
+                    {
+                        implementation: 'lnd',
+                        lndDir: 'node1',
+                        settings: {}
+                    } as any,
+                    {} as any,
+                    {} as any,
+                    {} as any
+                );
+                cashuStore.mintUrls = [MINT];
+                cashuStore.selectedMintUrl = MINT;
+                cashuStore.cashuWallets = {
+                    [MINT]: {
+                        walletId: MINT,
+                        pubkey: '',
+                        errorConnecting: false
+                    }
+                } as any;
+                cashuStore.invoices = [];
+                const started = await startService([{}], { cashuStore });
+                started.store.cashuEnabled = true;
+                const connection = started.connections[0];
+                connection.activity = [
+                    {
+                        id: cashuRequest,
+                        type: 'make_invoice',
+                        payment_source: 'cashu',
+                        status: 'pending',
+                        satAmount: 1000,
+                        invoice: cashuInvoice(),
+                        createdAt: new Date(Date.now() - 60_000)
+                    }
+                ] as any;
+                return {
+                    ...started,
+                    cashuStore,
+                    connection,
+                    activity: connection.activity[0],
+                    relay: relays.get(connection.relayUrl)!
+                };
+            }
+
+            it('publishes payment_received once when a pending Cashu invoice settles', async () => {
+                const { store, cashuStore, connection, activity, relay } =
+                    await startWithCashuInvoice();
+                jest.spyOn(cashuStore, 'checkInvoicePaid').mockResolvedValue({
+                    isPaid: true,
+                    amtSat: '1000',
+                    updatedInvoice: cashuInvoice(true)
+                } as any);
+
+                await Promise.all([
+                    (store as any).reconcilePendingCashuMakeInvoice(
+                        connection,
+                        activity
+                    ),
+                    (store as any).reconcilePendingCashuMakeInvoice(
+                        connection,
+                        activity
+                    )
+                ]);
+                await jest.advanceTimersByTimeAsync(0);
+
+                expect(activity.status).toBe('success');
+                expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+                expect(relay.publishNotification).toHaveBeenCalledWith(
+                    expect.anything(),
+                    expect.objectContaining({
+                        notification_type: 'payment_received',
+                        notification: expect.objectContaining({
+                            type: 'incoming',
+                            state: 'settled'
+                        })
+                    })
+                );
+            });
+
+            it('publishes nothing while a Cashu invoice is still unpaid', async () => {
+                const { store, cashuStore, connection, activity, relay } =
+                    await startWithCashuInvoice();
+                jest.spyOn(cashuStore, 'checkInvoicePaid').mockResolvedValue({
+                    isPaid: false
+                } as any);
+
+                await (store as any).reconcilePendingCashuMakeInvoice(
+                    connection,
+                    activity
+                );
+                await jest.advanceTimersByTimeAsync(0);
+
+                expect(activity.status).toBe('pending');
+                expect(relay.publishNotification).not.toHaveBeenCalled();
+            });
+
+            it('publishes payment_received once when opening a paid Cashu invoice', async () => {
+                const { store, cashuStore, activity, relay } =
+                    await startWithCashuInvoice();
+                cashuStore.invoices = [cashuInvoice(true)];
+
+                await store.refreshActivityInvoiceForNavigation(activity);
+                await store.refreshActivityInvoiceForNavigation(activity);
+                await jest.advanceTimersByTimeAsync(0);
+
+                expect(activity.status).toBe('success');
+                expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            });
         });
 
         it('publishes payment_sent once when finalizePayment follows a reconcile of the same payment', async () => {
