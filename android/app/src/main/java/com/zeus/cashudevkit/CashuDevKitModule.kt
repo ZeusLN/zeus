@@ -1144,7 +1144,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     .replace("+", "%20")
                 val quoteUrl = "$normalizedUrl/v1/mint/quote/bolt11/$encodedQuoteId"
 
-                Log.d(TAG, "checkExternalMintQuote: Fetching $quoteUrl")
+                Log.d(TAG, "checkExternalMintQuote: Fetching quote from $normalizedUrl")
 
                 connection = URL(quoteUrl).openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
@@ -1155,7 +1155,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 val responseCode = connection.responseCode
                 if (responseCode != HttpURLConnection.HTTP_OK) {
                     val errorStream = connection.errorStream?.let { readMintErrorBody(it) } ?: "Unknown error"
-                    Log.e(TAG, "checkExternalMintQuote: HTTP $responseCode - $errorStream")
+                    Log.e(TAG, "checkExternalMintQuote: HTTP $responseCode")
                     withContext(Dispatchers.Main) {
                         promise.reject("HTTP_ERROR", "Mint returned HTTP $responseCode: $errorStream")
                     }
@@ -1163,8 +1163,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 }
 
                 val response = readMintResponse(connection.inputStream)
-                Log.d(TAG, "checkExternalMintQuote: Response: $response")
-
                 val json = JSONObject(response)
 
                 // Parse the response according to NUT-04 spec
@@ -1185,7 +1183,9 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     promise.resolve(result.toString())
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "checkExternalMintQuote error", e)
+                // Log the class only: a JSONException message quotes the
+                // unparsed body and URL errors can carry the quote URL
+                Log.e(TAG, "checkExternalMintQuote error: ${e.javaClass.simpleName}")
                 withContext(Dispatchers.Main) {
                     promise.reject("EXTERNAL_QUOTE_ERROR", e.message, e)
                 }
@@ -1268,7 +1268,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     version = version
                 )
 
-                Log.d(TAG, "addExternalMintQuote: Adding quote $quoteId to database")
+                Log.d(TAG, "addExternalMintQuote: Adding quote to database")
 
                 // addMintQuote is a CAS upsert: the update only applies while
                 // the stored row still has the version we write, and a failed
@@ -1285,7 +1285,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     db!!.addMintQuote(makeQuote(retryVersion))
                 }
 
-                Log.d(TAG, "addExternalMintQuote: Successfully added quote $quoteId")
+                Log.d(TAG, "addExternalMintQuote: Successfully added quote")
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(true)
@@ -1315,7 +1315,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
         scope.launch {
             try {
-                Log.d(TAG, "mintExternal: Attempting to mint quote $quoteId from $mintUrl")
+                Log.d(TAG, "mintExternal: Attempting to mint quote from $mintUrl")
 
                 val wallet = getWallet(mintUrl)
                 val proofs = wallet.mint(
