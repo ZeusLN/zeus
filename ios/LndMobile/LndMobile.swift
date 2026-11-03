@@ -213,8 +213,8 @@ class LndMobile: RCTEventEmitter {
       streamOnlyOnce: streamOnlyOnce
     ) { (data, error) in
       if let e = error {
-        NSLog("Stream error for " + method)
-        NSLog(e.localizedDescription)
+        NSLog("%@", "Stream error for " + method)
+        NSLog("%@", e.localizedDescription)
 
         let fullError = e.localizedDescription
         var errorCode = "Error"
@@ -246,8 +246,8 @@ class LndMobile: RCTEventEmitter {
       streamOnlyOnce: streamOnlyOnce
     ) { (data, error) in
       if let e = error {
-        NSLog("Stream error for " + method)
-        NSLog(e.localizedDescription)
+        NSLog("%@", "Stream error for " + method)
+        NSLog("%@", e.localizedDescription)
 
         let fullError = e.localizedDescription
         var errorCode = "Error"
@@ -279,8 +279,8 @@ class LndMobile: RCTEventEmitter {
       payload: payload
     ) { (data, error) in
       if let e = error {
-        NSLog("writeToStream error for " + method)
-        NSLog(e.localizedDescription)
+        NSLog("%@", "writeToStream error for " + method)
+        NSLog("%@", e.localizedDescription)
         reject("error", e.localizedDescription, e)
       } else {
         resolve(data)
