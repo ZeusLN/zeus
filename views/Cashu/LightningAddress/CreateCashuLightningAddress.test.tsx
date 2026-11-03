@@ -234,6 +234,119 @@ describe('CreateCashuLightningAddress after a successful save', () => {
     });
 });
 
+describe('CreateCashuLightningAddress after a save while covered', () => {
+    const focusHandler = (navigation: any) =>
+        (navigation.addListener.mock.calls[0] as any[])[1];
+
+    it('goes back once on the next focus after a create', async () => {
+        const { navigation, LightningAddressStore } = await renderCreate([
+            'Wallet',
+            'ReceiveEcash'
+        ]);
+        const handleFocus = focusHandler(navigation);
+        // the screen opening
+        await act(async () => handleFocus());
+        let resolveCreate: (value: any) => void = () => {};
+        LightningAddressStore.createCashu.mockImplementation(
+            () => new Promise((resolve) => (resolveCreate = resolve))
+        );
+
+        await pressButton('views.Settings.LightningAddress.create');
+        navigation.isFocused.mockReturnValue(false);
+        resolveCreate({ success: true });
+        await flush();
+        expect(navigation.goBack).not.toHaveBeenCalled();
+
+        // the Lockscreen is unlocked and the screen is on top again
+        navigation.isFocused.mockReturnValue(true);
+        await act(async () => handleFocus());
+        expect(navigation.goBack).toHaveBeenCalledTimes(1);
+
+        // a later focus does not go back again
+        await act(async () => handleFocus());
+        expect(navigation.goBack).toHaveBeenCalledTimes(1);
+        expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+
+    it('returns to the ZEUS Pay screen on the next focus after a switch', async () => {
+        const { navigation, LightningAddressStore } = await renderCreate(
+            ['Wallet', 'LightningAddress', 'LightningAddressSettings'],
+            { switchTo: true }
+        );
+        const handleFocus = focusHandler(navigation);
+        await act(async () => handleFocus());
+        let resolveUpdate: (value: any) => void = () => {};
+        LightningAddressStore.update.mockImplementation(
+            () => new Promise((resolve) => (resolveUpdate = resolve))
+        );
+
+        // the switch handler awaits update(), so start it without waiting
+        await act(async () => {
+            findButton(
+                'views.Settings.LightningAddress.switchToCashu'
+            ).props.onPress();
+        });
+        navigation.isFocused.mockReturnValue(false);
+        await act(async () => {
+            resolveUpdate({ success: true });
+            await flush();
+        });
+        expect(navigation.popTo).not.toHaveBeenCalled();
+
+        navigation.isFocused.mockReturnValue(true);
+        await act(async () => handleFocus());
+        expect(navigation.popTo).toHaveBeenCalledTimes(1);
+        expect(navigation.popTo).toHaveBeenCalledWith('LightningAddress');
+        expect(navigation.goBack).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        [
+            'create',
+            ['Wallet', 'ReceiveEcash'],
+            {},
+            'views.Settings.LightningAddress.create',
+            'createCashu' as const
+        ],
+        [
+            'switch',
+            ['Wallet', 'LightningAddress', 'LightningAddressSettings'],
+            { switchTo: true },
+            'views.Settings.LightningAddress.switchToCashu',
+            'update' as const
+        ]
+    ])(
+        'does not leave on the next focus after a failed %s',
+        async (
+            _name: string,
+            routes: string[],
+            params: any,
+            button: string,
+            call: 'createCashu' | 'update'
+        ) => {
+            const { navigation, LightningAddressStore } = await renderCreate(
+                routes,
+                params
+            );
+            const handleFocus = focusHandler(navigation);
+            await act(async () => handleFocus());
+            LightningAddressStore[call].mockImplementation(() =>
+                Promise.resolve({ success: false })
+            );
+
+            navigation.isFocused.mockReturnValue(false);
+            await pressButton(button);
+            await flush();
+            navigation.isFocused.mockReturnValue(true);
+            await act(async () => handleFocus());
+
+            expect(LightningAddressStore[call]).toHaveBeenCalled();
+            expect(navigation.goBack).not.toHaveBeenCalled();
+            expect(navigation.popTo).not.toHaveBeenCalled();
+        }
+    );
+});
+
 describe('CreateCashuLightningAddress mints', () => {
     it('links to the Mints screen and disables create without mints', async () => {
         const { navigation } = await renderCreate(
