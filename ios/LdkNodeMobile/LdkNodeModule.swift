@@ -11,6 +11,11 @@ class LdkNodeModule: RCTEventEmitter {
     // storage dir until then.
     private var pendingBuildDoneSemaphore: DispatchSemaphore?
     private let nodeLock = NSLock()
+    // Advanced under nodeLock by stop() and by every buildNode(). A build
+    // publishes its node only while the generation is still the one it
+    // started with, so a build that was waiting on VSS when the wallet was
+    // stopped or switched cannot install the old wallet's node afterwards.
+    private var buildGeneration: UInt64 = 0
     private var builder: Builder?
     private var logFileObserver: LogFileObserver?
 
@@ -76,6 +81,45 @@ class LdkNodeModule: RCTEventEmitter {
         let old = node
         node = nil
         return old
+    }
+
+    /// Invalidates any build in flight and returns the new generation.
+    private func advanceBuildGeneration() -> UInt64 {
+        nodeLock.lock()
+        defer { nodeLock.unlock() }
+        buildGeneration &+= 1
+        return buildGeneration
+    }
+
+    private func isCurrentBuild(_ generation: UInt64) -> Bool {
+        nodeLock.lock()
+        defer { nodeLock.unlock() }
+        return generation == buildGeneration
+    }
+
+    /// Publishes a built node and consumes the builder, unless stop() or a
+    /// newer buildNode() ran since the build started.
+    private func publishNode(_ newNode: Node, generation: UInt64) -> Bool {
+        nodeLock.lock()
+        defer { nodeLock.unlock() }
+        guard generation == buildGeneration else { return false }
+        node = newNode
+        builder = nil // Builder is consumed
+        return true
+    }
+
+    /// Drops a node built by a superseded build. The builder and stored
+    /// config may already belong to the next wallet, so this leaves them
+    /// alone.
+    private func rejectSupersededBuild(_ builtNode: Node?, reject: @escaping RCTPromiseRejectBlock) {
+        NSLog("LdkNodeModule: buildNode: superseded by stop() or a newer build, discarding its node")
+        if let staleNode = builtNode {
+            do { try staleNode.stop() } catch { /* never started */ }
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 2.0) {
+                withExtendedLifetime(staleNode) {}
+            }
+        }
+        reject("build_cancelled", "The node was stopped before its build finished", nil)
     }
 
     private func resetStoredConfig() {
@@ -377,6 +421,7 @@ class LdkNodeModule: RCTEventEmitter {
                 withExtendedLifetime(existingNode) {}
             }
         }
+        let generation = self.advanceBuildGeneration()
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else {
@@ -419,6 +464,11 @@ class LdkNodeModule: RCTEventEmitter {
                 )
 
                 let nodeEntropy = NodeEntropy.fromBip39Mnemonic(mnemonic: mnemonic, passphrase: passphrase)
+                // Read before the VSS wait: by the time it returns, a stop and
+                // the next wallet's setup may have replaced the stored values
+                let failHard = self.storedVssFailOnError
+                let storageDirPath = self.storedStorageDirPath
+                var builtNode: Node? = nil
                 var vssError: String? = nil
                 var vssBuildPending = false
 
@@ -442,8 +492,6 @@ class LdkNodeModule: RCTEventEmitter {
                         return true
                     }
                     let dualStoreStart = CFAbsoluteTimeGetCurrent()
-                    let failHard = self.storedVssFailOnError
-                    let storageDirPath = self.storedStorageDirPath
 
                     let workItem = DispatchWorkItem {
                         let ffiStart = CFAbsoluteTimeGetCurrent()
@@ -502,7 +550,7 @@ class LdkNodeModule: RCTEventEmitter {
                         NSLog("LdkNodeModule: [timing] Dual store failed at \(elapsedMs)ms — \(vssError!)")
                     } else {
                         let elapsedMs = Int((CFAbsoluteTimeGetCurrent() - dualStoreStart) * 1000)
-                        self.setNode(buildResult)
+                        builtNode = buildResult
                         NSLog("LdkNodeModule: [timing] Node built with dual store successfully in \(elapsedMs)ms")
                     }
                 }
@@ -510,33 +558,43 @@ class LdkNodeModule: RCTEventEmitter {
                 // During restore-from-seed a silent local fallback would come up
                 // as a fresh node with no channels — fail hard instead so the
                 // caller can surface the error and retry
-                if let vssError = vssError, self.storedVssFailOnError {
-                    self.builder = nil
+                if let vssError = vssError, failHard {
+                    if self.isCurrentBuild(generation) {
+                        self.builder = nil
+                    }
                     // A failed build can leave a partial local DB that would
                     // shadow VSS on retry. On a fast failure remove it now; on
                     // timeout the still-running build closure removes it once
                     // the FFI call returns.
                     if !vssBuildPending {
-                        try? FileManager.default.removeItem(atPath: self.storedStorageDirPath)
+                        try? FileManager.default.removeItem(atPath: storageDirPath)
                     }
                     reject("vss_error", vssError, nil)
                     return
                 }
 
+                if !self.isCurrentBuild(generation) {
+                    self.rejectSupersededBuild(builtNode, reject: reject)
+                    return
+                }
+
                 // Fall back to local SQLite store if dual store failed or VSS was not configured
-                if self.getNode() == nil {
+                if builtNode == nil {
                     if vssError != nil {
                         NSLog("LdkNodeModule: [timing] Falling back to local SQLite store")
                     }
                     let localStart = CFAbsoluteTimeGetCurrent()
                     let localBuilder = Builder.fromConfig(config: config)
                     self.applyBuilderSettings(localBuilder)
-                    self.setNode(try localBuilder.build(nodeEntropy: nodeEntropy))
+                    builtNode = try localBuilder.build(nodeEntropy: nodeEntropy)
                     let localMs = Int((CFAbsoluteTimeGetCurrent() - localStart) * 1000)
                     NSLog("LdkNodeModule: [timing] Local-only build completed in \(localMs)ms")
                 }
 
-                self.builder = nil // Builder is consumed
+                guard let newNode = builtNode, self.publishNode(newNode, generation: generation) else {
+                    self.rejectSupersededBuild(builtNode, reject: reject)
+                    return
+                }
                 var result: [String: Any] = [:]
                 if let vssError = vssError {
                     result["vssError"] = vssError
@@ -606,6 +664,8 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(stop:rejecter:)
     func stop(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // Also cancels a build still in flight (see buildGeneration)
+        _ = self.advanceBuildGeneration()
         guard let node = self.takeNode() else {
             // No node to stop - that's OK
             resolve(["status": "ok"])
