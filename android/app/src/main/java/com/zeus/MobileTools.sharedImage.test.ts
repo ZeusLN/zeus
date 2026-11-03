@@ -42,7 +42,9 @@ const extract = () => {
 };
 
 // argv[0] is the provider: "valid" serves a small image at once, "stalled"
-// returns a pipe and never writes to it, "endless" writes without end. Prints
+// returns a pipe and never writes to it, "blockingClose" does the same and
+// never returns from close(), "endless" writes without end, "atCap" and
+// "overCap" serve exactly SHARED_IMAGE_MAX_BYTES and one byte more. Prints
 // how long the @ReactMethod held its caller, how the promise settled, and
 // whether the provider's stream was closed and its reader let go.
 const HARNESS = (method: string) => `import java.io.*;
@@ -151,6 +153,32 @@ class Harness {
     };
   }
 
+  static InputStream bytes(long length) {
+    return watched(new InputStream() {
+      long left = length;
+      @Override public int read() {
+        if (left <= 0) return -1;
+        left--;
+        return 0;
+      }
+      @Override public int read(byte[] b, int off, int len) {
+        if (left <= 0) return -1;
+        int n = (int) Math.min(len, left);
+        left -= n;
+        return n;
+      }
+    });
+  }
+
+  static InputStream blockingClose() throws IOException {
+    return watched(new PipedInputStream(new PipedOutputStream()) {
+      @Override public void close() {
+        try { new CountDownLatch(1).await(); }
+        catch (InterruptedException e) {}
+      }
+    });
+  }
+
   final String TAG = "MobileTools";
   Context getReactApplicationContext() { return new Context(); }
 
@@ -165,6 +193,15 @@ class Harness {
         // The sending app keeps the write end and never writes to it
         PipedOutputStream writer = new PipedOutputStream();
         provider = watched(new PipedInputStream(writer));
+        break;
+      case "blockingClose":
+        provider = blockingClose();
+        break;
+      case "atCap":
+        provider = bytes(SHARED_IMAGE_MAX_BYTES);
+        break;
+      case "overCap":
+        provider = bytes(SHARED_IMAGE_MAX_BYTES + 1);
         break;
       case "endless":
         provider = watched(new InputStream() {
@@ -187,10 +224,22 @@ class Harness {
     // a second settle would show up here
     Thread.sleep(200);
 
+    // A close that blocked the deadline thread would also keep the next
+    // share's deadline from firing
+    String secondOutcome = null;
+    if (args[0].equals("blockingClose")) {
+      provider = blockingClose();
+      Promise second = new Promise();
+      new Harness().getSharedImageBase64(second);
+      second.settled.await(SHARED_IMAGE_TIMEOUT_MS + 3000, TimeUnit.MILLISECONDS);
+      secondOutcome = second.outcome;
+    }
+
     System.out.println("{\\"heldMs\\":" + heldMs
         + ",\\"settled\\":" + settled
         + ",\\"settledMs\\":" + settledMs
         + ",\\"outcome\\":\\"" + promise.outcome + "\\""
+        + ",\\"secondOutcome\\":\\"" + secondOutcome + "\\""
         + ",\\"settleCalls\\":" + promise.calls.get()
         + ",\\"served\\":" + served.get()
         + ",\\"closed\\":" + closed.get()
@@ -251,6 +300,28 @@ class Harness {
             // the stream is closed, so the reader thread is let go
             expect(result.closed).toBe(true);
             expect(result.readerStopped).toBe(true);
+        }, 20000);
+
+        it('settles a stalled sender whose close() never returns', () => {
+            const result = run('blockingClose');
+
+            expect(result.outcome).toBe('rejected:SHARE_TIMEOUT');
+            expect(result.settledMs).toBeLessThan(result.timeoutMs + 2000);
+            expect(result.secondOutcome).toBe('rejected:SHARE_TIMEOUT');
+        }, 30000);
+
+        it('reads an image of exactly the byte cap', () => {
+            const result = run('atCap');
+
+            expect(result.outcome).toBe('resolved:AQID');
+            expect(result.served).toBe(result.maxBytes);
+        }, 20000);
+
+        it('rejects an image one byte over the byte cap', () => {
+            const result = run('overCap');
+
+            expect(result.outcome).toBe('resolved:null');
+            expect(result.settleCalls).toBe(1);
         }, 20000);
 
         it('stops reading at the byte cap', () => {
