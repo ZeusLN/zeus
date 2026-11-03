@@ -401,14 +401,17 @@ export default class EmbeddedLND extends LND {
 
     getNodeInfo = async (urlParams?: Array<string>) =>
         await getNodeInfo((urlParams && urlParams[0]) || '');
+    // UTF-8, like the other backends. stringToUint8Array keeps only the low
+    // byte of each char, so a non-ASCII look-alike of the LNURL-auth phrase
+    // would pass isReservedSigningMessage and still be signed as the phrase.
     signMessage = async (msg: any) => {
-        return await signMessageNodePubkey(Base64Utils.stringToUint8Array(msg));
+        return await signMessageNodePubkey(Base64Utils.utf8ToBytes(msg));
     };
     verifyMessage = async (data: any) => {
         const { signature, msg } = data;
         return await verifyMessageNodePubkey(
             signature,
-            Base64Utils.stringToUint8Array(msg)
+            Base64Utils.utf8ToBytes(msg)
         );
     };
 

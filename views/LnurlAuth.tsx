@@ -22,15 +22,13 @@ import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { verifyLnurlAuthCallback } from '../utils/LnurlPayUtils';
+import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import {
     ecdsaSignDERHex,
     getCompressedPublicKeyHex
 } from '../utils/SigningUtils';
 import DropdownSetting from '../components/DropdownSetting';
 import SettingsStore, { LNDHUB_AUTH_MODES } from '../stores/SettingsStore';
-
-const LNURLAUTH_CANONICAL_PHRASE =
-    'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
 
 interface LnurlAuthProps {
     navigation: NativeStackNavigationProp<any, any>;

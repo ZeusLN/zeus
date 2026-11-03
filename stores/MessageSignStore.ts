@@ -2,6 +2,7 @@ import { action, observable } from 'mobx';
 import BackendUtils from './../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import addressUtils from '../utils/AddressUtils';
+import { isReservedSigningMessage } from '../utils/LnurlAuthUtils';
 
 interface VerificationRequest {
     msg: string;
@@ -177,6 +178,16 @@ export default class MessageSignStore {
         text: string,
         mode?: 'lightning' | 'onchain'
     ): Promise<string | null> => {
+        if (isReservedSigningMessage(text)) {
+            this.error = true;
+            this.errorMessage = localeString(
+                'views.Settings.SignMessage.reservedMessage'
+            );
+            this.signature = null;
+            this.loading = false;
+            return Promise.resolve(null);
+        }
+
         this.loading = true;
 
         try {

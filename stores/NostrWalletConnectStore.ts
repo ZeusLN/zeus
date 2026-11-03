@@ -42,6 +42,7 @@ import NostrConnectUtils, {
 import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
 import { retry } from '../utils/SleepUtils';
+import { isReservedSigningMessage } from '../utils/LnurlAuthUtils';
 import NWCConnection, {
     BudgetRenewalType,
     ConnectionActivity,
@@ -2656,6 +2657,12 @@ export default class NostrWalletConnectStore {
                         'stores.NostrWalletConnectStore.error.invalidSignMessage'
                     ),
                     Nip47ErrorCode.OTHER
+                );
+            }
+            if (isReservedSigningMessage(request.message)) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString('views.Settings.SignMessage.reservedMessage'),
+                    Nip47ErrorCode.RESTRICTED
                 );
             }
             if (this.isCashuConfigured) {

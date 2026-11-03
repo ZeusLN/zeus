@@ -53,9 +53,6 @@ jest.mock('./BackendUtils', () => ({
 jest.mock('../lndmobile/wallet', () => ({
     signMessageNodePubkey: jest.fn().mockResolvedValue({ signature: 'sig456' })
 }));
-jest.mock('./Base64Utils', () => ({
-    stringToUint8Array: (s: string) => new Uint8Array(Buffer.from(s))
-}));
 jest.mock('./SleepUtils', () => ({
     sleep: jest.fn().mockResolvedValue(undefined)
 }));
@@ -72,11 +69,27 @@ jest.mock('react-native', () => ({
     Platform: { OS: 'android', select: (opts: any) => opts.android }
 }));
 
+import { Alert } from 'react-native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import { signMessageNodePubkey } from '../lndmobile/wallet';
+import { LNURLAUTH_CANONICAL_PHRASE } from './LnurlAuthUtils';
 import {
     graphDataExists,
     validateChannelBackupFile,
-    importChannelDb
+    importChannelDb,
+    restoreChannelBackupFromOlympus
 } from './ChannelMigrationUtils';
+
+const mockFetch = ReactNativeBlobUtil.fetch as jest.Mock;
+const mockSignNodePubkey = signMessageNodePubkey as jest.Mock;
+const mockAlert = Alert.alert as jest.Mock;
+
+const jsonResponse = (body: any) => ({
+    info: () => ({ status: 200 }),
+    json: () => body
+});
+
+const CHALLENGE = 'ab'.repeat(64);
 
 describe('ChannelMigrationUtils', () => {
     beforeEach(() => {
@@ -293,6 +306,110 @@ describe('ChannelMigrationUtils', () => {
                 '/input.enc',
                 '/output.zip',
                 'my seed phrase'
+            );
+        });
+    });
+
+    describe('restoreChannelBackupFromOlympus', () => {
+        const restore = () =>
+            restoreChannelBackupFromOlympus('lnd', false, 'pubkey', 'seed');
+
+        let consoleLog: jest.SpyInstance;
+        let consoleError: jest.SpyInstance;
+
+        beforeEach(() => {
+            consoleLog = jest
+                .spyOn(console, 'log')
+                .mockImplementation(() => {});
+            consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            // Press the last button: "No backup" when there is none,
+            // "Restore" when one is found.
+            mockAlert.mockImplementation(
+                (_title: string, _message: string, buttons: any[]) =>
+                    buttons?.[buttons.length - 1]?.onPress?.()
+            );
+        });
+
+        afterEach(() => {
+            mockAlert.mockReset();
+            consoleLog.mockRestore();
+            consoleError.mockRestore();
+        });
+
+        it('signs the UTF-8 bytes of the status challenge', async () => {
+            mockFetch
+                .mockResolvedValueOnce(
+                    jsonResponse({ success: true, verification: CHALLENGE })
+                )
+                .mockResolvedValueOnce(
+                    jsonResponse({ success: true, last_backup_at: null })
+                );
+
+            expect(await restore()).toBe(false);
+            expect(mockSignNodePubkey).toHaveBeenCalledWith(
+                Uint8Array.from(Buffer.from(CHALLENGE, 'utf-8'))
+            );
+        });
+
+        it('does not sign a look-alike of the LNURL-auth phrase as the phrase bytes', async () => {
+            const lookAlike = '\u0144' + LNURLAUTH_CANONICAL_PHRASE.slice(1);
+            mockFetch
+                .mockResolvedValueOnce(
+                    jsonResponse({ success: true, verification: lookAlike })
+                )
+                .mockResolvedValueOnce(
+                    jsonResponse({ success: true, last_backup_at: null })
+                );
+
+            await restore();
+
+            const signed = mockSignNodePubkey.mock.calls[0][0];
+            expect(Buffer.from(signed).toString('latin1')).not.toBe(
+                LNURLAUTH_CANONICAL_PHRASE
+            );
+        });
+
+        it('refuses the LNURL-auth phrase as the status challenge', async () => {
+            mockFetch.mockResolvedValueOnce(
+                jsonResponse({
+                    success: true,
+                    verification: LNURLAUTH_CANONICAL_PHRASE
+                })
+            );
+
+            await expect(restore()).rejects.toThrow('LNURL-auth');
+            expect(mockSignNodePubkey).not.toHaveBeenCalled();
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+        });
+
+        it('refuses the LNURL-auth phrase as the restore challenge', async () => {
+            mockFetch
+                .mockResolvedValueOnce(
+                    jsonResponse({ success: true, verification: CHALLENGE })
+                )
+                .mockResolvedValueOnce(
+                    jsonResponse({
+                        success: true,
+                        last_backup_at: '2026-11-01T00:00:00Z'
+                    })
+                )
+                .mockResolvedValueOnce(
+                    jsonResponse({
+                        success: true,
+                        verification: ` ${LNURLAUTH_CANONICAL_PHRASE.toLowerCase()}\n`
+                    })
+                );
+
+            await expect(restore()).rejects.toThrow('LNURL-auth');
+            expect(mockSignNodePubkey).toHaveBeenCalledTimes(1);
+            expect(mockFetch).toHaveBeenCalledTimes(3);
+            expect(mockFetch).not.toHaveBeenCalledWith(
+                'POST',
+                expect.stringContaining('/api/restore-channels'),
+                expect.anything(),
+                expect.anything()
             );
         });
     });

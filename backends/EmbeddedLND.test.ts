@@ -21,6 +21,8 @@ const mockListPayments = jest.fn();
 const mockGetTransactions = jest.fn();
 const mockSendCoins = jest.fn();
 const mockOpenChannel = jest.fn();
+const mockSignMessageNodePubkey = jest.fn();
+const mockVerifyMessageNodePubkey = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
     default: {
@@ -39,7 +41,12 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
             decodeCloseStatusUpdate: (data: string) => JSON.parse(data),
             decodeOpenStatusUpdate: (data: string) => JSON.parse(data)
         },
-        wallet: {},
+        wallet: {
+            signMessageNodePubkey: (...args: any[]) =>
+                mockSignMessageNodePubkey(...args),
+            verifyMessageNodePubkey: (...args: any[]) =>
+                mockVerifyMessageNodePubkey(...args)
+        },
         onchain: {
             getTransactions: (...args: any[]) => mockGetTransactions(...args),
             sendCoins: (...args: any[]) => mockSendCoins(...args)
@@ -84,6 +91,7 @@ import Long from 'long';
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { lnrpc } from '../proto/lightning';
 import EmbeddedLND from './EmbeddedLND';
+import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import Peer from '../models/Peer';
 import {
     isNodeResponse,
@@ -593,5 +601,57 @@ describe('EmbeddedLND.openChannelStream', () => {
         await flush();
 
         expect(second.error?.message).toEqual('peer offline');
+    });
+});
+
+describe('EmbeddedLND message signing', () => {
+    const embeddedLnd = new EmbeddedLND();
+
+    beforeEach(() => {
+        mockSignMessageNodePubkey.mockReset().mockResolvedValue({
+            signature: 'sig'
+        });
+        mockVerifyMessageNodePubkey.mockReset().mockResolvedValue({
+            valid: true
+        });
+    });
+
+    const signedBytes = () =>
+        Buffer.from(mockSignMessageNodePubkey.mock.calls[0][0]);
+
+    it('signs the UTF-8 bytes of the message', async () => {
+        await embeddedLnd.signMessage('héllo ⚡');
+
+        expect(signedBytes().equals(Buffer.from('héllo ⚡', 'utf-8'))).toBe(
+            true
+        );
+    });
+
+    it('does not sign a low-byte look-alike as the LNURL-auth phrase', async () => {
+        await embeddedLnd.signMessage(
+            '\u0144' + LNURLAUTH_CANONICAL_PHRASE.slice(1)
+        );
+
+        expect(
+            signedBytes().equals(Buffer.from(LNURLAUTH_CANONICAL_PHRASE))
+        ).toBe(false);
+    });
+
+    it('signs the phrase itself as the same bytes as before, for lnurlAuth', async () => {
+        await embeddedLnd.signMessage(LNURLAUTH_CANONICAL_PHRASE);
+
+        expect(
+            signedBytes().equals(Buffer.from(LNURLAUTH_CANONICAL_PHRASE))
+        ).toBe(true);
+    });
+
+    it('verifies against the UTF-8 bytes of the message', async () => {
+        await embeddedLnd.verifyMessage({ signature: 'sig', msg: 'héllo ⚡' });
+
+        const [signature, msg] = mockVerifyMessageNodePubkey.mock.calls[0];
+        expect(signature).toBe('sig');
+        expect(Buffer.from(msg).equals(Buffer.from('héllo ⚡', 'utf-8'))).toBe(
+            true
+        );
     });
 });

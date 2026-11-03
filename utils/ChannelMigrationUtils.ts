@@ -9,6 +9,7 @@ import { stopLnd } from './LndMobileUtils';
 import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import Base64Utils from './Base64Utils';
+import { isReservedSigningMessage } from './LnurlAuthUtils';
 import { IN_APP_RESTART } from './InAppRestartUtils';
 import { sleep } from './SleepUtils';
 import { zipFolder, unzipFile, encryptFile, decryptFile } from './ZipUtils';
@@ -410,6 +411,20 @@ export const uploadChannelBackupToOlympus = async (
 };
 
 /**
+ * Signs an Olympus auth challenge with the node key. The restore flow calls
+ * lndmobile directly, so it does not go through the reserved-phrase check in
+ * BackendUtils.signMessage and has to apply it here.
+ */
+const signOlympusChallenge = async (challenge: string) => {
+    if (isReservedSigningMessage(challenge)) {
+        throw new Error(
+            'Refusing to sign the LNURL-auth key derivation phrase'
+        );
+    }
+    return await signMessageNodePubkey(Base64Utils.utf8ToBytes(challenge));
+};
+
+/**
  * Downloads and restores the graph data from Olympus
  */
 export const restoreChannelBackupFromOlympus = async (
@@ -437,8 +452,8 @@ export const restoreChannelBackupFromOlympus = async (
             throw new Error('Invalid auth response');
 
         console.log('Signing status challenge...');
-        const statusSignData = await signMessageNodePubkey(
-            Base64Utils.stringToUint8Array(statusAuth.verification)
+        const statusSignData = await signOlympusChallenge(
+            statusAuth.verification
         );
         const statusSignature = statusSignData.signature;
 
@@ -532,8 +547,8 @@ export const restoreChannelBackupFromOlympus = async (
             throw new Error('Invalid auth response');
 
         console.log('Signing restore challenge...');
-        const restoreSignData = await signMessageNodePubkey(
-            Base64Utils.stringToUint8Array(restoreAuth.verification)
+        const restoreSignData = await signOlympusChallenge(
+            restoreAuth.verification
         );
         const restoreSignature = restoreSignData.signature;
 
