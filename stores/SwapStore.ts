@@ -312,6 +312,20 @@ export default class SwapStore {
     };
 
     /**
+     * The active network's stored provider selection: a host URL or `Custom`.
+     * Each network keeps its own selection, so everything that depends on the
+     * provider must resolve it through here.
+     */
+    @computed get selectedHost(): string {
+        const isTestnet = this.nodeInfoStore?.nodeInfo?.isTestNet;
+        const swaps = this.settingsStore.settings.swaps;
+
+        return isTestnet
+            ? swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
+            : swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET;
+    }
+
+    /**
      * Whether the selected provider has a Pro tier. `proEnabled` is a single
      * flag shared across both networks while `pro` is a per-host property, so
      * the two can disagree whenever the host changes without going through the
@@ -323,19 +337,13 @@ export default class SwapStore {
      * `Custom` entry instead of its URL.
      */
     @computed get isProHost(): boolean {
-        const isTestnet = this.nodeInfoStore?.nodeInfo?.isTestNet;
-        const settings = this.settingsStore.settings;
-
-        const selected = isTestnet
-            ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
-            : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET;
-
-        const hostKeys = isTestnet
+        const hostKeys = this.nodeInfoStore?.nodeInfo?.isTestNet
             ? SWAP_HOST_KEYS_TESTNET
             : SWAP_HOST_KEYS_MAINNET;
 
         return (
-            hostKeys.find((host: any) => host.value === selected)?.pro === true
+            hostKeys.find((host: any) => host.value === this.selectedHost)
+                ?.pro === true
         );
     }
 
@@ -357,20 +365,15 @@ export default class SwapStore {
     /** Returns the API host based on network type */
     @computed
     public get getHost() {
-        const isTestnet = this.nodeInfoStore?.nodeInfo?.isTestNet;
-        const settings = this.settingsStore.settings;
+        const customHost = this.settingsStore.settings.swaps?.customHost;
 
-        if (
-            settings.swaps?.customHost &&
-            (settings.swaps?.hostTestnet === 'Custom' ||
-                settings.swaps?.hostMainnet === 'Custom')
-        ) {
-            return settings.swaps?.customHost;
+        // `customHost` is a single value shared across both networks, so only
+        // the active network's selection may opt into it
+        if (this.selectedHost === 'Custom' && customHost) {
+            return customHost;
         }
 
-        return isTestnet
-            ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
-            : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET;
+        return this.selectedHost;
     }
 
     /** Returns the name of the swap service based on host and network */
