@@ -16,3 +16,14 @@ export function decodeMemo(memo?: string): string | undefined {
         return memo;
     }
 }
+
+// The invoice memo with the receiver name from the invoice settings in
+// front of it. No trailing separator when there is no memo.
+export const withReceiverName = (
+    receiverName?: string,
+    memo?: string
+): string => {
+    if (!receiverName) return memo || '';
+    if (!memo) return receiverName;
+    return `${receiverName}:  ${memo}`;
+};

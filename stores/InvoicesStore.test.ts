@@ -1476,6 +1476,35 @@ describe('InvoicesStore superseded invoice requests', () => {
         expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
     });
 
+    it('restores the on-chain leg of a stored unified invoice', () => {
+        const store = newStore();
+        store.reset();
+
+        store.showStoredInvoice({
+            paymentRequest: 'lnbc-stored',
+            amount: '1000',
+            lspFeeSats: null,
+            onChainAddress: 'bc1qstored'
+        });
+
+        expect(store.payment_request).toBe('lnbc-stored');
+        expect(store.onChainAddress).toBe('bc1qstored');
+    });
+
+    it('shows a stored lightning-only invoice without an on-chain address', () => {
+        const store = newStore();
+        store.reset();
+
+        store.showStoredInvoice({
+            paymentRequest: 'lnbc-stored',
+            amount: '1000',
+            lspFeeSats: null
+        });
+
+        expect(store.payment_request).toBe('lnbc-stored');
+        expect(store.onChainAddress).toBeFalsy();
+    });
+
     it('keeps the newer invoice and withdraw when an older request finishes last', async () => {
         const older = deferred();
         const newer = deferred();

@@ -134,7 +134,12 @@ describe('ReceiveEcash NFC scan', () => {
 
         expect(handleAnything).toHaveBeenCalledWith('tag text', '25000');
         expect(CashuStore.createInvoice).toHaveBeenCalledWith(
-            expect.objectContaining({ value: '25000', lnurl: withdrawParams })
+            expect.objectContaining({
+                value: '25000',
+                lnurl: withdrawParams,
+                // LUD-03 defaultDescription is a string
+                memo: 'card'
+            })
         );
         expect(navigate).not.toHaveBeenCalled();
     });
