@@ -162,6 +162,10 @@ class BackendUtils {
     watchInvoicePaid = (...args: any[]) => this.call('watchInvoicePaid', args);
     watchOnchainReceived = (...args: any[]) =>
         this.call('watchOnchainReceived', args);
+    // return an unsubscribe function, or false on backends that report
+    // splices in their channel data instead of as events
+    watchSpliceEvents = (...args: any[]) =>
+        this.call('watchSpliceEvents', args);
     subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
     subscribeInvoices = (...args: any[]) =>
         this.call('subscribeInvoices', args);

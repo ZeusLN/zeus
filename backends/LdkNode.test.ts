@@ -943,3 +943,74 @@ describe('LdkNode received JIT payments', () => {
         ).toBeUndefined();
     });
 });
+
+describe('LdkNode.watchSpliceEvents', () => {
+    let ldk: LdkNode;
+    let emit: (event: any) => void;
+    let unsubscribe: jest.Mock;
+
+    beforeEach(() => {
+        ldk = new LdkNode();
+        unsubscribe = jest.fn();
+        ldk.subscribeToEvents = (callback: any) => {
+            emit = callback;
+            return unsubscribe;
+        };
+    });
+
+    it('reports a negotiated splice with its new funding output', () => {
+        const onEvent = jest.fn();
+        ldk.watchSpliceEvents(onEvent);
+
+        emit({
+            type: 'splicePending',
+            channelId: 'chan',
+            userChannelId: 'user-chan',
+            counterpartyNodeId: '02peer',
+            newFundingTxo_txid: 'splice-txid',
+            newFundingTxo_vout: 1
+        });
+
+        expect(onEvent).toHaveBeenCalledWith({
+            type: 'splicePending',
+            userChannelId: 'user-chan',
+            channelId: 'chan',
+            txid: 'splice-txid',
+            vout: 1
+        });
+    });
+
+    it.each(['spliceFailed', 'channelReady', 'channelClosed'])(
+        'reports %s for its channel',
+        (type) => {
+            const onEvent = jest.fn();
+            ldk.watchSpliceEvents(onEvent);
+
+            emit({ type, channelId: 'chan', userChannelId: 'user-chan' });
+
+            expect(onEvent).toHaveBeenCalledWith({
+                type,
+                userChannelId: 'user-chan',
+                channelId: 'chan'
+            });
+        }
+    );
+
+    it('ignores events unrelated to splices', () => {
+        const onEvent = jest.fn();
+        ldk.watchSpliceEvents(onEvent);
+
+        emit({ type: 'paymentReceived', paymentHash: 'hash', amountMsat: 1 });
+        emit({
+            type: 'channelPending',
+            channelId: 'chan',
+            userChannelId: 'user-chan'
+        });
+
+        expect(onEvent).not.toHaveBeenCalled();
+    });
+
+    it('returns the event unsubscribe function', () => {
+        expect(ldk.watchSpliceEvents(jest.fn())).toBe(unsubscribe);
+    });
+});

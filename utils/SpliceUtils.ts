@@ -2,6 +2,18 @@ import { localeString } from './LocaleUtils';
 
 export type SpliceDirection = 'in' | 'out';
 
+// What a backend reports while following a splice. channelReady fires again
+// once a splice locks, so a ready event for a channel with a pending splice
+// means that splice is done
+export interface SpliceEvent {
+    type: 'splicePending' | 'spliceFailed' | 'channelReady' | 'channelClosed';
+    userChannelId: string;
+    channelId: string;
+    // splicePending only: the splice transaction's new funding output
+    txid?: string;
+    vout?: number;
+}
+
 // Peers reject outputs below their dust limit while the splice transaction
 // is built. 546 sats is the highest standard limit (P2PKH), so a payout of
 // at least this much clears every peer's check, whatever the address type
