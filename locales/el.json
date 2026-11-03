@@ -1225,6 +1225,7 @@
     "views.Settings.SignMessage.signingMethod": "Μέθοδος υπογραφής",
     "views.Settings.SignMessage.selectAddressSigning": "Επιλέξτε διεύθυνση για υπογραφή",
     "views.Settings.SignMessage.selectAddressVerification": "Εισάγετε Διεύθυνση για Επιβεβαίωση",
+    "views.Settings.SignMessage.reservedMessage": "This message is reserved for LNURL-auth key derivation and cannot be signed. Signing it would expose your LNURL-auth identity for every site.",
     "views.Settings.SignMessage.fullAddress": "Πλήρης διεύθυνση",
     "views.Settings.SignMessage.tapToSelectAddress": "Πατήστε εδώ για επιλογή διεύθυνσης",
     "views.Settings.SignMessage.signatureType": "Τύπος Υπογραφής",
