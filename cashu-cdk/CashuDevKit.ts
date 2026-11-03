@@ -98,15 +98,43 @@ function mapCDKError(error: any): CDKError {
  * The native modules only convert P2PK conditions with a pubkey. Refuse
  * anything else before the native call so a requested lock can never turn
  * into an unlocked bearer token. HTLC is not wired up on either platform.
+ * Optional fields that are present but invalid are refused too, matching
+ * the native parsers, instead of being dropped.
  */
 function assertSupportedConditions(conditions: CDKSpendingConditions): void {
     const kind = (conditions as any)?.kind;
     if (kind !== 'P2PK') {
         throw new Error(`Unsupported spending condition kind: ${kind}`);
     }
-    const pubkey = (conditions as any).data?.pubkey;
+    const data = (conditions as any).data;
+    const pubkey = data?.pubkey;
     if (typeof pubkey !== 'string' || pubkey.length === 0) {
         throw new Error('P2PK spending conditions require a pubkey');
+    }
+    for (const key of ['locktime', 'num_sigs', 'num_sigs_refund']) {
+        const value = data[key];
+        if (value == null) continue;
+        const valid =
+            typeof value === 'number'
+                ? Number.isSafeInteger(value) && value >= 0
+                : typeof value === 'string' && /^\d+$/.test(value);
+        if (!valid) {
+            throw new Error(`${key} must be a non-negative integer`);
+        }
+    }
+    for (const key of ['pubkeys', 'refund_keys']) {
+        const value = data[key];
+        if (value == null) continue;
+        if (!Array.isArray(value)) {
+            throw new Error(`${key} must be an array`);
+        }
+        if (value.some((k) => typeof k !== 'string' || k.length === 0)) {
+            throw new Error(`${key} entries must be non-empty strings`);
+        }
+    }
+    const sigFlag = data.sig_flag;
+    if (sigFlag != null && sigFlag !== 'SigInputs' && sigFlag !== 'SigAll') {
+        throw new Error(`Unsupported sig_flag: ${sigFlag}`);
     }
 }
 

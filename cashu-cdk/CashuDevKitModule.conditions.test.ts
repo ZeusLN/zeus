@@ -33,8 +33,32 @@ const UNSUPPORTED: Array<[string, any]> = [
     ['a missing kind', { data: { pubkey: PUBKEY } }],
     ['P2PK without data', { kind: 'P2PK' }],
     ['P2PK without a pubkey', { kind: 'P2PK', data: {} }],
-    ['P2PK with an empty pubkey', { kind: 'P2PK', data: { pubkey: '' } }]
+    ['P2PK with an empty pubkey', { kind: 'P2PK', data: { pubkey: '' } }],
+    ...invalidP2PKFields()
 ];
+
+// Present but invalid optional P2PK fields must be refused, not dropped.
+function invalidP2PKFields(): Array<[string, any]> {
+    const withData = (extra: object) => ({
+        kind: 'P2PK',
+        data: { pubkey: PUBKEY, ...extra }
+    });
+    return [
+        ['a null pubkeys entry', withData({ pubkeys: [PUBKEY, null] })],
+        ['a numeric pubkeys entry', withData({ pubkeys: [2] })],
+        ['an empty pubkeys entry', withData({ pubkeys: [''] })],
+        ['pubkeys that are not an array', withData({ pubkeys: PUBKEY })],
+        ['a null refund_keys entry', withData({ refund_keys: [null] })],
+        ['refund_keys that are not an array', withData({ refund_keys: {} })],
+        ['a negative locktime', withData({ locktime: -1 })],
+        ['a fractional locktime', withData({ locktime: 1.5 })],
+        ['a non-numeric locktime string', withData({ locktime: 'soon' })],
+        ['a boolean num_sigs', withData({ num_sigs: true })],
+        ['an object num_sigs_refund', withData({ num_sigs_refund: {} })],
+        ['an unknown sig_flag', withData({ sig_flag: 'SigNone' })],
+        ['a numeric sig_flag', withData({ sig_flag: 1 })]
+    ];
+}
 
 const between = (source: string, start: string, end: string) => {
     const from = source.indexOf(start);
@@ -81,7 +105,13 @@ ${parser}
             let result: SpendingConditions? = try parseP2PKConditions(from: parsed)
             switch result {
             case .p2pk(let pubkey, let conditions)?:
-                return "p2pk \\(pubkey) \\(conditions?.locktime ?? 0)"
+                let c = conditions!
+                return [
+                    "p2pk", pubkey, "\\(c.locktime ?? 0)",
+                    "\\(c.pubkeys.count)", "\\(c.refundKeys.count)",
+                    "\\(c.numSigs ?? 0)", "\\(c.numSigsRefund ?? 0)",
+                    "\\(c.sigFlag)"
+                ].joined(separator: " ")
             case .htlc(let hash, _)?:
                 return "htlc \\(hash)"
             case nil:
@@ -149,7 +179,42 @@ for arg in CommandLine.arguments.dropFirst() {
                 kind: 'P2PK',
                 data: { pubkey: PUBKEY, locktime: 1900000000 }
             })
-        ).toEqual([`p2pk ${PUBKEY} 1900000000`]);
+        ).toEqual([`p2pk ${PUBKEY} 1900000000 0 0 0 0 0`]);
+    });
+
+    it('converts every optional P2PK field', () => {
+        expect(
+            run({
+                kind: 'P2PK',
+                data: {
+                    pubkey: PUBKEY,
+                    locktime: '1900000000',
+                    pubkeys: [PUBKEY],
+                    refund_keys: [PUBKEY],
+                    num_sigs: 2,
+                    num_sigs_refund: 1,
+                    sig_flag: 'SigAll'
+                }
+            })
+        ).toEqual([`p2pk ${PUBKEY} 1900000000 1 1 2 1 1`]);
+    });
+
+    // A bridged JSON 1 also matches `is Bool`, which used to read num_sigs: 1
+    // as absent.
+    it('keeps a num_sigs of 1 and leaves out zeros and nulls', () => {
+        expect(
+            run({
+                kind: 'P2PK',
+                data: {
+                    pubkey: PUBKEY,
+                    locktime: 0,
+                    pubkeys: null,
+                    num_sigs: 1,
+                    num_sigs_refund: null,
+                    sig_flag: 'SigInputs'
+                }
+            })
+        ).toEqual([`p2pk ${PUBKEY} 0 0 0 1 0 0`]);
     });
 });
 
@@ -196,6 +261,36 @@ describe('Android CashuDevKitModule conditions', () => {
             /requireNotNull\(json\.optJSONObject\("data"\)\)/
         );
         expect(parser).toContain('require(pubkeyHex.isNotEmpty())');
+    });
+
+    it('rejects invalid optional P2PK fields instead of dropping them', () => {
+        expect(parser).toContain(
+            'val pubkeys = optionalKeyList(data, "pubkeys")'
+        );
+        expect(parser).toContain(
+            'val refundKeys = optionalKeyList(data, "refund_keys")'
+        );
+        expect(parser).not.toContain('optJSONArray');
+        expect(parser).not.toContain('optString(i)');
+        expect(parser).toMatch(
+            /"SigAll" -> 1\.toUByte\(\)\s*else -> throw IllegalArgumentException\("Unsupported sig_flag/
+        );
+
+        const helpers = between(
+            ANDROID_SOURCE,
+            'private fun optionalPositiveULong',
+            'private fun readPositiveLong'
+        );
+        expect(helpers).not.toContain('readPositiveLong');
+        expect(helpers).toMatch(
+            /requireNotNull\(parsed\?\.takeIf \{ it >= 0L \}\)/
+        );
+        expect(helpers).toContain(
+            'requireNotNull(json.opt(key) as? JSONArray) { "$key must be an array" }'
+        );
+        expect(helpers).toMatch(
+            /requireNotNull\(\(arr\.opt\(i\) as\? String\)\?\.takeIf \{ it\.isNotEmpty\(\) \}\)/
+        );
     });
 
     it('does not mint unlocked when the conditions JSON is malformed', () => {

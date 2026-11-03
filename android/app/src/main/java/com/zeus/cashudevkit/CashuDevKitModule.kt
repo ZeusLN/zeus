@@ -151,7 +151,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         val data = requireNotNull(json.optJSONObject("data")) {
             "P2PK spending conditions require a pubkey"
         }
-        val pubkeyHex = data.optString("pubkey")
+        val pubkeyHex = data.opt("pubkey") as? String ?: ""
         require(pubkeyHex.isNotEmpty()) { "P2PK spending conditions require a pubkey" }
 
         // NUT-11 tags must be omitted entirely when they don't apply. Emitting
@@ -162,19 +162,16 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         val numSigs = optionalPositiveULong(data, "num_sigs")
         val numSigsRefund = optionalPositiveULong(data, "num_sigs_refund")
 
-        val pubkeys = data.optJSONArray("pubkeys")?.let { arr ->
-            (0 until arr.length()).mapNotNull { i ->
-                arr.optString(i).takeIf { it.isNotEmpty() }
-            }
-        } ?: emptyList()
+        val pubkeys = optionalKeyList(data, "pubkeys")
+        val refundKeys = optionalKeyList(data, "refund_keys")
 
-        val refundKeys = data.optJSONArray("refund_keys")?.let { arr ->
-            (0 until arr.length()).mapNotNull { i ->
-                arr.optString(i).takeIf { it.isNotEmpty() }
-            }
-        } ?: emptyList()
-
-        val sigFlag: UByte = if (data.optString("sig_flag") == "SigAll") 1.toUByte() else 0.toUByte()
+        // A present but unrecognised sig_flag is rejected rather than read as
+        // SigInputs, so the lock is never weaker than the caller asked for.
+        val sigFlag: UByte = when (val raw = if (data.isNull("sig_flag")) null else data.opt("sig_flag")) {
+            null, "SigInputs" -> 0.toUByte()
+            "SigAll" -> 1.toUByte()
+            else -> throw IllegalArgumentException("Unsupported sig_flag: $raw")
+        }
 
         // NUT-11: "If n_sigs or n_sigs_refund ... exceeds the total number of
         // keys in its pathway, the P2PK secret is malformed and the Proof
@@ -210,10 +207,39 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     /**
      * Returns the value at [key] only when it is a positive integer, so that
      * optional NUT-11 tags stay absent instead of being serialized as 0.
+     * A present value that is not a non-negative integer (or a string of
+     * one) throws instead of being dropped.
      */
     private fun optionalPositiveULong(json: JSONObject, key: String): ULong? {
         if (!json.has(key) || json.isNull(key)) return null
-        return readPositiveLong(json, key).takeIf { it > 0L }?.toULong()
+        val parsed: Long? = when (val raw = json.opt(key)) {
+            is Int -> raw.toLong()
+            is Long -> raw
+            is Double -> raw.takeIf {
+                it % 1.0 == 0.0 && it < Long.MAX_VALUE.toDouble()
+            }?.toLong()
+            is String -> raw.toLongOrNull()
+            else -> null
+        }
+        val value = requireNotNull(parsed?.takeIf { it >= 0L }) {
+            "$key must be a non-negative integer"
+        }
+        return value.takeIf { it > 0L }?.toULong()
+    }
+
+    /**
+     * Reads an optional array of hex pubkeys. Every entry must be a
+     * non-empty string: dropping a bad entry would change which keys the
+     * lock names.
+     */
+    private fun optionalKeyList(json: JSONObject, key: String): List<String> {
+        if (!json.has(key) || json.isNull(key)) return emptyList()
+        val arr = requireNotNull(json.opt(key) as? JSONArray) { "$key must be an array" }
+        return (0 until arr.length()).map { i ->
+            requireNotNull((arr.opt(i) as? String)?.takeIf { it.isNotEmpty() }) {
+                "$key entries must be non-empty strings"
+            }
+        }
     }
 
     private fun readPositiveLong(json: JSONObject, key: String): Long {
