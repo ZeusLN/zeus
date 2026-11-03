@@ -3087,6 +3087,15 @@ export default class NostrWalletConnectStore {
             );
         }
 
+        const budgetCheck = this.validateBudgetBeforePayment(
+            connection,
+            amountSats,
+            Nip47ErrorCode.INSUFFICIENT_BALANCE
+        );
+        if (!budgetCheck.success) {
+            return { result: undefined, error: budgetCheck.error };
+        }
+
         // The mint can spend up to the melt quote's fee reserve on top of
         // the amount, and nothing caps the fee below that, so the budget
         // has to cover both. getPayReq above fetched the quote. A negative
@@ -3095,13 +3104,21 @@ export default class NostrWalletConnectStore {
             0,
             Math.ceil(Number(this.cashuStore.feeEstimate)) || 0
         );
-        const budgetCheck = this.validateBudgetBeforePayment(
-            connection,
-            amountSats + feeReserveSats,
-            Nip47ErrorCode.INSUFFICIENT_BALANCE
-        );
-        if (!budgetCheck.success) {
-            return { result: undefined, error: budgetCheck.error };
+        if (
+            feeReserveSats > 0 &&
+            !connection.canSpend(amountSats + feeReserveSats)
+        ) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget',
+                    {
+                        amount: amountSats.toString(),
+                        feeReserve: feeReserveSats.toString(),
+                        remaining: connection.remainingBudget.toString()
+                    }
+                ),
+                Nip47ErrorCode.INSUFFICIENT_BALANCE
+            );
         }
 
         const currentBalance = this.cashuStore.totalBalanceSats || 0;
