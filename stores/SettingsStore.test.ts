@@ -107,6 +107,7 @@ import SettingsStore, {
     DEFAULT_LSPS1_REST_TESTNET,
     DEFAULT_THEME,
     RETIRED_THEMES,
+    RETIRED_THEMES_V4,
     SETTINGS_WRITE_DEBOUNCE_MS,
     STORAGE_KEY,
     THEME_KEYS,
@@ -1756,5 +1757,10 @@ describe('THEME_KEYS', () => {
         for (const theme of RETIRED_THEMES) {
             expect(offered).not.toContain(theme);
         }
+    });
+
+    it('retires Memberberry in v4 and no longer offers it', () => {
+        expect(RETIRED_THEMES_V4).toEqual(['purple']);
+        expect(THEME_KEYS.map(({ value }) => value)).not.toContain('purple');
     });
 });

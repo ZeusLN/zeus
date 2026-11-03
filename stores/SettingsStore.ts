@@ -1299,6 +1299,9 @@ export const THEME_KEYS = [
 // removal takes its own list and a new version.
 export const RETIRED_THEMES = ['junkie', 'bpm', 'desert', 'mint', 'watermelon'];
 
+// Removed with settings version 4: Memberberry ('purple').
+export const RETIRED_THEMES_V4 = ['purple'];
+
 export const DEFAULT_VIEW_KEYS = [
     {
         key: 'Balance',
