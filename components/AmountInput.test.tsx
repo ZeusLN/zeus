@@ -270,6 +270,30 @@ describe('AmountInput keypad', () => {
 
         expect(NavigationService.navigate).not.toHaveBeenCalled();
     });
+
+    it('tells the parent before the keypad screen opens', async () => {
+        const order: string[] = [];
+        (NavigationService.navigate as jest.Mock).mockImplementationOnce(() =>
+            order.push('navigate')
+        );
+        await renderInput({
+            amount: '21',
+            onNavigateAway: () => order.push('onNavigateAway')
+        });
+
+        await openKeypad('21 sats');
+
+        expect(order).toEqual(['onNavigateAway', 'navigate']);
+    });
+
+    it('does not tell the parent when locked', async () => {
+        const onNavigateAway = jest.fn();
+        await renderInput({ amount: '21', locked: true, onNavigateAway });
+
+        await openKeypad('21 sats');
+
+        expect(onNavigateAway).not.toHaveBeenCalled();
+    });
 });
 
 describe('AmountInput unit button', () => {

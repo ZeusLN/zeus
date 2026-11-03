@@ -676,6 +676,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         this._unsubscribe?.();
     }
 
+    // The amount keypad and the fee editor are screens of their own:
+    // opening one blurs this one, which must not reset the form
+    markNavigatingAway = () => {
+        this.isNavigatingAway = true;
+    };
+
     resetFields = () => {
         this.setState(
             {
@@ -685,8 +691,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 inputDisplay: '',
                 outputDisplay: '',
                 invoice: '',
-                error: '',
-                paramsProcessed: false
+                error: ''
             },
             () => this.checkIsValid()
         );
@@ -986,8 +991,6 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                 style={{ marginTop: -10 }}
                 onPress={() => {
-                    // Reset paramsProcessed when navigating to clear previous prefill
-                    this.setState({ paramsProcessed: false });
                     navigation.navigate('SwapsPane');
                 }}
                 accessibilityLabel={localeString('general.add')}
@@ -1164,6 +1167,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     }}
                                                 >
                                                     <AmountInput
+                                                        onNavigateAway={
+                                                            this
+                                                                .markNavigatingAway
+                                                        }
                                                         prefix={
                                                             <TouchableOpacity
                                                                 onPress={() => {
@@ -1379,6 +1386,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         }}
                                                     >
                                                         <AmountInput
+                                                            onNavigateAway={
+                                                                this
+                                                                    .markNavigatingAway
+                                                            }
                                                             prefix={
                                                                 <TouchableOpacity
                                                                     onPress={() => {
@@ -2515,10 +2526,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 fee: text
                                                             })
                                                         }
-                                                        onNavigateAway={() => {
-                                                            this.isNavigatingAway =
-                                                                true;
-                                                        }}
+                                                        onNavigateAway={
+                                                            this
+                                                                .markNavigatingAway
+                                                        }
                                                         navigation={navigation}
                                                     />
                                                 </>
