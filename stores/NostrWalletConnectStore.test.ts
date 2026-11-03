@@ -106,6 +106,7 @@ import Payment from '../models/Payment';
 import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import Base64Utils from '../utils/Base64Utils';
+import * as LocaleUtils from '../utils/LocaleUtils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
 import InvoicesStore from './InvoicesStore';
 import CashuStore from './CashuStore';
@@ -6958,11 +6959,22 @@ describe('NostrWalletConnectStore cashu pay_invoice budget', () => {
     });
 
     it('rejects before melting when the amount fits but the fee reserve does not', async () => {
+        const localeSpy = jest.spyOn(LocaleUtils, 'localeString');
         const { response, connection, payLnInvoiceFromEcash } =
             await payWithFeeReserve(4);
 
         expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
-        expect(response.error?.code).toBe(Nip47ErrorCode.INSUFFICIENT_BALANCE);
+        expect(response.error).toEqual({
+            code: Nip47ErrorCode.INSUFFICIENT_BALANCE,
+            message:
+                'stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget'
+        });
+        // the invoice amount and the reserve are reported separately
+        expect(localeSpy).toHaveBeenCalledWith(
+            'stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget',
+            { amount: '100', feeReserve: '4', remaining: '103' }
+        );
+        localeSpy.mockRestore();
         expect(connection.totalSpendSats).toBe(0);
         expect(connection.activity).toHaveLength(0);
     });
@@ -6972,7 +6984,11 @@ describe('NostrWalletConnectStore cashu pay_invoice budget', () => {
             await payWithFeeReserve(-2, 99);
 
         expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
-        expect(response.error?.code).toBe(Nip47ErrorCode.INSUFFICIENT_BALANCE);
+        expect(response.error).toEqual({
+            code: Nip47ErrorCode.INSUFFICIENT_BALANCE,
+            message:
+                'views.Settings.NostrWalletConnect.error.paymentExceedsBudget'
+        });
         expect(connection.totalSpendSats).toBe(0);
         expect(connection.activity).toHaveLength(0);
     });
