@@ -3,12 +3,16 @@ import { settingsStore } from '../stores/Stores';
 import type { NwcActivityNotif } from './NostrConnectUtils';
 
 // An NWC notification tapped while login is required or POS is active,
-// opened by Wallet once the user has logged in, like a deferred deep link
-let pendingLink: NwcActivityNotif | null = null;
+// opened by Wallet once the user has logged in, like a deferred deep link.
+// The connection belongs to the wallet selected at the tap, so the link is
+// dropped if the user logs in to another wallet.
+let pendingLink: { link: NwcActivityNotif; selectedNode: number } | null = null;
 
-export function openNwcActivityLink(link: NwcActivityNotif): void {
+const selectedNode = () => settingsStore.settings?.selectedNode || 0;
+
+function openOrQueue(link: NwcActivityNotif, walletIndex: number): void {
     if (settingsStore.externalInputAuthRequired()) {
-        pendingLink = link;
+        pendingLink = { link, selectedNode: walletIndex };
         return;
     }
     NavigationService.navigateWhenReady('NWCConnectionActivity', {
@@ -19,10 +23,15 @@ export function openNwcActivityLink(link: NwcActivityNotif): void {
     });
 }
 
+export function openNwcActivityLink(link: NwcActivityNotif): void {
+    openOrQueue(link, selectedNode());
+}
+
 export function processPendingNwcActivityLink(): void {
     if (pendingLink) {
-        const link = pendingLink;
+        const { link, selectedNode: walletIndex } = pendingLink;
         pendingLink = null;
-        openNwcActivityLink(link);
+        if (walletIndex !== selectedNode()) return;
+        openOrQueue(link, walletIndex);
     }
 }

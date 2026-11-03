@@ -67,6 +67,7 @@ import { Notifications } from 'react-native-notifications';
 import PushNotificationManager from './PushNotificationManager';
 import NavigationService from './NavigationService';
 import { processPendingNwcActivityLink } from './utils/NwcActivityLinkUtils';
+import { settingsStore } from './stores/Stores';
 
 const EVENTS = ['registered', 'failed', 'foreground', 'opened', 'background'];
 const live = (event: string) => mockActive.get(event)?.size ?? 0;
@@ -183,6 +184,7 @@ describe('PushNotificationManager.goToNwcActivityFromNotif', () => {
 
     beforeEach(() => {
         mockAuthRequired = false;
+        settingsStore.settings = {};
         // drop a link a previous test left queued
         processPendingNwcActivityLink();
         jest.clearAllMocks();
@@ -237,6 +239,35 @@ describe('PushNotificationManager.goToNwcActivityFromNotif', () => {
         expect(NavigationService.navigateWhenReady).toHaveBeenCalledWith(
             'NWCConnectionActivity',
             { connectionId: 'conn-1' }
+        );
+    });
+
+    it('drops the tap when the user logs in to another wallet', () => {
+        settingsStore.settings = { selectedNode: 1 } as any;
+        mockAuthRequired = true;
+        tap(payload);
+
+        mockAuthRequired = false;
+        settingsStore.settings = { selectedNode: 2 } as any;
+        processPendingNwcActivityLink();
+        settingsStore.settings = { selectedNode: 1 } as any;
+        processPendingNwcActivityLink();
+
+        expect(NavigationService.navigateWhenReady).not.toHaveBeenCalled();
+    });
+
+    it('opens the tap after login to the wallet it was queued for', () => {
+        settingsStore.settings = { selectedNode: 1 } as any;
+        mockAuthRequired = true;
+        tap(payload);
+        processPendingNwcActivityLink();
+
+        mockAuthRequired = false;
+        processPendingNwcActivityLink();
+
+        expect(NavigationService.navigateWhenReady).toHaveBeenCalledWith(
+            'NWCConnectionActivity',
+            { connectionId: 'conn-1', failedActivityId: 'act-1' }
         );
     });
 
