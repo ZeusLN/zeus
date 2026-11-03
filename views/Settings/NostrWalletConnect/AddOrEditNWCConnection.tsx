@@ -270,8 +270,13 @@ export default class AddOrEditNWCConnection extends React.Component<
         ) {
             originalState.customExpiryValue =
                 originalConnection.customExpiryValue || undefined;
-            originalState.customExpiryUnit =
-                originalConnection.customExpiryUnit;
+            // Older builds saved the translated label, which
+            // loadConnectionForEdit normalizes for the current state
+            originalState.customExpiryUnit = originalConnection.customExpiryUnit
+                ? NostrConnectUtils.normalizeTimeUnit(
+                      originalConnection.customExpiryUnit
+                  )
+                : originalConnection.customExpiryUnit;
         }
         return !isEqual(currentState, originalState);
     };

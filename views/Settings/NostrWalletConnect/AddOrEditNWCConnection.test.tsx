@@ -42,7 +42,10 @@ jest.mock('../../../utils/ThemeUtils', () => ({
     themeColor: jest.fn(() => '#000')
 }));
 jest.mock('../../../utils/LocaleUtils', () => ({
-    localeString: jest.fn((key: string) => key)
+    localeString: jest.fn((key: string) => key),
+    allLocaleStrings: jest.fn((key: string) =>
+        key === 'time.hours' ? ['Hours', 'Stunden'] : []
+    )
 }));
 jest.mock('../../../utils/BackendUtils', () => ({
     __esModule: true,
@@ -73,7 +76,11 @@ const BUDGET = 'views.Settings.NostrWalletConnect.budget';
 const INFO_LABEL =
     'views.Settings.NostrWalletConnect.budgetInfo.accessibilityLabel';
 
-const renderScreen = async (connectionPermissions?: string[]) => {
+const renderScreen = async (
+    connectionPermissions?: string[],
+    connectionOverrides: any = {},
+    ref?: React.RefObject<any>
+) => {
     const ModalStore = { toggleInfoModal: jest.fn() };
     let onFocus: () => void = () => {};
     const NostrWalletConnectStore = {
@@ -87,12 +94,14 @@ const renderScreen = async (connectionPermissions?: string[]) => {
                 permissions: connectionPermissions,
                 relayUrl: 'wss://relay.example',
                 createdAt: new Date(),
-                expiresAt: undefined
+                expiresAt: undefined,
+                ...connectionOverrides
             }
         }))
     };
     await render(
         <AddOrEditNWCConnection
+            ref={ref}
             navigation={
                 {
                     addListener: jest.fn((_: string, cb: () => void) => {
@@ -139,5 +148,26 @@ describe('AddOrEditNWCConnection budget info', () => {
                 'views.Settings.NostrWalletConnect.budgetInfo.limit'
             ]
         });
+    });
+});
+
+describe('AddOrEditNWCConnection change tracking', () => {
+    it('sees no change for a custom expiry unit saved as a translated label', async () => {
+        const ref = React.createRef<any>();
+        const createdAt = new Date();
+        await renderScreen(
+            ['pay_invoice'],
+            {
+                createdAt,
+                expiresAt: new Date(createdAt.getTime() + 72 * 60 * 60 * 1000),
+                customExpiryValue: 72,
+                customExpiryUnit: 'Stunden'
+            },
+            ref
+        );
+
+        expect(ref.current.state.showCustomExpiryInput).toBe(true);
+        expect(ref.current.state.customExpiryUnit).toBe('Hours');
+        expect(ref.current.checkForChanges()).toBe(false);
     });
 });
