@@ -184,7 +184,7 @@ describe('PushNotificationManager.goToNwcActivityFromNotif', () => {
 
     beforeEach(() => {
         mockAuthRequired = false;
-        settingsStore.settings = {};
+        settingsStore.settings = {} as any;
         // drop a link a previous test left queued
         processPendingNwcActivityLink();
         jest.clearAllMocks();
