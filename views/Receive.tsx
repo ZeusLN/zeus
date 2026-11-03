@@ -298,11 +298,15 @@ export default class Receive extends React.Component<
         return { lnOnly, onChainOnly };
     };
 
+    // Lightning-only screens (POS set to Lightning only, the Lightning
+    // balance action) never show an on-chain address, so they do not ask
+    // for one
     private getSkipOnchain = (): boolean => {
         const { settings } = this.props.SettingsStore;
         return (
+            this.getReceiveModeFlags().lnOnly ||
             settings?.invoices?.defaultInvoiceType !==
-            DefaultInvoiceType.Unified
+                DefaultInvoiceType.Unified
         );
     };
 
