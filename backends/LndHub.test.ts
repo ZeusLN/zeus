@@ -147,6 +147,25 @@ describe('LndHub.getPayments', () => {
         expect(payment.isFailed).toBe(false);
     });
 
+    it('leaves rows without a preimage and without the in-transition memo unchanged', async () => {
+        const otherMemo = { ...held, memo: 'order 2' };
+        const onchain = {
+            type: 'bitcoind_tx',
+            category: 'receive',
+            amount: 0.001,
+            confirmations: 3,
+            address: 'bc1qexample',
+            time: 1790000120
+        };
+
+        const payments = await listPayments([otherMemo, onchain]);
+
+        expect(payments).toEqual([otherMemo, onchain]);
+        for (const row of payments) {
+            expect(new Payment(row).isInTransit).toBe(false);
+        }
+    });
+
     it('passes a non-array response through', async () => {
         const payments = await listPayments(undefined);
 
