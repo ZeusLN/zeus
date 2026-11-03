@@ -13,14 +13,29 @@ jest.mock('../utils/BackendUtils', () => ({
     }
 }));
 
+jest.mock('../storage', () => ({
+    __esModule: true,
+    default: { getItem: jest.fn(), setItem: jest.fn() }
+}));
+
+import { extendObservable } from 'mobx';
+
 import SpliceStore from './SpliceStore';
+import Storage from '../storage';
 import BackendUtils from '../utils/BackendUtils';
 
-const channelsStore: any = { getChannels: jest.fn(), channels: [] };
+// Observable, so the store's reconcile reacts to channel refreshes
+const channelsStore: any = { getChannels: jest.fn() };
+extendObservable(channelsStore, { channels: [], hasChannelData: false });
 const balanceStore = { getCombinedBalance: jest.fn() };
+const nodeInfoStore: any = { nodeInfo: { nodeId: '03me' } };
 
 const newStore = () =>
-    new SpliceStore(channelsStore as any, balanceStore as any);
+    new SpliceStore(
+        channelsStore as any,
+        balanceStore as any,
+        nodeInfoStore as any
+    );
 
 const mockUtxos = (
     utxos: Array<{ amount_sat: number; confirmations: string }>
@@ -315,15 +330,28 @@ describe('SpliceStore splice tracking', () => {
         vout: 1
     };
 
-    const trackingStore = () => {
+    const trackingStore = async () => {
         const store = newStore();
-        store.trackSplices();
+        await store.trackSplices();
         return store;
     };
+
+    const mockStored = (splices: any[] | false) =>
+        (Storage.getItem as jest.Mock).mockResolvedValue(
+            splices && JSON.stringify(splices)
+        );
+    const lastSaved = () => {
+        const calls = (Storage.setItem as jest.Mock).mock.calls;
+        return calls[calls.length - 1][1];
+    };
+    const flushSaves = () => new Promise((resolve) => setImmediate(resolve));
 
     beforeEach(() => {
         jest.clearAllMocks();
         channelsStore.channels = [channel];
+        channelsStore.hasChannelData = false;
+        nodeInfoStore.nodeInfo = { nodeId: '03me' };
+        mockStored(false);
         (BackendUtils.watchSpliceEvents as jest.Mock).mockImplementation(
             (callback: any) => {
                 emit = callback;
@@ -332,26 +360,25 @@ describe('SpliceStore splice tracking', () => {
         );
     });
 
-    it('subscribes once however often it is asked to track', () => {
+    it('starts once however often it is asked to track', async () => {
         const store = newStore();
-        store.trackSplices();
-        store.trackSplices();
+        await Promise.all([store.trackSplices(), store.trackSplices()]);
+        await store.trackSplices();
 
         expect(BackendUtils.watchSpliceEvents).toHaveBeenCalledTimes(1);
     });
 
-    it('does nothing on a backend without splice events', () => {
+    it('does nothing on a backend without splice events', async () => {
         (BackendUtils.watchSpliceEvents as jest.Mock).mockReturnValue(false);
-        const store = newStore();
-        store.trackSplices();
+        const store = await trackingStore();
         store.stopTracking();
-        store.trackSplices();
+        await store.trackSplices();
 
         expect(BackendUtils.watchSpliceEvents).toHaveBeenCalledTimes(2);
     });
 
-    it('records a splice the peer started and refreshes channels', () => {
-        const store = trackingStore();
+    it('records a splice the peer started and refreshes channels', async () => {
+        const store = await trackingStore();
 
         emit(pendingEvent);
 
@@ -373,7 +400,7 @@ describe('SpliceStore splice tracking', () => {
         (BackendUtils.spliceOut as jest.Mock).mockResolvedValue({
             success: true
         });
-        const store = trackingStore();
+        const store = await trackingStore();
 
         await store.splice({
             direction: 'out',
@@ -397,7 +424,7 @@ describe('SpliceStore splice tracking', () => {
         (BackendUtils.spliceIn as jest.Mock).mockRejectedValue(
             new Error('Failed to splice channel.')
         );
-        const store = trackingStore();
+        const store = await trackingStore();
 
         await store.splice({
             direction: 'in',
@@ -411,8 +438,8 @@ describe('SpliceStore splice tracking', () => {
 
     it.each(['channelReady', 'spliceFailed', 'channelClosed'])(
         'clears the splice on %s and refreshes channels',
-        (type) => {
-            const store = trackingStore();
+        async (type) => {
+            const store = await trackingStore();
             emit(pendingEvent);
             jest.clearAllMocks();
 
@@ -424,8 +451,8 @@ describe('SpliceStore splice tracking', () => {
         }
     );
 
-    it('ignores channelReady for a channel with no splice, such as a new channel', () => {
-        const store = trackingStore();
+    it('ignores channelReady for a channel with no splice, such as a new channel', async () => {
+        const store = await trackingStore();
 
         emit({
             type: 'channelReady',
@@ -437,8 +464,8 @@ describe('SpliceStore splice tracking', () => {
         expect(channelsStore.getChannels).not.toHaveBeenCalled();
     });
 
-    it('keeps one splice per channel', () => {
-        const store = trackingStore();
+    it('keeps one splice per channel', async () => {
+        const store = await trackingStore();
 
         emit(pendingEvent);
         emit({ ...pendingEvent, txid: 'later-txid' });
@@ -447,8 +474,8 @@ describe('SpliceStore splice tracking', () => {
         expect(store.pendingSplices[0].txid).toEqual('later-txid');
     });
 
-    it('stops listening and forgets splices when tracking stops', () => {
-        const store = trackingStore();
+    it('stops listening and forgets splices when tracking stops', async () => {
+        const store = await trackingStore();
         emit(pendingEvent);
 
         store.stopTracking();
@@ -457,12 +484,154 @@ describe('SpliceStore splice tracking', () => {
         expect(store.pendingSplices).toEqual([]);
     });
 
-    it('keeps tracked splices when the splice form resets', () => {
-        const store = trackingStore();
+    it('keeps tracked splices when the splice form resets', async () => {
+        const store = await trackingStore();
         emit(pendingEvent);
 
         store.reset();
 
         expect(store.pendingSplices).toHaveLength(1);
+    });
+
+    describe('across restarts', () => {
+        const stored = (overrides: any = {}) => ({
+            userChannelId: 'user-chan',
+            channelId: 'chan',
+            txid: 'splice-txid',
+            initiator: 'local',
+            direction: 'in',
+            amountSats: 50000,
+            startedAt: 1,
+            nodePubkey: '03me',
+            ...overrides
+        });
+
+        it("loads this wallet's saved splices and not another wallet's", async () => {
+            mockStored([
+                stored(),
+                stored({ userChannelId: 'theirs', nodePubkey: '02other' })
+            ]);
+
+            const store = await trackingStore();
+
+            expect(store.pendingSplices).toEqual([
+                expect.objectContaining({
+                    userChannelId: 'user-chan',
+                    direction: 'in',
+                    amountSats: 50000
+                })
+            ]);
+            expect(store.pendingSplices[0]).not.toHaveProperty('nodePubkey');
+        });
+
+        it("saves a new splice next to other wallets' splices", async () => {
+            const theirs = stored({
+                userChannelId: 'theirs',
+                nodePubkey: '02other'
+            });
+            mockStored([theirs]);
+            await trackingStore();
+
+            emit(pendingEvent);
+            await flushSaves();
+
+            expect(Storage.setItem).toHaveBeenCalledWith(
+                'zeus-splices',
+                expect.any(Array)
+            );
+            expect(lastSaved()).toEqual([
+                theirs,
+                expect.objectContaining({
+                    userChannelId: 'user-chan',
+                    txid: 'splice-txid',
+                    nodePubkey: '03me'
+                })
+            ]);
+        });
+
+        it('saves the list without a splice once it locks', async () => {
+            await trackingStore();
+            emit(pendingEvent);
+            emit({
+                type: 'channelReady',
+                userChannelId: 'user-chan',
+                channelId: 'chan'
+            });
+            await flushSaves();
+
+            expect(lastSaved()).toEqual([]);
+        });
+
+        it('drops a splice that locked while the app was closed', async () => {
+            mockStored([stored()]);
+            const store = await trackingStore();
+            expect(store.pendingSplices).toHaveLength(1);
+
+            channelsStore.channels = [
+                { ...channel, channel_point: 'splice-txid:1' }
+            ];
+            channelsStore.hasChannelData = true;
+            await flushSaves();
+
+            expect(store.pendingSplices).toEqual([]);
+            expect(lastSaved()).toEqual([]);
+        });
+
+        it('drops a splice whose channel is no longer open', async () => {
+            mockStored([stored()]);
+            channelsStore.channels = [];
+            channelsStore.hasChannelData = true;
+
+            const store = await trackingStore();
+
+            expect(store.pendingSplices).toEqual([]);
+        });
+
+        it('keeps a splice that is still waiting to confirm', async () => {
+            mockStored([stored()]);
+            channelsStore.hasChannelData = true;
+
+            const store = await trackingStore();
+
+            expect(store.pendingSplices).toHaveLength(1);
+            expect(Storage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('keeps splices while the channel list is empty because it has not loaded', async () => {
+            mockStored([stored()]);
+            channelsStore.channels = [];
+
+            const store = await trackingStore();
+
+            expect(store.pendingSplices).toHaveLength(1);
+        });
+
+        it('does not subscribe for a wallet that was switched away while loading', async () => {
+            let finishLoad: (value: any) => void = () => {};
+            (Storage.getItem as jest.Mock).mockReturnValue(
+                new Promise((resolve) => (finishLoad = resolve))
+            );
+            const store = newStore();
+
+            const tracking = store.trackSplices();
+            store.stopTracking();
+            finishLoad(JSON.stringify([stored()]));
+            await tracking;
+
+            expect(BackendUtils.watchSpliceEvents).not.toHaveBeenCalled();
+            expect(store.pendingSplices).toEqual([]);
+        });
+
+        it('keeps splices in memory only when the node pubkey is unknown', async () => {
+            nodeInfoStore.nodeInfo = {};
+            const store = await trackingStore();
+
+            emit(pendingEvent);
+            await flushSaves();
+
+            expect(store.pendingSplices).toHaveLength(1);
+            expect(Storage.getItem).not.toHaveBeenCalled();
+            expect(Storage.setItem).not.toHaveBeenCalled();
+        });
     });
 });
