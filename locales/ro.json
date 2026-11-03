@@ -1225,6 +1225,7 @@
     "views.Settings.SignMessage.signingMethod": "Metodă de semnare",
     "views.Settings.SignMessage.selectAddressSigning": "Selectați adresa pentru semnătură",
     "views.Settings.SignMessage.selectAddressVerification": "Introduceți adresa pentru verificare",
+    "views.Settings.SignMessage.reservedMessage": "This message is reserved for LNURL-auth key derivation and cannot be signed. Signing it would expose your LNURL-auth identity for every site.",
     "views.Settings.SignMessage.fullAddress": "Adresă completă",
     "views.Settings.SignMessage.tapToSelectAddress": "Atingeți aici pentru a selecta o adresă",
     "views.Settings.SignMessage.signatureType": "Tipul de semnătură",
