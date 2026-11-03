@@ -5140,4 +5140,80 @@ describe('NostrWalletConnectStore LndHub wallet identity', () => {
         expect(store.connections).toEqual([]);
         expect(storedNodePubkeys()).toEqual([LEGACY_PUBKEY]);
     });
+
+    it.each([
+        [
+            'another LndHub server with the same login',
+            {
+                ...lnbitsWallet(OTHER_ADMIN_KEY),
+                lndhubUrl: 'https://other.example/lndhub/ext/'
+            }
+        ],
+        [
+            'the same server with another login',
+            { ...lnbitsWallet(OTHER_ADMIN_KEY), username: 'invoice' }
+        ],
+        ['a duplicate of the open wallet', lnbitsWallet(ADMIN_KEY)],
+        [
+            'a non-LndHub wallet with leftover LndHub fields',
+            { ...lnbitsWallet(OTHER_ADMIN_KEY), implementation: 'lnd' }
+        ]
+    ])(
+        'rebinds connections stored under the old identity while the other saved wallet is %s',
+        async (_, otherWallet) => {
+            const { store } = buildLndHubStore([
+                lnbitsWallet(ADMIN_KEY),
+                otherWallet
+            ]);
+            const data = storeConnections(LEGACY_PUBKEY);
+            const identity = (store as any).getCurrentWalletPubkey();
+
+            await store.loadConnections();
+
+            expect(store.connections.map((c) => c.id)).toEqual([data.id]);
+            expect(storedNodePubkeys()).toEqual([identity]);
+        }
+    );
+
+    it('leaves connections stored under the old identity alone while the only saved wallet with that server and login has another password', async () => {
+        const { store } = buildLndHubStore([lnbitsWallet(OTHER_ADMIN_KEY)]);
+        storeConnections(LEGACY_PUBKEY);
+
+        await store.loadConnections();
+
+        expect(store.connections).toEqual([]);
+        expect(storedNodePubkeys()).toEqual([LEGACY_PUBKEY]);
+    });
+
+    it('leaves a non-LndHub connection with the old identity alone', async () => {
+        const { store } = buildLndHubStore();
+        const data = connectionData({
+            nodePubkey: LEGACY_PUBKEY,
+            implementation: 'lnd'
+        });
+        storedItems.set(NWC_CONNECTIONS_KEY, JSON.stringify([data]));
+
+        await store.loadConnections();
+
+        expect(store.connections).toEqual([]);
+        expect(storedNodePubkeys()).toEqual([LEGACY_PUBKEY]);
+        expect(connectionWrites()).toBe(0);
+    });
+
+    it('keeps the rebound connections loaded when saving them fails', async () => {
+        const { store } = buildLndHubStore();
+        const data = storeConnections(LEGACY_PUBKEY);
+        const identity = (store as any).getCurrentWalletPubkey();
+        failWrites(NWC_CONNECTIONS_KEY, { once: true });
+
+        await store.loadConnections();
+
+        expect(store.connections.map((c) => c.id)).toEqual([data.id]);
+        expect(store.connections[0].nodePubkey).toBe(identity);
+        expect(storedNodePubkeys()).toEqual([LEGACY_PUBKEY]);
+
+        await store.loadConnections();
+
+        expect(storedNodePubkeys()).toEqual([identity]);
+    });
 });

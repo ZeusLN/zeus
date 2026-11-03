@@ -1147,10 +1147,12 @@ export default class NostrWalletConnectStore {
      * Identity LndHub connections were stored under before the account was
      * hashed in: server and login only. Every wallet of an LNbits server
      * shares it, so a connection stored under it can only be claimed for the
-     * open wallet while no other saved wallet has the same server and login.
+     * open wallet while every saved wallet with that server and login is
+     * the open wallet's account (the same password, as in a duplicated
+     * wallet).
      */
     private getLegacyLndHubWalletPubkey(): string {
-        const { implementation, lndhubUrl, username, settings } =
+        const { implementation, lndhubUrl, username, password, settings } =
             this.settingsStore;
         if (implementation !== 'lndhub' || !lndhubUrl || !username) {
             return '';
@@ -1161,7 +1163,10 @@ export default class NostrWalletConnectStore {
                 node.lndhubUrl === lndhubUrl &&
                 node.username === username
         );
-        return sameLogin.length === 1 ? `lndhub:${lndhubUrl}:${username}` : '';
+        return sameLogin.length > 0 &&
+            sameLogin.every((node) => node.password === password)
+            ? `lndhub:${lndhubUrl}:${username}`
+            : '';
     }
 
     /** Rebinds legacy LndHub connections to the open wallet's identity. */
@@ -1224,7 +1229,11 @@ export default class NostrWalletConnectStore {
                     );
                 });
                 if (migrated) {
-                    await this.saveConnections();
+                    // A failed write leaves the loaded connections in place;
+                    // the next load rebinds them again
+                    await this.saveConnections().catch((err) =>
+                        console.error('NWC: migration save failed:', err)
+                    );
                 } else if (stamped) {
                     this.scheduleSave();
                 }
