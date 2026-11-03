@@ -4,6 +4,12 @@ import { settingsStore } from '../stores/Stores';
 
 const { MobileTools } = NativeModules;
 
+// Wallet.getSettingsAndNavigate waits for the shared image before it opens
+// the Lockscreen, and the image is served by the app that shared it. Give up
+// after the native read's own deadline (MobileTools.SHARED_IMAGE_TIMEOUT_MS,
+// 5 s) plus time spent queued behind other native calls.
+export const SHARED_IMAGE_TIMEOUT_MS = 8000;
+
 // A shared image on its way to the ShareIntentProcessing screen, with the
 // gates it still has to clear
 export interface ShareIntentPayload {
@@ -39,6 +45,7 @@ export const processSharedQRImageFast =
     async (): Promise<ShareIntentResult | null> => {
         if (readInFlight) return null;
         readInFlight = true;
+        let timeout: ReturnType<typeof setTimeout> | undefined;
         try {
             // Read the shared image (Android: the activity intent; iOS: the
             // file the share extension wrote) and consume it in the same
@@ -48,8 +55,19 @@ export const processSharedQRImageFast =
             // Reading and clearing in two calls let a share that arrived in
             // between be cleared without ever being read. If the native side
             // cannot consume the share it still returns the image and leaves
-            // the share in place, so the next read delivers it again.
-            const base64Image = await MobileTools.takeSharedImageBase64();
+            // the share in place, so the next read delivers it again. A read
+            // that gives up is a processing error; the native side consumes
+            // the share only with the image in hand, so the next read asks
+            // for it again.
+            const base64Image = await Promise.race([
+                MobileTools.takeSharedImageBase64(),
+                new Promise<never>((_, reject) => {
+                    timeout = setTimeout(
+                        () => reject(new Error('Shared image read timed out')),
+                        SHARED_IMAGE_TIMEOUT_MS
+                    );
+                })
+            ]);
 
             if (!base64Image) return null;
 
@@ -85,6 +103,7 @@ export const processSharedQRImageFast =
                 error: localeString('utils.shareIntent.processingError')
             };
         } finally {
+            clearTimeout(timeout);
             readInFlight = false;
         }
     };
