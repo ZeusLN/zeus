@@ -42,7 +42,10 @@ jest.mock('../../../utils/ThemeUtils', () => ({
     themeColor: jest.fn(() => '#000')
 }));
 jest.mock('../../../utils/LocaleUtils', () => ({
-    localeString: jest.fn((key: string) => key)
+    localeString: jest.fn((key: string) => key),
+    allLocaleStrings: jest.fn((key: string) =>
+        key === 'time.hours' ? ['Hours', 'Stunden'] : []
+    )
 }));
 jest.mock('../../../utils/BackendUtils', () => ({
     __esModule: true,
@@ -75,7 +78,8 @@ const INFO_LABEL =
 
 const renderScreen = async (
     connectionPermissions?: string[],
-    relayUrl: string = 'wss://relay.example'
+    relayUrl: string = 'wss://relay.example',
+    connectionOverrides: any = {}
 ) => {
     const ref = React.createRef<any>();
     const ModalStore = { toggleInfoModal: jest.fn() };
@@ -91,7 +95,8 @@ const renderScreen = async (
                 permissions: connectionPermissions,
                 relayUrl,
                 createdAt: new Date(),
-                expiresAt: undefined
+                expiresAt: undefined,
+                ...connectionOverrides
             }
         }))
     };
@@ -179,5 +184,21 @@ describe('AddOrEditNWCConnection custom relay validation', () => {
         expect(screenInstance.isValidRelayUrl('ws://other.example.com')).toBe(
             false
         );
+    });
+});
+
+describe('AddOrEditNWCConnection change tracking', () => {
+    it('sees no change for a custom expiry unit saved as a translated label', async () => {
+        const createdAt = new Date();
+        const { ref } = await renderScreen(['pay_invoice'], undefined, {
+            createdAt,
+            expiresAt: new Date(createdAt.getTime() + 72 * 60 * 60 * 1000),
+            customExpiryValue: 72,
+            customExpiryUnit: 'Stunden'
+        });
+
+        expect(ref.current.state.showCustomExpiryInput).toBe(true);
+        expect(ref.current.state.customExpiryUnit).toBe('Hours');
+        expect(ref.current.checkForChanges()).toBe(false);
     });
 });
