@@ -32,8 +32,16 @@ const nodes = [
 ];
 
 // With realLogin, the login and session methods are the production ones
-// instead of stubs, so a test can read sessionStarted() after startup
-function setup(selectedNode: number, { realLogin = false } = {}) {
+// instead of stubs, so a test can read sessionStarted() after startup.
+// processSharedQRImageFast replaces the share read, which finds no share by
+// default.
+function setup(
+    selectedNode: number,
+    {
+        realLogin = false,
+        processSharedQRImageFast = async (): Promise<any> => null
+    } = {}
+) {
     const BackendUtils = {
         supportsAccounts: () => false,
         supportsLightningAddress: () => false,
@@ -140,7 +148,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             LinkingUtils,
             Storage: { getItem: async () => false },
             CHANNEL_MIGRATION_ACTIVE: 'test-migration-flag',
-            processSharedQRImageFast: async () => null,
+            processSharedQRImageFast,
             Platform: { OS: 'ios' },
             SystemNavigationBar: {
                 setNavigationColor: jest.fn(),
@@ -514,6 +522,55 @@ describe('session start', () => {
             'Lockscreen',
             { shareIntentData: undefined }
         );
+    });
+
+    // The shared image is read before the login check, from the app that
+    // shared it. A sending app that never serves it must not keep start-up
+    // from opening the Lockscreen.
+    it('opens the Lockscreen when the shared image is never served', async () => {
+        jest.useFakeTimers();
+        try {
+            jest.spyOn(console, 'error').mockImplementation(() => {});
+            let processSharedQRImageFast: any;
+            let SHARED_IMAGE_TIMEOUT_MS = 0;
+            jest.isolateModules(() => {
+                jest.doMock('react-native', () => ({
+                    NativeModules: {
+                        MobileTools: {
+                            getSharedImageBase64: () => new Promise(() => {}),
+                            clearSharedIntent: jest.fn()
+                        }
+                    }
+                }));
+                jest.doMock('../../stores/Stores', () => ({
+                    settingsStore: {
+                        externalInputAuthRequired: () => true,
+                        settings: {}
+                    }
+                }));
+                ({
+                    processSharedQRImageFast,
+                    SHARED_IMAGE_TIMEOUT_MS
+                } = require('../../utils/ShareIntentProcessor'));
+            });
+            const { settings, view } = setup(1, {
+                realLogin: true,
+                processSharedQRImageFast
+            });
+            settings.settings = { ...settings.settings, pin: '1234' };
+
+            const startup = view.getSettingsAndNavigate();
+            await jest.advanceTimersByTimeAsync(SHARED_IMAGE_TIMEOUT_MS);
+            await startup;
+
+            expect(settings.loggedIn).toBe(false);
+            expect(view.props.navigation.navigate).toHaveBeenCalledWith(
+                'Lockscreen',
+                { shareIntentData: undefined }
+            );
+        } finally {
+            jest.useRealTimers();
+        }
     });
 });
 

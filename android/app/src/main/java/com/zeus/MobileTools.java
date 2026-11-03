@@ -18,8 +18,16 @@ import android.provider.Settings;
 import java.util.Arrays;
 import java.io.UnsupportedEncodingException;
 import java.io.InputStream;
+import java.io.FilterInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -28,6 +36,17 @@ import com.facebook.react.bridge.Promise;
 
 class MobileTools extends ReactContextBaseJavaModule {
   final String TAG = "MobileTools";
+
+  // A shared image is read from the app that shared it, which can take as
+  // long as it likes to serve it. The read runs on its own thread, so the
+  // native modules thread (which also runs every keychain call) stays free,
+  // and the promise settles after SHARED_IMAGE_TIMEOUT_MS at the latest.
+  static final long SHARED_IMAGE_TIMEOUT_MS = 5000;
+  static final long SHARED_IMAGE_MAX_BYTES = 32L * 1024 * 1024;
+  private static final ExecutorService sharedImageReaders =
+      Executors.newCachedThreadPool();
+  private static final ScheduledExecutorService sharedImageDeadlines =
+      Executors.newSingleThreadScheduledExecutor();
 
   public MobileTools(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -141,24 +160,8 @@ class MobileTools extends ReactContextBaseJavaModule {
         android.util.Log.d(TAG, "Image URI: " + imageUri);
         
         if (imageUri != null) {
-          InputStream inputStream = getReactApplicationContext()
-              .getContentResolver().openInputStream(imageUri);
-          
-          if (inputStream != null) {
-            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-            inputStream.close();
-            
-            if (bitmap != null) {
-              ByteArrayOutputStream baos = new ByteArrayOutputStream();
-              bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-              byte[] imageBytes = baos.toByteArray();
-              String base64String = Base64.encodeToString(imageBytes, Base64.DEFAULT);
-              
-              android.util.Log.d(TAG, "Successfully converted image to base64, length: " + base64String.length());
-              promise.resolve(base64String);
-              return;
-            }
-          }
+          readSharedImage(imageUri, promise);
+          return;
         }
       }
       android.util.Log.d(TAG, "No valid shared image found");
@@ -166,6 +169,116 @@ class MobileTools extends ReactContextBaseJavaModule {
     } catch (Exception e) {
       android.util.Log.e(TAG, "Error processing shared image", e);
       promise.reject("SHARE_ERROR", e.getMessage());
+    }
+  }
+
+  // Settles the promise exactly once: with the image, or with
+  // SHARE_TIMEOUT when the sending app has not served it in time. On timeout
+  // the stream is closed, which ends a read blocked on it. An openFile()
+  // that never returns cannot be interrupted, so its reader thread stays
+  // parked, but the promise is settled all the same.
+  private void readSharedImage(Uri imageUri, Promise promise) {
+    AtomicBoolean settled = new AtomicBoolean(false);
+    AtomicReference<InputStream> stream = new AtomicReference<>();
+
+    Future<?> read = sharedImageReaders.submit(() -> {
+      try {
+        InputStream inputStream = getReactApplicationContext()
+            .getContentResolver().openInputStream(imageUri);
+        String base64String = null;
+
+        if (inputStream != null) {
+          stream.set(inputStream);
+          Bitmap bitmap = null;
+          try {
+            // the deadline may have passed while the provider opened it
+            if (!settled.get()) {
+              bitmap = BitmapFactory.decodeStream(
+                  new CappedInputStream(inputStream, SHARED_IMAGE_MAX_BYTES));
+            }
+          } finally {
+            inputStream.close();
+          }
+
+          if (bitmap != null) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+            byte[] imageBytes = baos.toByteArray();
+            base64String = Base64.encodeToString(imageBytes, Base64.DEFAULT);
+            android.util.Log.d(TAG, "Successfully converted image to base64, length: " + base64String.length());
+          }
+        }
+
+        if (settled.compareAndSet(false, true)) {
+          if (base64String == null) {
+            android.util.Log.d(TAG, "No valid shared image found");
+          }
+          promise.resolve(base64String);
+        }
+      } catch (Exception e) {
+        if (settled.compareAndSet(false, true)) {
+          android.util.Log.e(TAG, "Error processing shared image", e);
+          promise.reject("SHARE_ERROR", e.getMessage());
+        }
+      }
+    });
+
+    sharedImageDeadlines.schedule(() -> {
+      if (!settled.compareAndSet(false, true)) return;
+      android.util.Log.w(TAG, "Shared image not served within " + SHARED_IMAGE_TIMEOUT_MS + " ms");
+      InputStream inputStream = stream.get();
+      if (inputStream != null) {
+        try {
+          inputStream.close();
+        } catch (IOException e) {
+          // the reader closes it again when its read fails
+        }
+      }
+      read.cancel(true);
+      promise.reject("SHARE_TIMEOUT", "Shared image was not served in time");
+    }, SHARED_IMAGE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+  }
+
+  // Fails the read once a shared image passes the byte cap, so a sending
+  // app cannot keep the decoder reading until the deadline with a stream
+  // that does not end
+  static class CappedInputStream extends FilterInputStream {
+    private long remaining;
+
+    CappedInputStream(InputStream in, long limit) {
+      super(in);
+      remaining = limit;
+    }
+
+    @Override
+    public int read() throws IOException {
+      if (remaining <= 0) throw new IOException("Shared image too large");
+      int b = super.read();
+      if (b >= 0) remaining--;
+      return b;
+    }
+
+    @Override
+    public int read(byte[] b, int off, int len) throws IOException {
+      if (len == 0) return 0;
+      if (remaining <= 0) throw new IOException("Shared image too large");
+      int n = super.read(b, off, (int) Math.min(len, remaining));
+      if (n > 0) remaining -= n;
+      return n;
+    }
+
+    @Override
+    public long skip(long n) throws IOException {
+      if (remaining <= 0) throw new IOException("Shared image too large");
+      long skipped = super.skip(Math.min(n, remaining));
+      if (skipped > 0) remaining -= skipped;
+      return skipped;
+    }
+
+    // mark/reset would let the decoder read past the cap
+    @Override
+    public boolean markSupported() {
+      return false;
     }
   }
 
