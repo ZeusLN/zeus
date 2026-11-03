@@ -33,7 +33,9 @@ static NSString *StandardDefaultsPath(void) {
  well. isProtectedDataAvailable is also NO while the device is locked after the first unlock,
  when the file is readable, so the check waits then too, which is stricter than needed.
 
- Returns NO when it could not run yet, so the caller can retry once protected data is available.
+ Writes the flag only after every delete returned success or item-not-found. Returns NO when it
+ could not run yet or a delete failed, so the caller can retry once protected data is available,
+ and a later launch retries if this one does not.
  */
 static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defaultsPath) {
     if (!protectedDataAvailable) {
@@ -52,9 +54,6 @@ static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defa
         return YES;
     }
 
-    // Set the appropriate value so we don't clear next time the app is launched
-    [defaults setBool:YES forKey:kHasRunBeforeKey];
-
     NSArray *secItemClasses = @[
         (__bridge id)kSecClassGenericPassword,
         (__bridge id)kSecClassInternetPassword,
@@ -64,25 +63,37 @@ static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defa
     ];
 
     // Maps through all Keychain classes and deletes all items that match
+    BOOL cleared = YES;
     for (id secItemClass in secItemClasses) {
         NSDictionary *spec = @{(__bridge id)kSecClass: secItemClass};
-        SecItemDelete((__bridge CFDictionaryRef)spec);
+        OSStatus status = SecItemDelete((__bridge CFDictionaryRef)spec);
+        if (status != errSecSuccess && status != errSecItemNotFound) {
+            NSLog(@"First-run keychain clear failed for %@: %d", secItemClass, (int)status);
+            cleared = NO;
+        }
+    }
+    if (!cleared) {
+        return NO;
     }
 
+    // Set the appropriate value so we don't clear next time the app is launched
+    [defaults setBool:YES forKey:kHasRunBeforeKey];
     return YES;
 }
 
 /**
- Runs the first-run check that launch deferred because protected data was unavailable. Runs it
- at most once, and only with protected data available. Returns YES when it ran, so the caller
- can stop listening for retries.
+ Runs the first-run check that launch deferred because protected data was unavailable or a delete
+ failed. Runs it only with protected data available, and only until it completes. Returns YES when
+ it completed, so the caller can stop listening for retries.
  */
 static BOOL RunPendingKeychainCheck(BOOL *pending, BOOL protectedDataAvailable, NSString *defaultsPath) {
     if (!*pending || !protectedDataAvailable) {
         return NO;
     }
+    if (!ClearKeychainIfNecessary(YES, defaultsPath)) {
+        return NO;
+    }
     *pending = NO;
-    ClearKeychainIfNecessary(YES, defaultsPath);
     return YES;
 }
 
