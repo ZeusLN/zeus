@@ -564,6 +564,81 @@ describe('SpliceStore splice tracking', () => {
         expect(store.hasFailedSplice(channel as any)).toBe(false);
     });
 
+    describe('the Splicing screen after the node stopped waiting', () => {
+        const requestSplice = async (result: any = { success: true }) => {
+            (BackendUtils.spliceIn as jest.Mock).mockResolvedValue(result);
+            const store = await trackingStore();
+            await store.splice({
+                direction: 'in',
+                fundingTxid: 'funding-txid',
+                amountSats: 50000
+            });
+            return store;
+        };
+
+        it('shows the transaction once the peer agrees', async () => {
+            const store = await requestSplice();
+            expect(store.spliceTxid).toBeNull();
+
+            emit(pendingEvent);
+
+            expect(store.spliceSuccess).toBe(true);
+            expect(store.spliceTxid).toEqual('splice-txid');
+        });
+
+        it('shows the failure if the splice falls through', async () => {
+            const store = await requestSplice();
+
+            emit({
+                type: 'spliceFailed',
+                userChannelId: 'user-chan',
+                channelId: 'chan'
+            });
+
+            expect(store.spliceSuccess).toBe(false);
+            expect(store.spliceError).toEqual('views.Splice.failedLate');
+        });
+
+        it('leaves a splice that was already broadcast alone', async () => {
+            const store = await requestSplice({
+                success: true,
+                funding_txid_str: 'splice-txid'
+            });
+
+            emit({
+                type: 'spliceFailed',
+                userChannelId: 'user-chan',
+                channelId: 'chan'
+            });
+
+            expect(store.spliceSuccess).toBe(true);
+            expect(store.spliceError).toBeNull();
+        });
+
+        it("ignores another channel's splice", async () => {
+            const store = await requestSplice();
+
+            emit({ ...pendingEvent, userChannelId: 'other' });
+            emit({
+                type: 'spliceFailed',
+                userChannelId: 'other',
+                channelId: 'other'
+            });
+
+            expect(store.spliceTxid).toBeNull();
+            expect(store.spliceError).toBeNull();
+        });
+
+        it('stops following once the screen resets', async () => {
+            const store = await requestSplice();
+
+            store.reset();
+            emit(pendingEvent);
+
+            expect(store.spliceTxid).toBeNull();
+        });
+    });
+
     describe('across restarts', () => {
         const stored = (overrides: any = {}) => ({
             userChannelId: 'user-chan',
