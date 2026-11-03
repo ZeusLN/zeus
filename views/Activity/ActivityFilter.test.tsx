@@ -49,7 +49,8 @@ jest.mock('../../utils/BackendUtils', () => ({
     supportsCashuWallet: () => true,
     supportsKeysend: () => true,
     supportsOnchainReceiving: () => true,
-    supportsOnchainSends: () => true
+    supportsOnchainSends: () => true,
+    supportsSplicing: jest.fn(() => true)
 }));
 // ActivityStore is only needed for DEFAULT_FILTERS and SERVICES_CONFIG; its
 // store imports pull in native modules
@@ -59,12 +60,14 @@ jest.mock('../../stores/InvoicesStore', () => ({}));
 jest.mock('../../stores/TransactionsStore', () => ({}));
 jest.mock('../../stores/CashuStore', () => ({}));
 jest.mock('../../stores/SwapStore', () => ({}));
+jest.mock('../../stores/SpliceStore', () => ({}));
 jest.mock('../../stores/NodeInfoStore', () => ({}));
 jest.mock('../../stores/LSPStore', () => ({ LSPS_ORDERS_KEY: 'lsps' }));
 jest.mock('../../stores/Stores', () => ({}));
 jest.mock('../../storage', () => ({}));
 
 import { DEFAULT_FILTERS } from '../../stores/ActivityStore';
+import BackendUtils from '../../utils/BackendUtils';
 import ActivityFilter from './ActivityFilter';
 
 const renderFilter = async () => {
@@ -126,5 +129,20 @@ describe('ActivityFilter', () => {
         // control was the last of six children and lost the inset.
         expect(row).toHaveProp('childCount', 2);
         expect(row).toHaveStyle({ paddingRight: 16 });
+    });
+
+    it('offers a splices filter on a backend that can splice', async () => {
+        await renderFilter();
+
+        expect(
+            screen.getByText('views.ActivityFilter.splices')
+        ).toBeOnTheScreen();
+    });
+
+    it('hides the splices filter on a backend that cannot splice', async () => {
+        jest.mocked(BackendUtils.supportsSplicing).mockReturnValueOnce(false);
+        await renderFilter();
+
+        expect(screen.queryByText('views.ActivityFilter.splices')).toBeNull();
     });
 });

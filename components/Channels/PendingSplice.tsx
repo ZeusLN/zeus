@@ -6,13 +6,13 @@ import Amount from '../Amount';
 import KeyValue from '../KeyValue';
 import Text from '../Text';
 
-import type { PendingSplice as PendingSpliceRecord } from '../../stores/SpliceStore';
+import type { SpliceRecord } from '../../stores/SpliceStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 interface PendingSpliceProps {
-    splice: PendingSpliceRecord;
+    splice: SpliceRecord;
     // the channel's capacity before the splice: LDK keeps reporting it
     // until the splice locks
     capacity: string;
