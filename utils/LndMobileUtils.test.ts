@@ -80,6 +80,7 @@ import {
     deleteLndWallet,
     deleteNeutrinoFiles,
     expressGraphSync,
+    hasUserNeutrinoPeers,
     initializeLnd,
     LndMobileEventEmitter,
     optimizeNeutrinoPeers,
@@ -587,6 +588,21 @@ describe('optimizeNeutrinoPeers', () => {
         });
     });
 
+    it('sets dontAllowOtherPeers from the Optimize button even when the other network has peers of their own', async () => {
+        settingsStore.settings = {
+            ...defaults,
+            neutrinoPeersTestnet: ['testnet.home.example'],
+            dontAllowOtherPeers: false
+        } as any;
+
+        await optimizeNeutrinoPeers(false, undefined, true);
+
+        expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+            neutrinoPeersMainnet: ['a.mainnet', 'b.mainnet', 'c.mainnet'],
+            dontAllowOtherPeers: true
+        });
+    });
+
     it('replaces peers of their own when asked to', async () => {
         settingsStore.settings = {
             ...defaults,
@@ -600,5 +616,24 @@ describe('optimizeNeutrinoPeers', () => {
             neutrinoPeersMainnet: ['a.mainnet', 'b.mainnet', 'c.mainnet'],
             dontAllowOtherPeers: true
         });
+    });
+});
+
+describe('hasUserNeutrinoPeers', () => {
+    const known = ['a.mainnet', 'b.mainnet'];
+
+    it('is false when no list is stored', () => {
+        expect(hasUserNeutrinoPeers(undefined, known)).toBe(false);
+    });
+
+    it('is false for peers ZEUS ships', () => {
+        expect(hasUserNeutrinoPeers(['b.mainnet'], known)).toBe(false);
+    });
+
+    it('is true for an empty list or a peer ZEUS does not ship', () => {
+        expect(hasUserNeutrinoPeers([], known)).toBe(true);
+        expect(hasUserNeutrinoPeers(['a.mainnet', 'home.example'], known)).toBe(
+            true
+        );
     });
 });
