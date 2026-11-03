@@ -23,7 +23,7 @@ jest.mock('../../stores/SettingsStore', () => ({
 jest.mock('../../utils/BackendUtils', () => ({}));
 jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
-    themeColor: () => '#000000'
+    themeColor: (color: string) => (color === 'error' ? '#ff0000' : '#000000')
 }));
 jest.mock('../../utils/ActionUtils', () => ({
     confirmAction: jest.fn()
@@ -772,6 +772,77 @@ describe('WalletConfiguration', () => {
                 username: '',
                 password: ''
             });
+        });
+    });
+
+    describe('port field', () => {
+        const portField = () => screen.getByPlaceholderText('443/8080');
+        const saveButton = () =>
+            screen.getByRole('button', {
+                name: 'views.Settings.WalletConfiguration.saveWallet'
+            });
+
+        it('marks an invalid port of a saved wallet', async () => {
+            await renderView({ ...LND_NODE, port: '8080@evil.example' });
+
+            expect(portField().props.textColor).toBe('#ff0000');
+            expect(saveButton()).toBeDisabled();
+        });
+
+        it('keeps a saved port with a path', async () => {
+            const { updateSettings } = await renderView({
+                ...LND_NODE,
+                port: '8443/lnd'
+            });
+
+            expect(portField().props.textColor).toBe('#000000');
+            expect(saveButton()).toBeEnabled();
+
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                port: '8443/lnd'
+            });
+        });
+
+        it.each([
+            [
+                'lndconnect',
+                'lndconnect://new-node.example.com:8080@evil.example?macaroon=AgEDbG5k'
+            ],
+            [
+                'clnrest',
+                'clnrest+https://new-cln.example.com:3010@evil.example?rune=newrune'
+            ]
+        ])(
+            'marks an invalid port from a %s import',
+            async (_label, importString) => {
+                (Clipboard.getString as jest.Mock).mockResolvedValue(
+                    importString
+                );
+                await renderView(LND_NODE, { clipboard: true });
+
+                await pressButton('views.Settings.AddEditNode.import');
+
+                expect(portField().props.textColor).toBe('#ff0000');
+                expect(saveButton()).toBeDisabled();
+            }
+        );
+
+        it('clears the mark when a valid config is imported', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            await renderView(
+                { ...LND_NODE, port: '8080@evil.example' },
+                { clipboard: true }
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+
+            expect(portField()).toHaveDisplayValue('8080');
+            expect(portField().props.textColor).toBe('#000000');
+            expect(saveButton()).toBeEnabled();
         });
     });
 
