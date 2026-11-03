@@ -32,7 +32,11 @@ describe('CashuDevKit.fetchMintInfo', () => {
                 '15': [{ method: 'bolt11', unit: 'sat' }]
             }
         };
-        expect(await mintInfoFrom(info)).toEqual(info);
+        // only NUT-15's value is read; the others keep just their number
+        expect(await mintInfoFrom(info)).toEqual({
+            ...info,
+            nuts: { '4': {}, '15': [{ method: 'bolt11', unit: 'sat' }] }
+        });
     });
 
     it('drops members of the wrong JSON type', async () => {
@@ -77,6 +81,50 @@ describe('CashuDevKit.fetchMintInfo', () => {
     ])('reduces NUT-15 %j to a list of methods', async (nut15, methods) => {
         const info = await mintInfoFrom({ nuts: { '15': nut15 } });
         expect(info?.nuts?.['15']).toEqual(methods);
+    });
+
+    it('drops nuts given as an array', async () => {
+        const info = await mintInfoFrom({
+            nuts: [{ method: 'bolt11', unit: 'sat' }]
+        });
+        expect(info?.nuts).toBeUndefined();
+    });
+
+    it('keeps only a bounded number of NUT numbers from nuts', async () => {
+        const nuts: Record<string, any> = {
+            '15': [{ method: 'bolt11', unit: 'sat' }],
+            '4': { methods: Array(1000).fill({ method: 'bolt11' }) },
+            nut4: {},
+            '1234': {},
+            ' 7': {}
+        };
+        for (let i = 0; i < 20000; i++) nuts[`x${i}`] = { i };
+        for (let i = 100; i < 300; i++) nuts[String(i)] = { i };
+
+        const info = await mintInfoFrom({ nuts });
+        const keys = Object.keys(info?.nuts || {});
+
+        expect(keys).toHaveLength(50);
+        expect(keys.every((key) => /^\d{1,3}$/.test(key))).toBe(true);
+        expect(info?.nuts?.['4']).toEqual({});
+        expect(info?.nuts?.['15']).toEqual([{ method: 'bolt11', unit: 'sat' }]);
+    });
+
+    it('drops nuts keys that are not NUT numbers', async () => {
+        const info = await mintInfoFrom({
+            nuts: { '4': {}, nut4: {}, '1234': {}, ' 7': {}, '': {} }
+        });
+        expect(info?.nuts).toEqual({ '4': {} });
+    });
+
+    it('limits the length of NUT-15 methods and units', async () => {
+        const info = await mintInfoFrom({
+            nuts: {
+                '15': [{ method: 'm'.repeat(1000), unit: 'u'.repeat(1000) }]
+            }
+        });
+        expect(info?.nuts?.['15'][0].method).toHaveLength(256);
+        expect(info?.nuts?.['15'][0].unit).toHaveLength(256);
     });
 
     it('drops members that are not part of the mint info', async () => {

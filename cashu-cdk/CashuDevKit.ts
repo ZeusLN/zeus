@@ -60,10 +60,20 @@ export function parseMintInfo(json: string): CDKMintInfo | null {
         typeof info.nuts === 'object' &&
         info.nuts !== null &&
         !Array.isArray(info.nuts);
-    const nuts: Record<string, any> = hasNuts ? { ...info.nuts } : {};
+    // The Mint screen shows a pill per key, so keep only NUT numbers, a
+    // bounded count of them, without their values
+    const nuts: Record<string, any> = {};
+    if (hasNuts) {
+        Object.keys(info.nuts)
+            .filter((key) => /^\d{1,3}$/.test(key))
+            .slice(0, MINT_INFO_MAX_LIST_ENTRIES)
+            .forEach((key) => {
+                nuts[key] = {};
+            });
+    }
     // NUT-15 is the only entry read by the app: a list of methods, either
     // bare or under a `methods` key
-    const nut15 = nuts['15'];
+    const nut15 = hasNuts ? info.nuts['15'] : undefined;
     if (nut15 !== undefined) {
         const methods = Array.isArray(nut15) ? nut15 : nut15?.methods;
         nuts['15'] = (Array.isArray(methods) ? methods : [])
