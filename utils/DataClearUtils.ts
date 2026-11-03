@@ -68,6 +68,7 @@ import {
     NWC_PERSISTENT_SERVICE_ENABLED
 } from '../stores/NostrWalletConnectStore';
 import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
+import { SPLICES_KEY } from '../utils/SpliceUtils';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import {
@@ -113,6 +114,7 @@ const STORAGE_KEYS = [
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY,
+    SPLICES_KEY,
     // NWC service and client key material (nostr secret keys) plus flags
     NWC_CONNECTIONS_KEY,
     NWC_CLIENT_KEYS,

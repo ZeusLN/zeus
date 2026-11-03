@@ -1,10 +1,19 @@
-import { action, observable, runInAction } from 'mobx';
+import {
+    action,
+    IReactionDisposer,
+    observable,
+    reaction,
+    runInAction
+} from 'mobx';
 
 import BalanceStore from './BalanceStore';
 import ChannelsStore from './ChannelsStore';
+import NodeInfoStore from './NodeInfoStore';
 
+import Storage from '../storage';
 import BackendUtils from '../utils/BackendUtils';
 import {
+    SPLICES_KEY,
     SpliceDirection,
     SpliceEvent,
     getSpliceErrorMessage,
@@ -39,11 +48,22 @@ export interface PendingSplice {
     startedAt: number;
 }
 
+// One list for every wallet, like swaps, so each record names its node
+interface StoredSplice extends PendingSplice {
+    nodePubkey: string;
+}
+
 export default class SpliceStore {
     @observable public pendingSplices: PendingSplice[] = [];
 
     private intents = new Map<string, SpliceIntent>();
+    private tracking = false;
+    private trackingSession = 0;
     private unsubscribeSpliceEvents: (() => void) | null = null;
+    private disposeReconcile: IReactionDisposer | null = null;
+    private nodePubkey: string | null = null;
+    private otherNodesSplices: StoredSplice[] = [];
+    private saveQueue: Promise<unknown> = Promise.resolve();
 
     @observable public spliceInAvailableSats: number | null = null;
     @observable public loadingSpliceInAvailable = false;
@@ -57,10 +77,16 @@ export default class SpliceStore {
 
     channelsStore: ChannelsStore;
     balanceStore: BalanceStore;
+    nodeInfoStore: NodeInfoStore;
 
-    constructor(channelsStore: ChannelsStore, balanceStore: BalanceStore) {
+    constructor(
+        channelsStore: ChannelsStore,
+        balanceStore: BalanceStore,
+        nodeInfoStore: NodeInfoStore
+    ) {
         this.channelsStore = channelsStore;
         this.balanceStore = balanceStore;
+        this.nodeInfoStore = nodeInfoStore;
     }
 
     @action
@@ -83,22 +109,55 @@ export default class SpliceStore {
     // Follows splices for the connected node, including ones the peer starts.
     // A splice keeps the channel's old funding and capacity until it locks,
     // so channels and balances are refreshed on each step. Safe to call on
-    // every refresh: it subscribes once until stopTracking
-    @action
-    public trackSplices = () => {
-        if (this.unsubscribeSpliceEvents) return;
+    // every refresh: it only starts once until stopTracking
+    public trackSplices = async () => {
+        if (this.tracking) return;
+        this.tracking = true;
+        const session = ++this.trackingSession;
+        const nodePubkey: string | null =
+            this.nodeInfoStore.nodeInfo?.nodeId || null;
+
+        // Read before subscribing, so no event saves over records that
+        // haven't been loaded yet
+        const stored = nodePubkey ? await this.loadStoredSplices() : [];
+        if (session !== this.trackingSession) return;
+
         const unsubscribe = BackendUtils.watchSpliceEvents(
             this.handleSpliceEvent
         );
-        if (typeof unsubscribe === 'function') {
+        if (typeof unsubscribe !== 'function') return;
+
+        runInAction(() => {
             this.unsubscribeSpliceEvents = unsubscribe;
-        }
+            this.nodePubkey = nodePubkey;
+            this.otherNodesSplices = stored.filter(
+                (splice) => splice.nodePubkey !== nodePubkey
+            );
+            this.pendingSplices = stored
+                .filter((splice) => splice.nodePubkey === nodePubkey)
+                .map(({ nodePubkey: _nodePubkey, ...splice }) => splice);
+        });
+
+        this.disposeReconcile = reaction(
+            () => [
+                this.channelsStore.hasChannelData,
+                this.channelsStore.channels
+            ],
+            this.reconcile,
+            { fireImmediately: true }
+        );
     };
 
     @action
     public stopTracking = () => {
+        this.trackingSession++;
+        this.tracking = false;
         this.unsubscribeSpliceEvents?.();
         this.unsubscribeSpliceEvents = null;
+        this.disposeReconcile?.();
+        this.disposeReconcile = null;
+        this.nodePubkey = null;
+        this.otherNodesSplices = [];
         this.pendingSplices = [];
         this.intents.clear();
     };
@@ -113,7 +172,7 @@ export default class SpliceStore {
         if (type === 'splicePending' && event.txid) {
             const intent = this.intents.get(userChannelId);
             this.intents.delete(userChannelId);
-            this.pendingSplices = [
+            this.setPendingSplices([
                 ...this.pendingSplices.filter(
                     (splice) => splice.userChannelId !== userChannelId
                 ),
@@ -126,7 +185,7 @@ export default class SpliceStore {
                     ...intent,
                     startedAt: Date.now()
                 }
-            ];
+            ]);
         } else if (type === 'spliceFailed' || type === 'channelClosed') {
             const intended = this.intents.delete(userChannelId);
             if (!pending && !intended) return;
@@ -141,11 +200,66 @@ export default class SpliceStore {
         this.balanceStore.getCombinedBalance();
     };
 
+    // Catches what happened while nothing was listening, such as a splice
+    // that locked while the app was closed. Only a loaded channel list
+    // counts: an empty one from a reset or a failed fetch proves nothing
+    @action
+    private reconcile = () => {
+        const { hasChannelData, channels } = this.channelsStore;
+        if (!hasChannelData) return;
+
+        const remaining = this.pendingSplices.filter((splice) => {
+            const channel = channels.find(
+                (c) => c.user_channel_id === splice.userChannelId
+            );
+            // No longer open: closed or closing, so the splice is moot
+            if (!channel) return false;
+            // Already running on the splice transaction: it locked
+            return channel.channel_point?.split(':')[0] !== splice.txid;
+        });
+
+        if (remaining.length !== this.pendingSplices.length) {
+            this.setPendingSplices(remaining);
+        }
+    };
+
     @action
     private removePendingSplice = (userChannelId: string) => {
-        this.pendingSplices = this.pendingSplices.filter(
-            (splice) => splice.userChannelId !== userChannelId
+        this.setPendingSplices(
+            this.pendingSplices.filter(
+                (splice) => splice.userChannelId !== userChannelId
+            )
         );
+    };
+
+    @action
+    private setPendingSplices = (splices: PendingSplice[]) => {
+        this.pendingSplices = splices;
+        this.saveSplices();
+    };
+
+    private loadStoredSplices = async (): Promise<StoredSplice[]> => {
+        try {
+            const stored = await Storage.getItem(SPLICES_KEY);
+            const splices = stored ? JSON.parse(stored) : [];
+            return Array.isArray(splices) ? splices : [];
+        } catch (error) {
+            console.error('Error loading splices:', error);
+            return [];
+        }
+    };
+
+    // Queued so an older list can never land after a newer one
+    private saveSplices = () => {
+        const { nodePubkey } = this;
+        if (!nodePubkey) return;
+        const splices: StoredSplice[] = [
+            ...this.otherNodesSplices,
+            ...this.pendingSplices.map((splice) => ({ ...splice, nodePubkey }))
+        ];
+        this.saveQueue = this.saveQueue
+            .then(() => Storage.setItem(SPLICES_KEY, splices))
+            .catch((error) => console.error('Error saving splices:', error));
     };
 
     // A splice-in can only spend confirmed UTXOs, so the confirmed balance
