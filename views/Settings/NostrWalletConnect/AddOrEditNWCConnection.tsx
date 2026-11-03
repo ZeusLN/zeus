@@ -24,7 +24,10 @@ import TextInput from '../../../components/TextInput';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import Switch from '../../../components/Switch';
 import DropdownSetting from '../../../components/DropdownSetting';
-import { ErrorMessage } from '../../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../../components/SuccessErrorMessage';
 
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
@@ -963,28 +966,11 @@ export default class AddOrEditNWCConnection extends React.Component<
                             />
                         )}
                         {route.params?.isEdit && this.isRelayChanged() && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    borderColor: themeColor('secondary'),
-                                    borderWidth: 1,
-                                    padding: 10,
-                                    marginBottom: 10,
-                                    borderRadius: 8,
-                                    marginHorizontal: 10,
-                                    marginTop: 10
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        color: themeColor('highlight')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.NostrWalletConnect.relayChangeWarning'
-                                    )}
-                                </Text>
-                            </View>
+                            <WarningMessage
+                                message={localeString(
+                                    'views.Settings.NostrWalletConnect.relayChangeWarning'
+                                )}
+                            />
                         )}
 
                         {/* Connection Name */}
