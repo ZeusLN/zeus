@@ -1583,6 +1583,20 @@ describe('TransactionsStore payment preimage check', () => {
         expect(outcome.status).toBe('SUCCEEDED');
     });
 
+    it('reports the expected hash, not one derived from the wrong preimage', () => {
+        const store = newStore('lnd');
+
+        // no payment_hash in the result, so Payment derives one from the
+        // preimage the node returned
+        const outcome = store.getPaymentOutcome(
+            { status: 'SUCCEEDED', payment_preimage: OTHER_PREIMAGE },
+            HASH.toUpperCase()
+        );
+
+        expect(outcome.preimageMismatch).toBe(true);
+        expect(outcome.payment_hash).toBe(HASH);
+    });
+
     it('does not flag a matching preimage as a mismatch', () => {
         const store = newStore('lnd');
 

@@ -5909,6 +5909,45 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
             expect(connection.totalSpendSats).toBe(5010);
         });
 
+        it('does not notify a failure when a success is already recorded', async () => {
+            const { store } = buildHandlerStore();
+            const connection = addConnection(store, {
+                maxAmountSats: 100000,
+                activity: [
+                    {
+                        id: invoice,
+                        type: 'pay_invoice',
+                        payment_source: 'lightning',
+                        status: 'success',
+                        satAmount: 5000,
+                        paymentHash,
+                        isBudgetDebited: true,
+                        createdAt: new Date(Date.now() - 60_000)
+                    }
+                ]
+            });
+
+            await (store as any).finalizePayment({
+                rawInvoice: invoice,
+                type: 'pay_invoice',
+                decoded: null,
+                payment_source: 'lightning',
+                connection,
+                amountSats: 5000,
+                paymentHash,
+                unverifiedError: 'stores.TransactionsStore.preimageMismatch'
+            });
+
+            // the recorded success stays, so there is no failure to report
+            expect(connection.activity[0].status).toBe('success');
+            expect(
+                NostrConnectUtils.notifyOutgoingNwcPaymentFailed
+            ).not.toHaveBeenCalled();
+            expect(
+                NostrConnectUtils.notifyOutgoingNwcPayment
+            ).not.toHaveBeenCalled();
+        });
+
         it('does not debit a payment the budget already counted', async () => {
             const { store, transactionsStore } = buildHandlerStore();
             transactionsStore.getPaymentOutcome.mockReturnValue(
