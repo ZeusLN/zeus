@@ -77,6 +77,11 @@ export const cashuStore = new CashuStore(
     modalStore
 );
 export const swapStore = new SwapStore(nodeInfoStore, settingsStore);
+export const spliceStore = new SpliceStore(
+    channelsStore,
+    balanceStore,
+    nodeInfoStore
+);
 export const activityStore = new ActivityStore(
     settingsStore,
     paymentsStore,
@@ -84,6 +89,7 @@ export const activityStore = new ActivityStore(
     transactionsStore,
     cashuStore,
     swapStore,
+    spliceStore,
     nodeInfoStore
 );
 export const lightningAddressStore = new LightningAddressStore(
@@ -94,11 +100,6 @@ export const lightningAddressStore = new LightningAddressStore(
 export const posStore = new PosStore(settingsStore, fiatStore, unitsStore);
 export const inventoryStore = new InventoryStore();
 export const sweepStore = new SweepStore(nodeInfoStore);
-export const spliceStore = new SpliceStore(
-    channelsStore,
-    balanceStore,
-    nodeInfoStore
-);
 export const nostrWalletConnectStore = new NostrWalletConnectStore(
     settingsStore,
     balanceStore,

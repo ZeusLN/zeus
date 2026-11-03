@@ -12,6 +12,7 @@ import Payment from '../models/Payment';
 import Invoice from '../models/Invoice';
 import Transaction from '../models/Transaction';
 import CashuToken from '../models/CashuToken';
+import Splice from '../models/Splice';
 import { Filter } from '../stores/ActivityStore';
 import ActivityFilterUtils from './ActivityFilterUtils';
 
@@ -514,11 +515,63 @@ describe('ActivityFilterUtils', () => {
         ]);
     });
 
+    describe('splices', () => {
+        const activities = () => [
+            new Splice({
+                txid: 'splice-txid',
+                initiator: 'local',
+                direction: 'in',
+                amountSats: 100000,
+                startedAt: 0,
+                status: 'locked'
+            }),
+            new Transaction({ amount: -5000, time_stamp: '0' })
+        ];
+
+        it('lists splices by default', () => {
+            const filtered = ActivityFilterUtils.filterActivities(
+                activities(),
+                getDefaultFilter()
+            );
+
+            expect(filtered.some((a) => a instanceof Splice)).toBe(true);
+        });
+
+        it('hides splices when their filter is off', () => {
+            const filter = getDefaultFilter();
+            filter.splices = false;
+
+            const filtered = ActivityFilterUtils.filterActivities(
+                activities(),
+                filter
+            );
+
+            expect(filtered.some((a) => a instanceof Splice)).toBe(false);
+            expect(filtered.some((a) => a instanceof Transaction)).toBe(true);
+        });
+
+        it('keeps splices when on-chain, sent or received is off', () => {
+            const filter = getDefaultFilter();
+            filter.onChain = false;
+            filter.sent = false;
+            filter.received = false;
+
+            const filtered = ActivityFilterUtils.filterActivities(
+                activities(),
+                filter
+            );
+
+            expect(filtered).toHaveLength(1);
+            expect(filtered[0]).toBeInstanceOf(Splice);
+        });
+    });
+
     const getDefaultFilter = () =>
         ({
             lightning: true,
             onChain: true,
             cashu: true,
+            splices: true,
             sent: true,
             received: true,
             unpaid: true,

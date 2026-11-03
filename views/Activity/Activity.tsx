@@ -17,6 +17,7 @@ import ActivityToCsv from './ActivityToCsv';
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 import {
     SATS_PER_BTC,
     numberWithCommas,
@@ -24,19 +25,24 @@ import {
 } from '../../utils/UnitsUtils';
 
 import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
+import ChannelsStore from '../../stores/ChannelsStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 
 import { LSPOrderState } from '../../models/LSP';
+import Splice from '../../models/Splice';
 
 interface ActivityProps {
     navigation: NativeStackNavigationProp<any, any>;
     ActivityStore: ActivityStore;
+    ChannelsStore: ChannelsStore;
     FiatStore: FiatStore;
+    NodeInfoStore: NodeInfoStore;
     PosStore: PosStore;
     SettingsStore: SettingsStore;
     SwapStore: SwapStore;
@@ -51,7 +57,9 @@ interface ActivityState {
 
 @inject(
     'ActivityStore',
+    'ChannelsStore',
     'FiatStore',
+    'NodeInfoStore',
     'PosStore',
     'SettingsStore',
     'InvoicesStore',
@@ -152,6 +160,21 @@ export default class Activity extends React.PureComponent<
                 endpoint: item.endpoint,
                 invoice: item.invoice
             });
+        }
+
+        if (item instanceof Splice) {
+            const channel = this.props.ChannelsStore.enrichedChannels.find(
+                (c) => c.user_channel_id === item.userChannelId
+            );
+            if (channel) {
+                navigation.navigate('Channel', { channel });
+            } else {
+                UrlUtils.goToBlockExplorerTXID(
+                    item.txid,
+                    this.props.NodeInfoStore.testnet
+                );
+            }
+            return;
         }
 
         if (item.model === 'LSPS1Order') {
