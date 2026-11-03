@@ -35,12 +35,50 @@ const unsupported: Array<[string, any]> = [
     ['P2PK without a pubkey', { kind: 'P2PK', data: {} }],
     ['P2PK with an empty pubkey', { kind: 'P2PK', data: { pubkey: '' } }],
     ['P2PK with a non-string pubkey', { kind: 'P2PK', data: { pubkey: 2 } }],
-    ['a non-object', 'P2PK']
+    ['a non-object', 'P2PK'],
+    ...invalidP2PKFields()
 ];
+
+// Present but invalid optional P2PK fields must be refused, not dropped.
+function invalidP2PKFields(): Array<[string, any]> {
+    const withData = (extra: object) => ({
+        kind: 'P2PK',
+        data: { pubkey: PUBKEY, ...extra }
+    });
+    return [
+        ['a null pubkeys entry', withData({ pubkeys: [PUBKEY, null] })],
+        ['a numeric pubkeys entry', withData({ pubkeys: [2] })],
+        ['an empty pubkeys entry', withData({ pubkeys: [''] })],
+        ['pubkeys that are not an array', withData({ pubkeys: PUBKEY })],
+        ['a null refund_keys entry', withData({ refund_keys: [null] })],
+        ['refund_keys that are not an array', withData({ refund_keys: {} })],
+        ['a negative locktime', withData({ locktime: -1 })],
+        ['a fractional locktime', withData({ locktime: 1.5 })],
+        ['a non-numeric locktime string', withData({ locktime: 'soon' })],
+        ['a boolean num_sigs', withData({ num_sigs: true })],
+        ['an object num_sigs_refund', withData({ num_sigs_refund: {} })],
+        ['an unknown sig_flag', withData({ sig_flag: 'SigNone' })],
+        ['a numeric sig_flag', withData({ sig_flag: 1 })]
+    ];
+}
 
 const p2pk: CDKSpendingConditions = {
     kind: 'P2PK',
     data: { pubkey: PUBKEY, locktime: 1900000000 }
+};
+
+// Every optional field set to a value the native parsers accept
+const fullP2PK: any = {
+    kind: 'P2PK',
+    data: {
+        pubkey: PUBKEY,
+        locktime: '1900000000',
+        pubkeys: [PUBKEY],
+        refund_keys: [PUBKEY],
+        num_sigs: 2,
+        num_sigs_refund: 0,
+        sig_flag: 'SigAll'
+    }
 };
 
 const sentOptions = () => JSON.parse(native.prepareSend.mock.calls[0][2]);
@@ -84,6 +122,38 @@ describe('CashuDevKit.mint spending conditions', () => {
             JSON.stringify(p2pk)
         );
     });
+
+    it('forwards P2PK conditions with every optional field set', async () => {
+        await CashuDevKit.mint(MINT, 'quote1', fullP2PK);
+
+        expect(native.mint).toHaveBeenCalledWith(
+            MINT,
+            'quote1',
+            JSON.stringify(fullP2PK)
+        );
+    });
+
+    it.each([null, undefined])(
+        'ignores optional fields set to %s',
+        async (value) => {
+            const conditions: any = {
+                kind: 'P2PK',
+                data: {
+                    pubkey: PUBKEY,
+                    locktime: value,
+                    pubkeys: value,
+                    refund_keys: value,
+                    num_sigs: value,
+                    num_sigs_refund: value,
+                    sig_flag: value
+                }
+            };
+
+            await CashuDevKit.mint(MINT, 'quote1', conditions);
+
+            expect(native.mint).toHaveBeenCalledTimes(1);
+        }
+    );
 
     it('mints without conditions when none are given', async () => {
         await CashuDevKit.mint(MINT, 'quote1');
