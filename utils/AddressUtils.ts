@@ -263,6 +263,24 @@ class AddressUtils {
     isValidBitcoinAddressForNode = (input: string) =>
         this.isValidBitcoinAddress(input, this.isNodeOnTestNetwork());
 
+    // Stricter than isValidBitcoinAddressForNode: decodes the address
+    // against the node's own network, so a tb1 address fails on regtest and
+    // a bcrt1 address fails on signet, and checks the checksum
+    isAddressForNodeNetwork = (
+        input: string,
+        nodeInfo: any = nodeInfoStore?.nodeInfo
+    ) => {
+        try {
+            bitcoin.address.toOutputScript(
+                input,
+                this.bitcoinNetworkForNode(nodeInfo)
+            );
+            return true;
+        } catch {
+            return false;
+        }
+    };
+
     // For inputs not tied to the connected node's network, such as contacts
     isValidBitcoinAddressOnAnyNetwork = (input: string) =>
         this.isValidBitcoinAddress(input, false) ||

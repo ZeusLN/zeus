@@ -60,12 +60,14 @@ describe('RefundSwapQRScanner', () => {
     );
 
     it.each([
-        ['mainnet', {}, TESTNET],
-        ['testnet', { isTestNet: true }, MAINNET],
-        ['regtest', { isRegTest: true }, MAINNET]
+        ['a testnet', 'mainnet', {}, TESTNET],
+        ['a mainnet', 'testnet', { isTestNet: true }, MAINNET],
+        ['a mainnet', 'regtest', { isRegTest: true }, MAINNET],
+        ['a testnet', 'regtest', { isRegTest: true }, TESTNET],
+        ['a regtest', 'signet', { isSigNet: true }, REGTEST]
     ])(
-        'rejects an address for another network on a %s node',
-        async (_network, nodeInfo, address) => {
+        'rejects %s address on a %s node',
+        async (_address, _network, nodeInfo, address) => {
             const navigation = await scan(nodeInfo, address);
             expect((Alert.alert as jest.Mock).mock.calls[0][1]).toBe(
                 'components.QRCodeScanner.notRecognized'

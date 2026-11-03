@@ -672,6 +672,106 @@ describe('AddressUtils', () => {
         });
     });
 
+    describe('isAddressForNodeNetwork', () => {
+        const MAINNET_NODE = {
+            isTestNet: false,
+            isRegTest: false,
+            isSigNet: false,
+            isMutinynet: false
+        };
+        const mainnet = [
+            'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+            'BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4',
+            'bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297',
+            '1AY6gTALH7bGrbN73qqTRnkW271JvBJc9o',
+            '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy'
+        ];
+        const TB1 = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
+        const BCRT1 = 'bcrt1qqgdrlt97x4847rf85utak8gre5q7k83uwh3ajj';
+        // testnet, signet and regtest share base58 version bytes
+        const testBase58 = [
+            'mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn',
+            '2MzQwSSnBHWHqSAqtTVQ6v47XtaisrJa1Vc'
+        ];
+
+        it('accepts only mainnet addresses on a mainnet node', () => {
+            mainnet.forEach((address) =>
+                expect(
+                    AddressUtils.isAddressForNodeNetwork(address, MAINNET_NODE)
+                ).toBe(true)
+            );
+            [TB1, BCRT1, ...testBase58].forEach((address) =>
+                expect(
+                    AddressUtils.isAddressForNodeNetwork(address, MAINNET_NODE)
+                ).toBe(false)
+            );
+        });
+
+        it('accepts tb1 but not bcrt1 on testnet, signet and Mutinynet', () => {
+            [
+                { isTestNet: true },
+                { isSigNet: true },
+                { isSigNet: true, isMutinynet: true },
+                { isMutinynet: true }
+            ].forEach((nodeInfo) => {
+                [TB1, ...testBase58].forEach((address) =>
+                    expect(
+                        AddressUtils.isAddressForNodeNetwork(address, nodeInfo)
+                    ).toBe(true)
+                );
+                [BCRT1, ...mainnet].forEach((address) =>
+                    expect(
+                        AddressUtils.isAddressForNodeNetwork(address, nodeInfo)
+                    ).toBe(false)
+                );
+            });
+        });
+
+        it('accepts bcrt1 but not tb1 on regtest', () => {
+            const nodeInfo = { isRegTest: true };
+            [BCRT1, ...testBase58].forEach((address) =>
+                expect(
+                    AddressUtils.isAddressForNodeNetwork(address, nodeInfo)
+                ).toBe(true)
+            );
+            [TB1, ...mainnet].forEach((address) =>
+                expect(
+                    AddressUtils.isAddressForNodeNetwork(address, nodeInfo)
+                ).toBe(false)
+            );
+        });
+
+        it('refuses a bad checksum, a public key and other non-addresses', () => {
+            [
+                // last character of a valid address changed
+                'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwv',
+                '1AY6gTALH7bGrbN73qqTRnkW271JvBJc9p',
+                '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
+                'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                ' bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                ''
+            ].forEach((input) =>
+                expect(
+                    AddressUtils.isAddressForNodeNetwork(input, MAINNET_NODE)
+                ).toBe(false)
+            );
+        });
+
+        it('treats a node whose info has not loaded as mainnet', () => {
+            expect(AddressUtils.isAddressForNodeNetwork(mainnet[0], {})).toBe(
+                true
+            );
+            expect(AddressUtils.isAddressForNodeNetwork(TB1, {})).toBe(false);
+        });
+
+        it("reads the connected node's info when called without one", () => {
+            withNodeInfo({ isRegTest: true }, () => {
+                expect(AddressUtils.isAddressForNodeNetwork(BCRT1)).toBe(true);
+                expect(AddressUtils.isAddressForNodeNetwork(TB1)).toBe(false);
+            });
+        });
+    });
+
     describe('isValidLightningPaymentRequest', () => {
         it('validates Lightning payment requests properly', () => {
             expect(
