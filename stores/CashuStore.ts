@@ -6307,15 +6307,18 @@ export default class CashuStore {
                 }
             });
 
-            // Persist arrays
+            // Persist arrays. Write the lists this sweep set: a reset()
+            // during the first write loads the next wallet's lists into
+            // the store
+            const spentTokens = this.offlineSpentTokens;
             await Storage.setItem(
                 `${nodeDir}-cashu-offline-pending-tokens`,
-                this.offlinePendingTokens
+                remaining
             );
             if (spent.length > 0) {
                 await Storage.setItem(
                     `${nodeDir}-cashu-offline-spent-tokens`,
-                    this.offlineSpentTokens
+                    spentTokens
                 );
             }
 

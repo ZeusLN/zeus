@@ -108,7 +108,9 @@ jest.mock('../storage', () => ({
     KEY_PREFIX: 'zeus:'
 }));
 
+import Storage from '../storage';
 import CashuStore from './CashuStore';
+import CashuToken from '../models/CashuToken';
 
 // BIP-39 test vectors, never real wallets
 const SEED_A = `${'abandon '.repeat(11)}about`;
@@ -303,6 +305,36 @@ describe('CashuStore offline-token sweep across a wallet switch', () => {
         // Nothing of A's reaches the store, which now belongs to B
         expect(store.offlineSpentTokens).toEqual([]);
         expect(store.showOfflineSpentAlert).toBe(false);
+    });
+
+    it("keeps wallet A's spent list when the switch comes during the final write", async () => {
+        mockCdk.spentTokens = ['token-1-for-wallet-A'];
+        // A's spent list as initializeWallets() loaded it
+        store.offlineSpentTokens = [
+            new CashuToken({
+                encodedToken: 'token-0-for-wallet-A',
+                spent: true
+            } as any)
+        ];
+        // A's sweep has finished claiming when B is selected, while it
+        // writes A's pending queue
+        const setItem = jest.mocked(Storage.setItem);
+        const write = setItem.getMockImplementation()!;
+        setItem.mockImplementation(async (key: string, value: any) => {
+            if (key === 'walletA-cashu-offline-pending-tokens') {
+                setItem.mockImplementation(write);
+                switchToWalletB();
+            }
+            return write(key, value);
+        });
+
+        mockCdk.answerFirstClaim!();
+        await sweeps.mock.results[0].value;
+
+        expect(storedTokens('walletA-cashu-offline-spent-tokens')).toEqual([
+            'token-0-for-wallet-A',
+            'token-1-for-wallet-A'
+        ]);
     });
 
     it("keeps wallet B's sweep the only one running after wallet A's stopped sweep ends", async () => {
