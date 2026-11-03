@@ -547,26 +547,24 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                     return@launch
                 }
 
-                if (!isCurrentBuild(generation)) {
-                    rejectSupersededBuild(builtNode, promise)
-                    return@launch
-                }
-
-                // Fall back to local SQLite store if dual store failed or VSS was not configured
-                if (builtNode == null) {
-                    if (vssError != null) {
-                        Log.w("LdkNodeModule", "[timing] Falling back to local SQLite store")
-                    }
-                    val localStartMs = System.currentTimeMillis()
-                    val localBuilder = Builder.fromConfig(config)
-                    applyBuilderSettings(localBuilder)
-                    builtNode = localBuilder.build(nodeEntropy)
-                    Log.d("LdkNodeModule", "[timing] Local-only build completed in ${System.currentTimeMillis() - localStartMs}ms")
-                }
-
+                // The local build runs under nodeLock so that stop() and the
+                // next buildNode() wait for it instead of opening the same
+                // storage dir while it is still running. A superseded build
+                // skips it.
                 val published = synchronized(nodeLock) {
                     val current = generation == this@LdkNodeModule.buildGeneration
                     if (current) {
+                        // Fall back to local SQLite store if dual store failed or VSS was not configured
+                        if (builtNode == null) {
+                            if (vssError != null) {
+                                Log.w("LdkNodeModule", "[timing] Falling back to local SQLite store")
+                            }
+                            val localStartMs = System.currentTimeMillis()
+                            val localBuilder = Builder.fromConfig(config)
+                            applyBuilderSettings(localBuilder)
+                            builtNode = localBuilder.build(nodeEntropy)
+                            Log.d("LdkNodeModule", "[timing] Local-only build completed in ${System.currentTimeMillis() - localStartMs}ms")
+                        }
                         this@LdkNodeModule.node = builtNode
                         this@LdkNodeModule.builder = null // Builder is consumed
                     }
