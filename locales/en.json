@@ -2378,6 +2378,7 @@
     "stores.CashuStore.alreadySpent": "Token has already been spent.",
     "stores.CashuStore.pending": "Payment is pending.",
     "stores.CashuStore.claimError": "Error claiming token",
+    "stores.CashuStore.storedSeedUnusable": "This wallet has an ecash seed stored that ZEUS could not load. ZEUS will not create a new seed over it, so ecash cannot be used in this wallet until the stored seed can be read.",
     "stores.CashuStore.claimError.keyMismatch": "Wallet key mismatch",
     "stores.CashuStore.claimError.lockedToWallet": "This token is locked to a different wallet, can not redeem it",
     "stores.CashuStore.claimError.inconsistentLocking": "Token is locked to multiple different wallets",
