@@ -140,14 +140,19 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     // Helper Methods
     // ========================================================================
     /**
-     * Parse P2PK spending conditions from JSON
+     * Parse P2PK spending conditions from JSON. Throws instead of returning
+     * null for anything it cannot convert: null means "no conditions" to CDK
+     * and would mint or send an unlocked token.
      */
-    private fun parseP2PKConditions(json: JSONObject): SpendingConditions? {
+    private fun parseP2PKConditions(json: JSONObject): SpendingConditions {
         val kind = json.optString("kind")
-        if (kind != "P2PK") return null
+        require(kind == "P2PK") { "Unsupported spending condition kind: $kind" }
 
-        val data = json.optJSONObject("data") ?: return null
-        val pubkeyHex = data.optString("pubkey").takeIf { it.isNotEmpty() } ?: return null
+        val data = requireNotNull(json.optJSONObject("data")) {
+            "P2PK spending conditions require a pubkey"
+        }
+        val pubkeyHex = data.optString("pubkey")
+        require(pubkeyHex.isNotEmpty()) { "P2PK spending conditions require a pubkey" }
 
         // NUT-11 tags must be omitted entirely when they don't apply. Emitting
         // them with a value of 0 (["locktime", "0"], ["n_sigs", "0"],
@@ -1143,15 +1148,13 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
         scope.launch {
             try {
-                // Parse spending conditions if provided. Only tolerate a
-                // malformed JSON *blob* silently (treat as "no conditions");
-                // a validation failure inside well-formed conditions (e.g. an
-                // impossible num_sigs) must fail loudly instead of quietly
-                // minting an unlocked proof the caller never asked for.
+                // Parse spending conditions if provided. Conditions that
+                // cannot be parsed or converted (malformed JSON, a non-P2PK
+                // kind, an impossible num_sigs) must fail loudly instead of
+                // quietly minting an unlocked proof the caller never asked
+                // for.
                 val conditions = conditionsJson?.let { json ->
-                    val parsed = runCatching { JSONObject(json) }.getOrNull()
-                        ?: return@let null
-                    parseP2PKConditions(parsed)
+                    parseP2PKConditions(JSONObject(json))
                 }
                 val wallet = getWallet(mintUrl)
                 val proofs = wallet.mint(
@@ -1345,9 +1348,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
                     includeFee = parsed.optBoolean("include_fee", false)
 
-                    // Parse spending conditions (P2PK) if provided
-                    parsed.optJSONObject("conditions")?.let { cond ->
-                        conditions = parseP2PKConditions(cond)
+                    // Parse spending conditions (P2PK) if provided. A present
+                    // value that is not an object is rejected, not dropped.
+                    if (parsed.has("conditions") && !parsed.isNull("conditions")) {
+                        conditions = parseP2PKConditions(parsed.getJSONObject("conditions"))
                     }
 
                     // Parse send_kind
