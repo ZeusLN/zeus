@@ -1225,6 +1225,7 @@
     "views.Settings.SignMessage.signingMethod": "簽署方式",
     "views.Settings.SignMessage.selectAddressSigning": "請選擇用來簽署的位址",
     "views.Settings.SignMessage.selectAddressVerification": "請輸入要驗證的位址",
+    "views.Settings.SignMessage.reservedMessage": "This message is reserved for LNURL-auth key derivation and cannot be signed. Signing it would expose your LNURL-auth identity for every site.",
     "views.Settings.SignMessage.fullAddress": "完整位址",
     "views.Settings.SignMessage.tapToSelectAddress": "請點這裡選擇位址",
     "views.Settings.SignMessage.signatureType": "簽章類型",
