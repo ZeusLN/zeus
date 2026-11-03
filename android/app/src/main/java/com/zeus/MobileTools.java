@@ -226,16 +226,20 @@ class MobileTools extends ReactContextBaseJavaModule {
     sharedImageDeadlines.schedule(() -> {
       if (!settled.compareAndSet(false, true)) return;
       android.util.Log.w(TAG, "Shared image not served within " + SHARED_IMAGE_TIMEOUT_MS + " ms");
+      promise.reject("SHARE_TIMEOUT", "Shared image was not served in time");
+      read.cancel(true);
+      // Closing a provider's stream can itself block, so it runs on the
+      // reader pool. This thread runs every share's deadline.
       InputStream inputStream = stream.get();
       if (inputStream != null) {
-        try {
-          inputStream.close();
-        } catch (IOException e) {
-          // the reader closes it again when its read fails
-        }
+        sharedImageReaders.execute(() -> {
+          try {
+            inputStream.close();
+          } catch (IOException e) {
+            // the reader closes it again when its read fails
+          }
+        });
       }
-      read.cancel(true);
-      promise.reject("SHARE_TIMEOUT", "Shared image was not served in time");
     }, SHARED_IMAGE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
   }
 
@@ -250,9 +254,18 @@ class MobileTools extends ReactContextBaseJavaModule {
       remaining = limit;
     }
 
+    // At the cap, an image that ends there is allowed: read one more byte
+    // and fail only if there is one
+    private void checkCap() throws IOException {
+      if (remaining <= 0 && super.read() >= 0) {
+        throw new IOException("Shared image too large");
+      }
+    }
+
     @Override
     public int read() throws IOException {
-      if (remaining <= 0) throw new IOException("Shared image too large");
+      checkCap();
+      if (remaining <= 0) return -1;
       int b = super.read();
       if (b >= 0) remaining--;
       return b;
@@ -261,7 +274,8 @@ class MobileTools extends ReactContextBaseJavaModule {
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
       if (len == 0) return 0;
-      if (remaining <= 0) throw new IOException("Shared image too large");
+      checkCap();
+      if (remaining <= 0) return -1;
       int n = super.read(b, off, (int) Math.min(len, remaining));
       if (n > 0) remaining -= n;
       return n;
@@ -269,7 +283,8 @@ class MobileTools extends ReactContextBaseJavaModule {
 
     @Override
     public long skip(long n) throws IOException {
-      if (remaining <= 0) throw new IOException("Shared image too large");
+      checkCap();
+      if (remaining <= 0) return 0;
       long skipped = super.skip(Math.min(n, remaining));
       if (skipped > 0) remaining -= skipped;
       return skipped;
