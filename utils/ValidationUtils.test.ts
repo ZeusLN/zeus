@@ -248,15 +248,47 @@ describe('isValidPort', () => {
         expect(ValidationUtils.isValidPort('a')).toBe(false);
     });
 
-    it('rejects anything other than digits', () => {
+    it('rejects anything other than digits before a path', () => {
         expect(ValidationUtils.isValidPort('')).toBe(false);
         expect(ValidationUtils.isValidPort('8080@evil.com')).toBe(false);
         expect(ValidationUtils.isValidPort('8080@evil.com/')).toBe(false);
-        expect(ValidationUtils.isValidPort('8080/path')).toBe(false);
         expect(ValidationUtils.isValidPort('8080#')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080?')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080\\@evil.com')).toBe(false);
         expect(ValidationUtils.isValidPort('8080 ')).toBe(false);
         expect(ValidationUtils.isValidPort('80.80')).toBe(false);
         expect(ValidationUtils.isValidPort('1e3')).toBe(false);
+        expect(ValidationUtils.isValidPort('/lnd')).toBe(false);
+    });
+
+    // Saved wallets combine a port with a path this way, since the
+    // backends append the port after any path in the server address
+    it('accepts a path after the port', () => {
+        expect(ValidationUtils.isValidPort('8080/')).toBe(true);
+        expect(ValidationUtils.isValidPort('8443/lnd')).toBe(true);
+        expect(ValidationUtils.isValidPort('8443/lnd/v1/')).toBe(true);
+    });
+
+    it('checks the range of a port with a path', () => {
+        expect(ValidationUtils.isValidPort('0/lnd')).toBe(false);
+        expect(ValidationUtils.isValidPort('65536/lnd')).toBe(false);
+    });
+
+    it('rejects a path that could change the host or query', () => {
+        expect(ValidationUtils.isValidPort('8080/x@evil.com')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080/x?y')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080/x#y')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080/x\\y')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080/x%2F')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080/x:1')).toBe(false);
+    });
+
+    it('rejects a long invalid path without backtracking', () => {
+        const start = Date.now();
+        expect(ValidationUtils.isValidPort(`8080/${'a'.repeat(10000)}@`)).toBe(
+            false
+        );
+        expect(Date.now() - start).toBeLessThan(100);
     });
 });
 
