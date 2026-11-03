@@ -274,6 +274,7 @@ describe('ChoosePaymentMethod BIP 21 amount check', () => {
         mockInvoiceSats.lnbc12k = 12000;
         mockInvoiceSats.lnbc12k5 = 12000.5;
         mockInvoiceSats.lnbc0 = 0;
+        mockInvoiceSats.lnbc12001 = 12001;
     });
 
     it('warns when the amount differs from the lightning invoice amount', async () => {
@@ -286,6 +287,36 @@ describe('ChoosePaymentMethod BIP 21 amount check', () => {
         expect(screen.queryByText(MISMATCH)).not.toBeNull();
         // the URI amount is still the one shown and checked
         expect(list().satAmount).toBe('12000');
+    });
+
+    it('warns when the amount is 1 sat below a whole-sat invoice amount', async () => {
+        await renderView({
+            value: ADDRESS,
+            satAmount: '12000',
+            lightning: 'lnbc12001'
+        });
+
+        expect(screen.queryByText(MISMATCH)).not.toBeNull();
+    });
+
+    it('warns when the amount is higher than the invoice amount', async () => {
+        await renderView({
+            value: ADDRESS,
+            satAmount: '15000',
+            lightning: 'lnbc12k'
+        });
+
+        expect(screen.queryByText(MISMATCH)).not.toBeNull();
+    });
+
+    it('does not warn for amount=0, which is not shown', async () => {
+        await renderView({
+            value: ADDRESS,
+            satAmount: '0',
+            lightning: 'lnbc15k'
+        });
+
+        expect(screen.queryByText(MISMATCH)).toBeNull();
     });
 
     it('does not warn when the amounts match', async () => {
