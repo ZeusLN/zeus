@@ -47,6 +47,9 @@ const renderCreate = async (
         navigate: jest.fn(),
         // returns the unsubscribe function, as the navigator does
         addListener: jest.fn(() => jest.fn()),
+        // The screen does not call getState() now, so routes do not change
+        // what it does. They stay as a guard: if a stack check comes back,
+        // the test opened from the ZEUS Pay screen gets popTo(), not goBack()
         getState: () => ({
             routes: [...routes, 'CreateCashuLightningAddress'].map((name) => ({
                 name
