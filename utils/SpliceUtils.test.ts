@@ -14,6 +14,7 @@ jest.mock('./LocaleUtils', () => ({
 import {
     SPLICE_OUT_MIN_SATS,
     getSpliceAmountError,
+    getSpliceChannelError,
     getSpliceErrorMessage,
     getSpliceInAvailableSats,
     getSpliceOutAvailableSats
@@ -131,6 +132,30 @@ describe('SpliceUtils', () => {
             );
             expect(getSpliceErrorMessage('Node not initialized')).toEqual(
                 'Node not initialized'
+            );
+        });
+    });
+
+    describe('getSpliceChannelError', () => {
+        it('accepts an active channel with no splice in progress', () => {
+            expect(getSpliceChannelError(true, false)).toBeNull();
+        });
+
+        it('refuses a channel whose peer is offline', () => {
+            expect(getSpliceChannelError(false, false)).toEqual(
+                en['views.Splice.error.channelInactive']
+            );
+        });
+
+        it('refuses a channel that is already splicing', () => {
+            expect(getSpliceChannelError(true, true)).toEqual(
+                en['views.Splice.error.alreadySplicing']
+            );
+        });
+
+        it('asks for the peer first when both apply', () => {
+            expect(getSpliceChannelError(false, true)).toEqual(
+                en['views.Splice.error.channelInactive']
             );
         });
     });

@@ -14,6 +14,7 @@ import Channel from '../models/Channel';
 
 import Storage from '../storage';
 import BackendUtils from '../utils/BackendUtils';
+import { localeString } from '../utils/LocaleUtils';
 import {
     SPLICES_KEY,
     SpliceDirection,
@@ -69,6 +70,8 @@ export default class SpliceStore {
     private nodePubkey: string | null = null;
     private otherNodesSplices: StoredSplice[] = [];
     private saveQueue: Promise<unknown> = Promise.resolve();
+    // The channel the Splicing screen is following
+    private spliceUserChannelId: string | null = null;
 
     @observable public spliceInAvailableSats: number | null = null;
     @observable public loadingSpliceInAvailable = false;
@@ -109,6 +112,7 @@ export default class SpliceStore {
         this.spliceTxid = null;
         this.spliceError = null;
         this.spliceErrorDetail = null;
+        this.spliceUserChannelId = null;
     };
 
     // Follows splices for the connected node, including ones the peer starts.
@@ -174,6 +178,19 @@ export default class SpliceStore {
         const pending = this.pendingSplices.some(
             (splice) => splice.userChannelId === userChannelId
         );
+
+        // The Splicing screen shows "requested" when the node stopped
+        // waiting before the peer answered; the answer can still come
+        const requested =
+            userChannelId === this.spliceUserChannelId &&
+            this.spliceSuccess &&
+            !this.spliceTxid;
+        if (requested && type === 'splicePending' && event.txid) {
+            this.spliceTxid = event.txid;
+        } else if (requested && type === 'spliceFailed') {
+            this.spliceSuccess = false;
+            this.spliceError = localeString('views.Splice.failedLate');
+        }
 
         if (type === 'splicePending' && event.txid) {
             const intent = this.intents.get(userChannelId);
@@ -351,6 +368,7 @@ export default class SpliceStore {
         if (userChannelId) {
             this.intents.set(userChannelId, { direction, amountSats, address });
         }
+        this.spliceUserChannelId = userChannelId || null;
 
         try {
             let result: any;

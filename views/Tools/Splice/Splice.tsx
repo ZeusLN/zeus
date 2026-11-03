@@ -32,6 +32,7 @@ import { localeString } from '../../../utils/LocaleUtils';
 import {
     SpliceDirection,
     getSpliceAmountError,
+    getSpliceChannelError,
     getSpliceOutAvailableSats
 } from '../../../utils/SpliceUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -109,11 +110,12 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
     }
 
     private validateChannel = (channel: Channel): boolean => {
-        if (!channel.isActive) {
-            Alert.alert(
-                localeString('general.error'),
-                localeString('views.Splice.error.channelInactive')
-            );
+        const error = getSpliceChannelError(
+            channel.isActive,
+            !!this.props.SpliceStore.getPendingSplice(channel)
+        );
+        if (error) {
+            Alert.alert(localeString('general.error'), error);
             return false;
         }
         return true;
