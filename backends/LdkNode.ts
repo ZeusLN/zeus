@@ -17,6 +17,7 @@ import {
 } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { markRequestTimeout } from '../utils/RequestTimeoutUtils';
+import type { SpliceEvent } from '../utils/SpliceUtils';
 import type {
     Network,
     NodeStatus,
@@ -153,6 +154,30 @@ export default class LdkNode {
         });
         return unsubscribe;
     };
+
+    watchSpliceEvents = (onEvent: (event: SpliceEvent) => void): (() => void) =>
+        this.subscribeToEvents((event) => {
+            switch (event.type) {
+                case 'splicePending':
+                    onEvent({
+                        type: event.type,
+                        userChannelId: event.userChannelId,
+                        channelId: event.channelId,
+                        txid: event.newFundingTxo_txid,
+                        vout: event.newFundingTxo_vout
+                    });
+                    break;
+                case 'spliceFailed':
+                case 'channelReady':
+                case 'channelClosed':
+                    onEvent({
+                        type: event.type,
+                        userChannelId: event.userChannelId,
+                        channelId: event.channelId
+                    });
+                    break;
+            }
+        });
 
     /**
      * Start the event loop
