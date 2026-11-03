@@ -20,7 +20,7 @@ jest.mock('../storage', () => ({
 
 import { extendObservable } from 'mobx';
 
-import SpliceStore from './SpliceStore';
+import SpliceStore, { SPLICE_HISTORY_LIMIT } from './SpliceStore';
 import Storage from '../storage';
 import BackendUtils from '../utils/BackendUtils';
 
@@ -639,6 +639,121 @@ describe('SpliceStore splice tracking', () => {
         });
     });
 
+    describe('history', () => {
+        const lock = () =>
+            emit({
+                type: 'channelReady',
+                userChannelId: 'user-chan',
+                channelId: 'chan'
+            });
+
+        it("notes the channel's capacity when the splice starts", async () => {
+            channelsStore.channels = [{ ...channel, capacity: '300000' }];
+            const store = await trackingStore();
+
+            emit(pendingEvent);
+
+            expect(store.splices[0].capacityBefore).toEqual(300000);
+        });
+
+        it('notes the capacity after once the refreshed channel shows the splice', async () => {
+            channelsStore.channels = [{ ...channel, capacity: '300000' }];
+            channelsStore.hasChannelData = true;
+            const store = await trackingStore();
+            emit(pendingEvent);
+            lock();
+            expect(store.splices[0].capacityAfter).toBeUndefined();
+
+            channelsStore.channels = [
+                {
+                    ...channel,
+                    channel_point: 'splice-txid:1',
+                    capacity: '400000'
+                }
+            ];
+
+            expect(store.splices[0]).toEqual(
+                expect.objectContaining({
+                    status: 'locked',
+                    capacityBefore: 300000,
+                    capacityAfter: 400000
+                })
+            );
+        });
+
+        it('keeps a finished splice when its channel closes', async () => {
+            const store = await trackingStore();
+            emit(pendingEvent);
+            lock();
+
+            emit({
+                type: 'channelClosed',
+                userChannelId: 'user-chan',
+                channelId: 'chan'
+            });
+            channelsStore.channels = [];
+            channelsStore.hasChannelData = true;
+
+            expect(store.splices).toHaveLength(1);
+            expect(store.splices[0].status).toEqual('locked');
+        });
+
+        it('does not keep a splice that failed', async () => {
+            const store = await trackingStore();
+            emit(pendingEvent);
+
+            emit({
+                type: 'spliceFailed',
+                userChannelId: 'user-chan',
+                channelId: 'chan'
+            });
+
+            expect(store.splices).toEqual([]);
+        });
+
+        it("keeps a channel's earlier splices when it splices again", async () => {
+            const store = await trackingStore();
+            emit(pendingEvent);
+            lock();
+
+            emit({ ...pendingEvent, txid: 'second-txid' });
+
+            expect(store.splices.map((splice) => splice.txid)).toEqual([
+                'splice-txid',
+                'second-txid'
+            ]);
+            expect(store.getPendingSplice(channel as any)?.txid).toEqual(
+                'second-txid'
+            );
+        });
+
+        it(`keeps the latest ${SPLICE_HISTORY_LIMIT} finished splices`, async () => {
+            const finished = Array.from(
+                { length: SPLICE_HISTORY_LIMIT + 2 },
+                (_, i) => ({
+                    userChannelId: `chan-${i}`,
+                    channelId: `chan-${i}`,
+                    txid: `txid-${i}`,
+                    initiator: 'remote',
+                    startedAt: i,
+                    status: 'locked',
+                    nodePubkey: '03me'
+                })
+            );
+            mockStored(finished);
+            const store = await trackingStore();
+
+            emit(pendingEvent);
+
+            expect(store.pendingSplices).toHaveLength(1);
+            expect(store.splices).toHaveLength(SPLICE_HISTORY_LIMIT + 1);
+            const kept = store.splices.map((splice) => splice.txid);
+            expect(kept).not.toContain('txid-0');
+            expect(kept).not.toContain('txid-1');
+            expect(kept).toContain(`txid-${SPLICE_HISTORY_LIMIT + 1}`);
+        });
+    });
+
     describe('across restarts', () => {
         const stored = (overrides: any = {}) => ({
             userChannelId: 'user-chan',
@@ -648,6 +763,7 @@ describe('SpliceStore splice tracking', () => {
             direction: 'in',
             amountSats: 50000,
             startedAt: 1,
+            status: 'pending',
             nodePubkey: '03me',
             ...overrides
         });
@@ -695,7 +811,7 @@ describe('SpliceStore splice tracking', () => {
             ]);
         });
 
-        it('saves the list without a splice once it locks', async () => {
+        it('saves a splice that locked as finished', async () => {
             await trackingStore();
             emit(pendingEvent);
             emit({
@@ -705,22 +821,48 @@ describe('SpliceStore splice tracking', () => {
             });
             await flushSaves();
 
-            expect(lastSaved()).toEqual([]);
+            expect(lastSaved()).toEqual([
+                expect.objectContaining({
+                    txid: 'splice-txid',
+                    status: 'locked',
+                    lockedAt: expect.any(Number)
+                })
+            ]);
         });
 
-        it('drops a splice that locked while the app was closed', async () => {
-            mockStored([stored()]);
+        it('finishes a splice that locked while the app was closed', async () => {
+            mockStored([stored({ capacityBefore: 300000 })]);
             const store = await trackingStore();
             expect(store.pendingSplices).toHaveLength(1);
 
             channelsStore.channels = [
-                { ...channel, channel_point: 'splice-txid:1' }
+                {
+                    ...channel,
+                    channel_point: 'splice-txid:1',
+                    capacity: '350000'
+                }
             ];
             channelsStore.hasChannelData = true;
             await flushSaves();
 
             expect(store.pendingSplices).toEqual([]);
-            expect(lastSaved()).toEqual([]);
+            expect(store.splices).toEqual([
+                expect.objectContaining({
+                    status: 'locked',
+                    capacityBefore: 300000,
+                    capacityAfter: 350000
+                })
+            ]);
+            expect(lastSaved()[0].status).toEqual('locked');
+        });
+
+        it('treats a record saved without a status as pending', async () => {
+            const { status: _status, ...legacy } = stored();
+            mockStored([legacy]);
+
+            const store = await trackingStore();
+
+            expect(store.pendingSplices).toHaveLength(1);
         });
 
         it('drops a splice whose channel is no longer open', async () => {

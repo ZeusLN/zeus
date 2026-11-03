@@ -1,5 +1,6 @@
 import {
     action,
+    computed,
     IReactionDisposer,
     observable,
     reaction,
@@ -38,7 +39,7 @@ interface SpliceIntent {
     address?: string;
 }
 
-export interface PendingSplice {
+export interface SpliceRecord {
     userChannelId: string;
     channelId: string;
     txid: string;
@@ -49,15 +50,26 @@ export interface PendingSplice {
     amountSats?: number;
     address?: string;
     startedAt: number;
+    // locked: confirmed and in use by the channel; kept for Activity
+    status: 'pending' | 'locked';
+    lockedAt?: number;
+    // the channel's capacity before and after, so a splice the peer started
+    // gets a direction and an amount once it locks
+    capacityBefore?: number;
+    capacityAfter?: number;
 }
 
 // One list for every wallet, like swaps, so each record names its node
-interface StoredSplice extends PendingSplice {
+interface StoredSplice extends SpliceRecord {
     nodePubkey: string;
 }
 
+// Finished splices kept per wallet; older ones drop out of Activity
+export const SPLICE_HISTORY_LIMIT = 50;
+
 export default class SpliceStore {
-    @observable public pendingSplices: PendingSplice[] = [];
+    // this node's splices, in progress and finished
+    @observable public splices: SpliceRecord[] = [];
     // Channels whose splice failed after the splice screens were left, so
     // the channel screen can say so. Not saved: a restart forgets them
     @observable public failedSpliceChannels: string[] = [];
@@ -86,6 +98,10 @@ export default class SpliceStore {
     channelsStore: ChannelsStore;
     balanceStore: BalanceStore;
     nodeInfoStore: NodeInfoStore;
+
+    @computed public get pendingSplices(): SpliceRecord[] {
+        return this.splices.filter((splice) => splice.status === 'pending');
+    }
 
     constructor(
         channelsStore: ChannelsStore,
@@ -142,9 +158,12 @@ export default class SpliceStore {
             this.otherNodesSplices = stored.filter(
                 (splice) => splice.nodePubkey !== nodePubkey
             );
-            this.pendingSplices = stored
+            this.splices = stored
                 .filter((splice) => splice.nodePubkey === nodePubkey)
-                .map(({ nodePubkey: _nodePubkey, ...splice }) => splice);
+                .map(({ nodePubkey: _nodePubkey, ...splice }) => ({
+                    ...splice,
+                    status: splice.status || 'pending'
+                }));
         });
 
         this.disposeReconcile = reaction(
@@ -167,7 +186,7 @@ export default class SpliceStore {
         this.disposeReconcile = null;
         this.nodePubkey = null;
         this.otherNodesSplices = [];
-        this.pendingSplices = [];
+        this.splices = [];
         this.failedSpliceChannels = [];
         this.intents.clear();
     };
@@ -198,9 +217,14 @@ export default class SpliceStore {
             this.failedSpliceChannels = this.failedSpliceChannels.filter(
                 (id) => id !== userChannelId
             );
-            this.setPendingSplices([
-                ...this.pendingSplices.filter(
-                    (splice) => splice.userChannelId !== userChannelId
+            const capacity = this.channelsStore.channels.find(
+                (channel) => channel.user_channel_id === userChannelId
+            )?.capacity;
+            this.setSplices([
+                ...this.splices.filter(
+                    (splice) =>
+                        splice.userChannelId !== userChannelId ||
+                        splice.status !== 'pending'
                 ),
                 {
                     userChannelId,
@@ -209,7 +233,10 @@ export default class SpliceStore {
                     vout: event.vout,
                     initiator: intent ? 'local' : 'remote',
                     ...intent,
-                    startedAt: Date.now()
+                    startedAt: Date.now(),
+                    status: 'pending',
+                    capacityBefore:
+                        capacity != null ? Number(capacity) : undefined
                 }
             ]);
         } else if (type === 'spliceFailed' || type === 'channelClosed') {
@@ -225,7 +252,15 @@ export default class SpliceStore {
                 ];
             }
         } else if (type === 'channelReady' && pending) {
-            this.removePendingSplice(userChannelId);
+            // the capacity after is read once the refresh below lands
+            this.setSplices(
+                this.splices.map((splice) =>
+                    splice.userChannelId === userChannelId &&
+                    splice.status === 'pending'
+                        ? { ...splice, status: 'locked', lockedAt: Date.now() }
+                        : splice
+                )
+            );
         } else {
             return;
         }
@@ -242,22 +277,46 @@ export default class SpliceStore {
         const { hasChannelData, channels } = this.channelsStore;
         if (!hasChannelData) return;
 
-        const remaining = this.pendingSplices.filter((splice) => {
+        let changed = false;
+        const splices = this.splices.flatMap((splice): SpliceRecord[] => {
             const channel = channels.find(
                 (c) => c.user_channel_id === splice.userChannelId
             );
-            // No longer open: closed or closing, so the splice is moot
-            if (!channel) return false;
-            // Already running on the splice transaction: it locked
-            return channel.channel_point?.split(':')[0] !== splice.txid;
+            const onSplice =
+                !!channel &&
+                channel.channel_point?.split(':')[0] === splice.txid;
+
+            if (splice.status === 'pending') {
+                // No longer open: closed or closing, so the splice is moot
+                if (!channel) {
+                    changed = true;
+                    return [];
+                }
+                // Already running on the splice transaction: it locked
+                if (onSplice) {
+                    changed = true;
+                    return [
+                        {
+                            ...splice,
+                            status: 'locked',
+                            lockedAt: Date.now(),
+                            capacityAfter: Number(channel.capacity)
+                        }
+                    ];
+                }
+            } else if (onSplice && splice.capacityAfter == null) {
+                changed = true;
+                return [
+                    { ...splice, capacityAfter: Number(channel!.capacity) }
+                ];
+            }
+            return [splice];
         });
 
-        if (remaining.length !== this.pendingSplices.length) {
-            this.setPendingSplices(remaining);
-        }
+        if (changed) this.setSplices(splices);
     };
 
-    public getPendingSplice = (channel: Channel): PendingSplice | null =>
+    public getPendingSplice = (channel: Channel): SpliceRecord | null =>
         (channel.user_channel_id &&
             this.pendingSplices.find(
                 (splice) => splice.userChannelId === channel.user_channel_id
@@ -268,18 +327,27 @@ export default class SpliceStore {
         !!channel.user_channel_id &&
         this.failedSpliceChannels.includes(channel.user_channel_id);
 
+    // finished splices stay as history
     @action
     private removePendingSplice = (userChannelId: string) => {
-        this.setPendingSplices(
-            this.pendingSplices.filter(
-                (splice) => splice.userChannelId !== userChannelId
+        this.setSplices(
+            this.splices.filter(
+                (splice) =>
+                    splice.userChannelId !== userChannelId ||
+                    splice.status !== 'pending'
             )
         );
     };
 
     @action
-    private setPendingSplices = (splices: PendingSplice[]) => {
-        this.pendingSplices = splices;
+    private setSplices = (splices: SpliceRecord[]) => {
+        const finished = splices
+            .filter((splice) => splice.status === 'locked')
+            .sort((a, b) => b.startedAt - a.startedAt)
+            .slice(0, SPLICE_HISTORY_LIMIT);
+        this.splices = splices.filter(
+            (splice) => splice.status === 'pending' || finished.includes(splice)
+        );
         this.saveSplices();
     };
 
@@ -300,7 +368,7 @@ export default class SpliceStore {
         if (!nodePubkey) return;
         const splices: StoredSplice[] = [
             ...this.otherNodesSplices,
-            ...this.pendingSplices.map((splice) => ({ ...splice, nodePubkey }))
+            ...this.splices.map((splice) => ({ ...splice, nodePubkey }))
         ];
         this.saveQueue = this.saveQueue
             .then(() => Storage.setItem(SPLICES_KEY, splices))

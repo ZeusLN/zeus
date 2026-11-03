@@ -8,6 +8,7 @@ import Swap, { SwapState } from './../models/Swap';
 
 //on-chain
 import Transaction from './../models/Transaction';
+import Splice from './../models/Splice';
 
 // ecash
 import CashuInvoice from './../models/CashuInvoice';
@@ -22,6 +23,7 @@ import InvoicesStore from './InvoicesStore';
 import TransactionsStore from './TransactionsStore';
 import CashuStore from './CashuStore';
 import SwapStore from './SwapStore';
+import SpliceStore from './SpliceStore';
 import NodeInfoStore from './NodeInfoStore';
 
 import BackendUtils from './../utils/BackendUtils';
@@ -62,6 +64,7 @@ type ActivityItem =
     | CashuPayment
     | CashuToken
     | Swap
+    | Splice
     | LSPActivity;
 
 export interface Filter {
@@ -69,6 +72,7 @@ export interface Filter {
     lightning: boolean;
     onChain: boolean;
     cashu: boolean;
+    splices: boolean;
     sent: boolean;
     swaps: boolean;
     submarine: boolean;
@@ -100,6 +104,7 @@ export const DEFAULT_FILTERS = {
     lightning: true,
     onChain: true,
     cashu: true,
+    splices: true,
     sent: true,
     swaps: true,
     submarine: true,
@@ -148,6 +153,7 @@ export default class ActivityStore {
     transactionsStore: TransactionsStore;
     cashuStore: CashuStore;
     swapStore: SwapStore;
+    spliceStore: SpliceStore;
     nodeInfoStore: NodeInfoStore;
     private activityPayments?: Array<Payment | any>;
     private activityInvoices?: Array<Invoice>;
@@ -159,6 +165,7 @@ export default class ActivityStore {
         transactionsStore: TransactionsStore,
         cashuStore: CashuStore,
         swapStore: SwapStore,
+        spliceStore: SpliceStore,
         nodeInfoStore: NodeInfoStore
     ) {
         this.settingsStore = settingsStore;
@@ -167,6 +174,7 @@ export default class ActivityStore {
         this.invoicesStore = invoicesStore;
         this.cashuStore = cashuStore;
         this.swapStore = swapStore;
+        this.spliceStore = spliceStore;
         this.nodeInfoStore = nodeInfoStore;
     }
 
@@ -181,6 +189,7 @@ export default class ActivityStore {
             lightning: true,
             onChain: true,
             cashu: true,
+            splices: true,
             swaps: true,
             submarine: true,
             reverse: true,
@@ -322,14 +331,24 @@ export default class ActivityStore {
         const invoices = this.activityInvoices ?? this.invoicesStore.invoices;
         const swaps = this.swapStore.swaps;
         const lspOrders = await this.getLSPOrders();
+        const splices = this.spliceStore.splices.map(
+            (splice) => new Splice(splice)
+        );
 
         let additions = payments.concat(invoices);
 
         additions = additions.concat(swaps);
         additions = additions.concat(lspOrders);
+        additions = additions.concat(splices);
 
         if (BackendUtils.supportsOnchainSends()) {
-            additions = additions.concat(transactions);
+            // a splice's own row stands in for its on-chain transaction
+            const spliceTxids = new Set(splices.map((splice) => splice.txid));
+            additions = additions.concat(
+                transactions.filter(
+                    (transaction) => !spliceTxids.has(transaction.tx)
+                )
+            );
         }
 
         if (

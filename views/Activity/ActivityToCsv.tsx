@@ -15,6 +15,7 @@ import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
 import CashuToken from '../../models/CashuToken';
 import Swap from '../../models/Swap';
+import Splice from '../../models/Splice';
 import { LSPActivity } from '../../models/LSP';
 
 import Button from '../../components/Button';
@@ -38,6 +39,7 @@ type ActivityItem =
     | CashuPayment
     | CashuToken
     | Swap
+    | Splice
     | LSPActivity;
 
 interface ActivityProps {

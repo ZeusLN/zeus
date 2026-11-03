@@ -64,6 +64,7 @@ describe('ActivityStore scoped LND fetches', () => {
             { transactions: [] } as any,
             { checkPendingItems: jest.fn() } as any,
             { swaps: [], fetchAndUpdateSwaps: jest.fn() } as any,
+            { splices: [] } as any,
             { nodeInfo: { version: '0.20.0-beta' } } as any
         );
         const startDate = new Date(2024, 4, 10);
@@ -115,6 +116,7 @@ describe('ActivityStore scoped LND fetches', () => {
             { transactions: [] } as any,
             { checkPendingItems: jest.fn() } as any,
             { swaps: [], fetchAndUpdateSwaps: jest.fn() } as any,
+            { splices: [] } as any,
             nodeInfoStore as any
         );
 
@@ -144,6 +146,7 @@ describe('ActivityStore scoped LND fetches', () => {
             { transactions: [] } as any,
             { checkPendingItems: jest.fn() } as any,
             { swaps: [], fetchAndUpdateSwaps: jest.fn() } as any,
+            { splices: [] } as any,
             { nodeInfo: { version: '0.20.0-beta' } } as any
         );
         (store as any).activityPayments = [activityItem(1)];
@@ -181,6 +184,7 @@ describe('ActivityStore scoped LND fetches', () => {
             { transactions: [] } as any,
             { checkPendingItems: jest.fn() } as any,
             { swaps: [] } as any,
+            { splices: [] } as any,
             { nodeInfo: { version: '0.20.0-beta' } } as any
         );
         store.filters = {
@@ -221,6 +225,7 @@ describe('ActivityStore scoped LND fetches', () => {
             { transactions: [] } as any,
             { checkPendingItems: jest.fn() } as any,
             { swaps: [], fetchAndUpdateSwaps: jest.fn() } as any,
+            { splices: [] } as any,
             { nodeInfo: {} } as any
         );
 
