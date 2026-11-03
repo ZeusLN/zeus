@@ -26,7 +26,7 @@ jest.mock('../../components/Text', () => 'Text');
 jest.mock('../../components/TextInput', () => 'TextInput');
 
 import * as React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import Privacy from './Privacy';
 
 // Mounts the view with these saved privacy settings, lets componentDidMount
@@ -118,5 +118,123 @@ describe('Privacy unmount', () => {
                 customMempoolInstance: 'https://mempool.example.com'
             })
         ).toEqual({});
+    });
+});
+
+// A fake store with the real debounce contract: debounced patches
+// collect until a flush (timer, unmount, backgrounding) writes them
+const makeStore = (privacy: any) => {
+    const stored: any = { privacy: { ...privacy } };
+    let pending: any = {};
+    const store = {
+        stored,
+        settings: {},
+        getSettings: jest.fn(async () => stored),
+        updateSettingsGroup: jest.fn((group: string, patch: any) => {
+            stored[group] = {
+                ...stored[group],
+                ...(typeof patch === 'function' ? patch(stored[group]) : patch)
+            };
+        }),
+        updateSettingsGroupDebounced: jest.fn((group: string, patch: any) => {
+            pending[group] = { ...pending[group], ...patch };
+        }),
+        flushPendingSettings: jest.fn(() => {
+            for (const group of Object.keys(pending)) {
+                stored[group] = { ...stored[group], ...pending[group] };
+            }
+            pending = {};
+        })
+    };
+    return store;
+};
+
+const mount = (store: any) =>
+    render(<Privacy navigation={{} as any} SettingsStore={store} />);
+
+const typeInto = (placeholder: string, text: string) =>
+    fireEvent.changeText(
+        screen.container.queryAll(
+            (node) =>
+                node.type === 'TextInput' &&
+                node.props.placeholder === placeholder
+        )[0],
+        text
+    );
+
+// Every prefix of a typed URL is valid, so an invalid final value used
+// to leave the last valid prefix saved, and requests went to that host
+// (#4974)
+describe.each([
+    ['customBlockExplorer', 'https://explorer.mynode.local'],
+    ['customMempoolInstance', 'https://mempool.mynode.local']
+])('Privacy %s ending invalid', (field, placeholder) => {
+    const privacy = {
+        defaultBlockExplorer: 'Custom',
+        mempoolInstance: 'Custom',
+        customBlockExplorer: 'https://saved-explorer.onion',
+        customMempoolInstance: 'https://saved-mempool.onion'
+    };
+
+    it('keeps the saved URL when the prefix was still pending', async () => {
+        const store = makeStore(privacy);
+        const { unmount } = await mount(store);
+
+        await typeInto(placeholder, 'https://clearnet');
+        await typeInto(placeholder, 'https://clearnet .onion');
+        await unmount();
+
+        expect(store.stored.privacy[field]).toEqual((privacy as any)[field]);
+    });
+
+    it('restores the saved URL when the prefix was already written', async () => {
+        const store = makeStore(privacy);
+        const { unmount } = await mount(store);
+
+        await typeInto(placeholder, 'https://clearnet');
+        // the debounce timer fires while the user pauses
+        store.flushPendingSettings();
+        expect(store.stored.privacy[field]).toEqual('https://clearnet');
+        await typeInto(placeholder, 'https://clearnet .onion');
+        await unmount();
+
+        expect(store.stored.privacy[field]).toEqual((privacy as any)[field]);
+    });
+
+    // A written URL cannot be told apart from a written prefix
+    it('restores the saved URL over a valid URL written earlier', async () => {
+        const store = makeStore(privacy);
+        const { unmount } = await mount(store);
+
+        await typeInto(placeholder, 'https://new.onion');
+        store.flushPendingSettings();
+        expect(store.stored.privacy[field]).toEqual('https://new.onion');
+        await typeInto(placeholder, 'https://new .onion');
+        await unmount();
+
+        expect(store.stored.privacy[field]).toEqual((privacy as any)[field]);
+    });
+
+    it('restores an empty saved URL', async () => {
+        const store = makeStore({ ...privacy, [field]: '' });
+        const { unmount } = await mount(store);
+
+        await typeInto(placeholder, 'https://clearnet');
+        store.flushPendingSettings();
+        await typeInto(placeholder, 'https://clearnet .onion');
+        await unmount();
+
+        expect(store.stored.privacy[field]).toEqual('');
+    });
+
+    it('saves a valid final URL', async () => {
+        const store = makeStore(privacy);
+        const { unmount } = await mount(store);
+
+        await typeInto(placeholder, 'https://clearnet .onion');
+        await typeInto(placeholder, 'https://new.onion');
+        await unmount();
+
+        expect(store.stored.privacy[field]).toEqual('https://new.onion');
     });
 });
