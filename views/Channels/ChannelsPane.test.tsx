@@ -68,7 +68,12 @@ jest.mock('../../components/Channels/ChannelItem', () => {
     const { Text } = require('react-native');
     const { useEffect } = require('react');
     return {
-        ChannelItem: ({ title, expirationStatus, statusSuffix }: any) => {
+        ChannelItem: ({
+            title,
+            status,
+            expirationStatus,
+            statusSuffix
+        }: any) => {
             useEffect(() => {
                 mockRowMounts.count++;
             }, []);
@@ -78,6 +83,7 @@ jest.mock('../../components/Channels/ChannelItem', () => {
                     {statusSuffix && (
                         <Text>{`${title} status: ${statusSuffix}`}</Text>
                     )}
+                    {status && <Text>{`${title} tag: ${status}`}</Text>}
                 </>
             );
         }
@@ -158,8 +164,18 @@ const makeStores = (height: number, leases: any[]) => ({
     LSPStore: observable({ getExtendableChannelsData: leases }) as any,
     NodeInfoStore: observable({
         nodeInfo: { currentBlockHeight: height }
-    }) as any
+    }) as any,
+    SpliceStore: splicesOf([])
 });
+
+const splicesOf = (pendingSplices: any[]) => {
+    const store: any = observable({ pendingSplices });
+    store.getPendingSplice = (c: any) =>
+        store.pendingSplices.find(
+            (splice: any) => splice.userChannelId === c.user_channel_id
+        ) || null;
+    return store;
+};
 
 const update = (fn: () => void) => act(async () => runInAction(fn));
 
@@ -256,5 +272,57 @@ describe('ChannelsPane pending channel status', () => {
         expect(
             screen.getByText('ldk status: · views.Channel.waitingForPeer')
         ).toBeOnTheScreen();
+    });
+});
+
+describe('ChannelsPane splicing status', () => {
+    const splicing = { userChannelId: 'user-chan', txid: 'splice-txid' };
+
+    const renderWith = (row: any, pendingSplices: any[]) => {
+        const stores = makeStores(850000, []);
+        stores.ChannelsStore.filteredChannels = [
+            { ...channel, user_channel_id: 'user-chan', ...row }
+        ];
+        stores.SpliceStore = splicesOf(pendingSplices);
+        return { stores, rendered: renderPane(stores) };
+    };
+
+    beforeEach(() => {
+        mockRowMounts.count = 0;
+        jest.mocked(BackendUtils.supportsPendingChannels).mockReturnValue(
+            false
+        );
+        jest.mocked(BackendUtils.supportsClosedChannels).mockReturnValue(false);
+    });
+
+    it('tags an active channel with a splice in progress', async () => {
+        const { rendered } = renderWith({}, [splicing]);
+        await rendered;
+
+        expect(
+            screen.getByText('lsp tag: channel.status.splicing')
+        ).toBeOnTheScreen();
+    });
+
+    it('shows an offline channel as offline even while splicing', async () => {
+        const { rendered } = renderWith({ isActive: false }, [splicing]);
+        await rendered;
+
+        expect(screen.getByText('lsp tag: general.offline')).toBeOnTheScreen();
+    });
+
+    it('redraws the row when a splice starts', async () => {
+        const { stores, rendered } = renderWith({}, []);
+        await rendered;
+        expect(screen.getByText('lsp tag: general.online')).toBeOnTheScreen();
+
+        await update(() => {
+            stores.SpliceStore.pendingSplices = [splicing];
+        });
+
+        expect(
+            screen.getByText('lsp tag: channel.status.splicing')
+        ).toBeOnTheScreen();
+        expect(mockRowMounts.count).toBe(1);
     });
 });

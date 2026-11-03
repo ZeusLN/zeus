@@ -493,6 +493,77 @@ describe('SpliceStore splice tracking', () => {
         expect(store.pendingSplices).toHaveLength(1);
     });
 
+    it('finds the pending splice of a channel', async () => {
+        const store = await trackingStore();
+        emit(pendingEvent);
+
+        expect(store.getPendingSplice(channel as any)?.txid).toEqual(
+            'splice-txid'
+        );
+        expect(
+            store.getPendingSplice({ user_channel_id: 'other' } as any)
+        ).toBeNull();
+        // other backends' channels have no user_channel_id
+        expect(store.getPendingSplice({} as any)).toBeNull();
+    });
+
+    it('remembers a splice that failed after the splice screens were left', async () => {
+        const store = await trackingStore();
+        emit(pendingEvent);
+
+        emit({
+            type: 'spliceFailed',
+            userChannelId: 'user-chan',
+            channelId: 'chan'
+        });
+
+        expect(store.hasFailedSplice(channel as any)).toBe(true);
+        expect(store.hasFailedSplice({ user_channel_id: 'other' } as any)).toBe(
+            false
+        );
+    });
+
+    it('forgets the failure once a new splice is negotiated', async () => {
+        const store = await trackingStore();
+        emit(pendingEvent);
+        emit({
+            type: 'spliceFailed',
+            userChannelId: 'user-chan',
+            channelId: 'chan'
+        });
+
+        emit(pendingEvent);
+
+        expect(store.hasFailedSplice(channel as any)).toBe(false);
+    });
+
+    it('does not report a closed channel as a failed splice', async () => {
+        const store = await trackingStore();
+        emit(pendingEvent);
+
+        emit({
+            type: 'channelClosed',
+            userChannelId: 'user-chan',
+            channelId: 'chan'
+        });
+
+        expect(store.hasFailedSplice(channel as any)).toBe(false);
+    });
+
+    it('forgets failures when tracking stops', async () => {
+        const store = await trackingStore();
+        emit(pendingEvent);
+        emit({
+            type: 'spliceFailed',
+            userChannelId: 'user-chan',
+            channelId: 'chan'
+        });
+
+        store.stopTracking();
+
+        expect(store.hasFailedSplice(channel as any)).toBe(false);
+    });
+
     describe('across restarts', () => {
         const stored = (overrides: any = {}) => ({
             userChannelId: 'user-chan',

@@ -10,6 +10,8 @@ import BalanceStore from './BalanceStore';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
 
+import Channel from '../models/Channel';
+
 import Storage from '../storage';
 import BackendUtils from '../utils/BackendUtils';
 import {
@@ -55,6 +57,9 @@ interface StoredSplice extends PendingSplice {
 
 export default class SpliceStore {
     @observable public pendingSplices: PendingSplice[] = [];
+    // Channels whose splice failed after the splice screens were left, so
+    // the channel screen can say so. Not saved: a restart forgets them
+    @observable public failedSpliceChannels: string[] = [];
 
     private intents = new Map<string, SpliceIntent>();
     private tracking = false;
@@ -159,6 +164,7 @@ export default class SpliceStore {
         this.nodePubkey = null;
         this.otherNodesSplices = [];
         this.pendingSplices = [];
+        this.failedSpliceChannels = [];
         this.intents.clear();
     };
 
@@ -172,6 +178,9 @@ export default class SpliceStore {
         if (type === 'splicePending' && event.txid) {
             const intent = this.intents.get(userChannelId);
             this.intents.delete(userChannelId);
+            this.failedSpliceChannels = this.failedSpliceChannels.filter(
+                (id) => id !== userChannelId
+            );
             this.setPendingSplices([
                 ...this.pendingSplices.filter(
                     (splice) => splice.userChannelId !== userChannelId
@@ -190,6 +199,14 @@ export default class SpliceStore {
             const intended = this.intents.delete(userChannelId);
             if (!pending && !intended) return;
             this.removePendingSplice(userChannelId);
+            if (type === 'spliceFailed') {
+                this.failedSpliceChannels = [
+                    ...this.failedSpliceChannels.filter(
+                        (id) => id !== userChannelId
+                    ),
+                    userChannelId
+                ];
+            }
         } else if (type === 'channelReady' && pending) {
             this.removePendingSplice(userChannelId);
         } else {
@@ -222,6 +239,17 @@ export default class SpliceStore {
             this.setPendingSplices(remaining);
         }
     };
+
+    public getPendingSplice = (channel: Channel): PendingSplice | null =>
+        (channel.user_channel_id &&
+            this.pendingSplices.find(
+                (splice) => splice.userChannelId === channel.user_channel_id
+            )) ||
+        null;
+
+    public hasFailedSplice = (channel: Channel): boolean =>
+        !!channel.user_channel_id &&
+        this.failedSpliceChannels.includes(channel.user_channel_id);
 
     @action
     private removePendingSplice = (userChannelId: string) => {

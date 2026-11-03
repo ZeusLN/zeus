@@ -34,6 +34,7 @@ import ChannelsStore, {
 } from '../../stores/ChannelsStore';
 import LSPStore from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import SpliceStore from '../../stores/SpliceStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -64,6 +65,7 @@ interface ChannelsProps {
     ChannelsStore?: ChannelsStore;
     LSPStore?: LSPStore;
     NodeInfoStore?: NodeInfoStore;
+    SpliceStore?: SpliceStore;
 }
 
 interface ChannelsState {
@@ -72,7 +74,13 @@ interface ChannelsState {
     selectedPeer: any;
 }
 
-@inject('ChannelsStore', 'LSPStore', 'NodeInfoStore', 'ModalStore')
+@inject(
+    'ChannelsStore',
+    'LSPStore',
+    'NodeInfoStore',
+    'ModalStore',
+    'SpliceStore'
+)
 @observer
 export default class ChannelsPane extends React.PureComponent<
     ChannelsProps,
@@ -151,12 +159,16 @@ export default class ChannelsPane extends React.PureComponent<
     }
 
     renderItem = ({ item }: { item: Channel }) => {
-        const { ChannelsStore, navigation } = this.props;
+        const { ChannelsStore, SpliceStore, navigation } = this.props;
         const { largestChannelSats, channelsType } = ChannelsStore!;
 
         const getStatus = () => {
             if (item.isActive) {
-                return Status.Online;
+                // an offline channel shows as offline: its splice can't
+                // lock until the peer is back
+                return SpliceStore?.getPendingSplice(item)
+                    ? Status.Splicing
+                    : Status.Online;
             } else if (item.pendingOpen) {
                 return Status.Opening;
             } else if (item.pendingClose || item.closing) {
@@ -295,8 +307,13 @@ export default class ChannelsPane extends React.PureComponent<
     };
 
     render() {
-        const { ChannelsStore, LSPStore, NodeInfoStore, navigation } =
-            this.props;
+        const {
+            ChannelsStore,
+            LSPStore,
+            NodeInfoStore,
+            SpliceStore,
+            navigation
+        } = this.props;
         const {
             loading,
             getChannels,
@@ -325,12 +342,14 @@ export default class ChannelsPane extends React.PureComponent<
         };
 
         // renderItem reads the lease data and block height for each row's
-        // lease badge. Reading them here makes this observer re-render when
-        // they change, and passing them as extraData makes FlatList redraw
-        // its rows, which it otherwise skips while data is unchanged.
+        // lease badge, and pending splices for its status. Reading them here
+        // makes this observer re-render when they change, and passing them
+        // as extraData makes FlatList redraw its rows, which it otherwise
+        // skips while data is unchanged.
         const leaseExtraData = [
             LSPStore?.getExtendableChannelsData,
-            NodeInfoStore?.nodeInfo?.currentBlockHeight
+            NodeInfoStore?.nodeInfo?.currentBlockHeight,
+            SpliceStore?.pendingSplices
         ];
 
         // Render callbacks rather than components: a component created in
