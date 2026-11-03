@@ -19,6 +19,15 @@
 static RNSecureContainer *_secureTextField = nil;
 static UIView *_originalRootParent = nil;
 static NSUInteger _originalRootViewIndex = 0;
+// The view moved into the canvas. Restored by reference, since the active
+// window may be gone (e.g. on a bridge reload in the background).
+static UIView *_reparentedRootView = nil;
+
+@interface ShareBridge ()
+{
+    BOOL _hasListeners;
+}
+@end
 
 @implementation ShareBridge
 
@@ -47,11 +56,14 @@ RCT_EXPORT_MODULE(MobileTools);
     return [containerURL URLByAppendingPathComponent:@"sharedQR.txt"];
 }
 
-- (void)applySecureTextFieldHack {
+// Returns NO when the root view could not be moved into a secure canvas,
+// so the caller can report that protection is off.
+- (BOOL)applySecureTextFieldHack {
+    if (_secureTextField) return YES;
     UIWindow *window = [self activeWindow];
-    if (!window || !window.rootViewController) return;
+    if (!window || !window.rootViewController) return NO;
     UIView *rootView = window.rootViewController.view;
-    if (!rootView || _secureTextField) return;
+    if (!rootView) return NO;
 
     RNSecureContainer *container = [[RNSecureContainer alloc] initWithFrame:window.bounds];
     container.secureTextEntry = YES;
@@ -77,38 +89,63 @@ RCT_EXPORT_MODULE(MobileTools);
     // silently render content unprotected.
     if (!canvasView) {
         [container removeFromSuperview];
-        return;
+        return NO;
     }
 
     _secureTextField = container;
     _originalRootParent = rootView.superview;
     _originalRootViewIndex = [rootView.superview.subviews indexOfObject:rootView];
+    _reparentedRootView = rootView;
 
     [canvasView addSubview:rootView];
     rootView.frame = canvasView.bounds;
     rootView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    return YES;
 }
 
 - (void)removeSecureTextFieldHack {
-    if (!_secureTextField || !_originalRootParent) return;
-    UIWindow *window = [self activeWindow];
-    UIView *rootView = window ? window.rootViewController.view : nil;
-    if (rootView) {
-        [_originalRootParent insertSubview:rootView atIndex:_originalRootViewIndex];
+    if (!_secureTextField) return;
+    UIView *rootView = _reparentedRootView;
+    if (rootView && _originalRootParent) {
+        NSUInteger index = MIN(_originalRootViewIndex, _originalRootParent.subviews.count);
+        [_originalRootParent insertSubview:rootView atIndex:index];
+        rootView.frame = _originalRootParent.bounds;
     }
     [_secureTextField removeFromSuperview];
     _secureTextField = nil;
     _originalRootParent = nil;
     _originalRootViewIndex = 0;
+    _reparentedRootView = nil;
 }
 
 - (void)screenCaptureChanged {
+    if (!_hasListeners) return;
     [self sendEventWithName:@"ScreenRecordingStateChanged"
                        body:@{@"isCapturing": @([self activeWindow].windowScene.screen.isCaptured)}];
 }
 
 - (NSArray<NSString *> *)supportedEvents {
     return @[@"ScreenRecordingStateChanged"];
+}
+
+- (void)startObserving {
+    _hasListeners = YES;
+}
+
+- (void)stopObserving {
+    _hasListeners = NO;
+}
+
+// On a bridge reload, put the root view back and drop the secure container,
+// which is static and would otherwise outlive this module instance.
+- (void)invalidate {
+    [super invalidate];
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:UIScreenCapturedDidChangeNotification
+                                                  object:nil];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self removeSecureTextFieldHack];
+    });
 }
 
 RCT_EXPORT_METHOD(setSecureFlag:(BOOL)enable
@@ -118,25 +155,29 @@ RCT_EXPORT_METHOD(setSecureFlag:(BOOL)enable
     NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
     [nc removeObserver:self name:UIScreenCapturedDidChangeNotification object:nil];
 
-    if (enable) {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self applySecureTextFieldHack];
+    // Settle the promise on the main queue, after the view work, so a
+    // failed enable reaches JS as a rejection.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (enable) {
+            if (![self applySecureTextFieldHack]) {
+                reject(@"SECURE_FLAG_FAILED",
+                       @"Could not enable screen capture protection", nil);
+                return;
+            }
+            [nc addObserver:self selector:@selector(screenCaptureChanged)
+                       name:UIScreenCapturedDidChangeNotification object:nil];
             if ([self activeWindow].windowScene.screen.isCaptured) {
                 [self screenCaptureChanged];
             }
-        });
-
-        [nc addObserver:self selector:@selector(screenCaptureChanged)
-                   name:UIScreenCapturedDidChangeNotification object:nil];
-    } else {
-        dispatch_async(dispatch_get_main_queue(), ^{
+        } else {
             [self removeSecureTextFieldHack];
-        });
-        [self sendEventWithName:@"ScreenRecordingStateChanged"
-                           body:@{@"isCapturing": @NO}];
-    }
-
-    resolve(@(YES));
+            if (self->_hasListeners) {
+                [self sendEventWithName:@"ScreenRecordingStateChanged"
+                                   body:@{@"isCapturing": @NO}];
+            }
+        }
+        resolve(@(YES));
+    });
 }
 
 RCT_EXPORT_METHOD(getSharedImageBase64:(RCTPromiseResolveBlock)resolve
