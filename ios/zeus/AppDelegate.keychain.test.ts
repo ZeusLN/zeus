@@ -32,19 +32,25 @@ const extractCheck = () => {
 //   unlock        applicationProtectedDataDidBecomeAvailable:
 //   active:<0|1>  UIApplicationDidBecomeActiveNotification, with protected data
 //                 unavailable/available at that moment
-//   fail:<status> the next internet-password delete returns this OSStatus
+//   fail:<status>:<n>  the next n internet-password deletes return this OSStatus
+//   save          the app saves an internet password, as after onboarding
+//   check-saved   exit 3 if that saved item was deleted since
 const HARNESS = (check: string) => `#import <Foundation/Foundation.h>
 #import <Security/Security.h>
 
 static NSMutableArray *gDeleted;
-static NSNumber *gFailInternetDelete;
+static OSStatus gFailStatus;
+static int gFailCount;
+static BOOL gSaved;
 static OSStatus FakeSecItemDelete(CFDictionaryRef query) {
   id itemClass = ((__bridge NSDictionary *)query)[(__bridge id)kSecClass];
   [gDeleted addObject:itemClass];
-  if (gFailInternetDelete && [itemClass isEqual:(__bridge id)kSecClassInternetPassword]) {
-    OSStatus status = gFailInternetDelete.intValue;
-    gFailInternetDelete = nil;
-    return status;
+  if ([itemClass isEqual:(__bridge id)kSecClassInternetPassword]) {
+    if (gFailCount > 0) {
+      gFailCount--;
+      return gFailStatus;
+    }
+    gSaved = NO;
   }
   return errSecSuccess;
 }
@@ -96,7 +102,16 @@ int main(int argc, const char *argv[]) {
       } else if ([event hasPrefix:@"active:"]) {
         if (RunPendingKeychainCheck(&pending, [event hasSuffix:@"1"], path)) checks++;
       } else if ([event hasPrefix:@"fail:"]) {
-        gFailInternetDelete = @([event substringFromIndex:5].intValue);
+        NSArray *parts = [event componentsSeparatedByString:@":"];
+        gFailStatus = [parts[1] intValue];
+        gFailCount = [parts[2] intValue];
+      } else if ([event isEqualToString:@"save"]) {
+        gSaved = YES;
+      } else if ([event isEqualToString:@"check-saved"]) {
+        if (!gSaved) {
+          fprintf(stderr, "item saved after the first-run clear was deleted\\n");
+          return 3;
+        }
       } else {
         fprintf(stderr, "unknown event %s\\n", argv[i]);
         return 1;
@@ -221,92 +236,87 @@ int main(int argc, const char *argv[]) {
         });
 
         describe('failed delete', () => {
-            const errSecItemNotFound = 'fail:-25300';
-            const errSecNotAvailable = 'fail:-25291';
+            // The next n internet-password deletes fail with this status
+            const notAvailable = (n: number) => `fail:-25291:${n}`;
+            const notFound = (n: number) => `fail:-25300:${n}`;
 
-            it('does not mark a launch cleanup complete when a delete fails', () => {
+            it('retries a failed class in place until it clears', () => {
                 expect(
-                    run(false, missing, errSecNotAvailable, 'launch:1')
-                ).toMatchObject({
-                    checks: 0,
-                    pending: true,
-                    deleted: 5,
-                    flag: false
-                });
-            });
-
-            it('retries a failed launch cleanup on becoming active', () => {
-                expect(
-                    run(
-                        false,
-                        missing,
-                        errSecNotAvailable,
-                        'launch:1',
-                        'active:1'
-                    )
+                    run(false, missing, notAvailable(1), 'launch:1')
                 ).toMatchObject({
                     checks: 1,
                     pending: false,
-                    deleted: 10,
+                    deleted: 6,
+                    flag: true
+                });
+                expect(
+                    run(false, missing, notAvailable(2), 'launch:1')
+                ).toMatchObject({
+                    checks: 1,
+                    pending: false,
+                    deleted: 7,
                     flag: true
                 });
             });
 
-            it('retries a failed launch cleanup on the next launch', () => {
+            it('gives up after three attempts and never clears again', () => {
                 expect(
                     run(
                         false,
                         missing,
-                        errSecNotAvailable,
+                        notAvailable(3),
                         'launch:1',
-                        'launch:1'
-                    )
-                ).toMatchObject({
-                    checks: 1,
-                    pending: false,
-                    deleted: 10,
-                    flag: true
-                });
-            });
-
-            it('keeps a failed deferred cleanup pending until a retry completes', () => {
-                expect(
-                    run(
-                        false,
-                        missing,
-                        'launch:0',
-                        errSecNotAvailable,
-                        'unlock'
-                    )
-                ).toMatchObject({
-                    checks: 0,
-                    pending: true,
-                    deleted: 5,
-                    flag: false
-                });
-                expect(
-                    run(
-                        false,
-                        missing,
-                        'launch:0',
-                        errSecNotAvailable,
+                        'save',
+                        'active:1',
                         'unlock',
-                        errSecNotAvailable,
+                        'launch:1',
                         'active:1',
-                        'active:1',
-                        'unlock'
+                        'check-saved'
                     )
+                ).toMatchObject({
+                    checks: 2,
+                    pending: false,
+                    deleted: 7,
+                    flag: true
+                });
+            });
+
+            it('retries a failed deferred check in place until it clears', () => {
+                expect(
+                    run(false, missing, 'launch:0', notAvailable(2), 'unlock')
                 ).toMatchObject({
                     checks: 1,
                     pending: false,
-                    deleted: 15,
+                    deleted: 7,
+                    flag: true
+                });
+            });
+
+            it('gives up on a deferred check after three attempts and never clears again', () => {
+                expect(
+                    run(
+                        false,
+                        missing,
+                        'launch:0',
+                        notAvailable(3),
+                        'active:1',
+                        'save',
+                        'unlock',
+                        'active:1',
+                        'launch:1',
+                        'check-saved'
+                    )
+                ).toMatchObject({
+                    checks: 2,
+                    pending: false,
+                    deleted: 7,
                     flag: true
                 });
             });
 
             it('treats item-not-found as cleared', () => {
                 expect(
-                    run(false, missing, errSecItemNotFound, 'launch:1')
+                    run(false, missing, notFound(1), 'launch:1')
                 ).toMatchObject({
                     checks: 1,
                     pending: false,
