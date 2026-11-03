@@ -1225,6 +1225,7 @@
     "views.Settings.SignMessage.signingMethod": "Metode Penandatanganan",
     "views.Settings.SignMessage.selectAddressSigning": "Pilih Alamat untuk Penandatanganan",
     "views.Settings.SignMessage.selectAddressVerification": "Masukkan Alamat untuk Verifikasi",
+    "views.Settings.SignMessage.reservedMessage": "This message is reserved for LNURL-auth key derivation and cannot be signed. Signing it would expose your LNURL-auth identity for every site.",
     "views.Settings.SignMessage.fullAddress": "Alamat Penuh",
     "views.Settings.SignMessage.tapToSelectAddress": "Tekan di sini untuk memilih alamat",
     "views.Settings.SignMessage.signatureType": "Tipe Tanda Tangan",
