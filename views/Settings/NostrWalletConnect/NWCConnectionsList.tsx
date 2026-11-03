@@ -81,7 +81,6 @@ export default class NWCConnectionsList extends React.Component<
     componentDidMount() {
         const { navigation } = this.props;
         navigation.addListener('focus', this.handleFocus);
-        this.getConnections();
     }
     componentWillUnmount() {
         this.unmounted = true;

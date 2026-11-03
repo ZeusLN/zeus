@@ -26,6 +26,7 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
+        lookupInvoice: jest.fn(),
         supportsNodeInfo: jest.fn(),
         supportsCashuWallet: jest.fn(),
         supportsMessageSigning: jest.fn(),
@@ -2353,6 +2354,35 @@ describe('NostrWalletConnectStore connection data scoping', () => {
             expect(connection.totalReceivedActivitySats).toBe(0);
             lookup.mockRestore();
             coerce.mockRestore();
+        });
+
+        it('keeps an expired lightning invoice pending when the node lookup fails', async () => {
+            const { store } = buildStore();
+            const connection = seedConnection(store, {
+                activity: [
+                    pendingActivity('lnbc1expiredunknown', {
+                        expiresAt: new Date(Date.now() - 60_000)
+                    })
+                ]
+            });
+            (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+                new Error('Tor down')
+            );
+            const coerce = jest
+                .spyOn(NostrConnectUtils, 'coerceLightningInvoice')
+                .mockReturnValue({
+                    isPaid: false,
+                    isExpired: true,
+                    getPaymentRequest: '',
+                    getRHash: CONNECTION_HASH
+                } as any);
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(BackendUtils.lookupInvoice).toHaveBeenCalledTimes(1);
+            expect(connection.activity[0].status).toBe('pending');
+            coerce.mockRestore();
+            (BackendUtils.lookupInvoice as jest.Mock).mockReset();
         });
 
         it('flushes a pending debounced save before reloading from storage', async () => {

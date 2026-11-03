@@ -25,7 +25,8 @@ jest.mock('./LocaleUtils', () => ({
 jest.mock('./BackendUtils', () => ({
     __esModule: true,
     default: {
-        supportsMessageSigning: jest.fn(() => true)
+        supportsMessageSigning: jest.fn(() => true),
+        lookupInvoice: jest.fn()
     }
 }));
 
@@ -1742,5 +1743,49 @@ describe('NostrConnectUtils pay_invoice amount resolution', () => {
                 requestedAmountMsat: 7_000_000
             })
         ).resolves.toBe(0);
+    });
+});
+
+describe('NostrConnectUtils.lookupInvoicePaidFromNode', () => {
+    const rHash = hex64('a');
+
+    beforeEach(() => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockReset();
+    });
+
+    it('returns true when the node reports the invoice settled', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue({
+            state: 'SETTLED',
+            settled: true
+        });
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+        ).resolves.toBe(true);
+    });
+
+    it('returns false when the node reports the invoice open', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue({
+            state: 'OPEN',
+            settled: false
+        });
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+        ).resolves.toBe(false);
+    });
+
+    it('returns undefined when the lookup fails', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+            new Error('Tor down')
+        );
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+        ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when there is no hash to look up', async () => {
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({})
+        ).resolves.toBeUndefined();
+        expect(BackendUtils.lookupInvoice).not.toHaveBeenCalled();
     });
 });

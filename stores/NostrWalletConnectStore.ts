@@ -3486,11 +3486,11 @@ export default class NostrWalletConnectStore {
         );
         if (!invoice) return;
 
-        const settled =
-            (await NostrConnectUtils.lookupInvoicePaidFromNode({
-                paymentRequest: invoice.getPaymentRequest,
-                rHash: invoice.getRHash
-            })) || invoice.isPaid;
+        const lookedUp = await NostrConnectUtils.lookupInvoicePaidFromNode({
+            paymentRequest: invoice.getPaymentRequest,
+            rHash: invoice.getRHash
+        });
+        const settled = lookedUp || invoice.isPaid;
 
         if (settled) {
             const refreshed = await this.refreshLightningInvoiceFromNode(
@@ -3510,7 +3510,9 @@ export default class NostrWalletConnectStore {
             return;
         }
 
-        if (invoice.isExpired) {
+        // Only close the invoice when the node answered "unpaid": a failed
+        // lookup (Tor drop, node still starting) leaves it pending to retry
+        if (invoice.isExpired && lookedUp === false) {
             runInAction(() => {
                 activity.status = 'expired';
             });

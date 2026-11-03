@@ -87,7 +87,12 @@ const renderList = async (connection: any, refresh: () => Promise<void>) => {
         <NWCConnectionsList
             navigation={
                 {
-                    addListener: jest.fn(),
+                    // the initial focus event loads the list
+                    addListener: jest.fn(
+                        (event: string, callback: () => void) => {
+                            if (event === 'focus') callback();
+                        }
+                    ),
                     removeListener: jest.fn(),
                     navigate: jest.fn()
                 } as any
