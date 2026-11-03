@@ -1,5 +1,7 @@
 import { localeString } from './LocaleUtils';
 
+export const SPLICES_KEY = 'zeus-splices';
+
 export type SpliceDirection = 'in' | 'out';
 
 // What a backend reports while following a splice. channelReady fires again
