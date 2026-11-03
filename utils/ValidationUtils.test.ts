@@ -728,6 +728,19 @@ describe('isValidNwcServiceRelayUrl', () => {
         }
     });
 
+    // These pass the "://" check above, so only the URL parse rejects them
+    it('rejects relays the URL parser cannot read', () => {
+        for (const relay of [
+            'wss://relay.example.com:99999',
+            'wss://relay.example.com:65536',
+            'wss://[::1'
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(
+                false
+            );
+        }
+    });
+
     it('rejects anything that is not a relay URL', () => {
         for (const relay of [
             '',
