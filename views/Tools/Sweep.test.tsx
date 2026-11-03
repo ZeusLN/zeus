@@ -122,6 +122,15 @@ describe('Sweep', () => {
         expect(navigation.navigate).toHaveBeenCalledWith('SendingOnChain');
     });
 
+    it('quotes only the confirmed balance on CLNRest', async () => {
+        await renderSweep('cln-rest');
+
+        expect((Alert.alert as jest.Mock).mock.calls[0][1]).toBe(
+            'Send the whole on-chain balance (1,500,000 sats, less the ' +
+                `network fee) to ${DESTINATION} at 2 sat/vB?`
+        );
+    });
+
     it('uses amount all on CLNRest once confirmed', async () => {
         const { TransactionsStore } = await renderSweep('cln-rest');
 
@@ -135,7 +144,7 @@ describe('Sweep', () => {
         });
     });
 
-    it.each(['', '0', '-1', 'abc', '2001'])(
+    it.each(['', '0', '-1', 'abc', '2001', '2.5', '1e3', '0x10', ' 2'])(
         'does not offer to send at a fee rate of %p',
         async (fee) => {
             const { TransactionsStore } = await renderSweep('lnd', fee);

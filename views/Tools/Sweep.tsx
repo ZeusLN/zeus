@@ -81,11 +81,18 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
     // see and accept amount, destination and rate before it is broadcast
     confirmSweep = () =>
         new Promise<boolean>((resolve) => {
-            const { BalanceStore } = this.props;
+            const { BalanceStore, SettingsStore } = this.props;
             const { destination, fee } = this.state;
+            // CLN's withdraw spends confirmed outputs only (minconf
+            // defaults to 1, and CLNRest.sendCoins does not pass
+            // spend_unconfirmed on)
             const amount = new BigNumber(
                 BalanceStore.confirmedBlockchainBalance || 0
-            ).plus(BalanceStore.unconfirmedBlockchainBalance || 0);
+            ).plus(
+                SettingsStore.implementation === 'cln-rest'
+                    ? 0
+                    : BalanceStore.unconfirmedBlockchainBalance || 0
+            );
             Alert.alert(
                 localeString('views.Sweep.title'),
                 localeString('views.Sweep.confirm', {
@@ -162,11 +169,13 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
 
         // Send stays off while the fee field shows an error. With an empty
         // or 0 rate the node picks its own fee, so the rate the user
-        // confirms would not be the one used
+        // confirms would not be the one used. The rate is shown as typed in
+        // the confirmation, and LND takes whole sat/vB, so only digits
         const disabled =
             !destination ||
             !isValid ||
             noOnchainBalance ||
+            !/^\d+$/.test(fee) ||
             !isPlausibleSatPerVbyte(fee);
 
         return (
