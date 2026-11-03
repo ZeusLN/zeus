@@ -356,6 +356,205 @@ describe('CashuStore.createInvoice', () => {
         });
     });
 
+    describe('silent', () => {
+        // Puts non-default values in every field ReceiveEcash shows or
+        // polls, so a write of any of them shows up
+        const seedShared = (store: CashuStore) => {
+            store.invoice = 'lnbc-screen';
+            store.quoteId = 'quote-screen';
+            store.lastInvoiceMintUrl = B;
+            store.creatingInvoice = true;
+            store.creatingInvoiceError = true;
+            store.error_msg = 'screen error';
+        };
+        const expectShared = (store: CashuStore) => {
+            expect(store.invoice).toBe('lnbc-screen');
+            expect(store.quoteId).toBe('quote-screen');
+            expect(store.lastInvoiceMintUrl).toBe(B);
+            expect(store.creatingInvoice).toBe(true);
+            expect(store.creatingInvoiceError).toBe(true);
+            expect(store.error_msg).toBe('screen error');
+        };
+        const deferQuote = (id: string, request: string) => {
+            let release: () => void = () => {};
+            cdk.createMintQuote.mockImplementationOnce(
+                () =>
+                    new Promise((resolve) => {
+                        release = () =>
+                            resolve(mintQuote('Unpaid', { id, request }));
+                    })
+            );
+            return () => release();
+        };
+
+        it('returns the invoice and records the quote without touching the screen fields', async () => {
+            const store = newStore();
+            seedShared(store);
+
+            const result = await store.createInvoice({
+                memo: 'nwc',
+                value: '1000',
+                silent: true
+            });
+
+            expect(result).toEqual({ paymentRequest: REQUEST });
+            expectShared(store);
+            expect(store.invoices!.map((i: any) => i.quote)).toEqual([
+                'quote-1'
+            ]);
+            expect(storage.setItem).toHaveBeenCalledWith(
+                'node1-cashu-invoices',
+                store.invoices
+            );
+        });
+
+        it('throws the error text without touching the screen fields', async () => {
+            const store = newStore();
+            seedShared(store);
+            cdk.createMintQuote.mockRejectedValue(new Error('mint offline'));
+
+            await expect(
+                store.createInvoice({ memo: '', value: '10', silent: true })
+            ).rejects.toThrow(
+                'stores.InvoicesStore.errorCreatingInvoice: mint offline'
+            );
+
+            expectShared(store);
+            expect(store.invoices).toEqual([]);
+        });
+
+        it('refuses an LNURL withdraw', async () => {
+            const store = newStore();
+            seedShared(store);
+            const lnurl = {
+                callback: 'https://service.example/withdraw',
+                k1: 'k1value',
+                domain: 'service.example'
+            } as any;
+
+            await expect(
+                store.createInvoice({
+                    memo: '',
+                    value: '10',
+                    lnurl,
+                    silent: true
+                })
+            ).rejects.toThrow();
+
+            expect(cdk.createMintQuote).not.toHaveBeenCalled();
+            expect(blobFetch).not.toHaveBeenCalled();
+            expectShared(store);
+        });
+
+        it.each([
+            ['the silent call resolves first', true],
+            ['the screen call resolves first', false]
+        ])(
+            'does not supersede a screen request started before it when %s',
+            async (_label, silentFirst) => {
+                const store = newStore();
+                const releaseScreen = deferQuote('quote-screen', 'lnbc-screen');
+                const releaseSilent = deferQuote('quote-nwc', 'lnbc-nwc');
+
+                const screen = store.createInvoice({ memo: '', value: '10' });
+                const silent = store.createInvoice({
+                    memo: '',
+                    value: '20',
+                    silent: true
+                });
+                await new Promise((resolve) => setImmediate(resolve));
+                expect(store.creatingInvoice).toBe(true);
+
+                if (silentFirst) {
+                    releaseSilent();
+                    expect(await silent).toEqual({
+                        paymentRequest: 'lnbc-nwc'
+                    });
+                    expect(store.invoice).toBeUndefined();
+                    expect(store.creatingInvoice).toBe(true);
+                    releaseScreen();
+                    expect(await screen).toEqual({
+                        paymentRequest: 'lnbc-screen'
+                    });
+                } else {
+                    releaseScreen();
+                    expect(await screen).toEqual({
+                        paymentRequest: 'lnbc-screen'
+                    });
+                    releaseSilent();
+                    expect(await silent).toEqual({
+                        paymentRequest: 'lnbc-nwc'
+                    });
+                }
+
+                expect(store.invoice).toBe('lnbc-screen');
+                expect(store.quoteId).toBe('quote-screen');
+                expect(store.lastInvoiceMintUrl).toBe(A);
+                expect(store.creatingInvoice).toBe(false);
+                expect(store.invoices!.map((i: any) => i.quote).sort()).toEqual(
+                    ['quote-nwc', 'quote-screen']
+                );
+            }
+        );
+
+        it('is not superseded by a screen request started after it', async () => {
+            const store = newStore();
+            const releaseSilent = deferQuote('quote-nwc', 'lnbc-nwc');
+            const releaseScreen = deferQuote('quote-screen', 'lnbc-screen');
+
+            const silent = store.createInvoice({
+                memo: '',
+                value: '20',
+                silent: true
+            });
+            const screen = store.createInvoice({ memo: '', value: '10' });
+            await new Promise((resolve) => setImmediate(resolve));
+
+            releaseScreen();
+            expect(await screen).toEqual({ paymentRequest: 'lnbc-screen' });
+            releaseSilent();
+            expect(await silent).toEqual({ paymentRequest: 'lnbc-nwc' });
+
+            expect(store.invoice).toBe('lnbc-screen');
+            expect(store.quoteId).toBe('quote-screen');
+            expect(store.creatingInvoice).toBe(false);
+            expect(store.invoices!.map((i: any) => i.quote).sort()).toEqual([
+                'quote-nwc',
+                'quote-screen'
+            ]);
+        });
+
+        it('keeps a screen error when it fails during a screen request', async () => {
+            const store = newStore();
+            const releaseScreen = deferQuote('quote-screen', 'lnbc-screen');
+            let fail: () => void = () => {};
+            cdk.createMintQuote.mockImplementationOnce(
+                () =>
+                    new Promise((_, reject) => {
+                        fail = () => reject(new Error('mint offline'));
+                    })
+            );
+
+            const screen = store.createInvoice({ memo: '', value: '10' });
+            const silent = store.createInvoice({
+                memo: '',
+                value: '20',
+                silent: true
+            });
+            await new Promise((resolve) => setImmediate(resolve));
+            fail();
+            await expect(silent).rejects.toThrow('mint offline');
+            expect(store.creatingInvoice).toBe(true);
+            expect(store.creatingInvoiceError).toBe(false);
+            releaseScreen();
+            await screen;
+
+            expect(store.invoice).toBe('lnbc-screen');
+            expect(store.creatingInvoiceError).toBe(false);
+            expect(store.error_msg).toBeUndefined();
+        });
+    });
+
     describe('LNURL withdraw', () => {
         const lnurl = {
             callback: 'https://service.example/withdraw?session=abc',
