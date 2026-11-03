@@ -1225,6 +1225,7 @@
     "views.Settings.SignMessage.signingMethod": "서명 방식",
     "views.Settings.SignMessage.selectAddressSigning": "서명할 주소 선택",
     "views.Settings.SignMessage.selectAddressVerification": "검증할 주소 입력",
+    "views.Settings.SignMessage.reservedMessage": "This message is reserved for LNURL-auth key derivation and cannot be signed. Signing it would expose your LNURL-auth identity for every site.",
     "views.Settings.SignMessage.fullAddress": "전체 주소",
     "views.Settings.SignMessage.tapToSelectAddress": "주소를 선택하려면 여기를 누르세요.",
     "views.Settings.SignMessage.signatureType": "서명 유형",
