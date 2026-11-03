@@ -547,6 +547,53 @@ describe('UrlUtils', () => {
                 UrlUtils.isCleartextHttpTransport('http://evil.com#foo.onion')
             ).toBe(true);
         });
+
+        it('flags http: forms the URL parser reads as http://', () => {
+            for (const url of [
+                'http:mint.example.com',
+                'http:/mint.example.com',
+                'http:\\\\mint.example.com',
+                'http:\\/mint.example.com',
+                'HTTP:mint.example.com',
+                ' http:mint.example.com ',
+                'ht\ttp://mint.example.com',
+                'http:\n//mint.example.com'
+            ]) {
+                expect(UrlUtils.isCleartextHttpTransport(url)).toBe(true);
+            }
+        });
+
+        it('exempts loopback and onion hosts in those forms', () => {
+            expect(
+                UrlUtils.isCleartextHttpTransport('http:localhost:3338')
+            ).toBe(false);
+            expect(UrlUtils.isCleartextHttpTransport('http:/127.0.0.1')).toBe(
+                false
+            );
+            expect(
+                UrlUtils.isCleartextHttpTransport('http:someonionaddress.onion')
+            ).toBe(false);
+        });
+
+        it('fails closed on unparseable http input', () => {
+            expect(UrlUtils.isCleartextHttpTransport('http://')).toBe(true);
+            expect(UrlUtils.isCleartextHttpTransport('http:')).toBe(true);
+            expect(
+                UrlUtils.isCleartextHttpTransport('http://exa mple.com')
+            ).toBe(true);
+        });
+
+        it('does not flag https: forms or scheme-less hosts with a port', () => {
+            for (const url of [
+                'https:mint.example.com',
+                'https:/mint.example.com',
+                '192.168.1.5:8080',
+                'mynode.local:8080',
+                'localhost:8080'
+            ]) {
+                expect(UrlUtils.isCleartextHttpTransport(url)).toBe(false);
+            }
+        });
     });
 
     describe('getLocalWalletFaqUrl', () => {

@@ -158,24 +158,32 @@ const isValidUrl = (url: string): boolean => {
     }
 };
 
-// Returns true when an explicit http:// scheme would carry traffic across
+// Returns true when an explicit http scheme would carry traffic across
 // the network in cleartext. Onion services are authenticated and encrypted
 // at the Tor layer and loopback never leaves the device, so neither counts.
 // Parses with URL so hosts hidden behind userinfo (http://127.0.0.1@evil.com),
 // fragments (http://evil.com#foo.onion), or spoofed prefixes
-// (http://127.0.0.1.evil.com) are not mistaken for exempt hosts.
+// (http://127.0.0.1.evil.com) are not mistaken for exempt hosts. The scheme
+// is read from the parsed URL too: URL reads http:mint.com, http:/mint.com
+// and http:\\mint.com as http://mint.com/, which an http:// prefix check
+// misses.
 const isCleartextHttpTransport = (urlString?: string): boolean => {
     if (!urlString) return false;
     const trimmed = urlString.trim();
-    if (!trimmed.toLowerCase().startsWith('http://')) return false;
 
-    let hostname: string;
+    let url: URL;
     try {
-        hostname = new URL(trimmed).hostname;
+        url = new URL(trimmed);
     } catch {
-        // Unparseable http:// input: fail closed and warn.
-        return true;
+        // Unparseable http input: fail closed and warn. Scheme-less hosts
+        // (192.168.1.5, example.com) also land here; the backends send
+        // those over HTTPS, so they are not flagged. URL ignores tabs and
+        // newlines anywhere in the input, so drop them before matching.
+        return /^http:/i.test(trimmed.replace(/[\t\n\r]/g, ''));
     }
+    if (url.protocol !== 'http:') return false;
+
+    const { hostname } = url;
 
     if (hostname.endsWith('.onion')) return false;
 
