@@ -79,6 +79,26 @@ export default class ConnectivityStore {
         return results.some((ok) => ok);
     };
 
+    // Fires the reconnect callbacks on an offline -> online transition. Each
+    // callback is isolated so one that throws cannot skip the rest.
+    private setOnlineState = (online: boolean) => {
+        const wasOffline = this.isOffline;
+        runInAction(() => {
+            this.isOffline = !online;
+        });
+        if (!online || !wasOffline) return;
+        this.reconnectCallbacks.forEach((cb) => {
+            try {
+                cb();
+            } catch (e) {
+                console.error(
+                    'ConnectivityStore: reconnect callback failed',
+                    e
+                );
+            }
+        });
+    };
+
     /**
      * Core logic: probe fallback URLs and update isOffline accordingly.
      * Called by the poll interval and on NetInfo state changes.
@@ -92,34 +112,20 @@ export default class ConnectivityStore {
             // offline; their result must not reach a later session
             if (generation !== this.generation) return;
             this.verifyInFlight = false;
-            const wasOffline = this.isOffline;
-            runInAction(() => {
-                this.isOffline = !online;
-            });
-            if (online && wasOffline) {
-                this.reconnectCallbacks.forEach((cb) => cb());
-            }
+            this.setOnlineState(online);
         });
     };
 
     private updateState = (state: NetInfoState) => {
         // isConnected === false is a reliable native signal — mark immediately
         if (state.isConnected === false) {
-            runInAction(() => {
-                this.isOffline = true;
-            });
+            this.setOnlineState(false);
             return;
         }
 
         // isInternetReachable === true is reliable — mark online immediately
         if (state.isInternetReachable === true) {
-            const wasOffline = this.isOffline;
-            runInAction(() => {
-                this.isOffline = false;
-            });
-            if (wasOffline) {
-                this.reconnectCallbacks.forEach((cb) => cb());
-            }
+            this.setOnlineState(true);
             return;
         }
 

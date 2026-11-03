@@ -1,6 +1,10 @@
 jest.mock('./Stores', () => ({
     activityStore: { getSortedActivity: jest.fn() },
-    connectivityStore: {}
+    connectivityStore: {
+        start: jest.fn(),
+        stop: jest.fn(),
+        onReconnect: jest.fn()
+    }
 }));
 jest.mock('./SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.one', 'wss://relay.two']
@@ -54,6 +58,7 @@ import CashuStore from './CashuStore';
 import InvoicesStore from './InvoicesStore';
 import BackendUtils from '../utils/BackendUtils';
 import CashuPayment from '../models/CashuPayment';
+import { connectivityStore } from './Stores';
 import Storage, { getRawItem } from '../storage';
 import CashuDevKit from '../cashu-cdk';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
@@ -1908,5 +1913,46 @@ describe('CashuStore deleteCashuData', () => {
             'lnd-cashu-pending-melts'
         );
         expect(store.pendingMelts).toEqual([]);
+    });
+});
+
+describe('CashuStore connectivity monitoring', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('registers the reconnect callback once across repeated starts and resets', () => {
+        const store = newStore();
+
+        store.startConnectivityMonitoring();
+        store.startConnectivityMonitoring();
+        store.reset();
+        store.startConnectivityMonitoring();
+
+        expect(connectivityStore.onReconnect).toHaveBeenCalledTimes(1);
+        expect(connectivityStore.start).toHaveBeenCalledTimes(3);
+        expect(connectivityStore.stop).toHaveBeenCalledTimes(1);
+    });
+
+    it('sweeps and checks pending items once per reconnect', () => {
+        jest.useFakeTimers();
+        const store = newStore();
+        const sweep = jest
+            .spyOn(store, 'sweepOfflinePendingTokens')
+            .mockResolvedValue(undefined as any);
+        const check = jest
+            .spyOn(store, 'checkPendingItems')
+            .mockResolvedValue(undefined as any);
+
+        store.startConnectivityMonitoring();
+        store.startConnectivityMonitoring();
+        // Fire every registered callback, as ConnectivityStore does
+        (connectivityStore.onReconnect as jest.Mock).mock.calls.forEach(
+            ([onReconnect]) => onReconnect()
+        );
+        jest.advanceTimersByTime(3000);
+
+        expect(sweep).toHaveBeenCalledTimes(1);
+        expect(check).toHaveBeenCalledTimes(1);
+        jest.useRealTimers();
+        jest.restoreAllMocks();
     });
 });
