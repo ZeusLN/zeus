@@ -4,6 +4,7 @@
 import { patchJcenter } from './patch-jcenter.mjs';
 import { patchNativeEventEmitter } from './patch-native-event-emitter.mjs';
 import { patchReactNativeNotifications } from './patch-react-native-notifications.mjs';
+import { patchNotificationsCompletionOnce } from './patch-notifications-completion-once.mjs';
 import { patchNobleHashes } from './patch-noble-hashes.mjs';
 import { patchReanimatedSetFixes } from './patch-reanimated-set-fixes.mjs';
 import { patchKeychainCloudSync } from './patch-keychain-cloudsync.mjs';
@@ -16,6 +17,7 @@ console.log('Running postinstall patches...\n');
         patchJcenter();
         patchNativeEventEmitter();
         patchReactNativeNotifications();
+        patchNotificationsCompletionOnce();
         patchNobleHashes();
         patchReanimatedSetFixes();
         patchKeychainCloudSync();
