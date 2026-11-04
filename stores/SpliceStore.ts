@@ -10,6 +10,7 @@ import {
 import BalanceStore from './BalanceStore';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
+import TransactionsStore from './TransactionsStore';
 
 import Channel from '../models/Channel';
 
@@ -18,6 +19,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import {
     SPLICES_KEY,
+    SpliceConfirmations,
     SpliceDirection,
     SpliceEvent,
     getSpliceErrorMessage,
@@ -98,6 +100,7 @@ export default class SpliceStore {
     channelsStore: ChannelsStore;
     balanceStore: BalanceStore;
     nodeInfoStore: NodeInfoStore;
+    transactionsStore: TransactionsStore;
 
     @computed public get pendingSplices(): SpliceRecord[] {
         return this.splices.filter((splice) => splice.status === 'pending');
@@ -106,11 +109,13 @@ export default class SpliceStore {
     constructor(
         channelsStore: ChannelsStore,
         balanceStore: BalanceStore,
-        nodeInfoStore: NodeInfoStore
+        nodeInfoStore: NodeInfoStore,
+        transactionsStore: TransactionsStore
     ) {
         this.channelsStore = channelsStore;
         this.balanceStore = balanceStore;
         this.nodeInfoStore = nodeInfoStore;
+        this.transactionsStore = transactionsStore;
     }
 
     @action
@@ -322,6 +327,22 @@ export default class SpliceStore {
                 (splice) => splice.userChannelId === channel.user_channel_id
             )) ||
         null;
+
+    public getSpliceConfirmations = (
+        splice: SpliceRecord
+    ): SpliceConfirmations | null => {
+        const transaction = this.transactionsStore.transactions.find(
+            (t) => t.tx === splice.txid
+        );
+        if (!transaction) return null;
+        const channel = this.channelsStore.channels.find(
+            (c) => c.user_channel_id === splice.userChannelId
+        );
+        return {
+            current: transaction.getNumConfirmations,
+            total: channel?.confirmations_required
+        };
+    };
 
     public hasFailedSplice = (channel: Channel): boolean =>
         !!channel.user_channel_id &&

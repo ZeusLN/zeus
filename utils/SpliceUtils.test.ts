@@ -13,6 +13,7 @@ jest.mock('./LocaleUtils', () => ({
 
 import {
     SPLICE_OUT_MIN_SATS,
+    formatSpliceConfirmations,
     getSpliceAmountError,
     getSpliceChannelError,
     getSpliceErrorMessage,
@@ -23,6 +24,21 @@ import {
 const en = require('../locales/en.json');
 
 describe('SpliceUtils', () => {
+    describe('formatSpliceConfirmations', () => {
+        it('counts up to the lock depth and stops there', () => {
+            expect(formatSpliceConfirmations({ current: 2, total: 6 })).toEqual(
+                '2 / 6'
+            );
+            expect(formatSpliceConfirmations({ current: 9, total: 6 })).toEqual(
+                '6 / 6'
+            );
+        });
+
+        it('shows the count alone when the depth is unknown', () => {
+            expect(formatSpliceConfirmations({ current: 2 })).toEqual('2');
+        });
+    });
+
     describe('getSpliceInAvailableSats', () => {
         it('keeps the anchor reserve out of the confirmed balance', () => {
             expect(getSpliceInAvailableSats(100000, 25000)).toEqual(75000);

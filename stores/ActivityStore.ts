@@ -1,4 +1,4 @@
-import { action, observable, runInAction } from 'mobx';
+import { action, observable, reaction, runInAction } from 'mobx';
 
 // LN
 import Payment from './../models/Payment';
@@ -152,6 +152,10 @@ export default class ActivityStore {
     spliceStore: SpliceStore;
     nodeInfoStore: NodeInfoStore;
 
+    private loadsInFlight = 0;
+    private spliceRebuildSeq = 0;
+    private spliceRebuildSkipped = false;
+
     constructor(
         settingsStore: SettingsStore,
         paymentsStore: PaymentsStore,
@@ -170,7 +174,32 @@ export default class ActivityStore {
         this.swapStore = swapStore;
         this.spliceStore = spliceStore;
         this.nodeInfoStore = nodeInfoStore;
+
+        // A splice the peer starts, and every lock, change the list while
+        // Activity may be open
+        reaction(
+            () => this.spliceStore.splices,
+            () => this.rebuildForSplices()
+        );
     }
+
+    private rebuildForSplices = async () => {
+        // a load in flight lists the splices as they are when it finishes
+        if (this.loadsInFlight > 0) {
+            this.spliceRebuildSkipped = true;
+            return;
+        }
+        const seq = ++this.spliceRebuildSeq;
+        const activity = await this.getSortedActivity();
+        if (seq !== this.spliceRebuildSeq || this.loadsInFlight > 0) return;
+        runInAction(() => {
+            this.activity = activity;
+        });
+        await this.setFilters(
+            this.filters,
+            this.settingsStore.settings?.locale
+        );
+    };
 
     public resetFilters = async () => {
         this.filters = DEFAULT_FILTERS;
@@ -391,19 +420,30 @@ export default class ActivityStore {
     };
 
     private getActivity = async () => {
-        this.activity = [];
-        await this.paymentsStore.getPayments();
-        if (BackendUtils.supportsOnchainSends())
-            await this.transactionsStore.getTransactions();
-        await this.invoicesStore.getInvoices();
+        this.loadsInFlight++;
+        // a splice rebuild still running would land older data over this load
+        this.spliceRebuildSeq++;
+        try {
+            this.activity = [];
+            await this.paymentsStore.getPayments();
+            if (BackendUtils.supportsOnchainSends())
+                await this.transactionsStore.getTransactions();
+            await this.invoicesStore.getInvoices();
 
-        await this.swapStore.fetchAndUpdateSwaps();
-        const sortedActivity = await this.getSortedActivity();
+            await this.swapStore.fetchAndUpdateSwaps();
+            const sortedActivity = await this.getSortedActivity();
 
-        runInAction(() => {
-            this.activity = sortedActivity;
-            this.filteredActivity = this.activity;
-        });
+            runInAction(() => {
+                this.activity = sortedActivity;
+                this.filteredActivity = this.activity;
+            });
+        } finally {
+            this.loadsInFlight--;
+        }
+        if (this.loadsInFlight === 0 && this.spliceRebuildSkipped) {
+            this.spliceRebuildSkipped = false;
+            this.rebuildForSplices();
+        }
     };
 
     public updateInvoices = async (locale: string | undefined) => {

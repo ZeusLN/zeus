@@ -30,6 +30,7 @@ import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import SpliceStore from '../../stores/SpliceStore';
 import SwapStore from '../../stores/SwapStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
@@ -46,6 +47,7 @@ interface ActivityProps {
     PosStore: PosStore;
     SettingsStore: SettingsStore;
     SwapStore: SwapStore;
+    SpliceStore: SpliceStore;
     route: Route<'Activity', { order: any }>;
 }
 
@@ -63,7 +65,8 @@ interface ActivityState {
     'PosStore',
     'SettingsStore',
     'InvoicesStore',
-    'SwapStore'
+    'SwapStore',
+    'SpliceStore'
 )
 @observer
 export default class Activity extends React.PureComponent<
@@ -227,6 +230,7 @@ export default class Activity extends React.PureComponent<
             PosStore,
             SettingsStore,
             SwapStore,
+            SpliceStore,
             route
         } = this.props;
         const { loading, selectedPaymentForOrder, isCsvModalVisible } =
@@ -408,6 +412,7 @@ export default class Activity extends React.PureComponent<
                                 onItemPress={this.handleItemPress}
                                 order={route.params?.order}
                                 swapStore={SwapStore}
+                                spliceStore={SpliceStore}
                             />
                         )}
                         keyExtractor={(item, index) => `${item.model}-${index}`}

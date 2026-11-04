@@ -29,12 +29,14 @@ const channelsStore: any = { getChannels: jest.fn() };
 extendObservable(channelsStore, { channels: [], hasChannelData: false });
 const balanceStore = { getCombinedBalance: jest.fn() };
 const nodeInfoStore: any = { nodeInfo: { nodeId: '03me' } };
+const transactionsStore: any = { transactions: [] };
 
 const newStore = () =>
     new SpliceStore(
         channelsStore as any,
         balanceStore as any,
-        nodeInfoStore as any
+        nodeInfoStore as any,
+        transactionsStore as any
     );
 
 const mockUtxos = (
@@ -505,6 +507,26 @@ describe('SpliceStore splice tracking', () => {
         ).toBeNull();
         // other backends' channels have no user_channel_id
         expect(store.getPendingSplice({} as any)).toBeNull();
+    });
+
+    it("counts a splice's confirmations to the channel's lock depth", async () => {
+        const store = await trackingStore();
+        emit(pendingEvent);
+        const splice = store.pendingSplices[0];
+
+        expect(store.getSpliceConfirmations(splice)).toBeNull();
+
+        channelsStore.channels = [{ ...channel, confirmations_required: 6 }];
+        transactionsStore.transactions = [
+            { tx: 'other-txid', getNumConfirmations: 9 },
+            { tx: 'splice-txid', getNumConfirmations: 3 }
+        ];
+
+        expect(store.getSpliceConfirmations(splice)).toEqual({
+            current: 3,
+            total: 6
+        });
+        transactionsStore.transactions = [];
     });
 
     it('remembers a splice that failed after the splice screens were left', async () => {
