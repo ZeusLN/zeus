@@ -1828,6 +1828,7 @@
     "stores.LSPStore.getInfoResponseError": "The LSP returned an unexpected response. Please try again later, or contact the LSP if the problem continues.",
     "stores.LSPStore.wrappedInvoiceVerificationFailed": "The wrapped invoice returned by the LSP does not match the invoice it is supposed to wrap and was rejected",
     "stores.LSPStore.missingWrappedInvoice": "The LSP response did not include a wrapped invoice",
+    "stores.LightningAddressStore.Cashu.mintMismatch": "Payment references a mint that is not approved on this device",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "견적이 결제되지 않음",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "견적 결제 확인 중 오류 발생",
     "stores.NostrWalletConnectStore.initializingService": "Nostr Wallet Connect 서비스 초기화 중…",
