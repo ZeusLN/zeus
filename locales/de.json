@@ -1828,6 +1828,7 @@
     "stores.LSPStore.getInfoResponseError": "Der LSP hat eine unerwartete Antwort geliefert. Bitte versuche es später erneut oder kontaktiere den LSP, falls das Problem weiterhin besteht.",
     "stores.LSPStore.wrappedInvoiceVerificationFailed": "Die vom LSP zurückgegebene verpackte Rechnung passt nicht zu der Rechnung, die sie verpacken soll, und wurde abgelehnt",
     "stores.LSPStore.missingWrappedInvoice": "Die Antwort des LSP enthielt keine verpackte Rechnung",
+    "stores.LightningAddressStore.Cashu.mintMismatch": "Payment references a mint that is not approved on this device",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Quote nicht bezahlt",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Fehler beim Prüfen der Quote-Zahlung",
     "stores.NostrWalletConnectStore.initializingService": "Nostr-Wallet-Connect-Dienst wird initialisiert...",
