@@ -213,6 +213,11 @@ export default class WalletConfiguration extends React.Component<
     WalletConfigurationProps,
     WalletConfigurationState
 > {
+    // Set while a save is being written. `saving` only disables the
+    // buttons after a re-render, so it cannot stop a second call in the
+    // same tick, and a second call on a new entry would append it twice.
+    private saveInFlight = false;
+
     state: WalletConfigurationState = {
         node: null,
         nickname: '',
@@ -726,6 +731,9 @@ export default class WalletConfiguration extends React.Component<
             throw new Error('lndhub settings missing.');
         }
 
+        if (this.saveInFlight) return;
+        this.saveInFlight = true;
+
         // Block the action buttons until navigation: a second Save (or a
         // Delete) firing mid-write would re-persist the stale nodes array.
         this.setState({ saving: true });
@@ -835,6 +843,7 @@ export default class WalletConfiguration extends React.Component<
         updateSettings(update)
             .then(async (newSettings: Settings) => {
                 if (savedIndex === -1) {
+                    this.saveInFlight = false;
                     this.setState({ saving: false });
                     this.showWalletChangedError();
                     return;
@@ -917,6 +926,7 @@ export default class WalletConfiguration extends React.Component<
             })
             .catch((error: any) => {
                 console.error('Error saving wallet configuration:', error);
+                this.saveInFlight = false;
                 this.setState({ saving: false });
             });
     };
