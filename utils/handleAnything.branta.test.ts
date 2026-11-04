@@ -10,6 +10,15 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 let mockSupportsOnchainSends = true;
 let mockSupportsCashuWallet = false;
 jest.mock('./TorUtils', () => ({}));
+jest.mock('./LnurlFetchUtils', () => ({
+    fetchLnurlUrl: jest.fn(() =>
+        Promise.resolve({
+            info: () => ({ status: 200 }),
+            json: () => ({ callback: 'https://zbd.gg/callback' })
+        })
+    ),
+    isUnsafeLnurlError: () => false
+}));
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
     supportsAccounts: () => false,
@@ -301,10 +310,6 @@ describe('handleAnything Branta verification', () => {
         });
 
         it('does not call for a lightning address', async () => {
-            mockBlobUtilFetch.mockResolvedValue({
-                info: () => ({ status: 200 }),
-                json: () => ({ callback: 'https://zbd.gg/callback' })
-            });
             const fetchMock = jest.fn().mockRejectedValue(new Error('no dns'));
             const originalFetch = globalThis.fetch;
             (globalThis as any).fetch = fetchMock;

@@ -19,11 +19,7 @@
       "<rootDir>/node_modules"
     ],
     "transformIgnorePatterns": [
-<<<<<<< HEAD
-      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|@react-navigation|dateformat|nostr-tools|@noble|@scure|uuid|uint8array-tools|query-string|decode-uri-component|filter-obj|split-on-first|@react-native-vector-icons)/)"
-=======
-      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|@react-navigation|dateformat|nostr-tools|@branta-ops|@nostr|@noble|@scure|uuid|uint8array-tools|query-string|decode-uri-component|filter-obj|split-on-first)/)"
->>>>>>> b24751b (fix: enable ZK verification in React Native)
+      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|@react-navigation|dateformat|nostr-tools|@branta-ops|@nostr|@noble|@scure|uuid|uint8array-tools|query-string|decode-uri-component|filter-obj|split-on-first|@react-native-vector-icons)/)"
     ],
     "testPathIgnorePatterns": [
       "zeus_modules"
@@ -146,7 +142,6 @@
     "react-native-image-picker": "8.3.0",
     "react-native-keychain": "10.0.0",
     "react-native-nfc-manager": "3.17.5",
-    "react-native-nitro-tor": "0.6.1",
     "react-native-notifications": "5.2.2",
     "react-native-print": "0.11.0",
     "react-native-qr-kit": "1.1.6",
@@ -160,11 +155,8 @@
     "react-native-share": "12.3.1",
     "react-native-svg": "15.16.1",
     "react-native-svg-transformer": "1.5.3",
-<<<<<<< HEAD
     "react-native-system-navigation-bar": "3.0.1",
-=======
-    "react-native-system-navigation-bar": "2.8.0",
->>>>>>> b24751b (fix: enable ZK verification in React Native)
+    "react-native-nitro-tor": "0.6.1",
     "react-native-udp": "4.1.7",
     "react-native-view-shot": "6.2.1",
     "react-native-vision-camera": "4.7.3",
