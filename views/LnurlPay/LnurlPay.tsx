@@ -455,6 +455,20 @@ export default class LnurlPay extends React.Component<
                     InvoicesStore.getPayReq(pr).then(() => {
                         this.setState({ loading: false });
 
+                        // a newer decode (deep link, NFC tap) replaced this
+                        // one: getPayReq dropped our answer, so pay_req and
+                        // getPayReqError are unset or belong to the other
+                        // invoice. Don't bind this LNURL's metadata and
+                        // success action to it; the newer request has its
+                        // own PaymentRequest
+                        if (
+                            InvoicesStore.paymentRequest !== pr ||
+                            (!InvoicesStore.pay_req &&
+                                !InvoicesStore.getPayReqError)
+                        ) {
+                            return;
+                        }
+
                         if (InvoicesStore.getPayReqError) {
                             Alert.alert(
                                 localeString(
