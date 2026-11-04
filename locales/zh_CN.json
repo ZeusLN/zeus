@@ -1828,6 +1828,7 @@
     "stores.LSPStore.getInfoResponseError": "闪电网络服务提供方（LSP）返回了意外的响应。请稍后再试；如果问题仍然存在，请联系 LSP。",
     "stores.LSPStore.wrappedInvoiceVerificationFailed": "LSP 退回的包装发票与对应包装的发票不符，因此被拒绝",
     "stores.LSPStore.missingWrappedInvoice": "LSP 的回复中未包含包装的发票",
+    "stores.LightningAddressStore.Cashu.mintMismatch": "Payment references a mint that is not approved on this device",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "报价尚未支付",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "检查报价支付时出错",
     "stores.NostrWalletConnectStore.initializingService": "正在初始化 Nostr Wallet Connect 服务……",
