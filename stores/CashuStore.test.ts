@@ -574,9 +574,11 @@ describe('CashuStore receiveTokenCDK', () => {
             store.receiveTokenCDK('cashuBtoken', 'aa'.repeat(32))
         ).resolves.toBe(21);
 
-        expect(CashuDevKit.receive).toHaveBeenCalledWith('cashuBtoken', {
-            p2pk_signing_keys: ['aa'.repeat(32)]
-        });
+        // toStrictEqual: toHaveBeenCalledWith would also accept a trailing
+        // undefined in the key list.
+        expect((CashuDevKit.receive as jest.Mock).mock.calls).toStrictEqual([
+            ['cashuBtoken', { p2pk_signing_keys: ['aa'.repeat(32)] }]
+        ]);
     });
 
     it('passes no signing keys when no key is offered', async () => {
@@ -584,9 +586,10 @@ describe('CashuStore receiveTokenCDK', () => {
 
         await store.receiveTokenCDK('cashuBtoken');
 
-        expect(CashuDevKit.receive).toHaveBeenCalledWith('cashuBtoken', {
-            p2pk_signing_keys: []
-        });
+        // toStrictEqual: toHaveBeenCalledWith treats [undefined] as [].
+        expect((CashuDevKit.receive as jest.Mock).mock.calls).toStrictEqual([
+            ['cashuBtoken', { p2pk_signing_keys: [] }]
+        ]);
     });
 });
 
