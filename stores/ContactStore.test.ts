@@ -93,6 +93,32 @@ describe('ContactStore', () => {
             expect(bob.name).toBe('Bob');
             expect(store.prefillContact).toBeNull();
         });
+
+        it('updates only the matching contact when contacts only have the old id field', async () => {
+            // Contacts saved before 01656c594 have `id`, not `contactId`.
+            // Matching on contactId alone compared undefined to undefined
+            // and rewrote every one of them.
+            const existing = [
+                { id: 'old-a', name: 'Alice' },
+                { id: 'old-b', name: 'Bob' },
+                { contactId: 'new-c', name: 'Carol' }
+            ];
+            getItemMock.mockResolvedValue(JSON.stringify(existing));
+            store.setPrefillContact(existing[1] as any);
+
+            await store.saveContact(
+                { name: 'Robert' },
+                true,
+                false,
+                navigation
+            );
+
+            expect(savedContacts()).toEqual([
+                { id: 'old-a', name: 'Alice' },
+                { contactId: 'new-c', name: 'Carol' },
+                { id: 'old-b', name: 'Robert' }
+            ]);
+        });
     });
 
     describe('deleteContact', () => {
@@ -113,6 +139,75 @@ describe('ContactStore', () => {
             expect(contacts).toHaveLength(1);
             expect(contacts[0].contactId).toBe('id-b');
             expect(store.prefillContact).toBeNull();
+        });
+
+        it('removes only the matching contact when contacts only have the old id field', async () => {
+            const existing = [
+                { id: 'old-a', name: 'Alice' },
+                { id: 'old-b', name: 'Bob' },
+                { contactId: 'new-c', name: 'Carol' }
+            ];
+            getItemMock.mockResolvedValue(JSON.stringify(existing));
+            store.setPrefillContact(existing[0] as any);
+
+            await store.deleteContact(navigation);
+
+            expect(savedContacts()).toEqual([
+                { id: 'old-b', name: 'Bob' },
+                { contactId: 'new-c', name: 'Carol' }
+            ]);
+        });
+
+        it('removes nothing when the contact has no id at all', async () => {
+            const existing = [{ name: 'Alice' }, { id: 'old-b', name: 'Bob' }];
+            getItemMock.mockResolvedValue(JSON.stringify(existing));
+            store.setPrefillContact({ name: 'Alice' } as any);
+
+            await store.deleteContact(navigation);
+
+            expect(savedContacts()).toEqual(existing);
+        });
+    });
+
+    describe('updateContact', () => {
+        it('replaces only the matching contact when contacts only have the old id field', async () => {
+            const existing = [
+                { id: 'old-a', name: 'Alice', isFavourite: false },
+                { id: 'old-b', name: 'Bob', isFavourite: false }
+            ];
+            getItemMock.mockResolvedValue(JSON.stringify(existing));
+
+            await store.updateContact({ ...existing[1], isFavourite: true });
+
+            expect(savedContacts()).toEqual([
+                { id: 'old-a', name: 'Alice', isFavourite: false },
+                { id: 'old-b', name: 'Bob', isFavourite: true }
+            ]);
+        });
+
+        it('replaces the contact matching contactId', async () => {
+            const existing = [
+                { contactId: 'id-a', name: 'Alice', isFavourite: false },
+                { contactId: 'id-b', name: 'Bob', isFavourite: false }
+            ];
+            getItemMock.mockResolvedValue(JSON.stringify(existing));
+
+            await store.updateContact({ ...existing[0], isFavourite: true });
+
+            expect(savedContacts()).toEqual([
+                { contactId: 'id-a', name: 'Alice', isFavourite: true },
+                { contactId: 'id-b', name: 'Bob', isFavourite: false }
+            ]);
+        });
+
+        it('writes nothing for a contact that is not stored', async () => {
+            getItemMock.mockResolvedValue(
+                JSON.stringify([{ contactId: 'id-a', name: 'Alice' }])
+            );
+
+            await store.updateContact({ name: 'Nostr friend' });
+
+            expect(setItemMock).not.toHaveBeenCalled();
         });
     });
 
