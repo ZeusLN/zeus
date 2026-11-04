@@ -2,10 +2,15 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-jest.mock('js-lnurl', () => ({ getParams: jest.fn() }));
-const mockBlobUtilFetch = jest.fn();
-jest.mock('react-native-blob-util', () => ({
-    fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+jest.mock('react-native-blob-util', () => ({}));
+// clearnet lookups go through the redirect-checking fetch
+const mockFetchLnurlUrl = jest.fn();
+// the lnurl resolve behind getLnurlParams
+const mockFetchLnurlParams = jest.fn();
+jest.mock('../../utils/LnurlFetchUtils', () => ({
+    ...jest.requireActual('../../utils/LnurlFetchUtils'),
+    fetchLnurlUrl: (...args: any[]) => mockFetchLnurlUrl(...args),
+    fetchLnurlParams: (...args: any[]) => mockFetchLnurlParams(...args)
 }));
 const mockDoTorRequest = jest.fn();
 jest.mock('../../utils/TorUtils', () => ({
@@ -28,9 +33,12 @@ jest.mock('./SwipeableRowAction', () => 'SwipeableRowAction');
 jest.mock('./SwipeableRowContainer', () => 'SwipeableRowContainer');
 
 import * as React from 'react';
-import { Text } from 'react-native';
+import { Alert, Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { bech32 } from 'bech32';
+import Base64Utils from '../../utils/Base64Utils';
 import { settingsStore } from '../../stores/Stores';
+import { unsafeLnurlError } from '../../utils/LnurlFetchUtils';
 import LightningSwipeableRow from './LightningSwipeableRow';
 
 const mockSettingsStore = settingsStore as {
@@ -40,13 +48,21 @@ const mockSettingsStore = settingsStore as {
 
 const ONION = 'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
 
+const asLnurl = (target: string) =>
+    bech32.encode(
+        'lnurl',
+        bech32.toWords(Base64Utils.utf8ToBytes(target)),
+        20000
+    );
+
 // A locked row pays its destination when tapped
-const tapRow = async (lightningAddress: string) => {
+const tapRow = async (lightningAddress?: string, lightning?: string) => {
     const navigation = { navigate: jest.fn() };
     await render(
         <LightningSwipeableRow
             {...({
                 lightningAddress,
+                lightning,
                 locked: true,
                 navigation,
                 SyncStore: { isSyncing: false }
@@ -63,8 +79,8 @@ const tapRow = async (lightningAddress: string) => {
 
 describe('LightningSwipeableRow Lightning Address lookup', () => {
     beforeEach(() => {
-        mockBlobUtilFetch.mockReset();
-        mockBlobUtilFetch.mockResolvedValue({
+        mockFetchLnurlUrl.mockReset();
+        mockFetchLnurlUrl.mockResolvedValue({
             info: () => ({ status: 200 }),
             json: () => ({ callback: 'https://example.com/callback' })
         });
@@ -79,8 +95,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
     it('lowercases an uppercase domain and username', async () => {
         const navigation = await tapRow('SATOSHI@BLINK.SV');
 
-        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-            'get',
+        expect(mockFetchLnurlUrl).toHaveBeenCalledWith(
             'https://blink.sv/.well-known/lnurlp/satoshi'
         );
         expect(navigation.navigate).toHaveBeenCalledWith(
@@ -94,8 +109,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
 
         await tapRow(`${username}@cryptoqr.net`);
 
-        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-            'get',
+        expect(mockFetchLnurlUrl).toHaveBeenCalledWith(
             `https://cryptoqr.net/.well-known/lnurlp/${username}`
         );
     });
@@ -109,7 +123,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             `http://${ONION}/.well-known/lnurlp/satoshi`,
             'GET'
         );
-        expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+        expect(mockFetchLnurlUrl).not.toHaveBeenCalled();
         expect(navigation.navigate).toHaveBeenCalledWith(
             'LnurlPay',
             expect.anything()
@@ -120,10 +134,26 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         await tapRow(`satoshi@${ONION}`);
 
         expect(mockDoTorRequest).not.toHaveBeenCalled();
-        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-            'get',
+        expect(mockFetchLnurlUrl).toHaveBeenCalledWith(
             `http://${ONION}/.well-known/lnurlp/satoshi`
         );
+    });
+
+    it('refuses an address on a private host without fetching it', async () => {
+        const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation();
+
+        const navigation = await tapRow('user@192.168.1.1');
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'utils.lnurl.unsafeLightningAddress',
+            expect.anything(),
+            expect.anything()
+        );
+        expect(mockFetchLnurlUrl).not.toHaveBeenCalled();
+        expect(mockDoTorRequest).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        alertSpy.mockRestore();
     });
 
     it('fetches a clearnet domain with an .onion label over https', async () => {
@@ -132,82 +162,184 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         await tapRow('satoshi@pay.onion.example.com');
 
         expect(mockDoTorRequest).not.toHaveBeenCalled();
-        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-            'get',
+        expect(mockFetchLnurlUrl).toHaveBeenCalledWith(
             'https://pay.onion.example.com/.well-known/lnurlp/satoshi'
         );
     });
 
-    // fetchLnInvoice neither awaits nor catches the lookup, so a server
-    // without a callback ends up as an unhandled rejection and the user sees
-    // nothing. Jest fails a test on an unhandled rejection, so this cannot be
-    // pinned through the row until the error is handled (#5060).
-    it.todo('tells the user when the Lightning address lookup fails');
+    describe('lookup failures', () => {
+        let alertSpy: jest.SpyInstance;
+        beforeEach(() => {
+            alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        });
+        afterEach(() => alertSpy.mockRestore());
 
-    describe('handler validation', () => {
-        // Until #5060 lands, call the handler on a mounted row directly
-        const lookUp = async (lightningAddress: string) => {
-            const ref = React.createRef<any>();
-            const navigation = { navigate: jest.fn() };
-            await render(
-                <LightningSwipeableRow
-                    {...({
-                        ref,
-                        lightningAddress,
-                        locked: true,
-                        navigation,
-                        SyncStore: { isSyncing: false }
-                    } as any)}
-                >
-                    <Text>Pay</Text>
-                </LightningSwipeableRow>
-            );
-            const result = ref.current.handleLightningAddress(
-                lightningAddress,
-                navigation,
-                {}
-            );
-            return { navigation, result };
-        };
+        const alertedMessage = () => alertSpy.mock.calls[0]?.[1];
 
-        it('rejects a response without a callback', async () => {
-            mockBlobUtilFetch.mockResolvedValue({
+        it('alerts when the response has no callback', async () => {
+            mockFetchLnurlUrl.mockResolvedValue({
                 info: () => ({ status: 200 }),
                 json: () => ({})
             });
 
-            const { navigation, result } = await lookUp('satoshi@domain.com');
+            const navigation = await tapRow('satoshi@domain.com');
 
-            await expect(result).rejects.toThrow(
+            expect(alertedMessage()).toBe(
                 'utils.handleAnything.lightningAddressError'
             );
             expect(navigation.navigate).not.toHaveBeenCalled();
         });
 
-        it('rejects a non-200 response', async () => {
-            mockBlobUtilFetch.mockResolvedValue({
+        it('alerts on a non-200 response', async () => {
+            mockFetchLnurlUrl.mockResolvedValue({
                 info: () => ({ status: 404 }),
                 json: () => ({ callback: 'https://example.com/callback' })
             });
 
-            const { navigation, result } = await lookUp('satoshi@domain.com');
+            const navigation = await tapRow('satoshi@domain.com');
 
-            await expect(result).rejects.toThrow(
+            expect(alertedMessage()).toBe(
                 'utils.handleAnything.lightningAddressError'
             );
             expect(navigation.navigate).not.toHaveBeenCalled();
         });
 
-        it('rejects a Tor response without a callback', async () => {
+        it('alerts when the redirect limit is hit', async () => {
+            mockFetchLnurlUrl.mockRejectedValue(
+                new Error('utils.lnurl.tooManyRedirects')
+            );
+
+            const navigation = await tapRow('satoshi@domain.com');
+
+            expect(alertedMessage()).toBe('utils.lnurl.tooManyRedirects');
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+
+        it('alerts when a redirect is refused by the host policy', async () => {
+            mockFetchLnurlUrl.mockRejectedValue(
+                unsafeLnurlError('utils.lnurl.unsafeRedirect')
+            );
+
+            const navigation = await tapRow('satoshi@domain.com');
+
+            expect(alertedMessage()).toBe('utils.lnurl.unsafeRedirect');
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+
+        it('alerts when the request fails', async () => {
+            mockFetchLnurlUrl.mockRejectedValue(new Error('network down'));
+
+            const navigation = await tapRow('satoshi@domain.com');
+
+            expect(alertedMessage()).toBe('network down');
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+
+        it('alerts when a Tor response has no callback', async () => {
             mockSettingsStore.enableTor = true;
             mockDoTorRequest.mockResolvedValue({});
 
-            const { navigation, result } = await lookUp(`satoshi@${ONION}`);
+            const navigation = await tapRow(`satoshi@${ONION}`);
 
-            await expect(result).rejects.toThrow(
+            expect(alertedMessage()).toBe(
                 'utils.handleAnything.lightningAddressError'
             );
             expect(navigation.navigate).not.toHaveBeenCalled();
         });
+
+        // doTorRequest can reject with a non-Error value
+        it('falls back to the generic message for a Tor rejection without a message', async () => {
+            mockSettingsStore.enableTor = true;
+            mockDoTorRequest.mockRejectedValue('socks failure');
+
+            const navigation = await tapRow(`satoshi@${ONION}`);
+
+            expect(alertedMessage()).toBe(
+                'utils.handleAnything.lightningAddressError'
+            );
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+    });
+});
+
+// A BIP21 lightning= lnurl reaches the row without passing through
+// handleAnything, so the row's own resolve is the only policy check
+describe('LightningSwipeableRow lnurl resolve', () => {
+    let alertSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        mockFetchLnurlParams.mockReset();
+        alertSpy = jest.spyOn(Alert, 'alert').mockImplementation();
+    });
+
+    afterEach(() => alertSpy.mockRestore());
+
+    const expectAlert = (message: string) =>
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            message,
+            expect.anything(),
+            expect.anything()
+        );
+
+    it('opens Receive for a public withdraw', async () => {
+        const params = {
+            tag: 'withdrawRequest',
+            k1: 'k1',
+            callback: 'https://example.com/cb'
+        };
+        mockFetchLnurlParams.mockResolvedValue(params);
+
+        const navigation = await tapRow(
+            undefined,
+            asLnurl('https://example.com/lnurl')
+        );
+
+        expect(navigation.navigate).toHaveBeenCalledWith('Receive', {
+            lnurlParams: params
+        });
+        expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    it('refuses an lnurl on a private host without resolving it', async () => {
+        const navigation = await tapRow(
+            undefined,
+            asLnurl('https://192.168.1.1/lnurl')
+        );
+
+        expectAlert('utils.lnurl.unsafeEndpoint');
+        expect(mockFetchLnurlParams).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('refuses a withdraw whose callback is on a private host', async () => {
+        mockFetchLnurlParams.mockResolvedValue({
+            tag: 'withdrawRequest',
+            k1: 'k1',
+            callback: 'https://10.0.0.1/cb'
+        });
+
+        const navigation = await tapRow(
+            undefined,
+            asLnurl('https://example.com/lnurl')
+        );
+
+        expectAlert('utils.lnurl.unsafeCallback');
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    // js-lnurl throws this for a withdraw link with a repeated callback=
+    it('shows the generic message, not the raw error, for a malformed link', async () => {
+        mockFetchLnurlParams.mockRejectedValue(
+            new TypeError('url.split is not a function')
+        );
+
+        const navigation = await tapRow(
+            undefined,
+            asLnurl('https://example.com/lnurl')
+        );
+
+        expectAlert('utils.handleAnything.invalidLnurlParams');
+        expect(navigation.navigate).not.toHaveBeenCalled();
     });
 });

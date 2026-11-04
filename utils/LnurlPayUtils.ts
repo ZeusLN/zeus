@@ -2,6 +2,7 @@
 import url from 'url';
 import BigNumber from 'bignumber.js';
 import { sha256 } from '@noble/hashes/sha256';
+import { decodelnurl } from 'js-lnurl/lib/helpers';
 
 import Base64Utils from './Base64Utils';
 import Bolt11Utils from './Bolt11Utils';
@@ -139,7 +140,7 @@ const parseIPv4Literal = (host: string): number[] | null => {
 const isPrivateIPv4 = (host: string): boolean => {
     const octets = parseIPv4Literal(host);
     if (!octets) return false;
-    const [a, b] = octets;
+    const [a, b, c] = octets;
     if (a === 0) return true; // "this network"
     if (a === 10) return true; // RFC1918
     if (a === 127) return true; // loopback
@@ -147,6 +148,9 @@ const isPrivateIPv4 = (host: string): boolean => {
     if (a === 172 && b >= 16 && b <= 31) return true; // RFC1918
     if (a === 192 && b === 168) return true; // RFC1918
     if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT (RFC6598)
+    if (a === 192 && b === 0 && c === 0) return true; // IETF protocol assignments
+    if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking
+    if (a >= 224) return true; // multicast, reserved, and broadcast
     return false;
 };
 
@@ -229,6 +233,7 @@ const isPrivateIPv6 = (host: string): boolean => {
     }
     if ((groups[0] & 0xfe00) === 0xfc00) return true; // fc00::/7 unique-local
     if ((groups[0] & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
+    if ((groups[0] & 0xffc0) === 0xfec0) return true; // fec0::/10 site-local
     return false;
 };
 
@@ -279,7 +284,21 @@ export const isLnurlCallbackAllowed = (callback: string): LnurlCheckResult => {
         };
     }
 
-    if (isPrivateOrReservedHost(hostname)) {
+    // url.parse ends the host at '%', but OkHttp percent-decodes it before
+    // dialing, so `https://192.168.%31.1/` is classified as `192.168.` and
+    // reaches 192.168.1.1. A real host never contains '%'. Both parsers
+    // accept any run of '/' and '\' after the scheme.
+    const authority = /^[a-z][a-z0-9+.-]*:[/\\]*([^/?#\\]*)/i.exec(
+        callback.trim()
+    )?.[1];
+    if (authority?.includes('%')) {
+        return { ok: false, reason: 'percent-encoded host' };
+    }
+
+    if (
+        isPrivateOrReservedHost(hostname) ||
+        isPrivateOrReservedHost(compatibilityHostname(callback))
+    ) {
         return {
             ok: false,
             reason: 'callback targets a private or reserved address'
@@ -287,6 +306,35 @@ export const isLnurlCallbackAllowed = (callback: string): LnurlCheckResult => {
     }
 
     return { ok: true };
+};
+
+/**
+ * The hostname a native HTTP stack is likely to contact. The bundled `url`
+ * package punycodes a non-ASCII host as is, so `１２７.０.０.１` (fullwidth)
+ * parses to an `xn--` name, while OkHttp and other IDNA implementations apply
+ * compatibility mapping first and connect to 127.0.0.1. NFKC plus lowercasing
+ * is that mapping for the characters that matter here (fullwidth and circled
+ * digits, letters and dots).
+ *
+ * IDNA also deletes some code points outright (soft hyphen, zero-width and
+ * variation-selector characters, Hangul fillers), which NFKC leaves in place,
+ * so `12<U+00AD>7.0.0.1` reaches 127.0.0.1 too. Those are stripped on both
+ * sides of the NFKC pass. The set is UTS-46's "ignored" code points plus the
+ * ones only nameprep (java.net.IDN) maps to nothing: U+1806, U+200C, U+200D.
+ */
+const IDNA_IGNORED =
+    /[\u00AD\u034F\u115F\u1160\u17B4\u17B5\u1806\u180B-\u180F\u200B-\u200D\u2060-\u2064\u206A-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\u{1BCA0}-\u{1BCA3}\u{1D173}-\u{1D17A}\u{E0100}-\u{E01EF}]/gu;
+
+const compatibilityHostname = (callback: string): string => {
+    try {
+        const mapped = callback
+            .replace(IDNA_IGNORED, '')
+            .normalize('NFKC')
+            .replace(IDNA_IGNORED, '');
+        return (url.parse(mapped).hostname || '').toLowerCase();
+    } catch (err: any) {
+        return '';
+    }
 };
 
 /**
@@ -336,3 +384,37 @@ export const verifyLnurlAuthCallback = (
 
     return { ok: true };
 };
+
+/**
+ * The same policy, applied to the LNURL endpoint itself before it is fetched.
+ *
+ * Checking callbacks alone leaves the step before them wide open: a bech32
+ * lnurl decodes to an arbitrary URL and js-lnurl fetches whatever it decodes
+ * to, so an `lnurl1...` encoding `http://192.168.1.1/` reaches the LAN with
+ * no server, no service and no callback involved. It also covers every tag at
+ * once, including the ones whose callbacks are checked elsewhere.
+ */
+export const isLnurlEndpointAllowed = (lnurl: string): LnurlCheckResult => {
+    let decoded: string;
+    try {
+        decoded = decodelnurl(lnurl);
+    } catch (err: any) {
+        // Nothing to police: js-lnurl decodes before it fetches and reports
+        // an undecodable value as an error without touching the network, so
+        // no request can come of this one. Rejecting it here would only
+        // replace that error with a misleading security one.
+        return { ok: true };
+    }
+
+    return isLnurlCallbackAllowed(decoded);
+};
+
+/**
+ * The same policy for a LUD-16 lightning address, given the well-known URL
+ * the caller is about to fetch. The address grammar admits IP-literal
+ * domains, so `user@192.168.1.1` is the same LAN request as a bech32 lnurl
+ * encoding it, without involving js-lnurl at all.
+ */
+export const isLightningAddressEndpointAllowed = (
+    wellKnownUrl: string
+): LnurlCheckResult => isLnurlCallbackAllowed(wellKnownUrl);

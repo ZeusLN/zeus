@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
@@ -31,11 +32,13 @@ jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/BackendUtils', () => ({
     connectPeer: jest.fn(() => Promise.resolve())
 }));
-jest.mock('react-native-blob-util', () => ({
-    fetch: jest.fn(() => Promise.resolve({ json: () => ({ status: 'OK' }) }))
+jest.mock('../utils/LnurlFetchUtils', () => ({
+    fetchLnurlUrl: jest.fn(() =>
+        Promise.resolve({ json: () => ({ status: 'OK' }) })
+    )
 }));
 
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
 import BackendUtils from '../utils/BackendUtils';
 import LnurlChannel from './LnurlChannel';
 
@@ -46,11 +49,11 @@ const lnurlParams = {
     uri: '03864ef025fde8fb587d989186ce6a4a186895ee44a926bfc370e2c366597a3f8f@3.33.236.230:9735'
 };
 
-const renderView = () =>
+const renderView = (params: typeof lnurlParams = lnurlParams) =>
     render(
         <LnurlChannel
             navigation={{} as any}
-            route={{ params: { lnurlParams } } as any}
+            route={{ params: { lnurlParams: params } } as any}
             ChannelsStore={{} as any}
             NodeInfoStore={{ nodeInfo: { getPubkey: 'localpubkey' } } as any}
         />
@@ -60,13 +63,13 @@ const connectButton = () =>
     screen.getByRole('button', { name: 'views.LnurlChannel.connect' });
 
 const callbackQuery = () => {
-    const [, url] = (ReactNativeBlobUtil.fetch as jest.Mock).mock.calls[0];
+    const [url] = (fetchLnurlUrl as jest.Mock).mock.calls[0];
     return new URL(url).searchParams;
 };
 
 describe('LnurlChannel', () => {
     beforeEach(() => {
-        (ReactNativeBlobUtil.fetch as jest.Mock).mockClear();
+        (fetchLnurlUrl as jest.Mock).mockClear();
         (BackendUtils.connectPeer as jest.Mock).mockClear();
     });
 
@@ -92,12 +95,12 @@ describe('LnurlChannel', () => {
 
         expect(connectButton()).toBeDisabled();
         await fireEvent.press(connectButton());
-        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+        expect(fetchLnurlUrl).not.toHaveBeenCalled();
 
         await act(async () => connected());
         expect(connectButton()).toBeEnabled();
         await fireEvent.press(connectButton());
-        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+        expect(fetchLnurlUrl).toHaveBeenCalledTimes(1);
     });
 
     it('keeps Connect disabled when the peer connection fails', async () => {
@@ -138,5 +141,24 @@ describe('LnurlChannel', () => {
 
         await fireEvent.press(connectButton());
         expect(callbackQuery().get('private')).toBe('0');
+    });
+
+    it('refuses a callback on a private host without fetching it', async () => {
+        const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation();
+        await renderView({
+            ...lnurlParams,
+            callback: 'https://192.168.1.1/channel'
+        });
+
+        await fireEvent.press(connectButton());
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'utils.lnurl.unsafeCallback',
+            expect.anything(),
+            expect.anything()
+        );
+        expect(fetchLnurlUrl).not.toHaveBeenCalled();
+        alertSpy.mockRestore();
     });
 });
