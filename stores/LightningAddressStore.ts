@@ -363,6 +363,7 @@ export default class LightningAddressStore {
     @action
     public status = async (isRedeem?: boolean) => {
         this.loading = true;
+        const pubkey = this.nodeInfoStore.nodeInfo?.identity_pubkey;
 
         try {
             const { verification, signature } = await this.getAuthData();
@@ -428,9 +429,13 @@ export default class LightningAddressStore {
             // ZEUS Pay keys the address to the node pubkey, so it can exist
             // without this install having created it (restore, reinstall,
             // reset settings). `enabled` gates the startup redeem, the
-            // socket and Receive, so bring it in line with the server.
+            // socket and Receive, so bring it in line with the server. A
+            // retired Zaplocker address stays off, and a reply for a node
+            // the user has since switched away from is ignored.
             if (
                 handle &&
+                (addressType === 'cashu' || addressType === 'nwc') &&
+                this.nodeInfoStore.nodeInfo?.identity_pubkey === pubkey &&
                 !this.settingsStore.settings?.lightningAddress?.enabled
             ) {
                 await this.settingsStore.updateSettingsGroup(

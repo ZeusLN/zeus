@@ -485,6 +485,48 @@ describe('LightningAddressStore flows', () => {
                 ).not.toHaveBeenCalled();
                 expect(arm).not.toHaveBeenCalled();
             });
+
+            it('leaves a retired Zaplocker address disabled', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                withAddress('zaplocker');
+
+                await store.status();
+
+                expect(
+                    settingsStore.updateSettingsGroup
+                ).not.toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+
+            it('ignores the reply when the wallet was switched mid-request', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                signMessage.mockImplementation(async () => {
+                    store.nodeInfoStore.nodeInfo.identity_pubkey = '02ff';
+                    return { zbase: 'zsig' };
+                });
+                withAddress();
+
+                await store.status();
+
+                expect(
+                    settingsStore.updateSettingsGroup
+                ).not.toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
         });
     });
 
