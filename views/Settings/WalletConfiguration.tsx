@@ -322,6 +322,12 @@ export default class WalletConfiguration extends React.Component<
         pairingPhraseError: false
     });
 
+    // A port filled in from a saved wallet, a scan or an import is marked
+    // the same way as a typed one, so a disabled Save button has a reason
+    // on screen.
+    isInvalidPort = (port?: string) =>
+        !!port && !ValidationUtils.isValidPort(port);
+
     importClipboard = () => {
         const { suggestImport } = this.state;
 
@@ -338,6 +344,7 @@ export default class WalletConfiguration extends React.Component<
                 }),
                 host,
                 port,
+                portError: this.isInvalidPort(port),
                 macaroonHex: macaroonHex || '',
                 suggestImport: '',
                 importError: '',
@@ -406,6 +413,7 @@ export default class WalletConfiguration extends React.Component<
                 host,
                 rune,
                 port,
+                portError: this.isInvalidPort(port),
                 enableTor,
                 suggestImport: '',
                 importError: ''
@@ -539,6 +547,7 @@ export default class WalletConfiguration extends React.Component<
                 dismissCustodialWarning,
                 host,
                 port,
+                portError: this.isInvalidPort(port),
                 macaroonHex,
                 rune,
                 implementation: implementation || 'lnd',

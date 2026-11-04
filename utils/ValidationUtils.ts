@@ -64,8 +64,18 @@ const isValidServerAddress = (
     }
 };
 
+// The backends append the port to the host as text, so anything after the
+// digits must not change the host: '8080@example.com' would make the shown
+// host URL userinfo. A path after a '/' leaves the host alone and is kept,
+// since a port such as '8443/lnd' is the only way to give a path together
+// with a port. One character class, not PATH_REGEX: its nested quantifier
+// backtracks exponentially on input that does not match.
+const PORT_WITH_PATH_REGEX = /^(\d+)(\/[a-zA-Z0-9\-._~!$&'()*+,;=/]*)?$/;
+
 const isValidPort = (port: string): boolean => {
-    const portNum = parseInt(port);
+    const match = PORT_WITH_PATH_REGEX.exec(port);
+    if (!match) return false;
+    const portNum = parseInt(match[1], 10);
     return portNum >= 1 && portNum <= 65535;
 };
 
