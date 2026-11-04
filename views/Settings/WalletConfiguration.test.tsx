@@ -115,9 +115,21 @@ const renderView = async (
     }: { clipboard?: boolean; saved?: boolean; params?: any } = {}
 ) => {
     openedNode = node;
-    const updateSettings = jest.fn(() => Promise.resolve());
+    const settings: any = {
+        privacy: { clipboard },
+        selectedNode: 0,
+        nodes: [{}, node]
+    };
+    // Applies the update before resolving, like SettingsStore
+    const updateSettings = jest.fn((update: any) => {
+        Object.assign(
+            settings,
+            typeof update === 'function' ? update(settings) : update
+        );
+        return Promise.resolve(settings);
+    });
     const SettingsStore = {
-        settings: { privacy: { clipboard }, selectedNode: 0 },
+        settings,
         updateSettings,
         setConnectingStatus: jest.fn()
     };
@@ -560,6 +572,13 @@ describe('WalletConfiguration', () => {
             await save();
 
             expect(savedNode(updateSettings).enableTor).toBeFalsy();
+        });
+
+        it('leaves the screen after the save', async () => {
+            const { navigation } = await renderView(LND_NODE);
+            await save();
+
+            expect(navigation.goBack).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -1373,6 +1392,45 @@ describe('WalletConfiguration', () => {
             expect(SettingsStore.settings.nodes[2]).toMatchObject({
                 host: 'https://linked.example.com'
             });
+        });
+
+        // Add and Duplicate open a new entry at the end of the list
+        it('appends a new entry once when Save is pressed twice in the same tick', async () => {
+            const copy = { ...LND_NODE, nickname: 'Copy' };
+            const { SettingsStore } = await open([LND_NODE], {
+                node: copy,
+                newEntry: true,
+                index: 1,
+                active: false,
+                saved: false
+            });
+            // Inside one act the first press has not re-rendered Save as
+            // disabled when the second one lands
+            await act(async () => {
+                save();
+                save();
+            });
+
+            expect(SettingsStore.updateSettings).toHaveBeenCalledTimes(1);
+            expect(SettingsStore.settings.nodes).toHaveLength(2);
+            expect(SettingsStore.settings.nodes[1]).toMatchObject(copy);
+        });
+
+        it('saves again after a save found the wallet gone', async () => {
+            const { SettingsStore } = await open([SAVINGS], {
+                node: SPENDING,
+                index: 0,
+                saved: false
+            });
+
+            await save();
+            expect(alert).toHaveBeenCalledTimes(1);
+
+            // The second press reaches the store instead of being dropped
+            await save();
+            expect(SettingsStore.updateSettings).toHaveBeenCalledTimes(2);
+            expect(SettingsStore.settings.nodes).toEqual([SAVINGS]);
+            expect(alert).toHaveBeenCalledTimes(2);
         });
     });
 });
