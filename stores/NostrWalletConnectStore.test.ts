@@ -2068,6 +2068,41 @@ describe('NostrWalletConnectStore payment notifications', () => {
             expect(relay.publishNotification).toHaveBeenCalledTimes(1);
         });
 
+        it('publishes payment_sent once and debits once when finalizePayment lands during a reconcile', async () => {
+            const payment = settledPayment();
+            let release: (value: any) => void = () => {};
+            const gate = new Promise((resolve) => (release = resolve));
+            const started = await startService([{ maxAmountSats: 100000 }], {
+                paymentsStore: {
+                    payments: [payment],
+                    getPayments: jest.fn(() => gate)
+                }
+            });
+            const connection = started.connections[0];
+            connection.activity = [pendingPayInvoice()] as any;
+            const relay = relays.get(connection.relayUrl)!;
+
+            const reconcile = (
+                started.store as any
+            ).reconcilePendingPayInvoiceActivities(connection);
+            await (started.store as any).finalizePayment({
+                rawInvoice: invoice,
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                decoded: payment,
+                connection,
+                amountSats: 10000,
+                feeSats: 50,
+                paymentHash
+            });
+            release([payment]);
+            await reconcile;
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            expect(connection.totalSpendSats).toBe(10050);
+        });
+
         describe('Cashu invoices', () => {
             const MINT = 'https://mint.example';
             const cashuRequest = 'lnbc1notify-cashu';
@@ -2310,7 +2345,8 @@ describe('NostrWalletConnectStore payment notifications', () => {
         expect(connection.activity[0].status).toBe('success');
         expect(connection.activity[0].isBudgetDebited).toBe(true);
         expect(relay.publishNotification).toHaveBeenCalledTimes(1);
-        expect(consoleError).toHaveBeenCalled();
+        // logged once, by notifyConnection
+        expect(consoleError).toHaveBeenCalledTimes(1);
     });
 });
 

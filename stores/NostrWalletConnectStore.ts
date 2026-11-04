@@ -14,6 +14,7 @@ import {
     Nip47SignMessageResponse,
     Nip47SignMessageRequest,
     Nip47Method,
+    Nip47NotificationType,
     NWCWalletServiceRequestHandler,
     NWCWalletServiceResponsePromise
 } from '@getalby/sdk';
@@ -109,7 +110,10 @@ export const DEFAULT_NOSTR_RELAYS = [
 ];
 
 type AppStateSubscription = ReturnType<typeof AppState.addEventListener>;
-type Nip47NotifyType = 'payment_sent' | 'payment_received';
+type Nip47NotifyType = Extract<
+    Nip47NotificationType,
+    'payment_sent' | 'payment_received'
+>;
 
 type PendingConnectionMutation = 'delete' | 'update' | 'rotate';
 
@@ -1917,17 +1921,10 @@ export default class NostrWalletConnectStore {
             );
             return;
         }
-        try {
-            await service.publishNotification(
-                new NWCWalletServiceKeyPair(walletSecret, connection.pubkey),
-                { notification_type: notificationType, notification: tx }
-            );
-        } catch (error) {
-            console.error(
-                `NWC: failed to publish ${notificationType} notification for connection ${connection.name}:`,
-                error
-            );
-        }
+        await service.publishNotification(
+            new NWCWalletServiceKeyPair(walletSecret, connection.pubkey),
+            { notification_type: notificationType, notification: tx }
+        );
     }
 
     /**
@@ -1942,10 +1939,10 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection | undefined,
         activity: ConnectionActivity,
         apply: () => void
-    ): boolean {
+    ): void {
         const wasSettled = activity.status === 'success';
         runInAction(apply);
-        if (wasSettled) return false;
+        if (wasSettled) return;
         if (connection) {
             void this.notifyConnection(
                 connection,
@@ -1953,7 +1950,6 @@ export default class NostrWalletConnectStore {
                 activity
             );
         }
-        return true;
     }
 
     private connectionOfActivity(
@@ -3264,24 +3260,27 @@ export default class NostrWalletConnectStore {
             }
 
             let transitionedToSuccess = false;
+            let current = activity;
 
             runInAction(() => {
-                const statusBefore = activity.status;
+                // finalizePayment may have replaced the row during the await
+                current =
+                    connection.findPayInvoiceActivity(
+                        activity.id,
+                        activity.paymentHash
+                    ) ?? activity;
+                const statusBefore = current.status;
                 if (
-                    this.applyPayInvoiceReconcile(activity, connection, payment)
+                    this.applyPayInvoiceReconcile(current, connection, payment)
                 ) {
                     changed = true;
                 }
                 transitionedToSuccess =
-                    statusBefore !== 'success' && activity.status === 'success';
+                    statusBefore !== 'success' && current.status === 'success';
             });
 
             if (transitionedToSuccess) {
-                void this.notifyConnection(
-                    connection,
-                    'payment_sent',
-                    activity
-                );
+                void this.notifyConnection(connection, 'payment_sent', current);
             }
         }
 
