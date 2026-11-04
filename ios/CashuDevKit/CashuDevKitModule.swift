@@ -56,6 +56,16 @@ class CashuDevKitModule: RCTEventEmitter {
             throw makeP2PKValidationError("P2PK spending conditions require a pubkey")
         }
 
+        // An unknown field (e.g. a camelCase numSigs) is rejected rather than
+        // ignored, which would lock to fewer signers than the caller wrote.
+        let knownKeys: Set<String> = [
+            "pubkey", "locktime", "pubkeys", "refund_keys",
+            "num_sigs", "num_sigs_refund", "sig_flag"
+        ]
+        if let unknownKey = condData.keys.sorted().first(where: { !knownKeys.contains($0) }) {
+            throw makeP2PKValidationError("Unsupported P2PK field: \(unknownKey)")
+        }
+
         // NUT-11 tags must be omitted entirely when they don't apply. Emitting
         // them with a value of 0 (`["locktime", "0"]`, `["n_sigs", "0"]`,
         // `["n_sigs_refund", "0"]`) produces tokens that mints such as CDK

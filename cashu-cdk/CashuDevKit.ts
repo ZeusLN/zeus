@@ -97,22 +97,47 @@ function mapCDKError(error: any): CDKError {
     return { type: CDKErrorType.Generic, message };
 }
 
+const P2PK_DATA_KEYS = [
+    'pubkey',
+    'locktime',
+    'pubkeys',
+    'refund_keys',
+    'num_sigs',
+    'num_sigs_refund',
+    'sig_flag'
+];
+
 /**
  * The native modules only convert P2PK conditions with a pubkey. Refuse
  * anything else before the native call so a requested lock can never turn
  * into an unlocked bearer token. HTLC is not wired up on either platform.
  * Optional fields that are present but invalid are refused too, matching
- * the native parsers, instead of being dropped.
+ * the native parsers, instead of being dropped. So are unknown fields
+ * (e.g. a camelCase numSigs), which the native parsers would ignore.
+ *
+ * Throws a Generic CDKError. Call it outside the try blocks that end in
+ * mapCDKError: "spending" contains "pending", so mapCDKError would
+ * classify these messages as PaymentPending.
  */
 function assertSupportedConditions(conditions: CDKSpendingConditions): void {
+    const fail = (message: string): never => {
+        const error: CDKError = { type: CDKErrorType.Generic, message };
+        throw error;
+    };
     const kind = (conditions as any)?.kind;
     if (kind !== 'P2PK') {
-        throw new Error(`Unsupported spending condition kind: ${kind}`);
+        fail(`Unsupported spending condition kind: ${kind}`);
     }
     const data = (conditions as any).data;
     const pubkey = data?.pubkey;
     if (typeof pubkey !== 'string' || pubkey.length === 0) {
-        throw new Error('P2PK spending conditions require a pubkey');
+        fail('P2PK spending conditions require a pubkey');
+    }
+    const unknownKey = Object.keys(data)
+        .sort()
+        .find((key) => !P2PK_DATA_KEYS.includes(key));
+    if (unknownKey !== undefined) {
+        fail(`Unsupported P2PK field: ${unknownKey}`);
     }
     for (const key of ['locktime', 'num_sigs', 'num_sigs_refund']) {
         const value = data[key];
@@ -122,22 +147,27 @@ function assertSupportedConditions(conditions: CDKSpendingConditions): void {
                 ? Number.isSafeInteger(value) && value >= 0
                 : typeof value === 'string' && /^\d+$/.test(value);
         if (!valid) {
-            throw new Error(`${key} must be a non-negative integer`);
+            fail(`${key} must be a non-negative integer`);
         }
     }
     for (const key of ['pubkeys', 'refund_keys']) {
         const value = data[key];
         if (value == null) continue;
         if (!Array.isArray(value)) {
-            throw new Error(`${key} must be an array`);
+            fail(`${key} must be an array`);
         }
-        if (value.some((k) => typeof k !== 'string' || k.length === 0)) {
-            throw new Error(`${key} entries must be non-empty strings`);
+        // Array.from turns holes into undefined; some() and every() skip them
+        if (
+            Array.from(value).some(
+                (k) => typeof k !== 'string' || k.length === 0
+            )
+        ) {
+            fail(`${key} entries must be non-empty strings`);
         }
     }
     const sigFlag = data.sig_flag;
     if (sigFlag != null && sigFlag !== 'SigInputs' && sigFlag !== 'SigAll') {
-        throw new Error(`Unsupported sig_flag: ${sigFlag}`);
+        fail(`Unsupported sig_flag: ${sigFlag}`);
     }
 }
 
@@ -449,9 +479,9 @@ class CashuDevKit {
         quoteId: string,
         conditions?: CDKSpendingConditions
     ): Promise<CDKProof[]> {
+        if (conditions != null) assertSupportedConditions(conditions);
         return this.gate.runOperation(mintUrl, async () => {
             try {
-                if (conditions != null) assertSupportedConditions(conditions);
                 const json = await CashuDevKitModule.mint(
                     mintUrl,
                     quoteId,
@@ -577,10 +607,10 @@ class CashuDevKit {
         amount: number,
         options?: CDKSendOptions
     ): Promise<CDKPreparedSend> {
+        if (options?.conditions != null) {
+            assertSupportedConditions(options.conditions);
+        }
         try {
-            if (options?.conditions != null) {
-                assertSupportedConditions(options.conditions);
-            }
             const result = await CashuDevKitModule.prepareSend(
                 mintUrl,
                 amount,
