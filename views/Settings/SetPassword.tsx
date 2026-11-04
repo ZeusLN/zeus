@@ -5,6 +5,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import PreventRemove from '../../components/PreventRemove';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
@@ -29,7 +31,10 @@ interface SetPassphraseState {
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
     passphraseEmptyError: boolean;
+    passphraseSaveError: boolean;
     isBiometryEnabled: boolean;
+    saving: boolean;
+    saved: boolean;
 }
 
 @inject('SettingsStore', 'ModalStore')
@@ -45,7 +50,10 @@ export default class SetPassphrase extends React.Component<
         passphraseMismatchError: false,
         passphraseInvalidError: false,
         passphraseEmptyError: false,
-        isBiometryEnabled: false
+        passphraseSaveError: false,
+        isBiometryEnabled: false,
+        saving: false,
+        saved: false
     };
 
     private firstInput = React.createRef<any>();
@@ -77,7 +85,7 @@ export default class SetPassphrase extends React.Component<
     saveSettings = async () => {
         const { SettingsStore, navigation, route } = this.props;
         const { passphrase, passphraseConfirm } = this.state;
-        const { getSettings, updateSettings, setLoginStatus } = SettingsStore;
+        const { settings, updateSettings, setLoginStatus } = SettingsStore;
 
         if (passphrase !== passphraseConfirm) {
             this.setState({
@@ -87,8 +95,11 @@ export default class SetPassphrase extends React.Component<
             return;
         }
 
-        const settings = await getSettings();
-
+        // In-memory settings are current here: every write of
+        // passphrase/duressPassphrase goes through updateSettings, which
+        // updates this.settings once the write has landed, and those flows
+        // only navigate afterwards. Re-reading the keychain would only add
+        // latency and a full re-render.
         if (passphrase !== '' && passphrase === settings.duressPassphrase) {
             this.setState({
                 passphraseInvalidError: true
@@ -104,9 +115,19 @@ export default class SetPassphrase extends React.Component<
             return;
         }
 
-        await updateSettings({ passphrase }).then(() => {
+        this.setState({ saving: true, passphraseSaveError: false });
+        try {
+            await updateSettings({ passphrase });
+        } catch (error) {
+            console.error('Could not save password', error);
+            this.setState({ saving: false, passphraseSaveError: true });
+            return;
+        }
+
+        // PreventRemove would also block this popTo; navigate only once
+        // `saved` has been committed and lifted the block
+        this.setState({ saved: true }, () => {
             setLoginStatus(true);
-            getSettings();
             navigation.popTo('Security', {
                 enableBiometrics: route.params?.forBiometrics
             });
@@ -135,13 +156,21 @@ export default class SetPassphrase extends React.Component<
             savedPassphrase,
             passphraseMismatchError,
             passphraseInvalidError,
-            passphraseEmptyError
+            passphraseEmptyError,
+            passphraseSaveError,
+            saving,
+            saved
         } = this.state;
 
         return (
             <Screen>
+                {/* Leaving mid-save would let Security read the old settings */}
+                <PreventRemove
+                    enabled={saving && !saved}
+                    onAttempt={() => void 0}
+                />
                 <Header
-                    leftComponent="Back"
+                    leftComponent={saving ? undefined : 'Back'}
                     centerComponent={{
                         text: localeString(
                             savedPassphrase
@@ -153,6 +182,9 @@ export default class SetPassphrase extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        saving ? <LoadingIndicator size={30} /> : undefined
+                    }
                     navigation={navigation}
                 />
                 <View
@@ -183,6 +215,13 @@ export default class SetPassphrase extends React.Component<
                             )}
                         />
                     )}
+                    {passphraseSaveError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.SetPassword.saveError'
+                            )}
+                        />
+                    )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.newPassword')}
                     </Text>
@@ -196,12 +235,14 @@ export default class SetPassphrase extends React.Component<
                                 passphrase: text,
                                 passphraseMismatchError: false,
                                 passphraseInvalidError: false,
-                                passphraseEmptyError: false
+                                passphraseEmptyError: false,
+                                passphraseSaveError: false
                             })
                         }
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
+                        locked={saving}
                         style={{
                             paddingLeft: 10,
                             paddingTop:
@@ -228,12 +269,14 @@ export default class SetPassphrase extends React.Component<
                                 passphraseConfirm: text,
                                 passphraseMismatchError: false,
                                 passphraseInvalidError: false,
-                                passphraseEmptyError: false
+                                passphraseEmptyError: false,
+                                passphraseSaveError: false
                             })
                         }
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
+                        locked={saving}
                         style={{
                             paddingLeft: 10,
                             paddingTop:
@@ -253,6 +296,7 @@ export default class SetPassphrase extends React.Component<
                                 'views.Settings.SetPassword.save'
                             )}
                             onPress={() => this.saveSettings()}
+                            disabled={saving}
                         />
                     </View>
                     {!!savedPassphrase && (
@@ -310,6 +354,7 @@ export default class SetPassphrase extends React.Component<
                                     );
                                 }}
                                 warning
+                                disabled={saving}
                             />
                         </View>
                     )}

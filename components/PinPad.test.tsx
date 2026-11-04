@@ -200,6 +200,7 @@ describe('PinPad PIN entry', () => {
         const { clearValue } = await renderPad();
 
         await act(() => onAppStateChange('active'));
+        await act(() => onAppStateChange('inactive'));
         expect(clearValue).not.toHaveBeenCalled();
 
         await act(() => onAppStateChange('background'));

@@ -11,6 +11,9 @@ interface PinProps {
     pinLength?: number;
     pinConfirm?: boolean;
     shuffle?: boolean;
+    // Set by the parent while it processes a submitted PIN: shows all
+    // circles filled and locks the pad until the parent is done.
+    disabled?: boolean;
 }
 
 export default function Pin({
@@ -19,7 +22,8 @@ export default function Pin({
     hidePinLength,
     pinLength = 4,
     pinConfirm = false,
-    shuffle = true
+    shuffle = true,
+    disabled = false
 }: PinProps) {
     const [pinValue, setPinValue] = useState('');
     const [showPin, setShowPin] = useState(false);
@@ -78,7 +82,7 @@ export default function Pin({
                     justifyContent: 'center'
                 }}
             >
-                {showPin ? (
+                {showPin && !disabled ? (
                     <Text
                         style={{
                             fontFamily: 'PPNeueMontreal-Bold',
@@ -93,7 +97,7 @@ export default function Pin({
                 ) : (
                     <PinCircles
                         pinLength={pinLength}
-                        numFilled={pinValue.length}
+                        numFilled={disabled ? pinLength : pinValue.length}
                         hidePinLength={hidePinLength}
                     />
                 )}
@@ -106,7 +110,9 @@ export default function Pin({
             <View
                 style={{
                     flex: 1,
-                    justifyContent: 'flex-end'
+                    justifyContent: 'flex-end',
+                    opacity: disabled ? 0.25 : 1,
+                    pointerEvents: disabled ? 'none' : 'auto'
                 }}
             >
                 <PinPad

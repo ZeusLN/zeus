@@ -4,7 +4,9 @@ import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import Pin from '../../components/Pin';
+import PreventRemove from '../../components/PreventRemove';
 import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
@@ -24,6 +26,9 @@ interface SetPinState {
     pinConfirm: string;
     pinMismatchError: boolean;
     pinInvalidError: boolean;
+    pinSaveError: boolean;
+    saving: boolean;
+    saved: boolean;
 }
 
 @inject('SettingsStore')
@@ -33,7 +38,10 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         pin: '',
         pinConfirm: '',
         pinMismatchError: false,
-        pinInvalidError: false
+        pinInvalidError: false,
+        pinSaveError: false,
+        saving: false,
+        saved: false
     };
 
     renderSeparator = () => (
@@ -50,7 +58,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             this.setState({
                 pin: value,
                 pinMismatchError: false,
-                pinInvalidError: false
+                pinInvalidError: false,
+                pinSaveError: false
             });
         } else {
             this.setState({ pinConfirm: value }, () => {
@@ -62,14 +71,15 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     onPinChange = () => {
         this.setState({
             pinMismatchError: false,
-            pinInvalidError: false
+            pinInvalidError: false,
+            pinSaveError: false
         });
     };
 
     saveSettings = async () => {
         const { SettingsStore, navigation, route } = this.props;
         const { pin, pinConfirm } = this.state;
-        const { getSettings, updateSettings, setLoginStatus } = SettingsStore;
+        const { settings, updateSettings, setLoginStatus } = SettingsStore;
 
         if (pin !== pinConfirm) {
             this.setState({
@@ -81,8 +91,11 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             return;
         }
 
-        const settings = await getSettings();
-
+        // In-memory settings are current here: every write of pin/duressPin
+        // goes through updateSettings, which updates this.settings once the
+        // write has landed, and those flows only navigate afterwards.
+        // Re-reading the keychain would only add latency and a full
+        // re-render.
         if (pin === settings.duressPin) {
             this.setState({
                 pinInvalidError: true,
@@ -93,9 +106,19 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             return;
         }
 
-        await updateSettings({ pin }).then(() => {
+        this.setState({ saving: true });
+        try {
+            await updateSettings({ pin });
+        } catch (error) {
+            console.error('Could not save PIN', error);
+            this.setState({ saving: false, pinSaveError: true });
+            return;
+        }
+
+        // PreventRemove would also block this popTo; navigate only once
+        // `saved` has been committed and lifted the block
+        this.setState({ saved: true }, () => {
             setLoginStatus(true);
-            getSettings();
             navigation.popTo('Security', {
                 enableBiometrics: route.params?.forBiometrics
             });
@@ -105,11 +128,29 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     render() {
         const { navigation, SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const { pin, pinMismatchError, pinInvalidError } = this.state;
+        const {
+            pin,
+            pinMismatchError,
+            pinInvalidError,
+            pinSaveError,
+            saving,
+            saved
+        } = this.state;
 
         return (
             <Screen>
-                <Header leftComponent="Back" navigation={navigation} />
+                {/* Leaving mid-save would let Security read the old settings */}
+                <PreventRemove
+                    enabled={saving && !saved}
+                    onAttempt={() => void 0}
+                />
+                <Header
+                    leftComponent={saving ? undefined : 'Back'}
+                    rightComponent={
+                        saving ? <LoadingIndicator size={30} /> : undefined
+                    }
+                    navigation={navigation}
+                />
                 <View
                     style={{
                         paddingTop: 10,
@@ -128,6 +169,13 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                             <ErrorMessage
                                 message={localeString(
                                     'views.Settings.SetPin.invalid'
+                                )}
+                            />
+                        )}
+                        {pinSaveError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.SetPin.saveError'
                                 )}
                             />
                         )}
@@ -223,6 +271,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                     pinConfirm={true}
                                     pinLength={pin.length}
                                     shuffle={settings.scramblePin}
+                                    disabled={saving}
                                 />
                             </View>
                         </>
