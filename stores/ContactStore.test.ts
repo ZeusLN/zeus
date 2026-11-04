@@ -119,6 +119,29 @@ describe('ContactStore', () => {
                 { id: 'old-b', name: 'Robert' }
             ]);
         });
+
+        it('does not log the contact list', async () => {
+            const logSpy = jest.spyOn(console, 'log').mockImplementation();
+            getItemMock.mockResolvedValue(
+                JSON.stringify([
+                    { contactId: 'id-a', name: 'Alice', lnAddress: ['a@x.com'] }
+                ])
+            );
+            store.setPrefillContact({
+                contactId: 'id-a',
+                name: 'Alice'
+            } as any);
+
+            await store.saveContact(
+                { name: 'Alicia', lnAddress: ['a@x.com'] },
+                true,
+                false,
+                navigation
+            );
+
+            expect(JSON.stringify(logSpy.mock.calls)).not.toContain('a@x.com');
+            logSpy.mockRestore();
+        });
     });
 
     describe('deleteContact', () => {
