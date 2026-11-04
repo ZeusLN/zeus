@@ -62,6 +62,7 @@ jest.mock('../components/Switch', () => 'Switch');
 jest.mock('../components/SwipeButton', () => 'SwipeButton');
 jest.mock('../components/TextInput', () => 'TextInput');
 jest.mock('../components/UTXOPicker', () => 'UTXOPicker');
+jest.mock('../components/BrantaVerification', () => 'BrantaVerification');
 jest.mock('../assets/images/SVG/NFC-alt.svg', () => 'NFC');
 jest.mock('../assets/images/SVG/PeersContact.svg', () => 'ContactIcon');
 jest.mock('../assets/images/SVG/Scan.svg', () => 'Scan');

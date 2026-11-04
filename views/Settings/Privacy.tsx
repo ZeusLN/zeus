@@ -408,10 +408,8 @@ export default class Privacy extends React.Component<
                                     this.setState({
                                         enableBranta: !enableBranta
                                     });
-                                    await updateSettings({
-                                        branta: {
-                                            enabled: !enableBranta
-                                        }
+                                    await updateSettingsGroup('branta', {
+                                        enabled: !enableBranta
                                     });
                                 }}
                             />
