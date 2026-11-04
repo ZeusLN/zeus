@@ -1828,6 +1828,7 @@
     "stores.LSPStore.getInfoResponseError": "Το LSP επέστρεψε μια απροσδόκητη απάντηση. Παρακαλούμε δοκιμάστε ξανά αργότερα ή επικοινωνήστε με το LSP αν το πρόβλημα παραμένει.",
     "stores.LSPStore.wrappedInvoiceVerificationFailed": "Το συνημμένο τιμολόγιο που επιστράφηκε από τον πάροχο υπηρεσιών logistics LSP δεν αντιστοιχεί στο τιμολόγιο που έπρεπε να συνοδεύει και απορρίφθηκε",
     "stores.LSPStore.missingWrappedInvoice": "Η απάντηση της LSP δεν περιελάμβανε συνημμένο τιμολόγιο",
+    "stores.LightningAddressStore.Cashu.mintMismatch": "Payment references a mint that is not approved on this device",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Δεν έχει πληρωθεί το ποσό που αναφέρεται στην προσφορά",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Έλεγχος σφαλμάτων για πληρωμή  ",
     "stores.NostrWalletConnectStore.initializingService": "Εκκίνηση της υπηρεσίας Nostr Wallet Connect...",
