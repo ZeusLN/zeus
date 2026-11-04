@@ -2049,6 +2049,25 @@ describe('NostrWalletConnectStore payment notifications', () => {
             expect(relay.publishNotification).toHaveBeenCalledTimes(1);
         });
 
+        it('publishes payment_received once when the activity screen loads alongside two lookup_invoice calls', async () => {
+            const { store, connection, relay } = await startWithInvoice();
+            settleOnNode();
+
+            await Promise.all([
+                store.getActivities(connection.id),
+                (store as any).handleLookupInvoice(connection, {
+                    payment_hash: incomingHash
+                }),
+                (store as any).handleLookupInvoice(connection, {
+                    payment_hash: incomingHash
+                })
+            ]);
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(connection.activity[0].status).toBe('success');
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
         describe('Cashu invoices', () => {
             const MINT = 'https://mint.example';
             const cashuRequest = 'lnbc1notify-cashu';
@@ -2140,6 +2159,21 @@ describe('NostrWalletConnectStore payment notifications', () => {
                         })
                     })
                 );
+            });
+
+            it('stores the paid invoice on a settled activity that still holds the unpaid one, without notifying', async () => {
+                const { store, cashuStore, activity, relay } =
+                    await startWithCashuInvoice();
+                activity.status = 'success';
+                cashuStore.invoices = [cashuInvoice(true)];
+
+                const returned =
+                    await store.refreshActivityInvoiceForNavigation(activity);
+                await jest.advanceTimersByTimeAsync(0);
+
+                expect((returned as CashuInvoice).isPaid).toBe(true);
+                expect((activity.invoice as CashuInvoice).isPaid).toBe(true);
+                expect(relay.publishNotification).not.toHaveBeenCalled();
             });
 
             it('publishes nothing while a Cashu invoice is still unpaid', async () => {

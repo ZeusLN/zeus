@@ -1932,16 +1932,20 @@ export default class NostrWalletConnectStore {
 
     /**
      * Marks a make_invoice activity settled and sends payment_received once.
-     * Overlapping refreshes of the same activity find it already settled and
-     * skip, so only the call that makes the change notifies.
+     * The update is always applied, so a settled activity that still holds
+     * an unpaid invoice gets the paid one. Only the call that finds the
+     * activity not yet settled notifies: the check and the update run in the
+     * same synchronous step, so overlapping refreshes cannot both see it
+     * unsettled.
      */
     private settleMakeInvoice(
         connection: NWCConnection | undefined,
         activity: ConnectionActivity,
         apply: () => void
     ): boolean {
-        if (activity.status === 'success') return false;
+        const wasSettled = activity.status === 'success';
         runInAction(apply);
+        if (wasSettled) return false;
         if (connection) {
             void this.notifyConnection(
                 connection,
