@@ -258,20 +258,18 @@ describe('isValidServerAddress', () => {
     });
 
     // The old pattern /^\/([...]+\/?)*$/ took time exponential in the length
-    // of a path that does not match: for 28 characters about 2 s, or about
-    // 28 s before V8 compiles the pattern. The new check takes well under
-    // 1 ms, so the limit leaves room for a busy CI worker
-    it.each([28, 10000])(
-        'rejects an invalid path of %i characters in under 500 ms',
-        (length: number) => {
-            const address = `example.com/${'a'.repeat(length)}@`;
-            const start = Date.now();
-            const valid = ValidationUtils.isValidServerAddress(address);
-            const elapsed = Date.now() - start;
-            expect(valid).toBe(false);
-            expect(elapsed).toBeLessThan(500);
-        }
-    );
+    // of a path that does not match: seconds for 28 characters. The new check
+    // takes well under 1 ms, so the limit leaves room for a busy CI worker.
+    // No longer input here: on a pattern like the old one it would block the
+    // event loop, and Jest cannot interrupt a synchronous regex
+    it('rejects an invalid path of 28 characters in under 500 ms', () => {
+        const address = `example.com/${'a'.repeat(28)}@`;
+        const start = Date.now();
+        const valid = ValidationUtils.isValidServerAddress(address);
+        const elapsed = Date.now() - start;
+        expect(valid).toBe(false);
+        expect(elapsed).toBeLessThan(500);
+    });
 });
 
 describe('isValidPort', () => {
