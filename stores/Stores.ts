@@ -80,7 +80,8 @@ export const swapStore = new SwapStore(nodeInfoStore, settingsStore);
 export const spliceStore = new SpliceStore(
     channelsStore,
     balanceStore,
-    nodeInfoStore
+    nodeInfoStore,
+    transactionsStore
 );
 export const activityStore = new ActivityStore(
     settingsStore,

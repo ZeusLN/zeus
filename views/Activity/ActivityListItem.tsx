@@ -12,7 +12,9 @@ import {
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
+import { formatSpliceConfirmations } from '../../utils/SpliceUtils';
 
+import SpliceStore from '../../stores/SpliceStore';
 import SwapStore from '../../stores/SwapStore';
 
 import Invoice from '../../models/Invoice';
@@ -40,6 +42,7 @@ export interface ActivityListItemProps {
     onItemPress: (item: any) => void;
     order?: Order;
     swapStore: SwapStore;
+    spliceStore?: SpliceStore;
 }
 
 const ActivityListItem = observer(
@@ -48,7 +51,8 @@ const ActivityListItem = observer(
         selectedPaymentForOrder,
         onItemPress,
         order,
-        swapStore
+        swapStore,
+        spliceStore
     }: ActivityListItemProps) => {
         const note = item.getNote;
         let displayName = item.model;
@@ -216,6 +220,9 @@ const ActivityListItem = observer(
             );
         } else if (item instanceof Splice) {
             const direction = item.getDirection;
+            const confirmations = item.isPending
+                ? spliceStore?.getSpliceConfirmations(item)
+                : null;
             displayName =
                 item.initiator === 'remote'
                     ? localeString('views.Splice.activityPeer')
@@ -235,9 +242,11 @@ const ActivityListItem = observer(
                         : localeString('general.lightning')}
                     {'\n'}
                     {`${localeString('general.status')}: ${
-                        item.isPending
-                            ? localeString('views.Splice.waitingToConfirm')
-                            : localeString('general.confirmed')
+                        !item.isPending
+                            ? localeString('views.Splice.completed')
+                            : confirmations
+                            ? formatSpliceConfirmations(confirmations)
+                            : localeString('views.Splice.waitingToConfirm')
                     }`}
                 </Text>
             );

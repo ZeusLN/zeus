@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 
+jest.mock('@rneui/themed', () => ({ Divider: 'Divider' }));
 jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: (key: string) => `theme:${key}`
@@ -60,15 +61,17 @@ describe('PendingSplice', () => {
         expect(screen.getByText('100000 sats')).toBeOnTheScreen();
         expect(screen.getByText('400000 sats')).toBeOnTheScreen();
         expect(screen.getByText('2 / 6')).toBeOnTheScreen();
-        expect(screen.queryByText('views.Splice.lessTheFee')).toBeNull();
+        expect(screen.getByText('views.Splice.newCapacity')).toBeOnTheScreen();
     });
 
-    it('notes that a splice-out also pays its fee from the channel', async () => {
+    it('labels a splice-out capacity as before the fee it pays from the channel', async () => {
         await renderSplice({ direction: 'out', amountSats: 30000 });
 
         expect(screen.getByText('views.Splice.splicingOut')).toBeOnTheScreen();
+        expect(
+            screen.getByText('views.Splice.newCapacityBeforeFee')
+        ).toBeOnTheScreen();
         expect(screen.getByText('270000 sats')).toBeOnTheScreen();
-        expect(screen.getByText('views.Splice.lessTheFee')).toBeOnTheScreen();
     });
 
     it('shows where a splice-out pays to', async () => {
@@ -91,10 +94,19 @@ describe('PendingSplice', () => {
         expect(screen.queryByText('general.amount')).toBeNull();
     });
 
-    it('stops counting at the required depth while the splice waits to lock', async () => {
+    it('stops counting at the required depth and says it waits for the peer', async () => {
         await renderSplice({}, { current: 8, total: 6 });
 
         expect(screen.getByText('6 / 6')).toBeOnTheScreen();
+        expect(
+            screen.getByText('views.Channel.waitingForPeer')
+        ).toBeOnTheScreen();
+    });
+
+    it('does not wait for the peer before the required depth', async () => {
+        await renderSplice({}, { current: 5, total: 6 });
+
+        expect(screen.queryByText('views.Channel.waitingForPeer')).toBeNull();
     });
 
     it('says it is waiting to confirm when the transaction is not in the wallet', async () => {

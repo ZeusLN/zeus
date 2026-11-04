@@ -16,6 +16,20 @@ export interface SpliceEvent {
     vout?: number;
 }
 
+// A splice transaction's confirmations once it is in the on-chain list.
+// total is the depth the channel locks at, when the backend reports it
+export interface SpliceConfirmations {
+    current: number;
+    total?: number;
+}
+
+// "2 / 6", stopping at the lock depth while the peer catches up
+export const formatSpliceConfirmations = ({
+    current,
+    total
+}: SpliceConfirmations): string =>
+    total ? `${Math.min(current, total)} / ${total}` : `${current}`;
+
 // Peers reject outputs below their dust limit while the splice transaction
 // is built. 546 sats is the highest standard limit (P2PKH), so a payout of
 // at least this much clears every peer's check, whatever the address type

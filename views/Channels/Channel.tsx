@@ -224,8 +224,7 @@ export default class ChannelView extends React.Component<
             ModalStore,
             NodeInfoStore,
             ChannelsStore,
-            SpliceStore,
-            TransactionsStore
+            SpliceStore
         } = this.props;
         const {
             channel: openedChannel,
@@ -251,11 +250,6 @@ export default class ChannelView extends React.Component<
             openedChannel;
 
         const pendingSplice = SpliceStore.getPendingSplice(channel);
-        const spliceTransaction =
-            pendingSplice &&
-            TransactionsStore.transactions.find(
-                (transaction) => transaction.tx === pendingSplice.txid
-            );
 
         const closeAddress: string | undefined = channel?.close_address;
 
@@ -495,15 +489,9 @@ export default class ChannelView extends React.Component<
                             <PendingSplice
                                 splice={pendingSplice}
                                 capacity={capacity}
-                                confirmations={
-                                    spliceTransaction
-                                        ? {
-                                              current:
-                                                  spliceTransaction.getNumConfirmations,
-                                              total: channel.confirmations_required
-                                          }
-                                        : null
-                                }
+                                confirmations={SpliceStore.getSpliceConfirmations(
+                                    pendingSplice
+                                )}
                                 testnet={testnet}
                             />
                         )}
