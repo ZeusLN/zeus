@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { Divider } from '@rneui/themed';
 import BigNumber from 'bignumber.js';
 
 import Amount from '../Amount';
@@ -10,13 +11,17 @@ import type { SpliceRecord } from '../../stores/SpliceStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
+import {
+    SpliceConfirmations,
+    formatSpliceConfirmations
+} from '../../utils/SpliceUtils';
 
 interface PendingSpliceProps {
     splice: SpliceRecord;
     // the channel's capacity before the splice: LDK keeps reporting it
     // until the splice locks
     capacity: string;
-    confirmations: { current: number; total?: number } | null;
+    confirmations: SpliceConfirmations | null;
     testnet?: boolean;
 }
 
@@ -34,8 +39,13 @@ export default function PendingSplice({
             : new BigNumber(capacity).minus(amountSats!)
         : null;
 
+    // our confirmations can reach the lock depth before the peer locks it
+    const waitingForPeer =
+        !!confirmations?.total && confirmations.current >= confirmations.total;
+
     return (
-        <View style={styles.container}>
+        <View>
+            <Divider orientation="horizontal" style={styles.divider} />
             <Text style={{ ...styles.title, color: themeColor('text') }}>
                 {initiator === 'remote'
                     ? localeString('views.Splice.startedByPeer')
@@ -51,7 +61,11 @@ export default function PendingSplice({
             )}
             {newCapacity && (
                 <KeyValue
-                    keyValue={localeString('views.Splice.newCapacity')}
+                    keyValue={
+                        direction === 'out'
+                            ? localeString('views.Splice.newCapacityBeforeFee')
+                            : localeString('views.Splice.newCapacity')
+                    }
                     value={
                         <Amount
                             sats={newCapacity.toString()}
@@ -61,29 +75,24 @@ export default function PendingSplice({
                     }
                 />
             )}
-            {newCapacity && direction === 'out' && (
+            <KeyValue
+                keyValue={localeString('views.OpenChannel.numConf')}
+                value={
+                    confirmations
+                        ? formatSpliceConfirmations(confirmations)
+                        : localeString('views.Splice.waitingToConfirm')
+                }
+            />
+            {waitingForPeer && (
                 <Text
                     style={{
                         ...styles.note,
                         color: themeColor('secondaryText')
                     }}
                 >
-                    {localeString('views.Splice.lessTheFee')}
+                    {localeString('views.Channel.waitingForPeer')}
                 </Text>
             )}
-            <KeyValue
-                keyValue={localeString('views.OpenChannel.numConf')}
-                value={
-                    confirmations
-                        ? confirmations.total
-                            ? `${Math.min(
-                                  confirmations.current,
-                                  confirmations.total
-                              )} / ${confirmations.total}`
-                            : `${confirmations.current}`
-                        : localeString('views.Splice.waitingToConfirm')
-                }
-            />
             {address && (
                 <KeyValue
                     keyValue={localeString('general.destination')}
@@ -99,13 +108,15 @@ export default function PendingSplice({
                     UrlUtils.goToBlockExplorerTXID(txid, testnet)
                 }
             />
+            <Divider orientation="horizontal" style={styles.divider} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        marginBottom: 18
+    divider: {
+        marginHorizontal: 20,
+        marginVertical: 10
     },
     title: {
         fontFamily: 'PPNeueMontreal-Medium',

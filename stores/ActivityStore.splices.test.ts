@@ -20,6 +20,8 @@ jest.mock('./NodeInfoStore', () => ({}));
 jest.mock('./LSPStore', () => ({ LSPS_ORDERS_KEY: 'lsps' }));
 jest.mock('./Stores', () => ({ notesStore: { notes: {} } }));
 
+import { observable, runInAction } from 'mobx';
+
 import ActivityStore from './ActivityStore';
 import Splice from '../models/Splice';
 import Transaction from '../models/Transaction';
@@ -95,5 +97,73 @@ describe('ActivityStore splices', () => {
             'general.transaction',
             'Splice'
         ]);
+    });
+});
+
+describe('ActivityStore keeping splices current', () => {
+    const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    const setup = () => {
+        const spliceStore = observable({ splices: [] as any[] });
+        let finishPayments: () => void = () => {};
+        const paymentsStore = {
+            payments: [],
+            getPayments: jest.fn(
+                () => new Promise<void>((resolve) => (finishPayments = resolve))
+            )
+        };
+        const store = new ActivityStore(
+            { settings: {} } as any,
+            paymentsStore as any,
+            { invoices: [], getInvoices: jest.fn() } as any,
+            { transactions: [], getTransactions: jest.fn() } as any,
+            { checkPendingItems: jest.fn() } as any,
+            { swaps: [], fetchAndUpdateSwaps: jest.fn() } as any,
+            spliceStore as any,
+            { nodeInfo: { nodeId: '03me' } } as any
+        );
+        const setSplices = (splices: any[]) =>
+            runInAction(() => {
+                spliceStore.splices = splices;
+            });
+        return { store, setSplices, finishPayments: () => finishPayments() };
+    };
+
+    it('lists a splice that starts while Activity is open', async () => {
+        const { store, setSplices } = setup();
+
+        setSplices([spliceRecord]);
+        await flush();
+
+        expect(store.filteredActivity).toHaveLength(1);
+        expect(store.filteredActivity[0]).toBeInstanceOf(Splice);
+    });
+
+    it('shows a splice as completed once it locks', async () => {
+        const { store, setSplices } = setup();
+        setSplices([spliceRecord]);
+        await flush();
+
+        setSplices([
+            { ...spliceRecord, status: 'locked', capacityAfter: 1 } as any
+        ]);
+        await flush();
+
+        expect((store.filteredActivity[0] as Splice).isPending).toBe(false);
+    });
+
+    it('lists a splice that changed during a load once the load finishes', async () => {
+        const { store, setSplices, finishPayments } = setup();
+        const load = store.getActivityAndFilter('en');
+
+        setSplices([spliceRecord]);
+        await flush();
+        expect(store.filteredActivity).toHaveLength(0);
+
+        finishPayments();
+        await load;
+        await flush();
+
+        expect(store.filteredActivity).toHaveLength(1);
     });
 });
