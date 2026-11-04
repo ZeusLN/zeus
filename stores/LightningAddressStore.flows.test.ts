@@ -68,7 +68,11 @@ const newCashuStore = () => ({
 });
 
 let cashuStore: ReturnType<typeof newCashuStore>;
-let settingsStore: { settings: any; updateSettings: jest.Mock };
+let settingsStore: {
+    settings: any;
+    updateSettings: jest.Mock;
+    updateSettingsGroup: jest.Mock;
+};
 
 const newStore = () =>
     new LightningAddressStore(
@@ -108,7 +112,13 @@ describe('LightningAddressStore flows', () => {
         cashuStore.decodeTokenCDK.mockResolvedValue({ mint_url: MINT });
         settingsStore = {
             settings: {},
-            updateSettings: jest.fn().mockResolvedValue(undefined)
+            updateSettings: jest.fn().mockResolvedValue(undefined),
+            updateSettingsGroup: jest.fn(async (group: string, patch: any) => {
+                settingsStore.settings = {
+                    ...settingsStore.settings,
+                    [group]: { ...settingsStore.settings[group], ...patch }
+                };
+            })
         };
     });
 
@@ -354,6 +364,172 @@ describe('LightningAddressStore flows', () => {
             await expect(store.status()).rejects.toBe('not found');
 
             expect(store.error_msg).toBe('not found');
+        });
+
+        describe('an address this install did not create', () => {
+            const withAddress = (addressType = 'cashu') =>
+                reply(
+                    '/api/lnurl/status',
+                    ok({
+                        addressType,
+                        handle: 'satoshi',
+                        domain: 'zeuspay.com'
+                    })
+                );
+            const armSpy = (store: LightningAddressStore) =>
+                jest
+                    .spyOn(store, 'prepareToAutomaticallyAcceptCashu')
+                    .mockImplementation(() => {});
+
+            it('enables the address locally, keeping the other settings', async () => {
+                const store = authed();
+                armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: { enabled: false, mintUrl: MINT }
+                };
+                withAddress();
+
+                await store.status();
+
+                expect(settingsStore.updateSettingsGroup).toHaveBeenCalledWith(
+                    'lightningAddress',
+                    { enabled: true }
+                );
+                expect(settingsStore.settings.lightningAddress).toEqual({
+                    enabled: true,
+                    mintUrl: MINT
+                });
+            });
+
+            it('starts automatic accept for a Cashu address', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                withAddress();
+
+                await store.status();
+
+                expect(arm).toHaveBeenCalledTimes(1);
+            });
+
+            it('does not start automatic accept when it is off', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: false
+                    }
+                };
+                withAddress();
+
+                await store.status();
+
+                expect(settingsStore.updateSettingsGroup).toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+
+            it('does not start automatic accept for an NWC address', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                withAddress('nwc');
+
+                await store.status();
+
+                expect(settingsStore.updateSettingsGroup).toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+
+            it('leaves settings alone when the address is already enabled', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: true,
+                        automaticallyAccept: true
+                    }
+                };
+                withAddress();
+
+                await store.status();
+
+                expect(
+                    settingsStore.updateSettingsGroup
+                ).not.toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+
+            it('does not enable anything when the node has no address', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                reply('/api/lnurl/status', ok({ paid: [] }));
+
+                await store.status();
+
+                expect(
+                    settingsStore.updateSettingsGroup
+                ).not.toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+
+            it('leaves a retired Zaplocker address disabled', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                withAddress('zaplocker');
+
+                await store.status();
+
+                expect(
+                    settingsStore.updateSettingsGroup
+                ).not.toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+
+            it('ignores the reply when the wallet was switched mid-request', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                signMessage.mockImplementation(async () => {
+                    store.nodeInfoStore.nodeInfo.identity_pubkey = '02ff';
+                    return { zbase: 'zsig' };
+                });
+                withAddress();
+
+                await store.status();
+
+                expect(
+                    settingsStore.updateSettingsGroup
+                ).not.toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
         });
     });
 
