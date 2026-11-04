@@ -467,13 +467,13 @@ describe('LnurlPay invoice decode', () => {
     beforeEach(() => {
         unitsStore.units = 'sats';
         (verifyLnurlPayInvoice as jest.Mock).mockReturnValue({ ok: true });
-        mockBlobFetch.mockResolvedValueOnce({
+        mockFetchLnurlUrl.mockResolvedValueOnce({
             json: () => ({ pr: PR, successAction: { tag: 'noop' } })
         });
     });
 
     afterEach(() => {
-        mockBlobFetch.mockImplementation(() => new Promise(() => {}));
+        mockFetchLnurlUrl.mockImplementation(() => new Promise(() => {}));
         jest.restoreAllMocks();
     });
 
