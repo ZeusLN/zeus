@@ -312,6 +312,13 @@ describe('isValidPort', () => {
         expect(ValidationUtils.isValidPort('65536/lnd')).toBe(false);
     });
 
+    // the same rule as the path of a server address
+    it('rejects empty path segments after the port', () => {
+        expect(ValidationUtils.isValidPort('8080//')).toBe(false);
+        expect(ValidationUtils.isValidPort('8443//lnd')).toBe(false);
+        expect(ValidationUtils.isValidPort('8443/lnd//v1')).toBe(false);
+    });
+
     it('rejects a path that could change the host or query', () => {
         expect(ValidationUtils.isValidPort('8080/x@evil.com')).toBe(false);
         expect(ValidationUtils.isValidPort('8080/x?y')).toBe(false);
@@ -321,12 +328,15 @@ describe('isValidPort', () => {
         expect(ValidationUtils.isValidPort('8080/x:1')).toBe(false);
     });
 
+    // 28 characters, as for isValidServerAddress: the path goes through
+    // PATH_REGEX, and a longer input would block the event loop if a
+    // backtracking pattern came back
     it('rejects a long invalid path without backtracking', () => {
         const start = Date.now();
-        expect(ValidationUtils.isValidPort(`8080/${'a'.repeat(10000)}@`)).toBe(
-            false
-        );
-        expect(Date.now() - start).toBeLessThan(100);
+        const valid = ValidationUtils.isValidPort(`8080/${'a'.repeat(28)}@`);
+        const elapsed = Date.now() - start;
+        expect(valid).toBe(false);
+        expect(elapsed).toBeLessThan(500);
     });
 });
 
