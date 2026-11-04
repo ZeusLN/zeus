@@ -1,8 +1,10 @@
 // we  incorporate domains (incl. optional subdomains), IPv4, IPv6 and local hostnames ('localhost' etc.)
 const HOST_REGEX =
     /^(([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}|\b(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b|\[(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:))\]|[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)$/;
-// in paths we have more allowed chars
-const PATH_REGEX = /^\/([a-zA-Z0-9\-._~!$&'()*+,;=]+\/?)*$/;
+// in paths we have more allowed chars. One character class with no nested
+// quantifier, so a path that does not match fails in linear time; empty
+// segments (//) are rejected separately in isValidServerAddress
+const PATH_REGEX = /^\/[a-zA-Z0-9\-._~!$&'()*+,;=/]*$/;
 const PORT_REGEX = /^:\d+$/;
 const NOSTR_WALLET_CONNECT_PREFIX = 'nostr+walletconnect://';
 // @getalby/sdk checks both the wallet pubkey and secret against this pattern.
@@ -56,7 +58,8 @@ const isValidServerAddress = (
         )
             return false;
 
-        if (path && !PATH_REGEX.test(path)) return false;
+        if (path && (!PATH_REGEX.test(path) || path.includes('//')))
+            return false;
 
         return true;
     } catch (error) {

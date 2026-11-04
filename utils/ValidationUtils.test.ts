@@ -232,6 +232,42 @@ describe('isValidServerAddress', () => {
             })
         ).toBe(true);
     });
+
+    it('accepts every path character the old pattern allowed', () => {
+        expect(
+            ValidationUtils.isValidServerAddress(
+                "example.com/a-._~!$&'()*+,;=/b/"
+            )
+        ).toBe(true);
+        expect(
+            ValidationUtils.isValidServerAddress('example.com:8080/lnd/', {
+                allowPort: true
+            })
+        ).toBe(true);
+    });
+
+    it('rejects empty path segments', () => {
+        expect(ValidationUtils.isValidServerAddress('example.com/a//b')).toBe(
+            false
+        );
+        expect(
+            ValidationUtils.isValidServerAddress('example.com:8080//lnd', {
+                allowPort: true
+            })
+        ).toBe(false);
+    });
+
+    // The old pattern /^\/([...]+\/?)*$/ took time exponential in the length
+    // of a path that does not match: about 2 s for 28 characters
+    it.each([28, 10000])(
+        'rejects an invalid path of %i characters in under 100 ms',
+        (length: number) => {
+            const address = `example.com/${'a'.repeat(length)}@`;
+            const start = Date.now();
+            expect(ValidationUtils.isValidServerAddress(address)).toBe(false);
+            expect(Date.now() - start).toBeLessThan(100);
+        }
+    );
 });
 
 describe('isValidPort', () => {
