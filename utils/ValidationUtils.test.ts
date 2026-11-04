@@ -257,6 +257,13 @@ describe('isValidServerAddress', () => {
         ).toBe(false);
     });
 
+    // $ without the m flag matches only at the end of the input
+    it('rejects a trailing newline after the path', () => {
+        expect(ValidationUtils.isValidServerAddress('example.com/lnd\n')).toBe(
+            false
+        );
+    });
+
     // The old pattern /^\/([...]+\/?)*$/ took time exponential in the length
     // of a path that does not match: seconds for 28 characters. The new check
     // takes well under 1 ms, so the limit leaves room for a busy CI worker.
@@ -317,6 +324,11 @@ describe('isValidPort', () => {
         expect(ValidationUtils.isValidPort('8080//')).toBe(false);
         expect(ValidationUtils.isValidPort('8443//lnd')).toBe(false);
         expect(ValidationUtils.isValidPort('8443/lnd//v1')).toBe(false);
+    });
+
+    // $ without the m flag matches only at the end of the input
+    it('rejects a trailing newline after the path', () => {
+        expect(ValidationUtils.isValidPort('8080/lnd\n')).toBe(false);
     });
 
     it('rejects a path that could change the host or query', () => {
