@@ -34,6 +34,15 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
     useEffect(() => setNewFee(fee), [fee]);
 
     useEffect(() => {
+        const handleFeeError = () => {
+            onChangeFee('0');
+            setErrorOccurredLoadingFees(true);
+            setLoading(false);
+            if (props.onFeeError) {
+                props.onFeeError(true);
+            }
+        };
+
         if (enableMempoolRates) {
             const hasValidFee = fee && Number(fee) > 0;
             if (hasValidFee) {
@@ -54,18 +63,20 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                         recommended !== '' && recommended != null
                             ? String(recommended)
                             : '';
+                    if (!feeStr) {
+                        // getOnchainFeesviaMempool never rejects: it
+                        // resolves undefined on any failure (non-200,
+                        // network error, or implausible payload). Treat
+                        // that as a failure so the error is shown
+                        // instead of an empty fee field.
+                        handleFeeError();
+                        return;
+                    }
                     setNewFee(feeStr);
                     onChangeFee(feeStr);
                     setLoading(false);
                 })
-                .catch(() => {
-                    onChangeFee('0');
-                    setErrorOccurredLoadingFees(true);
-                    setLoading(false);
-                    if (props.onFeeError) {
-                        props.onFeeError(true);
-                    }
-                });
+                .catch(handleFeeError);
         }
     }, []);
 
