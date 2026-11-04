@@ -129,7 +129,10 @@ const OTHER_KEYS: Array<{
     {
         key: CONTACTS_KEY,
         description: 'Contacts',
-        reviewDivergence: hasEntryMissingFromLive((entry) => entry?.contactId)
+        // Contacts saved before 01656c594 only have `id` (see Contact.getContactId).
+        reviewDivergence: hasEntryMissingFromLive(
+            (entry) => entry?.contactId || entry?.id
+        )
     },
     { key: NOTES_KEY, description: 'Notes' },
     { key: LAST_CHANNEL_BACKUP_STATUS, description: 'Channel Backup Status' },

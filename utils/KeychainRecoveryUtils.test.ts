@@ -491,6 +491,65 @@ describe('KeychainRecoveryUtils', () => {
             expect(result.divergentDataFound).toEqual([]);
         });
 
+        it('matches old contacts that only have an id', async () => {
+            liveAndCloud(
+                'contacts',
+                JSON.stringify([{ id: 'c1', name: 'Bob B.' }]),
+                JSON.stringify([{ id: 'c1', name: 'Bob' }])
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
+        it('matches LSPS orders stored as a full JSON-RPC response', async () => {
+            const order = (id: string, state: string) =>
+                JSON.stringify({
+                    order: { result: { order_id: id, order_state: state } }
+                });
+            liveAndCloud(
+                'lsps-orders',
+                JSON.stringify([order('o1', 'COMPLETED')]),
+                JSON.stringify([order('o1', 'CREATED')])
+            );
+            expect(
+                (await utils.scanForRecoverableData()).divergentDataFound
+            ).toEqual([]);
+
+            liveAndCloud(
+                'lsps-orders',
+                JSON.stringify([order('o1', 'COMPLETED')]),
+                JSON.stringify([order('o2', 'CREATED')])
+            );
+            expect(
+                (await utils.scanForRecoverableData()).divergentDataFound
+            ).toEqual([expect.objectContaining({ key: 'lsps-orders' })]);
+        });
+
+        it('reports a legacy list when the live value does not parse', async () => {
+            liveAndCloud('swaps', '{not json', JSON.stringify([{ id: 'a' }]));
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({
+                    key: 'swaps',
+                    source: 'prefixed-cloud'
+                })
+            ]);
+        });
+
+        it('reports a legacy value that parses but is not a list', async () => {
+            liveAndCloud('swaps', '[]', '{}');
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({ key: 'swaps', data: '{}' })
+            ]);
+        });
+
         it('does not report notes, whose bodies the scan does not read', async () => {
             liveAndCloud('notes', '["note-1"]', '["note-0"]');
 
