@@ -56,7 +56,9 @@ function invalidP2PKFields(): Array<[string, any]> {
         ['a boolean num_sigs', withData({ num_sigs: true })],
         ['an object num_sigs_refund', withData({ num_sigs_refund: {} })],
         ['an unknown sig_flag', withData({ sig_flag: 'SigNone' })],
-        ['a numeric sig_flag', withData({ sig_flag: 1 })]
+        ['a numeric sig_flag', withData({ sig_flag: 1 })],
+        ['a camelCase numSigs', withData({ pubkeys: [PUBKEY], numSigs: 2 })],
+        ['an unknown field set to null', withData({ refundKeys: null })]
     ];
 }
 
@@ -173,6 +175,15 @@ for arg in CommandLine.arguments.dropFirst() {
         ]);
     });
 
+    it('names an unknown P2PK field', () => {
+        expect(
+            run({
+                kind: 'P2PK',
+                data: { pubkey: PUBKEY, pubkeys: [PUBKEY], numSigs: 2 }
+            })
+        ).toEqual(['error Unsupported P2PK field: numSigs']);
+    });
+
     it('converts a P2PK condition with its locktime', () => {
         expect(
             run({
@@ -261,6 +272,18 @@ describe('Android CashuDevKitModule conditions', () => {
             /requireNotNull\(json\.optJSONObject\("data"\)\)/
         );
         expect(parser).toContain('require(pubkeyHex.isNotEmpty())');
+    });
+
+    it('rejects unknown P2PK fields instead of ignoring them', () => {
+        expect(parser).toMatch(
+            /val knownKeys = setOf\(\s*"pubkey", "locktime", "pubkeys", "refund_keys",\s*"num_sigs", "num_sigs_refund", "sig_flag"\s*\)/
+        );
+        expect(parser).toContain(
+            'val unknownKey = data.keys().asSequence().sorted().firstOrNull { it !in knownKeys }'
+        );
+        expect(parser).toContain(
+            'require(unknownKey == null) { "Unsupported P2PK field: $unknownKey" }'
+        );
     });
 
     it('rejects invalid optional P2PK fields instead of dropping them', () => {
