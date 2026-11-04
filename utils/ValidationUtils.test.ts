@@ -232,6 +232,51 @@ describe('isValidServerAddress', () => {
             })
         ).toBe(true);
     });
+
+    it('accepts every path character the old pattern allowed', () => {
+        expect(
+            ValidationUtils.isValidServerAddress(
+                "example.com/a-._~!$&'()*+,;=/b/"
+            )
+        ).toBe(true);
+        expect(
+            ValidationUtils.isValidServerAddress('example.com:8080/lnd/', {
+                allowPort: true
+            })
+        ).toBe(true);
+    });
+
+    it('rejects empty path segments', () => {
+        expect(ValidationUtils.isValidServerAddress('example.com/a//b')).toBe(
+            false
+        );
+        expect(
+            ValidationUtils.isValidServerAddress('example.com:8080//lnd', {
+                allowPort: true
+            })
+        ).toBe(false);
+    });
+
+    // $ without the m flag matches only at the end of the input
+    it('rejects a trailing newline after the path', () => {
+        expect(ValidationUtils.isValidServerAddress('example.com/lnd\n')).toBe(
+            false
+        );
+    });
+
+    // The old pattern /^\/([...]+\/?)*$/ took time exponential in the length
+    // of a path that does not match: seconds for 28 characters. The new check
+    // takes well under 1 ms, so the limit leaves room for a busy CI worker.
+    // No longer input here: on a pattern like the old one it would block the
+    // event loop, and Jest cannot interrupt a synchronous regex
+    it('rejects an invalid path of 28 characters in under 500 ms', () => {
+        const address = `example.com/${'a'.repeat(28)}@`;
+        const start = Date.now();
+        const valid = ValidationUtils.isValidServerAddress(address);
+        const elapsed = Date.now() - start;
+        expect(valid).toBe(false);
+        expect(elapsed).toBeLessThan(500);
+    });
 });
 
 describe('isValidPort', () => {
@@ -274,6 +319,18 @@ describe('isValidPort', () => {
         expect(ValidationUtils.isValidPort('65536/lnd')).toBe(false);
     });
 
+    // the same rule as the path of a server address
+    it('rejects empty path segments after the port', () => {
+        expect(ValidationUtils.isValidPort('8080//')).toBe(false);
+        expect(ValidationUtils.isValidPort('8443//lnd')).toBe(false);
+        expect(ValidationUtils.isValidPort('8443/lnd//v1')).toBe(false);
+    });
+
+    // $ without the m flag matches only at the end of the input
+    it('rejects a trailing newline after the path', () => {
+        expect(ValidationUtils.isValidPort('8080/lnd\n')).toBe(false);
+    });
+
     it('rejects a path that could change the host or query', () => {
         expect(ValidationUtils.isValidPort('8080/x@evil.com')).toBe(false);
         expect(ValidationUtils.isValidPort('8080/x?y')).toBe(false);
@@ -283,12 +340,15 @@ describe('isValidPort', () => {
         expect(ValidationUtils.isValidPort('8080/x:1')).toBe(false);
     });
 
+    // 28 characters, as for isValidServerAddress: the path goes through
+    // PATH_REGEX, and a longer input would block the event loop if a
+    // backtracking pattern came back
     it('rejects a long invalid path without backtracking', () => {
         const start = Date.now();
-        expect(ValidationUtils.isValidPort(`8080/${'a'.repeat(10000)}@`)).toBe(
-            false
-        );
-        expect(Date.now() - start).toBeLessThan(100);
+        const valid = ValidationUtils.isValidPort(`8080/${'a'.repeat(28)}@`);
+        const elapsed = Date.now() - start;
+        expect(valid).toBe(false);
+        expect(elapsed).toBeLessThan(500);
     });
 });
 

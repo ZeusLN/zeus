@@ -1,8 +1,14 @@
 // we  incorporate domains (incl. optional subdomains), IPv4, IPv6 and local hostnames ('localhost' etc.)
 const HOST_REGEX =
     /^(([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}|\b(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b|\[(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:))\]|[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)$/;
-// in paths we have more allowed chars
-const PATH_REGEX = /^\/([a-zA-Z0-9\-._~!$&'()*+,;=]+\/?)*$/;
+// in paths we have more allowed chars. One character class with no nested
+// quantifier, so a path that does not match fails in linear time; empty
+// segments (//) are rejected separately in isValidPath
+const PATH_REGEX = /^\/[a-zA-Z0-9\-._~!$&'()*+,;=/]*$/;
+// The path of a server address, and the path after a port: allowed
+// characters only, and no empty segments
+const isValidPath = (path: string): boolean =>
+    PATH_REGEX.test(path) && !path.includes('//');
 const PORT_REGEX = /^:\d+$/;
 const NOSTR_WALLET_CONNECT_PREFIX = 'nostr+walletconnect://';
 // @getalby/sdk checks both the wallet pubkey and secret against this pattern.
@@ -56,7 +62,7 @@ const isValidServerAddress = (
         )
             return false;
 
-        if (path && !PATH_REGEX.test(path)) return false;
+        if (path && !isValidPath(path)) return false;
 
         return true;
     } catch (error) {
@@ -68,13 +74,14 @@ const isValidServerAddress = (
 // digits must not change the host: '8080@example.com' would make the shown
 // host URL userinfo. A path after a '/' leaves the host alone and is kept,
 // since a port such as '8443/lnd' is the only way to give a path together
-// with a port. One character class, not PATH_REGEX: its nested quantifier
-// backtracks exponentially on input that does not match.
-const PORT_WITH_PATH_REGEX = /^(\d+)(\/[a-zA-Z0-9\-._~!$&'()*+,;=/]*)?$/;
+// with a port. The path follows the same rule as the path of a server
+// address (isValidPath).
+const PORT_WITH_PATH_REGEX = /^(\d+)(\/.*)?$/;
 
 const isValidPort = (port: string): boolean => {
     const match = PORT_WITH_PATH_REGEX.exec(port);
     if (!match) return false;
+    if (match[2] && !isValidPath(match[2])) return false;
     const portNum = parseInt(match[1], 10);
     return portNum >= 1 && portNum <= 65535;
 };
