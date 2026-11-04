@@ -1828,6 +1828,7 @@
     "stores.LSPStore.getInfoResponseError": "LSP vrátil neočekávanou odpověď. Zkuste to prosím znovu později, nebo v případě přetrvávajících potíží kontaktujte LSP.",
     "stores.LSPStore.wrappedInvoiceVerificationFailed": "Zabalená faktura vrácená LSP se neshoduje s fakturou, kterou měla zabalit, a proto byla odmítnuta",
     "stores.LSPStore.missingWrappedInvoice": "Odpověď LSP neobsahovala zabalenou fakturu",
+    "stores.LightningAddressStore.Cashu.mintMismatch": "Payment references a mint that is not approved on this device",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Kvóta nebyla zaplacena",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Chyba při zjišťování odhadované částky k zaplacení",
     "stores.NostrWalletConnectStore.initializingService": "Zahajování služby Nostr Wallet Connect...",
