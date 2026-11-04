@@ -30,7 +30,8 @@ const newStore = (settings: any = {}) =>
         { nodeInfo: { identity_pubkey: '03cd' } } as any,
         {
             settings,
-            updateSettings: jest.fn().mockResolvedValue(undefined)
+            updateSettings: jest.fn().mockResolvedValue(undefined),
+            updateSettingsGroup: jest.fn().mockResolvedValue(undefined)
         } as any
     );
 

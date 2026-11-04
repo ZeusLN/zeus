@@ -424,6 +424,27 @@ export default class LightningAddressStore {
                     this.lightningAddress = `${handle}@${domain}`;
                 }
             });
+
+            // ZEUS Pay keys the address to the node pubkey, so it can exist
+            // without this install having created it (restore, reinstall,
+            // reset settings). `enabled` gates the startup redeem, the
+            // socket and Receive, so bring it in line with the server.
+            if (
+                handle &&
+                !this.settingsStore.settings?.lightningAddress?.enabled
+            ) {
+                await this.settingsStore.updateSettingsGroup(
+                    'lightningAddress',
+                    { enabled: true }
+                );
+                if (
+                    addressType === 'cashu' &&
+                    this.settingsStore.settings?.lightningAddress
+                        ?.automaticallyAccept
+                ) {
+                    this.prepareToAutomaticallyAcceptCashu();
+                }
+            }
         } catch (error) {
             const error_msg = error?.toString();
             runInAction(() => {
