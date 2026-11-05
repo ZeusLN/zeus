@@ -66,9 +66,8 @@ export default class FeeStore {
                     // These rates become defaults the user does not have
                     // to look at (Sweep sends at one without a confirm
                     // screen), so an implausible response is rejected
-                    // rather than trusted. Consumers already handle a
-                    // failed fetch by showing an error and asking for a
-                    // rate.
+                    // rather than trusted. When the fetch fails,
+                    // consumers show an error and ask for a rate.
                     const sanitized = sanitizeRecommendedFees(response.json());
                     if (!sanitized) {
                         console.error(
