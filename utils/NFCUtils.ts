@@ -1,16 +1,19 @@
 import { Platform } from 'react-native';
+import { reaction } from 'mobx';
 import NfcManager, {
+    NfcAdapter,
     NfcEvents,
     NfcTech,
+    NdefRecord,
     TagEvent,
-    Ndef,
-    NdefRecord
+    Ndef
 } from 'react-native-nfc-manager';
 import ModalStore from '../stores/ModalStore';
 import CashuStore from '../stores/CashuStore';
 import {
     isCREQ,
     decodeCREQ,
+    creqPaymentError,
     findCompatibleMint,
     CREQParams
 } from './CREQUtils';
@@ -191,7 +194,23 @@ export async function scanNfcTag(
 
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
 
+        // Cancelling the AndroidNfcModal only hides it; stop listening too,
+        // or the next scan finds the tag event still registered
+        const stopWatchingModal =
+            Platform.OS === 'android'
+                ? reaction(
+                      () => modalStore.showAndroidNfcModal,
+                      (shown) => {
+                          if (shown) return;
+                          stopWatchingModal();
+                          NfcManager.unregisterTagEvent().catch(() => 0);
+                          resolve(undefined);
+                      }
+                  )
+                : () => {};
+
         NfcManager.setEventListener(NfcEvents.DiscoverTag, (tag: TagEvent) => {
+            stopWatchingModal();
             tagFound = tag;
             const str = pickNfcRecord(tag.ndefMessage || [], prefer);
 
@@ -203,6 +222,7 @@ export async function scanNfcTag(
         });
 
         NfcManager.setEventListener(NfcEvents.SessionClosed, () => {
+            stopWatchingModal();
             if (Platform.OS === 'android')
                 modalStore.toggleAndroidNfcModal(false);
 
@@ -217,7 +237,8 @@ export async function scanNfcTag(
 
 const NDEF_AID = [0xd2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01];
 const FILE_CC = [0xe1, 0x03];
-const FILE_NDEF = [0xe1, 0x04];
+// Largest Lc/Le of a short APDU
+const SHORT_APDU_MAX = 255;
 
 function buildSelectAidApdu(aid: number[]): number[] {
     // CLA=00 INS=A4 P1=04 P2=00 Lc=len data Le=00
@@ -245,20 +266,17 @@ function buildUpdateBinaryApdu(offset: number, data: number[]): number[] {
 }
 
 /**
- * Parse APDU response, extracting data and status word.
- * iOS returns [...data, sw1, sw2] while Android returns [...data, sw1, sw2]
- * as the last two bytes of the array (same format from transceive).
+ * Split an APDU response into data and status word. Both platforms return
+ * [...data, sw1, sw2] from transceive.
  */
 function parseApduResponse(response: number[]): {
     data: number[];
-    sw1: number;
-    sw2: number;
     ok: boolean;
 } {
     const sw1 = response[response.length - 2];
     const sw2 = response[response.length - 1];
     const data = response.slice(0, response.length - 2);
-    return { data, sw1, sw2, ok: sw1 === 0x90 && sw2 === 0x00 };
+    return { data, ok: sw1 === 0x90 && sw2 === 0x00 };
 }
 
 /**
@@ -298,88 +316,314 @@ export function buildNdefTextMessage(text: string): number[] {
     return [(nlen >> 8) & 0xff, nlen & 0xff, ...record];
 }
 
+export interface CapabilityContainer {
+    /** Largest READ BINARY response, from MLe */
+    maxRead: number;
+    /** Largest UPDATE BINARY data, from MLc */
+    maxWrite: number;
+    ndefFileId: number[];
+    /** Size of the NDEF file, NLEN included */
+    maxNdefSize: number;
+    writable: boolean;
+}
+
+/**
+ * Parse a Type 4 Tag capability container (CC file): CCLEN(2) version(1)
+ * MLe(2) MLc(2), then the NDEF File Control TLV T=04 L=06 file id(2)
+ * max NDEF size(2) read access(1) write access(1).
+ */
+export function parseCapabilityContainer(cc: number[]): CapabilityContainer {
+    if (cc.length < 15 || cc[7] !== 0x04 || cc[8] < 0x06) {
+        throw new Error('Invalid capability container');
+    }
+    const mle = (cc[3] << 8) | cc[4];
+    const mlc = (cc[5] << 8) | cc[6];
+    return {
+        maxRead: Math.max(1, Math.min(mle, SHORT_APDU_MAX)),
+        maxWrite: Math.max(1, Math.min(mlc, SHORT_APDU_MAX)),
+        ndefFileId: [cc[9], cc[10]],
+        maxNdefSize: (cc[11] << 8) | cc[12],
+        writable: cc[14] === 0x00
+    };
+}
+
 // --- Session-internal APDU operations (call within an active IsoDep session) ---
 
-async function selectNdefApp(): Promise<void> {
+async function transceive(apdu: number[], step: string): Promise<number[]> {
     const resp = parseApduResponse(
-        await NfcManager.isoDepHandler.transceive(buildSelectAidApdu(NDEF_AID))
+        await NfcManager.isoDepHandler.transceive(apdu)
     );
-    if (!resp.ok) throw new Error('Failed to select NDEF application');
+    if (!resp.ok) throw new Error(`NFC tag rejected ${step}`);
+    return resp.data;
 }
 
-async function readNdefText(): Promise<string | null> {
-    // SELECT CC
-    let resp = parseApduResponse(
-        await NfcManager.isoDepHandler.transceive(buildSelectFileApdu(FILE_CC))
+/**
+ * Select the NDEF application, read its capability container and leave the
+ * NDEF file selected.
+ */
+async function openNdefFile(): Promise<CapabilityContainer> {
+    await transceive(buildSelectAidApdu(NDEF_AID), 'SELECT NDEF application');
+    await transceive(buildSelectFileApdu(FILE_CC), 'SELECT CC');
+    const cc = parseCapabilityContainer(
+        await transceive(buildReadBinaryApdu(0, 15), 'READ CC')
     );
-    if (!resp.ok) throw new Error('Failed to select CC file');
+    await transceive(buildSelectFileApdu(cc.ndefFileId), 'SELECT NDEF file');
+    return cc;
+}
 
-    // READ CC
-    resp = parseApduResponse(
-        await NfcManager.isoDepHandler.transceive(buildReadBinaryApdu(0, 15))
-    );
-    if (!resp.ok) throw new Error('Failed to read CC');
+/** Read the NDEF message (without NLEN) from the selected NDEF file */
+async function readNdefBytes(cc: CapabilityContainer): Promise<number[]> {
+    const nlenBytes = await transceive(buildReadBinaryApdu(0, 2), 'READ NLEN');
+    const nlen = (nlenBytes[0] << 8) | nlenBytes[1];
+    if (nlen + 2 > cc.maxNdefSize) throw new Error('NLEN exceeds NDEF file');
 
-    // SELECT NDEF file
-    resp = parseApduResponse(
-        await NfcManager.isoDepHandler.transceive(
-            buildSelectFileApdu(FILE_NDEF)
-        )
-    );
-    if (!resp.ok) throw new Error('Failed to select NDEF file');
-
-    // READ NLEN
-    resp = parseApduResponse(
-        await NfcManager.isoDepHandler.transceive(buildReadBinaryApdu(0, 2))
-    );
-    if (!resp.ok) throw new Error('Failed to read NLEN');
-    const nlen = (resp.data[0] << 8) | resp.data[1];
-
-    // READ body in chunks
     const ndefBytes: number[] = [];
-    let offset = 2;
     while (ndefBytes.length < nlen) {
-        const toRead = Math.min(nlen - ndefBytes.length, 255);
-        resp = parseApduResponse(
-            await NfcManager.isoDepHandler.transceive(
-                buildReadBinaryApdu(offset, toRead)
-            )
+        const toRead = Math.min(nlen - ndefBytes.length, cc.maxRead);
+        const data = await transceive(
+            buildReadBinaryApdu(2 + ndefBytes.length, toRead),
+            'READ NDEF'
         );
-        if (!resp.ok) throw new Error('Failed to read NDEF body');
-        ndefBytes.push(...resp.data);
-        offset += resp.data.length;
+        if (data.length === 0) throw new Error('Empty READ NDEF response');
+        ndefBytes.push(...data);
     }
-
-    return parseNdefTextPayload(ndefBytes);
+    return ndefBytes.slice(0, nlen);
 }
 
-async function writeNdefText(token: string): Promise<void> {
-    // SELECT NDEF file
-    let resp = parseApduResponse(
-        await NfcManager.isoDepHandler.transceive(
-            buildSelectFileApdu(FILE_NDEF)
-        )
-    );
-    if (!resp.ok) throw new Error('Failed to select NDEF file');
-
-    const ndefMessage = buildNdefTextMessage(token);
-
-    // Write in chunks (max 255 bytes per UPDATE BINARY)
-    let offset = 0;
-    while (offset < ndefMessage.length) {
-        const chunkSize = Math.min(ndefMessage.length - offset, 255);
-        const chunk = ndefMessage.slice(offset, offset + chunkSize);
-        resp = parseApduResponse(
-            await NfcManager.isoDepHandler.transceive(
-                buildUpdateBinaryApdu(offset, chunk)
-            )
-        );
-        if (!resp.ok) throw new Error(`Failed to write at offset ${offset}`);
-        offset += chunkSize;
+/**
+ * Write an NDEF file (NLEN included) the way NFC Forum Type 4 Tags expect:
+ * NLEN 0, then the message, then the real NLEN. A reader that parses the
+ * file after every write, like react-native-hce, then never sees a full
+ * length over a half-written message.
+ */
+async function writeNdefBytes(
+    cc: CapabilityContainer,
+    ndefFile: number[]
+): Promise<void> {
+    if (ndefFile.length > cc.maxNdefSize) {
+        throw new Error('Token does not fit the NDEF file');
     }
+    await transceive(buildUpdateBinaryApdu(0, [0x00, 0x00]), 'clear NLEN');
+    let offset = 2;
+    while (offset < ndefFile.length) {
+        const chunk = ndefFile.slice(offset, offset + cc.maxWrite);
+        await transceive(
+            buildUpdateBinaryApdu(offset, chunk),
+            `UPDATE NDEF at ${offset}`
+        );
+        offset += chunk.length;
+    }
+    await transceive(buildUpdateBinaryApdu(0, ndefFile.slice(0, 2)), 'NLEN');
 }
 
 // --- Public NFC operations ---
+
+// Reader mode keeps Android from also dispatching the tag to the app as an
+// NDEF_DISCOVERED intent, which would route it a second time
+const readerModeOptions = () => ({
+    isReaderModeEnabled: true,
+    readerModeFlags:
+        NfcAdapter.FLAG_READER_NFC_A |
+        NfcAdapter.FLAG_READER_NFC_B |
+        NfcAdapter.FLAG_READER_NFC_F |
+        NfcAdapter.FLAG_READER_NFC_V
+});
+
+/**
+ * Hide-the-modal handler for Android tech sessions: cancelling the
+ * AndroidNfcModal only hides it, so cancel the pending request with it.
+ * Returns a disposer, and the callback sees whether the user cancelled.
+ */
+function cancelOnModalClose(
+    modalStore: ModalStore,
+    onCancel: () => void
+): () => void {
+    if (Platform.OS !== 'android') return () => {};
+    return reaction(
+        () => modalStore.showAndroidNfcModal,
+        (shown) => {
+            if (shown) return;
+            onCancel();
+            NfcManager.cancelTechnologyRequest().catch(() => 0);
+        }
+    );
+}
+
+/** Text of a tag's first NDEF record, decoded like scanNfcTag does */
+function ndefPayloadToString(payload: number[] | Uint8Array): string {
+    const bytes = new Uint8Array(payload);
+    const decoded = Ndef.text.decodePayload(bytes);
+    if (decoded.match(/^(https?|lnurl)/)) return decoded;
+    return decodeNdefTextPayload(bytes) || '';
+}
+
+/**
+ * The Cashu payment request on a tag: either the whole text, or the creq
+ * parameter of a BIP-321 URI (what Numo broadcasts, next to a lightning
+ * invoice).
+ */
+export function extractTagCREQ(text: string): string | undefined {
+    if (isCREQ(text)) return text;
+    const match = text.match(/^bitcoin:[^?]*\?(?:[^#]*&)?creq=([^&#]+)/i);
+    if (!match) return undefined;
+    try {
+        const creq = decodeURIComponent(match[1]);
+        return isCREQ(creq) ? creq : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+export type NfcTapResult =
+    /** a token for the tag's payment request was delivered */
+    | { status: 'paid'; amount: number }
+    /** not paid here: hand the tag's text to the regular input handlers */
+    | { status: 'read'; text?: string }
+    | { status: 'failed'; error: string; tokenSaved?: boolean }
+    | { status: 'cancelled' };
+
+/**
+ * Single-tap NFC payment: read the tag, and if it holds a Cashu payment
+ * request (CREQ), create a token and write it back, all in one NFC session.
+ * No user confirmation.
+ *
+ * Any other tag content comes back as 'read' so the caller can route it
+ * without a second tap. A CREQ that can't be paid also comes back as 'read'
+ * when it sits in a URI with other payment methods, so the user can pick
+ * one of those instead.
+ */
+export async function payViaNfcTap(
+    modalStore: ModalStore,
+    cashuStore: CashuStore
+): Promise<NfcTapResult> {
+    if (!(await checkNfcEnabled(modalStore)))
+        return {
+            status: 'failed',
+            error: localeString('utils.NFCUtils.nfcNotEnabled')
+        };
+
+    let cancelled = false;
+    let connected = false;
+    const stopWatchingModal = cancelOnModalClose(modalStore, () => {
+        cancelled = true;
+    });
+
+    try {
+        await NfcManager.start().catch((e) => console.warn(e.message));
+        // a leftover tag event registration would keep reader mode off
+        if (Platform.OS === 'android')
+            await NfcManager.unregisterTagEvent().catch(() => 0);
+        if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
+
+        const tech = await NfcManager.requestTechnology(
+            [NfcTech.IsoDep, NfcTech.Ndef],
+            readerModeOptions()
+        );
+        connected = true;
+        // from here on the payment finishes even if the modal is dismissed
+        stopWatchingModal();
+
+        let cc: CapabilityContainer | undefined;
+        if (tech === NfcTech.IsoDep) {
+            try {
+                cc = await openNdefFile();
+            } catch (e) {
+                console.warn('payViaNfcTap: no NDEF application', e);
+            }
+        }
+
+        let records: NdefRecord[] | undefined;
+        if (Platform.OS === 'android') {
+            records = (await NfcManager.getTag())?.ndefMessage;
+        } else if (tech !== NfcTech.IsoDep) {
+            records = (await NfcManager.ndefHandler.getNdefMessage())
+                ?.ndefMessage;
+        }
+        if (!records?.length && cc) {
+            records = Ndef.decodeMessage(await readNdefBytes(cc));
+        }
+
+        const payload = records?.[0]?.payload;
+        const text = payload?.length ? ndefPayloadToString(payload) : '';
+        const creq = text ? extractTagCREQ(text) : undefined;
+        if (!creq) return { status: 'read', text: text || undefined };
+
+        const hasOtherMethods = creq !== text;
+        const cannotPay = (error: string): NfcTapResult =>
+            hasOtherMethods
+                ? { status: 'read', text }
+                : { status: 'failed', error: localeString(error) };
+
+        let creqParams: CREQParams;
+        try {
+            creqParams = await decodeCREQ(creq);
+        } catch (e) {
+            console.warn('payViaNfcTap: invalid CREQ', e);
+            return cannotPay('views.Cashu.CREQPayment.invalidRequest');
+        }
+
+        const requestError = creqPaymentError(creqParams);
+        if (requestError) return cannotPay(requestError);
+
+        if (!cc?.writable) return cannotPay('utils.NFCUtils.tagNotWritable');
+
+        const mintUrl = findCompatibleMint(
+            creqParams,
+            cashuStore.mintUrls,
+            cashuStore.mintBalances,
+            cashuStore.selectedMintUrl
+        );
+        if (!mintUrl)
+            return cannotPay('views.Cashu.CREQPayment.noCompatibleMint');
+
+        const amount = creqParams.amount!;
+        let token: string;
+        try {
+            ({ token } = await cashuStore.sendTokenForRequest(
+                mintUrl,
+                amount,
+                creqParams.description
+            ));
+        } catch (e: any) {
+            console.warn('payViaNfcTap: token creation failed', e);
+            return {
+                status: 'failed',
+                error:
+                    e?.message ||
+                    localeString('views.Cashu.CREQPayment.failedToCreateToken')
+            };
+        }
+
+        try {
+            // openNdefFile left the NDEF file selected
+            await writeNdefBytes(cc, buildNdefTextMessage(token));
+        } catch (e) {
+            console.warn('payViaNfcTap: token write failed', e);
+            return {
+                status: 'failed',
+                error: localeString('utils.NFCUtils.tokenNotDelivered'),
+                tokenSaved: true
+            };
+        }
+
+        return { status: 'paid', amount };
+    } catch (e: any) {
+        if (cancelled || !connected) {
+            // user cancel, session timeout or a session that never started
+            if (!cancelled) console.warn('payViaNfcTap session error:', e);
+            return { status: 'cancelled' };
+        }
+        console.warn('payViaNfcTap error:', e);
+        return {
+            status: 'failed',
+            error: localeString('utils.NFCUtils.nfcPaymentFailed')
+        };
+    } finally {
+        stopWatchingModal();
+        if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);
+        NfcManager.cancelTechnologyRequest().catch(() => 0);
+    }
+}
 
 /**
  * Write a Cashu token to an NFC Type 4 tag via IsoDep UPDATE BINARY APDUs.
@@ -391,137 +635,24 @@ export async function writeTokenToTag(
 ): Promise<boolean> {
     if (!(await checkNfcEnabled(modalStore))) return false;
 
+    const stopWatchingModal = cancelOnModalClose(modalStore, () => 0);
+
     try {
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
 
-        await NfcManager.requestTechnology(NfcTech.IsoDep);
-        await selectNdefApp();
-        await writeNdefText(token);
+        await NfcManager.requestTechnology(NfcTech.IsoDep, readerModeOptions());
+        stopWatchingModal();
+        const cc = await openNdefFile();
+        if (!cc.writable) return false;
+        await writeNdefBytes(cc, buildNdefTextMessage(token));
 
         return true;
     } catch (e) {
         console.warn('writeTokenToTag error:', e);
         return false;
     } finally {
+        stopWatchingModal();
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);
         NfcManager.cancelTechnologyRequest().catch(() => 0);
     }
-}
-
-/**
- * Single-tap NFC payment: read CREQ from merchant tag, create Cashu token,
- * write it back — all in one NFC session. No user confirmation.
- *
- * Returns the decoded CREQ params on success, or an error string on failure.
- */
-export async function payViaNfcTap(
-    modalStore: ModalStore,
-    cashuStore: CashuStore
-): Promise<
-    | { success: true; creqParams: CREQParams }
-    | { success: false; error: string }
-> {
-    if (!(await checkNfcEnabled(modalStore)))
-        return {
-            success: false,
-            error: localeString('utils.NFCUtils.nfcNotEnabled')
-        };
-
-    try {
-        if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
-
-        await NfcManager.requestTechnology(NfcTech.IsoDep);
-
-        // 1. Read CREQ from merchant
-        await selectNdefApp();
-        const text = await readNdefText();
-        if (!text || !isCREQ(text)) {
-            return {
-                success: false,
-                error: localeString('utils.NFCUtils.noCreqOnTag')
-            };
-        }
-
-        const creqParams = decodeCREQ(text);
-        if (!creqParams.amount) {
-            return {
-                success: false,
-                error: localeString('utils.NFCUtils.creqNoAmount')
-            };
-        }
-
-        // 2. Find a compatible mint and create token
-        const mintUrl = findCompatibleMint(
-            creqParams,
-            cashuStore.mintUrls,
-            cashuStore.mintBalances,
-            cashuStore.selectedMintUrl
-        );
-        if (!mintUrl) {
-            return {
-                success: false,
-                error: localeString('views.Cashu.CREQPayment.noCompatibleMint')
-            };
-        }
-
-        const token = await cashuStore.sendTokenCDK(
-            mintUrl,
-            creqParams.amount,
-            creqParams.description
-        );
-
-        // 3. Write token back to merchant tag
-        await writeNdefText(token.encoded);
-
-        return { success: true, creqParams };
-    } catch (e: any) {
-        console.warn('payViaNfcTap error:', e);
-        return {
-            success: false,
-            error: e.message || localeString('utils.NFCUtils.nfcPaymentFailed')
-        };
-    } finally {
-        if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);
-        NfcManager.cancelTechnologyRequest().catch(() => 0);
-    }
-}
-
-/**
- * Parse NDEF Text record bytes to extract the text content.
- * Input is the raw NDEF record bytes (after NLEN).
- */
-function parseNdefTextPayload(recordBytes: number[]): string | null {
-    // Minimal NDEF record: flags(1) + typeLen(1) + payloadLen(1+) + type(1) + payload
-    if (recordBytes.length < 5) return null;
-
-    const flags = recordBytes[0];
-    const tnf = flags & 0x07;
-    if (tnf !== 0x01) return null; // Not Well Known
-
-    const sr = (flags >> 4) & 0x01;
-    const typeLen = recordBytes[1];
-
-    let payloadLen: number;
-    let headerSize: number;
-    if (sr) {
-        payloadLen = recordBytes[2];
-        headerSize = 3 + typeLen;
-    } else {
-        payloadLen =
-            (recordBytes[2] << 24) |
-            (recordBytes[3] << 16) |
-            (recordBytes[4] << 8) |
-            recordBytes[5];
-        headerSize = 6 + typeLen;
-    }
-
-    const type = recordBytes.slice(sr ? 3 : 6, sr ? 3 + typeLen : 6 + typeLen);
-    if (type[0] !== 0x54) return null; // Not Text record ('T')
-
-    const payload = recordBytes.slice(headerSize, headerSize + payloadLen);
-    if (payload.length === 0) return null;
-
-    const langLen = payload[0] & 0x3f;
-    const textData = payload.slice(1 + langLen);
-    return Buffer.from(textData).toString('utf-8');
 }

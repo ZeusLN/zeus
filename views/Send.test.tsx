@@ -710,49 +710,70 @@ describe('Send scanNfc', () => {
         expect(scanNfcTag).toHaveBeenCalledWith(ModalStore, 'pay');
     });
 
-    it('alerts and stops after a successful CREQ payment', async () => {
+    it('alerts after a successful CREQ payment', async () => {
         const alertSpy = jest
             .spyOn(Alert, 'alert')
             .mockImplementation(() => void 0);
         (payViaNfcTap as jest.Mock).mockResolvedValue({
-            success: true,
-            creqParams: { amount: 21 }
+            status: 'paid',
+            amount: 21
         });
         const send = await renderWithRef();
 
         await act(() => send.scanNfc());
 
         expect(payViaNfcTap).toHaveBeenCalledWith(ModalStore, mockCashuStore);
-        expect(alertSpy).toHaveBeenCalledWith('general.success', '21 sat');
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.success',
+            '21 general.sats'
+        );
         expect(scanNfcTag).not.toHaveBeenCalled();
         alertSpy.mockRestore();
     });
 
-    it.each([
-        'utils.NFCUtils.nfcNotEnabled',
-        'views.Cashu.CREQPayment.noCompatibleMint'
-    ])('stops on the definitive failure %s', async (error) => {
+    it('routes other tag content from the same tap', async () => {
         (payViaNfcTap as jest.Mock).mockResolvedValue({
-            success: false,
-            error
+            status: 'read',
+            text: 'lnurlw://example.com/withdraw'
         });
         const send = await renderWithRef();
+        send.validateAddress = jest.fn();
 
         await act(() => send.scanNfc());
 
-        expect(send.state.error_msg).toBe(error);
+        expect(send.validateAddress).toHaveBeenCalledWith(
+            'lnurlw://example.com/withdraw'
+        );
+        // no second NFC session
         expect(scanNfcTag).not.toHaveBeenCalled();
     });
 
-    it('falls back to plain tag reading on other CREQ failures', async () => {
+    it('shows CREQ failures', async () => {
         (payViaNfcTap as jest.Mock).mockResolvedValue({
-            success: false,
-            error: 'utils.NFCUtils.noCreqOnTag'
+            status: 'failed',
+            error: 'utils.NFCUtils.tokenNotDelivered',
+            tokenSaved: true
         });
         const send = await renderWithRef();
 
         await act(() => send.scanNfc());
 
-        expect(scanNfcTag).toHaveBeenCalledWith(ModalStore, 'pay');
+        expect(send.state.error_msg).toBe('utils.NFCUtils.tokenNotDelivered');
+        expect(scanNfcTag).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['a cancelled tap', { status: 'cancelled' }],
+        ['an empty tag', { status: 'read' }]
+    ])('does nothing after %s', async (_, result) => {
+        (payViaNfcTap as jest.Mock).mockResolvedValue(result);
+        const send = await renderWithRef();
+        send.validateAddress = jest.fn();
+
+        await act(() => send.scanNfc());
+
+        expect(send.validateAddress).not.toHaveBeenCalled();
+        expect(send.state.error_msg).toBeFalsy();
+        expect(scanNfcTag).not.toHaveBeenCalled();
     });
 });

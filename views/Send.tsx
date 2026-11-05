@@ -324,34 +324,26 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     scanNfc = async () => {
-        // Try CREQ tap-to-pay first if ecash is enabled
+        // With ecash, one NFC session pays a CREQ tag (tap-to-pay) and hands
+        // any other tag content to validateAddress
         if (BackendUtils.supportsCashuWallet() && cashuStore.cdkInitialized) {
             const result = await payViaNfcTap(
                 this.props.ModalStore,
                 cashuStore
             );
-            if (result.success) {
+            if (result.status === 'paid') {
                 Alert.alert(
                     localeString('general.success'),
-                    `${result.creqParams.amount} ${
-                        result.creqParams.unit || 'sat'
-                    }`
+                    `${result.amount} ${localeString('general.sats')}`
                 );
-                return;
-            }
-            // Only stop for definitive failures; otherwise fall through
-            // to regular tag scanning (e.g. technology mismatch, plain NDEF tag)
-            const stopErrors = [
-                localeString('utils.NFCUtils.nfcNotEnabled'),
-                localeString('views.Cashu.CREQPayment.noCompatibleMint')
-            ];
-            if (stopErrors.includes(result.error)) {
+            } else if (result.status === 'read') {
+                if (result.text) this.validateAddress(result.text);
+            } else if (result.status === 'failed') {
                 this.setState({ error_msg: result.error });
-                return;
             }
+            return;
         }
 
-        // Fall back to regular NFC tag reading
         const str = await scanNfcTag(this.props.ModalStore, 'pay');
         if (str) this.validateAddress(str);
     };
