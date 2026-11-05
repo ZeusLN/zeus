@@ -28,6 +28,9 @@ import { inFlightRequestKey } from '../utils/InFlightRequestUtils';
 
 const calls = new Map<string, Promise<any>>();
 
+// a splice needs a round of messages with the peer before it is broadcast
+const SPLICE_TIMEOUT_MS = 120000;
+
 // CLN's feerate takes an integer before the perkb suffix. Float math turns
 // 2.01 sat/vB into 2009.9999999999998perkb, so multiply with BigNumber and
 // round to a whole sat/kB. Number() first keeps the old output for a
@@ -647,6 +650,82 @@ export default class CLNRest {
             this.formatXpayResult
         );
     };
+    // Core Lightning names channels by channel_id; ZEUS knows them by
+    // funding txid
+    private findSpliceChannelId = async (
+        fundingTxid: string
+    ): Promise<string> => {
+        const { channels } = await this.postRequest('/v1/listpeerchannels');
+        const channel = (channels || []).find(
+            (c: any) => c.funding_txid === fundingTxid
+        );
+        if (!channel?.channel_id) {
+            throw new Error(
+                localeString('error.channelNotFound', { fundingTxid })
+            );
+        }
+        return channel.channel_id;
+    };
+
+    // splicein and spliceout answer once the splice transaction is signed
+    // with the peer and broadcast. When our wait runs out first the splice
+    // may still go through, so that is the Splicing screen's "requested"
+    // state rather than a failure the user would retry
+    private spliceAndWait = async (route: string, request: any) => {
+        const call = this.postRequest(
+            route,
+            request,
+            SPLICE_TIMEOUT_MS + 5000
+        ).then((result: any) => ({
+            success: true,
+            funding_txid_str: result?.txid
+        }));
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const waited = new Promise<any>((resolve) => {
+            timer = setTimeout(
+                () => resolve({ success: true }),
+                SPLICE_TIMEOUT_MS
+            );
+        });
+        try {
+            return await Promise.race([call, waited]);
+        } finally {
+            clearTimeout(timer);
+        }
+    };
+
+    // Both take the fee on top of the amount: splicein from the wallet,
+    // spliceout from the channel
+    spliceIn = async ({
+        fundingTxid,
+        amountSats
+    }: {
+        fundingTxid: string;
+        amountSats: number;
+    }) => {
+        const channel = await this.findSpliceChannelId(fundingTxid);
+        return this.spliceAndWait('/v1/splicein', {
+            channel,
+            amount: `${Number(amountSats)}sat`
+        });
+    };
+
+    // without a destination the funds go to the node's own wallet
+    spliceOut = async ({
+        fundingTxid,
+        amountSats,
+        address
+    }: {
+        fundingTxid: string;
+        amountSats: number;
+        address?: string;
+    }) => {
+        const channel = await this.findSpliceChannelId(fundingTxid);
+        const request: any = { channel, amount: `${Number(amountSats)}sat` };
+        if (address) request.destination = address;
+        return this.spliceAndWait('/v1/spliceout', request);
+    };
+
     closeChannel = (urlParams?: Array<string>) => {
         const request = {
             id: urlParams && urlParams[0],
@@ -896,6 +975,8 @@ export default class CLNRest {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => true;
+    // splicein and spliceout, with splicing on by default, came in v26.04
+    supportsSplicing = () => this.supports('v26.04');
     supportsOnchainSendMax = () => true;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
