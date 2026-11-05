@@ -93,6 +93,12 @@ jest.mock('../assets/images/SVG/Caret Right.svg', () => 'CaretRight');
 jest.mock('../assets/images/SVG/Lock.svg', () => 'LockIcon');
 jest.mock('../assets/images/SVG/Gear.svg', () => 'Gear');
 jest.mock('../assets/images/SVG/NFC-alt.svg', () => 'NfcIcon');
+jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/LSPStore', () => ({}));
+jest.mock('../stores/ChannelsStore', () => ({}));
+jest.mock('../stores/NodeInfoStore', () => ({}));
+jest.mock('../ldknode/LdkNodeInjection', () => ({}));
+jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
 
 import * as React from 'react';
 import { Alert } from 'react-native';
@@ -101,6 +107,7 @@ import BackendUtils from '../utils/BackendUtils';
 import handleAnything from '../utils/handleAnything';
 import { scanNfcTag } from '../utils/NFCUtils';
 import { getSatAmount } from '../components/AmountInput';
+import InvoicesStore from '../stores/InvoicesStore';
 
 // value is in the display unit (here fiat), satAmount in sats, as set by
 // AmountInput's onAmountChange
@@ -1206,5 +1213,91 @@ describe('Receive LSP fee shown with the invoice', () => {
         });
 
         expect(bareText(view.render())).toEqual([]);
+    });
+});
+
+// Receive screens without an on-chain part must not ask for an address:
+// it is never shown, and a failed request would put an address error on a
+// Lightning-only screen
+describe('Receive Lightning-only invoices with Unified as the default type', () => {
+    const backend = BackendUtils as any;
+
+    beforeEach(() => {
+        backend.createInvoice = jest.fn(async () => ({
+            payment_request: 'lnbc-ln-only',
+            r_hash: 'aa'
+        }));
+        backend.getNewAddress = jest.fn(async () => ({
+            address: 'bcrt1-unified'
+        }));
+    });
+
+    afterEach(() => {
+        delete backend.createInvoice;
+        delete backend.getNewAddress;
+    });
+
+    const createWith = async ({
+        params = {},
+        posStatus,
+        pos
+    }: {
+        params?: any;
+        posStatus?: string;
+        pos?: any;
+    }) => {
+        const settings = {
+            invoices: { defaultInvoiceType: 'unified' },
+            ...(pos ? { pos } : {})
+        };
+        const invoicesStore = new InvoicesStore(
+            { settings } as any,
+            { resetFee: jest.fn(), clearFee: jest.fn() } as any,
+            {} as any,
+            {} as any
+        );
+        const view = new Receive({
+            navigation: { navigate: jest.fn() },
+            route: { params },
+            InvoicesStore: invoicesStore,
+            LSPStore: { reset: jest.fn() },
+            PosStore: {},
+            SettingsStore: { posStatus, settings },
+            NodeInfoStore: { nodeInfo: { block_height: 900000 } }
+        } as unknown as React.ComponentProps<typeof Receive>);
+        view.subscribeInvoice = jest.fn();
+
+        view.autoGenerateInvoice('1000');
+        await flush();
+        await flush();
+        expect(backend.createInvoice).toHaveBeenCalledTimes(1);
+        return { view, invoicesStore };
+    };
+
+    it('asks for an address for a unified invoice', async () => {
+        const { view } = await createWith({});
+        expect(backend.getNewAddress).toHaveBeenCalledTimes(1);
+        expect(view.subscribeInvoice).toHaveBeenCalledWith(
+            'aa',
+            'bcrt1-unified'
+        );
+    });
+
+    it('asks for no address when opened from the Lightning balance', async () => {
+        const { view, invoicesStore } = await createWith({
+            params: { forceLn: true }
+        });
+        expect(backend.getNewAddress).not.toHaveBeenCalled();
+        expect(view.subscribeInvoice).toHaveBeenCalledWith('aa', undefined);
+        expect(invoicesStore.payment_request).toBe('lnbc-ln-only');
+        expect(invoicesStore.error_msg).toBeNull();
+    });
+
+    it('asks for no address in POS set to Lightning only', async () => {
+        await createWith({
+            posStatus: 'active',
+            pos: { confirmationPreference: 'lnOnly' }
+        });
+        expect(backend.getNewAddress).not.toHaveBeenCalled();
     });
 });

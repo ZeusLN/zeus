@@ -657,20 +657,69 @@ describe('InvoicesStore.getNewAddress', () => {
         expect(store.creatingInvoice).toBe(false);
     });
 
-    // A backend rejecting with undefined/null makes the catch handler throw
-    // on error.toString() (getNewChangeAddress uses error?.toString()), so
-    // creatingInvoice stays true and error_msg stays null: Receive spins
-    // forever with no error shown.
-    it.todo(
-        'clears creatingInvoice and sets error_msg when the backend rejects with undefined'
+    it.each([undefined, null])(
+        'clears creatingInvoice and shows the generic message when the backend rejects with %p',
+        async (reason) => {
+            (BackendUtils.getNewAddress as jest.Mock).mockRejectedValue(reason);
+
+            const store = dirtyStore();
+            const result = await store.getNewAddress({ account: 'default' });
+
+            expect(result).toBeUndefined();
+            expect(store.onChainAddress).toBeNull();
+            expect(store.error_msg).toBe(
+                'stores.InvoicesStore.errorGeneratingAddress'
+            );
+            expect(store.creatingInvoice).toBe(false);
+        }
     );
 
-    // A response with none of address / bech32 / p2tr / [0].address resolves
-    // with undefined and leaves error_msg null, so Receive shows neither an
-    // address nor an error.
-    it.todo(
-        'sets error_msg when the backend response carries no recognizable address'
+    it.each([
+        ['an empty object', {}],
+        ['an empty address', { address: '' }],
+        ['an empty array', []],
+        ['an array entry without an address', [{}]],
+        ['null', null],
+        ['undefined', undefined]
+    ])(
+        'shows the generic message when the response is %s',
+        async (_label, response) => {
+            (BackendUtils.getNewAddress as jest.Mock).mockResolvedValue(
+                response
+            );
+
+            const store = dirtyStore();
+            const result = await store.getNewAddress({ account: 'default' });
+
+            expect(result).toBeUndefined();
+            expect(store.onChainAddress).toBeNull();
+            expect(store.error_msg).toBe(
+                'stores.InvoicesStore.errorGeneratingAddress'
+            );
+            expect(store.creatingInvoice).toBe(false);
+        }
     );
+
+    it('reports a missing address on unified requests the same way as a rejection', async () => {
+        (BackendUtils.getNewAddress as jest.Mock)
+            .mockRejectedValueOnce(new Error('node offline'))
+            .mockResolvedValueOnce({});
+
+        const rejected = newStore();
+        await rejected.getNewAddress({ unified: true });
+        expect(rejected.error_msg).toBe('Error: node offline');
+        expect(rejected.creatingInvoice).toBe(false);
+
+        const store = newStore();
+        store.creatingInvoice = true;
+        const result = await store.getNewAddress({ unified: true });
+
+        expect(result).toBeUndefined();
+        expect(store.error_msg).toBe(
+            'stores.InvoicesStore.errorGeneratingAddress'
+        );
+        expect(store.creatingInvoice).toBe(false);
+    });
 });
 
 describe('InvoicesStore.getNewChangeAddress', () => {
@@ -693,6 +742,67 @@ describe('InvoicesStore.getNewChangeAddress', () => {
             type: 'TAPROOT_PUBKEY'
         });
     });
+
+    it('shows the change address and clears the previous error', async () => {
+        (BackendUtils.getNewChangeAddress as jest.Mock).mockResolvedValue({
+            addr: 'bcrt1qchange'
+        });
+
+        const store = newStore();
+        store.error_msg = 'old error';
+        const result = await store.getNewChangeAddress({ account: 'default' });
+
+        expect(result).toBe('bcrt1qchange');
+        expect(store.onChainAddress).toBe('bcrt1qchange');
+        expect(store.error_msg).toBeNull();
+        expect(store.creatingInvoice).toBe(false);
+    });
+
+    it.each([
+        ['an Error', new Error('node offline'), 'Error: node offline'],
+        ['undefined', undefined, 'stores.InvoicesStore.errorGeneratingAddress']
+    ])(
+        'clears creatingInvoice when the backend rejects with %s',
+        async (_label, reason, message) => {
+            (BackendUtils.getNewChangeAddress as jest.Mock).mockRejectedValue(
+                reason
+            );
+
+            const store = newStore();
+            const result = await store.getNewChangeAddress({
+                account: 'default'
+            });
+
+            expect(result).toBeUndefined();
+            expect(store.onChainAddress).toBeNull();
+            expect(store.error_msg).toBe(message);
+            expect(store.creatingInvoice).toBe(false);
+        }
+    );
+
+    it.each([
+        ['an empty object', {}],
+        ['null', null]
+    ])(
+        'shows the generic message when the response is %s',
+        async (_label, response) => {
+            (BackendUtils.getNewChangeAddress as jest.Mock).mockResolvedValue(
+                response
+            );
+
+            const store = newStore();
+            const result = await store.getNewChangeAddress({
+                account: 'default'
+            });
+
+            expect(result).toBeUndefined();
+            expect(store.onChainAddress).toBeNull();
+            expect(store.error_msg).toBe(
+                'stores.InvoicesStore.errorGeneratingAddress'
+            );
+            expect(store.creatingInvoice).toBe(false);
+        }
+    );
 });
 
 describe('InvoicesStore.createInvoice LSP decision', () => {
@@ -1888,39 +1998,55 @@ describe('InvoicesStore superseded invoice requests', () => {
         expect(store.loading).toBe(false);
     });
 
-    it('leaves the next screen alone when the on-chain address arrives after reset()', async () => {
-        (BackendUtils.supportsOnchainReceiving as jest.Mock).mockReturnValue(
-            true
-        );
-        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
-            payment_request: 'lnbc-old',
-            r_hash: 'aa'
-        });
-        const address = deferred();
-        const failedAddress = deferred();
-        (BackendUtils.getNewAddress as jest.Mock)
-            .mockReturnValueOnce(address.promise)
-            .mockReturnValueOnce(failedAddress.promise);
-        const store = newStore();
+    // The second request ends both ways a failed address request can: a
+    // rejection, and a response with no address, which reaches the
+    // missing-address check only after the writesShared() check
+    it.each([
+        [
+            'rejects',
+            (request: ReturnType<typeof deferred>) =>
+                request.reject(new Error('wallet locked'))
+        ],
+        [
+            'resolves without an address',
+            (request: ReturnType<typeof deferred>) => request.resolve({})
+        ]
+    ])(
+        'leaves the next screen alone when the on-chain address arrives after reset() (second request %s)',
+        async (_outcome, endSecondRequest) => {
+            (
+                BackendUtils.supportsOnchainReceiving as jest.Mock
+            ).mockReturnValue(true);
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-old',
+                r_hash: 'aa'
+            });
+            const address = deferred();
+            const failedAddress = deferred();
+            (BackendUtils.getNewAddress as jest.Mock)
+                .mockReturnValueOnce(address.promise)
+                .mockReturnValueOnce(failedAddress.promise);
+            const store = newStore();
 
-        const pending = store.createUnifiedInvoice(params);
-        const failing = store.createUnifiedInvoice(params);
-        await flush();
-        expect(BackendUtils.getNewAddress).toHaveBeenCalledTimes(2);
-        store.reset();
-        seedNextScreen(store);
-        address.resolve({ address: 'bcrt1-old' });
-        failedAddress.reject(new Error('wallet locked'));
+            const pending = store.createUnifiedInvoice(params);
+            const failing = store.createUnifiedInvoice(params);
+            await flush();
+            expect(BackendUtils.getNewAddress).toHaveBeenCalledTimes(2);
+            store.reset();
+            seedNextScreen(store);
+            address.resolve({ address: 'bcrt1-old' });
+            endSecondRequest(failedAddress);
 
-        await expect(pending).resolves.toEqual({
-            rHash: 'aa',
-            paymentRequest: 'lnbc-old',
-            onChainAddress: 'bcrt1-old',
-            lspFeeSats: null
-        });
-        await failing;
-        expectNextScreenKept(store);
-    });
+            await expect(pending).resolves.toEqual({
+                rHash: 'aa',
+                paymentRequest: 'lnbc-old',
+                onChainAddress: 'bcrt1-old',
+                lspFeeSats: null
+            });
+            await failing;
+            expectNextScreenKept(store);
+        }
+    );
 
     it('does not let a silent call and a Receive call supersede each other', async () => {
         const receive = deferred();
