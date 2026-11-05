@@ -78,7 +78,6 @@ const NOT_DELIVERED = [
 ];
 
 const notDelivered = (error: any): boolean => {
-    if (isRequestNotSent(error)) return true;
     const message = String(error?.message ?? error ?? '');
     return NOT_DELIVERED.some((pattern) => pattern.test(message));
 };
@@ -91,6 +90,9 @@ export const mayHaveBeenSent = (
     error: any,
     implementation?: string
 ): boolean => {
+    // tagged before anything went out, even if the text says it timed out
+    // (e.g. Tor failing to start)
+    if (isRequestNotSent(error)) return false;
     if (isRequestTimeout(error)) return true;
     if (notDelivered(error)) return false;
 

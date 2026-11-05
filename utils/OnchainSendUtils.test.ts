@@ -389,6 +389,18 @@ describe('mayHaveBeenSent', () => {
         }
     );
 
+    it.each(['lightning-node-connect', 'lnd', 'cln-rest'])(
+        'is false on %s for an error tagged as not sent whose text says it timed out',
+        (implementation) => {
+            expect(
+                mayHaveBeenSent(
+                    markRequestNotSent(new Error('Tor bootstrap timed out')),
+                    implementation
+                )
+            ).toBe(false);
+        }
+    );
+
     it.each([
         ['Tor not running', 'Tor service not running'],
         ['Tor not initialized', 'Tor library not initialized'],

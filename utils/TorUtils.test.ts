@@ -217,12 +217,47 @@ describe('doTorRequest errors', () => {
 
         expect(error.message).toBe('bootstrap timed out');
         expect(isRequestNotSent(error)).toBe(true);
+        expect(mayHaveBeenSent(error, 'lnd')).toBe(false);
         expect(tor.httpPost).not.toHaveBeenCalledWith(
             expect.objectContaining({
                 url: 'https://node.onion:8080/v1/transactions'
             })
         );
     });
+
+    it.each([
+        ['an Error', new Error('Tor bootstrap timed out')],
+        ['a string', 'Tor bootstrap timed out']
+    ])(
+        'tags a start that rejects with %s as not sent',
+        async (_, rejection) => {
+            let fresh: any;
+            let tor: any;
+            jest.isolateModules(() => {
+                tor = require('react-native-nitro-tor').RnTor;
+                fresh = require('./TorUtils');
+            });
+            tor.startTorIfNotRunning.mockRejectedValueOnce(rejection);
+
+            const error = await fresh
+                .doTorRequest(
+                    'https://node.onion:8080/v1/transactions',
+                    fresh.RequestMethod.POST,
+                    '{}'
+                )
+                .catch((e: any) => e);
+
+            expect(error.message).toBe('Tor bootstrap timed out');
+            expect(isRequestNotSent(error)).toBe(true);
+            expect(mayHaveBeenSent(error, 'lnd')).toBe(false);
+            expect(mayHaveBeenSent(error, 'cln-rest')).toBe(false);
+            expect(tor.httpPost).not.toHaveBeenCalledWith(
+                expect.objectContaining({
+                    url: 'https://node.onion:8080/v1/transactions'
+                })
+            );
+        }
+    );
 
     it('does not tag a transport failure', async () => {
         (RnTor.httpPost as jest.Mock).mockResolvedValue({

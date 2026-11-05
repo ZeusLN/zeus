@@ -58,14 +58,12 @@ const ensureTorStarted = (): Promise<void> => {
                 timeout_ms: START_TIMEOUT_MS
             });
             if (!result.is_success) {
-                // the request that needed Tor never went out
-                throw markRequestNotSent(
-                    new Error(result.error_message || 'Failed to start Tor')
-                );
+                throw new Error(result.error_message || 'Failed to start Tor');
             }
         })().catch((e) => {
             startPromise = null;
-            throw e;
+            // the request that needed Tor never went out
+            throw markRequestNotSent(e);
         });
     }
     return startPromise;
