@@ -1,5 +1,12 @@
 import React, { Component } from 'react';
-import { FlatList, StyleSheet, Text, View, I18nManager } from 'react-native';
+import {
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    I18nManager
+} from 'react-native';
 import LinearGradient from '../LinearGradient';
 import { RectButton } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -301,18 +308,22 @@ const SwipeableRow = ({
 
     if (item.layer === 'Ecash (CREQ)' && creqParams && creqString) {
         return (
-            <RectButton
-                style={[styles.rectButton, rowDisabled && { opacity: 0.5 }]}
-                onPress={() => {
-                    if (rowDisabled) return;
-                    navigation.navigate('CREQPayment', {
-                        creqParams,
-                        creqString
-                    });
-                }}
+            <TouchableOpacity
+                onPress={() =>
+                    rowDisabled
+                        ? null
+                        : navigation.navigate('CREQPayment', {
+                              creqParams,
+                              creqString
+                          })
+                }
+                activeOpacity={1}
+                style={{ width: '100%' }}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: rowDisabled }}
             >
                 <Row item={item} />
-            </RectButton>
+            </TouchableOpacity>
         );
     }
 

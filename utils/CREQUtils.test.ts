@@ -13,6 +13,7 @@ import {
     creqPaymentError,
     mintUrlKey,
     findCompatibleMint,
+    sameRequest,
     tokenRequestMismatch
 } from './CREQUtils';
 import type { CREQParams } from './CREQUtils';
@@ -244,6 +245,59 @@ describe('CREQUtils', () => {
                     'https://a.example.com'
                 )
             ).toBe('https://b.example.com');
+        });
+    });
+
+    describe('sameRequest', () => {
+        const request: CREQParams = {
+            id: 'b7a90176',
+            amount: 21,
+            unit: 'sat',
+            mints: ['https://mint.example.com']
+        };
+
+        it('matches the same id, amount and unit', () => {
+            expect(sameRequest(request, { ...request, unit: 'SAT' })).toBe(
+                true
+            );
+        });
+
+        it.each([
+            ['id', { id: 'c8b01287' }],
+            ['missing id', { id: undefined }],
+            ['amount', { amount: 2100 }],
+            ['unit', { unit: 'msat' }]
+        ])('refuses a different %s', (_, change) => {
+            expect(sameRequest(request, { ...request, ...change })).toBe(false);
+        });
+
+        it('compares mints when neither request has an id', () => {
+            const noId = { amount: 21, unit: 'sat' };
+            expect(
+                sameRequest(
+                    {
+                        ...noId,
+                        mints: [
+                            'https://a.example.com',
+                            'https://b.example.com'
+                        ]
+                    },
+                    {
+                        ...noId,
+                        mints: [
+                            'https://B.example.com/',
+                            'https://a.example.com'
+                        ]
+                    }
+                )
+            ).toBe(true);
+            expect(
+                sameRequest(
+                    { ...noId, mints: ['https://a.example.com'] },
+                    { ...noId, mints: ['https://b.example.com'] }
+                )
+            ).toBe(false);
+            expect(sameRequest(noId, { ...noId, mints: [] })).toBe(true);
         });
     });
 

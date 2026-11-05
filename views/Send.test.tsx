@@ -76,7 +76,8 @@ jest.mock('../models/Contact', () => class Contact {});
 jest.mock('../stores/SettingsStore', () => ({
     __esModule: true,
     default: class SettingsStore {},
-    DEFAULT_SLIDE_TO_PAY_THRESHOLD: 10000
+    DEFAULT_SLIDE_TO_PAY_THRESHOLD: 10000,
+    DEFAULT_TAP_TO_PAY_LIMIT: 10000
 }));
 
 import * as React from 'react';
@@ -645,17 +646,19 @@ describe('Send NFC scan', () => {
 
 describe('Send scanNfc', () => {
     const ModalStore = {};
+    let navigation: any;
 
-    const renderWithRef = async () => {
+    const renderWithRef = async (settings: any = {}) => {
         const ref = React.createRef<any>();
+        navigation = {
+            navigate: jest.fn(),
+            addListener: jest.fn(() => jest.fn())
+        };
         await render(
             <Send
                 ref={ref}
                 {...({
-                    navigation: {
-                        navigate: jest.fn(),
-                        addListener: jest.fn(() => jest.fn())
-                    },
+                    navigation,
                     route: { params: {} },
                     BalanceStore: {
                         lightningBalance: 0,
@@ -667,7 +670,7 @@ describe('Send scanNfc', () => {
                     NodeInfoStore: {},
                     SettingsStore: {
                         implementation: 'lnd',
-                        settings: {},
+                        settings,
                         getSettings: jest.fn(async () => ({}))
                     },
                     TransactionsStore: {},
@@ -722,7 +725,9 @@ describe('Send scanNfc', () => {
 
         await act(() => send.scanNfc());
 
-        expect(payViaNfcTap).toHaveBeenCalledWith(ModalStore, mockCashuStore);
+        expect(payViaNfcTap).toHaveBeenCalledWith(ModalStore, mockCashuStore, {
+            limit: 10000
+        });
         expect(alertSpy).toHaveBeenCalledWith(
             'general.success',
             '21 general.sats'
@@ -748,7 +753,38 @@ describe('Send scanNfc', () => {
         expect(scanNfcTag).not.toHaveBeenCalled();
     });
 
-    it('shows CREQ failures', async () => {
+    it('passes the tap-to-pay limit from the payments settings', async () => {
+        (payViaNfcTap as jest.Mock).mockResolvedValue({ status: 'cancelled' });
+        const send = await renderWithRef({ payments: { tapToPayLimit: 0 } });
+
+        await act(() => send.scanNfc());
+
+        expect(payViaNfcTap).toHaveBeenCalledWith(ModalStore, mockCashuStore, {
+            limit: 0
+        });
+    });
+
+    it('opens CREQPayment to confirm a request above the limit', async () => {
+        const creqParams = { amount: 50000, unit: 'sat' };
+        (payViaNfcTap as jest.Mock).mockResolvedValue({
+            status: 'confirm',
+            creqParams,
+            creqString: 'creqAoWFhZA'
+        });
+        const send = await renderWithRef();
+
+        await act(() => send.scanNfc());
+
+        expect(navigation.navigate).toHaveBeenCalledWith('CREQPayment', {
+            creqParams,
+            creqString: 'creqAoWFhZA'
+        });
+    });
+
+    it('alerts CREQ failures, which have no destination to show under', async () => {
+        const alertSpy = jest
+            .spyOn(Alert, 'alert')
+            .mockImplementation(() => void 0);
         (payViaNfcTap as jest.Mock).mockResolvedValue({
             status: 'failed',
             error: 'utils.NFCUtils.tokenNotDelivered',
@@ -758,8 +794,12 @@ describe('Send scanNfc', () => {
 
         await act(() => send.scanNfc());
 
-        expect(send.state.error_msg).toBe('utils.NFCUtils.tokenNotDelivered');
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'utils.NFCUtils.tokenNotDelivered'
+        );
         expect(scanNfcTag).not.toHaveBeenCalled();
+        alertSpy.mockRestore();
     });
 
     it.each([
@@ -775,5 +815,71 @@ describe('Send scanNfc', () => {
         expect(send.validateAddress).not.toHaveBeenCalled();
         expect(send.state.error_msg).toBeFalsy();
         expect(scanNfcTag).not.toHaveBeenCalled();
+    });
+});
+
+describe('Send NFC modal', () => {
+    const renderWithModal = async (closesDialog: boolean) => {
+        const ref = React.createRef<any>();
+        const navigation = {
+            navigate: jest.fn(),
+            pop: jest.fn(),
+            addListener: jest.fn(() => jest.fn())
+        };
+        const ModalStore = {
+            showAndroidNfcModal: true,
+            closeVisibleModalDialog: jest.fn(() => closesDialog),
+            toggleAndroidNfcModal: jest.fn()
+        };
+        await render(
+            <Send
+                ref={ref}
+                {...({
+                    navigation,
+                    route: { params: {} },
+                    BalanceStore: {
+                        lightningBalance: 0,
+                        getLightningBalance: jest.fn()
+                    },
+                    ContactStore: { contacts: [] },
+                    InvoicesStore: {},
+                    ModalStore,
+                    NodeInfoStore: {},
+                    SettingsStore: {
+                        implementation: 'lnd',
+                        settings: {},
+                        getSettings: jest.fn(async () => ({}))
+                    },
+                    TransactionsStore: {},
+                    UTXOsStore: {}
+                } as any)}
+            />
+        );
+        return { send: ref.current, navigation, ModalStore };
+    };
+
+    it('closes an open modal on back instead of leaving Send', async () => {
+        const { send, navigation, ModalStore } = await renderWithModal(true);
+
+        expect(send.backPressed()).toBe(true);
+
+        expect(ModalStore.closeVisibleModalDialog).toHaveBeenCalled();
+        expect(navigation.pop).not.toHaveBeenCalled();
+    });
+
+    it('leaves Send on back when no modal is open', async () => {
+        const { send, navigation } = await renderWithModal(false);
+
+        expect(send.backPressed()).toBe(true);
+
+        expect(navigation.pop).toHaveBeenCalled();
+    });
+
+    it('hides the NFC modal when Send unmounts', async () => {
+        const { ModalStore } = await renderWithModal(false);
+
+        await act(() => screen.unmount());
+
+        expect(ModalStore.toggleAndroidNfcModal).toHaveBeenCalledWith(false);
     });
 });

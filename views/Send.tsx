@@ -27,7 +27,8 @@ import InvoicesStore from '../stores/InvoicesStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore, {
-    DEFAULT_SLIDE_TO_PAY_THRESHOLD
+    DEFAULT_SLIDE_TO_PAY_THRESHOLD,
+    DEFAULT_TAP_TO_PAY_LIMIT
 } from '../stores/SettingsStore';
 import TransactionsStore from '../stores/TransactionsStore';
 import UTXOsStore from '../stores/UTXOsStore';
@@ -303,6 +304,12 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     componentWillUnmount(): void {
+        // hiding the NFC modal cancels a tap-to-pay request that hasn't
+        // reached a tag yet, so it can't pay after Send is gone
+        const { ModalStore } = this.props;
+        if (ModalStore.showAndroidNfcModal) {
+            ModalStore.toggleAndroidNfcModal(false);
+        }
         this.backPressSubscription?.remove();
         this.appStateSubscription?.remove();
         if (this.focusListener) this.focusListener();
@@ -327,19 +334,30 @@ export default class Send extends React.Component<SendProps, SendState> {
         // With ecash, one NFC session pays a CREQ tag (tap-to-pay) and hands
         // any other tag content to validateAddress
         if (BackendUtils.supportsCashuWallet() && cashuStore.cdkInitialized) {
+            const limit =
+                this.props.SettingsStore.settings?.payments?.tapToPayLimit ??
+                DEFAULT_TAP_TO_PAY_LIMIT;
             const result = await payViaNfcTap(
                 this.props.ModalStore,
-                cashuStore
+                cashuStore,
+                { limit }
             );
             if (result.status === 'paid') {
                 Alert.alert(
                     localeString('general.success'),
                     `${result.amount} ${localeString('general.sats')}`
                 );
+            } else if (result.status === 'confirm') {
+                this.props.navigation.navigate('CREQPayment', {
+                    creqParams: result.creqParams,
+                    creqString: result.creqString
+                });
             } else if (result.status === 'read') {
                 if (result.text) this.validateAddress(result.text);
             } else if (result.status === 'failed') {
-                this.setState({ error_msg: result.error });
+                // an alert, since Send may have no destination to show an
+                // error under
+                Alert.alert(localeString('general.error'), result.error);
             }
             return;
         }
@@ -686,6 +704,9 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     backPressed = () => {
+        // Send's handler runs before App's, so close an open modal here.
+        // Closing the NFC modal also cancels a pending tap-to-pay request
+        if (this.props.ModalStore.closeVisibleModalDialog()) return true;
         if (this.state.clearOnBackPress && this.state.transactionType) {
             this.setState({
                 contactName: '',

@@ -138,6 +138,8 @@ interface PaymentsSettings {
     timeoutSeconds?: string;
     preferredMempoolRate?: string;
     slideToPayThreshold: number;
+    // ecash NFC payments above this many sats need a confirmation
+    tapToPayLimit?: number;
     enableDonations?: boolean;
     defaultDonationPercentage?: number;
 }
@@ -1561,6 +1563,7 @@ export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
 ];
 
 export const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
+export const DEFAULT_TAP_TO_PAY_LIMIT = 10000;
 
 // The full set of top-level settings and their default values. A fresh
 // install's initial `settings` and MigrationUtils.applyMissingSettingsGroups
@@ -1616,6 +1619,7 @@ export const DEFAULT_SETTINGS: Settings = {
         timeoutSeconds: '60',
         preferredMempoolRate: 'fastestFee',
         slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD,
+        tapToPayLimit: DEFAULT_TAP_TO_PAY_LIMIT,
         enableDonations: false,
         defaultDonationPercentage: 5
     },

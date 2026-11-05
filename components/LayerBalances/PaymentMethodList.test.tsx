@@ -33,7 +33,12 @@ jest.mock('../../components/SVG/LightningSvg', () => 'LightningSvg');
 jest.mock('../../components/SVG/EcashSvg', () => 'EcashSvg');
 
 import * as React from 'react';
-import { render, screen, within } from '@testing-library/react-native';
+import {
+    fireEvent,
+    render,
+    screen,
+    within
+} from '@testing-library/react-native';
 
 import PaymentMethodList from './PaymentMethodList';
 import BackendUtils from '../../utils/BackendUtils';
@@ -408,5 +413,64 @@ describe('PaymentMethodList CLINK offers', () => {
             balance: undefined,
             props: { disabled: false }
         });
+    });
+});
+
+describe('PaymentMethodList CREQ', () => {
+    const creqParams = { amount: 21, unit: 'sat' };
+    const creqString = 'creqAoWFhZA';
+
+    beforeEach(() => {
+        (BackendUtils.supportsCashuWallet as jest.Mock).mockReturnValue(true);
+        settingsStore.settings = { ecash: { enableCashu: true } };
+    });
+
+    const creqRow = () =>
+        screen.getByRole('button', {
+            name: /components\.LayerBalances\.ecashCreq/
+        });
+
+    it('opens CREQPayment from a full-width row', async () => {
+        const navigation = { navigate: jest.fn() };
+        await renderList({
+            navigation,
+            creqParams,
+            creqString,
+            ecashBalance: 2_000,
+            satAmount: 21
+        });
+
+        expect(creqRow()).toHaveStyle({ width: '100%' });
+        fireEvent.press(screen.getByText('components.LayerBalances.ecashCreq'));
+
+        expect(navigation.navigate).toHaveBeenCalledWith('CREQPayment', {
+            creqParams,
+            creqString
+        });
+    });
+
+    it('does nothing when the ecash balance is too low', async () => {
+        const navigation = { navigate: jest.fn() };
+        await renderList({
+            navigation,
+            creqParams,
+            creqString,
+            ecashBalance: 20,
+            satAmount: 21
+        });
+
+        expect(creqRow()).toBeDisabled();
+        fireEvent.press(screen.getByText('components.LayerBalances.ecashCreq'));
+
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('leaves the row out when Cashu is turned off', async () => {
+        settingsStore.settings = { ecash: { enableCashu: false } };
+        await renderList({ creqParams, creqString, ecashBalance: 2_000 });
+
+        expect(
+            screen.queryByText('components.LayerBalances.ecashCreq')
+        ).toBeNull();
     });
 });

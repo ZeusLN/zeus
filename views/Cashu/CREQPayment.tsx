@@ -18,7 +18,7 @@ import {
 import CashuStore from '../../stores/CashuStore';
 import ModalStore from '../../stores/ModalStore';
 
-import { writeTokenToTag } from '../../utils/NFCUtils';
+import { payViaNfcTap } from '../../utils/NFCUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -45,8 +45,6 @@ interface CREQPaymentState {
     loading: boolean;
     success: boolean;
     error: string;
-    tokenCreated: string;
-    writingNfc: boolean;
 }
 
 @inject('CashuStore', 'ModalStore')
@@ -58,65 +56,27 @@ export default class CREQPayment extends React.Component<
     state: CREQPaymentState = {
         loading: false,
         success: false,
-        error: '',
-        tokenCreated: '',
-        writingNfc: false
+        error: ''
     };
 
-    payFromCREQ = async () => {
-        const { CashuStore } = this.props;
+    // One NFC session reads the tag, checks it still holds this request,
+    // then creates the token and writes it back
+    payViaNfc = async () => {
+        const { CashuStore, ModalStore } = this.props;
         const { creqParams } = this.props.route.params;
 
-        const requestError = creqPaymentError(creqParams);
-        if (requestError) {
-            this.setState({ error: localeString(requestError) });
-            return;
-        }
-
-        // Find a compatible mint
-        const mintUrl = this.getCompatibleMint();
-        if (!mintUrl) {
-            this.setState({
-                error: localeString('views.Cashu.CREQPayment.noCompatibleMint')
-            });
-            return;
-        }
-
         this.setState({ loading: true, error: '' });
-
-        try {
-            const { token } = await CashuStore.sendTokenForRequest(
-                mintUrl,
-                creqParams.amount!,
-                creqParams.description
-            );
-            this.setState({
-                loading: false,
-                tokenCreated: token
-            });
-        } catch (e: any) {
-            this.setState({
-                loading: false,
-                error:
-                    e.message ||
-                    localeString('views.Cashu.CREQPayment.failedToCreateToken')
-            });
-        }
-    };
-
-    writeViaNfc = async () => {
-        const { ModalStore } = this.props;
-        const { tokenCreated } = this.state;
-
-        this.setState({ writingNfc: true });
-        const success = await writeTokenToTag(ModalStore!, tokenCreated);
-        this.setState({
-            writingNfc: false,
-            success,
-            error: success
-                ? ''
-                : localeString('utils.NFCUtils.tokenNotDelivered')
+        const result = await payViaNfcTap(ModalStore, CashuStore, {
+            expected: creqParams
         });
+
+        if (result.status === 'paid') {
+            this.setState({ loading: false, success: true });
+        } else if (result.status === 'failed') {
+            this.setState({ loading: false, error: result.error });
+        } else {
+            this.setState({ loading: false });
+        }
     };
 
     getCompatibleMint(): string | undefined {
@@ -133,8 +93,7 @@ export default class CREQPayment extends React.Component<
     render() {
         const { navigation } = this.props;
         const { creqParams } = this.props.route.params;
-        const { loading, success, error, tokenCreated, writingNfc } =
-            this.state;
+        const { loading, success, error } = this.state;
 
         const compatibleMint = this.getCompatibleMint();
         const requestError = creqPaymentError(creqParams);
@@ -155,7 +114,7 @@ export default class CREQPayment extends React.Component<
                     navigation={navigation}
                 />
 
-                {(loading || writingNfc) && (
+                {loading && (
                     <View style={{ marginTop: 40 }}>
                         <LoadingIndicator />
                     </View>
@@ -212,29 +171,16 @@ export default class CREQPayment extends React.Component<
                             />
                         )}
 
-                        {!tokenCreated && (
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.PaymentRequest.payInvoice'
-                                    )}
-                                    icon={{ name: 'send', size: 25 }}
-                                    onPress={this.payFromCREQ}
-                                    disabled={!compatibleMint || !!requestError}
-                                />
-                            </View>
-                        )}
-
-                        {!!tokenCreated && !success && (
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.Cashu.CREQPayment.tapToDeliver'
-                                    )}
-                                    onPress={this.writeViaNfc}
-                                />
-                            </View>
-                        )}
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.Cashu.CREQPayment.payViaNfc'
+                                )}
+                                icon={{ name: 'nfc', size: 25 }}
+                                onPress={this.payViaNfc}
+                                disabled={!compatibleMint || !!requestError}
+                            />
+                        </View>
                     </View>
                 )}
             </Screen>

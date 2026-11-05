@@ -162,6 +162,23 @@ export function findCompatibleMint(
 }
 
 /**
+ * Whether two decoded payment requests ask for the same payment: the same
+ * id if either has one, otherwise the same mints. The amount and unit must
+ * match either way. Compares decoded fields, since one request can be
+ * encoded as creqA or creqb.
+ */
+export function sameRequest(a: CREQParams, b: CREQParams): boolean {
+    if (a.amount !== b.amount) return false;
+    if ((a.unit || '').toLowerCase() !== (b.unit || '').toLowerCase()) {
+        return false;
+    }
+    if (a.id || b.id) return a.id === b.id;
+    const mints = (p: CREQParams) =>
+        [...new Set((p.mints || []).map(mintUrlKey))].sort().join(' ');
+    return mints(a) === mints(b);
+}
+
+/**
  * Locale key of the reason a token written back by a payer doesn't settle
  * the request ZEUS broadcast, if any.
  */
@@ -191,5 +208,6 @@ export default {
     creqPaymentError,
     mintUrlKey,
     findCompatibleMint,
+    sameRequest,
     tokenRequestMismatch
 };
