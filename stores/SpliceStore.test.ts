@@ -10,7 +10,8 @@ jest.mock('../utils/BackendUtils', () => ({
         spliceOut: jest.fn(),
         watchSpliceEvents: jest.fn(),
         getMyNodeInfo: jest.fn(),
-        getSpliceTransactionStatus: jest.fn()
+        getSpliceTransactionStatus: jest.fn(),
+        getSpliceHistory: jest.fn()
     }
 }));
 
@@ -385,7 +386,7 @@ describe('SpliceStore splice tracking', () => {
         expect(BackendUtils.watchSpliceEvents).toHaveBeenCalledTimes(1);
     });
 
-    it('does nothing on a backend without splice events', async () => {
+    it('starts again after stopping on a backend without splice events', async () => {
         (BackendUtils.watchSpliceEvents as jest.Mock).mockReturnValue(false);
         const store = await trackingStore();
         store.stopTracking();
@@ -524,6 +525,36 @@ describe('SpliceStore splice tracking', () => {
         expect(store.getPendingSplice({} as any)).toBeNull();
     });
 
+    it('takes the splice a backend reports on the channel', () => {
+        const store = newStore();
+
+        const splice = store.getPendingSplice({
+            channelId: 'cln-chan',
+            capacity: '300000',
+            pending_splice: {
+                txid: 'splice-txid',
+                vout: 1,
+                initiator: 'remote',
+                direction: 'in',
+                capacitySats: 340002
+            }
+        } as any);
+
+        expect(splice).toEqual(
+            expect.objectContaining({
+                channelId: 'cln-chan',
+                txid: 'splice-txid',
+                vout: 1,
+                initiator: 'remote',
+                direction: 'in',
+                status: 'pending',
+                capacityBefore: 300000,
+                capacityAfter: 340002
+            })
+        );
+        expect(store.getSpliceConfirmations(splice!)).toBeNull();
+    });
+
     it("counts a splice's confirmations to the channel's lock depth", async () => {
         const store = await trackingStore();
         emit(pendingEvent);
@@ -542,6 +573,179 @@ describe('SpliceStore splice tracking', () => {
             total: 6
         });
         transactionsStore.transactions = [];
+    });
+
+    describe('on a backend that reports its splices', () => {
+        const reported = {
+            txid: 'pending-txid',
+            vout: 0,
+            initiator: 'local' as const,
+            direction: 'in' as const,
+            amountSats: 100000,
+            capacitySats: 1_100_000
+        };
+        const clnChannel = (pending_splice?: any) => ({
+            channel_point: 'funding-txid',
+            channelId: 'cln-chan',
+            chan_id: 'cln-chan',
+            capacity: '1000000',
+            pending_splice
+        });
+        const finished = {
+            userChannelId: '',
+            channelId: 'cln-chan',
+            txid: 'earlier-txid',
+            initiator: 'remote',
+            direction: 'in',
+            startedAt: 1000,
+            status: 'locked',
+            capacityBefore: 900_000,
+            capacityAfter: 1_000_000
+        };
+        const mockHistory = (splices: any[] | Promise<any>) =>
+            (BackendUtils.getSpliceHistory as jest.Mock).mockImplementation(
+                () =>
+                    splices instanceof Promise
+                        ? splices
+                        : Promise.resolve({ splices })
+            );
+        const refreshChannels = async (channels: any[]) => {
+            channelsStore.channels = channels;
+            await flushSaves();
+        };
+
+        beforeEach(() => {
+            (BackendUtils.watchSpliceEvents as jest.Mock).mockReturnValue(
+                false
+            );
+            channelsStore.channels = [clnChannel(reported)];
+            channelsStore.hasChannelData = true;
+            mockHistory([finished]);
+        });
+
+        afterEach(() => {
+            channelsStore.hasChannelData = false;
+        });
+
+        it('lists the splice in progress and the finished ones', async () => {
+            const store = await trackingStore();
+            await flushSaves();
+
+            expect(store.splices).toEqual([
+                expect.objectContaining({
+                    txid: 'pending-txid',
+                    status: 'pending',
+                    channelId: 'cln-chan',
+                    capacityAfter: 1_100_000
+                }),
+                finished
+            ]);
+            expect(store.splices[0].startedAt).toBeGreaterThan(0);
+            expect(Storage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('reads the history again only when the splices in progress change', async () => {
+            const store = await trackingStore();
+            await flushSaves();
+            const startedAt = store.splices[0].startedAt;
+
+            await refreshChannels([clnChannel(reported)]);
+            expect(BackendUtils.getSpliceHistory).toHaveBeenCalledTimes(1);
+            expect(store.splices[0].startedAt).toEqual(startedAt);
+
+            mockHistory([
+                { ...finished, txid: 'pending-txid', status: 'locked' },
+                finished
+            ]);
+            await refreshChannels([clnChannel()]);
+
+            expect(BackendUtils.getSpliceHistory).toHaveBeenCalledTimes(2);
+            expect(store.pendingSplices).toEqual([]);
+            expect(store.splices.map((splice) => splice.txid)).toEqual([
+                'pending-txid',
+                'earlier-txid'
+            ]);
+        });
+
+        it('shows a confirmed splice as in progress until it locks', async () => {
+            mockHistory([{ ...finished, txid: 'pending-txid' }]);
+
+            const store = await trackingStore();
+            await flushSaves();
+
+            expect(store.splices).toHaveLength(1);
+            expect(store.splices[0].status).toEqual('pending');
+        });
+
+        it('refreshes channels while a splice is in progress, to see it lock', async () => {
+            const store = await trackingStore();
+            await flushSaves();
+            expect((store as any).chainCheckTimer).not.toBeNull();
+
+            await refreshChannels([clnChannel()]);
+
+            expect((store as any).chainCheckTimer).toBeNull();
+            expect(balanceStore.getCombinedBalance).toHaveBeenCalled();
+        });
+
+        it('shows what we asked for, not what left the channel with the fee', async () => {
+            (BackendUtils.spliceOut as jest.Mock).mockResolvedValue({
+                success: true,
+                funding_txid_str: 'pending-txid'
+            });
+            const store = await trackingStore();
+
+            await store.splice({
+                direction: 'out',
+                fundingTxid: 'funding-txid',
+                amountSats: 50000
+            });
+
+            expect(
+                store.getPendingSplice(
+                    clnChannel({
+                        ...reported,
+                        direction: 'out',
+                        amountSats: 50199,
+                        capacitySats: 1_049_801
+                    }) as any
+                )
+            ).toEqual(
+                expect.objectContaining({
+                    direction: 'out',
+                    amountSats: 50000,
+                    capacityAfter: 1_049_801
+                })
+            );
+        });
+
+        it('keeps the finished splices it had when the history fails', async () => {
+            const store = await trackingStore();
+            await flushSaves();
+            (BackendUtils.getSpliceHistory as jest.Mock).mockRejectedValue(
+                new Error('offline')
+            );
+
+            await refreshChannels([clnChannel()]);
+
+            expect(store.splices).toEqual([finished]);
+        });
+
+        it('drops a history that lands after switching wallets', async () => {
+            let answer: (value: any) => void = () => {};
+            mockHistory(
+                new Promise((resolve) => {
+                    answer = resolve;
+                })
+            );
+            const store = await trackingStore();
+
+            store.stopTracking();
+            answer({ splices: [finished] });
+            await flushSaves();
+
+            expect(store.splices).toEqual([]);
+        });
     });
 
     describe('reading pending splices from the chain', () => {

@@ -97,6 +97,13 @@ export default class SpliceStore {
     private saveQueue: Promise<unknown> = Promise.resolve();
     // The channel the Splicing screen is following
     private spliceUserChannelId: string | null = null;
+    // A backend that reports its splices: the pending ones its history was
+    // last read with, and when each was first seen (it doesn't say)
+    private reportedPendingKey: string | null = null;
+    private reportedStartedAt = new Map<string, number>();
+    // What we asked for, by splice txid: Core Lightning reports a
+    // splice-out as what left the channel, fee included
+    private reportedIntents = new Map<string, SpliceIntent>();
 
     @observable public spliceInAvailableSats: number | null = null;
     @observable public loadingSpliceInAvailable = false;
@@ -166,7 +173,10 @@ export default class SpliceStore {
         const unsubscribe = BackendUtils.watchSpliceEvents(
             this.handleSpliceEvent
         );
-        if (typeof unsubscribe !== 'function') return;
+        if (typeof unsubscribe !== 'function') {
+            this.followReportedSplices(session);
+            return;
+        }
 
         runInAction(() => {
             this.unsubscribeSpliceEvents = unsubscribe;
@@ -197,6 +207,94 @@ export default class SpliceStore {
                 anyPending ? this.startChainChecks() : this.stopChainChecks(),
             { fireImmediately: true }
         );
+    };
+
+    // Core Lightning reports its splices itself: each one in progress on its
+    // channel, finished ones in its bookkeeper. Nothing is saved, and the
+    // history is read again only when the splices in progress change, which
+    // is how a lock shows
+    private followReportedSplices = (session: number) => {
+        this.disposeReconcile = reaction(
+            () => [
+                this.channelsStore.hasChannelData,
+                this.channelsStore.channels
+            ],
+            () => this.loadReportedSplices(session),
+            { fireImmediately: true }
+        );
+
+        // with no events, a lock shows only in a fresh channel list
+        this.disposeChainChecks = reaction(
+            () => this.pendingSplices.length > 0,
+            (anyPending) =>
+                anyPending ? this.startChannelChecks() : this.stopChainChecks(),
+            { fireImmediately: true }
+        );
+    };
+
+    private startChannelChecks = () => {
+        if (this.chainCheckTimer) return;
+        this.chainCheckTimer = setInterval(
+            () => this.channelsStore.getChannels(),
+            SPLICE_CHAIN_CHECK_MS
+        );
+    };
+
+    private loadReportedSplices = async (session: number) => {
+        const { hasChannelData, channels } = this.channelsStore;
+        if (!hasChannelData) return;
+
+        const now = Date.now();
+        const pending = channels.flatMap((channel): SpliceRecord[] => {
+            const splice = this.getPendingSplice(channel);
+            if (!splice) return [];
+            if (!this.reportedStartedAt.has(splice.txid)) {
+                this.reportedStartedAt.set(splice.txid, now);
+            }
+            return [
+                {
+                    ...splice,
+                    startedAt: this.reportedStartedAt.get(splice.txid)!
+                }
+            ];
+        });
+        const pendingKey = pending
+            .map((splice) => splice.txid)
+            .sort()
+            .join(',');
+
+        let finished = this.splices.filter(
+            (splice) => splice.status === 'locked'
+        );
+        if (pendingKey !== this.reportedPendingKey) {
+            let history: any = null;
+            try {
+                history = await BackendUtils.getSpliceHistory();
+            } catch (error) {
+                console.error('Error loading splice history:', error);
+            }
+            if (session !== this.trackingSession) return;
+            if (Array.isArray(history?.splices)) {
+                // a splice that is no longer in progress has locked
+                if (this.reportedPendingKey) {
+                    this.balanceStore.getCombinedBalance();
+                }
+                finished = history.splices;
+                this.reportedPendingKey = pendingKey;
+            }
+        }
+
+        const splices = [
+            ...pending,
+            ...finished.filter(
+                (splice) => !pending.some((p) => p.txid === splice.txid)
+            )
+        ];
+        if (JSON.stringify(splices) !== JSON.stringify(this.splices)) {
+            runInAction(() => {
+                this.splices = splices;
+            });
+        }
     };
 
     private startChainChecks = () => {
@@ -281,6 +379,9 @@ export default class SpliceStore {
         this.disposeChainChecks = null;
         this.stopChainChecks();
         this.bestBlockHeight = null;
+        this.reportedPendingKey = null;
+        this.reportedStartedAt.clear();
+        this.reportedIntents.clear();
         this.nodePubkey = null;
         this.otherNodesSplices = [];
         this.splices = [];
@@ -413,12 +514,35 @@ export default class SpliceStore {
         if (changed) this.setSplices(splices);
     };
 
-    public getPendingSplice = (channel: Channel): SpliceRecord | null =>
-        (channel.user_channel_id &&
-            this.pendingSplices.find(
-                (splice) => splice.userChannelId === channel.user_channel_id
-            )) ||
-        null;
+    // A backend that reports its own splices says so on the channel; LDK's
+    // are tracked from its events
+    public getPendingSplice = (channel: Channel): SpliceRecord | null => {
+        const reported = channel.pending_splice;
+        if (reported) {
+            const intent = this.reportedIntents.get(reported.txid);
+            return {
+                userChannelId: channel.user_channel_id || '',
+                channelId: channel.channelId || '',
+                txid: reported.txid,
+                vout: reported.vout,
+                initiator: reported.initiator,
+                direction: intent?.direction ?? reported.direction,
+                amountSats: intent?.amountSats ?? reported.amountSats,
+                address: intent?.address,
+                startedAt: 0,
+                status: 'pending',
+                capacityBefore: Number(channel.capacity),
+                capacityAfter: reported.capacitySats
+            };
+        }
+        return (
+            (channel.user_channel_id &&
+                this.pendingSplices.find(
+                    (splice) => splice.userChannelId === channel.user_channel_id
+                )) ||
+            null
+        );
+    };
 
     public getSpliceConfirmations = (
         splice: SpliceRecord
@@ -584,6 +708,14 @@ export default class SpliceStore {
                 this.spliceSuccess = true;
                 this.spliceTxid = result?.funding_txid_str || null;
             });
+            // a backend without splice events reports it by txid
+            if (!userChannelId && result?.funding_txid_str) {
+                this.reportedIntents.set(result.funding_txid_str, {
+                    direction,
+                    amountSats,
+                    address
+                });
+            }
 
             this.channelsStore.getChannels();
             this.balanceStore.getCombinedBalance();

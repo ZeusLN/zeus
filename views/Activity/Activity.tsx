@@ -166,8 +166,13 @@ export default class Activity extends React.PureComponent<
         }
 
         if (item instanceof Splice) {
+            // LDK names the channel by user_channel_id, Core Lightning by
+            // its channel id
             const channel = this.props.ChannelsStore.enrichedChannels.find(
-                (c) => c.user_channel_id === item.userChannelId
+                (c) =>
+                    item.userChannelId
+                        ? c.user_channel_id === item.userChannelId
+                        : c.chan_id === item.channelId
             );
             if (channel) {
                 navigation.navigate('Channel', { channel });
