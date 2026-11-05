@@ -27,6 +27,9 @@ export default function CashuPayment(props: any) {
     const { redeemCashu, deletePayment } = lightningAddressStore;
 
     const date = DateTimeUtils.formatDateTimeShort(item.updated_at);
+    // mint_url comes from the ZEUS Pay status response; an object here
+    // would crash the list, so render only strings
+    const mintUrl = typeof item.mint_url === 'string' ? item.mint_url : '';
 
     const confirmDelete = () => {
         Alert.alert(
@@ -68,7 +71,7 @@ export default function CashuPayment(props: any) {
                     <ListItem.Title>
                         <Amount sats={item.amount_msat / 1000} />{' '}
                     </ListItem.Title>
-                    {item.comment && (
+                    {!!item.comment && (
                         <ListItem.Subtitle>
                             <Text
                                 style={{
@@ -81,19 +84,20 @@ export default function CashuPayment(props: any) {
                             </Text>
                         </ListItem.Subtitle>
                     )}
-                    <ListItem.Subtitle>
-                        <Text
-                            style={{
-                                color: cashuStore.cashuWallets[item.mint_url]
-                                    ?.errorConnecting
-                                    ? themeColor('warning')
-                                    : themeColor('secondaryText')
-                            }}
-                        >
-                            {cashuStore.mintInfos[item.mint_url]?.name ||
-                                item.mint_url}
-                        </Text>
-                    </ListItem.Subtitle>
+                    {!!mintUrl && (
+                        <ListItem.Subtitle>
+                            <Text
+                                style={{
+                                    color: cashuStore.cashuWallets[mintUrl]
+                                        ?.errorConnecting
+                                        ? themeColor('warning')
+                                        : themeColor('secondaryText')
+                                }}
+                            >
+                                {cashuStore.mintInfos[mintUrl]?.name || mintUrl}
+                            </Text>
+                        </ListItem.Subtitle>
+                    )}
                     <ListItem.Subtitle>
                         <Text
                             style={{
