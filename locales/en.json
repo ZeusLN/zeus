@@ -1949,6 +1949,7 @@
     "views.Settings.NodeConfiguration.embeddedDelete2": "It is recommended to close all your channels manually before moving to another device. Restoring without closing out channels beforehand will trigger force closes, which will result in higher fees and can take up to two weeks to recover your funds.",
     "views.Settings.LightningAddress.create": "Create lightning address",
     "views.Settings.LightningAddress.redeemAll": "Redeem all",
+    "views.Settings.LightningAddress.redeemAllProgress": "{{redeemed}} of {{total}} payments",
     "views.Settings.LightningAddress.change": "Change lightning address",
     "views.Settings.LightningAddress.chooseHandle": "Choose a handle",
     "views.Settings.LightningAddress.noPaymentsToRedeem": "No payments to redeem. Check back later.",

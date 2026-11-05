@@ -18,6 +18,7 @@ import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import CashuPayment from './CashuPayment';
+import RedeemAllProgress from './RedeemAllProgress';
 
 import { showCopiedToast } from '../../components/CopiedToast';
 
@@ -148,8 +149,15 @@ export default class LightningAddress extends React.Component<
             error_msg,
             loading,
             redeeming,
-            redeemingAll
+            redeemingAll,
+            redeemAllTotal,
+            redeemAllRedeemed,
+            redeemAllAmountMsat,
+            showRedeemAllTotal
         } = LightningAddressStore;
+
+        // Redeem All keeps the screen until its final total has been shown
+        const redeemAllBusy = redeemingAll || showRedeemAllTotal;
 
         const { fontScale } = Dimensions.get('window');
 
@@ -260,7 +268,7 @@ export default class LightningAddress extends React.Component<
                             />
                         }
                         rightComponent={
-                            !loading && !redeeming && !redeemingAll ? (
+                            !loading && !redeeming && !redeemAllBusy ? (
                                 <Row>
                                     {lightningAddressHandle && !isZaplocker && (
                                         <InfoButton />
@@ -284,7 +292,7 @@ export default class LightningAddress extends React.Component<
                                 <LightningLoadingPattern />
                             </View>
                         )}
-                        {redeemingAll && !redeeming && (
+                        {redeemAllBusy && !redeeming && (
                             <View
                                 style={[
                                     styles.loadingPatternWrapper,
@@ -296,12 +304,14 @@ export default class LightningAddress extends React.Component<
                                 />
                             </View>
                         )}
-                        {loading && <LoadingIndicator />}
+                        {/* the status refresh after Redeem All would add a
+                            spinner on top of the held total */}
+                        {loading && !showRedeemAllTotal && <LoadingIndicator />}
                         {!loading && !redeeming && !!error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
                         {!loading &&
-                            !redeemingAll &&
+                            !redeemAllBusy &&
                             !redeeming &&
                             lightningAddressHandle && (
                                 <View
@@ -419,7 +429,7 @@ export default class LightningAddress extends React.Component<
                             )}
                         {!loading &&
                             !redeeming &&
-                            !redeemingAll &&
+                            !redeemAllBusy &&
                             !lightningAddressHandle && (
                                 <>
                                     <View
@@ -850,7 +860,7 @@ export default class LightningAddress extends React.Component<
                             <>
                                 {!loading &&
                                     !redeeming &&
-                                    !redeemingAll &&
+                                    !redeemAllBusy &&
                                     paid.length === 0 && (
                                         <TouchableOpacity
                                             style={{
@@ -881,7 +891,7 @@ export default class LightningAddress extends React.Component<
                                         </TouchableOpacity>
                                     )}
 
-                                {!loading && !redeeming && !redeemingAll && (
+                                {!loading && !redeeming && !redeemAllBusy && (
                                     <>
                                         <FlatList
                                             data={paid}
@@ -982,6 +992,15 @@ export default class LightningAddress extends React.Component<
                             </>
                         )}
                     </View>
+                    {/* outside the content margin so the band spans the
+                        full screen width */}
+                    {redeemAllBusy && redeemAllTotal > 1 && (
+                        <RedeemAllProgress
+                            redeemed={redeemAllRedeemed}
+                            total={redeemAllTotal}
+                            amountMsat={redeemAllAmountMsat}
+                        />
+                    )}
                 </View>
             </Screen>
         );
