@@ -3687,7 +3687,10 @@ export default class NostrWalletConnectStore {
             // A settled payment that a reconcile already recorded has been
             // notified then
             if (!alreadyDebited) {
-                notifyActivity = connection.activity.find((a) => a.id === id);
+                notifyActivity = connection.findPayInvoiceActivity(
+                    id,
+                    paymentHash
+                );
             }
         });
         this.scheduleMaxBudgetRefresh();

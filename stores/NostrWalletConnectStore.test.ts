@@ -2351,6 +2351,43 @@ describe('NostrWalletConnectStore payment notifications', () => {
                 notification_type: 'payment_sent'
             });
         });
+
+        it('publishes the pay_invoice row when a make_invoice row has the same id', async () => {
+            const { store, connections } = await startService([
+                { maxAmountSats: 10000 }
+            ]);
+            const connection = connections[0];
+            const relay = relays.get(connection.relayUrl)!;
+            connection.activity = [
+                {
+                    id: invoice,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 10000,
+                    paymentHash,
+                    createdAt: new Date()
+                }
+            ] as any;
+
+            await (store as any).finalizePayment({
+                rawInvoice: invoice,
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                decoded: settledPayment(),
+                connection,
+                amountSats: 10000,
+                feeSats: 50,
+                paymentHash
+            });
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            expect(relay.publishNotification.mock.calls[0][1]).toMatchObject({
+                notification_type: 'payment_sent',
+                notification: { type: 'outgoing', fees_paid: 50000 }
+            });
+        });
     });
 
     it('does not publish for a zero-amount activity', async () => {
