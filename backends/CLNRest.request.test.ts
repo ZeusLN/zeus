@@ -1027,6 +1027,7 @@ describe('CLNRest capability flags', () => {
         supportsSweep: true,
         // gated on v26.04, newer than any node version set in this file
         supportsSplicing: false,
+        supportsSpliceOutToAddress: false,
         supportsOnchainSendMax: true,
         supportsOnchainBatching: false,
         supportsChannelBatching: false,
