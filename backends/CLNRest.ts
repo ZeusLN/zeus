@@ -10,6 +10,7 @@ import {
     getBalance,
     getChainTransactions,
     getOffchainBalance,
+    getSpliceHistory as getChainSpliceHistory,
     getUTXOs as getChainUTXOs,
     listPeers,
     listClosedChannels,
@@ -30,6 +31,20 @@ const calls = new Map<string, Promise<any>>();
 
 // a splice needs a round of messages with the peer before it is broadcast
 const SPLICE_TIMEOUT_MS = 120000;
+
+// The splice plugin passes on the failed step's error as `step: {json}`
+const unwrapSpliceError = (message: string): string => {
+    const wrapped = message.match(/^(\w+): (\{.*\})$/s);
+    if (!wrapped) return message;
+    try {
+        const inner = JSON.parse(wrapped[2]);
+        return typeof inner?.message === 'string'
+            ? `${wrapped[1]}: ${inner.message}`
+            : message;
+    } catch (e) {
+        return message;
+    }
+};
 
 // CLN's feerate takes an integer before the perkb suffix. Float math turns
 // 2.01 sat/vB into 2009.9999999999998perkb, so multiply with BigNumber and
@@ -672,14 +687,16 @@ export default class CLNRest {
     // may still go through, so that is the Splicing screen's "requested"
     // state rather than a failure the user would retry
     private spliceAndWait = async (route: string, request: any) => {
-        const call = this.postRequest(
-            route,
-            request,
-            SPLICE_TIMEOUT_MS + 5000
-        ).then((result: any) => ({
-            success: true,
-            funding_txid_str: result?.txid
-        }));
+        const call = this.postRequest(route, request, SPLICE_TIMEOUT_MS + 5000)
+            .then((result: any) => ({
+                success: true,
+                funding_txid_str: result?.txid
+            }))
+            .catch((error: any) => {
+                throw new Error(
+                    unwrapSpliceError(error?.message || String(error))
+                );
+            });
         let timer: ReturnType<typeof setTimeout> | undefined;
         const waited = new Promise<any>((resolve) => {
             timer = setTimeout(
@@ -744,6 +761,7 @@ export default class CLNRest {
             feeppm: data.fee_rate
         });
     getUTXOs = async () => await getChainUTXOs();
+    getSpliceHistory = async () => await getChainSpliceHistory();
     signMessage = (message: string) =>
         this.postRequest('/v1/signmessage', {
             message
