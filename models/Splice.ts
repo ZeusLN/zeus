@@ -10,6 +10,7 @@ export default class Splice extends BaseModel {
     public userChannelId: string;
     public channelId: string;
     public txid: string;
+    public vout?: number;
     public initiator: 'local' | 'remote';
     public direction?: SpliceDirection;
     public amountSats?: number;
@@ -19,6 +20,7 @@ export default class Splice extends BaseModel {
     public lockedAt?: number;
     public capacityBefore?: number;
     public capacityAfter?: number;
+    public confirmationHeight?: number;
 
     @computed public get model(): string {
         return 'Splice';
@@ -28,7 +30,7 @@ export default class Splice extends BaseModel {
         return this.status !== 'locked';
     }
 
-    // only known once the splice has locked
+    // known once the splice transaction has been read from the chain
     @computed public get capacityChange(): number | undefined {
         if (this.capacityBefore == null || this.capacityAfter == null) {
             return undefined;

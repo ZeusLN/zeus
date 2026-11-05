@@ -9,7 +9,9 @@ jest.mock('../utils/BackendUtils', () => ({
         getNewAddress: jest.fn(),
         spliceIn: jest.fn(),
         spliceOut: jest.fn(),
-        watchSpliceEvents: jest.fn()
+        watchSpliceEvents: jest.fn(),
+        getMyNodeInfo: jest.fn(),
+        getSpliceTransactionStatus: jest.fn()
     }
 }));
 
@@ -332,11 +334,16 @@ describe('SpliceStore splice tracking', () => {
         vout: 1
     };
 
+    const tracked: SpliceStore[] = [];
     const trackingStore = async () => {
         const store = newStore();
+        tracked.push(store);
         await store.trackSplices();
         return store;
     };
+
+    // stops the chain checks a pending splice starts
+    afterEach(() => tracked.splice(0).forEach((store) => store.stopTracking()));
 
     const mockStored = (splices: any[] | false) =>
         (Storage.getItem as jest.Mock).mockResolvedValue(
@@ -527,6 +534,142 @@ describe('SpliceStore splice tracking', () => {
             total: 6
         });
         transactionsStore.transactions = [];
+    });
+
+    describe('reading pending splices from the chain', () => {
+        const mockChain = (
+            height: number,
+            status:
+                | Promise<any>
+                | { confirmationHeight?: number; fundingSats?: number }
+        ) => {
+            (BackendUtils.getMyNodeInfo as jest.Mock).mockResolvedValue({
+                block_height: height
+            });
+            (
+                BackendUtils.getSpliceTransactionStatus as jest.Mock
+            ).mockReturnValue(Promise.resolve(status));
+        };
+        const checkChain = (store: SpliceStore) => (store as any).checkChain();
+
+        beforeEach(() => {
+            channelsStore.channels = [
+                { ...channel, capacity: '100000', confirmations_required: 6 }
+            ];
+        });
+
+        it('counts confirmations from the block it confirmed in, for any splice', async () => {
+            mockChain(105, { confirmationHeight: 103, fundingSats: 150000 });
+            const store = await trackingStore();
+
+            emit(pendingEvent);
+            await flushSaves();
+
+            expect(
+                BackendUtils.getSpliceTransactionStatus
+            ).toHaveBeenCalledWith('splice-txid', 1);
+            expect(
+                store.getSpliceConfirmations(store.pendingSplices[0])
+            ).toEqual({ current: 3, total: 6 });
+        });
+
+        it("reads a peer's splice amount from its new funding output", async () => {
+            mockChain(105, { fundingSats: 150000 });
+            const store = await trackingStore();
+
+            emit(pendingEvent);
+            await flushSaves();
+
+            expect(store.pendingSplices[0]).toEqual(
+                expect.objectContaining({
+                    capacityBefore: 100000,
+                    capacityAfter: 150000
+                })
+            );
+            expect(store.pendingSplices[0].confirmationHeight).toBeUndefined();
+        });
+
+        it('stops asking the chain once the splice has confirmed', async () => {
+            mockChain(105, { confirmationHeight: 103, fundingSats: 150000 });
+            const store = await trackingStore();
+            emit(pendingEvent);
+            await flushSaves();
+            mockChain(107, { confirmationHeight: 103, fundingSats: 150000 });
+
+            await checkChain(store);
+
+            expect(
+                BackendUtils.getSpliceTransactionStatus
+            ).toHaveBeenCalledTimes(1);
+            expect(
+                store.getSpliceConfirmations(store.pendingSplices[0])?.current
+            ).toEqual(5);
+        });
+
+        it('shows no negative count when the node is a block behind', async () => {
+            mockChain(102, { confirmationHeight: 103 });
+            const store = await trackingStore();
+
+            emit(pendingEvent);
+            await flushSaves();
+
+            expect(
+                store.getSpliceConfirmations(store.pendingSplices[0])?.current
+            ).toEqual(0);
+        });
+
+        it("falls back to the wallet's count when the chain can't be reached", async () => {
+            mockChain(105, Promise.reject(new Error('offline')));
+            transactionsStore.transactions = [
+                { tx: 'splice-txid', getNumConfirmations: 2 }
+            ];
+            const store = await trackingStore();
+
+            emit(pendingEvent);
+            await flushSaves();
+
+            expect(store.pendingSplices[0].confirmationHeight).toBeUndefined();
+            expect(
+                store.getSpliceConfirmations(store.pendingSplices[0])
+            ).toEqual({ current: 2, total: 6 });
+            transactionsStore.transactions = [];
+        });
+
+        it('stops checking once no splice is pending', async () => {
+            mockChain(105, {});
+            const store = await trackingStore();
+            emit(pendingEvent);
+            await flushSaves();
+            expect((store as any).chainCheckTimer).not.toBeNull();
+
+            emit({
+                type: 'channelReady',
+                userChannelId: 'user-chan',
+                channelId: 'chan'
+            });
+
+            expect((store as any).chainCheckTimer).toBeNull();
+        });
+
+        it('drops a check that lands after switching to another wallet', async () => {
+            let answer: (status: any) => void = () => {};
+            mockChain(
+                105,
+                new Promise((resolve) => {
+                    answer = resolve;
+                })
+            );
+            const store = await trackingStore();
+            emit(pendingEvent);
+
+            store.stopTracking();
+            answer({ confirmationHeight: 103 });
+            await flushSaves();
+
+            expect(store.splices).toEqual([]);
+            expect(store.bestBlockHeight).toBeNull();
+            expect((store as any).chainCheckTimer).toBeNull();
+        });
     });
 
     it('remembers a splice that failed after the splice screens were left', async () => {

@@ -116,6 +116,8 @@ class BackendUtils {
     closeChannel = (...args: any[]) => this.call('closeChannel', args);
     spliceIn = (...args: any[]) => this.call('spliceIn', args);
     spliceOut = (...args: any[]) => this.call('spliceOut', args);
+    getSpliceTransactionStatus = (...args: any[]) =>
+        this.call('getSpliceTransactionStatus', args);
     getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
     getFees = (...args: any[]) => this.call('getFees', args);
     setFees = (...args: any[]) => this.call('setFees', args);

@@ -74,6 +74,31 @@ describe('PendingSplice', () => {
         expect(screen.getByText('270000 sats')).toBeOnTheScreen();
     });
 
+    it("shows a splice-out's exact capacity once read from the chain", async () => {
+        await renderSplice({
+            direction: 'out',
+            amountSats: 30000,
+            capacityAfter: 269812
+        });
+
+        expect(screen.getByText('views.Splice.newCapacity')).toBeOnTheScreen();
+        expect(screen.getByText('269812 sats')).toBeOnTheScreen();
+        expect(screen.getByText('30000 sats')).toBeOnTheScreen();
+    });
+
+    it("shows a peer's splice amount once read from the chain", async () => {
+        await renderSplice({
+            initiator: 'remote',
+            direction: undefined,
+            amountSats: undefined,
+            capacityAfter: 340002
+        });
+
+        expect(screen.getByText('40002 sats')).toBeOnTheScreen();
+        expect(screen.getByText('340002 sats')).toBeOnTheScreen();
+        expect(screen.getByText('views.Splice.newCapacity')).toBeOnTheScreen();
+    });
+
     it('shows where a splice-out pays to', async () => {
         await renderSplice({ direction: 'out', address: 'bc1qdest' });
 
