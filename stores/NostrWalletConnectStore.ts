@@ -2549,6 +2549,62 @@ export default class NostrWalletConnectStore {
         return false;
     }
 
+    /**
+     * Promotes the connection's pending make_invoice activities that were
+     * paid, or have expired, on the node or mint, so list_transactions lists
+     * an invoice that settled. Best effort: an unreachable node or mint must
+     * not fail the listing. Returns whether any activity changed.
+     */
+    private async reconcilePendingMakeInvoiceActivities(
+        connection: NWCConnection
+    ): Promise<boolean> {
+        const pending = connection.activity.filter(
+            (activity) =>
+                activity.type === 'make_invoice' &&
+                activity.status === 'pending' &&
+                !!activity.invoice
+        );
+        if (pending.length === 0) return false;
+
+        const lightning = pending.filter((a) => a.payment_source !== 'cashu');
+        const cashu = pending.filter((a) => a.payment_source === 'cashu');
+
+        const results = await Promise.allSettled(
+            lightning.map((activity) =>
+                this.reconcilePendingLightningMakeInvoice(activity)
+            )
+        );
+
+        if (
+            cashu.length > 0 &&
+            this.isCashuConfigured &&
+            this.shouldRefreshPendingCashuInvoices(connection.id, cashu)
+        ) {
+            results.push(
+                ...(await Promise.allSettled(
+                    cashu.map((activity) =>
+                        this.reconcilePendingCashuMakeInvoice(activity)
+                    )
+                ))
+            );
+            this.lastPendingInvoiceStatusFetchByConnection.set(
+                connection.id,
+                Date.now()
+            );
+        }
+
+        results.forEach((result) => {
+            if (result.status === 'rejected') {
+                console.error(
+                    'NWC: failed to refresh make_invoice status:',
+                    result.reason
+                );
+            }
+        });
+
+        return pending.some((activity) => activity.status !== 'pending');
+    }
+
     private async reconcilePendingMakeInvoiceActivity(
         activity: ConnectionActivity
     ): Promise<void> {
@@ -2609,10 +2665,11 @@ export default class NostrWalletConnectStore {
         request: Nip47ListTransactionsRequest
     ): NWCWalletServiceResponsePromise<Nip47ListTransactionsResponse> {
         try {
-            const reconciled = await this.reconcilePendingPayInvoiceActivities(
-                connection
-            );
-            if (reconciled) {
+            const paymentsReconciled =
+                await this.reconcilePendingPayInvoiceActivities(connection);
+            const invoicesReconciled =
+                await this.reconcilePendingMakeInvoiceActivities(connection);
+            if (paymentsReconciled || invoicesReconciled) {
                 this.scheduleSave();
             }
 
