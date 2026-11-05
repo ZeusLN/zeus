@@ -73,6 +73,7 @@ interface LockscreenState {
     hidden: boolean;
     error: boolean;
     attemptNotSaved: boolean;
+    verificationFailed: boolean;
     verifying: boolean;
     modifySecurityScreen: string;
     deletePin: boolean;
@@ -120,6 +121,7 @@ export default class Lockscreen extends React.Component<
             hidden: true,
             error: false,
             attemptNotSaved: false,
+            verificationFailed: false,
             verifying: false,
             modifySecurityScreen: '',
             deletePin: false,
@@ -386,6 +388,7 @@ export default class Lockscreen extends React.Component<
         this.setState({
             error: false,
             attemptNotSaved: false,
+            verificationFailed: false,
             verifying: true
         });
 
@@ -409,10 +412,26 @@ export default class Lockscreen extends React.Component<
             : getDummyVerifier(primaryVerifier);
 
         try {
-            const [primaryMatch, duressMatch] = await Promise.all([
-                verifySecret(attempt, primaryVerifier),
-                verifySecret(attempt, duressVerifier)
-            ]);
+            // A rejection here is a failed derivation, not a wrong entry, so
+            // it is reported without being counted: counting it would let a
+            // broken key derivation turn correct entries into a wipe.
+            let primaryMatch: boolean;
+            let duressMatch: boolean;
+            try {
+                [primaryMatch, duressMatch] = await Promise.all([
+                    verifySecret(attempt, primaryVerifier),
+                    verifySecret(attempt, duressVerifier)
+                ]);
+            } catch (error) {
+                console.error('Failed to verify the lock credential', error);
+                this.setState({
+                    error: true,
+                    verificationFailed: true,
+                    pinAttempt: '',
+                    verifying: false
+                });
+                return;
+            }
 
             // The duress wipe does not depend on the attempt count, so it
             // runs before the attempt is saved: a failed write (storage full)
@@ -710,12 +729,20 @@ export default class Lockscreen extends React.Component<
     };
 
     generateErrorMessage = (): string => {
-        const { authMethod, authenticationAttempts, attemptNotSaved } =
-            this.state;
+        const {
+            authMethod,
+            authenticationAttempts,
+            attemptNotSaved,
+            verificationFailed
+        } = this.state;
         let incorrect = '';
 
         if (attemptNotSaved) {
             return localeString('views.Lockscreen.attemptNotSaved');
+        }
+
+        if (verificationFailed) {
+            return localeString('views.Lockscreen.verificationFailed');
         }
 
         if (authMethod === 'passphrase') {

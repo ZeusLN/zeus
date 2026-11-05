@@ -130,14 +130,6 @@ describe('LockVerifierUtils', () => {
             expect(await verifySecret('', record)).toBe(false);
         });
 
-        it('fails closed when the native derivation fails', async () => {
-            const record = await deriveVerifier('1234', salt);
-            jest.spyOn(LockKdf, 'pbkdf2Sha256').mockRejectedValue(
-                new Error('Invalid PBKDF2 parameters')
-            );
-            expect(await verifySecret('1234', record)).toBe(false);
-        });
-
         it('fails closed on a missing or malformed record', async () => {
             expect(await verifySecret('1234', undefined)).toBe(false);
             expect(await verifySecret('1234', null)).toBe(false);
@@ -156,6 +148,19 @@ describe('LockVerifierUtils', () => {
                     hash: 'zz'
                 } as unknown as VerifierRecord)
             ).toBe(false);
+        });
+
+        // A KDF failure must not look like a wrong entry: the Lockscreen
+        // counts wrong entries toward the wipe
+        it('rejects when the derivation fails', async () => {
+            const record = await deriveVerifier('1234', salt);
+            jest.spyOn(LockKdf, 'pbkdf2Sha256').mockRejectedValue(
+                new Error('LockKdf native module unavailable')
+            );
+
+            await expect(verifySecret('1234', record)).rejects.toThrow(
+                'LockKdf native module unavailable'
+            );
         });
 
         // Records from earlier builds of the lock verifier change, which used
@@ -203,23 +208,70 @@ describe('LockVerifierUtils', () => {
     });
 
     describe('getDummyVerifier', () => {
-        it('uses the KDF of the primary verifier', async () => {
-            const pbkdf2 = await deriveVerifier('1234', salt);
-            expect(getDummyVerifier(pbkdf2)).toBe(DUMMY_VERIFIER);
-            expect(getDummyVerifier(undefined)).toBe(DUMMY_VERIFIER);
+        it('copies the KDF and cost parameters of a PBKDF2 primary', async () => {
+            const primary = await deriveVerifier('1234', salt);
+            const dummy = getDummyVerifier(primary);
 
+            expect(dummy).toEqual({
+                ...primary,
+                salt: '0'.repeat(primary.salt.length),
+                hash: '0'.repeat(primary.hash.length)
+            });
+            expect(hasVerifier(dummy)).toBe(true);
+            expect(await verifySecret('1234', dummy)).toBe(false);
+        });
+
+        // e.g. a record written before PBKDF2_ITERATIONS is raised: a fixed
+        // dummy at the new count would cost more than the primary check
+        it('keeps the iteration count and key length of an older record', async () => {
+            const primary = {
+                ...(await deriveVerifier('1234', salt)),
+                iterations: 1000,
+                hash: 'ab'.repeat(16)
+            } as VerifierRecord;
+            const native = jest.spyOn(LockKdf, 'pbkdf2Sha256');
+
+            await verifySecret('1234', getDummyVerifier(primary));
+
+            expect(native).toHaveBeenCalledWith(
+                Buffer.from('1234'),
+                Buffer.alloc(16),
+                1000,
+                16
+            );
+        });
+
+        it('copies the parameters of a scrypt primary', async () => {
             const scryptDummy = getDummyVerifier({
                 v: 1,
                 kdf: 'scrypt',
-                n: 32768,
+                n: 1024,
                 r: 8,
                 p: 1,
                 salt: 'aa',
                 hash: 'bb'
             });
-            expect(scryptDummy.kdf).toEqual('scrypt');
-            expect(hasVerifier(scryptDummy)).toBe(true);
+            expect(scryptDummy).toEqual({
+                v: 1,
+                kdf: 'scrypt',
+                n: 1024,
+                r: 8,
+                p: 1,
+                salt: '00',
+                hash: '00'
+            });
             expect(await verifySecret('1234', scryptDummy)).toBe(false);
+        });
+
+        it('falls back to DUMMY_VERIFIER without a well-formed primary', () => {
+            expect(getDummyVerifier(undefined)).toBe(DUMMY_VERIFIER);
+            expect(getDummyVerifier(null)).toBe(DUMMY_VERIFIER);
+            expect(
+                getDummyVerifier({
+                    salt: '',
+                    hash: ''
+                } as unknown as VerifierRecord)
+            ).toBe(DUMMY_VERIFIER);
         });
     });
 

@@ -10,7 +10,8 @@ jest.mock('react-native-randombytes', () => ({
 jest.mock('./LockKdf');
 jest.mock('react-native-encrypted-storage', () => ({
     getItem: jest.fn(),
-    setItem: jest.fn()
+    setItem: jest.fn(),
+    removeItem: jest.fn()
 }));
 jest.mock('react-native-keychain', () => ({
     getInternetCredentials: jest.fn(),
@@ -2273,15 +2274,41 @@ describe('MigrationUtils', () => {
 
     describe('migrateLockCredentialsToVerifiers', () => {
         const EncryptedStorage = require('react-native-encrypted-storage');
+        const Storage = require('../storage');
         const { settingsStore } = require('../stores/Stores');
 
         beforeEach(() => {
             EncryptedStorage.getItem.mockReset();
             EncryptedStorage.setItem.mockReset();
+            EncryptedStorage.removeItem.mockReset();
+            EncryptedStorage.removeItem.mockResolvedValue('zeus-settings');
+            // the v2 blob is persisted device-local unless a test says not
+            Storage.getItem.mockReset();
+            Storage.getItem.mockImplementation((key: string) =>
+                Promise.resolve(key === 'zeus-settings-v2' ? '{}' : false)
+            );
             settingsStore.setSettings.mockReset();
             settingsStore.setSettings.mockResolvedValue(true);
             settingsStore.updateSettings.mockReset();
         });
+
+        afterEach(() => {
+            Storage.getItem.mockReset();
+        });
+
+        // the legacy 'zeus-settings' blob holds `legacy`; every other
+        // EncryptedStorage key (the MOD flag included) reads `flag`
+        const mockEncryptedStorage = (
+            legacy: object | null,
+            flag: string | null = null
+        ) =>
+            EncryptedStorage.getItem.mockImplementation((key: string) =>
+                Promise.resolve(
+                    key === 'zeus-settings'
+                        ? legacy && JSON.stringify(legacy)
+                        : flag
+                )
+            );
 
         it('hashes plaintext pin + duress pin into verifiers and strips the plaintext', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
@@ -2366,20 +2393,61 @@ describe('MigrationUtils', () => {
             );
         });
 
-        it('is idempotent once the flag is set', async () => {
+        it('is a no-op once the flag is set and the blob holds no plaintext', async () => {
             EncryptedStorage.getItem.mockResolvedValue('true');
-            const settings: any = { pin: '1234' };
+            const settings: any = { pinVerifier: { v: 1 } };
+
+            const result =
+                await MigrationUtils.migrateLockCredentialsToVerifiers(
+                    settings,
+                    true
+                );
+
+            expect(result).toBe(settings);
+            expect(settings).toEqual({ pinVerifier: { v: 1 } });
+            // only the flag is read; the legacy blob is not looked at
+            expect(EncryptedStorage.getItem).toHaveBeenCalledTimes(1);
+            expect(EncryptedStorage.getItem).toHaveBeenCalledWith(
+                'lock-verifier-hash-mod'
+            );
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+            expect(EncryptedStorage.removeItem).not.toHaveBeenCalled();
+        });
+
+        // An older copy written back after the flag was stamped: Keychain
+        // Recovery's restoreSettings, or the iOS synchronizable-partition
+        // fallback on a device restored from a backup that carried the flag
+        it('hashes plaintext written back after the flag was stamped', async () => {
+            mockEncryptedStorage(null, 'true');
+            const settings: any = { pin: '1234', duressPin: '9999' };
 
             await MigrationUtils.migrateLockCredentialsToVerifiers(
                 settings,
                 true
             );
 
-            // untouched: plaintext left as-is, nothing persisted
-            expect(settings.pin).toBe('1234');
-            expect(settings.pinVerifier).toBeUndefined();
-            expect(settingsStore.setSettings).not.toHaveBeenCalled();
-            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+            expect(settings.pin).toBeUndefined();
+            expect(settings.duressPin).toBeUndefined();
+            expect(await verifySecret('1234', settings.pinVerifier)).toBe(true);
+            expect(await verifySecret('9999', settings.duressPinVerifier)).toBe(
+                true
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledWith(settings);
+        });
+
+        it('outside the queue, routes plaintext written back after the flag through a queued update', async () => {
+            mockEncryptedStorage(null, 'true');
+            const queued = { pinVerifier: { v: 1 } };
+            settingsStore.updateSettings.mockResolvedValue(queued);
+
+            const result =
+                await MigrationUtils.migrateLockCredentialsToVerifiers({
+                    pin: '1234'
+                });
+
+            expect(settingsStore.updateSettings).toHaveBeenCalledWith({});
+            expect(result).toBe(queued);
         });
 
         it('legacy path hashes in memory without persisting or flagging', async () => {
@@ -2421,18 +2489,11 @@ describe('MigrationUtils', () => {
             );
         });
 
-        it('strips plaintext credentials from the legacy zeus-settings blob', async () => {
-            EncryptedStorage.getItem.mockImplementation((key: string) => {
-                if (key === 'zeus-settings') {
-                    return Promise.resolve(
-                        JSON.stringify({
-                            pin: '1234',
-                            duressPassphrase: 'burn it',
-                            theme: 'dark'
-                        })
-                    );
-                }
-                return Promise.resolve(null);
+        it('deletes the legacy zeus-settings blob', async () => {
+            mockEncryptedStorage({
+                pin: '1234',
+                duressPassphrase: 'burn it',
+                nodes: [{ host: 'legacy' }]
             });
             const settings: any = { pin: '1234' };
 
@@ -2441,31 +2502,25 @@ describe('MigrationUtils', () => {
                 true
             );
 
-            const legacyWrite = EncryptedStorage.setItem.mock.calls.find(
-                (call: string[]) => call[0] === 'zeus-settings'
+            expect(EncryptedStorage.removeItem).toHaveBeenCalledWith(
+                'zeus-settings'
             );
-            expect(legacyWrite).toBeDefined();
-            const rewritten = JSON.parse(legacyWrite[1]);
-            expect(rewritten.pin).toBeUndefined();
-            expect(rewritten.duressPassphrase).toBeUndefined();
-            // everything else survives the rewrite
-            expect(rewritten.theme).toBe('dark');
+            // deleted, not rewritten
+            expect(
+                EncryptedStorage.setItem.mock.calls.find(
+                    (call: string[]) => call[0] === 'zeus-settings'
+                )
+            ).toBeUndefined();
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
                 'lock-verifier-hash-mod',
                 'true'
             );
         });
 
-        it('strips the legacy blob outside the queue once the v2 blob holds no plaintext', async () => {
+        it('deletes the legacy blob outside the queue once the v2 blob holds no plaintext', async () => {
             // second load after a legacy-path upgrade: storageMigrationV2
             // persisted the hashed blob, the legacy blob still has the PIN
-            EncryptedStorage.getItem.mockImplementation((key: string) =>
-                Promise.resolve(
-                    key === 'zeus-settings'
-                        ? JSON.stringify({ pin: '1234', theme: 'dark' })
-                        : null
-                )
-            );
+            mockEncryptedStorage({ pin: '1234', theme: 'dark' });
             const settings: any = { pinVerifier: { v: 1 } };
 
             const result =
@@ -2476,31 +2531,88 @@ describe('MigrationUtils', () => {
             expect(result).toBe(settings);
             expect(settingsStore.updateSettings).not.toHaveBeenCalled();
             expect(settingsStore.setSettings).not.toHaveBeenCalled();
-            const legacyWrite = EncryptedStorage.setItem.mock.calls.find(
-                (call: string[]) => call[0] === 'zeus-settings'
+            expect(EncryptedStorage.removeItem).toHaveBeenCalledWith(
+                'zeus-settings'
             );
-            expect(JSON.parse(legacyWrite[1])).toEqual({ theme: 'dark' });
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
                 'lock-verifier-hash-mod',
                 'true'
             );
         });
 
-        it('leaves the legacy blob alone when it holds no plaintext credentials', async () => {
-            EncryptedStorage.getItem.mockImplementation((key: string) => {
-                if (key === 'zeus-settings') {
-                    return Promise.resolve(JSON.stringify({ theme: 'dark' }));
-                }
-                return Promise.resolve(null);
+        it('deletes a legacy blob that holds no lock credentials', async () => {
+            mockEncryptedStorage({ nodes: [{ host: 'legacy' }] });
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers({
+                nodes: []
             });
+
+            expect(EncryptedStorage.removeItem).toHaveBeenCalledWith(
+                'zeus-settings'
+            );
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
+            );
+        });
+
+        it('keeps the legacy blob and the flag unset while the v2 blob is not stored device-local', async () => {
+            // iOS: the settings came from the synchronizable-partition
+            // fallback and nothing has persisted them locally yet
+            mockEncryptedStorage({ nodes: [{ host: 'legacy' }] });
+            Storage.getItem.mockResolvedValue(false);
             const settings: any = { nodes: [] };
 
-            await MigrationUtils.migrateLockCredentialsToVerifiers(settings);
+            const result =
+                await MigrationUtils.migrateLockCredentialsToVerifiers(
+                    settings
+                );
 
-            const legacyWrite = EncryptedStorage.setItem.mock.calls.find(
-                (call: string[]) => call[0] === 'zeus-settings'
+            expect(result).toBe(settings);
+            expect(EncryptedStorage.removeItem).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
             );
-            expect(legacyWrite).toBeUndefined();
+        });
+
+        it('leaves the flag unset when deleting the legacy blob fails', async () => {
+            mockEncryptedStorage({ nodes: [{ host: 'legacy' }] });
+            EncryptedStorage.removeItem.mockRejectedValue(
+                new Error('keychain error')
+            );
+            const errorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            const settings: any = { nodes: [] };
+
+            // does not reject, so the settings load carries on
+            const result =
+                await MigrationUtils.migrateLockCredentialsToVerifiers(
+                    settings
+                );
+
+            expect(result).toBe(settings);
+            expect(errorSpy).toHaveBeenCalledWith(
+                'Failed to remove the legacy settings blob',
+                expect.any(Error)
+            );
+            errorSpy.mockRestore();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalledWith(
+                'lock-verifier-hash-mod',
+                'true'
+            );
+        });
+
+        it('does not call removeItem when there is no legacy blob', async () => {
+            mockEncryptedStorage(null);
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers({
+                nodes: []
+            });
+
+            // removeItem rejects on a missing item
+            expect(EncryptedStorage.removeItem).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
                 'lock-verifier-hash-mod',
                 'true'

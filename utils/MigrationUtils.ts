@@ -705,8 +705,13 @@ class MigrationsUtils {
     // wallet secret, and login was a direct string compare - so anyone who
     // could read the blob (root/jailbreak dump, or an iOS backup migration)
     // recovered the credentials and could tell which one was the duress
-    // trigger. Runs once (MOD-gated) on the modern (zeus-settings-v2) load
-    // path; the legacy path hashes in memory via applyLockCredentialVerifiers.
+    // trigger. Runs on the modern (zeus-settings-v2) load path; the legacy
+    // path hashes in memory via applyLockCredentialVerifiers. The MOD flag
+    // only skips the work when the blob holds no plaintext: an older copy
+    // can be written back after the flag is stamped (Keychain Recovery's
+    // restoreSettings, or the iOS synchronizable-partition fallback on a
+    // restored device, where the flag came across in the backup), and
+    // skipping it would boot with no lock and keep the plaintext.
     //
     // Like runSettingsMigrations, the blob is only ever persisted from inside
     // the updateSettings queue: outside it `settings` is a snapshot that a
@@ -716,10 +721,13 @@ class MigrationsUtils {
         settings: any,
         inQueue: boolean = false
     ) {
-        if (await this.readFlag(MOD_KEY_LOCK_VERIFIER)) return settings;
         if (!settings) return settings;
+        const hasPlaintext = this.hasLegacyLockCredentials(settings);
+        if (!hasPlaintext && (await this.readFlag(MOD_KEY_LOCK_VERIFIER))) {
+            return settings;
+        }
 
-        if (this.hasLegacyLockCredentials(settings)) {
+        if (hasPlaintext) {
             if (!inQueue) return await settingsStore.updateSettings({});
             await this.applyLockCredentialVerifiers(settings);
             // A write of our own even though applySettingsUpdate persists
@@ -737,15 +745,9 @@ class MigrationsUtils {
             }
         }
 
-        // The pre-v2 'zeus-settings' blob is copied forward by
-        // storageMigrationV2 but never deleted, so for anyone who came
-        // through the legacy path it still holds the plaintext credentials
-        // this migration exists to remove. Rewrite it stripped rather than
-        // deleting it, since KeychainRecoveryUtils still lists it as a
-        // recovery source. Only reached once the v2 blob holds no plaintext,
-        // and before the flag is stamped so a failure here retries on the
-        // next load.
-        await this.stripLegacyLockCredentials();
+        // Only reached once the v2 blob holds no plaintext, and before the
+        // flag is stamped so a failure here retries on the next load.
+        if (!(await this.removeLegacySettingsBlob())) return settings;
 
         await this.writeFlag(MOD_KEY_LOCK_VERIFIER);
         return settings;
@@ -780,40 +782,37 @@ class MigrationsUtils {
         return changed;
     }
 
-    // Remove plaintext app-lock credentials from the legacy 'zeus-settings'
-    // EncryptedStorage blob, leaving everything else in place.
-    private async stripLegacyLockCredentials() {
+    // Delete the pre-v2 'zeus-settings' blob. storageMigrationV2 copies it
+    // forward but never deletes it, so for anyone who came through the
+    // legacy path it still holds every wallet secret (and, until this
+    // migration, the plaintext lock credentials). EncryptedStorage writes it
+    // with no accessibility class, so on iOS it gets the default
+    // kSecAttrAccessibleWhenUnlocked and moves to a new device through
+    // encrypted backups. zeus-settings-v2 is THIS_DEVICE_ONLY and stays
+    // behind, so getSettings on the restored device would fall back to this
+    // blob and load its wallets with no lock. This also removes it from the
+    // KeychainRecoveryUtils sources; what it held is a copy from before the
+    // v2 migration.
+    //
+    // Only deleted once the v2 blob is in the device-local partition: on
+    // iOS the settings being migrated can be the synchronizable-partition
+    // fallback copy, and the legacy blob must not go while that is the only
+    // other copy. Returns whether the blob is gone; never throws, so a
+    // keychain error cannot fail the settings load.
+    private async removeLegacySettingsBlob(): Promise<boolean> {
         const LEGACY_SETTINGS_KEY = 'zeus-settings';
-        const legacy = await EncryptedStorage.getItem(LEGACY_SETTINGS_KEY);
-        if (!legacy) return;
-
-        let parsed: any;
         try {
-            parsed = JSON.parse(legacy);
-        } catch (e) {
-            // an unparseable legacy blob holds no strippable fields; leave
-            // it for KeychainRecoveryUtils to surface
-            return;
-        }
-        if (!parsed || typeof parsed !== 'object') return;
-
-        let changed = false;
-        for (const field of [
-            'pin',
-            'duressPin',
-            'passphrase',
-            'duressPassphrase'
-        ]) {
-            if (parsed[field] !== undefined) {
-                delete parsed[field];
-                changed = true;
+            if (!(await EncryptedStorage.getItem(LEGACY_SETTINGS_KEY))) {
+                return true;
             }
-        }
-        if (changed) {
-            await EncryptedStorage.setItem(
-                LEGACY_SETTINGS_KEY,
-                JSON.stringify(parsed)
-            );
+            if (!(await Storage.getItem(STORAGE_KEY))) return false;
+            // removeItem rejects when the item is missing, so only reached
+            // after the read above found it
+            await EncryptedStorage.removeItem(LEGACY_SETTINGS_KEY);
+            return true;
+        } catch (error) {
+            console.error('Failed to remove the legacy settings blob', error);
+            return false;
         }
     }
 

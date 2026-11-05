@@ -42,9 +42,12 @@ jest.mock('../components/Pin', () => {
 });
 jest.mock('../components/ShowHideToggle', () => () => null);
 jest.mock('../components/TextInput', () => () => null);
-jest.mock('../components/SuccessErrorMessage', () => ({
-    ErrorMessage: () => null
-}));
+jest.mock('../components/SuccessErrorMessage', () => {
+    const { Text } = require('react-native');
+    return {
+        ErrorMessage: ({ message }: any) => <Text>{message}</Text>
+    };
+});
 jest.mock('../stores/SettingsStore', () => ({
     PosEnabled: {
         Disabled: 'disabled',
@@ -341,6 +344,61 @@ describe('Lockscreen verification cost', () => {
         expect(derive).not.toHaveBeenCalled();
         derive.mockRestore();
         verify.mockRestore();
+    });
+});
+
+// A key derivation that fails is not a wrong entry: counting it would let a
+// broken native module turn five correct entries into a wipe
+describe('Lockscreen with a failed key derivation', () => {
+    const failDerivation = () =>
+        jest
+            .spyOn(LockKdf, 'pbkdf2Sha256')
+            .mockRejectedValue(new Error('LockKdf native module unavailable'));
+
+    it('shows an error without counting the attempt, and the next attempt still works', async () => {
+        const derive = failDerivation();
+        const saved: any = { pinVerifier };
+        const updateSettings = makeUpdateSettings(saved);
+        const { navigation } = await renderLockscreen(updateSettings, {
+            settings: saved
+        });
+
+        await submitPin();
+        await screen.findByText('views.Lockscreen.verificationFailed');
+
+        expect(errorSpy).toHaveBeenCalledWith(
+            'Failed to verify the lock credential',
+            expect.any(Error)
+        );
+        expect(updateSettings).not.toHaveBeenCalled();
+        expect(saved.authenticationAttempts).toBeUndefined();
+        expect(navigation.pop).not.toHaveBeenCalled();
+
+        // the verifying guard was released, so a retry goes through
+        derive.mockRestore();
+        await submitPin();
+        await untilCalled(navigation.pop);
+        expect(
+            screen.queryByText('views.Lockscreen.verificationFailed')
+        ).toBeNull();
+    });
+
+    it('does not wipe after five entries that could not be checked', async () => {
+        const derive = failDerivation();
+        const saved: any = { pinVerifier };
+        const updateSettings = makeUpdateSettings(saved);
+        await renderLockscreen(updateSettings, { settings: saved });
+
+        for (let i = 1; i <= 5; i++) {
+            await submitPin();
+            await waitFor(() => expect(derive).toHaveBeenCalledTimes(2 * i));
+            await screen.findByText('views.Lockscreen.verificationFailed');
+        }
+
+        expect(updateSettings).not.toHaveBeenCalled();
+        expect(markWipePending).not.toHaveBeenCalled();
+        expect(clearAllData).not.toHaveBeenCalled();
+        derive.mockRestore();
     });
 });
 

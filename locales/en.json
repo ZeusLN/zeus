@@ -699,6 +699,7 @@
     "views.Lockscreen.incorrectPin": "Incorrect PIN",
     "views.Lockscreen.authenticationAttempts": "attempts remaining",
     "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
+    "views.Lockscreen.verificationFailed": "Could not check this attempt, so it was not counted. Try again.",
     "views.NodeInfo.feeReport": "Fee Report",
     "views.NodeInfo.forwarding": "Forwarding",
     "views.NodeInfo.copyUri": "Copy URI",
