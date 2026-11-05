@@ -27,6 +27,7 @@ import { Row } from '../../../components/layout/Row';
 import Channel from '../../../models/Channel';
 
 import AddressUtils from '../../../utils/AddressUtils';
+import BackendUtils from '../../../utils/BackendUtils';
 import { getButtonGroupStyles } from '../../../utils/buttonGroupStyles';
 import { localeString } from '../../../utils/LocaleUtils';
 import {
@@ -219,6 +220,24 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
     private renderDestinationSection = () => {
         const { address } = this.state;
         const addressError = this.getAddressError();
+
+        if (!BackendUtils.supportsSpliceOutToAddress()) {
+            return (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>
+                        {localeString('general.destination')}
+                    </Text>
+                    <Text
+                        style={{
+                            ...styles.message,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
+                        {localeString('views.Splice.destinationNodeWalletOnly')}
+                    </Text>
+                </View>
+            );
+        }
 
         return (
             <View style={styles.section}>

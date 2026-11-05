@@ -2483,6 +2483,7 @@ export default class LdkNode {
     supportsCircularRebalancing = () => false;
     supportsForceClose = () => true;
     supportsSplicing = () => true;
+    supportsSpliceOutToAddress = () => true;
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => true;
     supportsMPP = () => true;

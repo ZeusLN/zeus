@@ -142,6 +142,45 @@ describe('SpliceUtils', () => {
             ).toEqual(en['views.Splice.error.spliceRefused']);
         });
 
+        // as Core Lightning words them; its splice plugin prefixes the
+        // failing step
+        it.each([
+            [
+                'splice_init: Peer does not support splicing',
+                'views.Splice.error.peerCantSplice'
+            ],
+            [
+                'splice_init: Currently waiting on previous splice command to finish.',
+                'views.Splice.error.alreadySplicing'
+            ],
+            [
+                'splice_init: Channel is disconnected',
+                'views.Splice.error.peerOffline'
+            ],
+            [
+                "splice_init: Channel hasn't finished connecting or in abnormal owner state CHANNELD",
+                'views.Splice.error.peerOffline'
+            ],
+            [
+                'addpsbtinput: Could not afford 50000sat using all 1 available UTXOs: 1250sat short',
+                'views.Splice.error.insufficientOnchainFunds'
+            ],
+            [
+                'addpsbtinput: Cannot afford: still syncing with bitcoin network...',
+                'views.Splice.error.nodeSyncing'
+            ],
+            [
+                'Amount going to onchain wallet 10000sat is not enough to meet the emergency minimum of 25000sat',
+                'views.Splice.error.emergencyReserve'
+            ],
+            [
+                'splice_update: Feerate too high. Do you really want to spend 90000sat on fees?',
+                'views.Splice.error.feeTooHigh'
+            ]
+        ])('explains Core Lightning\'s "%s"', (message, key) => {
+            expect(getSpliceErrorMessage(message)).toEqual(en[key]);
+        });
+
         it('passes other messages through unchanged', () => {
             expect(getSpliceErrorMessage('Splice failed')).toEqual(
                 'Splice failed'

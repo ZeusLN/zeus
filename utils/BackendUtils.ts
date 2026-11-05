@@ -257,6 +257,7 @@ class BackendUtils {
         this.call('supportsCircularRebalancing');
     supportsForceClose = () => this.call('supportsForceClose');
     supportsSplicing = () => this.call('supportsSplicing');
+    supportsSpliceOutToAddress = () => this.call('supportsSpliceOutToAddress');
     supportsPendingChannels = () => this.call('supportsPendingChannels');
     supportsClosedChannels = () => this.call('supportsClosedChannels');
     supportsMPP = () => this.call('supportsMPP');
