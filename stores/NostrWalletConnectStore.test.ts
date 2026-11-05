@@ -94,6 +94,7 @@ import BackendUtils from '../utils/BackendUtils';
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
 import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
+import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
@@ -264,6 +265,7 @@ interface FakeRelay {
     failPublish: boolean;
     close: jest.Mock;
     publishWalletServiceInfoEvent: jest.Mock;
+    publishNotification: jest.Mock;
     subscribe: jest.Mock;
     holdNextSubscribe: () => Hold;
 }
@@ -284,6 +286,7 @@ function createFakeRelay(relayUrl: string): FakeRelay {
         publishWalletServiceInfoEvent: jest.fn(async () => {
             if (relay.failPublish) throw new Error('publish failed');
         }),
+        publishNotification: jest.fn(async () => {}),
         subscribe: jest.fn(
             async (
                 keypair: { clientPubkey: string },
@@ -1790,6 +1793,659 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
         expect(connection.activity[0].error).toBe(
             'views.SendingLightning.paymentTimedOut'
         );
+    });
+});
+
+describe('NostrWalletConnectStore payment notifications', () => {
+    const invoice = 'lnbc1notify-sent';
+    const paymentHash = hex64('d');
+
+    function settledPayment(status = 'SUCCEEDED', preimage = hex64('9')) {
+        return new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status,
+            value_sat: 10000,
+            fee_sat: '50',
+            payment_preimage: preimage
+        });
+    }
+
+    function pendingPayInvoice(overrides: Record<string, unknown> = {}) {
+        return {
+            id: invoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 10000,
+            paymentHash,
+            createdAt: new Date(Date.now() - 60_000),
+            ...overrides
+        };
+    }
+
+    async function startWithPayment(payment: Payment) {
+        const started = await startService([{ maxAmountSats: 10000 }], {
+            paymentsStore: {
+                payments: [payment],
+                getPayments: jest.fn(async () => [payment])
+            }
+        });
+        const connection = started.connections[0];
+        connection.activity = [pendingPayInvoice()] as any;
+        return { ...started, connection };
+    }
+
+    it('publishes payment_sent through the SDK when a pending payment settles', async () => {
+        const { store, connection } = await startWithPayment(settledPayment());
+        const relay = relays.get(connection.relayUrl)!;
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(connection.activity[0].status).toBe('success');
+        expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        const [keypair, notification] = relay.publishNotification.mock.calls[0];
+        expect(keypair).toEqual({
+            walletSecret: SERVICE_PRIV,
+            clientPubkey: connection.pubkey
+        });
+        expect(notification.notification_type).toBe('payment_sent');
+        expect(notification.notification).toMatchObject({
+            type: 'outgoing',
+            state: 'settled',
+            payment_hash: paymentHash
+        });
+    });
+
+    it('does not publish while the payment is still in flight', async () => {
+        const { store, connection } = await startWithPayment(
+            settledPayment('IN_FLIGHT', hex64('0'))
+        );
+        const relay = relays.get(connection.relayUrl)!;
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(relay.publishNotification).not.toHaveBeenCalled();
+    });
+
+    it('does not publish for a payment that was already settled', async () => {
+        const { store, connection } = await startWithPayment(settledPayment());
+        const relay = relays.get(connection.relayUrl)!;
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+    });
+
+    describe('make_invoice and finalizePayment', () => {
+        const incomingHash = hex64('b');
+        const incomingInvoice = 'lnbc1notify-received';
+        const PREIMAGE = hex64('7');
+
+        const lightningInvoice = (overrides: Record<string, unknown> = {}) =>
+            new Invoice({
+                r_hash: Base64Utils.hexToBase64(incomingHash),
+                payment_request: incomingInvoice,
+                creation_date: String(Math.floor(Date.now() / 1000) - 60),
+                expiry: '3600',
+                value: '1000',
+                ...overrides
+            });
+
+        const pendingMakeInvoice = (invoice = lightningInvoice()) => ({
+            id: invoice.getPaymentRequest,
+            type: 'make_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 1000,
+            paymentHash: incomingHash,
+            invoice,
+            createdAt: new Date(Date.now() - 60_000)
+        });
+
+        async function startWithInvoice(invoice = lightningInvoice()) {
+            const started = await startService([{}]);
+            const connection = started.connections[0];
+            connection.activity = [pendingMakeInvoice(invoice)] as any;
+            return {
+                ...started,
+                connection,
+                activity: connection.activity[0],
+                relay: relays.get(connection.relayUrl)!
+            };
+        }
+
+        const settleOnNode = () => {
+            jest.spyOn(
+                NostrConnectUtils,
+                'lookupInvoicePaidFromNode'
+            ).mockResolvedValue(true);
+            jest.spyOn(
+                NostrWalletConnectStore.prototype as any,
+                'refreshLightningInvoiceFromNode'
+            ).mockResolvedValue(
+                lightningInvoice({
+                    settled: true,
+                    settle_date: String(Math.floor(Date.now() / 1000)),
+                    r_preimage: Base64Utils.hexToBase64(PREIMAGE)
+                })
+            );
+        };
+
+        beforeEach(() => {
+            jest.spyOn(
+                NostrConnectUtils,
+                'decodeInvoiceTags'
+            ).mockResolvedValue({
+                paymentRequest: invoice,
+                paymentHash,
+                descriptionHash: '',
+                description: '',
+                amount: 10000,
+                expiryTime: 0,
+                createdAt: 0,
+                isExpired: false,
+                network: 'bitcoin'
+            });
+        });
+
+        it('publishes payment_received when a pending invoice settles', async () => {
+            const { store, connection, activity, relay } =
+                await startWithInvoice();
+            settleOnNode();
+
+            await (store as any).reconcilePendingLightningMakeInvoice(
+                connection,
+                activity
+            );
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(activity.status).toBe('success');
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            const [, notification] = relay.publishNotification.mock.calls[0];
+            expect(notification.notification_type).toBe('payment_received');
+            expect(notification.notification).toMatchObject({
+                type: 'incoming',
+                state: 'settled',
+                payment_hash: incomingHash,
+                preimage: PREIMAGE
+            });
+        });
+
+        it('publishes nothing while the invoice is still open', async () => {
+            const { store, connection, activity, relay } =
+                await startWithInvoice();
+            jest.spyOn(
+                NostrConnectUtils,
+                'lookupInvoicePaidFromNode'
+            ).mockResolvedValue(false);
+
+            await (store as any).reconcilePendingLightningMakeInvoice(
+                connection,
+                activity
+            );
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(activity.status).toBe('pending');
+            expect(relay.publishNotification).not.toHaveBeenCalled();
+        });
+
+        it('publishes nothing when the invoice expired', async () => {
+            const { store, connection, activity, relay } =
+                await startWithInvoice(
+                    lightningInvoice({
+                        payment_request:
+                            'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr'
+                    })
+                );
+            jest.spyOn(
+                NostrConnectUtils,
+                'lookupInvoicePaidFromNode'
+            ).mockResolvedValue(false);
+
+            await (store as any).reconcilePendingLightningMakeInvoice(
+                connection,
+                activity
+            );
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(activity.status).toBe('expired');
+            expect(relay.publishNotification).not.toHaveBeenCalled();
+        });
+
+        it('publishes payment_received when opening an invoice that was paid', async () => {
+            const { store, activity, relay } = await startWithInvoice();
+            settleOnNode();
+
+            await store.refreshActivityInvoiceForNavigation(activity);
+            await store.refreshActivityInvoiceForNavigation(activity);
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(activity.status).toBe('success');
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
+        it('publishes payment_received once for overlapping reconciles', async () => {
+            const { store, connection, activity, relay } =
+                await startWithInvoice();
+            settleOnNode();
+
+            await Promise.all([
+                (store as any).reconcilePendingLightningMakeInvoice(
+                    connection,
+                    activity
+                ),
+                (store as any).reconcilePendingLightningMakeInvoice(
+                    connection,
+                    activity
+                )
+            ]);
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
+        it('publishes payment_received once when the activity screen loads alongside two lookup_invoice calls', async () => {
+            const { store, connection, relay } = await startWithInvoice();
+            settleOnNode();
+
+            await Promise.all([
+                store.getActivities(connection.id),
+                (store as any).handleLookupInvoice(connection, {
+                    payment_hash: incomingHash
+                }),
+                (store as any).handleLookupInvoice(connection, {
+                    payment_hash: incomingHash
+                })
+            ]);
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(connection.activity[0].status).toBe('success');
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
+        it('publishes payment_sent once and debits once when finalizePayment lands during a reconcile', async () => {
+            const payment = settledPayment();
+            let release: (value: any) => void = () => {};
+            const gate = new Promise((resolve) => (release = resolve));
+            const started = await startService([{ maxAmountSats: 100000 }], {
+                paymentsStore: {
+                    payments: [payment],
+                    getPayments: jest.fn(() => gate)
+                }
+            });
+            const connection = started.connections[0];
+            connection.activity = [pendingPayInvoice()] as any;
+            const relay = relays.get(connection.relayUrl)!;
+
+            const reconcile = (
+                started.store as any
+            ).reconcilePendingPayInvoiceActivities(connection);
+            await (started.store as any).finalizePayment({
+                rawInvoice: invoice,
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                decoded: payment,
+                connection,
+                amountSats: 10000,
+                feeSats: 50,
+                paymentHash
+            });
+            release([payment]);
+            await reconcile;
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            expect(connection.totalSpendSats).toBe(10050);
+        });
+
+        it('keeps a settled invoice settled when an expiry check resolves after it', async () => {
+            const { store, connection, activity, relay } =
+                await startWithInvoice(
+                    lightningInvoice({
+                        payment_request:
+                            'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr'
+                    })
+                );
+            let release: (v: boolean) => void = () => {};
+            jest.spyOn(
+                NostrConnectUtils,
+                'lookupInvoicePaidFromNode'
+            ).mockReturnValue(new Promise((r) => (release = r)));
+
+            const reconcile = (
+                store as any
+            ).reconcilePendingLightningMakeInvoice(connection, activity);
+            (store as any).settleMakeInvoice(connection, activity, () => {
+                activity.status = 'success';
+            });
+            release(false);
+            await reconcile;
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(activity.status).toBe('success');
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
+        describe('Cashu invoices', () => {
+            const MINT = 'https://mint.example';
+            const cashuRequest = 'lnbc1notify-cashu';
+
+            const cashuInvoice = (paid = false) =>
+                new CashuInvoice({
+                    quote: 'quote-1',
+                    request: cashuRequest,
+                    state: paid ? 'PAID' : 'UNPAID',
+                    paid,
+                    mintUrl: MINT,
+                    expiry: Math.floor(Date.now() / 1000) + 3600
+                } as any);
+
+            async function startWithCashuInvoice() {
+                const cashuStore = new CashuStore(
+                    {
+                        implementation: 'lnd',
+                        lndDir: 'node1',
+                        settings: {}
+                    } as any,
+                    {} as any,
+                    {} as any,
+                    {} as any
+                );
+                cashuStore.mintUrls = [MINT];
+                cashuStore.selectedMintUrl = MINT;
+                cashuStore.cashuWallets = {
+                    [MINT]: {
+                        walletId: MINT,
+                        pubkey: '',
+                        errorConnecting: false
+                    }
+                } as any;
+                cashuStore.invoices = [];
+                const started = await startService([{}], { cashuStore });
+                started.store.cashuEnabled = true;
+                const connection = started.connections[0];
+                connection.activity = [
+                    {
+                        id: cashuRequest,
+                        type: 'make_invoice',
+                        payment_source: 'cashu',
+                        status: 'pending',
+                        satAmount: 1000,
+                        invoice: cashuInvoice(),
+                        createdAt: new Date(Date.now() - 60_000)
+                    }
+                ] as any;
+                return {
+                    ...started,
+                    cashuStore,
+                    connection,
+                    activity: connection.activity[0],
+                    relay: relays.get(connection.relayUrl)!
+                };
+            }
+
+            it('publishes payment_received once when a pending Cashu invoice settles', async () => {
+                const { store, cashuStore, connection, activity, relay } =
+                    await startWithCashuInvoice();
+                jest.spyOn(cashuStore, 'checkInvoicePaid').mockResolvedValue({
+                    isPaid: true,
+                    amtSat: '1000',
+                    updatedInvoice: cashuInvoice(true)
+                } as any);
+
+                await Promise.all([
+                    (store as any).reconcilePendingCashuMakeInvoice(
+                        connection,
+                        activity
+                    ),
+                    (store as any).reconcilePendingCashuMakeInvoice(
+                        connection,
+                        activity
+                    )
+                ]);
+                await jest.advanceTimersByTimeAsync(0);
+
+                expect(activity.status).toBe('success');
+                expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+                expect(relay.publishNotification).toHaveBeenCalledWith(
+                    expect.anything(),
+                    expect.objectContaining({
+                        notification_type: 'payment_received',
+                        notification: expect.objectContaining({
+                            type: 'incoming',
+                            state: 'settled'
+                        })
+                    })
+                );
+            });
+
+            it('stores the paid invoice on a settled activity that still holds the unpaid one, without notifying', async () => {
+                const { store, cashuStore, activity, relay } =
+                    await startWithCashuInvoice();
+                activity.status = 'success';
+                cashuStore.invoices = [cashuInvoice(true)];
+
+                const returned =
+                    await store.refreshActivityInvoiceForNavigation(activity);
+                await jest.advanceTimersByTimeAsync(0);
+
+                expect((returned as CashuInvoice).isPaid).toBe(true);
+                expect((activity.invoice as CashuInvoice).isPaid).toBe(true);
+                expect(relay.publishNotification).not.toHaveBeenCalled();
+            });
+
+            it('keeps a settled Cashu invoice settled when an expiry check resolves after it', async () => {
+                const { store, cashuStore, connection, activity, relay } =
+                    await startWithCashuInvoice();
+                // expiry is read from the decoded BOLT11, so this needs a
+                // real expired invoice (the BOLT11 spec example, 2017)
+                activity.invoice = new CashuInvoice({
+                    quote: 'quote-1',
+                    request:
+                        'lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp',
+                    state: 'UNPAID',
+                    paid: false,
+                    mintUrl: MINT,
+                    expiry: 1496314718
+                } as any);
+                let release: (v: any) => void = () => {};
+                jest.spyOn(cashuStore, 'checkInvoicePaid').mockReturnValue(
+                    new Promise((r) => (release = r)) as any
+                );
+
+                const reconcile = (
+                    store as any
+                ).reconcilePendingCashuMakeInvoice(connection, activity);
+                (store as any).settleMakeInvoice(connection, activity, () => {
+                    activity.status = 'success';
+                });
+                release({ isPaid: false });
+                await reconcile;
+                await jest.advanceTimersByTimeAsync(0);
+
+                expect(activity.status).toBe('success');
+                expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            });
+
+            it('publishes nothing while a Cashu invoice is still unpaid', async () => {
+                const { store, cashuStore, connection, activity, relay } =
+                    await startWithCashuInvoice();
+                jest.spyOn(cashuStore, 'checkInvoicePaid').mockResolvedValue({
+                    isPaid: false
+                } as any);
+
+                await (store as any).reconcilePendingCashuMakeInvoice(
+                    connection,
+                    activity
+                );
+                await jest.advanceTimersByTimeAsync(0);
+
+                expect(activity.status).toBe('pending');
+                expect(relay.publishNotification).not.toHaveBeenCalled();
+            });
+
+            it('publishes payment_received once when opening a paid Cashu invoice', async () => {
+                const { store, cashuStore, activity, relay } =
+                    await startWithCashuInvoice();
+                cashuStore.invoices = [cashuInvoice(true)];
+
+                await store.refreshActivityInvoiceForNavigation(activity);
+                await store.refreshActivityInvoiceForNavigation(activity);
+                await jest.advanceTimersByTimeAsync(0);
+
+                expect(activity.status).toBe('success');
+                expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            });
+        });
+
+        it('publishes payment_sent once when finalizePayment follows a reconcile of the same payment', async () => {
+            const payment = settledPayment();
+            const { store, connection } = await startWithPayment(payment);
+            const relay = relays.get(connection.relayUrl)!;
+
+            await (store as any).reconcilePendingPayInvoiceActivities(
+                connection
+            );
+            await (store as any).finalizePayment({
+                rawInvoice: invoice,
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                decoded: payment,
+                connection,
+                amountSats: 10000,
+                feeSats: 50,
+                paymentHash
+            });
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(connection.activity[0].status).toBe('success');
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
+        it('publishes payment_sent when finalizePayment records a new payment', async () => {
+            const { store, connections } = await startService([
+                { maxAmountSats: 10000 }
+            ]);
+            const connection = connections[0];
+            const relay = relays.get(connection.relayUrl)!;
+
+            await (store as any).finalizePayment({
+                rawInvoice: invoice,
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                decoded: settledPayment(),
+                connection,
+                amountSats: 10000,
+                feeSats: 50,
+                paymentHash
+            });
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            expect(relay.publishNotification.mock.calls[0][1]).toMatchObject({
+                notification_type: 'payment_sent'
+            });
+        });
+
+        it('publishes the pay_invoice row when a make_invoice row has the same id', async () => {
+            const { store, connections } = await startService([
+                { maxAmountSats: 10000 }
+            ]);
+            const connection = connections[0];
+            const relay = relays.get(connection.relayUrl)!;
+            connection.activity = [
+                {
+                    id: invoice,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 10000,
+                    paymentHash,
+                    createdAt: new Date()
+                }
+            ] as any;
+
+            await (store as any).finalizePayment({
+                rawInvoice: invoice,
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                decoded: settledPayment(),
+                connection,
+                amountSats: 10000,
+                feeSats: 50,
+                paymentHash
+            });
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            expect(relay.publishNotification.mock.calls[0][1]).toMatchObject({
+                notification_type: 'payment_sent',
+                notification: { type: 'outgoing', fees_paid: 50000 }
+            });
+        });
+    });
+
+    it('does not publish for a zero-amount activity', async () => {
+        const { store, connection } = await startWithPayment(settledPayment());
+        const relay = relays.get(connection.relayUrl)!;
+        connection.activity[0].satAmount = 0;
+
+        await (store as any).notifyConnection(
+            connection,
+            'payment_sent',
+            connection.activity[0]
+        );
+
+        expect(relay.publishNotification).not.toHaveBeenCalled();
+    });
+
+    it('only warns when the relay service or wallet keys are missing', async () => {
+        const { store, connection } = await startWithPayment(settledPayment());
+        const relay = relays.get(connection.relayUrl)!;
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+        (store as any).nwcWalletServices.delete(connection.relayUrl);
+        await (store as any).notifyConnection(
+            connection,
+            'payment_sent',
+            connection.activity[0]
+        );
+        expect(warn).toHaveBeenCalledTimes(1);
+
+        (store as any).nwcWalletServices.set(connection.relayUrl, relay);
+        (store as any).walletServiceKeys = null;
+        await (store as any).notifyConnection(
+            connection,
+            'payment_sent',
+            connection.activity[0]
+        );
+
+        expect(warn).toHaveBeenCalledTimes(2);
+        expect(relay.publishNotification).not.toHaveBeenCalled();
+    });
+
+    it('keeps the payment state when publishing the notification fails', async () => {
+        const { store, connection } = await startWithPayment(settledPayment());
+        const relay = relays.get(connection.relayUrl)!;
+        relay.publishNotification.mockRejectedValue(new Error('no relay'));
+        const consoleError = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.activity[0].isBudgetDebited).toBe(true);
+        expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        // logged once, by notifyConnection
+        expect(consoleError).toHaveBeenCalledTimes(1);
     });
 });
 
