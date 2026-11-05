@@ -13,6 +13,8 @@ const mockListBalances = jest.fn();
 const mockStatus = jest.fn();
 const mockListUtxos = jest.fn();
 const mockReceiveViaJitChannel = jest.fn();
+const mockNewOnchainAddress = jest.fn();
+const mockSpliceOut = jest.fn();
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
@@ -21,14 +23,17 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
             listChannels: (...args: any[]) => mockListChannels(...args),
             closeChannel: (...args: any[]) => mockCloseChannel(...args),
             forceCloseChannel: (...args: any[]) =>
-                mockForceCloseChannel(...args)
+                mockForceCloseChannel(...args),
+            spliceOut: (...args: any[]) => mockSpliceOut(...args)
         },
         node: {
             listBalances: (...args: any[]) => mockListBalances(...args),
             status: (...args: any[]) => mockStatus(...args)
         },
         onchain: {
-            listUtxos: (...args: any[]) => mockListUtxos(...args)
+            listUtxos: (...args: any[]) => mockListUtxos(...args),
+            newOnchainAddress: (...args: any[]) =>
+                mockNewOnchainAddress(...args)
         },
         payments: {
             listPayments: (...args: any[]) => mockListPayments(...args)
@@ -1067,5 +1072,70 @@ describe('LdkNode.getSpliceTransactionStatus', () => {
         await expect(
             new LdkNode().getSpliceTransactionStatus('splice-txid', 0)
         ).rejects.toThrow('404');
+    });
+});
+
+describe('LdkNode.spliceOut', () => {
+    const splicingNode = () => {
+        const ldk = new LdkNode();
+        (ldk as any).spliceAndWait = (
+            _: string,
+            request: () => Promise<void>
+        ) => request().then(() => ({ success: true }));
+        return ldk;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockListChannels.mockResolvedValue([
+            {
+                fundingTxo_txid: 'funding-txid',
+                userChannelId: 'user-chan',
+                counterpartyNodeId: '02peer'
+            }
+        ]);
+        mockNewOnchainAddress.mockResolvedValue('tb1qwallet');
+        mockSpliceOut.mockResolvedValue(undefined);
+    });
+
+    it('pays a fresh address of our own wallet when none is given', async () => {
+        await splicingNode().spliceOut({
+            fundingTxid: 'funding-txid',
+            amountSats: 30000
+        });
+
+        expect(mockSpliceOut).toHaveBeenCalledWith({
+            userChannelId: 'user-chan',
+            counterpartyNodeId: '02peer',
+            address: 'tb1qwallet',
+            spliceAmountSats: 30000
+        });
+    });
+
+    it('pays the given address without taking one from the wallet', async () => {
+        await splicingNode().spliceOut({
+            fundingTxid: 'funding-txid',
+            amountSats: 30000,
+            address: 'tb1qexternal'
+        });
+
+        expect(mockNewOnchainAddress).not.toHaveBeenCalled();
+        expect(mockSpliceOut).toHaveBeenCalledWith(
+            expect.objectContaining({ address: 'tb1qexternal' })
+        );
+    });
+
+    it('does not splice when no wallet address can be taken', async () => {
+        mockNewOnchainAddress.mockRejectedValue(
+            new Error('Node not initialized')
+        );
+
+        await expect(
+            splicingNode().spliceOut({
+                fundingTxid: 'funding-txid',
+                amountSats: 30000
+            })
+        ).rejects.toThrow('Node not initialized');
+        expect(mockSpliceOut).not.toHaveBeenCalled();
     });
 });

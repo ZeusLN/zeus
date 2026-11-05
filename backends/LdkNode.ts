@@ -1276,7 +1276,9 @@ export default class LdkNode {
      * Splice funds out of an existing channel to an on-chain address
      *
      * The splice fee is taken from the channel balance, so the channel
-     * loses slightly more than the amount paid out.
+     * loses slightly more than the amount paid out. Without an address it
+     * pays a fresh address of our own wallet, taken only now so an
+     * abandoned splice doesn't use one up.
      */
     spliceOut = async ({
         fundingTxid,
@@ -1285,15 +1287,17 @@ export default class LdkNode {
     }: {
         fundingTxid: string;
         amountSats: number;
-        address: string;
+        address?: string;
     }): Promise<any> => {
         const channel = await this.findChannelByFundingTxid(fundingTxid);
+        const destination =
+            address || (await LdkNodeInjection.onchain.newOnchainAddress());
 
         return await this.spliceAndWait(channel.userChannelId, () =>
             LdkNodeInjection.channel.spliceOut({
                 userChannelId: channel.userChannelId,
                 counterpartyNodeId: channel.counterpartyNodeId,
-                address,
+                address: destination,
                 spliceAmountSats: Number(amountSats)
             })
         );
