@@ -54,7 +54,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import CashuInvoice from '../../models/CashuInvoice';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { encodeCREQ } from '../../utils/CREQUtils';
+import { encodeCREQ, tokenRequestMismatch } from '../../utils/CREQUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { isNfcWithdraw, scanNfcTag } from '../../utils/NFCUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -149,6 +149,7 @@ export default class ReceiveEcash extends React.Component<
     // CashuStore is shared with the next ReceiveEcash view, so work that
     // completes after this view is gone must not reach it
     isUnmounted = false;
+    redeemingNfcToken = false;
     // Bumped for each invoice this view asks CashuStore for and by Cancel,
     // so only the latest request's invoice is checked or handed on
     invoiceRequestId = 0;
@@ -315,13 +316,83 @@ export default class ReceiveEcash extends React.Component<
         this.validateAddress(str);
     };
 
+    /**
+     * Android merchant mode: a CREQ for the invoice amount, broadcast next
+     * to the invoice so a payer with ecash can tap and write a token back
+     */
+    nfcPaymentRequest = ():
+        | { creq: string; amount: number; mintUrl: string }
+        | undefined => {
+        const { CashuStore } = this.props;
+        const { satAmount, memo } = this.state;
+        const amount = Number(satAmount);
+        const mintUrl =
+            CashuStore.lastInvoiceMintUrl || CashuStore.selectedMintUrl;
+        if (
+            Platform.OS !== 'android' ||
+            !CashuStore.invoice ||
+            !mintUrl ||
+            !Number.isInteger(amount) ||
+            amount <= 0
+        ) {
+            return undefined;
+        }
+        try {
+            const creq = encodeCREQ({
+                amount,
+                unit: 'sat',
+                mints: [mintUrl],
+                description: memo || undefined
+            });
+            return { creq, amount, mintUrl };
+        } catch (e) {
+            // CREQ generation is best-effort
+            return undefined;
+        }
+    };
+
     onNfcTokenReceived = async (content: string) => {
         const { CashuStore } = this.props;
+        const request = this.nfcPaymentRequest();
+        if (!request || this.redeemingNfcToken || CashuStore.watchedInvoicePaid)
+            return;
+
+        const encoded = content.trim().replace(/^cashu:/i, '');
+        this.redeemingNfcToken = true;
         try {
-            await CashuStore.receiveTokenCDK(content);
-            CashuStore.watchedInvoicePaid = true;
+            let token;
+            try {
+                token = await CashuStore.decodeTokenCDK(encoded);
+            } catch (e) {
+                // react-native-hce reports writes that leave a parseable
+                // record, which can be a token still being written
+                console.warn('CREQ write is not a token (yet):', e);
+                return;
+            }
+
+            const mismatch = tokenRequestMismatch(token, request);
+            if (mismatch) {
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString(mismatch)
+                );
+                return;
+            }
+
+            const received = await CashuStore.receiveTokenCDK(
+                encoded,
+                undefined,
+                request.mintUrl
+            );
+            CashuStore.setWatchedInvoicePaid(received);
         } catch (e: any) {
             console.warn('Failed to receive CREQ token:', e);
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.Cashu.ReceiveEcash.creqRedeemFailed')
+            );
+        } finally {
+            this.redeemingNfcToken = false;
         }
     };
 
@@ -561,30 +632,17 @@ export default class ReceiveEcash extends React.Component<
 
         const haveInvoice = !!invoice;
 
-        let lnInvoice, lnInvoiceCopyValue, creqNfcValue;
+        let lnInvoice, lnInvoiceCopyValue, nfcValue;
 
         if (invoice) {
             lnInvoice = `lightning:${invoice.toUpperCase()}`;
             lnInvoiceCopyValue = invoice;
-        }
 
-        // Generate CREQ for NFC tap-to-pay (Android merchant mode)
-        if (
-            haveInvoice &&
-            Platform.OS === 'android' &&
-            satAmount &&
-            Number(satAmount) > 0
-        ) {
-            try {
-                const { selectedMintUrl } = CashuStore;
-                creqNfcValue = encodeCREQ({
-                    amount: Number(satAmount),
-                    unit: 'sat',
-                    mints: selectedMintUrl ? [selectedMintUrl] : undefined,
-                    description: memo || undefined
-                });
-            } catch (e) {
-                // CREQ generation is best-effort
+            // BIP-321 URI like Numo's: lightning wallets pay the invoice,
+            // ecash wallets the CREQ
+            const nfcRequest = this.nfcPaymentRequest();
+            if (nfcRequest) {
+                nfcValue = `bitcoin:?lightning=${invoice}&creq=${nfcRequest.creq}`;
             }
         }
 
@@ -841,18 +899,16 @@ export default class ReceiveEcash extends React.Component<
                                                     <CollapsedQR
                                                         value={lnInvoice || ''}
                                                         copyValue={
-                                                            creqNfcValue ||
                                                             lnInvoiceCopyValue
                                                         }
+                                                        nfcValue={nfcValue}
                                                         expanded
                                                         textBottom
                                                         truncateLongValue
                                                         nfcSupported={
                                                             nfcSupported
                                                         }
-                                                        nfcWritable={
-                                                            !!creqNfcValue
-                                                        }
+                                                        nfcWritable={!!nfcValue}
                                                         onNfcTokenReceived={
                                                             this
                                                                 .onNfcTokenReceived

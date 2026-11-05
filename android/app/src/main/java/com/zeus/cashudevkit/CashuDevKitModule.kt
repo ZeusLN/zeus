@@ -1762,6 +1762,51 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     // ========================================================================
+    // Payment Requests (NUT-18 creqA, NUT-26 creqb)
+    // ========================================================================
+
+    @ReactMethod
+    fun decodePaymentRequest(encoded: String, promise: Promise) {
+        try {
+            val request = org.cashudevkit.decodePaymentRequest(encoded)
+            val result = JSONObject()
+            request.paymentId()?.let { result.put("payment_id", it) }
+            request.amount()?.let { result.put("amount", it.value.toLong()) }
+            request.unit()?.let { result.put("unit", currencyUnitToString(it)) }
+            request.singleUse()?.let { result.put("single_use", it) }
+            request.description()?.let { result.put("description", it) }
+            val mints = JSONArray()
+            request.mints().forEach { mints.put(it) }
+            result.put("mints", mints)
+            val transports = JSONArray()
+            request.transports().forEach { transport ->
+                val tags = JSONArray()
+                transport.tags.forEach { tag -> tags.put(JSONArray(tag)) }
+                transports.put(JSONObject().apply {
+                    put(
+                        "type",
+                        when (transport.transportType) {
+                            TransportType.NOSTR -> "nostr"
+                            TransportType.HTTP_POST -> "post"
+                        }
+                    )
+                    put("target", transport.target)
+                    put("tags", tags)
+                })
+            }
+            result.put("transports", transports)
+            promise.resolve(result.toString())
+        } catch (e: FfiException) {
+            val (code, message) = mapFfiException(e)
+            Log.e(TAG, "decodePaymentRequest error: $message", e)
+            promise.reject(code, message, e)
+        } catch (e: Exception) {
+            Log.e(TAG, "decodePaymentRequest error", e)
+            promise.reject("DECODE_ERROR", e.message, e)
+        }
+    }
+
+    // ========================================================================
     // Restore
     // ========================================================================
 

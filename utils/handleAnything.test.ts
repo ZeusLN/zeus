@@ -11,6 +11,7 @@ import { Alert } from 'react-native';
 
 import { nip05 } from 'nostr-tools';
 
+import { decodeCREQ } from './CREQUtils';
 import { invoicesStore, settingsStore } from '../stores/Stores';
 import handleAnything, {
     strictUriEncode,
@@ -130,8 +131,13 @@ jest.mock('./CashuUtils', () => {
 });
 
 jest.mock('./CREQUtils', () => ({
-    isCREQ: (v: string) => v.startsWith('creqA'),
-    decodeCREQ: (v: string) => ({ amount: 100, unit: 'sat', _raw: v })
+    isCREQ: (v: string) =>
+        v.startsWith('creqA') || v.toLowerCase().startsWith('creqb1'),
+    decodeCREQ: jest.fn(async (v: string) => ({
+        amount: 100,
+        unit: 'sat',
+        _raw: v
+    }))
 }));
 
 const mockProcessLndConnectUrl = jest.fn();
@@ -3472,6 +3478,50 @@ describe('handleAnything', () => {
                     lightning: 'lnbc1234',
                     creqParams: expect.objectContaining({ amount: 100 }),
                     creqString: creq
+                })
+            ]);
+        });
+
+        it("should route Numo's uppercase NUT-26 creq + lightning URI to ChoosePaymentMethod", async () => {
+            const creq = 'CREQB1QYQQSE3CV93KYDENVGPQ';
+            mockProcessBIP21Uri.mockReturnValue({
+                value: '',
+                lightning: 'LNBC210N1XYZ',
+                creq
+            });
+
+            const result = await handleAnything(
+                'BITCOIN:?LIGHTNING=LNBC210N1XYZ&CREQ=' + creq
+            );
+            expect(result).toEqual([
+                'ChoosePaymentMethod',
+                expect.objectContaining({
+                    lightning: 'LNBC210N1XYZ',
+                    creqParams: expect.objectContaining({ amount: 100 }),
+                    creqString: creq
+                })
+            ]);
+        });
+
+        it('should still offer the other methods when the creq does not decode', async () => {
+            (decodeCREQ as jest.Mock).mockRejectedValueOnce(
+                new Error('Invalid prefix')
+            );
+            mockProcessBIP21Uri.mockReturnValue({
+                value: '',
+                lightning: 'lnbc1234',
+                creq: 'creqAbroken'
+            });
+
+            const result = await handleAnything(
+                'bitcoin:?lightning=lnbc1234&creq=creqAbroken'
+            );
+            expect(result).toEqual([
+                'ChoosePaymentMethod',
+                expect.objectContaining({
+                    lightning: 'lnbc1234',
+                    creqParams: undefined,
+                    creqString: undefined
                 })
             ]);
         });

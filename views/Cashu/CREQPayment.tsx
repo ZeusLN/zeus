@@ -22,7 +22,11 @@ import { writeTokenToTag } from '../../utils/NFCUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import { findCompatibleMint, CREQParams } from '../../utils/CREQUtils';
+import {
+    creqPaymentError,
+    findCompatibleMint,
+    CREQParams
+} from '../../utils/CREQUtils';
 
 interface CREQPaymentProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -63,11 +67,9 @@ export default class CREQPayment extends React.Component<
         const { CashuStore } = this.props;
         const { creqParams } = this.props.route.params;
 
-        const amount = creqParams.amount;
-        if (!amount) {
-            this.setState({
-                error: localeString('views.Cashu.CREQPayment.noAmount')
-            });
+        const requestError = creqPaymentError(creqParams);
+        if (requestError) {
+            this.setState({ error: localeString(requestError) });
             return;
         }
 
@@ -83,15 +85,14 @@ export default class CREQPayment extends React.Component<
         this.setState({ loading: true, error: '' });
 
         try {
-            const token = await CashuStore.sendTokenCDK(
+            const { token } = await CashuStore.sendTokenForRequest(
                 mintUrl,
-                amount,
+                creqParams.amount!,
                 creqParams.description
             );
-
             this.setState({
                 loading: false,
-                tokenCreated: token.encoded
+                tokenCreated: token
             });
         } catch (e: any) {
             this.setState({
@@ -114,7 +115,7 @@ export default class CREQPayment extends React.Component<
             success,
             error: success
                 ? ''
-                : localeString('views.Cashu.CREQPayment.failedToWriteToken')
+                : localeString('utils.NFCUtils.tokenNotDelivered')
         });
     };
 
@@ -136,6 +137,9 @@ export default class CREQPayment extends React.Component<
             this.state;
 
         const compatibleMint = this.getCompatibleMint();
+        const requestError = creqPaymentError(creqParams);
+        const errorMessage =
+            error || (requestError ? localeString(requestError) : '');
 
         return (
             <Screen>
@@ -157,9 +161,9 @@ export default class CREQPayment extends React.Component<
                     </View>
                 )}
 
-                {!!error && (
+                {!!errorMessage && (
                     <View style={styles.content}>
-                        <ErrorMessage message={error} />
+                        <ErrorMessage message={errorMessage} />
                     </View>
                 )}
 
@@ -216,7 +220,7 @@ export default class CREQPayment extends React.Component<
                                     )}
                                     icon={{ name: 'send', size: 25 }}
                                     onPress={this.payFromCREQ}
-                                    disabled={!compatibleMint}
+                                    disabled={!compatibleMint || !!requestError}
                                 />
                             </View>
                         )}

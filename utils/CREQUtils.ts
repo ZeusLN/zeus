@@ -1,8 +1,10 @@
-import { encode as cborEncode, decode as cborDecode } from 'cborg';
+import { encode as cborEncode } from 'cborg';
+import CashuDevKit from '../cashu-cdk';
 import Base64Utils from './Base64Utils';
 
-const CREQ_PREFIX = 'creq';
-const CREQ_VERSION = 'A';
+const CREQ_A_PREFIX = 'creqA';
+// NUT-26 bech32m human-readable part plus separator
+const CREQ_B_PREFIX = 'creqb1';
 
 export interface CREQTransport {
     /** Transport type (e.g. 'nostr', 'post') */
@@ -31,15 +33,19 @@ export interface CREQParams {
 }
 
 /**
- * Check if a string is a CREQ payment request (NUT-18).
+ * Check if a string is a Cashu payment request: NUT-18 (creqA, base64url
+ * so case-sensitive) or NUT-26 (creqb, bech32m so any case).
  */
 export function isCREQ(value: string): boolean {
-    return value.startsWith(CREQ_PREFIX + CREQ_VERSION);
+    return (
+        value.startsWith(CREQ_A_PREFIX) ||
+        value.toLowerCase().startsWith(CREQ_B_PREFIX)
+    );
 }
 
 /**
  * Encode a Cashu payment request as a CREQ string (NUT-18).
- * Format: "creq" + "A" + base64url(CBOR(PaymentRequest))
+ * Format: "creqA" + base64url(CBOR(PaymentRequest))
  */
 export function encodeCREQ(params: CREQParams): string {
     const map: Record<string, unknown> = {};
@@ -61,37 +67,32 @@ export function encodeCREQ(params: CREQParams): string {
     const cborBytes = cborEncode(map);
     const base64 = Base64Utils.bytesToBase64(cborBytes);
     const base64url = Base64Utils.base64ToBase64Url(base64);
-    return CREQ_PREFIX + CREQ_VERSION + base64url;
+    return CREQ_A_PREFIX + base64url;
 }
 
 /**
- * Decode a CREQ string into structured parameters (NUT-18).
+ * Decode a creqA or creqb payment request with CDK.
  */
-export function decodeCREQ(creq: string): CREQParams {
+export async function decodeCREQ(creq: string): Promise<CREQParams> {
     if (!isCREQ(creq)) {
         throw new Error('Invalid CREQ: missing prefix');
     }
 
-    const encoded = creq.slice(CREQ_PREFIX.length + CREQ_VERSION.length);
-    const base64 = Base64Utils.base64UrlToBase64(encoded);
-    const cborBytes = Base64Utils.base64ToBytes(base64);
-    const map = cborDecode(cborBytes) as Record<string, unknown>;
+    const request = await CashuDevKit.decodePaymentRequest(creq);
 
     const params: CREQParams = {};
-
-    if (map.i !== undefined) params.id = map.i as string;
-    if (map.a !== undefined) params.amount = map.a as number;
-    if (map.u !== undefined) params.unit = map.u as string;
-    if (map.s !== undefined) params.singleUse = map.s as boolean;
-    if (Array.isArray(map.m)) {
-        params.mints = map.m.filter((m): m is string => typeof m === 'string');
-    }
-    if (map.d !== undefined) params.description = map.d as string;
-    if (Array.isArray(map.t)) {
-        params.transports = (map.t as any[]).map((tr) => ({
-            t: tr.t as string,
-            a: tr.a as string,
-            ...(Array.isArray(tr.g) ? { g: tr.g as string[][] } : {})
+    if (request.payment_id !== undefined) params.id = request.payment_id;
+    if (request.amount !== undefined) params.amount = request.amount;
+    if (request.unit !== undefined) params.unit = request.unit;
+    if (request.single_use !== undefined) params.singleUse = request.single_use;
+    if (request.description !== undefined)
+        params.description = request.description;
+    if (request.mints?.length) params.mints = request.mints;
+    if (request.transports?.length) {
+        params.transports = request.transports.map((tr) => ({
+            t: tr.type,
+            a: tr.target,
+            ...(tr.tags?.length ? { g: tr.tags } : {})
         }));
     }
 
@@ -99,9 +100,39 @@ export function decodeCREQ(creq: string): CREQParams {
 }
 
 /**
+ * Locale key of the reason ZEUS can't pay this request, if any. Only
+ * whole-sat amounts in 'sat' are paid: the amount is in the request's unit,
+ * so paying an msat or fiat request as sats would send the wrong amount.
+ */
+export function creqPaymentError(creqParams: CREQParams): string | undefined {
+    const { amount, unit } = creqParams;
+    if (!amount || !Number.isInteger(amount) || amount <= 0) {
+        return 'views.Cashu.CREQPayment.noAmount';
+    }
+    if (unit?.toLowerCase() !== 'sat') {
+        return 'views.Cashu.CREQPayment.unsupportedUnit';
+    }
+    return undefined;
+}
+
+/**
+ * Comparison key for mint URLs: no trailing slash, scheme and host lowercased
+ * (CDK canonicalizes those), path left case-sensitive.
+ */
+export function mintUrlKey(url: string): string {
+    return url
+        .trim()
+        .replace(/\/+$/, '')
+        .replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/i, (schemeAndHost) =>
+            schemeAndHost.toLowerCase()
+        );
+}
+
+/**
  * Find a mint from the user's wallets that can fulfill a CREQ payment.
- * Prefers mints listed in the CREQ, then the selected mint, then any with
- * sufficient balance.
+ * If the CREQ lists mints, only those are used, in the CREQ's order.
+ * Otherwise prefers the selected mint, then any with sufficient balance.
+ * Returns the URL as the wallet spells it.
  */
 export function findCompatibleMint(
     creqParams: CREQParams,
@@ -110,24 +141,55 @@ export function findCompatibleMint(
     selectedMintUrl: string
 ): string | undefined {
     const amount = creqParams.amount || 0;
+    const balance = (url: string) =>
+        mintBalances[url] ?? mintBalances[url.replace(/\/+$/, '')] ?? 0;
+    const walletMint = (url: string) =>
+        mintUrls.find((walletUrl) => mintUrlKey(walletUrl) === mintUrlKey(url));
 
     if (creqParams.mints && creqParams.mints.length > 0) {
         for (const mint of creqParams.mints) {
-            if (
-                mintUrls.includes(mint) &&
-                (mintBalances[mint] || 0) >= amount
-            ) {
-                return mint;
-            }
+            const url = walletMint(mint);
+            if (url && balance(url) >= amount) return url;
         }
         return undefined;
     }
 
-    if (selectedMintUrl && (mintBalances[selectedMintUrl] || 0) >= amount) {
+    if (selectedMintUrl && balance(selectedMintUrl) >= amount) {
         return selectedMintUrl;
     }
 
-    return mintUrls.find((url) => (mintBalances[url] || 0) >= amount);
+    return mintUrls.find((url) => balance(url) >= amount);
 }
 
-export default { isCREQ, encodeCREQ, decodeCREQ, findCompatibleMint };
+/**
+ * Locale key of the reason a token written back by a payer doesn't settle
+ * the request ZEUS broadcast, if any.
+ */
+export function tokenRequestMismatch(
+    token: { value: number; mint_url: string; unit?: string },
+    request: { amount: number; mintUrl?: string }
+): string | undefined {
+    if ((token.unit || 'sat').toLowerCase() !== 'sat') {
+        return 'views.Cashu.CREQPayment.unsupportedUnit';
+    }
+    if (
+        request.mintUrl &&
+        mintUrlKey(token.mint_url) !== mintUrlKey(request.mintUrl)
+    ) {
+        return 'views.Cashu.ReceiveEcash.creqWrongMint';
+    }
+    if (token.value < request.amount) {
+        return 'views.Cashu.ReceiveEcash.creqUnderpaid';
+    }
+    return undefined;
+}
+
+export default {
+    isCREQ,
+    encodeCREQ,
+    decodeCREQ,
+    creqPaymentError,
+    mintUrlKey,
+    findCompatibleMint,
+    tokenRequestMismatch
+};

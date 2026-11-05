@@ -977,3 +977,49 @@ describe('CashuStore.loadTransactions', () => {
         ]);
     });
 });
+
+describe('CashuStore.sendTokenForRequest', () => {
+    it('sends from the mint the request was matched to and records the token', async () => {
+        const store = newStore();
+        store.selectedMintUrl = A;
+        jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
+        cdk.send.mockResolvedValue(cdkToken(21));
+
+        const result = await store.sendTokenForRequest(B, 21, 'coffee');
+
+        expect(cdk.send).toHaveBeenCalledWith(
+            B,
+            21,
+            'coffee',
+            undefined,
+            'OnlineExact',
+            undefined
+        );
+        expect(result.token).toBe('cashuBtoken');
+        expect(result.decoded).toMatchObject({
+            mint: B,
+            memo: 'coffee',
+            sent: true,
+            spent: false,
+            value: 21,
+            encodedToken: 'cashuBtoken',
+            created_at: 1700000000
+        });
+        expect(store.sentTokens).toEqual([result.decoded]);
+        expect(storage.setItem).toHaveBeenCalledWith(
+            'node1-cashu-sent-tokens',
+            store.sentTokens
+        );
+    });
+
+    it('records nothing when CDK cannot send', async () => {
+        const store = newStore();
+        cdk.send.mockRejectedValue(new Error('Insufficient funds'));
+
+        await expect(store.sendTokenForRequest(B, 21)).rejects.toThrow(
+            'Insufficient funds'
+        );
+        expect(store.sentTokens).toEqual([]);
+        expect(storage.setItem).not.toHaveBeenCalled();
+    });
+});

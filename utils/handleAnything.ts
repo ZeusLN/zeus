@@ -420,7 +420,7 @@ const handleAnything = async (
         let creqString;
         if (creq && isCREQ(creq)) {
             try {
-                creqParams = decodeCREQ(creq);
+                creqParams = await decodeCREQ(creq);
                 creqString = creq;
             } catch {}
         }
@@ -444,7 +444,7 @@ const handleAnything = async (
     } else if (creq && isCREQ(creq)) {
         // CREQ from BIP-21 as only payment method
         if (isClipboardValue) return true;
-        const creqParams = decodeCREQ(creq);
+        const creqParams = await decodeCREQ(creq);
         return [
             'CREQPayment',
             {
@@ -1204,7 +1204,7 @@ const handleAnything = async (
         ];
     } else if (isCREQ(value)) {
         if (isClipboardValue) return true;
-        const creqParams = decodeCREQ(value);
+        const creqParams = await decodeCREQ(value);
         return [
             'CREQPayment',
             {

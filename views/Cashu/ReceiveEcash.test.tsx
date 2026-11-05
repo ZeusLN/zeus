@@ -714,3 +714,149 @@ describe('ReceiveEcash Lightning address tab', () => {
         }
     );
 });
+
+describe('ReceiveEcash NFC tap-to-pay (merchant)', () => {
+    const MINT = 'https://mint.example';
+    const { Platform } = require('react-native');
+    const originalOS = Platform.OS;
+
+    const makeMerchant = (cashuStore: any = {}) =>
+        makeView('21', 21, {
+            invoice: 'lnbc210n1xyz',
+            lastInvoiceMintUrl: MINT,
+            watchedInvoicePaid: false,
+            decodeTokenCDK: jest.fn(async () => ({
+                value: 21,
+                mint_url: MINT,
+                unit: 'sat'
+            })),
+            receiveTokenCDK: jest.fn(async () => 21),
+            ...cashuStore
+        });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        Platform.OS = 'android';
+        jest.spyOn(Alert, 'alert').mockImplementation(() => void 0);
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        Platform.OS = originalOS;
+        (Alert.alert as jest.Mock).mockRestore();
+        (console.warn as jest.Mock).mockRestore();
+    });
+
+    it('requests the invoice amount from the invoice mint', () => {
+        const { view } = makeMerchant({
+            selectedMintUrl: 'https://other.example'
+        });
+
+        const request = view.nfcPaymentRequest();
+
+        expect(request).toMatchObject({ amount: 21, mintUrl: MINT });
+        expect(request!.creq.startsWith('creqA')).toBe(true);
+    });
+
+    it.each([
+        ['on iOS', { os: 'ios' }],
+        ['without an invoice', { invoice: undefined }],
+        ['for a zero amount', { satAmount: 0 }]
+    ])('broadcasts no request %s', (_, { os, satAmount, ...store }: any) => {
+        if (os) Platform.OS = os;
+        const { view } = makeMerchant(store);
+        if (satAmount !== undefined) view.state = { ...view.state, satAmount };
+
+        expect(view.nfcPaymentRequest()).toBeUndefined();
+    });
+
+    it('redeems a matching token and shows the invoice as paid', async () => {
+        const { view, CashuStore } = makeMerchant();
+
+        await view.onNfcTokenReceived('cashu:cashuBtoken\n');
+
+        expect(CashuStore.decodeTokenCDK).toHaveBeenCalledWith('cashuBtoken');
+        expect(CashuStore.receiveTokenCDK).toHaveBeenCalledWith(
+            'cashuBtoken',
+            undefined,
+            MINT
+        );
+        expect(CashuStore.setWatchedInvoicePaid).toHaveBeenCalledWith(21);
+    });
+
+    it.each([
+        [
+            'less than requested',
+            { value: 20, mint_url: MINT, unit: 'sat' },
+            'views.Cashu.ReceiveEcash.creqUnderpaid'
+        ],
+        [
+            'from another mint',
+            { value: 21, mint_url: 'https://evil.example', unit: 'sat' },
+            'views.Cashu.ReceiveEcash.creqWrongMint'
+        ]
+    ])('refuses a token %s', async (_, token, error) => {
+        const { view, CashuStore } = makeMerchant({
+            decodeTokenCDK: jest.fn(async () => token)
+        });
+
+        await view.onNfcTokenReceived('cashuBtoken');
+
+        expect(Alert.alert).toHaveBeenCalledWith('general.error', error);
+        expect(CashuStore.receiveTokenCDK).not.toHaveBeenCalled();
+        expect(CashuStore.setWatchedInvoicePaid).not.toHaveBeenCalled();
+    });
+
+    it('waits quietly through a write that is not a token yet', async () => {
+        const { view, CashuStore } = makeMerchant();
+        CashuStore.decodeTokenCDK.mockRejectedValueOnce(new Error('bad token'));
+
+        await view.onNfcTokenReceived('cashuBtok');
+        expect(Alert.alert).not.toHaveBeenCalled();
+        expect(CashuStore.receiveTokenCDK).not.toHaveBeenCalled();
+
+        await view.onNfcTokenReceived('cashuBtoken');
+        expect(CashuStore.receiveTokenCDK).toHaveBeenCalledTimes(1);
+    });
+
+    it('redeems one token when writes arrive while redeeming', async () => {
+        let finishReceive: (amount: number) => void = () => {};
+        const { view, CashuStore } = makeMerchant({
+            receiveTokenCDK: jest.fn(
+                () => new Promise((resolve) => (finishReceive = resolve))
+            )
+        });
+
+        const first = view.onNfcTokenReceived('cashuBtoken');
+        await flush();
+        await view.onNfcTokenReceived('cashuBtoken');
+        finishReceive(21);
+        await first;
+
+        expect(CashuStore.receiveTokenCDK).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores tokens once the invoice shows as paid', async () => {
+        const { view, CashuStore } = makeMerchant({ watchedInvoicePaid: true });
+
+        await view.onNfcTokenReceived('cashuBtoken');
+
+        expect(CashuStore.decodeTokenCDK).not.toHaveBeenCalled();
+    });
+
+    it('tells the merchant when redeeming fails', async () => {
+        const { view, CashuStore } = makeMerchant({
+            receiveTokenCDK: jest.fn(async () => {
+                throw new Error('Token already spent');
+            })
+        });
+
+        await view.onNfcTokenReceived('cashuBtoken');
+
+        expect(Alert.alert).toHaveBeenCalledWith(
+            'general.error',
+            'views.Cashu.ReceiveEcash.creqRedeemFailed'
+        );
+        expect(CashuStore.setWatchedInvoicePaid).not.toHaveBeenCalled();
+    });
+});
