@@ -311,6 +311,7 @@ describe('clearAllData node data directory wipe (KEY-005 regression)', () => {
         expect(mockedPurgeCsvExports).toHaveBeenCalledWith(true);
         expect(mockedPurgeCsvStaging).toHaveBeenCalledTimes(1);
         expect(mockedPurgeConfigExports).toHaveBeenCalledTimes(1);
+        expect(mockedPurgeConfigExports).toHaveBeenCalledWith(true);
     });
 
     it('does not delete an ldk-node directory when ldkNodeDir is missing', async () => {

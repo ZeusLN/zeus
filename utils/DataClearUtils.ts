@@ -1032,11 +1032,12 @@ export async function clearAllData(): Promise<void> {
     // storage (activity CSVs and credential-bearing wallet config backups).
     // These live outside the app-private keys cleared below, so they must
     // be unlinked explicitly. Unlike the startup migration, the wipe also
-    // sweeps Android Downloads CSVs and the share-staging cache dir: a
-    // panic/duress wipe should not leave a transaction history behind.
+    // sweeps Android Downloads (CSVs and config backups) and the
+    // share-staging cache dir: a panic/duress wipe should not leave a
+    // transaction history or wallet config behind.
     await purgeLegacyActivityCsvExports(true);
     await purgeCsvShareStaging();
-    await purgeLegacyNodeConfigExports();
+    await purgeLegacyNodeConfigExports(true);
 
     // 2g. Delete wallet and contact pictures. They sit in the documents
     // directory, which is included in device backups.

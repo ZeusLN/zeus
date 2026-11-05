@@ -2914,6 +2914,7 @@ describe('MigrationUtils', () => {
             // wipe passes includeAndroidDownloads
             expect(mockPurgeCsvExports).toHaveBeenCalledWith();
             expect(mockPurgeConfigExports).toHaveBeenCalledTimes(1);
+            expect(mockPurgeConfigExports).toHaveBeenCalledWith();
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
                 'legacy-export-file-cleanup',
                 'true'

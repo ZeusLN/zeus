@@ -162,14 +162,25 @@ export const exportNodeConfigs = async (
 // Best-effort removal of wallet config exports that older builds wrote to
 // shared storage (Android public Downloads, iOS Files-visible Documents).
 // They carry connection credentials, are optionally encrypted, and nothing
-// ever deleted them. Best-effort only: under Android scoped storage the file
-// can only be removed by the install that created it, and a failed unlink
-// can never succeed on a later retry.
-export const purgeLegacyNodeConfigExports = async (): Promise<void> => {
-    const dir =
-        Platform.OS === 'android'
-            ? RNFS.DownloadDirectoryPath
-            : RNFS.DocumentDirectoryPath;
+// ever deleted them. The migration covers only iOS Documents: invisible to
+// the user once file sharing is disabled, yet still swept into
+// iCloud/iTunes backups. Android Downloads is left alone there because,
+// since the save-dialog export, users pick Downloads on purpose for their
+// (always encrypted) backups and can still see and import them. A full
+// wipe passes includeAndroidDownloads. Best-effort only: under Android
+// scoped storage the file can only be removed by the install that created
+// it, and a failed unlink can never succeed on a later retry.
+export const purgeLegacyNodeConfigExports = async (
+    includeAndroidDownloads = false
+): Promise<void> => {
+    let dir: string;
+    if (Platform.OS === 'ios') {
+        dir = RNFS.DocumentDirectoryPath;
+    } else if (includeAndroidDownloads) {
+        dir = RNFS.DownloadDirectoryPath;
+    } else {
+        return;
+    }
     try {
         const entries = await RNFS.readDir(dir);
         for (const entry of entries) {
