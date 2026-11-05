@@ -2,6 +2,9 @@ jest.mock('react-native-randombytes', () => ({
     randomBytes: (n: number) => jest.requireActual('crypto').randomBytes(n)
 }));
 
+import fs from 'fs';
+import path from 'path';
+
 import {
     SEND_LABEL_PREFIX,
     findSentTransaction,
@@ -283,6 +286,20 @@ describe('mayHaveBeenSent', () => {
     ])('is false for %s on REST backends', (_, message) => {
         expect(mayHaveBeenSent(new Error(message), 'lnd')).toBe(false);
         expect(mayHaveBeenSent(message, 'cln-rest')).toBe(false);
+    });
+
+    // iOS returns these texts in the device's language once the app
+    // declares another localization, and the iOS patterns stop matching
+    it('relies on an iOS app that declares only English', () => {
+        const plist = fs.readFileSync(
+            path.join(__dirname, '../ios/zeus/Info.plist'),
+            'utf8'
+        );
+        expect(plist).toMatch(
+            /<key>CFBundleDevelopmentRegion<\/key>\s*<string>en<\/string>/
+        );
+        expect(plist).not.toContain('CFBundleLocalizations');
+        expect(plist).not.toContain('CFBundleAllowMixedLocalizations');
     });
 
     it.each([

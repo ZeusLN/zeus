@@ -47,11 +47,15 @@ const LNC_NOT_SENT =
 // refused connection, an unresolved host, or a failed TLS handshake.
 // Android passes OkHttp's exception message, iOS the NSURLSession error's
 // localizedDescription, and the Tor path the nitro-tor error (reqwest and
-// hyper underneath). A connection lost after that ("unexpected end of
+// hyper underneath). iOS gives the English text on every device only
+// while ios/zeus/Info.plist declares no localization but English: with
+// CFBundleLocalizations or CFBundleAllowMixedLocalizations, a German
+// device gets German text and the iOS patterns stop matching. A
+// connection lost after the request is written ("unexpected end of
 // stream", "The network connection was lost.", "connection closed before
-// message completed") may still have delivered the request, and so may a
-// timeout: Android reports connect and read timeouts alike as "The request
-// timed out." iOS's "The Internet connection appears to be offline." is
+// message completed") may still have delivered it, and so may a timeout:
+// Android reports connect and read timeouts alike as "The request timed
+// out." iOS's "The Internet connection appears to be offline." is
 // left out: it was not captured on a device, and nothing shows that iOS
 // raises it only before the request is written.
 const NOT_DELIVERED = [
