@@ -101,6 +101,7 @@ import {
 import Storage from '../storage';
 import BackendUtils from '../utils/BackendUtils';
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
+import CashuInvoice from '../models/CashuInvoice';
 import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
 import CashuInvoice from '../models/CashuInvoice';
@@ -2703,6 +2704,125 @@ function makePendingMakeInvoiceActivity(
     };
 }
 
+describe('NostrWalletConnectStore list_transactions pending make_invoice', () => {
+    const HASH = hex64('b');
+    const REQUEST = 'lnbc1list-pending';
+    const PREIMAGE = hex64('7');
+
+    const lightningInvoice = (overrides: Record<string, unknown> = {}) =>
+        new Invoice({
+            r_hash: Base64Utils.hexToBase64(HASH),
+            payment_request: REQUEST,
+            creation_date: String(Math.floor(Date.now() / 1000) - 60),
+            expiry: '3600',
+            value: '1000',
+            ...overrides
+        });
+
+    function setup() {
+        const { store } = createStore();
+        const connection = addConnection(store, {
+            permissions: ['make_invoice', 'list_transactions'],
+            activity: [
+                {
+                    id: REQUEST,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 1000,
+                    paymentHash: HASH,
+                    invoice: lightningInvoice(),
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+        return { store, connection };
+    }
+
+    it('lists a make_invoice that was paid on the node', async () => {
+        const { store, connection } = setup();
+        const scheduleSave = jest
+            .spyOn(store as any, 'scheduleSave')
+            .mockImplementation(() => {});
+        jest.spyOn(
+            NostrConnectUtils,
+            'lookupInvoicePaidFromNode'
+        ).mockResolvedValue(true);
+        jest.spyOn(
+            NostrWalletConnectStore.prototype as any,
+            'refreshLightningInvoiceFromNode'
+        ).mockResolvedValue(
+            lightningInvoice({
+                settled: true,
+                settle_date: String(Math.floor(Date.now() / 1000)),
+                r_preimage: Base64Utils.hexToBase64(PREIMAGE)
+            })
+        );
+
+        const response = await (store as any).handleListTransactions(
+            connection,
+            {}
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(response.result.transactions).toHaveLength(1);
+        expect(response.result.transactions[0]).toMatchObject({
+            type: 'incoming',
+            state: 'settled',
+            payment_hash: HASH,
+            preimage: PREIMAGE
+        });
+        expect(response.result.total_count).toBe(1);
+        expect(connection.activity[0].status).toBe('success');
+        // the settled status is saved, not only held in memory
+        expect(scheduleSave).toHaveBeenCalled();
+    });
+
+    it('leaves an open make_invoice pending and lists it only with unpaid: true', async () => {
+        const { store, connection } = setup();
+        jest.spyOn(
+            NostrConnectUtils,
+            'lookupInvoicePaidFromNode'
+        ).mockResolvedValue(false);
+
+        const settledOnly = await (store as any).handleListTransactions(
+            connection,
+            {}
+        );
+        const withUnpaid = await (store as any).handleListTransactions(
+            connection,
+            { unpaid: true }
+        );
+
+        expect(settledOnly.result.transactions).toHaveLength(0);
+        expect(withUnpaid.result.transactions).toHaveLength(1);
+        expect(withUnpaid.result.transactions[0].state).toBe('pending');
+        expect(connection.activity[0].status).toBe('pending');
+    });
+
+    it('still answers when the node cannot be reached to check an invoice', async () => {
+        const { store, connection } = setup();
+        jest.spyOn(
+            NostrConnectUtils,
+            'lookupInvoicePaidFromNode'
+        ).mockRejectedValue(new Error('node unreachable'));
+        const consoleError = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+
+        const response = await (store as any).handleListTransactions(
+            connection,
+            { unpaid: true }
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(response.result.transactions).toHaveLength(1);
+        expect(response.result.transactions[0].state).toBe('pending');
+        expect(connection.activity[0].status).toBe('pending');
+        expect(consoleError).toHaveBeenCalled();
+    });
+});
+
 describe('NostrWalletConnectStore make_invoice limits', () => {
     it('does not count expired pending make_invoice toward the outstanding cap', () => {
         const { store } = createStore();
@@ -3020,6 +3140,52 @@ describe('NostrWalletConnectStore make_invoice from Cashu', () => {
             'lnbc-first',
             'lnbc-second'
         ]);
+    });
+
+    it('list_transactions lists a Cashu invoice that was paid at the mint', async () => {
+        const { store, connection, cashuStore } = setup();
+        const request = 'lnbc1list-pending-cashu';
+        const cashuInvoice = (paid: boolean) =>
+            new CashuInvoice({
+                quote: 'quote-list',
+                request,
+                state: paid ? 'PAID' : 'UNPAID',
+                paid,
+                mintUrl: MINT,
+                expiry: Math.floor(Date.now() / 1000) + 3600
+            } as any);
+        connection.activity = [
+            {
+                id: request,
+                type: 'make_invoice',
+                payment_source: 'cashu',
+                status: 'pending',
+                satAmount: 1000,
+                invoice: cashuInvoice(false),
+                createdAt: new Date(Date.now() - 60_000)
+            }
+        ] as any;
+        const checkInvoicePaid = jest
+            .spyOn(cashuStore, 'checkInvoicePaid')
+            .mockResolvedValue({
+                isPaid: true,
+                amtSat: '1000',
+                updatedInvoice: cashuInvoice(true)
+            } as any);
+
+        const response = await (store as any).handleListTransactions(
+            connection,
+            {}
+        );
+
+        expect(checkInvoicePaid).toHaveBeenCalledTimes(1);
+        expect(response.error).toBeUndefined();
+        expect(response.result.transactions).toHaveLength(1);
+        expect(response.result.transactions[0]).toMatchObject({
+            type: 'incoming',
+            state: 'settled'
+        });
+        expect(connection.activity[0].status).toBe('success');
     });
 });
 
