@@ -932,9 +932,11 @@ class MigrationsUtils {
     // CSVs and wallet config backups (connection credentials) to the
     // Files-visible Documents dir on iOS, config backups to public Downloads
     // on Android. Exports now go through the share sheet and iOS file sharing
-    // is disabled, but files written by older builds persist until removed:
-    // invisible to the user, yet still swept into iCloud/iTunes backups.
-    // One-shot best-effort cleanup; the flag is set regardless of outcome
+    // is disabled, but files written by older builds persist until removed.
+    // On iOS they are invisible to the user, yet still swept into
+    // iCloud/iTunes backups, so they are purged here. Android Downloads is
+    // left to clearAllData: users can still see those files, and config
+    // backups saved there through the save dialog are deliberate. One-shot best-effort cleanup; the flag is set regardless of outcome
     // because a failed unlink (scoped storage, file owned by a previous
     // install) can never succeed on a later retry. Runs before the settings
     // blob is even read, so it covers both the legacy and modern
