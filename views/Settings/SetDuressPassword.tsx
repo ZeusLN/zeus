@@ -31,6 +31,7 @@ interface SetDuressPassphraseState {
     duressPassphraseMismatchError: boolean;
     duressPassphraseInvalidError: boolean;
     duressPassphraseEmptyError: boolean;
+    saveError: boolean;
 }
 
 @inject('SettingsStore')
@@ -45,7 +46,8 @@ export default class SetDuressPassphrase extends React.Component<
         hasSavedDuressPassphrase: false,
         duressPassphraseMismatchError: false,
         duressPassphraseInvalidError: false,
-        duressPassphraseEmptyError: false
+        duressPassphraseEmptyError: false,
+        saveError: false
     };
 
     async componentDidMount() {
@@ -89,21 +91,36 @@ export default class SetDuressPassphrase extends React.Component<
             return;
         }
 
-        const settings = await getSettings();
+        // A failed key derivation or settings write rejects. Nothing is
+        // saved in that case, so the user is told and can save again.
+        try {
+            const settings = await getSettings();
 
-        if (await verifySecret(duressPassphrase, settings.passphraseVerifier)) {
-            this.setState({
-                duressPassphraseInvalidError: true
-            });
+            if (
+                await verifySecret(
+                    duressPassphrase,
+                    settings.passphraseVerifier
+                )
+            ) {
+                this.setState({
+                    duressPassphraseInvalidError: true
+                });
 
+                return;
+            }
+
+            const duressPassphraseVerifier = await deriveVerifier(
+                duressPassphrase
+            );
+            await updateSettings({ duressPassphraseVerifier });
+        } catch (error) {
+            console.error('Failed to save the duress password', error);
+            this.setState({ saveError: true });
             return;
         }
 
-        const duressPassphraseVerifier = await deriveVerifier(duressPassphrase);
-        await updateSettings({ duressPassphraseVerifier }).then(() => {
-            getSettings();
-            navigation.popTo('Security');
-        });
+        getSettings();
+        navigation.popTo('Security');
     };
 
     deleteDuressPassword = async () => {
@@ -125,7 +142,8 @@ export default class SetDuressPassphrase extends React.Component<
             hasSavedDuressPassphrase,
             duressPassphraseMismatchError,
             duressPassphraseInvalidError,
-            duressPassphraseEmptyError
+            duressPassphraseEmptyError,
+            saveError
         } = this.state;
 
         return (
@@ -173,6 +191,13 @@ export default class SetDuressPassphrase extends React.Component<
                             )}
                         />
                     )}
+                    {saveError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.Security.saveFailed'
+                            )}
+                        />
+                    )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.newDuressPassword')}
                     </Text>
@@ -185,7 +210,8 @@ export default class SetDuressPassphrase extends React.Component<
                                 duressPassphrase: text,
                                 duressPassphraseMismatchError: false,
                                 duressPassphraseInvalidError: false,
-                                duressPassphraseEmptyError: false
+                                duressPassphraseEmptyError: false,
+                                saveError: false
                             })
                         }
                         autoCapitalize="none"
@@ -213,7 +239,8 @@ export default class SetDuressPassphrase extends React.Component<
                                 duressPassphraseConfirm: text,
                                 duressPassphraseMismatchError: false,
                                 duressPassphraseInvalidError: false,
-                                duressPassphraseEmptyError: false
+                                duressPassphraseEmptyError: false,
+                                saveError: false
                             })
                         }
                         autoCapitalize="none"

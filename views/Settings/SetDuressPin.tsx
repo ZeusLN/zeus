@@ -24,6 +24,7 @@ interface SetDuressPinState {
     duressPinConfirm: string;
     duressPinMismatchError: boolean;
     duressPinInvalidError: boolean;
+    saveError: boolean;
 }
 
 @inject('SettingsStore')
@@ -36,7 +37,8 @@ export default class SetDuressPin extends React.Component<
         duressPin: '',
         duressPinConfirm: '',
         duressPinMismatchError: false,
-        duressPinInvalidError: false
+        duressPinInvalidError: false,
+        saveError: false
     };
 
     renderSeparator = () => (
@@ -53,7 +55,8 @@ export default class SetDuressPin extends React.Component<
             this.setState({
                 duressPin: value,
                 duressPinMismatchError: false,
-                duressPinInvalidError: false
+                duressPinInvalidError: false,
+                saveError: false
             });
         } else {
             this.setState({ duressPinConfirm: value }, () => {
@@ -65,7 +68,8 @@ export default class SetDuressPin extends React.Component<
     onPinChange = () => {
         this.setState({
             duressPinMismatchError: false,
-            duressPinInvalidError: false
+            duressPinInvalidError: false,
+            saveError: false
         });
     };
 
@@ -84,30 +88,46 @@ export default class SetDuressPin extends React.Component<
             return;
         }
 
-        const settings = await getSettings();
+        // A failed key derivation or settings write rejects. Nothing is
+        // saved in that case, so the user is told and can enter it again.
+        try {
+            const settings = await getSettings();
 
-        if (await verifySecret(duressPin, settings.pinVerifier)) {
+            if (await verifySecret(duressPin, settings.pinVerifier)) {
+                this.setState({
+                    duressPinInvalidError: true,
+                    duressPin: '',
+                    duressPinConfirm: ''
+                });
+
+                return;
+            }
+
+            const duressPinVerifier = await deriveVerifier(duressPin);
+            await updateSettings({ duressPinVerifier });
+        } catch (error) {
+            console.error('Failed to save the duress PIN', error);
             this.setState({
-                duressPinInvalidError: true,
+                saveError: true,
                 duressPin: '',
                 duressPinConfirm: ''
             });
-
             return;
         }
 
-        const duressPinVerifier = await deriveVerifier(duressPin);
-        await updateSettings({ duressPinVerifier }).then(() => {
-            getSettings();
-            navigation.popTo('Security');
-        });
+        getSettings();
+        navigation.popTo('Security');
     };
 
     render() {
         const { navigation, SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const { duressPin, duressPinMismatchError, duressPinInvalidError } =
-            this.state;
+        const {
+            duressPin,
+            duressPinMismatchError,
+            duressPinInvalidError,
+            saveError
+        } = this.state;
 
         return (
             <Screen>
@@ -130,6 +150,13 @@ export default class SetDuressPin extends React.Component<
                             <ErrorMessage
                                 message={localeString(
                                     'views.Settings.SetPin.invalid'
+                                )}
+                            />
+                        )}
+                        {saveError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.Security.saveFailed'
                                 )}
                             />
                         )}

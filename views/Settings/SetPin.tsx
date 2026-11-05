@@ -29,6 +29,7 @@ interface SetPinState {
     pinConfirm: string;
     pinMismatchError: boolean;
     pinInvalidError: boolean;
+    saveError: boolean;
 }
 
 @inject('SettingsStore')
@@ -38,7 +39,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         pin: '',
         pinConfirm: '',
         pinMismatchError: false,
-        pinInvalidError: false
+        pinInvalidError: false,
+        saveError: false
     };
 
     renderSeparator = () => (
@@ -55,7 +57,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             this.setState({
                 pin: value,
                 pinMismatchError: false,
-                pinInvalidError: false
+                pinInvalidError: false,
+                saveError: false
             });
         } else {
             this.setState({ pinConfirm: value }, () => {
@@ -67,7 +70,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     onPinChange = () => {
         this.setState({
             pinMismatchError: false,
-            pinInvalidError: false
+            pinInvalidError: false,
+            saveError: false
         });
     };
 
@@ -86,32 +90,41 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             return;
         }
 
-        const settings = await getSettings();
+        // A failed key derivation or settings write rejects. Nothing is
+        // saved in that case, so the user is told and can enter it again.
+        try {
+            const settings = await getSettings();
 
-        if (await verifySecret(pin, settings.duressPinVerifier)) {
-            this.setState({
-                pinInvalidError: true,
-                pin: '',
-                pinConfirm: ''
-            });
+            if (await verifySecret(pin, settings.duressPinVerifier)) {
+                this.setState({
+                    pinInvalidError: true,
+                    pin: '',
+                    pinConfirm: ''
+                });
 
+                return;
+            }
+
+            const pinVerifier = await deriveVerifier(pin);
+            await updateSettings({ pinVerifier });
+        } catch (error) {
+            console.error('Failed to save the PIN', error);
+            this.setState({ saveError: true, pin: '', pinConfirm: '' });
             return;
         }
 
-        const pinVerifier = await deriveVerifier(pin);
-        await updateSettings({ pinVerifier }).then(() => {
-            setLoginStatus(true);
-            getSettings();
-            navigation.popTo('Security', {
-                enableBiometrics: route.params?.forBiometrics
-            });
+        setLoginStatus(true);
+        getSettings();
+        navigation.popTo('Security', {
+            enableBiometrics: route.params?.forBiometrics
         });
     };
 
     render() {
         const { navigation, SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const { pin, pinMismatchError, pinInvalidError } = this.state;
+        const { pin, pinMismatchError, pinInvalidError, saveError } =
+            this.state;
 
         return (
             <Screen>
@@ -134,6 +147,13 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                             <ErrorMessage
                                 message={localeString(
                                     'views.Settings.SetPin.invalid'
+                                )}
+                            />
+                        )}
+                        {saveError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.Security.saveFailed'
                                 )}
                             />
                         )}
