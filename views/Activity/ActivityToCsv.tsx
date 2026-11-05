@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
     StyleSheet,
     View,
+    Alert,
     Modal,
     KeyboardAvoidingView,
     Platform
@@ -112,6 +113,10 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                 closeModal();
             } catch (err) {
                 console.error('Failed to share CSV file:', err);
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.ActivityToCsv.csvDownloadFailed')
+                );
             } finally {
                 setIsLoading(false);
             }
