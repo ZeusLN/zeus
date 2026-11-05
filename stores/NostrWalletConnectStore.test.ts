@@ -2732,7 +2732,9 @@ describe('NostrWalletConnectStore list_transactions pending make_invoice', () =>
                     satAmount: 1000,
                     paymentHash: HASH,
                     invoice: lightningInvoice(),
-                    createdAt: new Date(Date.now() - 60_000)
+                    createdAt: new Date(Date.now() - 60_000),
+                    // recorded as a Date, as recordMakeInvoiceActivity does
+                    expiresAt: new Date(Date.now() + 3_540_000)
                 }
             ]
         });
@@ -2778,26 +2780,80 @@ describe('NostrWalletConnectStore list_transactions pending make_invoice', () =>
         expect(scheduleSave).toHaveBeenCalled();
     });
 
-    it('leaves an open make_invoice pending and lists it only with unpaid: true', async () => {
+    it('lists an open make_invoice as pending, unless the app opts out', async () => {
         const { store, connection } = setup();
         jest.spyOn(
             NostrConnectUtils,
             'lookupInvoicePaidFromNode'
         ).mockResolvedValue(false);
 
-        const settledOnly = await (store as any).handleListTransactions(
+        const byDefault = await (store as any).handleListTransactions(
             connection,
             {}
         );
-        const withUnpaid = await (store as any).handleListTransactions(
+        const optedOut = await (store as any).handleListTransactions(
             connection,
-            { unpaid: true }
+            { unpaid: false }
         );
 
-        expect(settledOnly.result.transactions).toHaveLength(0);
-        expect(withUnpaid.result.transactions).toHaveLength(1);
-        expect(withUnpaid.result.transactions[0].state).toBe('pending');
+        expect(byDefault.result.transactions).toHaveLength(1);
+        expect(byDefault.result.transactions[0]).toMatchObject({
+            type: 'incoming',
+            state: 'pending',
+            payment_hash: HASH
+        });
+        // unix seconds, not the milliseconds a Date turns into: a client
+        // reads milliseconds as an expiry tens of thousands of years away
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        expect(byDefault.result.transactions[0].expires_at).toBeGreaterThan(
+            nowSeconds
+        );
+        expect(byDefault.result.transactions[0].expires_at).toBeLessThan(
+            nowSeconds + 3600
+        );
+        expect(optedOut.result.transactions).toHaveLength(0);
         expect(connection.activity[0].status).toBe('pending');
+    });
+
+    it('lists an expired make_invoice, with its expiry, unless the app opts out', async () => {
+        const { store, connection } = setup();
+        // "expired" is read from the decoded BOLT11, so this needs a real
+        // invoice: the BOLT11 spec example, created in 2017 with a 60 second
+        // expiry. creation_date and expiry match it, as they do on a real
+        // node's invoice, because expires_at is built from them.
+        connection.activity[0].invoice = lightningInvoice({
+            payment_request:
+                'lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp',
+            creation_date: '1496314658',
+            expiry: '60'
+        });
+        connection.activity[0].expiresAt = new Date((1496314658 + 60) * 1000);
+        jest.spyOn(
+            NostrConnectUtils,
+            'lookupInvoicePaidFromNode'
+        ).mockResolvedValue(false);
+
+        const byDefault = await (store as any).handleListTransactions(
+            connection,
+            {}
+        );
+        const optedOut = await (store as any).handleListTransactions(
+            connection,
+            { unpaid_incoming: false }
+        );
+
+        expect(connection.activity[0].status).toBe('expired');
+        expect(byDefault.result.transactions).toHaveLength(1);
+        expect(byDefault.result.transactions[0]).toMatchObject({
+            type: 'incoming',
+            state: 'failed',
+            payment_hash: HASH
+        });
+        // NIP-47 has no expired state, so the client reads expires_at
+        expect(byDefault.result.transactions[0].expires_at).toBe(
+            1496314658 + 60
+        );
+        expect(optedOut.result.transactions).toHaveLength(0);
     });
 
     it('still answers when the node cannot be reached to check an invoice', async () => {
@@ -2812,7 +2868,7 @@ describe('NostrWalletConnectStore list_transactions pending make_invoice', () =>
 
         const response = await (store as any).handleListTransactions(
             connection,
-            { unpaid: true }
+            {}
         );
 
         expect(response.error).toBeUndefined();

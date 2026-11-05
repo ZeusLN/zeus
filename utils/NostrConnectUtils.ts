@@ -1531,9 +1531,15 @@ export default class NostrConnectUtils {
     private static extractExpiresAtFromActivity(
         activity: ConnectionActivity
     ): number {
-        const explicitExpiresAt = Number(activity?.expiresAt);
-        if (explicitExpiresAt > 0) {
-            return explicitExpiresAt;
+        // activity.expiresAt is a Date (an ISO string once it has been
+        // stored). Number() on a Date gives milliseconds, but NIP-47
+        // timestamps are unix seconds, and a client that reads milliseconds
+        // as seconds shows an expiry tens of thousands of years away.
+        const explicitExpiresAtMs = activity?.expiresAt
+            ? new Date(activity.expiresAt).getTime()
+            : NaN;
+        if (explicitExpiresAtMs > 0) {
+            return Math.floor(explicitExpiresAtMs / 1000);
         }
 
         if (activity.invoice) {
@@ -1707,11 +1713,24 @@ export default class NostrConnectUtils {
             filtered = filtered.filter((tx) => tx.created_at <= request.until!);
         }
 
-        // NIP-47 defines unpaid as "include unpaid invoices, default false", so
-        // it widens the result rather than selecting only unpaid ones
-        if (!request.unpaid) {
-            filtered = filtered.filter((tx) => tx.state === 'settled');
-        }
+        // NIP-47 defines unpaid as "include unpaid invoices, default false".
+        // Zeus departs from that default for incoming invoices: an app that
+        // created an invoice with make_invoice expects to see it in its
+        // activity while it is open and after it expired, so incoming
+        // invoices are listed in every state unless the app opts out with
+        // unpaid: false or unpaid_incoming: false. Outgoing payments that did
+        // not settle stay hidden unless unpaid or unpaid_outgoing is true.
+        // unpaid_incoming / unpaid_outgoing are not in the spec (the SDK
+        // sends them) and take precedence over unpaid for their direction.
+        const unpaidIncoming =
+            request.unpaid_incoming ?? request.unpaid ?? true;
+        const unpaidOutgoing =
+            request.unpaid_outgoing ?? request.unpaid ?? false;
+        filtered = filtered.filter(
+            (tx) =>
+                tx.state === 'settled' ||
+                (tx.type === 'incoming' ? unpaidIncoming : unpaidOutgoing)
+        );
 
         // Calculate pagination
         const totalCount = filtered.length;
