@@ -118,6 +118,7 @@ class BackendUtils {
     spliceOut = (...args: any[]) => this.call('spliceOut', args);
     getSpliceTransactionStatus = (...args: any[]) =>
         this.call('getSpliceTransactionStatus', args);
+    getSpliceHistory = (...args: any[]) => this.call('getSpliceHistory', args);
     getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
     getFees = (...args: any[]) => this.call('getFees', args);
     setFees = (...args: any[]) => this.call('setFees', args);

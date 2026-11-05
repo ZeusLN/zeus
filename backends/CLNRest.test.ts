@@ -17,6 +17,7 @@ jest.mock('./CoreLightningRequestHandler', () => ({
     getBalance: jest.fn(),
     getChainTransactions: jest.fn(),
     getOffchainBalance: jest.fn(),
+    getSpliceHistory: jest.fn(),
     listPeers: jest.fn(),
     listClosedChannels: jest.fn(),
     listPeerChannels: jest.fn()
@@ -425,6 +426,22 @@ describe('CLNRest splicing', () => {
         await expect(
             cln.spliceIn({ fundingTxid: 'funding-txid', amountSats: 50000 })
         ).rejects.toThrow('Peer does not support splicing');
+    });
+
+    it('unwraps the error of the splice step that failed', async () => {
+        answer(
+            Promise.reject(
+                new Error(
+                    'addpsbtinput: {"code":301,"message":"Could not afford 3469690sat using all 3 available UTXOs: 258sat short"}'
+                )
+            )
+        );
+
+        await expect(
+            cln.spliceIn({ fundingTxid: 'funding-txid', amountSats: 50000 })
+        ).rejects.toThrow(
+            /^addpsbtinput: Could not afford 3469690sat using all 3 available UTXOs: 258sat short$/
+        );
     });
 
     it('reports a splice still in negotiation as requested when the wait runs out', async () => {

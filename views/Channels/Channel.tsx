@@ -241,13 +241,17 @@ export default class ChannelView extends React.Component<
         const { closeChannelErr, closingChannel } = ChannelsStore;
 
         // A splice changes the channel's funding and capacity when it locks,
-        // so show the channel as listed now rather than as it was opened
+        // so show the channel as listed now rather than as it was opened.
+        // LDK keeps user_channel_id across splices, Core Lightning its
+        // channel id
         const channel =
-            (openedChannel.user_channel_id &&
-                ChannelsStore.enrichedChannels.find(
-                    (c) => c.user_channel_id === openedChannel.user_channel_id
-                )) ||
-            openedChannel;
+            ChannelsStore.enrichedChannels.find((c) =>
+                openedChannel.user_channel_id
+                    ? c.user_channel_id === openedChannel.user_channel_id
+                    : BackendUtils.supportsSplicing() &&
+                      !!openedChannel.chan_id &&
+                      c.chan_id === openedChannel.chan_id
+            ) || openedChannel;
 
         const pendingSplice = SpliceStore.getPendingSplice(channel);
 

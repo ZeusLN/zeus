@@ -16,6 +16,20 @@ export interface SpliceEvent {
     vout?: number;
 }
 
+// A splice in progress as a backend that tracks its own splices reports it
+// on the channel (Core Lightning). The channel keeps its old funding and
+// capacity until the splice locks, as on LDK
+export interface ReportedSplice {
+    txid: string;
+    vout: number;
+    initiator: 'local' | 'remote';
+    direction?: SpliceDirection;
+    // our side's share; unknown for a splice the peer started
+    amountSats?: number;
+    // the channel's capacity once the splice locks
+    capacitySats: number;
+}
+
 // A splice transaction's confirmations once it is in the on-chain list.
 // total is the depth the channel locks at, when the backend reports it
 export interface SpliceConfirmations {
