@@ -13,6 +13,7 @@ import NodeInfoStore from './NodeInfoStore';
 import TransactionsStore from './TransactionsStore';
 
 import Channel from '../models/Channel';
+import Utxo from '../models/Utxo';
 
 import Storage from '../storage';
 import BackendUtils from '../utils/BackendUtils';
@@ -503,15 +504,21 @@ export default class SpliceStore {
         this.spliceInAvailableError = null;
 
         try {
-            const [{ utxos }, balance] = await Promise.all([
+            const [unspent, balance] = await Promise.all([
                 BackendUtils.getUTXOs(),
                 BackendUtils.getBlockchainBalance()
             ]);
 
-            const confirmedSats = utxos
-                .filter((utxo: any) => Number(utxo.confirmations) > 0)
+            // LDK lists utxos with sats; CLN lists outputs with msat, and
+            // only a status when its tip height is unknown
+            const confirmedSats = (unspent.utxos || unspent.outputs || [])
+                .map((utxo: any) => new Utxo(utxo))
+                .filter(
+                    (utxo: Utxo) =>
+                        utxo.getConfs > 0 || utxo.status === 'confirmed'
+                )
                 .reduce(
-                    (sum: number, utxo: any) => sum + Number(utxo.amount_sat),
+                    (sum: number, utxo: Utxo) => sum + Number(utxo.getAmount),
                     0
                 );
 
