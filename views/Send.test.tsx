@@ -769,7 +769,8 @@ describe('Send scanNfc', () => {
         (payViaNfcTap as jest.Mock).mockResolvedValue({
             status: 'confirm',
             creqParams,
-            creqString: 'creqAoWFhZA'
+            creqString: 'CREQB1QYQQSE',
+            invoice: 'LNBC500U1XYZ'
         });
         const send = await renderWithRef();
 
@@ -777,7 +778,8 @@ describe('Send scanNfc', () => {
 
         expect(navigation.navigate).toHaveBeenCalledWith('CREQPayment', {
             creqParams,
-            creqString: 'creqAoWFhZA'
+            creqString: 'CREQB1QYQQSE',
+            invoice: 'LNBC500U1XYZ'
         });
     });
 

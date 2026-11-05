@@ -449,6 +449,26 @@ describe('PaymentMethodList CREQ', () => {
         });
     });
 
+    it('hands CREQPayment the Lightning invoice from the same URI', async () => {
+        const navigation = { navigate: jest.fn() };
+        await renderList({
+            navigation,
+            creqParams,
+            creqString,
+            lightning: 'lnbc210n1xyz',
+            ecashBalance: 2_000,
+            satAmount: 21
+        });
+
+        fireEvent.press(screen.getByText('components.LayerBalances.ecashCreq'));
+
+        expect(navigation.navigate).toHaveBeenCalledWith('CREQPayment', {
+            creqParams,
+            creqString,
+            invoice: 'lnbc210n1xyz'
+        });
+    });
+
     it('does nothing when the ecash balance is too low', async () => {
         const navigation = { navigate: jest.fn() };
         await renderList({

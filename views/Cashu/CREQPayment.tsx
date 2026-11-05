@@ -37,6 +37,8 @@ interface CREQPaymentProps {
         {
             creqParams: CREQParams;
             creqString: string;
+            /** the Lightning invoice the request came with, if any */
+            invoice?: string;
         }
     >;
 }
@@ -63,11 +65,12 @@ export default class CREQPayment extends React.Component<
     // then creates the token and writes it back
     payViaNfc = async () => {
         const { CashuStore, ModalStore } = this.props;
-        const { creqParams } = this.props.route.params;
+        const { creqParams, invoice } = this.props.route.params;
 
         this.setState({ loading: true, error: '' });
         const result = await payViaNfcTap(ModalStore, CashuStore, {
-            expected: creqParams
+            expected: creqParams,
+            expectedInvoice: invoice
         });
 
         if (result.status === 'paid') {

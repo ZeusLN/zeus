@@ -5,6 +5,7 @@ import { localeString } from './LocaleUtils';
 import handleAnything from './handleAnything';
 import { processSharedQRImageFast } from './ShareIntentProcessor';
 import { startedByInAppRestart } from './InAppRestartUtils';
+import { isTagRedelivery } from './NfcRedeliveryUtils';
 import { settingsStore } from '../stores/Stores';
 
 // Payment status screens that must never be popped out from under an
@@ -89,6 +90,8 @@ class LinkingUtils {
         navigation: NativeStackNavigationProp<any, any>
     ) => {
         const nfcData = await NativeModules.MobileTools.getIntentNfcData();
+        // the tag of an NFC payment that just ended, still in the field
+        if (nfcData && isTagRedelivery(nfcData)) return;
         if (nfcData) {
             this.handleDeepLink(nfcData, navigation);
             return;

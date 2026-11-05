@@ -350,7 +350,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             } else if (result.status === 'confirm') {
                 this.props.navigation.navigate('CREQPayment', {
                     creqParams: result.creqParams,
-                    creqString: result.creqString
+                    creqString: result.creqString,
+                    invoice: result.invoice
                 });
             } else if (result.status === 'read') {
                 if (result.text) this.validateAddress(result.text);

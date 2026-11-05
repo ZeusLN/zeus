@@ -19,6 +19,7 @@ import {
     CREQParams
 } from './CREQUtils';
 import { localeString } from './LocaleUtils';
+import { noteTagSessionEnded } from './NfcRedeliveryUtils';
 
 const decodeUtf8 = (data: Uint8Array): string | null => {
     try {
@@ -465,11 +466,22 @@ function ndefPayloadToString(payload: number[] | Uint8Array): string {
  */
 export function extractTagCREQ(text: string): string | undefined {
     if (isCREQ(text)) return text;
-    const match = text.match(/^bitcoin:[^?]*\?(?:[^#]*&)?creq=([^&#]+)/i);
+    const creq = bip321Param(text, 'creq');
+    return creq && isCREQ(creq) ? creq : undefined;
+}
+
+/** The Lightning invoice in a tag's BIP-321 URI, if any */
+export function extractTagInvoice(text: string): string | undefined {
+    return bip321Param(text, 'lightning');
+}
+
+function bip321Param(text: string, key: string): string | undefined {
+    const match = text.match(
+        new RegExp(`^bitcoin:[^?]*\\?(?:[^#]*&)?${key}=([^&#]+)`, 'i')
+    );
     if (!match) return undefined;
     try {
-        const creq = decodeURIComponent(match[1]);
-        return isCREQ(creq) ? creq : undefined;
+        return decodeURIComponent(match[1]);
     } catch {
         return undefined;
     }
@@ -481,7 +493,13 @@ export type NfcTapResult =
     /** not paid here: hand the tag's text to the regular input handlers */
     | { status: 'read'; text?: string }
     /** above the tap-to-pay limit: nothing paid, the user has to confirm */
-    | { status: 'confirm'; creqParams: CREQParams; creqString: string }
+    | {
+          status: 'confirm';
+          creqParams: CREQParams;
+          creqString: string;
+          /** the Lightning invoice next to the request, if any */
+          invoice?: string;
+      }
     | { status: 'failed'; error: string; tokenSaved?: boolean }
     | { status: 'cancelled' };
 
@@ -491,6 +509,8 @@ export interface NfcTapOptions {
      * must hold the same request, and the limit doesn't apply.
      */
     expected?: CREQParams;
+    /** The Lightning invoice the confirmed request came with, if any */
+    expectedInvoice?: string;
     /** Sats above which a request comes back as 'confirm' unpaid */
     limit?: number;
 }
@@ -508,7 +528,7 @@ export interface NfcTapOptions {
 export async function payViaNfcTap(
     modalStore: ModalStore,
     cashuStore: CashuStore,
-    { expected, limit }: NfcTapOptions = {}
+    { expected, expectedInvoice, limit }: NfcTapOptions = {}
 ): Promise<NfcTapResult> {
     if (!(await checkNfcEnabled(modalStore)))
         return {
@@ -518,6 +538,7 @@ export async function payViaNfcTap(
 
     let cancelled = false;
     let connected = false;
+    let tagText: string | undefined;
     const stopWatchingModal = cancelOnModalClose(modalStore, () => {
         cancelled = true;
     });
@@ -559,6 +580,7 @@ export async function payViaNfcTap(
 
         const payload = records?.[0]?.payload;
         const text = payload?.length ? ndefPayloadToString(payload) : '';
+        tagText = text;
         const creq = text ? extractTagCREQ(text) : undefined;
         if (!creq) {
             return expected
@@ -583,7 +605,11 @@ export async function payViaNfcTap(
             return cannotPay('views.Cashu.CREQPayment.invalidRequest');
         }
 
-        if (expected && !sameRequest(creqParams, expected)) {
+        const invoice = extractTagInvoice(text);
+        if (
+            expected &&
+            !sameRequest(creqParams, expected, invoice, expectedInvoice)
+        ) {
             return cannotPay('utils.NFCUtils.requestChanged');
         }
 
@@ -603,7 +629,12 @@ export async function payViaNfcTap(
 
         const amount = creqParams.amount!;
         if (!expected && limit != null && amount > limit) {
-            return { status: 'confirm', creqParams, creqString: creq };
+            return {
+                status: 'confirm',
+                creqParams,
+                creqString: creq,
+                ...(invoice && { invoice })
+            };
         }
 
         let token: string;
@@ -651,5 +682,6 @@ export async function payViaNfcTap(
         stopWatchingModal();
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);
         NfcManager.cancelTechnologyRequest().catch(() => 0);
+        if (tagText) noteTagSessionEnded(tagText);
     }
 }

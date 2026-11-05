@@ -161,17 +161,30 @@ export function findCompatibleMint(
     return mintUrls.find((url) => balance(url) >= amount);
 }
 
+// BOLT11 invoice, in either case: QR codes and NFC tags often use uppercase
+const BOLT11 = /^ln(bc|tb|tbs|bcrt)[0-9][a-z0-9]+$/i;
+
 /**
- * Whether two decoded payment requests ask for the same payment: the same
- * id if either has one, otherwise the same mints. The amount and unit must
- * match either way. Compares decoded fields, since one request can be
- * encoded as creqA or creqb.
+ * Whether two decoded payment requests ask for the same payment. The amount
+ * and unit must match. When both came in a BIP-321 URI with a Lightning
+ * invoice, they need the same invoice: Numo gives the request in its QR code
+ * a different id than the one on its NFC tag for the same checkout.
+ * Otherwise they need the same id if either has one, or else the same
+ * mints. Compares decoded fields, since one request can be encoded as creqA
+ * or creqb.
  */
-export function sameRequest(a: CREQParams, b: CREQParams): boolean {
+export function sameRequest(
+    a: CREQParams,
+    b: CREQParams,
+    invoiceA?: string,
+    invoiceB?: string
+): boolean {
     if (a.amount !== b.amount) return false;
     if ((a.unit || '').toLowerCase() !== (b.unit || '').toLowerCase()) {
         return false;
     }
+    if (invoiceA && invoiceB && BOLT11.test(invoiceA) && BOLT11.test(invoiceB))
+        return invoiceA.toLowerCase() === invoiceB.toLowerCase();
     if (a.id || b.id) return a.id === b.id;
     const mints = (p: CREQParams) =>
         [...new Set((p.mints || []).map(mintUrlKey))].sort().join(' ');

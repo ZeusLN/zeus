@@ -52,13 +52,17 @@ const CashuStore = {
 };
 const ModalStore = {};
 
-const renderView = (params: any = creqParams) =>
+const renderView = (params: any = creqParams, invoice?: string) =>
     render(
         <CREQPayment
             {...({
                 navigation: { navigate: jest.fn() },
                 route: {
-                    params: { creqParams: params, creqString: 'creqAoWFhZA' }
+                    params: {
+                        creqParams: params,
+                        creqString: 'creqAoWFhZA',
+                        invoice
+                    }
                 },
                 CashuStore,
                 ModalStore
@@ -90,6 +94,21 @@ describe('CREQPayment', () => {
         expect(CashuStore.sendTokenForRequest).not.toHaveBeenCalled();
         expect(screen.getByText('general.success')).toBeOnTheScreen();
         expect(screen.queryByRole('button')).toBeNull();
+    });
+
+    it('checks the tag against the Lightning invoice the request came with', async () => {
+        (payViaNfcTap as jest.Mock).mockResolvedValue({
+            status: 'paid',
+            amount: 21
+        });
+        await renderView(creqParams, 'lnbc210n1xyz');
+
+        await fireEvent.press(payButton());
+
+        expect(payViaNfcTap).toHaveBeenCalledWith(ModalStore, CashuStore, {
+            expected: creqParams,
+            expectedInvoice: 'lnbc210n1xyz'
+        });
     });
 
     it('shows why the payment failed and lets the user try again', async () => {

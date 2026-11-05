@@ -299,6 +299,52 @@ describe('CREQUtils', () => {
             ).toBe(false);
             expect(sameRequest(noId, { ...noId, mints: [] })).toBe(true);
         });
+
+        describe('with Lightning invoices', () => {
+            // Numo's QR and NFC tag carry different ids for one checkout
+            const nfcRequest = { ...request, id: 'c8b01287' };
+
+            it('matches the same invoice in any case, whatever the ids', () => {
+                expect(
+                    sameRequest(
+                        nfcRequest,
+                        request,
+                        'LNBC210N1XYZ',
+                        'lnbc210n1xyz'
+                    )
+                ).toBe(true);
+            });
+
+            it('refuses a different invoice with the same id', () => {
+                expect(
+                    sameRequest(
+                        request,
+                        request,
+                        'lnbc210n1xyz',
+                        'lnbc210n1abc'
+                    )
+                ).toBe(false);
+            });
+
+            it('still requires the same amount and unit', () => {
+                expect(
+                    sameRequest(
+                        { ...nfcRequest, amount: 2100 },
+                        request,
+                        'lnbc210n1xyz',
+                        'lnbc210n1xyz'
+                    )
+                ).toBe(false);
+            });
+
+            it.each([
+                ['only one side has one', 'lnbc210n1xyz', undefined],
+                ['one is not a BOLT11 invoice', 'lnbc210n1xyz', 'lnurl1dp68']
+            ])('compares ids when %s', (_, a, b) => {
+                expect(sameRequest(nfcRequest, request, a, b)).toBe(false);
+                expect(sameRequest(request, request, a, b)).toBe(true);
+            });
+        });
     });
 
     describe('tokenRequestMismatch', () => {
