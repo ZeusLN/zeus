@@ -15,6 +15,7 @@ import {
     decodeCREQ,
     creqPaymentError,
     findCompatibleMint,
+    sameRequest,
     CREQParams
 } from './CREQUtils';
 import { localeString } from './LocaleUtils';
@@ -479,22 +480,35 @@ export type NfcTapResult =
     | { status: 'paid'; amount: number }
     /** not paid here: hand the tag's text to the regular input handlers */
     | { status: 'read'; text?: string }
+    /** above the tap-to-pay limit: nothing paid, the user has to confirm */
+    | { status: 'confirm'; creqParams: CREQParams; creqString: string }
     | { status: 'failed'; error: string; tokenSaved?: boolean }
     | { status: 'cancelled' };
+
+export interface NfcTapOptions {
+    /**
+     * Pay only this request, which the user has already confirmed. The tag
+     * must hold the same request, and the limit doesn't apply.
+     */
+    expected?: CREQParams;
+    /** Sats above which a request comes back as 'confirm' unpaid */
+    limit?: number;
+}
 
 /**
  * Single-tap NFC payment: read the tag, and if it holds a Cashu payment
  * request (CREQ), create a token and write it back, all in one NFC session.
- * No user confirmation.
+ * No user confirmation up to the limit.
  *
  * Any other tag content comes back as 'read' so the caller can route it
  * without a second tap. A CREQ that can't be paid also comes back as 'read'
  * when it sits in a URI with other payment methods, so the user can pick
- * one of those instead.
+ * one of those instead. With an expected request, both are failures.
  */
 export async function payViaNfcTap(
     modalStore: ModalStore,
-    cashuStore: CashuStore
+    cashuStore: CashuStore,
+    { expected, limit }: NfcTapOptions = {}
 ): Promise<NfcTapResult> {
     if (!(await checkNfcEnabled(modalStore)))
         return {
@@ -546,9 +560,16 @@ export async function payViaNfcTap(
         const payload = records?.[0]?.payload;
         const text = payload?.length ? ndefPayloadToString(payload) : '';
         const creq = text ? extractTagCREQ(text) : undefined;
-        if (!creq) return { status: 'read', text: text || undefined };
+        if (!creq) {
+            return expected
+                ? {
+                      status: 'failed',
+                      error: localeString('utils.NFCUtils.requestNotFound')
+                  }
+                : { status: 'read', text: text || undefined };
+        }
 
-        const hasOtherMethods = creq !== text;
+        const hasOtherMethods = creq !== text && !expected;
         const cannotPay = (error: string): NfcTapResult =>
             hasOtherMethods
                 ? { status: 'read', text }
@@ -560,6 +581,10 @@ export async function payViaNfcTap(
         } catch (e) {
             console.warn('payViaNfcTap: invalid CREQ', e);
             return cannotPay('views.Cashu.CREQPayment.invalidRequest');
+        }
+
+        if (expected && !sameRequest(creqParams, expected)) {
+            return cannotPay('utils.NFCUtils.requestChanged');
         }
 
         const requestError = creqPaymentError(creqParams);
@@ -577,6 +602,10 @@ export async function payViaNfcTap(
             return cannotPay('views.Cashu.CREQPayment.noCompatibleMint');
 
         const amount = creqParams.amount!;
+        if (!expected && limit != null && amount > limit) {
+            return { status: 'confirm', creqParams, creqString: creq };
+        }
+
         let token: string;
         try {
             ({ token } = await cashuStore.sendTokenForRequest(
@@ -618,38 +647,6 @@ export async function payViaNfcTap(
             status: 'failed',
             error: localeString('utils.NFCUtils.nfcPaymentFailed')
         };
-    } finally {
-        stopWatchingModal();
-        if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);
-        NfcManager.cancelTechnologyRequest().catch(() => 0);
-    }
-}
-
-/**
- * Write a Cashu token to an NFC Type 4 tag via IsoDep UPDATE BINARY APDUs.
- * The tag must already be writable (merchant HCE with writable=true).
- */
-export async function writeTokenToTag(
-    modalStore: ModalStore,
-    token: string
-): Promise<boolean> {
-    if (!(await checkNfcEnabled(modalStore))) return false;
-
-    const stopWatchingModal = cancelOnModalClose(modalStore, () => 0);
-
-    try {
-        if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(true);
-
-        await NfcManager.requestTechnology(NfcTech.IsoDep, readerModeOptions());
-        stopWatchingModal();
-        const cc = await openNdefFile();
-        if (!cc.writable) return false;
-        await writeNdefBytes(cc, buildNdefTextMessage(token));
-
-        return true;
-    } catch (e) {
-        console.warn('writeTokenToTag error:', e);
-        return false;
     } finally {
         stopWatchingModal();
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);

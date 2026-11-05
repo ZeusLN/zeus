@@ -59,6 +59,7 @@ import {
     pickNfcRecord,
     scanNfcTag
 } from './NFCUtils';
+import type { NfcTapOptions } from './NFCUtils';
 
 const bytes = (text: string) => Array.from(Buffer.from(text, 'utf-8'));
 
@@ -571,8 +572,11 @@ describe('payViaNfcTap', () => {
         ...overrides
     });
 
-    const pay = (cashuStore: any, modalStore: any = makeModalStore()) =>
-        payViaNfcTap(modalStore, cashuStore);
+    const pay = (
+        cashuStore: any,
+        modalStore: any = makeModalStore(),
+        options?: NfcTapOptions
+    ) => payViaNfcTap(modalStore, cashuStore, options);
 
     const originalOS = Platform.OS;
 
@@ -773,6 +777,116 @@ describe('payViaNfcTap', () => {
             await expect(pay(cashuStore)).resolves.toEqual({
                 status: 'failed',
                 error: 'Insufficient funds'
+            });
+        });
+
+        describe('tap-to-pay limit', () => {
+            it('pays a request at the limit', async () => {
+                fakeType4Tag(NUMO_TAG);
+                cacheNdef(NUMO_TAG);
+
+                await expect(
+                    pay(makeCashuStore(), undefined, { limit: 21 })
+                ).resolves.toEqual({ status: 'paid', amount: 21 });
+            });
+
+            it('asks for confirmation above the limit without creating a token', async () => {
+                const tag = fakeType4Tag(NUMO_TAG);
+                cacheNdef(NUMO_TAG);
+                const cashuStore = makeCashuStore();
+
+                await expect(
+                    pay(cashuStore, undefined, { limit: 20 })
+                ).resolves.toEqual({
+                    status: 'confirm',
+                    creqParams: expect.objectContaining({
+                        amount: 21,
+                        unit: 'sat'
+                    }),
+                    creqString: 'CREQB1QYQQSE'
+                });
+                expect(cashuStore.sendTokenForRequest).not.toHaveBeenCalled();
+                expect(tag.nlenAfterWrites).toEqual([]);
+            });
+
+            it('confirms every payment with a limit of 0', async () => {
+                fakeType4Tag('creqAoWFhZA');
+                cacheNdef('creqAoWFhZA');
+
+                await expect(
+                    pay(makeCashuStore(), undefined, { limit: 0 })
+                ).resolves.toMatchObject({ status: 'confirm' });
+            });
+
+            it('routes an unpayable request before applying the limit', async () => {
+                fakeType4Tag(NUMO_TAG);
+                cacheNdef(NUMO_TAG);
+
+                await expect(
+                    pay(makeCashuStore({ mintBalances: {} }), undefined, {
+                        limit: 0
+                    })
+                ).resolves.toEqual({ status: 'read', text: NUMO_TAG });
+            });
+        });
+
+        describe('with a confirmed request', () => {
+            const confirmed = { amount: 21, unit: 'sat', mints: [] };
+
+            it('pays the same request, ignoring the limit', async () => {
+                const tag = fakeType4Tag(NUMO_TAG);
+                cacheNdef(NUMO_TAG);
+
+                await expect(
+                    pay(makeCashuStore(), undefined, {
+                        expected: confirmed,
+                        limit: 0
+                    })
+                ).resolves.toEqual({ status: 'paid', amount: 21 });
+                expect(tag.writtenText()).toBe(TOKEN);
+            });
+
+            it('refuses a tag that holds another request', async () => {
+                const tag = fakeType4Tag(NUMO_TAG);
+                cacheNdef(NUMO_TAG);
+                const cashuStore = makeCashuStore();
+
+                await expect(
+                    pay(cashuStore, undefined, {
+                        expected: { ...confirmed, amount: 2100 }
+                    })
+                ).resolves.toEqual({
+                    status: 'failed',
+                    error: 'utils.NFCUtils.requestChanged'
+                });
+                expect(cashuStore.sendTokenForRequest).not.toHaveBeenCalled();
+                expect(tag.nlenAfterWrites).toEqual([]);
+            });
+
+            it('refuses a tag without a payment request', async () => {
+                fakeType4Tag('lnurlw://example.com/withdraw');
+                cacheNdef('lnurlw://example.com/withdraw');
+
+                await expect(
+                    pay(makeCashuStore(), undefined, { expected: confirmed })
+                ).resolves.toEqual({
+                    status: 'failed',
+                    error: 'utils.NFCUtils.requestNotFound'
+                });
+            });
+
+            it('fails instead of routing a URI it cannot pay', async () => {
+                fakeType4Tag(NUMO_TAG);
+                cacheNdef(NUMO_TAG);
+
+                await expect(
+                    pay(makeCashuStore({ mintBalances: {} }), undefined, {
+                        expected: confirmed
+                    })
+                ).resolves.toEqual({
+                    status: 'failed',
+                    error: 'views.Cashu.CREQPayment.noCompatibleMint'
+                });
             });
         });
 
