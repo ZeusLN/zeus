@@ -296,7 +296,7 @@ const ActivityListItem = observer(
                                 justifyContent: 'flex-end'
                             }}
                         >
-                            {/* a peer's splice has no amount until it locks */}
+                            {/* a peer's splice has no amount until its transaction is read */}
                             {!(item instanceof Splice && !item.getAmount) && (
                                 <Amount
                                     sats={

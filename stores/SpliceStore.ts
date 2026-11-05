@@ -55,10 +55,13 @@ export interface SpliceRecord {
     // locked: confirmed and in use by the channel; kept for Activity
     status: 'pending' | 'locked';
     lockedAt?: number;
-    // the channel's capacity before and after, so a splice the peer started
-    // gets a direction and an amount once it locks
+    // The channel's capacity before and after, so a splice the peer started
+    // gets a direction and an amount. The after is read from the splice
+    // transaction while it is pending, or from the channel at the lock
     capacityBefore?: number;
     capacityAfter?: number;
+    // the block the splice transaction confirmed in, from the chain
+    confirmationHeight?: number;
 }
 
 // One list for every wallet, like swaps, so each record names its node
@@ -69,14 +72,21 @@ interface StoredSplice extends SpliceRecord {
 // Finished splices kept per wallet; older ones drop out of Activity
 export const SPLICE_HISTORY_LIMIT = 50;
 
+// How often a pending splice's transaction and the node's height are read
+export const SPLICE_CHAIN_CHECK_MS = 30_000;
+
 export default class SpliceStore {
     // this node's splices, in progress and finished
     @observable public splices: SpliceRecord[] = [];
     // Channels whose splice failed after the splice screens were left, so
     // the channel screen can say so. Not saved: a restart forgets them
     @observable public failedSpliceChannels: string[] = [];
+    // the node's best block, read while a splice is pending
+    @observable public bestBlockHeight: number | null = null;
 
     private intents = new Map<string, SpliceIntent>();
+    private disposeChainChecks: IReactionDisposer | null = null;
+    private chainCheckTimer: ReturnType<typeof setInterval> | null = null;
     private tracking = false;
     private trackingSession = 0;
     private unsubscribeSpliceEvents: (() => void) | null = null;
@@ -179,6 +189,83 @@ export default class SpliceStore {
             this.reconcile,
             { fireImmediately: true }
         );
+
+        this.disposeChainChecks = reaction(
+            () => this.pendingSplices.length > 0,
+            (anyPending) =>
+                anyPending ? this.startChainChecks() : this.stopChainChecks(),
+            { fireImmediately: true }
+        );
+    };
+
+    private startChainChecks = () => {
+        if (this.chainCheckTimer) return;
+        this.checkChain();
+        this.chainCheckTimer = setInterval(
+            this.checkChain,
+            SPLICE_CHAIN_CHECK_MS
+        );
+    };
+
+    private stopChainChecks = () => {
+        if (this.chainCheckTimer) clearInterval(this.chainCheckTimer);
+        this.chainCheckTimer = null;
+    };
+
+    // The wallet's own transaction list only has splices that touch the
+    // wallet, and only as fresh as its last load. The node's height is
+    // local; the chain is asked about each splice only until it confirms
+    private checkChain = async () => {
+        const session = this.trackingSession;
+        const unconfirmed = this.pendingSplices.filter(
+            (splice) => splice.confirmationHeight == null
+        );
+        const [nodeInfo, statuses] = await Promise.all([
+            Promise.resolve(BackendUtils.getMyNodeInfo()).catch(() => null),
+            Promise.all(
+                unconfirmed.map((splice) =>
+                    Promise.resolve(
+                        BackendUtils.getSpliceTransactionStatus(
+                            splice.txid,
+                            splice.vout
+                        )
+                    ).catch(() => null)
+                )
+            )
+        ]);
+        if (session !== this.trackingSession) return;
+
+        runInAction(() => {
+            if (nodeInfo?.block_height) {
+                this.bestBlockHeight = Number(nodeInfo.block_height);
+            }
+        });
+
+        const found = new Map(
+            unconfirmed.map((splice, i) => [splice.txid, statuses[i]])
+        );
+        let changed = false;
+        const splices = this.splices.map((splice) => {
+            const status =
+                splice.status === 'pending' && found.get(splice.txid);
+            if (!status) return splice;
+            const next = { ...splice };
+            if (status.confirmationHeight != null) {
+                next.confirmationHeight = status.confirmationHeight;
+            }
+            if (status.fundingSats != null && splice.capacityAfter == null) {
+                next.capacityAfter = status.fundingSats;
+            }
+            if (
+                next.confirmationHeight === splice.confirmationHeight &&
+                next.capacityAfter === splice.capacityAfter
+            ) {
+                return splice;
+            }
+            changed = true;
+            return next;
+        });
+        if (changed) this.setSplices(splices);
     };
 
     @action
@@ -189,6 +276,10 @@ export default class SpliceStore {
         this.unsubscribeSpliceEvents = null;
         this.disposeReconcile?.();
         this.disposeReconcile = null;
+        this.disposeChainChecks?.();
+        this.disposeChainChecks = null;
+        this.stopChainChecks();
+        this.bestBlockHeight = null;
         this.nodePubkey = null;
         this.otherNodesSplices = [];
         this.splices = [];
@@ -331,17 +422,24 @@ export default class SpliceStore {
     public getSpliceConfirmations = (
         splice: SpliceRecord
     ): SpliceConfirmations | null => {
+        const total = this.channelsStore.channels.find(
+            (c) => c.user_channel_id === splice.userChannelId
+        )?.confirmations_required;
+        if (splice.confirmationHeight != null && this.bestBlockHeight) {
+            return {
+                // the node can be a block behind the chain server
+                current: Math.max(
+                    0,
+                    this.bestBlockHeight - splice.confirmationHeight + 1
+                ),
+                total
+            };
+        }
         const transaction = this.transactionsStore.transactions.find(
             (t) => t.tx === splice.txid
         );
         if (!transaction) return null;
-        const channel = this.channelsStore.channels.find(
-            (c) => c.user_channel_id === splice.userChannelId
-        );
-        return {
-            current: transaction.getNumConfirmations,
-            total: channel?.confirmations_required
-        };
+        return { current: transaction.getNumConfirmations, total };
     };
 
     public hasFailedSplice = (channel: Channel): boolean =>

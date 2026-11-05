@@ -1014,3 +1014,83 @@ describe('LdkNode.watchSpliceEvents', () => {
         expect(ldk.watchSpliceEvents(jest.fn())).toBe(unsubscribe);
     });
 });
+
+describe('LdkNode.getSpliceTransactionStatus', () => {
+    const { settingsStore } = require('../stores/Stores');
+    const realFetch = global.fetch;
+    const answer = (body: any, ok = true, status = 200) => {
+        global.fetch = jest.fn(async () => ({
+            ok,
+            status,
+            json: async () => body
+        })) as any;
+    };
+
+    beforeEach(() => {
+        settingsStore.ldkEsploraServer = 'https://mutinynet.com/api/';
+    });
+
+    afterEach(() => {
+        global.fetch = realFetch;
+        delete settingsStore.ldkEsploraServer;
+    });
+
+    it("asks the node's own Esplora server for the splice transaction", async () => {
+        answer({ status: { confirmed: false }, vout: [] });
+
+        await new LdkNode().getSpliceTransactionStatus('splice-txid', 0);
+
+        expect(global.fetch).toHaveBeenCalledWith(
+            'https://mutinynet.com/api/tx/splice-txid'
+        );
+    });
+
+    it('reads the confirmation block and the new funding output', async () => {
+        answer({
+            status: { confirmed: true, block_height: 3563900 },
+            vout: [{ value: 210615 }, { value: 313436 }]
+        });
+
+        const status = await new LdkNode().getSpliceTransactionStatus(
+            'splice-txid',
+            1
+        );
+
+        expect(status).toEqual({
+            confirmationHeight: 3563900,
+            fundingSats: 313436
+        });
+    });
+
+    it('has no height while the transaction is unconfirmed', async () => {
+        answer({ status: { confirmed: false }, vout: [{ value: 313436 }] });
+
+        const status = await new LdkNode().getSpliceTransactionStatus(
+            'splice-txid',
+            0
+        );
+
+        expect(status).toEqual({
+            confirmationHeight: undefined,
+            fundingSats: 313436
+        });
+    });
+
+    it('has no funding value without the output index', async () => {
+        answer({ status: { confirmed: false }, vout: [{ value: 313436 }] });
+
+        const status = await new LdkNode().getSpliceTransactionStatus(
+            'splice-txid'
+        );
+
+        expect(status.fundingSats).toBeUndefined();
+    });
+
+    it('fails when the server has not seen the transaction', async () => {
+        answer({}, false, 404);
+
+        await expect(
+            new LdkNode().getSpliceTransactionStatus('splice-txid', 0)
+        ).rejects.toThrow('404');
+    });
+});
