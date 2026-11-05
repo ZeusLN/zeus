@@ -89,13 +89,24 @@ const WALLET_RECORD = new RegExp(
     [
         // URI schemes, including those Zeus registers for NFC on Android
         '^(lightning|bitcoin|lnurl[wcp]?|keyauth|web\\+cashu|cashu|lndconnect):',
-        // bare LNURLs, BOLT 11 invoices, BOLT 12 offers and ecash tokens
-        '^(lnurl1|ln(bc|tbs|tb|bcrt)\\w*1|lno1|cashu[AB])',
-        // LNURLs and ecash tokens behind a web address
-        '^https?://\\S*(/lnurl|lnurl1|cashu[AB])'
+        // bare LNURLs, BOLT 11 invoices and BOLT 12 offers
+        '^(lnurl1|ln(bc|tbs|tb|bcrt)\\w*1|lno1)',
+        // LNURLs behind a web address
+        '^https?://\\S*(/lnurl|lnurl1)'
     ].join('|'),
     'i'
 );
+
+// Ecash tokens, bare or behind a web address, matched as handleAnything
+// matches them: case-sensitive and with a body, so a web page whose address
+// holds, say, "?ref=cashuAfrica" is not taken for one
+const CASHU_TOKEN = /cashu[AB][0-9A-Za-z+/_=-]{10,}/;
+
+const isWalletText = (text: string): boolean => {
+    if (WALLET_RECORD.test(text)) return true;
+    const token = text.search(CASHU_TOKEN);
+    return token === 0 || (token > 0 && /^https:\/\//i.test(text));
+};
 
 interface TagRecord {
     text: string;
@@ -115,7 +126,7 @@ const readTagRecord = (record: NdefRecord): TagRecord | null => {
     const scheme = text.match(/^lnurl([pw]):/i)?.[1].toLowerCase();
     return {
         text,
-        isWallet: WALLET_RECORD.test(text),
+        isWallet: isWalletText(text),
         kind: scheme === 'p' ? 'pay' : scheme === 'w' ? 'withdraw' : undefined
     };
 };

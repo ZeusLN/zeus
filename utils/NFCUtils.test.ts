@@ -226,6 +226,19 @@ describe('pickNfcRecord', () => {
         }
     );
 
+    it.each([
+        ['"cashub" in another case', 'https://shop.example.org/cashubox'],
+        [
+            '"cashuA" without a token body',
+            'https://example.org/?ref=cashuAfrica'
+        ],
+        ['a token behind an http address', `http://zeusln.com/e/${TOKEN}`]
+    ])('does not take a web page holding %s for an ecash token', (_, page) => {
+        expect(
+            pickNfcRecord([uriRecord(page), textRecord('lightning:lnbc1a')])
+        ).toBe('lightning:lnbc1a');
+    });
+
     it('does not take CDF base URL and suffix records for wallet data', () => {
         expect(
             pickNfcRecord([
