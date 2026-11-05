@@ -2856,6 +2856,54 @@ describe('NostrWalletConnectStore list_transactions pending make_invoice', () =>
         expect(optedOut.result.transactions).toHaveLength(0);
     });
 
+    it('lists the newest activity first and paginates from the newest', async () => {
+        const { store, connection } = setup();
+        jest.spyOn(
+            NostrConnectUtils,
+            'lookupInvoicePaidFromNode'
+        ).mockResolvedValue(false);
+        const now = Math.floor(Date.now() / 1000);
+        const entry = (name: string, secondsAgo: number) => ({
+            id: `lnbc1order-${name}`,
+            type: 'make_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 1000,
+            paymentHash: hex64(name),
+            invoice: lightningInvoice({
+                r_hash: Base64Utils.hexToBase64(hex64(name)),
+                payment_request: `lnbc1order-${name}`,
+                creation_date: String(now - secondsAgo)
+            }),
+            createdAt: new Date((now - secondsAgo) * 1000),
+            expiresAt: new Date((now - secondsAgo + 3600) * 1000)
+        });
+        // stored out of time order, so the result cannot simply follow
+        // insertion order
+        connection.activity = [
+            entry('2', 600),
+            entry('1', 3000),
+            entry('3', 60)
+        ] as any;
+
+        const all = await (store as any).handleListTransactions(connection, {});
+        const firstPage = await (store as any).handleListTransactions(
+            connection,
+            { limit: 1 }
+        );
+        const secondPage = await (store as any).handleListTransactions(
+            connection,
+            { limit: 1, offset: 1 }
+        );
+
+        expect(
+            all.result.transactions.map((tx: any) => tx.payment_hash)
+        ).toEqual([hex64('3'), hex64('2'), hex64('1')]);
+        expect(all.result.total_count).toBe(3);
+        expect(firstPage.result.transactions[0].payment_hash).toBe(hex64('3'));
+        expect(secondPage.result.transactions[0].payment_hash).toBe(hex64('2'));
+    });
+
     it('still answers when the node cannot be reached to check an invoice', async () => {
         const { store, connection } = setup();
         jest.spyOn(
