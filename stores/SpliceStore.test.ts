@@ -81,6 +81,36 @@ describe('SpliceStore.loadSpliceInAvailable', () => {
         expect(store.spliceInAvailableSats).toEqual(60000);
     });
 
+    it("reads Core Lightning's outputs in msat", async () => {
+        (BackendUtils.getUTXOs as jest.Mock).mockResolvedValue({
+            outputs: [
+                { amount_msat: 60_000_000, confirmations: 3 },
+                { amount_msat: 40_000_000, confirmations: 0 }
+            ]
+        });
+        mockReserve(undefined);
+
+        const store = newStore();
+        await store.loadSpliceInAvailable();
+
+        expect(store.spliceInAvailableSats).toEqual(60000);
+    });
+
+    it("goes by Core Lightning's status when its tip height is unknown", async () => {
+        (BackendUtils.getUTXOs as jest.Mock).mockResolvedValue({
+            outputs: [
+                { amount_msat: 60_000_000, status: 'confirmed' },
+                { amount_msat: 40_000_000, status: 'unconfirmed' }
+            ]
+        });
+        mockReserve(undefined);
+
+        const store = newStore();
+        await store.loadSpliceInAvailable();
+
+        expect(store.spliceInAvailableSats).toEqual(60000);
+    });
+
     it('treats a missing reserve as none', async () => {
         mockUtxos([{ amount_sat: 50000, confirmations: '6' }]);
         mockReserve(undefined);
