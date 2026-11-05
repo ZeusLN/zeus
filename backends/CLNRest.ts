@@ -977,6 +977,9 @@ export default class CLNRest {
     supportsSweep = () => true;
     // splicein and spliceout, with splicing on by default, came in v26.04
     supportsSplicing = () => this.supports('v26.04');
+    // its splice plugin refuses to pay a Bitcoin address (still so in
+    // v26.04), so splice-outs go to the node's own wallet
+    supportsSpliceOutToAddress = () => false;
     supportsOnchainSendMax = () => true;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;

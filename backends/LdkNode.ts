@@ -2500,6 +2500,7 @@ export default class LdkNode {
     supportsCircularRebalancing = () => false;
     supportsForceClose = () => true;
     supportsSplicing = () => true;
+    supportsSpliceOutToAddress = () => true;
     supportsLSPS2 = () => true;
     // A dedicated LSPS2 LSP is registered in the running node
     isLsps2Active = () => !!getActiveLsps2NodeId();

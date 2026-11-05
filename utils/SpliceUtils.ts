@@ -45,6 +45,18 @@ const NODE_ERROR_INVALID_ADDRESS = 'The given address is invalid.';
 const NODE_ERROR_INSUFFICIENT_FUNDS =
     'The available funds are insufficient to complete the given operation.';
 
+// Core Lightning's splice errors, as worded in lightningd, its splice plugin
+// and wallet funding (v26.04)
+const CLN_ERROR_PEER_CANT_SPLICE = 'Peer does not support splicing';
+const CLN_ERROR_SPLICE_BUSY =
+    'Currently waiting on previous splice command to finish';
+const CLN_ERROR_DISCONNECTED = 'Channel is disconnected';
+const CLN_ERROR_NOT_CONNECTED = "Channel hasn't finished connecting";
+const CLN_ERROR_CANNOT_AFFORD = 'Could not afford';
+const CLN_ERROR_SYNCING = 'still syncing with bitcoin network';
+const CLN_ERROR_EMERGENCY_RESERVE = 'not enough to meet the emergency minimum';
+const CLN_ERROR_FEE_TOO_HIGH = 'Feerate too high';
+
 // ldk-node funds a splice-in from confirmed UTXOs only, and its coin
 // selection does not hold back the anchor channel reserve, so the reserve
 // is kept out of what can be spliced in
@@ -103,8 +115,32 @@ export const getSpliceErrorMessage = (message: string): string => {
     if (message.includes(NODE_ERROR_INVALID_ADDRESS)) {
         return localeString('views.Splice.error.invalidAddress');
     }
-    if (message.includes(NODE_ERROR_INSUFFICIENT_FUNDS)) {
+    if (
+        message.includes(NODE_ERROR_INSUFFICIENT_FUNDS) ||
+        message.includes(CLN_ERROR_CANNOT_AFFORD)
+    ) {
         return localeString('views.Splice.error.insufficientOnchainFunds');
+    }
+    if (message.includes(CLN_ERROR_PEER_CANT_SPLICE)) {
+        return localeString('views.Splice.error.peerCantSplice');
+    }
+    if (message.includes(CLN_ERROR_SPLICE_BUSY)) {
+        return localeString('views.Splice.error.alreadySplicing');
+    }
+    if (
+        message.includes(CLN_ERROR_DISCONNECTED) ||
+        message.includes(CLN_ERROR_NOT_CONNECTED)
+    ) {
+        return localeString('views.Splice.error.peerOffline');
+    }
+    if (message.includes(CLN_ERROR_SYNCING)) {
+        return localeString('views.Splice.error.nodeSyncing');
+    }
+    if (message.includes(CLN_ERROR_EMERGENCY_RESERVE)) {
+        return localeString('views.Splice.error.emergencyReserve');
+    }
+    if (message.includes(CLN_ERROR_FEE_TOO_HIGH)) {
+        return localeString('views.Splice.error.feeTooHigh');
     }
     return message;
 };
