@@ -2103,6 +2103,34 @@ describe('NostrWalletConnectStore payment notifications', () => {
             expect(connection.totalSpendSats).toBe(10050);
         });
 
+        it('keeps a settled invoice settled when an expiry check resolves after it', async () => {
+            const { store, connection, activity, relay } =
+                await startWithInvoice(
+                    lightningInvoice({
+                        payment_request:
+                            'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr'
+                    })
+                );
+            let release: (v: boolean) => void = () => {};
+            jest.spyOn(
+                NostrConnectUtils,
+                'lookupInvoicePaidFromNode'
+            ).mockReturnValue(new Promise((r) => (release = r)));
+
+            const reconcile = (
+                store as any
+            ).reconcilePendingLightningMakeInvoice(connection, activity);
+            (store as any).settleMakeInvoice(connection, activity, () => {
+                activity.status = 'success';
+            });
+            release(false);
+            await reconcile;
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(activity.status).toBe('success');
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
         describe('Cashu invoices', () => {
             const MINT = 'https://mint.example';
             const cashuRequest = 'lnbc1notify-cashu';
@@ -2209,6 +2237,39 @@ describe('NostrWalletConnectStore payment notifications', () => {
                 expect((returned as CashuInvoice).isPaid).toBe(true);
                 expect((activity.invoice as CashuInvoice).isPaid).toBe(true);
                 expect(relay.publishNotification).not.toHaveBeenCalled();
+            });
+
+            it('keeps a settled Cashu invoice settled when an expiry check resolves after it', async () => {
+                const { store, cashuStore, connection, activity, relay } =
+                    await startWithCashuInvoice();
+                // expiry is read from the decoded BOLT11, so this needs a
+                // real expired invoice (the BOLT11 spec example, 2017)
+                activity.invoice = new CashuInvoice({
+                    quote: 'quote-1',
+                    request:
+                        'lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp',
+                    state: 'UNPAID',
+                    paid: false,
+                    mintUrl: MINT,
+                    expiry: 1496314718
+                } as any);
+                let release: (v: any) => void = () => {};
+                jest.spyOn(cashuStore, 'checkInvoicePaid').mockReturnValue(
+                    new Promise((r) => (release = r)) as any
+                );
+
+                const reconcile = (
+                    store as any
+                ).reconcilePendingCashuMakeInvoice(connection, activity);
+                (store as any).settleMakeInvoice(connection, activity, () => {
+                    activity.status = 'success';
+                });
+                release({ isPaid: false });
+                await reconcile;
+                await jest.advanceTimersByTimeAsync(0);
+
+                expect(activity.status).toBe('success');
+                expect(relay.publishNotification).toHaveBeenCalledTimes(1);
             });
 
             it('publishes nothing while a Cashu invoice is still unpaid', async () => {
