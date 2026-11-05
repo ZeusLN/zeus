@@ -565,14 +565,11 @@ export default class SpliceStore {
                     amountSats
                 });
             } else {
-                // Fetched only now so an abandoned splice doesn't use up a
-                // wallet address
-                const destination =
-                    address || (await BackendUtils.getNewAddress()).address;
+                // without an address the backend pays our own wallet
                 result = await BackendUtils.spliceOut({
                     fundingTxid,
                     amountSats,
-                    address: destination
+                    address
                 });
             }
 

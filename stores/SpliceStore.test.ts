@@ -6,7 +6,6 @@ jest.mock('../utils/BackendUtils', () => ({
     default: {
         getUTXOs: jest.fn(),
         getBlockchainBalance: jest.fn(),
-        getNewAddress: jest.fn(),
         spliceIn: jest.fn(),
         spliceOut: jest.fn(),
         watchSpliceEvents: jest.fn(),
@@ -177,10 +176,7 @@ describe('SpliceStore.splice', () => {
         expect(store.spliceTxid).toBeNull();
     });
 
-    it('splices out to a fresh wallet address when none is given', async () => {
-        (BackendUtils.getNewAddress as jest.Mock).mockResolvedValue({
-            address: 'tb1qwallet'
-        });
+    it('leaves the own-wallet address to the backend when none is given', async () => {
         (BackendUtils.spliceOut as jest.Mock).mockResolvedValue({
             success: true,
             funding_txid_str: NEW_FUNDING_TXID
@@ -196,12 +192,12 @@ describe('SpliceStore.splice', () => {
         expect(BackendUtils.spliceOut).toHaveBeenCalledWith({
             fundingTxid: FUNDING_TXID,
             amountSats: 30000,
-            address: 'tb1qwallet'
+            address: undefined
         });
         expect(store.spliceSuccess).toBe(true);
     });
 
-    it('splices out to the given address without fetching one', async () => {
+    it('splices out to the given address', async () => {
         (BackendUtils.spliceOut as jest.Mock).mockResolvedValue({
             success: true
         });
@@ -214,7 +210,6 @@ describe('SpliceStore.splice', () => {
             address: 'tb1qexternal'
         });
 
-        expect(BackendUtils.getNewAddress).not.toHaveBeenCalled();
         expect(BackendUtils.spliceOut).toHaveBeenCalledWith({
             fundingTxid: FUNDING_TXID,
             amountSats: 30000,
@@ -255,23 +250,6 @@ describe('SpliceStore.splice', () => {
 
         expect(store.spliceError).toEqual('Splice failed');
         expect(store.spliceErrorDetail).toBeNull();
-    });
-
-    it('fails without splicing when no wallet address can be fetched', async () => {
-        (BackendUtils.getNewAddress as jest.Mock).mockRejectedValue(
-            new Error('Node not initialized')
-        );
-
-        const store = newStore();
-        await store.splice({
-            direction: 'out',
-            fundingTxid: FUNDING_TXID,
-            amountSats: 30000
-        });
-
-        expect(BackendUtils.spliceOut).not.toHaveBeenCalled();
-        expect(store.spliceError).toEqual('Node not initialized');
-        expect(store.spliceSuccess).toBe(false);
     });
 
     it('is splicing while the request is in flight', async () => {
