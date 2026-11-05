@@ -250,14 +250,8 @@ export default class LightningSwipeableRow extends Component<
                 });
             }
         } catch (e: any) {
-            // fetchLnInvoice does not await this, so anything rethrown
-            // would be lost and the tap would do nothing
-            Alert.alert(
-                localeString('general.error'),
-                e?.message || error,
-                [{ text: localeString('general.ok'), onPress: () => void 0 }],
-                { cancelable: false }
-            );
+            // fetchLnInvoice alerts it
+            throw new Error(e?.message || error);
         }
     };
 

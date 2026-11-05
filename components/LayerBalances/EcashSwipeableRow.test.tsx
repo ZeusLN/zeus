@@ -38,12 +38,14 @@ const asLnurl = (target: string) =>
     );
 
 // A locked row pays its destination when tapped
-const tapRow = async (lightning: string) => {
+const tapRow = (lightning: string) => tapRowWith({ lightning });
+
+const tapRowWith = async (destination: any) => {
     const navigation = { navigate: jest.fn() };
     await render(
         <EcashSwipeableRow
             {...({
-                lightning,
+                ...destination,
                 locked: true,
                 navigation,
                 SyncStore: { isSyncing: false }
@@ -129,14 +131,7 @@ describe('EcashSwipeableRow lnurl resolve', () => {
 });
 
 describe('EcashSwipeableRow LNURL errors', () => {
-    let navigation: { navigate: jest.Mock };
     let alertSpy: jest.SpyInstance;
-
-    // what tapping a locked row runs
-    const press = (props: any) =>
-        (
-            new EcashSwipeableRow({ navigation, ...props }) as any
-        ).fetchLnInvoice();
 
     const alertedMessage = () => alertSpy.mock.calls[0]?.[1];
 
@@ -146,7 +141,6 @@ describe('EcashSwipeableRow LNURL errors', () => {
         mockFetchLnurlParams.mockImplementation(
             jest.requireActual('../../utils/LnurlFetchUtils').fetchLnurlParams
         );
-        navigation = { navigate: jest.fn() };
         alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     });
 
@@ -154,15 +148,15 @@ describe('EcashSwipeableRow LNURL errors', () => {
 
     // #5060: this error used to end up as an unhandled rejection
     it('alerts on an .onion LNURL error response', async () => {
-        await expect(
-            press({
-                lnurlParams: {
-                    status: 'ERROR',
-                    domain: 'example.onion',
-                    reason: 'unreachable'
-                }
-            })
-        ).resolves.toBeUndefined();
+        // the row is only tappable with a lightning value
+        const navigation = await tapRowWith({
+            lightning: asLnurl('http://example.onion/lnurl'),
+            lnurlParams: {
+                status: 'ERROR',
+                domain: 'example.onion',
+                reason: 'unreachable'
+            }
+        });
 
         expect(alertedMessage()).toBe('example.onion says: unreachable');
         expect(navigation.navigate).not.toHaveBeenCalled();
@@ -174,9 +168,9 @@ describe('EcashSwipeableRow LNURL errors', () => {
     it('alerts that a LNURL with an undecodable query is invalid', async () => {
         const query = '%24%60x%24%27y'.repeat(100) + '%';
 
-        await expect(
-            press({ lightning: `lnurlw://example.com/withdraw?x=${query}` })
-        ).resolves.toBeUndefined();
+        const navigation = await tapRow(
+            `lnurlw://example.com/withdraw?x=${query}`
+        );
 
         expect(alertedMessage()).toBe(
             'utils.handleAnything.invalidLnurlParams'
@@ -186,7 +180,7 @@ describe('EcashSwipeableRow LNURL errors', () => {
     });
 
     it('keeps the host policy message for a refused LNURL', async () => {
-        await press({ lightning: 'lnurlw://192.168.1.1/withdraw' });
+        const navigation = await tapRow('lnurlw://192.168.1.1/withdraw');
 
         expect(alertedMessage()).toBe('utils.lnurl.unsafeEndpoint');
         expect(mockFetch).not.toHaveBeenCalled();
@@ -204,7 +198,7 @@ describe('EcashSwipeableRow LNURL errors', () => {
             json: () => params
         });
 
-        await press({ lightning: 'lnurlw://example.com/withdraw' });
+        const navigation = await tapRow('lnurlw://example.com/withdraw');
 
         expect(navigation.navigate).toHaveBeenCalledWith('ReceiveEcash', {
             lnurlParams: { ...params, domain: 'example.com' }
