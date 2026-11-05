@@ -1,5 +1,9 @@
 jest.mock('mobx-react', () => ({
-    inject: () => (component: any) => component,
+    // keeps the store names, so a test can check what the view asks for
+    inject:
+        (...stores: string[]) =>
+        (component: any) =>
+            Object.assign(component, { injectedStores: stores }),
     observer: (component: any) => component
 }));
 jest.mock('@rneui/themed', () => ({
@@ -114,6 +118,15 @@ const makeView = (amount: string, satAmount: number, cashuStore: any = {}) => {
     view.subscribeInvoice = jest.fn();
     return { view, navigate, CashuStore, PosStore, subscribeInvoice };
 };
+
+describe('ReceiveEcash stores', () => {
+    it('is given the ModalStore that scanning a tag needs', () => {
+        expect(
+            (ReceiveEcash as unknown as { injectedStores: string[] })
+                .injectedStores
+        ).toContain('ModalStore');
+    });
+});
 
 describe('ReceiveEcash NFC scan', () => {
     beforeEach(() => {

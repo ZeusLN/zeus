@@ -111,6 +111,7 @@ interface ReceiveEcashState {
 
 @inject(
     'CashuStore',
+    'ModalStore',
     'SettingsStore',
     'UnitsStore',
     'PosStore',
