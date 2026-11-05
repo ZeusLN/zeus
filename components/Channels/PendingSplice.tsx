@@ -31,12 +31,23 @@ export default function PendingSplice({
     confirmations,
     testnet
 }: PendingSpliceProps) {
-    const { initiator, direction, amountSats, address, txid } = splice;
-    const known = initiator === 'local' && !!direction && !!amountSats;
-    const newCapacity = known
+    const { initiator, direction, amountSats, address, txid, capacityAfter } =
+        splice;
+    const ours = initiator === 'local' && !!direction && !!amountSats;
+    // Once the splice transaction is read from the chain its new funding
+    // output gives the exact capacity; until then ours is what we asked for
+    const exact = capacityAfter != null;
+    const newCapacity = exact
+        ? new BigNumber(capacityAfter!)
+        : ours
         ? direction === 'in'
             ? new BigNumber(capacity).plus(amountSats!)
             : new BigNumber(capacity).minus(amountSats!)
+        : null;
+    const amount = ours
+        ? new BigNumber(amountSats!)
+        : exact
+        ? new BigNumber(capacityAfter!).minus(capacity).abs()
         : null;
 
     // our confirmations can reach the lock depth before the peer locks it
@@ -53,16 +64,18 @@ export default function PendingSplice({
                     ? localeString('views.Splice.splicingOut')
                     : localeString('views.Splice.splicingIn')}
             </Text>
-            {known && (
+            {amount && !amount.isZero() && (
                 <KeyValue
                     keyValue={localeString('general.amount')}
-                    value={<Amount sats={amountSats} sensitive toggleable />}
+                    value={
+                        <Amount sats={amount.toString()} sensitive toggleable />
+                    }
                 />
             )}
             {newCapacity && (
                 <KeyValue
                     keyValue={
-                        direction === 'out'
+                        direction === 'out' && !exact
                             ? localeString('views.Splice.newCapacityBeforeFee')
                             : localeString('views.Splice.newCapacity')
                     }

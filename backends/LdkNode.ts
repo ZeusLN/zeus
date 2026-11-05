@@ -1299,6 +1299,36 @@ export default class LdkNode {
         );
     };
 
+    /**
+     * A splice transaction as the node's own Esplora server sees it: the
+     * block it confirmed in, and the value of the channel's new funding
+     * output. The node already watches this channel's funding there, and it
+     * covers splices that don't touch our wallet
+     */
+    getSpliceTransactionStatus = async (
+        txid: string,
+        vout?: number
+    ): Promise<{ confirmationHeight?: number; fundingSats?: number }> => {
+        const server = (settingsStore.ldkEsploraServer || '').replace(
+            /\/+$/,
+            ''
+        );
+        if (!server) throw new Error('No Esplora server set');
+        const response = await fetch(`${server}/tx/${txid}`);
+        if (!response.ok) {
+            throw new Error(`Esplora answered ${response.status}`);
+        }
+        const tx = await response.json();
+        const fundingSats = vout != null ? tx.vout?.[vout]?.value : undefined;
+        return {
+            confirmationHeight: tx.status?.confirmed
+                ? tx.status.block_height
+                : undefined,
+            fundingSats:
+                typeof fundingSats === 'number' ? fundingSats : undefined
+        };
+    };
+
     // ========================================================================
     // On-chain Methods
     // ========================================================================
