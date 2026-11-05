@@ -44,14 +44,16 @@ const LNC_NOT_SENT =
     /^(RPC connection not ready|error getting client|rpc with name .* not found|param \w+ required)/;
 
 // Native HTTP errors that only happen before the request is written: a
-// refused connection, an unresolved host, no network, or a failed TLS
-// handshake. Android passes OkHttp's exception message, iOS the
-// NSURLSession error's localizedDescription, and the Tor path the
-// nitro-tor error (reqwest and hyper underneath). A connection lost after
-// that ("unexpected end of stream", "The network connection was lost.",
-// "connection closed before message completed") may still have delivered
-// the request, and so may a timeout: Android reports connect and read
-// timeouts alike as "The request timed out."
+// refused connection, an unresolved host, or a failed TLS handshake.
+// Android passes OkHttp's exception message, iOS the NSURLSession error's
+// localizedDescription, and the Tor path the nitro-tor error (reqwest and
+// hyper underneath). A connection lost after that ("unexpected end of
+// stream", "The network connection was lost.", "connection closed before
+// message completed") may still have delivered the request, and so may a
+// timeout: Android reports connect and read timeouts alike as "The request
+// timed out." iOS's "The Internet connection appears to be offline." is
+// left out: it was not captured on a device, and nothing shows that iOS
+// raises it only before the request is written.
 const NOT_DELIVERED = [
     // Android
     /^Failed to connect to /,
@@ -63,7 +65,6 @@ const NOT_DELIVERED = [
     // iOS
     /^Could not connect to the server\./,
     /^A server with the specified hostname could not be found\./,
-    /^The Internet connection appears to be offline\./,
     /^A TLS error caused the secure connection to fail\./,
     // older iOS
     /^An SSL error has occurred/,

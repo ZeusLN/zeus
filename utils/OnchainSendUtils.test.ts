@@ -272,7 +272,6 @@ describe('mayHaveBeenSent', () => {
             'an unresolved host on iOS',
             'A server with the specified hostname could not be found.'
         ],
-        ['no network on iOS', 'The Internet connection appears to be offline.'],
         [
             'a TLS failure on iOS',
             'An SSL error has occurred and a secure connection to the server cannot be made.'
@@ -295,7 +294,10 @@ describe('mayHaveBeenSent', () => {
             'a stream ended on Android',
             'unexpected end of stream on https://node.example.com/...'
         ],
-        ['a timeout on Android', 'The request timed out.']
+        ['a timeout on Android', 'The request timed out.'],
+        // not captured on a device, and not known to come only before the
+        // request is written
+        ['no network on iOS', 'The Internet connection appears to be offline.']
     ])('stays true for %s on REST backends', (_, message) => {
         expect(mayHaveBeenSent(new Error(message), 'lnd')).toBe(true);
     });
