@@ -52,6 +52,7 @@ import {
     decodeNdefTextPayload,
     decodeNdefUriPayload,
     extractTagCREQ,
+    extractTagInvoice,
     isNfcWithdraw,
     NfcRequestKind,
     parseCapabilityContainer,
@@ -60,6 +61,7 @@ import {
     scanNfcTag
 } from './NFCUtils';
 import type { NfcTapOptions } from './NFCUtils';
+import { isTagRedelivery } from './NfcRedeliveryUtils';
 
 const bytes = (text: string) => Array.from(Buffer.from(text, 'utf-8'));
 
@@ -478,6 +480,28 @@ describe('extractTagCREQ', () => {
     });
 });
 
+describe('extractTagInvoice', () => {
+    it("takes the lightning parameter of Numo's uppercase BIP-321 URI", () => {
+        expect(
+            extractTagInvoice(
+                'BITCOIN:?LIGHTNING=LNBC210N1XYZ&CREQ=CREQB1QYQQSE'
+            )
+        ).toBe('LNBC210N1XYZ');
+    });
+
+    it('takes a lightning parameter after other parameters', () => {
+        expect(
+            extractTagInvoice('bitcoin:bc1qxyz?amount=1&lightning=lnbc1')
+        ).toBe('lnbc1');
+    });
+
+    it('ignores tags without one', () => {
+        expect(extractTagInvoice('creqAoWFhZA')).toBeUndefined();
+        expect(extractTagInvoice('lightning:lnbc1')).toBeUndefined();
+        expect(extractTagInvoice('bitcoin:?creq=creqAoWFhZA')).toBeUndefined();
+    });
+});
+
 describe('payViaNfcTap', () => {
     const nfc = NfcManager as any;
     const decodePaymentRequest = CashuDevKit.decodePaymentRequest as jest.Mock;
@@ -803,7 +827,8 @@ describe('payViaNfcTap', () => {
                         amount: 21,
                         unit: 'sat'
                     }),
-                    creqString: 'CREQB1QYQQSE'
+                    creqString: 'CREQB1QYQQSE',
+                    invoice: 'LNBC210N1XYZ'
                 });
                 expect(cashuStore.sendTokenForRequest).not.toHaveBeenCalled();
                 expect(tag.nlenAfterWrites).toEqual([]);
@@ -863,6 +888,68 @@ describe('payViaNfcTap', () => {
                 expect(tag.nlenAfterWrites).toEqual([]);
             });
 
+            describe('from a QR code with a Lightning invoice', () => {
+                // Numo's QR request has another id than its NFC request
+                beforeEach(() =>
+                    decodePaymentRequest.mockResolvedValue({
+                        id: 'nfc-id',
+                        amount: 21,
+                        unit: 'sat',
+                        mints: [],
+                        transports: []
+                    })
+                );
+                const fromQr = { ...confirmed, id: 'qr-id' };
+
+                it('pays the tag with the same invoice', async () => {
+                    const tag = fakeType4Tag(NUMO_TAG);
+                    cacheNdef(NUMO_TAG);
+
+                    await expect(
+                        pay(makeCashuStore(), undefined, {
+                            expected: fromQr,
+                            expectedInvoice: 'lnbc210n1xyz'
+                        })
+                    ).resolves.toEqual({ status: 'paid', amount: 21 });
+                    expect(tag.writtenText()).toBe(TOKEN);
+                });
+
+                it('refuses a tag with another invoice', async () => {
+                    const tag = fakeType4Tag(NUMO_TAG);
+                    cacheNdef(NUMO_TAG);
+                    const cashuStore = makeCashuStore();
+
+                    await expect(
+                        pay(cashuStore, undefined, {
+                            expected: fromQr,
+                            expectedInvoice: 'lnbc210n1abc'
+                        })
+                    ).resolves.toEqual({
+                        status: 'failed',
+                        error: 'utils.NFCUtils.requestChanged'
+                    });
+                    expect(
+                        cashuStore.sendTokenForRequest
+                    ).not.toHaveBeenCalled();
+                    expect(tag.nlenAfterWrites).toEqual([]);
+                });
+
+                it('compares ids for a bare request on the tag', async () => {
+                    fakeType4Tag('creqAoWFhZA');
+                    cacheNdef('creqAoWFhZA');
+
+                    await expect(
+                        pay(makeCashuStore(), undefined, {
+                            expected: fromQr,
+                            expectedInvoice: 'lnbc210n1xyz'
+                        })
+                    ).resolves.toEqual({
+                        status: 'failed',
+                        error: 'utils.NFCUtils.requestChanged'
+                    });
+                });
+            });
+
             it('refuses a tag without a payment request', async () => {
                 fakeType4Tag('lnurlw://example.com/withdraw');
                 cacheNdef('lnurlw://example.com/withdraw');
@@ -910,6 +997,25 @@ describe('payViaNfcTap', () => {
 
             await expect(result).resolves.toEqual({ status: 'cancelled' });
             expect(nfc.cancelTechnologyRequest).toHaveBeenCalled();
+        });
+
+        describe('Android delivering the tag again', () => {
+            it.each([
+                ['paid', 'creqAoWFhZA', {}],
+                ['above the limit', NUMO_TAG, { limit: 0 }],
+                ['failed', 'creqAoWFhZA', { expected: { amount: 2100 } }],
+                ['not a CREQ', 'lnurlw://example.com/withdraw', {}]
+            ])(
+                'recognizes the tag of a session that %s',
+                async (_, text, options) => {
+                    fakeType4Tag(text);
+                    cacheNdef(text);
+
+                    await pay(makeCashuStore(), undefined, options);
+
+                    expect(isTagRedelivery(text)).toBe(true);
+                }
+            );
         });
 
         it('stops early when NFC is off', async () => {

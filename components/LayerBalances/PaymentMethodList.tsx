@@ -314,7 +314,8 @@ const SwipeableRow = ({
                         ? null
                         : navigation.navigate('CREQPayment', {
                               creqParams,
-                              creqString
+                              creqString,
+                              invoice: lightning
                           })
                 }
                 activeOpacity={1}
