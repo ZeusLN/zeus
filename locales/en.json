@@ -1671,7 +1671,7 @@
     "views.ActivityExport.toDate": "End date",
     "views.ActivityExport.dateRange": "Select Date Range:",
     "views.ActivityExport.downloadCompleteData": "Download Complete Data",
-    "views.ActivityExport.explainer": "Exports are delivered through the system share sheet. Choose where to save or send your CSV files; ZEUS does not keep a copy on the device.",
+    "views.ActivityExport.explainer": "Exports are delivered through the system share sheet. Choose where to save or send your CSV files.",
     "views.ActivityExport.noDataAvailableForSelection": "No activity data is available for the selected type.",
     "views.ActivityExport.noDataForSelectedDates": "No records found in the selected date range. Try a different date.",
     "views.ActivityExport.noValidDataForDownload": "There is no valid data available for download.",
