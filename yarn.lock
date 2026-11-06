@@ -8204,10 +8204,10 @@ react-native-qr-kit@1.1.6:
   resolved "https://registry.yarnpkg.com/react-native-qr-kit/-/react-native-qr-kit-1.1.6.tgz#004a440bca19fd25ec1e2039ae05ed46c42af13a"
   integrity sha512-QYcWX9IjPN1nHAjNfikL93Kvc5aDtof79Vl3n9V0+V3vVwehtmtRYFyR+nKdPSL9LT7IxFCTRLHXdrI0V5YDjw==
 
-react-native-qrcode-svg@6.3.50:
-  version "6.3.50"
-  resolved "https://registry.yarnpkg.com/react-native-qrcode-svg/-/react-native-qrcode-svg-6.3.50.tgz#f9ae18fd4475554d84b4f0e671213ccb0625562d"
-  integrity sha512-I9sg0n/PmUg1RQkS7Qf8q1mfNNA/HKvHpx2OwE08H2EPtkjNlclpoYL8N24oNzmd/N6Jtf7C2xzvjeyYQ74f6g==
+react-native-qrcode-svg@6.3.52:
+  version "6.3.52"
+  resolved "https://registry.yarnpkg.com/react-native-qrcode-svg/-/react-native-qrcode-svg-6.3.52.tgz#140f26b93df1c6e96c7ce657c2b073de31932d3e"
+  integrity sha512-u/CRa0w+rSEVog/IygFAnF+WPO45NCAvoCGkZ1tB2WDElT/KBq2pe5DbEkeFtUVUJuAgdkzvNYQQ6VDfRXd5jQ==
   dependencies:
     prop-types "^15.8.0"
     qrcode "^1.5.4"
@@ -8391,10 +8391,10 @@ react@19.3.0:
   resolved "https://registry.yarnpkg.com/react/-/react-19.3.0.tgz#e20aa3a14687075ce863351b5878b0608c3fbfb2"
   integrity sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog==
 
-readable-stream@1.0.33:
-  version "1.0.33"
-  resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-1.0.33.tgz#3a360dd66c1b1d7fd4705389860eda1d0f61126c"
-  integrity sha512-72KxhcKi8bAvHP/cyyWSP+ODS5ef0DIRs0OzrhGXw31q41f19aoELCbvd42FjhpyEDxQMRiiC5rq9rfE5PzTqg==
+readable-stream@1.1.14:
+  version "1.1.14"
+  resolved "https://registry.yarnpkg.com/readable-stream/-/readable-stream-1.1.14.tgz#7cf4c54ef648e3813084c636dd2079e166c081d9"
+  integrity sha512-+MeVjFf4L44XUkhM1eYbD8fyEsxcV81pqMSR5gblfcLCHfZvbrqy4/qYHE+/R5HoBUT11WV5O08Cr1n3YXkWVQ==
   dependencies:
     core-util-is "~1.0.0"
     inherits "~2.0.1"
