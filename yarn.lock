@@ -2032,42 +2032,42 @@
   resolved "https://registry.yarnpkg.com/@react-native-picker/picker/-/picker-2.11.4.tgz#7fb09506ee00a82989125cc03e8495204c8afc01"
   integrity sha512-Kf8h1AMnBo54b1fdiVylP2P/iFcZqzpMYcglC28EEFB1DEnOjsNr6Ucqc+3R9e91vHxEDnhZFbYDmAe79P2gjA==
 
-"@react-native-vector-icons/common@^13.0.4":
-  version "13.0.4"
-  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/common/-/common-13.0.4.tgz#88c439579a8264f16f34302a7ce072d5076e829c"
-  integrity sha512-1MvNyRf3KIW747rJsmka/+EdEwV92ccVHedEXFV2kQ0lo6D7uvrIBTtffeDidN4//l8+R4bN3IiQv0tXQzaRXQ==
+"@react-native-vector-icons/common@^14.0.0":
+  version "14.0.0"
+  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/common/-/common-14.0.0.tgz#728d207dcbae05165a99d2cdc689bdecc3489ded"
+  integrity sha512-wlNieCygX7DWFjMDjYuFfk4mcQVLkF1XTm/spxKdlrQMSofzvLOHSd4vkeQwDsWz/D4wbZPdzU3++crmi/x8XA==
   dependencies:
     find-up "^8.0.0"
     picocolors "^1.1.1"
     plist "^3.1.0"
 
-"@react-native-vector-icons/feather@13.1.5":
-  version "13.1.5"
-  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/feather/-/feather-13.1.5.tgz#c8864015611ecacb60bd1039e908f12fc3e6af1e"
-  integrity sha512-DyMKRFC6B0WnCMaWz13p/QJVTx5TecgkDBhLPxYbmQxIRxv1AmW2+2KyJE5P5z0G2uOCKmIUVPajCBr1TGzrcA==
+"@react-native-vector-icons/feather@14.0.0":
+  version "14.0.0"
+  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/feather/-/feather-14.0.0.tgz#1797332b9679d3efe507fc536ee7562ab17a5d8b"
+  integrity sha512-Du0m+U5oKye8MJylwZjc/3ojIGglE7E6QB6TAbxHNRoFQnEnscHISTan0cEUdUBJrWDmZu6yl0eEn0/wktN7dA==
   dependencies:
-    "@react-native-vector-icons/common" "^13.0.4"
+    "@react-native-vector-icons/common" "^14.0.0"
 
-"@react-native-vector-icons/fontawesome@13.1.5":
-  version "13.1.5"
-  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/fontawesome/-/fontawesome-13.1.5.tgz#95fc4c34b7594d8b61b2785b04d6a29743331894"
-  integrity sha512-HpoGTGNFDfmhY/teeAu6WmtT/1FNme1jBtvL+0I0O7ufgMAnv0zbt4OSx15BP0srfiWRdm9QlM0LXFhwBLeN/Q==
+"@react-native-vector-icons/fontawesome@14.0.0":
+  version "14.0.0"
+  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/fontawesome/-/fontawesome-14.0.0.tgz#c3589cb8bfd23d573d6be72b49a8e0d44a3bbb63"
+  integrity sha512-kuDo1nq+j6Ye6Dt8rSk1DQ+w/nA9CTCijQeeuesY4Tc2W2wFy08hRtXgzsg43abmgC7Wm0JQa7kOeRr6pRn1Sw==
   dependencies:
-    "@react-native-vector-icons/common" "^13.0.4"
+    "@react-native-vector-icons/common" "^14.0.0"
 
-"@react-native-vector-icons/material-design-icons@13.1.5":
-  version "13.1.5"
-  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/material-design-icons/-/material-design-icons-13.1.5.tgz#f50821c8032c0698b1b8b546482165d9435a93e7"
-  integrity sha512-RuGQMy3/A+u+AOrP7uW/n1heGoOYdfreLJ9lKdxtbsyZHQ0QZBJVk9zqErCtQBglOjMPbnKZXjUdc0FI53lYgA==
+"@react-native-vector-icons/material-design-icons@14.0.0":
+  version "14.0.0"
+  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/material-design-icons/-/material-design-icons-14.0.0.tgz#a09d8d5ebb0db4e62abea54f6eb85a566d43727c"
+  integrity sha512-4bM2hqftim52qUkxA0OMI9+6FDGjTWvQVpQmJY75+UgTmWBWDEHnSBxhdqpXY0ncOC4ZTBPO34hV3oYHy0iewQ==
   dependencies:
-    "@react-native-vector-icons/common" "^13.0.4"
+    "@react-native-vector-icons/common" "^14.0.0"
 
-"@react-native-vector-icons/material-icons@13.1.5":
-  version "13.1.5"
-  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/material-icons/-/material-icons-13.1.5.tgz#d105aead74ba0a420596170c6e4ff2a6be909baf"
-  integrity sha512-9wQ5HTFZ6qe2vqzny6ehzg9duPfYI/iAoqUaQkWOhL0mNLkS7OOjy/4m6pv21UvUwKyk1Cix3bh0Wcyzg1gXKw==
+"@react-native-vector-icons/material-icons@14.0.0":
+  version "14.0.0"
+  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/material-icons/-/material-icons-14.0.0.tgz#69b1bd721c28f0ebe2a884a652b8e4fc2fa920ff"
+  integrity sha512-YYCZOIoD4w/2osk5Oucr2/Si47hqyu5z5uM1wtCKQ6UtqCyVqOSEnmtZ7O4mG5wI/425zpISz8dczLEnMtfzMQ==
   dependencies:
-    "@react-native-vector-icons/common" "^13.0.4"
+    "@react-native-vector-icons/common" "^14.0.0"
 
 "@react-native/asset-utils@0.88.1":
   version "0.88.1"
