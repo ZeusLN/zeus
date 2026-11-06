@@ -7843,10 +7843,10 @@ pngjs@^5.0.0:
   resolved "https://registry.yarnpkg.com/pngjs/-/pngjs-5.0.0.tgz#e79dd2b215767fd9c04561c01236df960bce7fbb"
   integrity sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw==
 
-pod-install@0.1.38:
-  version "0.1.38"
-  resolved "https://registry.yarnpkg.com/pod-install/-/pod-install-0.1.38.tgz#1c16a800a5fc1abea0cafcc0e190f376368c76ab"
-  integrity sha512-NeDWGigjJRriOIKBOvpW2/tK2tYLfyUT7ia6C6L+oarCAhBNP+IGODWdU+GEAqvfsseqOApcFclpXAJTL0UPzA==
+pod-install@0.3.10:
+  version "0.3.10"
+  resolved "https://registry.yarnpkg.com/pod-install/-/pod-install-0.3.10.tgz#a5b66b6de21e23f7a073d45aa08b25fe27076d3d"
+  integrity sha512-eQRYCQFxcJe1kyd8G3F++yF56XbTj9fyAUJvc7FVIOv0IH+7f/r7h7qBnkfUYnRI1mMhWja6M5hlEyZ7lZT8og==
 
 possible-typed-array-names@^1.0.0:
   version "1.1.0"
@@ -8204,10 +8204,10 @@ react-native-qr-kit@1.1.6:
   resolved "https://registry.yarnpkg.com/react-native-qr-kit/-/react-native-qr-kit-1.1.6.tgz#004a440bca19fd25ec1e2039ae05ed46c42af13a"
   integrity sha512-QYcWX9IjPN1nHAjNfikL93Kvc5aDtof79Vl3n9V0+V3vVwehtmtRYFyR+nKdPSL9LT7IxFCTRLHXdrI0V5YDjw==
 
-react-native-qrcode-svg@6.3.50:
-  version "6.3.50"
-  resolved "https://registry.yarnpkg.com/react-native-qrcode-svg/-/react-native-qrcode-svg-6.3.50.tgz#f9ae18fd4475554d84b4f0e671213ccb0625562d"
-  integrity sha512-I9sg0n/PmUg1RQkS7Qf8q1mfNNA/HKvHpx2OwE08H2EPtkjNlclpoYL8N24oNzmd/N6Jtf7C2xzvjeyYQ74f6g==
+react-native-qrcode-svg@6.3.52:
+  version "6.3.52"
+  resolved "https://registry.yarnpkg.com/react-native-qrcode-svg/-/react-native-qrcode-svg-6.3.52.tgz#140f26b93df1c6e96c7ce657c2b073de31932d3e"
+  integrity sha512-u/CRa0w+rSEVog/IygFAnF+WPO45NCAvoCGkZ1tB2WDElT/KBq2pe5DbEkeFtUVUJuAgdkzvNYQQ6VDfRXd5jQ==
   dependencies:
     prop-types "^15.8.0"
     qrcode "^1.5.4"
