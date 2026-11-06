@@ -216,6 +216,13 @@ export default class SendingLightning extends React.Component<
                 return;
             }
 
+            // A payment still pending (NWC timeout or no preimage yet) has
+            // not settled: record no amount or preimage for it
+            if (typeof status === 'string' && status === 'IN_FLIGHT') {
+                this.setState({ payingDonation: false });
+                return;
+            }
+
             const amountDonated =
                 result?.num_satoshis ||
                 result?.value_sat ||
