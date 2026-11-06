@@ -196,6 +196,8 @@ describe('DonationUtils', () => {
                 'https://pay.zeusln.app/.well-known/lnurlp/tips',
                 'GET',
                 undefined,
+                undefined,
+                false,
                 undefined
             );
             expect(mockTorRequest).toHaveBeenNthCalledWith(
@@ -203,6 +205,8 @@ describe('DonationUtils', () => {
                 `${CALLBACK_URL}?amount=21000`,
                 'GET',
                 undefined,
+                undefined,
+                false,
                 undefined
             );
             expect(mockFetch).not.toHaveBeenCalled();

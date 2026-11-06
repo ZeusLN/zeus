@@ -65,6 +65,8 @@ describe('SyncStore block tip lookup', () => {
                 URL,
                 'GET',
                 undefined,
+                undefined,
+                false,
                 undefined
             );
         } else {
@@ -93,6 +95,8 @@ describe('SyncStore block tip lookup', () => {
             `${ONION_API}/blocks/tip/height`,
             'GET',
             undefined,
+            undefined,
+            false,
             undefined
         );
         expect(store.bestBlockHeight).toBe(900000);

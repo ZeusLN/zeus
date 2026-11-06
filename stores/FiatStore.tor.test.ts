@@ -44,7 +44,14 @@ const respond = (body: any) => {
 const expectTransport = (enableTor: boolean, url: string) => {
     if (enableTor) {
         expect(blobFetch).not.toHaveBeenCalled();
-        expect(torFetch).toHaveBeenCalledWith(url, 'GET', undefined, undefined);
+        expect(torFetch).toHaveBeenCalledWith(
+            url,
+            'GET',
+            undefined,
+            undefined,
+            false,
+            undefined
+        );
     } else {
         expect(torFetch).not.toHaveBeenCalled();
         expect(blobFetch).toHaveBeenCalledWith(
