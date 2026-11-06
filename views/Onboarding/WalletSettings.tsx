@@ -21,6 +21,7 @@ import SettingsStore, {
 
 import { createOnboardingWallet } from '../../utils/WalletCreationUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
@@ -234,6 +235,7 @@ export default class WalletSettings extends React.Component<
                     >
                         <View style={{ flex: 1 }}>
                             <Text
+                                testID={TEST_IDS.walletSettings.clipboardLabel}
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
@@ -250,6 +252,7 @@ export default class WalletSettings extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
+                                testID={TEST_IDS.walletSettings.clipboardSwitch}
                                 value={clipboard}
                                 onValueChange={(value: boolean) => {
                                     this.setState({ clipboard: value });
@@ -295,6 +298,7 @@ export default class WalletSettings extends React.Component<
                                 }}
                             >
                                 <Switch
+                                    testID={TEST_IDS.walletSettings.fiatSwitch}
                                     value={fiatEnabled}
                                     onValueChange={() => {
                                         const newValue = !fiatEnabled;
@@ -312,6 +316,10 @@ export default class WalletSettings extends React.Component<
                         {fiatEnabled && (
                             <>
                                 <DropdownSetting
+                                    testID={
+                                        TEST_IDS.walletSettings
+                                            .fiatRatesSourceDropdown
+                                    }
                                     title={
                                         localeString(
                                             'views.Settings.Currency.source'
@@ -341,10 +349,18 @@ export default class WalletSettings extends React.Component<
                                         backgroundColor: 'transparent',
                                         paddingHorizontal: 0
                                     }}
+                                    testID={
+                                        TEST_IDS.walletSettings
+                                            .selectCurrencyRow
+                                    }
                                     onPress={this.navigateToSelectCurrency}
                                 >
                                     <ListItem.Content>
                                         <ListItem.Title
+                                            testID={
+                                                TEST_IDS.walletSettings
+                                                    .selectCurrencyValue
+                                            }
                                             style={{
                                                 color: themeColor(
                                                     'secondaryText'
@@ -395,6 +411,7 @@ export default class WalletSettings extends React.Component<
                                 backgroundColor: 'transparent',
                                 paddingHorizontal: 0
                             }}
+                            testID={TEST_IDS.walletSettings.securityRow}
                             onPress={() => navigation.navigate('Security')}
                         >
                             <ListItem.Content>
@@ -424,6 +441,7 @@ export default class WalletSettings extends React.Component<
                     }}
                 >
                     <Button
+                        testID={TEST_IDS.walletSettings.createWalletButton}
                         title={localeString(
                             'views.WalletSettings.createWallet'
                         )}

@@ -20,6 +20,7 @@ import SettingsStore, {
 
 import { createOnboardingWallet } from '../../utils/WalletCreationUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import MintAvatar from '../../components/MintAvatar';
@@ -387,6 +388,7 @@ export default class RecommendedSettings extends React.Component<
 
                     {/* Wallet type */}
                     <ListItem
+                        testID={TEST_IDS.recommendedSettings.walletTypeRow}
                         containerStyle={{
                             backgroundColor: 'transparent',
                             paddingHorizontal: 0,
@@ -410,6 +412,9 @@ export default class RecommendedSettings extends React.Component<
                                 )}
                             </ListItem.Title>
                             <ListItem.Subtitle
+                                testID={
+                                    TEST_IDS.recommendedSettings.walletTypeValue
+                                }
                                 style={{
                                     color: themeColor('text'),
                                     fontFamily: 'PPNeueMontreal-Medium',
@@ -447,6 +452,9 @@ export default class RecommendedSettings extends React.Component<
 
                     {/* Node implementation */}
                     <ListItem
+                        testID={
+                            TEST_IDS.recommendedSettings.nodeImplementationRow
+                        }
                         containerStyle={{
                             backgroundColor: 'transparent',
                             paddingHorizontal: 0,
@@ -472,6 +480,10 @@ export default class RecommendedSettings extends React.Component<
                                 )}
                             </ListItem.Title>
                             <ListItem.Subtitle
+                                testID={
+                                    TEST_IDS.recommendedSettings
+                                        .nodeImplementationValue
+                                }
                                 style={{
                                     color: themeColor('text'),
                                     fontFamily: 'PPNeueMontreal-Medium',
@@ -496,6 +508,7 @@ export default class RecommendedSettings extends React.Component<
                     {/* Mint source (only when ecash enabled) */}
                     {enableCashu && (
                         <ListItem
+                            testID={TEST_IDS.recommendedSettings.mintSourceRow}
                             containerStyle={{
                                 backgroundColor: 'transparent',
                                 paddingHorizontal: 0,
@@ -523,6 +536,10 @@ export default class RecommendedSettings extends React.Component<
                                     )}
                                 </ListItem.Title>
                                 <ListItem.Subtitle
+                                    testID={
+                                        TEST_IDS.recommendedSettings
+                                            .mintSourceValue
+                                    }
                                     style={{
                                         color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Medium',
@@ -580,6 +597,7 @@ export default class RecommendedSettings extends React.Component<
 
                     {/* Clipboard */}
                     <ListItem
+                        testID={TEST_IDS.recommendedSettings.clipboardRow}
                         containerStyle={{
                             backgroundColor: 'transparent',
                             paddingHorizontal: 0,
@@ -606,6 +624,9 @@ export default class RecommendedSettings extends React.Component<
                                 )}
                             </ListItem.Title>
                             <ListItem.Subtitle
+                                testID={
+                                    TEST_IDS.recommendedSettings.clipboardValue
+                                }
                                 style={{
                                     color: themeColor('text'),
                                     fontFamily: 'PPNeueMontreal-Medium',
@@ -629,6 +650,7 @@ export default class RecommendedSettings extends React.Component<
 
                     {/* Fiat */}
                     <ListItem
+                        testID={TEST_IDS.recommendedSettings.fiatRow}
                         containerStyle={{
                             backgroundColor: 'transparent',
                             paddingHorizontal: 0,
@@ -653,6 +675,7 @@ export default class RecommendedSettings extends React.Component<
                                 {localeString('views.RecommendedSettings.fiat')}
                             </ListItem.Title>
                             <ListItem.Subtitle
+                                testID={TEST_IDS.recommendedSettings.fiatValue}
                                 style={{
                                     color: themeColor('text'),
                                     fontFamily: 'PPNeueMontreal-Medium',
@@ -680,6 +703,7 @@ export default class RecommendedSettings extends React.Component<
                     }}
                 >
                     <Button
+                        testID={TEST_IDS.recommendedSettings.createWalletButton}
                         title={localeString(
                             'views.RecommendedSettings.createWallet'
                         )}
