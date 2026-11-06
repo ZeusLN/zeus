@@ -18,7 +18,10 @@ import OnchainFeeInput from '../components/OnchainFeeInput';
 import KeyValue from '../components/KeyValue';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
-import { ErrorMessage } from '../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../components/SuccessErrorMessage';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
 import UTXOPicker from '../components/UTXOPicker';
@@ -347,12 +350,17 @@ export default class OpenChannel extends React.Component<
             errorMsgPeer,
             peerSuccess,
             channelSuccess,
-            funded_psbt
+            funded_psbt,
+            syncOpensInFlight
         } = ChannelsStore;
         const { confirmedBlockchainBalance, unconfirmedBlockchainBalance } =
             BalanceStore;
 
         const loading = connectingToPeer || openingChannel;
+        // an open started before this screen was reset (e.g. the user left
+        // the spinner and came back) can still open its channel
+        const earlierOpenInFlight =
+            !connectPeerOnly && !openingChannel && syncOpensInFlight > 0;
 
         const isCustomPeer = channelDestination === 'Custom';
 
@@ -389,8 +397,12 @@ export default class OpenChannel extends React.Component<
                 additionalChannels,
                 connectPeerOnly
             );
+        // a timed out open may still have opened the channel; submitting
+        // again could open a second one
         const isSubmitDisabled =
             loading ||
+            ChannelsStore.openOutcomeUnknown ||
+            earlierOpenInFlight ||
             (!connectPeerOnly && isInvalidFeeRate) ||
             isInvalidAmount ||
             isInvalidAdditionalChannel ||
@@ -718,6 +730,13 @@ export default class OpenChannel extends React.Component<
 
                         <View style={styles.content}>
                             {loading && <LoadingIndicator />}
+                            {earlierOpenInFlight && (
+                                <WarningMessage
+                                    message={localeString(
+                                        'views.OpenChannel.earlierOpenInFlight'
+                                    )}
+                                />
+                            )}
                             {(errorMsgPeer || errorMsgChannel) && (
                                 <ErrorMessage
                                     message={

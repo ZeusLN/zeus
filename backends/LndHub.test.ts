@@ -227,6 +227,7 @@ const EXPECTED_FLAGS: { [flag: string]: boolean } = {
     supportsCustomPreimages: false,
     supportsSweep: false,
     supportsOnchainSendMax: false,
+    supportsChannelMemo: false,
     supportsOnchainBatching: false,
     supportsChannelBatching: false,
     supportsChannelFundMax: false,

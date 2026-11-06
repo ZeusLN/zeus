@@ -5,7 +5,6 @@ jest.mock('react-native-randombytes', () => ({
 import {
     SEND_LABEL_PREFIX,
     findSentTransaction,
-    isRequestTimeout,
     makeSendLabel
 } from './OnchainSendUtils';
 
@@ -18,37 +17,6 @@ describe('makeSendLabel', () => {
 
     it('differs between sends', () => {
         expect(makeSendLabel()).not.toEqual(makeSendLabel());
-    });
-});
-
-describe('isRequestTimeout', () => {
-    it.each([
-        [
-            'the lnc-rn request timer',
-            'lnrpc.Lightning.SendCoins timed out after 60000ms'
-        ],
-        ['the REST backend timer', 'Request timeout'],
-        ['the iOS URL session', 'The request timed out.'],
-        ['an Android socket', 'timeout'],
-        ['the Tor client', 'request timed out']
-    ])('matches %s', (_source, message) => {
-        expect(isRequestTimeout(new Error(message))).toBe(true);
-    });
-
-    it('matches a timeout passed as a string', () => {
-        expect(isRequestTimeout('Request timeout')).toBe(true);
-    });
-
-    it.each([
-        'insufficient funds available to construct transaction',
-        'invalid address',
-        'transaction output is dust'
-    ])('does not match the node error "%s"', (message) => {
-        expect(isRequestTimeout(new Error(message))).toBe(false);
-    });
-
-    it('does not match a missing error', () => {
-        expect(isRequestTimeout(undefined)).toBe(false);
     });
 });
 

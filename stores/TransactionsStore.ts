@@ -27,11 +27,8 @@ import {
 import { sleep } from '../utils/SleepUtils';
 import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
-import {
-    findSentTransaction,
-    isRequestTimeout,
-    makeSendLabel
-} from '../utils/OnchainSendUtils';
+import { findSentTransaction, makeSendLabel } from '../utils/OnchainSendUtils';
+import { isRequestTimeout } from '../utils/RequestTimeoutUtils';
 
 import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
