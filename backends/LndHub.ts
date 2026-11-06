@@ -63,9 +63,22 @@ export default class LndHub extends LND {
             password: data.password
         });
 
+    // /gettxs has no status field. BlueWallet's LndHub lists a payment
+    // whose HTLC is still outstanding as a paid_invoice row with no
+    // preimage and the memo 'Payment in transition'. Mark it IN_FLIGHT so
+    // the Payment model treats it as in transit, as on the other backends,
+    // instead of as sent. Settled rows carry a preimage and are left as is
+    // even if the invoice description is the same text.
     getPayments = () =>
         this.getRequest('/gettxs').then((data: any) => ({
-            payments: data
+            payments: Array.isArray(data)
+                ? data.map((tx: any) =>
+                      tx?.memo === 'Payment in transition' &&
+                      !tx.payment_preimage
+                          ? { ...tx, status: 'IN_FLIGHT' }
+                          : tx
+                  )
+                : data
         }));
     getLightningBalance = () =>
         this.getRequest('/balance').then(({ BTC }: any) => ({
