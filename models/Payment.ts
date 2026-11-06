@@ -1,7 +1,6 @@
 import { computed } from 'mobx';
 import BigNumber from 'bignumber.js';
 import humanizeDuration from 'humanize-duration';
-import { sha256 } from 'js-sha256';
 
 import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
@@ -9,6 +8,7 @@ import { getFeePercentage } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import Base64Utils from '../utils/Base64Utils';
+import { sha256Hex } from '../utils/HashingUtils';
 import { decodeMemo } from '../utils/MemoUtils';
 import { lnrpc } from '../proto/lightning';
 import { notesStore } from '../stores/Stores';
@@ -89,7 +89,7 @@ export default class Payment extends BaseModel {
         }
 
         if (!this.isIncomplete) {
-            return sha256(Base64Utils.hexToBytes(this.getPreimage));
+            return sha256Hex(Base64Utils.hexToBytes(this.getPreimage));
         }
 
         return undefined;

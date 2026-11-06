@@ -35,7 +35,7 @@ import {
     TransactionPageRequest
 } from '../utils/OnchainTransactionUtils';
 
-import { Hash as sha256Hash } from 'fast-sha256';
+import { sha256Bytes } from '../utils/HashingUtils';
 import BigNumber from 'bignumber.js';
 
 export default class LightningNodeConnect {
@@ -993,9 +993,9 @@ export default class LightningNodeConnect {
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
-            signature: new sha256Hash()
-                .update(Base64Utils.stringToUint8Array(signed.signature))
-                .digest()
+            signature: sha256Bytes(
+                Base64Utils.stringToUint8Array(signed.signature)
+            )
         };
     };
     lookupInvoice = async (data: any) =>

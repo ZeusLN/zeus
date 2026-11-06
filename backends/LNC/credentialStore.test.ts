@@ -23,12 +23,23 @@ jest.mock('../../zeus_modules/@lightninglabs/lnc-rn', () => ({}));
 import LncCredentialStore, { LNC_STORAGE_KEY, hash } from './credentialStore';
 
 const PHRASE = 'abandon ability able about above absent absorb abstract';
-const BASE_KEY = `${LNC_STORAGE_KEY}:${hash(PHRASE)}`;
+// Stored credentials are keyed by sha256 of the pairing phrase (UTF-8),
+// computed here with Node's crypto so a hashing change cannot go unnoticed
+const PHRASE_HASH =
+    '98b1b7f7d1782f0c481e855d228ba071de6c67b2750be0cd0cd671835d5a1b10';
+const BASE_KEY = `${LNC_STORAGE_KEY}:${PHRASE_HASH}`;
 const HOST_KEY = `${BASE_KEY}:host`;
 
 const seed = (value: Record<string, string>) => {
     store[BASE_KEY] = JSON.stringify(value);
 };
+
+describe('hash', () => {
+    it('is the sha256 hex of the pairing phrase', () => {
+        expect(hash(PHRASE)).toBe(PHRASE_HASH);
+        expect(LNC_STORAGE_KEY).toBe('lnc-rn');
+    });
+});
 
 describe('LNC credentialStore', () => {
     beforeEach(() => {

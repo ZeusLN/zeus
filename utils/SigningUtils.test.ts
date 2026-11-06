@@ -1,4 +1,6 @@
 import { getCompressedPublicKeyHex, ecdsaSignDERHex } from './SigningUtils';
+import * as necc from '@noble/secp256k1';
+import { createHash, createHmac } from 'node:crypto';
 
 const h = (hex: string): Uint8Array => Buffer.from(hex, 'hex');
 
@@ -63,6 +65,35 @@ describe('SigningUtils', () => {
                     ecdsaSignDERHex(h(VECTORS[0].hash), key)
                 ).toThrow();
             }
+        );
+    });
+});
+
+// noble_ecc installs these hooks on @noble/secp256k1; signSync's RFC 6979
+// nonces use hmacSha256Sync. Each hook takes several message parts and must
+// hash their concatenation. Expected values from Node's crypto.
+describe('noble_ecc hash hooks', () => {
+    const parts = [
+        Uint8Array.from([1, 2, 3]),
+        new Uint8Array(0),
+        Uint8Array.from(Buffer.from('lightning', 'utf8'))
+    ];
+    const joined = Buffer.concat(parts.map((p) => Buffer.from(p)));
+
+    it('sha256Sync hashes the concatenated messages', () => {
+        expect(
+            Buffer.from(necc.utils.sha256Sync!(...parts)).toString('hex')
+        ).toBe(createHash('sha256').update(joined).digest('hex'));
+    });
+
+    it('hmacSha256Sync keys an HMAC over the concatenated messages', () => {
+        const key = new Uint8Array(32).fill(7);
+        expect(
+            Buffer.from(necc.utils.hmacSha256Sync!(key, ...parts)).toString(
+                'hex'
+            )
+        ).toBe(
+            createHmac('sha256', Buffer.from(key)).update(joined).digest('hex')
         );
     });
 });

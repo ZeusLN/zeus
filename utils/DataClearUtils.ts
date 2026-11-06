@@ -77,14 +77,14 @@ import {
 } from './LdkNodeUtils';
 import { isValidNodeDir } from './NodeDirUtils';
 import { sleep } from './SleepUtils';
-import hashjs from 'hash.js';
+import { sha256StringToHex } from './HashingUtils';
 
 // LNC credentials are persisted by backends/LNC/credentialStore.ts under
 // `lnc-rn:<sha256(pairingPhrase)>` and `...:host`. Reconstruct those keys from
 // each node's pairing phrase so a wipe removes them (clearing the literal
 // `lnc-rn` prefix alone never matches the hashed keys).
 const LNC_STORAGE_KEY = 'lnc-rn';
-const lncHash = (value: string) => hashjs.sha256().update(value).digest('hex');
+const lncHash = (value: string) => sha256StringToHex(value);
 
 const KEY_PREFIX = 'zeus:';
 
@@ -485,11 +485,7 @@ export async function clearCDKDatabaseForNode(node: any): Promise<void> {
             mnemonic = stored;
         }
 
-        const hash = hashjs
-            .sha256()
-            .update(mnemonic)
-            .digest('hex')
-            .slice(0, 16);
+        const hash = sha256StringToHex(mnemonic).slice(0, 16);
         const dbDir = cdkDatabaseDir();
         const dbFile = `cashu_wallet_${hash}.db`;
 

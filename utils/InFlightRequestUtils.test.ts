@@ -3,6 +3,15 @@ import { inFlightRequestKey } from './InFlightRequestUtils';
 describe('inFlightRequestKey', () => {
     const url = 'https://node.example.com:8080/v1/channels';
 
+    it('prefixes the key with sha256 of the JSON headers', () => {
+        // sha256 of {"Grpc-Metadata-macaroon":"abcd"}, computed with Node's crypto
+        expect(
+            inFlightRequestKey({ 'Grpc-Metadata-macaroon': 'abcd' }, url)
+        ).toBe(
+            `f034b2640f02f96d9430fe4cc5019cc2d31bffe6cded51f9acb1cb388d60f2b5:${url}`
+        );
+    });
+
     it('is stable for the same headers, url and body', () => {
         expect(inFlightRequestKey({ Rune: 'a' }, url, { n: 1 })).toBe(
             inFlightRequestKey({ Rune: 'a' }, url, { n: 1 })
