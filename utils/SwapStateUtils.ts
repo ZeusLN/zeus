@@ -10,10 +10,13 @@ const FINAL_SUBMARINE_SWAP_STATES: string[] = [
     SwapState.TransactionRefunded
 ];
 
-// A reverse swap is done once its claim went out (the host settled the
-// invoice) or the host gave up on it, which fails the user's payment back.
+// A reverse swap is done once the host gave up on it, which fails the
+// user's payment back, or once its claim was recorded as broadcast. The
+// host settles the invoice as soon as it has the preimage, which a
+// cooperative claim sends before ZEUS broadcasts, so a settled swap counts
+// only with a claimTxid. Settled swaps claimed by versions that did not
+// record the claim are listed too.
 const FINAL_REVERSE_SWAP_STATES: string[] = [
-    SwapState.InvoiceSettled,
     SwapState.TransactionClaimed,
     SwapState.InvoiceExpired,
     SwapState.SwapExpired,
@@ -29,11 +32,15 @@ export const getUnfinishedSwapIds = (swaps: any[]): string[] => {
     const ids: string[] = [];
     for (const swap of swaps) {
         if (!swap || typeof swap !== 'object') continue;
-        const finalStates =
-            swap.type === SwapType.Reverse
-                ? FINAL_REVERSE_SWAP_STATES
-                : FINAL_SUBMARINE_SWAP_STATES;
-        if (finalStates.includes(swap.status)) continue;
+        if (swap.type === SwapType.Reverse) {
+            if (swap.status === SwapState.InvoiceSettled) {
+                if (swap.claimTxid) continue;
+            } else if (FINAL_REVERSE_SWAP_STATES.includes(swap.status)) {
+                continue;
+            }
+        } else if (FINAL_SUBMARINE_SWAP_STATES.includes(swap.status)) {
+            continue;
+        }
         const id = swap.id ? String(swap.id) : '?';
         if (!ids.includes(id)) ids.push(id);
     }

@@ -22,10 +22,11 @@ const sub = (id: string, status?: string) => ({
     type: SwapType.Submarine,
     status
 });
-const rev = (id: string, status?: string) => ({
+const rev = (id: string, status?: string, fields: object = {}) => ({
     id,
     type: SwapType.Reverse,
-    status
+    status,
+    ...fields
 });
 
 describe('getUnfinishedSwapIds', () => {
@@ -53,7 +54,6 @@ describe('getUnfinishedSwapIds', () => {
     });
 
     it.each([
-        SwapState.InvoiceSettled,
         SwapState.TransactionClaimed,
         SwapState.InvoiceExpired,
         SwapState.SwapExpired,
@@ -69,6 +69,28 @@ describe('getUnfinishedSwapIds', () => {
         SwapState.TransactionConfirmed
     ])('treats a reverse swap in %s as unfinished', (status) => {
         expect(getUnfinishedSwapIds([rev('a', status)])).toEqual(['a']);
+    });
+
+    it('treats a settled reverse swap as finished once its claim is recorded', () => {
+        expect(
+            getUnfinishedSwapIds([
+                rev('a', SwapState.InvoiceSettled, { claimTxid: 'tx' })
+            ])
+        ).toEqual([]);
+    });
+
+    // the host settles the invoice once it has the preimage, which a
+    // cooperative claim sends before the claim is broadcast
+    it('treats a settled reverse swap without a recorded claim as unfinished', () => {
+        expect(
+            getUnfinishedSwapIds([
+                rev('a', SwapState.InvoiceSettled),
+                rev('b', SwapState.InvoiceSettled, {
+                    claimTransactionHex: '02000000'
+                }),
+                rev('c', SwapState.InvoiceSettled, { claimTxid: '' })
+            ])
+        ).toEqual(['a', 'b', 'c']);
     });
 
     it('treats a swap without a status or type as unfinished', () => {
@@ -110,15 +132,16 @@ describe('getStoredUnfinishedSwapIds', () => {
         // refresh moves them
         mockStored.swaps = JSON.stringify([
             sub('s1', SwapState.TransactionClaimed),
-            rev('r0', SwapState.InvoiceSettled),
-            rev('r1', SwapState.TransactionConfirmed)
+            rev('r0', SwapState.InvoiceSettled, { claimTxid: 'tx' }),
+            rev('r1', SwapState.TransactionConfirmed),
+            rev('r3', SwapState.InvoiceSettled)
         ]);
         mockStored['reverse-swaps'] = JSON.stringify([
             rev('r2', SwapState.TransactionMempool)
         ]);
 
         await expect(getStoredUnfinishedSwapIds()).resolves.toEqual({
-            ids: ['r1', 'r2'],
+            ids: ['r1', 'r3', 'r2'],
             unreadable: false
         });
     });
