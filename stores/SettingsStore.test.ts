@@ -110,6 +110,7 @@ import SettingsStore, {
     SETTINGS_WRITE_DEBOUNCE_MS,
     STORAGE_KEY,
     THEME_KEYS,
+    getJitChannelProvider,
     getLdkNodeLspConfig,
     getLspConfigForNetwork,
     isOlympusPeer
@@ -1698,6 +1699,43 @@ describe('getLdkNodeLspConfig', () => {
             expect(config.trustedPeers0conf).toEqual([
                 DEFAULT_LSPS1_PUBKEY_MUTINYNET
             ]);
+        });
+
+        describe('JIT channel provider', () => {
+            const withProvider = (jitChannelProvider?: string) => ({
+                ...lsps2Settings(lsps2Pubkey, '127.0.0.1:9735'),
+                jitChannelProvider
+            });
+
+            it('defaults to LSPS2', () => {
+                expect(getJitChannelProvider({} as any)).toEqual('lsps2');
+                expect(
+                    getJitChannelProvider({ jitChannelProvider: 'flow' } as any)
+                ).toEqual('flow');
+            });
+
+            it.each([undefined, 'lsps2'])(
+                'registers the LSPS2 LSP with provider %s',
+                (provider) => {
+                    expect(
+                        getLdkNodeLspConfig(withProvider(provider), 'mutinynet')
+                            .lsps2Config?.nodeId
+                    ).toEqual(lsps2Pubkey);
+                }
+            );
+
+            it('leaves out and does not trust the LSPS2 LSP with Flow', () => {
+                expect(
+                    getLdkNodeLspConfig(withProvider('flow'), 'mutinynet')
+                ).toEqual({
+                    lsps1Config: {
+                        nodeId: DEFAULT_LSPS1_PUBKEY_MUTINYNET,
+                        address: DEFAULT_LSPS1_HOST_MUTINYNET,
+                        token: null
+                    },
+                    trustedPeers0conf: [DEFAULT_LSPS1_PUBKEY_MUTINYNET]
+                });
+            });
         });
     });
 });

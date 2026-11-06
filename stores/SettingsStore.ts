@@ -273,6 +273,8 @@ export interface Settings {
     lsps2HostTestnet?: string;
     lsps2HostMutinynet?: string;
     lsps2Token?: string;
+    // Who opens JIT channels on LDK Node; unset follows the default
+    jitChannelProvider?: JitChannelProvider;
     // Swaps
     swaps: SwapsSettings;
     // Lightning Address
@@ -1396,6 +1398,15 @@ export const DEFAULT_LSPS2_HOST_TESTNET = '';
 export const DEFAULT_LSPS2_PUBKEY_MUTINYNET = '';
 export const DEFAULT_LSPS2_HOST_MUTINYNET = '';
 
+export type JitChannelProvider = 'flow' | 'lsps2';
+
+// Kept out of DEFAULT_SETTINGS like DEFAULT_LSPS2_*, so changing it reaches
+// every user who never picked a provider
+export const DEFAULT_JIT_CHANNEL_PROVIDER: JitChannelProvider = 'lsps2';
+
+export const getJitChannelProvider = (settings: Settings): JitChannelProvider =>
+    settings.jitChannelProvider ?? DEFAULT_JIT_CHANNEL_PROVIDER;
+
 /**
  * Select LSP config values for a given network.
  * Accepts either a network string ('mainnet'|'testnet'|'signet'|'mutinynet')
@@ -1523,11 +1534,15 @@ export function getLdkNodeLspConfig(
         trustedPeers0conf.push(lsps1Config.nodeId);
     }
 
+    // With Flow chosen the LSPS2 LSP is left out, so the LSPS1 node stays the
+    // LSPS2 source: ldk-node lets only that source's channels carry a full
+    // HTLC in flight, and Flow sends most of a new channel in one HTLC.
     // ldk-node aborts the app on iOS if it can't parse a peer, and the
     // settings screen saves as the user types, so only valid values pass
     const lsps2Pubkey = lspConfig.lsps2Pubkey.trim().toLowerCase();
     const lsps2Host = lspConfig.lsps2Host.trim();
     const lsps2Config =
+        getJitChannelProvider(settings) === 'lsps2' &&
         ValidationUtils.isValidPeerPubkey(lsps2Pubkey) &&
         ValidationUtils.isValidPeerAddress(lsps2Host)
             ? {
