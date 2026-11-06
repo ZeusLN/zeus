@@ -73,6 +73,7 @@ jest.mock('../stores/SettingsStore', () => ({
         'https://api.middle-way.space/v2'
     ],
     RETIRED_THEMES: ['junkie', 'bpm', 'desert', 'mint', 'watermelon'],
+    RETIRED_THEMES_V4: ['purple'],
     DEFAULT_THEME: 'kyriaki',
     DEFAULT_NOSTR_RELAYS_2023: [
         'wss://nostr.mutinywallet.com',
@@ -761,6 +762,22 @@ describe('MigrationUtils', () => {
                 expect(settings.display.displayNickname).toBe(true);
             }
         );
+
+        it('moves a theme on the list it is given', () => {
+            const settings: any = { display: { theme: 'purple' } };
+
+            expect(
+                MigrationUtils.applyRetiredThemes(settings, ['purple'])
+            ).toBe(true);
+            expect(settings.display.theme).toBe('kyriaki');
+        });
+
+        it('checks only the v3 list by default', () => {
+            const settings: any = { display: { theme: 'purple' } };
+
+            expect(MigrationUtils.applyRetiredThemes(settings)).toBe(false);
+            expect(settings.display.theme).toBe('purple');
+        });
 
         it('leaves themes that still exist alone', () => {
             const settings: any = { display: { theme: 'blueberry' } };
@@ -1642,7 +1659,7 @@ describe('MigrationUtils', () => {
             expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
         });
 
-        it('skips every block for a blob already stamped at 3', async () => {
+        it('skips the v1 to v3 blocks for a blob already stamped at 3', async () => {
             const settings: any = {
                 settingsVersion: 3,
                 display: { theme: 'mint' }
@@ -1655,6 +1672,56 @@ describe('MigrationUtils', () => {
             // the theme retirement is exactly-once, not merely idempotent
             expect(changed).toBe(false);
             expect(settings.display.theme).toBe('mint');
+        });
+
+        it('applies the v4 theme retirement to a blob already stamped at 3', async () => {
+            // installs that booted v13.2.3 or later are stamped at 3, so
+            // the v4 block alone moves them off Memberberry
+            const settings: any = {
+                settingsVersion: 3,
+                display: { theme: 'purple', defaultView: 'Keypad' }
+            };
+
+            const changed = await MigrationUtils.applySettingsMigrations(
+                settings
+            );
+
+            expect(changed).toBe(true);
+            expect(settings.display.theme).toBe('kyriaki');
+            expect(settings.display.defaultView).toBe('Keypad');
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
+        });
+
+        it('applies both theme retirements to a blob stamped at 2', async () => {
+            const purple: any = {
+                settingsVersion: 2,
+                display: { theme: 'purple' }
+            };
+            const mint: any = {
+                settingsVersion: 2,
+                display: { theme: 'mint' }
+            };
+
+            await MigrationUtils.applySettingsMigrations(purple);
+            await MigrationUtils.applySettingsMigrations(mint);
+
+            expect(purple.display.theme).toBe('kyriaki');
+            expect(mint.display.theme).toBe('kyriaki');
+        });
+
+        it('skips every block for a blob already stamped at 4', async () => {
+            const settings: any = {
+                settingsVersion: 4,
+                display: { theme: 'purple' }
+            };
+
+            const changed = await MigrationUtils.applySettingsMigrations(
+                settings
+            );
+
+            expect(changed).toBe(false);
+            expect(settings.display.theme).toBe('purple');
         });
     });
 

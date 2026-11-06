@@ -187,6 +187,55 @@ describe('ThemeUtils', () => {
         });
     });
 
+    describe('button text contrast in the editor-palette themes', () => {
+        // WCAG 2 relative luminance and contrast ratio
+        const luminance = (hex: string) => {
+            const [r, g, b] = [1, 3, 5].map((i) => {
+                const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+                return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+            });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const contrast = (a: string, b: string) => {
+            const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+            return (hi + 0.05) / (lo + 0.05);
+        };
+
+        afterEach(() => {
+            mockSettings.display.theme = 'dark';
+        });
+
+        // Button and layer balance row labels (buttonText) and their
+        // subtitles (buttonTextSecondary) sit on buttonBackground or on
+        // either end of buttonGradient
+        it.each([
+            'dracula',
+            'solarized-dark',
+            'solarized-light',
+            'gruvbox',
+            'nord',
+            'monokai',
+            'one-dark',
+            'tokyo-night',
+            'synthwave'
+        ])('%s reaches 4.5:1 on every button background', (theme) => {
+            mockSettings.display.theme = theme;
+            const backgrounds = [
+                themeColor('buttonBackground'),
+                ...themeColor('buttonGradient')
+            ];
+            for (const key of ['buttonText', 'buttonTextSecondary']) {
+                for (const background of backgrounds) {
+                    expect({
+                        key,
+                        background,
+                        passes: contrast(themeColor(key), background) >= 4.5
+                    }).toEqual({ key, background, passes: true });
+                }
+            }
+        });
+    });
+
     it('defines no radial gradient for other themes', () => {
         for (const theme of ['dark', 'kyriaki', 'pub', 'radioactive']) {
             mockSettings.display.theme = theme;

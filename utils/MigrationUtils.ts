@@ -30,6 +30,7 @@ import {
     RETIRED_SWAP_HOSTS_MAINNET,
     RETIRED_SWAP_HOSTS_MAINNET_V2,
     RETIRED_THEMES,
+    RETIRED_THEMES_V4,
     DEFAULT_THEME,
     DEFAULT_NOSTR_RELAYS_2023,
     PosEnabled,
@@ -680,6 +681,13 @@ class MigrationsUtils {
             changed = this.applyRetiredThemes(settings) || changed;
         }
 
+        if (priorVersion < 4) {
+            // v3 -> v4: move users off Memberberry. No flag read: the stamp
+            // alone keeps this exactly-once.
+            changed =
+                this.applyRetiredThemes(settings, RETIRED_THEMES_V4) || changed;
+        }
+
         settings.settingsVersion = SETTINGS_VERSION;
         return changed;
     }
@@ -833,10 +841,13 @@ class MigrationsUtils {
     // theme. Without this themeColor() falls through to the Dark palette
     // for them, and their persisted value matches no entry in THEME_KEYS,
     // so the theme picker cannot show it as selected.
-    public applyRetiredThemes(settings: any): boolean {
+    public applyRetiredThemes(
+        settings: any,
+        retiredThemes: string[] = RETIRED_THEMES
+    ): boolean {
         if (
             settings?.display?.theme &&
-            RETIRED_THEMES.includes(settings.display.theme)
+            retiredThemes.includes(settings.display.theme)
         ) {
             settings.display.theme = DEFAULT_THEME;
             return true;
