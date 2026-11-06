@@ -597,18 +597,24 @@ describe('SwapStore.verifyReverseLockup', () => {
             `https://mempool.test/api/tx/${LOCKUP_TX.getId()}`,
             'GET',
             undefined,
+            undefined,
+            false,
             undefined
         );
         expect(doTorRequestRaw).toHaveBeenCalledWith(
             `https://mempool.test/api/tx/${LOCKUP_TX.getId()}/outspend/0`,
             'GET',
             undefined,
+            undefined,
+            false,
             undefined
         );
         expect(doTorRequestRaw).toHaveBeenCalledWith(
             'https://mempool.test/api/blocks/tip/height',
             'GET',
             undefined,
+            undefined,
+            false,
             undefined
         );
     });

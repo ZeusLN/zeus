@@ -246,6 +246,33 @@ describe('networkFetch', () => {
             expect(response.json()).toEqual({ success: true });
         });
 
+        it('passes a request timeout to the Tor daemon, 60 s by default', async () => {
+            (RnTor.httpPost as jest.Mock).mockResolvedValue({
+                status_code: 200,
+                body: '{}',
+                error: null
+            });
+
+            await networkFetch({
+                method: 'POST',
+                url: 'https://example.com/upload',
+                body: '{}',
+                enableTor: true,
+                timeoutMs: 900000
+            });
+            await networkFetch({
+                method: 'POST',
+                url: 'https://example.com/status',
+                body: '{}',
+                enableTor: true
+            });
+
+            const timeouts = (RnTor.httpPost as jest.Mock).mock.calls.map(
+                ([args]) => args.timeout_ms
+            );
+            expect(timeouts).toEqual([900000, 60000]);
+        });
+
         it('surfaces a non-2xx status instead of throwing (parity with blob-util)', async () => {
             (RnTor.httpGet as jest.Mock).mockResolvedValue({
                 status_code: 404,

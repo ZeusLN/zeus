@@ -75,6 +75,7 @@ jest.mock('react-native', () => ({
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import {
+    CHANNEL_BACKUP_TRANSFER_TIMEOUT_MS,
     restoreChannelBackupFromOlympus,
     uploadChannelBackupToOlympus
 } from './ChannelMigrationUtils';
@@ -159,6 +160,32 @@ describe('ChannelMigrationUtils Tor routing', () => {
                 expect(method).toBe('POST');
                 expect(JSON.parse(body).pubkey).toBe(PUBKEY);
             }
+        }
+    );
+
+    it.each(flows)(
+        '%s gives only the backup transfer a longer Tor timeout',
+        async (_name, backupAt, run, paths) => {
+            mockSettingsStore.enableTor = true;
+            lastBackupAt = backupAt;
+
+            await run();
+
+            expect(CHANNEL_BACKUP_TRANSFER_TIMEOUT_MS).toBe(15 * 60 * 1000);
+            const transfer = paths[paths.length - 1];
+            expect(
+                torFetch.mock.calls.map(([url, , , , , timeoutMs]) => [
+                    url.replace(HOST, ''),
+                    timeoutMs
+                ])
+            ).toEqual(
+                paths.map((path) => [
+                    path,
+                    path === transfer
+                        ? CHANNEL_BACKUP_TRANSFER_TIMEOUT_MS
+                        : undefined
+                ])
+            );
         }
     );
 
