@@ -1024,23 +1024,84 @@ export default class LightningNodeConnect {
     subscribeInvoices = () => this.lnc.lnd.lightning.subscribeInvoices();
     subscribeTransactions = () =>
         this.lnc.lnd.lightning.subscribeTransactions();
+
+    // Native LNC streams cannot be cancelled, and every stream of a method
+    // emits under the method name, so each SubscribeTransactions or
+    // SubscribeInvoices stream started per watcher ran for the rest of the
+    // session and reached every listener. Start each at most once per
+    // client and fan its events out to the registered watchers;
+    // unsubscribing only drops the watcher.
+    private sharedStreams = new Map<
+        string,
+        {
+            client?: any;
+            listener?: EmitterSubscription;
+            watchers: Set<(event: any) => void>;
+        }
+    >();
+
+    private watchSharedStream = (
+        key: string,
+        start: () => string,
+        onEvent: (event: any) => void
+    ): (() => void) => {
+        let shared = this.sharedStreams.get(key);
+        if (!shared) {
+            shared = { watchers: new Set() };
+            this.sharedStreams.set(key, shared);
+        }
+        const stream = shared;
+        // a new client (wallet switch or reconnect) needs its own stream
+        const client = this.lnc;
+        if (stream.client !== client) {
+            const eventName = start();
+            stream.client = client;
+            if (!stream.listener) {
+                const { LncModule } = NativeModules;
+                const eventEmitter = new NativeEventEmitter(LncModule);
+                stream.listener = eventEmitter.addListener(
+                    eventName,
+                    (event: any) => {
+                        // EOF or an error string ends the stream: start a
+                        // new one for the next watcher
+                        if (event?.result) {
+                            try {
+                                JSON.parse(event.result);
+                            } catch (e) {
+                                stream.client = undefined;
+                            }
+                        }
+                        [...stream.watchers].forEach((watcher) =>
+                            watcher(event)
+                        );
+                    }
+                );
+            }
+        }
+        const watcher = (event: any) => onEvent(event);
+        stream.watchers.add(watcher);
+        return () => {
+            stream.watchers.delete(watcher);
+        };
+    };
+
     watchActivityUpdates = (
         onTransaction: () => void,
         onInvoice: () => void
     ): (() => void) => {
-        const { LncModule } = NativeModules;
-        const eventEmitter = new NativeEventEmitter(LncModule);
-        const transactionsListener = eventEmitter.addListener(
-            this.subscribeTransactions(),
+        const stopTransactions = this.watchSharedStream(
+            'transactions',
+            this.subscribeTransactions,
             onTransaction
         );
-        const invoicesListener = eventEmitter.addListener(
-            this.subscribeInvoices(),
+        const stopInvoices = this.watchSharedStream(
+            'invoices',
+            this.subscribeInvoices,
             onInvoice
         );
         return () => {
-            transactionsListener.remove();
-            invoicesListener.remove();
+            stopTransactions();
+            stopInvoices();
         };
     };
     watchInvoicePaid = (
@@ -1104,42 +1165,44 @@ export default class LightningNodeConnect {
         },
         onReceived: (payload: { amountSat: number; txid: string }) => void
     ): (() => void) => {
-        const { LncModule } = NativeModules;
-        const eventName = this.subscribeTransactions();
-        const eventEmitter = new NativeEventEmitter(LncModule);
-        const listener = eventEmitter.addListener(eventName, (event: any) => {
-            if (event.result) {
-                if (
-                    typeof event.result === 'string' &&
-                    event.result.includes('rpc error: code = Canceled')
-                ) {
-                    listener.remove();
-                    return;
-                }
-                try {
-                    const result = JSON.parse(event.result);
-                    if (result === 'EOF') {
-                        listener.remove();
+        const stop = this.watchSharedStream(
+            'transactions',
+            this.subscribeTransactions,
+            (event: any) => {
+                if (event.result) {
+                    if (
+                        typeof event.result === 'string' &&
+                        event.result.includes('rpc error: code = Canceled')
+                    ) {
+                        stop();
                         return;
                     }
-                    if (
-                        result.dest_addresses.includes(address) &&
-                        result.num_confirmations >= numConfPreference &&
-                        Number(result.amount) >= Number(expectedAmountSat ?? 0)
-                    ) {
-                        listener.remove();
-                        onReceived({
-                            amountSat: Number(result.amount),
-                            txid: result.tx_hash
-                        });
+                    try {
+                        const result = JSON.parse(event.result);
+                        if (result === 'EOF') {
+                            stop();
+                            return;
+                        }
+                        if (
+                            result.dest_addresses.includes(address) &&
+                            result.num_confirmations >= numConfPreference &&
+                            Number(result.amount) >=
+                                Number(expectedAmountSat ?? 0)
+                        ) {
+                            stop();
+                            onReceived({
+                                amountSat: Number(result.amount),
+                                txid: result.tx_hash
+                            });
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        stop();
                     }
-                } catch (error) {
-                    console.error(error);
-                    listener.remove();
                 }
             }
-        });
-        return () => listener.remove();
+        );
+        return stop;
     };
 
     supports = (minVersion: string, eosVersion?: string) => {
