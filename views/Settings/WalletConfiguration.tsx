@@ -24,6 +24,7 @@ import { hash, LNC_STORAGE_KEY } from '../../backends/LNC/credentialStore';
 import AddressUtils, { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
 import ConnectionFormatUtils from '../../utils/ConnectionFormatUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -1632,6 +1633,7 @@ export default class WalletConfiguration extends React.Component<
 
         const WalletInterface = () => (
             <DropdownSetting
+                testID={TEST_IDS.walletConfiguration.interfaceDropdown}
                 title={localeString(
                     'views.Settings.WalletConfiguration.walletInterface'
                 )}
@@ -2249,6 +2251,10 @@ export default class WalletConfiguration extends React.Component<
                                         )}
                                     </Text>
                                     <TextInput
+                                        testID={
+                                            TEST_IDS.walletConfiguration
+                                                .lndhubUrlInput
+                                        }
                                         placeholder={'https://'}
                                         textColor={
                                             lndhubUrlError
@@ -2507,6 +2513,10 @@ export default class WalletConfiguration extends React.Component<
                                         )}
                                     </Text>
                                     <TextInput
+                                        testID={
+                                            TEST_IDS.walletConfiguration
+                                                .hostInput
+                                        }
                                         placeholder={'localhost'}
                                         textColor={
                                             hostError

@@ -10,6 +10,7 @@ import Text from '../../components/Text';
 
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 
 interface Onboarding1Props {
     navigation: NativeStackNavigationProp<any, any>;
@@ -48,6 +49,10 @@ export default class Onboarding1 extends React.Component<Onboarding1Props, {}> {
                             <View style={styles.buttonsContainer}>
                                 <View style={styles.buttonWrapper}>
                                     <Button
+                                        testID={
+                                            TEST_IDS.onboarding
+                                                .recommendedButton
+                                        }
                                         title={localeString(
                                             'views.Onboarding.recommended'
                                         )}
@@ -60,6 +65,10 @@ export default class Onboarding1 extends React.Component<Onboarding1Props, {}> {
                                 </View>
                                 <View style={styles.buttonWrapper}>
                                     <Button
+                                        testID={
+                                            TEST_IDS.onboarding
+                                                .questionnaireButton
+                                        }
                                         title={localeString(
                                             'views.Onboarding.questionnaire'
                                         )}

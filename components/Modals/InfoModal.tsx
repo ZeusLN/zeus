@@ -9,6 +9,7 @@ import ModalStore from '../../stores/ModalStore';
 
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
@@ -58,6 +59,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                     }}
                 >
                     <View
+                        testID={TEST_IDS.infoModal.content}
                         style={{
                             backgroundColor:
                                 infoModalBackgroundColor ||
