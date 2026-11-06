@@ -313,7 +313,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
+        // Every wallet switch sets connecting before it navigates here, but
+        // CashuStore.reset() only runs later inside the connect, so
+        // cdkInitialized can still be true from the previous wallet. The
+        // connect initializes CDK for the selected wallet, so leave Cashu
+        // work to the next focus after it finishes.
         if (
+            !SettingsStore.connecting &&
             BackendUtils.supportsCashuWallet() &&
             SettingsStore.settings?.ecash?.enableCashu &&
             CashuStore?.cdkInitialized

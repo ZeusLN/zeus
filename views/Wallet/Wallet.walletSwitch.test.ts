@@ -28,7 +28,8 @@ const nodes = [
     { implementation: 'ldk-node', ldkMnemonic: 'm', ldkNodeDir: 'a' },
     { implementation: 'lnd', host: 'b' },
     { implementation: 'embedded-lnd', lndDir: 'c' },
-    { implementation: 'cln-rest', host: 'd' }
+    { implementation: 'cln-rest', host: 'd' },
+    { implementation: 'ldk-node', ldkMnemonic: 'm2', ldkNodeDir: 'e' }
 ];
 
 // With realLogin, the login and session methods are the production ones
@@ -119,7 +120,8 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             'getSettingsAndNavigate',
             'fetchData',
             'fetchDataCore',
-            'retryConnection'
+            'retryConnection',
+            'handleFocus'
         ],
         {
             BackendUtils,
@@ -151,7 +153,8 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             autoPurgeLegacyKeychain: jest.fn(),
             PosEnabled: { Disabled: 'disabled', Standalone: 'standalone' },
             repairMissingChannelEdges,
-            isWipePending
+            isWipePending,
+            BackHandler: { addEventListener: () => ({ remove: () => {} }) }
         }
     );
     const view = new Wallet();
@@ -207,6 +210,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
     const refresh = () => view.getSettingsAndNavigate();
     const runner = new WalletRefreshRunner(settings, () => true, refresh);
     return {
+        BackendUtils,
         settings,
         view,
         runner,
@@ -607,5 +611,134 @@ describe('error-screen Retry', () => {
         } finally {
             jest.useRealTimers();
         }
+    });
+});
+
+// Wallet.handleFocus syncs CDK balances and checks pending ecash items. After
+// a wallet switch the focus from popTo('Wallet') arrives before the connect
+// runs CashuStore.reset(), while cdkInitialized is still true from the
+// outgoing wallet and native CDK still holds that wallet's handles. Uses the
+// production CashuStore methods with native CDK controlled.
+describe('Cashu work on focus', () => {
+    const MINT_A = 'https://mint.a';
+
+    const cashuSetup = (selectedNode: number) => {
+        const ctx = setup(selectedNode);
+        ctx.BackendUtils.supportsCashuWallet = () => true;
+        ctx.settings.settings = {
+            ...ctx.settings.settings,
+            ecash: { enableCashu: true }
+        };
+        const CashuDevKit = {
+            getBalances: jest.fn(async () => ({ [MINT_A]: 500 })),
+            getTotalBalance: jest.fn(async () => 500)
+        };
+        const Cashu = sourceMethods(
+            'stores/CashuStore.ts',
+            'CashuStore',
+            [
+                'normalizeMintUrl',
+                'syncCDKBalances',
+                'checkPendingItems',
+                'reset'
+            ],
+            {
+                CashuDevKit,
+                runWhenIdle: (fn: () => unknown) => fn(),
+                activityStore: { getSortedActivity: jest.fn() }
+            }
+        );
+        const cashu = new Cashu();
+        // the selected wallet's CDK is initialized and has a pending invoice
+        Object.assign(cashu, {
+            cdkInitialized: true,
+            mintUrls: [MINT_A],
+            invoices: [
+                {
+                    quote: 'quote-a',
+                    mintUrl: MINT_A,
+                    isPaid: false,
+                    isExpired: false
+                }
+            ],
+            sentTokens: [],
+            addedMintsCache: new Map(),
+            mintInfoCache: new Map(),
+            // each of these reaches native CDK
+            checkInvoicePaid: jest.fn(async () => {}),
+            checkTokenSpent: jest.fn(async () => false),
+            reconcilePendingMelts: jest.fn(async () => {}),
+            clearInvoice: jest.fn(),
+            clearPayReq: jest.fn(),
+            stopConnectivityMonitoring: jest.fn(),
+            initializeWallets: jest.fn(async () => {
+                cashu.cdkInitialized = true;
+            }),
+            checkAndSweepMints: jest.fn(),
+            checkAndShowUpgradeModal: jest.fn()
+        });
+        jest.spyOn(cashu, 'reset');
+        Object.assign(ctx.view, {
+            refreshRunner: ctx.runner,
+            handleBackButton: () => false,
+            tabNavigationRef: { current: null }
+        });
+        ctx.view.props.CashuStore = cashu;
+        // the selected wallet finished connecting
+        ctx.settings.connecting = false;
+        const run = jest.spyOn(ctx.runner, 'run');
+        return { ...ctx, cashu, CashuDevKit, run };
+    };
+
+    it("does not touch the outgoing wallet's CDK when focus follows a switch", async () => {
+        const { settings, view, cashu, CashuDevKit, run } = cashuSetup(0);
+        select(settings, 4);
+        Object.assign(settings, { ldkMnemonic: 'm2', ldkNodeDir: 'e' });
+
+        view.handleFocus();
+        // the focus started the connect to the selected wallet
+        expect(run).toHaveBeenCalledTimes(1);
+        await run.mock.results[0].value;
+        await flush();
+
+        expect(CashuDevKit.getBalances).not.toHaveBeenCalled();
+        expect(CashuDevKit.getTotalBalance).not.toHaveBeenCalled();
+        expect(cashu.checkInvoicePaid).not.toHaveBeenCalled();
+        expect(cashu.checkTokenSpent).not.toHaveBeenCalled();
+        expect(cashu.reconcilePendingMelts).not.toHaveBeenCalled();
+        // the connect reset CashuStore and initialized the selected wallet
+        expect(cashu.reset).toHaveBeenCalledTimes(1);
+        expect(cashu.initializeWallets).toHaveBeenCalledTimes(1);
+        expect(cashu.mintBalances).toEqual({});
+        expect(cashu.cdkInitialized).toBe(true);
+        expect(settings.connecting).toBe(false);
+    });
+
+    it('syncs balances and checks pending items on a focus with no switch', async () => {
+        const { view, cashu, CashuDevKit, run } = cashuSetup(0);
+
+        view.handleFocus();
+        await flush();
+
+        expect(run).not.toHaveBeenCalled();
+        expect(CashuDevKit.getBalances).toHaveBeenCalledTimes(1);
+        expect(CashuDevKit.getTotalBalance).toHaveBeenCalledTimes(1);
+        expect(cashu.mintBalances).toEqual({ [MINT_A]: 500 });
+        expect(cashu.checkInvoicePaid).toHaveBeenCalledWith('quote-a', MINT_A);
+        expect(cashu.reconcilePendingMelts).toHaveBeenCalledTimes(1);
+        expect(cashu.reset).not.toHaveBeenCalled();
+    });
+
+    it('syncs on a settings refresh that does not reconnect', async () => {
+        const { settings, view, CashuDevKit, cashu, run } = cashuSetup(0);
+        settings.triggerSettingsRefresh = true;
+
+        view.handleFocus();
+        await run.mock.results[0].value;
+        await flush();
+
+        expect(CashuDevKit.getBalances).toHaveBeenCalledTimes(1);
+        expect(cashu.checkInvoicePaid).toHaveBeenCalledWith('quote-a', MINT_A);
+        expect(cashu.reset).not.toHaveBeenCalled();
     });
 });
