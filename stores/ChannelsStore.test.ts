@@ -791,9 +791,19 @@ describe('ChannelsStore batch channel open', () => {
                 });
         };
 
+        // the pending_chan_ids handleChannelOpen worked from, read when it
+        // finalizes
+        let idsAtFinalize: Array<string> | undefined;
+
         beforeEach(() => {
-            jest.mocked(BackendUtils.fundingStateStep).mockResolvedValue(
-                {} as any
+            idsAtFinalize = undefined;
+            jest.mocked(BackendUtils.fundingStateStep).mockImplementation(
+                (step: any) => {
+                    if (step.psbt_finalize) {
+                        idsAtFinalize = [...store.pending_chan_ids];
+                    }
+                    return Promise.resolve({});
+                }
             );
         });
 
@@ -824,11 +834,7 @@ describe('ChannelsStore batch channel open', () => {
                 { node: 'def', no_publish: true },
                 { node: 'ghi', no_publish: false }
             ]);
-            expect(store.pending_chan_ids).toEqual([
-                'chan-a',
-                'chan-b',
-                'chan-c'
-            ]);
+            expect(idsAtFinalize).toEqual(['chan-a', 'chan-b', 'chan-c']);
             expect(BackendUtils.fundPsbt).toHaveBeenCalledTimes(1);
             expect(
                 Object.keys(
@@ -910,7 +916,7 @@ describe('ChannelsStore batch channel open', () => {
                 { node: 'abc', no_publish: true },
                 { node: 'def', no_publish: false }
             ]);
-            expect(store.pending_chan_ids).toEqual(['chan-a', 'chan-b']);
+            expect(idsAtFinalize).toEqual(['chan-a', 'chan-b']);
             expect(store.channelSuccess).toBe(true);
         });
     });
