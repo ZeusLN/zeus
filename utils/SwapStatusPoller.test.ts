@@ -3,7 +3,9 @@ jest.mock('./NetworkUtils', () => ({
     networkFetch: (...args: any[]) => mockNetworkFetch(...args)
 }));
 
-import SwapStatusPoller from './SwapStatusPoller';
+jest.mock('./LocaleUtils');
+
+import SwapStatusPoller, { SWAP_STATUS_MAX_FAILURES } from './SwapStatusPoller';
 
 const ENDPOINT = 'https://swaps.example.com/v2';
 const INTERVAL = 1000;
@@ -136,6 +138,151 @@ describe('SwapStatusPoller', () => {
                 args: [{ id: 'swap1', status: 'swap.created' }]
             }
         ]);
+    });
+
+    describe('failed polls', () => {
+        const fail = () =>
+            mockNetworkFetch.mockRejectedValueOnce(new Error('tor down'));
+
+        beforeEach(() => {
+            jest.spyOn(console, 'warn').mockImplementation(() => {});
+        });
+
+        // The first call runs the opening poll, later calls the next ones
+        let polled = 0;
+        const pollTimes = async (n: number) => {
+            for (let i = 0; i < n; i++) {
+                await tick(polled++ === 0 ? 0 : INTERVAL);
+            }
+        };
+
+        beforeEach(() => {
+            polled = 0;
+        });
+
+        it('reports an error once after three in a row, and keeps polling', async () => {
+            expect(SWAP_STATUS_MAX_FAILURES).toBe(3);
+            mockNetworkFetch.mockRejectedValue(new Error('tor down'));
+            start();
+            const onerror = jest.fn();
+            poller.onerror = onerror;
+
+            await pollTimes(2);
+            expect(onerror).not.toHaveBeenCalled();
+
+            await pollTimes(4);
+            expect(mockNetworkFetch).toHaveBeenCalledTimes(6);
+            expect(onerror).toHaveBeenCalledTimes(1);
+            expect(onerror).toHaveBeenCalledWith({
+                message: 'views.SwapDetails.statusUnavailable'
+            });
+        });
+
+        it('counts server errors and non-JSON replies as failures', async () => {
+            mockNetworkFetch
+                .mockResolvedValueOnce(reply(503, { error: 'busy' }))
+                .mockResolvedValueOnce({
+                    info: () => ({ status: 502 }),
+                    json: () => {
+                        throw new SyntaxError('Unexpected token <');
+                    }
+                })
+                .mockResolvedValueOnce(reply(429, {}));
+            start();
+            const onerror = jest.fn();
+            poller.onerror = onerror;
+
+            await pollTimes(3);
+
+            expect(onerror).toHaveBeenCalledTimes(1);
+        });
+
+        it('starts the count over after any response', async () => {
+            fail();
+            fail();
+            mockNetworkFetch.mockResolvedValueOnce(
+                reply(200, { status: 'swap.created' })
+            );
+            fail();
+            fail();
+            mockNetworkFetch.mockResolvedValue(
+                reply(200, { status: 'swap.created' })
+            );
+            start();
+            const onerror = jest.fn();
+            poller.onerror = onerror;
+
+            await pollTimes(6);
+
+            expect(onerror).not.toHaveBeenCalled();
+        });
+
+        it('opens again once a poll gets a response after an error', async () => {
+            fail();
+            fail();
+            fail();
+            mockNetworkFetch.mockResolvedValue(
+                reply(200, { status: 'swap.created' })
+            );
+            start();
+            const onopen = jest.fn();
+            const onerror = jest.fn();
+            poller.onopen = onopen;
+            poller.onerror = onerror;
+
+            await pollTimes(3);
+            expect(onerror).toHaveBeenCalledTimes(1);
+            expect(onopen).toHaveBeenCalledTimes(1);
+
+            await pollTimes(3);
+            // only the first response after the error reopens
+            expect(onopen).toHaveBeenCalledTimes(2);
+            expect(messages(onmessage)).toEqual([
+                {
+                    event: 'update',
+                    args: [{ id: 'swap1', status: 'swap.created' }]
+                }
+            ]);
+        });
+
+        it('reports a second outage after recovering', async () => {
+            fail();
+            fail();
+            fail();
+            mockNetworkFetch.mockResolvedValueOnce(reply(200, {}));
+            fail();
+            fail();
+            fail();
+            mockNetworkFetch.mockResolvedValue(reply(200, {}));
+            start();
+            const onerror = jest.fn();
+            poller.onerror = onerror;
+
+            await pollTimes(7);
+
+            expect(onerror).toHaveBeenCalledTimes(2);
+        });
+
+        it('does not report after being closed', async () => {
+            mockNetworkFetch.mockRejectedValue(new Error('tor down'));
+            start();
+            const onerror = jest.fn();
+            poller.onerror = onerror;
+
+            await pollTimes(2);
+            let rejectLast: (e: Error) => void = () => {};
+            mockNetworkFetch.mockReturnValueOnce(
+                new Promise((_resolve, reject) => {
+                    rejectLast = reject;
+                })
+            );
+            await tick(INTERVAL);
+            poller.close();
+            rejectLast(new Error('tor down'));
+            await tick();
+
+            expect(onerror).not.toHaveBeenCalled();
+        });
     });
 
     it('stops polling once closed', async () => {
