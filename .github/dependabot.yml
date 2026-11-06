@@ -25,6 +25,12 @@ updates:
       # `bundle` call fails on it, breaking `yarn install`.
       - dependency-name: "pod-install"
         update-types: ["version-update:semver-major"]
+      # slider 5.2.2 adds a pan recognizer to every iOS slider: a drag that
+      # starts on the track now moves the value (e.g. the NWC budget) and
+      # no longer scrolls the parent ScrollView, and a drag from the thumb
+      # fires onSlidingComplete twice.
+      - dependency-name: "@react-native-community/slider"
+        versions: ["5.2.2"]
 
   # GitHub Actions used by the CI workflows
   - package-ecosystem: "github-actions"
