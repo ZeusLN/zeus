@@ -20,7 +20,7 @@ import {
 } from '@getalby/sdk';
 
 import { getPublicKey, generateSecretKey } from 'nostr-tools';
-import { bytesToHex } from '@noble/hashes/utils';
+import { bytesToHex } from '@noble/hashes/utils.js';
 
 import {
     Platform,

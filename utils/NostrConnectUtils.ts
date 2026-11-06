@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 import { Notifications } from 'react-native-notifications';
 import { Relay, generateSecretKey, getPublicKey } from 'nostr-tools';
-import { bytesToHex } from '@noble/hashes/utils';
-import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 import {
     Nip47NotificationType,
     Nip47Method,

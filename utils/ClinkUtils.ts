@@ -1,5 +1,5 @@
 import { bech32 } from '@scure/base';
-import { bytesToHex } from '@noble/hashes/utils';
+import { bytesToHex } from '@noble/hashes/utils.js';
 import BigNumber from 'bignumber.js';
 import Bolt11Utils from './Bolt11Utils';
 import {
