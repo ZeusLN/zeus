@@ -1,6 +1,5 @@
 // LnurlPayUtils.test.ts
 import BigNumber from 'bignumber.js';
-import { sha256 } from '@noble/hashes/sha2.js';
 
 import { bech32 } from 'bech32';
 
@@ -8,6 +7,7 @@ import Base64Utils from './Base64Utils';
 import Bolt11Utils from './Bolt11Utils';
 import {
     getLnurlpUrl,
+    getLnurlMetadataHash,
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed,
     verifyLnurlAuthCallback,
@@ -21,11 +21,29 @@ import {
 jest.mock('url', () => jest.requireActual('../node_modules/url/url.js'));
 
 const METADATA = '[["text/plain","Payment to Alice"]]';
-const MATCHING_HASH = Base64Utils.bytesToHex(
-    Array.from(sha256(Base64Utils.utf8ToBytes(METADATA)))
-);
+// sha256 of METADATA's UTF-8 bytes, computed with Node's crypto
+const MATCHING_HASH =
+    'a00744dee79238b1982cf5d50bd611b9deee940a33732dc5ff8ff5af17e67888';
 
 describe('LnurlPayUtils', () => {
+    describe('getLnurlMetadataHash', () => {
+        it('hashes the metadata string', () => {
+            expect(getLnurlMetadataHash(METADATA)).toBe(MATCHING_HASH);
+        });
+
+        it('hashes non-ASCII metadata as UTF-8', () => {
+            expect(
+                getLnurlMetadataHash('[["text/plain","Zahlung für ₿ ⚡"]]')
+            ).toBe(
+                '7730df30bef0fc3d3b26527e1c14a5c04db5481bef8fd99d2b6afdbee1fac986'
+            );
+        });
+
+        it('returns null without metadata', () => {
+            expect(getLnurlMetadataHash(undefined)).toBeNull();
+        });
+    });
+
     describe('getLnurlpUrl', () => {
         it('lowercases the domain and username', () => {
             expect(getLnurlpUrl('SATOSHI@BLINK.SV')).toEqual({

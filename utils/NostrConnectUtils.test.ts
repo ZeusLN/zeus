@@ -550,6 +550,75 @@ describe('NostrConnectUtils', () => {
             expect(id({ implementation: 'lnd' })).toBeUndefined();
             expect(id({ implementation: 'lndhub' })).toBeUndefined();
         });
+
+        // NWC connections store this id (NWCConnection.walletConfigId), so
+        // its value must not change. Expected values are sha256 of the
+        // UTF-8 JSON field list, computed with Node's crypto.
+        it.each([
+            [
+                'embedded LND with the default dir',
+                { implementation: 'embedded-lnd' },
+                'edd007300d761b9e75b0164cefbc13f0ef66d394470426f57e77bb1252d182a4'
+            ],
+            [
+                'LDK Node with the default dir',
+                { implementation: 'ldk-node' },
+                'dacbeb6c1bff48ca4225f4dbd03f31e467e7056b84323dc4be6e155939a600fb'
+            ],
+            [
+                'a remote LND node',
+                { host: 'node.example.com', port: '8080' },
+                '09083661cb64f3159024919765b2a938241e9ac7672f73bf4092f2ed2bc411b2'
+            ],
+            [
+                'a CLNRest node',
+                {
+                    implementation: 'cln-rest',
+                    host: 'node.example.com',
+                    port: '3010'
+                },
+                'f1e4ee6857c319350c471b58fdc55ec69189e72ae2e0c3decdc610a6a1b5bfb9'
+            ],
+            [
+                'an LndHub account',
+                {
+                    implementation: 'lndhub',
+                    lndhubUrl: 'https://lndhub.example.com',
+                    username: 'alice'
+                },
+                '21f65c72b2d60daa843c034b1435dd913180b51563df8ac2ccc24fef2035ced0'
+            ],
+            [
+                'an LNbits wallet (hashed username:password)',
+                {
+                    implementation: 'lndhub',
+                    lndhubUrl: 'https://lnbits.example.com/lndhub/ext/',
+                    username: 'admin',
+                    password: 'a'.repeat(32)
+                },
+                '800f1189f428bb260a77dc0396af4320b509afd3fc19f97b5245bb8837fa0720'
+            ],
+            [
+                'an LNbits wallet with a non-ASCII password',
+                {
+                    implementation: 'lndhub',
+                    lndhubUrl: 'https://lnbits.example.com/lndhub/ext/',
+                    username: 'admin',
+                    password: 'pässwörd-₿-😀'
+                },
+                '060c09377e99f75a396f8849eff0a50117534503d41421f11f1189bdccc8bb9c'
+            ],
+            [
+                'an LNC pairing',
+                {
+                    implementation: 'lightning-node-connect',
+                    pairingPhrase: 'alpha bravo charlie delta'
+                },
+                '260585b7191bb0939a3c9b825b3a6406dcf50a46c4f6a34bef81df079d5ff1c9'
+            ]
+        ])('keeps the stored id for %s', (_name, node, expected) => {
+            expect(id(node as any)).toBe(expected);
+        });
     });
 
     describe('resolveFeeSats', () => {

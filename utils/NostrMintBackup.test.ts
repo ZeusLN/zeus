@@ -162,6 +162,21 @@ describe('NostrMintBackup', () => {
             expect(publicKeyHex).toBe(expectedPubkey);
         });
 
+        it('derives the same backup key as before for a known seed', () => {
+            // The backup is looked up by this key, so it must not change.
+            // Private key is sha256(seed || "cashu-mint-backup"), computed
+            // with Node's crypto.
+            const { privateKeyHex, publicKeyHex } =
+                deriveMintBackupKeypair(testSeed);
+
+            expect(privateKeyHex).toBe(
+                'a2b87a529208651bbf974186ee4a0c13c1f31e07030de6ebd09ee33559ff97a7'
+            );
+            expect(publicKeyHex).toBe(
+                'e1c971f6a291628471291a266ab85c6ffd7116c7aab6299a6801ae502f56d69b'
+            );
+        });
+
         it('should produce valid npub/nsec encodings', () => {
             const { privateKey, privateKeyHex, publicKeyHex } =
                 deriveMintBackupKeypair(testSeed);
