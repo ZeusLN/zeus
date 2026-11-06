@@ -51,6 +51,9 @@ allprojects {
         flatDir {
             dirs("lndmobile")
         }
+        maven {
+            url("$rootDir/../node_modules/detox/Detox-android")
+        }
     }
 }
 
