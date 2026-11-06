@@ -233,6 +233,11 @@ export default class NostrWalletConnectStore {
         string,
         ReturnType<typeof setTimeout>
     >();
+    // The latest subscribe started per connection. A later subscribe, an
+    // unsubscribe, or a reset replaces or removes the entry, and an
+    // attempt that is no longer here when the relay answers unsubscribes
+    // at once instead of overwriting (and orphaning) the live subscription.
+    private subscribeAttempts = new Map<string, object>();
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -1664,9 +1669,11 @@ export default class NostrWalletConnectStore {
             });
             return;
         }
+        const attempt = {};
         try {
             this.cancelScheduledRelayRelease(connection.relayUrl);
             this.unsubscribeFromConnection(connection.id);
+            this.subscribeAttempts.set(connection.id, attempt);
             const serviceSecretKey = this.walletServiceKeys?.privateKey;
 
             if (!serviceSecretKey) {
@@ -1769,6 +1776,17 @@ export default class NostrWalletConnectStore {
                 exponentialBackoff: true
             });
 
+            if (
+                this.subscribeAttempts.get(connection.id) !== attempt ||
+                !this.getConnection({ connectionId: connection.id })
+                    .connection ||
+                this.pendingConnectionMutations
+                    .get(connection.id)
+                    ?.includes('delete')
+            ) {
+                unsubscribe();
+                return;
+            }
             runInAction(() => {
                 this.activeSubscriptions.set(connection.id, unsubscribe);
             });
@@ -1777,6 +1795,10 @@ export default class NostrWalletConnectStore {
                 `Failed to subscribe to connection ${connection.name}:`,
                 error?.message || String(error)
             );
+        } finally {
+            if (this.subscribeAttempts.get(connection.id) === attempt) {
+                this.subscribeAttempts.delete(connection.id);
+            }
         }
     }
 
@@ -1826,6 +1848,7 @@ export default class NostrWalletConnectStore {
         }
     }
     private unsubscribeFromConnection(connectionId: string): void {
+        this.subscribeAttempts.delete(connectionId);
         const unsub = this.activeSubscriptions.get(connectionId);
         if (!unsub) return;
         try {
@@ -1902,6 +1925,7 @@ export default class NostrWalletConnectStore {
         for (const connectionId of connectionIds) {
             this.unsubscribeFromConnection(connectionId);
         }
+        this.subscribeAttempts.clear();
         runInAction(() => {
             this.activeSubscriptions.clear();
         });
