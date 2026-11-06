@@ -48,10 +48,7 @@ const CDF_TYPES = new Map<string, NfcRequestKind | undefined>([
     ['cdf/lnp', 'pay'],
     ['cdf/lnw', 'withdraw'],
     ['cdf/pbitcoin', undefined],
-    ['cdf/kbitcoin', undefined],
-    // the private key type's name before the 2026-11-05 revision. No coin
-    // is named "kbitcoin", so it can't be read as an address type.
-    ['cdf/pkbitcoin', undefined]
+    ['cdf/kbitcoin', undefined]
 ]);
 
 const recordType = (record: NdefRecord): string =>

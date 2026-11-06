@@ -228,7 +228,6 @@ describe('pickNfcRecord', () => {
         ['cdf/lnp', PAY, PAY],
         ['CDF/LNW', WITHDRAW, WITHDRAW],
         ['cdf/kbitcoin', `Paper wallet;${WIF}`, WIF],
-        ['cdf/pkbitcoin', WIF, WIF],
         ['cdf/pbitcoin', `Savings;${ADDRESS}`, ADDRESS]
     ])(
         'skips a web page in front of a %s record whatever it holds',
@@ -250,6 +249,12 @@ describe('pickNfcRecord', () => {
         expect(
             pickNfcRecord([uriRecord(page), textRecord('lightning:lnbc1a')])
         ).toBe('lightning:lnbc1a');
+    });
+
+    it('ignores the private key type cdf/pkbitcoin from before the revision', () => {
+        expect(pickNfcRecord([site, mimeRecord('cdf/pkbitcoin', WIF)])).toBe(
+            SITE
+        );
     });
 
     it('does not take CDF base URL and suffix records for wallet data', () => {
