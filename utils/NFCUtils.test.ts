@@ -699,6 +699,46 @@ describe('payViaNfcTap', () => {
             expect(cashuStore.sendTokenForRequest).not.toHaveBeenCalled();
         });
 
+        it('finds a request stored after a web page', async () => {
+            fakeType4Tag(NUMO_TAG);
+            nfc.getTag.mockResolvedValue({
+                ndefMessage: [
+                    uriRecord('https://numo.example.org/'),
+                    textRecord(NUMO_TAG)
+                ]
+            });
+
+            await expect(pay(makeCashuStore())).resolves.toEqual({
+                status: 'paid',
+                amount: 21
+            });
+        });
+
+        it.each([
+            [
+                'the pay record of a card that can also be withdrawn from',
+                [
+                    uriRecord('https://bitcoin.example.org/'),
+                    uriRecord('lnurlw://w.example.org/w?id=1'),
+                    uriRecord('lnurlp://w.example.org/p?id=1')
+                ],
+                'lnurlp://w.example.org/p?id=1'
+            ],
+            [
+                'a URI record with the abbreviated https:// prefix',
+                [uriRecord('https://card.example.com/lnurlp/abc')],
+                'https://card.example.com/lnurlp/abc'
+            ]
+        ])('hands back %s', async (_, ndefMessage, text) => {
+            fakeType4Tag('');
+            nfc.getTag.mockResolvedValue({ ndefMessage });
+
+            await expect(pay(makeCashuStore())).resolves.toEqual({
+                status: 'read',
+                text
+            });
+        });
+
         it('reads an NDEF-only tag without IsoDep', async () => {
             nfc.requestTechnology.mockResolvedValue('Ndef');
             cacheNdef('lnurlw://example.com/withdraw');

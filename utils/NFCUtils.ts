@@ -451,14 +451,6 @@ function cancelOnModalClose(
     );
 }
 
-/** Text of a tag's first NDEF record, decoded like scanNfcTag does */
-function ndefPayloadToString(payload: number[] | Uint8Array): string {
-    const bytes = new Uint8Array(payload);
-    const decoded = Ndef.text.decodePayload(bytes);
-    if (decoded.match(/^(https?|lnurl)/)) return decoded;
-    return decodeNdefTextPayload(bytes) || '';
-}
-
 /**
  * The Cashu payment request on a tag: either the whole text, or the creq
  * parameter of a BIP-321 URI (what Numo broadcasts, next to a lightning
@@ -578,8 +570,16 @@ export async function payViaNfcTap(
             records = Ndef.decodeMessage(await readNdefBytes(cc));
         }
 
-        const payload = records?.[0]?.payload;
-        const text = payload?.length ? ndefPayloadToString(payload) : '';
+        // the request can sit behind other records, such as a web page
+        const tagRecords = records || [];
+        const text =
+            tagRecords
+                .map((record) => decodeNdefRecord(record)?.trim())
+                .find(
+                    (recordText) => recordText && extractTagCREQ(recordText)
+                ) ??
+            pickNfcRecord(tagRecords, 'pay') ??
+            '';
         tagText = text;
         const creq = text ? extractTagCREQ(text) : undefined;
         if (!creq) {
