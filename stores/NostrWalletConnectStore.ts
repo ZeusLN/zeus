@@ -1157,19 +1157,29 @@ export default class NostrWalletConnectStore {
                           )
                         : [];
 
+                    // Keep the object of a connection already in memory: the
+                    // subscribed request handlers are bound to it and debit
+                    // it, and saveConnections writes from it. A new object
+                    // would let updateConnection save over those debits.
+                    const inMemory = new Map(
+                        this.connections.map((c) => [c.id, c])
+                    );
                     this.connections = filtered.map(
                         (data: NWCConnectionData) => {
-                            if (
-                                !walletConfigId ||
-                                data.walletConfigId === walletConfigId
-                            ) {
-                                return new NWCConnection(data);
+                            const needsStamp =
+                                !!walletConfigId &&
+                                data.walletConfigId !== walletConfigId;
+                            if (needsStamp) stamped = true;
+                            const existing = inMemory.get(data.id);
+                            if (existing) {
+                                if (needsStamp) {
+                                    existing.walletConfigId = walletConfigId;
+                                }
+                                return existing;
                             }
-                            stamped = true;
-                            return new NWCConnection({
-                                ...data,
-                                walletConfigId
-                            });
+                            return new NWCConnection(
+                                needsStamp ? { ...data, walletConfigId } : data
+                            );
                         }
                     );
                 });
