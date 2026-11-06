@@ -42,7 +42,10 @@ import Screen from '../../components/Screen';
 import WalletHeader from '../../components/WalletHeader';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { shouldSkipBackgroundLock } from '../../utils/BackgroundLockUtils';
+import {
+    shouldSkipBackgroundLock,
+    skippedBackgroundLockIsOverdue
+} from '../../utils/BackgroundLockUtils';
 import { getSupportedBiometryType } from '../../utils/BiometricUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
 import {
@@ -379,6 +382,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } else if (nextAppState === 'inactive') {
             NostrWalletConnectStore.reset();
         } else if (nextAppState === 'active') {
+            // A lock skipped for a system dialog is due after all if the
+            // dialog was up too long. The dialog's flow may only settle
+            // after this event, so it cannot re-arm the lock in time itself.
+            if (skippedBackgroundLockIsOverdue()) {
+                SettingsStore.setLoginStatus(false);
+            }
             if (SettingsStore.loginRequired()) {
                 this.props.navigation.navigate('Lockscreen');
             } else if (this.props.navigation.isFocused()) {
