@@ -587,9 +587,21 @@ export default class NostrWalletConnectStore {
                 this.lastConnectionAttempt = 0;
                 this.cashuEnabled = false;
                 this.cancelAllScheduledRelayReleases();
+                await this.unsubscribeFromAllConnections();
+                // Close each relay's pool, or its websockets stay open after
+                // the service is dropped and the next start opens new ones
+                for (const [relayUrl, service] of this.nwcWalletServices) {
+                    try {
+                        service.close();
+                    } catch (error) {
+                        console.warn(
+                            `NWC: Failed to close relay service ${relayUrl}:`,
+                            error
+                        );
+                    }
+                }
                 this.nwcWalletServices.clear();
                 this.publishedRelays.clear();
-                await this.unsubscribeFromAllConnections();
             })();
             this.resetInFlight = teardown;
             try {

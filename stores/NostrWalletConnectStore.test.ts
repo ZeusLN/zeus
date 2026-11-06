@@ -1559,6 +1559,65 @@ describe('NostrWalletConnectStore relay release', () => {
         expect(relays.has(THIRD_RELAY)).toBe(false);
         expect(relayFor(OLD_RELAY).close).not.toHaveBeenCalled();
     });
+
+    it('closes every relay after unsubscribing when a reset tears the service down', async () => {
+        const {
+            store,
+            connections: [first, second]
+        } = await startService([{}, { relayUrl: NEW_RELAY }]);
+        const oldRelay = relayFor(OLD_RELAY);
+        const newRelay = relayFor(NEW_RELAY);
+        const subscribedAtClose: number[] = [];
+        for (const relay of [oldRelay, newRelay]) {
+            relay.close.mockImplementation(() => {
+                subscribedAtClose.push(relay.handlers.size);
+                relay.connected = false;
+            });
+        }
+
+        await store.reset(true);
+
+        expect(oldRelay.close).toHaveBeenCalledTimes(1);
+        expect(newRelay.close).toHaveBeenCalledTimes(1);
+        expect(subscribedAtClose).toEqual([0, 0]);
+        expect((store as any).nwcWalletServices.size).toBe(0);
+        expect(isSubscribed(first)).toBe(false);
+        expect(isSubscribed(second)).toBe(false);
+    });
+
+    it('closes the remaining relays when one fails to close on reset', async () => {
+        silence('warn');
+        const { store } = await startService([{}, { relayUrl: NEW_RELAY }]);
+        const oldRelay = relayFor(OLD_RELAY);
+        const newRelay = relayFor(NEW_RELAY);
+        oldRelay.close.mockImplementation(() => {
+            throw new Error('close failed');
+        });
+
+        await store.reset(true);
+
+        expect(oldRelay.close).toHaveBeenCalled();
+        expect(newRelay.close).toHaveBeenCalled();
+        expect((store as any).nwcWalletServices.size).toBe(0);
+    });
+
+    it('keeps the relays open when a reset keeps the service attached', async () => {
+        const {
+            store,
+            connections: [first, second]
+        } = await startService([{}, { relayUrl: NEW_RELAY }]);
+        const oldRelay = relayFor(OLD_RELAY);
+        const newRelay = relayFor(NEW_RELAY);
+
+        // AppState 'inactive' on iOS with active connections
+        await store.reset();
+
+        expect(oldRelay.close).not.toHaveBeenCalled();
+        expect(newRelay.close).not.toHaveBeenCalled();
+        expect((store as any).nwcWalletServices.size).toBe(2);
+        expect(isSubscribed(first)).toBe(true);
+        expect(isSubscribed(second)).toBe(true);
+    });
 });
 
 describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
@@ -6512,17 +6571,20 @@ describe('NostrWalletConnectStore wallet switch during initializeService', () =>
 
     it('does not let the old run set error after its publish retries run out', async () => {
         silence('error');
-        // alice's relay is unreachable, so each publish attempt fails
-        relayFor(OLD_RELAY).failPublish = true;
+        // alice's relay is unreachable, so each publish attempt fails.
+        // Kept here because reset closes it, and relayFor then returns a
+        // new fake
+        const aliceRelay = relayFor(OLD_RELAY);
+        aliceRelay.failPublish = true;
         seedWallet('alice1', hex64('a'), OLD_RELAY);
         const { store } = createStore();
 
         const aliceRun = store.initializeService();
         // Into the second retry backoff (attempts at 0 ms, 1 s and 3 s)
         await jest.advanceTimersByTimeAsync(1500);
-        expect(
-            relayFor(OLD_RELAY).publishWalletServiceInfoEvent
-        ).toHaveBeenCalledTimes(2);
+        expect(aliceRelay.publishWalletServiceInfoEvent).toHaveBeenCalledTimes(
+            2
+        );
 
         // Switch to bob, whose relay is reachable
         seedWallet('bob1', hex64('b'), NEW_RELAY);
@@ -6533,9 +6595,10 @@ describe('NostrWalletConnectStore wallet switch during initializeService', () =>
         await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
         await Promise.all([aliceRun, bobRun]);
 
-        expect(
-            relayFor(OLD_RELAY).publishWalletServiceInfoEvent
-        ).toHaveBeenCalledTimes(3);
+        expect(aliceRelay.publishWalletServiceInfoEvent).toHaveBeenCalledTimes(
+            3
+        );
+        expect(aliceRelay.close).toHaveBeenCalledTimes(1);
         expect(store.error).toBe(false);
         expect(store.errorMessage).toBe('');
         expect(store.isInitialized).toBe(true);
