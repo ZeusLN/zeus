@@ -463,6 +463,49 @@ describe('CashuStore mint list', () => {
             'lnd-cashu-mintUrls',
             JSON.stringify([listed])
         );
+        expect(store.loading).toBe(false);
+    });
+
+    // Mint and CashuTools disable their buttons while loading, and reset()
+    // does not clear it, so a failure must not leave it set
+    it('removeMint clears loading when saving the mint list fails', async () => {
+        cdkMints.push(listed);
+        const store = storeWith([listed]);
+        (Storage.setItem as jest.Mock).mockRejectedValue(
+            new Error('write failed')
+        );
+
+        await expect(store.removeMint(listed)).rejects.toThrow('write failed');
+
+        expect(CashuDevKit.removeMint).toHaveBeenCalledWith(listed);
+        expect(store.loading).toBe(false);
+    });
+
+    it('removeMint clears loading when reading the CDK mint list fails', async () => {
+        cdkMints.push(listed);
+        const store = storeWith([listed]);
+        (CashuDevKit.getMintUrls as jest.Mock).mockRejectedValue(
+            new Error('CDK unavailable')
+        );
+
+        await expect(store.removeMint(listed)).rejects.toThrow(
+            'CDK unavailable'
+        );
+
+        expect(CashuDevKit.removeMint).toHaveBeenCalledWith(listed);
+        expect(store.loading).toBe(false);
+    });
+
+    it('removeMint clears loading when CDK fails to remove the mint', async () => {
+        const store = storeWith([listed]);
+        (CashuDevKit.removeMint as jest.Mock).mockRejectedValue(
+            new Error('remove failed')
+        );
+
+        await expect(store.removeMint(listed)).rejects.toThrow('remove failed');
+
+        expect(store.mintUrls).toEqual([listed]);
+        expect(store.loading).toBe(false);
     });
 });
 
