@@ -142,7 +142,12 @@ describe('Seed rescue key deletion', () => {
             { id: 'sub1', type: 'Submarine', status: 'transaction.claimed' }
         ]);
         mockStored['reverse-swaps'] = JSON.stringify([
-            { id: 'rev1', type: 'Reverse', status: 'invoice.settled' }
+            {
+                id: 'rev1',
+                type: 'Reverse',
+                status: 'invoice.settled',
+                claimTxid: 'tx1'
+            }
         ]);
         const navigation = await mountRescueKey();
 
@@ -160,7 +165,12 @@ describe('Seed rescue key deletion', () => {
         ]);
         mockStored['reverse-swaps'] = JSON.stringify([
             { id: 'rev1', type: 'Reverse', status: 'transaction.mempool' },
-            { id: 'rev2', type: 'Reverse', status: 'invoice.settled' }
+            {
+                id: 'rev2',
+                type: 'Reverse',
+                status: 'invoice.settled',
+                claimTxid: 'tx2'
+            }
         ]);
         const navigation = await mountRescueKey();
 
@@ -176,6 +186,19 @@ describe('Seed rescue key deletion', () => {
         expect(removeItem).toHaveBeenCalledWith('swaps');
         expect(removeItem).toHaveBeenCalledWith('reverse-swaps');
         expect(navigation.popTo).toHaveBeenCalledWith('Swaps');
+    });
+
+    it('asks again when a settled reverse swap has no recorded claim', async () => {
+        mockStored['reverse-swaps'] = JSON.stringify([
+            { id: 'rev1', type: 'Reverse', status: 'invoice.settled' }
+        ]);
+        const navigation = await mountRescueKey();
+
+        await pressConfirm();
+
+        expect(removeItem).not.toHaveBeenCalled();
+        expect(navigation.popTo).not.toHaveBeenCalled();
+        expect(screen.getByText('Unfinished swaps: rev1')).toBeTruthy();
     });
 
     it('asks again after a cancel', async () => {
