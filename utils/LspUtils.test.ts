@@ -1,3 +1,4 @@
+import Bolt11Utils from './Bolt11Utils';
 import { verifyWrappedInvoice } from './LspUtils';
 
 // Deterministic fixtures signed with throwaway test keys. The scenario:
@@ -32,6 +33,54 @@ const WRAPPED_SUBSAT_OVER =
 
 const WRAPPED_TESTNET =
     'lntb1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyz5vqcqpj9qypqsqcnr4xnjgqh9lq2shjstc78mv3cw3tu7upkmj37ly6cu4um4s7f0kzzmnnedk5au2wgt5c7pydjy6pr2eqhpj284j8lryjdrtentxnhgpgelv6l';
+
+// Expiry and final CLTV variants, signed with another throwaway key.
+// INNER and WRAPPED_EXACT both expire 86 400 s after the same timestamp
+// and carry a min_final_cltv_expiry of 18.
+
+// WRAPPED_EXACT expiring 3600 s after INNER (what Olympus sends)
+const WRAPPED_EXPIRY_PLUS_HOUR =
+    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyzhuscqpj9qypqsqvnuxannkaxcm5y73tcmvc3rtdwjdtvqph8pzaze6lvu8kqhrty6zzpzdru9nx8y4ce7da2feut8m0vwj8zudenm2au8rze634xwlhrqp7dwd9t';
+
+// WRAPPED_EXACT expiring 3660 s after INNER (one hour plus the margin)
+const WRAPPED_EXPIRY_SLACK =
+    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyzh7vcqpj9qypqsqrn7dsueu3yxpkccv5yc4t6lsgs4mhqyfmy6sthfplx56w28sdj2p3ru6n8ejggumuxmmx08kwt6l72rwza6lm3ln7w90d9fqquneygcp0arjz5';
+
+// WRAPPED_EXACT expiring 3661 s after INNER
+const WRAPPED_EXPIRY_OVER =
+    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyzh7dcqpj9qypqsq62rk7nf86jwjalvylhj8xtrqrl4mngkl5c0zglqpxfdqlh7qqja8xwpvlhtghkf3edzeyjn0e2z4k9fusxzvkcq8tmts9dnxm5cl0fqq2gq0sf';
+
+// WRAPPED_EXACT with no x field (BOLT 11 default 3600 s)
+const WRAPPED_NO_EXPIRY =
+    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqcqpj9qypqsqf344lpqtuql3ur9xy7464umue5kdun3zmvyqsvu0r0qra6k3hachtwtga29wv7ktja3qugx5jsxnm8f04qygxqsxhplmkkxzkmr9ttcpzkt75k';
+
+// WRAPPED_EXACT with final CLTV 58 (Olympus: inner + 40)
+const WRAPPED_CLTV_58 =
+    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyz5vqcqzp69qypqsqfdukfjdcwmr9wx87cehlv9wzvzz2f0770qshvajfylru2dqlvkgxufx2gez2wjk9l8nxu6dstehaycw3j920zc0hahwyqd8pdektlfsqhhzxe9';
+
+// WRAPPED_EXACT with final CLTV 162 (inner + 144)
+const WRAPPED_CLTV_162 =
+    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyz5vqcqz9z9qypqsqkdwvmu6defej7qzdwe5a36fugkse3vq8r2zudhx5p9fgu6lem82j9jehymajmaxhgzsafaeq22qyzm300yzlpq0zgcwygakhkgcg78sppyheqt';
+
+// WRAPPED_EXACT with final CLTV 163 (inner + 145)
+const WRAPPED_CLTV_163 =
+    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyz5vqcqz9r9qypqsqu43r94hhjk8858uecs34g7x96yy5uyzx8fs67k20xu3lj00f4w2n7ay02ezkt80q353mhzfuaq5srkq4d0puj2czcxpjanlfhvacyagpfpexes';
+
+// WRAPPED_EXACT with no c field (BOLT 11 default 18)
+const WRAPPED_NO_CLTV =
+    'lnbc1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyz5vq9qypqsq2yslkkrv4t6h0mwdcc6wfu9kyk9z8d0qsv6dtv5eapga7jkpc5ap0csv40kckudlffer4ywyen6d0whu4qne9ugxxkg5cxt9lzwu82cqfz3mt9';
+
+// INNER with no x field (BOLT 11 default 3600 s)
+const INNER_NO_EXPIRY =
+    'lnbc990u1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqgd9hxuetjcqpj9qypqsqy8gc29jeakfdt7t6x33pnnjk00zk0a6awkdg4udusapyxdsx0hh9vs4dclnu4urtcq7jeehnjx9vtgadv6d02nfyrwwn0mphjqaevdcqr8shv6';
+
+// INNER with final CLTV 40
+const INNER_CLTV_40 =
+    'lnbc990u1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqgd9hxuetjxqyz5vqcqzpg9qypqsq87ed3euqfyx65ayn7gr588ecpc0rxx4jkzvx7d429kj22ezyhla82dljk9nvmy97rlctuhzgdgzxsy4m962gmuq0h6ns7tt0wm58vjsp7gjl67';
+
+// INNER with no c field (BOLT 11 default 18)
+const INNER_NO_CLTV =
+    'lnbc990u1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqgd9hxuetjxqyz5vq9qypqsqkggyh08ate4q5ktjvyeq0vdsfr6tz6md5uj8yz0kyl3fe8z9ymu9s3z4ngvjfxflufx9mpretmmd6qfvadjn4phra5hrhpjx8eq5vqcpqg8saw';
 
 const QUOTED_FEE_SATS = 1000;
 
@@ -124,6 +173,165 @@ describe('verifyWrappedInvoice', () => {
         expect(verifyWrappedInvoice(INNER, '', QUOTED_FEE_SATS)).toEqual({
             valid: false,
             error: 'decode_failure'
+        });
+    });
+
+    // keeps the comments on the fixtures above honest: each variant differs
+    // from its base only in the field its name says
+    describe('fixtures', () => {
+        it.each([
+            ['INNER', INNER, 86400, 18],
+            ['WRAPPED_EXACT', WRAPPED_EXACT, 86400, 18],
+            ['WRAPPED_EXPIRY_PLUS_HOUR', WRAPPED_EXPIRY_PLUS_HOUR, 90000, 18],
+            ['WRAPPED_EXPIRY_SLACK', WRAPPED_EXPIRY_SLACK, 90060, 18],
+            ['WRAPPED_EXPIRY_OVER', WRAPPED_EXPIRY_OVER, 90061, 18],
+            ['WRAPPED_NO_EXPIRY', WRAPPED_NO_EXPIRY, 3600, 18],
+            ['WRAPPED_CLTV_58', WRAPPED_CLTV_58, 86400, 58],
+            ['WRAPPED_CLTV_162', WRAPPED_CLTV_162, 86400, 162],
+            ['WRAPPED_CLTV_163', WRAPPED_CLTV_163, 86400, 163],
+            ['WRAPPED_NO_CLTV', WRAPPED_NO_CLTV, 86400, undefined],
+            ['INNER_NO_EXPIRY', INNER_NO_EXPIRY, 3600, 18],
+            ['INNER_CLTV_40', INNER_CLTV_40, 86400, 40],
+            ['INNER_NO_CLTV', INNER_NO_CLTV, 86400, undefined]
+        ])('%s has expiry %p and final CLTV %p', (_, invoice, expiry, cltv) => {
+            const inner = Bolt11Utils.decode(INNER);
+            const decoded = Bolt11Utils.decode(invoice);
+            expect(decoded.expiry).toBe(expiry);
+            expect(decoded.cltv_expiry).toBe(cltv);
+            expect(decoded.timestamp).toBe(inner.timestamp);
+            expect(decoded.payment_hash).toBe(inner.payment_hash);
+        });
+
+        it('has no x or c field where the name says so', () => {
+            const tags = (invoice: string) =>
+                Bolt11Utils.decode(invoice).sections.map((s) => s.name);
+            expect(tags(WRAPPED_NO_EXPIRY)).not.toContain('expiry');
+            expect(tags(INNER_NO_EXPIRY)).not.toContain('expiry');
+            expect(tags(WRAPPED_NO_CLTV)).not.toContain(
+                'min_final_cltv_expiry'
+            );
+            expect(tags(INNER_NO_CLTV)).not.toContain('min_final_cltv_expiry');
+            expect(tags(WRAPPED_EXACT)).toEqual(
+                expect.arrayContaining(['expiry', 'min_final_cltv_expiry'])
+            );
+        });
+    });
+
+    describe('expiry', () => {
+        it('accepts a wrap expiring one hour after the inner invoice', () => {
+            expect(
+                verifyWrappedInvoice(
+                    INNER,
+                    WRAPPED_EXPIRY_PLUS_HOUR,
+                    QUOTED_FEE_SATS
+                )
+            ).toEqual({ valid: true });
+        });
+
+        it('accepts a wrap up to a minute past the hour', () => {
+            expect(
+                verifyWrappedInvoice(
+                    INNER,
+                    WRAPPED_EXPIRY_SLACK,
+                    QUOTED_FEE_SATS
+                )
+            ).toEqual({ valid: true });
+        });
+
+        it('rejects a wrap expiring more than an hour and a minute after the inner invoice', () => {
+            expect(
+                verifyWrappedInvoice(
+                    INNER,
+                    WRAPPED_EXPIRY_OVER,
+                    QUOTED_FEE_SATS
+                )
+            ).toEqual({ valid: false, error: 'expiry_mismatch' });
+        });
+
+        it('accepts a wrap with no expiry field that expires first', () => {
+            expect(
+                verifyWrappedInvoice(INNER, WRAPPED_NO_EXPIRY, QUOTED_FEE_SATS)
+            ).toEqual({ valid: true });
+        });
+
+        it('applies the default expiry to an inner invoice without one', () => {
+            expect(
+                verifyWrappedInvoice(
+                    INNER_NO_EXPIRY,
+                    WRAPPED_EXACT,
+                    QUOTED_FEE_SATS
+                )
+            ).toEqual({ valid: false, error: 'expiry_mismatch' });
+        });
+    });
+
+    describe('final CLTV', () => {
+        it('accepts the inner CLTV plus 40 blocks', () => {
+            expect(
+                verifyWrappedInvoice(INNER, WRAPPED_CLTV_58, QUOTED_FEE_SATS)
+            ).toEqual({ valid: true });
+        });
+
+        it('accepts the inner CLTV plus 144 blocks', () => {
+            expect(
+                verifyWrappedInvoice(INNER, WRAPPED_CLTV_162, QUOTED_FEE_SATS)
+            ).toEqual({ valid: true });
+        });
+
+        it('rejects more than 144 blocks above the inner CLTV', () => {
+            expect(
+                verifyWrappedInvoice(INNER, WRAPPED_CLTV_163, QUOTED_FEE_SATS)
+            ).toEqual({ valid: false, error: 'cltv_mismatch' });
+        });
+
+        it('rejects a CLTV below the inner CLTV', () => {
+            expect(
+                verifyWrappedInvoice(
+                    INNER_CLTV_40,
+                    WRAPPED_EXACT,
+                    QUOTED_FEE_SATS
+                )
+            ).toEqual({ valid: false, error: 'cltv_mismatch' });
+        });
+
+        it('accepts a wrap above an inner CLTV of 40', () => {
+            expect(
+                verifyWrappedInvoice(
+                    INNER_CLTV_40,
+                    WRAPPED_CLTV_58,
+                    QUOTED_FEE_SATS
+                )
+            ).toEqual({ valid: true });
+        });
+
+        it('applies the default CLTV to a wrap without a c field', () => {
+            expect(
+                verifyWrappedInvoice(INNER, WRAPPED_NO_CLTV, QUOTED_FEE_SATS)
+            ).toEqual({ valid: true });
+            expect(
+                verifyWrappedInvoice(
+                    INNER_CLTV_40,
+                    WRAPPED_NO_CLTV,
+                    QUOTED_FEE_SATS
+                )
+            ).toEqual({ valid: false, error: 'cltv_mismatch' });
+        });
+
+        it('applies the default CLTV to an inner invoice without a c field', () => {
+            expect(
+                verifyWrappedInvoice(
+                    INNER_NO_CLTV,
+                    WRAPPED_CLTV_162,
+                    QUOTED_FEE_SATS
+                )
+            ).toEqual({ valid: true });
+            expect(
+                verifyWrappedInvoice(
+                    INNER_NO_CLTV,
+                    WRAPPED_CLTV_163,
+                    QUOTED_FEE_SATS
+                )
+            ).toEqual({ valid: false, error: 'cltv_mismatch' });
         });
     });
 });
