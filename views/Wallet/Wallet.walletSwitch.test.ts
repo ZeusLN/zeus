@@ -8,6 +8,8 @@ jest.mock('../../utils/LockKdf');
 import WalletRefreshRunner from '../../utils/WalletRefreshRunner';
 import {
     LndErrorCode,
+    createLndError,
+    getErrorMessage,
     isLndError,
     isTransientRpcError,
     matchesLndErrorCode,
@@ -117,6 +119,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
         processPendingDeepLink: jest.fn()
     };
     const isWipePending = jest.fn(async () => false);
+    const restartNeeded = jest.fn();
     const Wallet = sourceMethods(
         'views/Wallet/Wallet.tsx',
         'Wallet',
@@ -125,7 +128,8 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             'fetchData',
             'fetchDataCore',
             'retryConnection',
-            'handleFocus'
+            'handleFocus',
+            'showConnectError'
         ],
         {
             BackendUtils,
@@ -138,11 +142,12 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             isBatterySaverEnabled: async () => false,
             expressGraphSync: async () => ({ resetFailed: false }),
             LndErrorCode,
+            getErrorMessage,
             isLndError,
             isTransientRpcError,
             matchesLndErrorCode,
             retryOnTransientError,
-            restartNeeded: jest.fn(),
+            restartNeeded,
             LinkingUtils,
             Storage: { getItem: async () => false, setItem: async () => {} },
             CHANNEL_MIGRATION_ACTIVE: 'test-migration-flag',
@@ -222,7 +227,8 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
         lnd,
         repairMissingChannelEdges,
         LinkingUtils,
-        isWipePending
+        isWipePending,
+        restartNeeded
     };
 }
 
@@ -1016,4 +1022,140 @@ describe('a node left running by a wallet creation or restore', () => {
             );
         }
     );
+});
+
+// An embedded LND connect that fails without any store setting an error
+// used to end with connecting false and no error, so the wallet showed
+// neither data nor the error screen's Retry (pull-to-refresh needs data)
+describe('embedded LND connect failure', () => {
+    const fails = async (arrange: (ctx: ReturnType<typeof setup>) => void) => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        const ctx = setup(2);
+        arrange(ctx);
+        await ctx.runner.run(ctx.refresh);
+        return ctx;
+    };
+
+    it.each([
+        [
+            'initializeLnd throws',
+            ({ lnd }: ReturnType<typeof setup>) =>
+                lnd.initializeLnd.mockRejectedValueOnce(
+                    new Error('lnd.conf write failed')
+                ),
+            'lnd.conf write failed'
+        ],
+        [
+            'startLnd fails with a fatal error',
+            ({ lnd }: ReturnType<typeof setup>) =>
+                lnd.startLnd.mockRejectedValueOnce(
+                    new Error('unable to open wallet db')
+                ),
+            'unable to open wallet db'
+        ],
+        [
+            'RPC does not become ready in time',
+            ({ lnd }: ReturnType<typeof setup>) =>
+                lnd.waitForRpcReady.mockRejectedValueOnce(
+                    createLndError(
+                        LndErrorCode.RPC_READY_TIMEOUT,
+                        'Timeout: 30000ms'
+                    )
+                ),
+            'RPC did not become ready in time. Please try again. Timeout: 30000ms'
+        ],
+        [
+            'RPC fails after the wallet was just created',
+            ({ settings, lnd }: ReturnType<typeof setup>) => {
+                settings.lndDir = 'c';
+                settings.justCreatedNodeDir = 'c';
+                lnd.waitForRpcReady.mockRejectedValueOnce(
+                    new Error('unexpected EOF')
+                );
+            },
+            'unexpected EOF'
+        ]
+    ])('shows the error and Retry when %s', async (_case, arrange, msg) => {
+        const { settings } = await fails(arrange);
+
+        expect(settings.error).toBe(true);
+        expect(settings.errorMsg).toBe(msg);
+        expect(settings.connecting).toBe(false);
+    });
+
+    it.each([LndErrorCode.LND_START_FAILED, LndErrorCode.LND_READY_TIMEOUT])(
+        'shows the error and Retry next to the restart prompt on %s',
+        async (code) => {
+            const { settings, restartNeeded } = await fails(({ lnd }) =>
+                lnd.startLnd.mockRejectedValueOnce(createLndError(code))
+            );
+
+            // on iOS the prompt only has an OK button
+            expect(restartNeeded).toHaveBeenCalledWith(true);
+            expect(settings.error).toBe(true);
+            expect(settings.errorMsg).toBe(
+                getErrorMessage(createLndError(code))
+            );
+            expect(settings.connecting).toBe(false);
+        }
+    );
+
+    it('shows the error and Retry once the transient retries run out', async () => {
+        jest.useFakeTimers();
+        try {
+            const { settings, lnd } = await (async () => {
+                jest.spyOn(console, 'error').mockImplementation(() => {});
+                const ctx = setup(2);
+                ctx.lnd.startLnd.mockRejectedValue(
+                    new Error('RPC server is in the process of starting up')
+                );
+                const initial = ctx.runner.run(ctx.refresh);
+                // 2 + 4 + 8 + 16 + 32 seconds of backoff
+                await jest.advanceTimersByTimeAsync(62000);
+                await initial;
+                return ctx;
+            })();
+
+            expect(lnd.startLnd).toHaveBeenCalledTimes(6);
+            expect(settings.error).toBe(true);
+            expect(settings.errorMsg).toBe(
+                'RPC server is in the process of starting up'
+            );
+            expect(settings.connecting).toBe(false);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
+    it('keeps the error a store already shows', async () => {
+        const { settings } = await fails(({ view }) => {
+            const { NodeInfoStore } = view.props;
+            NodeInfoStore.getNodeInfo.mockImplementationOnce(async () => {
+                NodeInfoStore.error = true;
+                throw new Error('permission denied');
+            });
+        });
+
+        expect(settings.error).toBe(false);
+        expect(settings.connecting).toBe(false);
+    });
+
+    it('a failure after a wallet switch leaves the next wallet alone', async () => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        const { settings, view, runner, refresh, lnd } = setup(2);
+        const start = deferred();
+        lnd.startLnd.mockReturnValueOnce(start.promise);
+        const initial = runner.run(refresh);
+        await flush();
+        expect(lnd.startLnd).toHaveBeenCalledTimes(1);
+
+        select(settings, 1);
+        start.reject(new Error('unable to open wallet db'));
+        await initial;
+
+        expect(settings.error).toBe(false);
+        expect(settings.errorMsg).toBe('');
+        expect(view.props.ChannelsStore.getChannels).toHaveBeenCalledTimes(1);
+        expect(settings.connecting).toBe(false);
+    });
 });
