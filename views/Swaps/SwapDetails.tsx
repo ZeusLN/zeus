@@ -296,6 +296,7 @@ export default class SwapDetails extends React.Component<
         // Handle WebSocket connection open
         webSocket.onopen = () => {
             console.log('WebSocket connection opened');
+            this.clearStatusError();
             webSocket.send(
                 JSON.stringify({
                     op: 'subscribe',
@@ -727,6 +728,7 @@ export default class SwapDetails extends React.Component<
         // Handle WebSocket connection open
         webSocket.onopen = () => {
             console.log('WebSocket connection opened');
+            this.clearStatusError();
             webSocket.send(
                 JSON.stringify({
                     op: 'subscribe',
@@ -850,6 +852,18 @@ export default class SwapDetails extends React.Component<
                 webSocket.close();
             }
         };
+    };
+
+    // The Tor status poller reports an error after a run of failed polls and
+    // opens again once a poll gets a response. Clear only that error, not a
+    // claim or lockup error set in the meantime.
+    clearStatusError = () => {
+        if (
+            this.state.error ===
+            localeString('views.SwapDetails.statusUnavailable')
+        ) {
+            this.setState({ error: null });
+        }
     };
 
     // The platform WebSocket cannot use Tor, so with Tor enabled the status

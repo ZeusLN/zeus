@@ -1662,6 +1662,37 @@ describe('SwapDetails swap update transport', () => {
         );
     });
 
+    it.each([
+        ['reverse', {}],
+        ['submarine', { type: SwapType.Submarine, status: 'invoice.set' }]
+    ])(
+        'shows the Tor poll error for a %s swap and clears it when polling recovers',
+        async (_type, swapData) => {
+            await renderView(swapData, {}, {}, true);
+
+            await act(async () =>
+                socket.onerror({
+                    message: 'views.SwapDetails.statusUnavailable'
+                })
+            );
+            expect(errorShown()).toBe('views.SwapDetails.statusUnavailable');
+
+            await act(async () => socket.onopen());
+            expect(errorShown()).toBeUndefined();
+            unexpectedErrors = [];
+        }
+    );
+
+    it('keeps any other error when the poller opens again', async () => {
+        await renderView({}, {}, {}, true);
+
+        await act(async () => socket.onerror({ message: 'socket closed' }));
+        await act(async () => socket.onopen());
+
+        expect(errorShown()).toBe('socket closed');
+        unexpectedErrors = [];
+    });
+
     it('fetches submarine claim details over Tor when Tor is enabled', async () => {
         await renderView(
             { type: SwapType.Submarine, status: 'invoice.set' },
