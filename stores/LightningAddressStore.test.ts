@@ -117,6 +117,57 @@ describe('LightningAddressStore', () => {
             expect(store.lightningAddressType).toBe('nwc');
         });
 
+        it('keeps only the object entries of a Cashu paid list', async () => {
+            const store = statusStore();
+            const payment = {
+                quote_id: 'q1',
+                mint_url: 'https://mint.test',
+                amount_msat: 1000
+            };
+            mockStatusResponse({
+                addressType: 'cashu',
+                paid: [null, 1, 'x', ['q0'], payment]
+            });
+
+            await store.status();
+
+            expect(store.paid).toEqual([payment]);
+        });
+
+        it.each([
+            ['an object', {}],
+            ['a string', 'x'],
+            ['a number', 5]
+        ])(
+            'stores no open payments when paid is %s',
+            async (_name: string, paid: any) => {
+                const store = statusStore();
+                mockStatusResponse({ addressType: 'cashu', paid });
+
+                await store.status();
+
+                expect(store.paid).toEqual([]);
+            }
+        );
+
+        it('lets Redeem All finish after a paid value that is not an array', async () => {
+            const store = statusStore();
+            mockStatusResponse({ addressType: 'cashu', paid: {} });
+            await store.status();
+            const redeem = jest
+                .spyOn(store, 'redeemCashu')
+                .mockResolvedValue(true);
+
+            await expect(
+                store.redeemAllOpenPaymentsCashu(true)
+            ).resolves.toBeUndefined();
+            // the status call at the end of Redeem All
+            await flushPromises();
+
+            expect(redeem).not.toHaveBeenCalled();
+            expect(store.redeemingAll).toBe(false);
+        });
+
         it('records the error and rethrows when the server rejects the call', async () => {
             const store = statusStore();
             (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
