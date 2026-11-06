@@ -39,16 +39,6 @@ export function decodeNdefUriPayload(data: Uint8Array): string | null {
  */
 export type NfcRequestKind = 'pay' | 'withdraw';
 
-// The Crypto Data Format records (github.com/agama-point/cdf-rfc, CDF-003)
-// Zeus can act on, with the LNURL request each holds. A bitcoin private key
-// opens the sweeper. The base URL and suffix records (cdf/lnpb, cdf/lnpp,
-// cdf/lnpw) are not read: neither part is a request on its own.
-const CDF_TYPES = new Map<string, NfcRequestKind | undefined>([
-    ['cdf/lnp', 'pay'],
-    ['cdf/lnw', 'withdraw'],
-    ['cdf/pkbitcoin', undefined]
-]);
-
 const recordType = (record: NdefRecord): string =>
     typeof record.type === 'string'
         ? record.type
@@ -69,15 +59,10 @@ export function decodeNdefRecord(record: NdefRecord): string | null {
         case Ndef.TNF_ABSOLUTE_URI:
             // the URI is the record type, the payload is unused
             return type || null;
-        case Ndef.TNF_MIME_MEDIA: {
-            const mimeType = type.toLowerCase();
-            if (mimeType === 'text/plain') return decodeUtf8(payload);
-            if (!CDF_TYPES.has(mimeType)) return null;
-            // CDF records can put a label in front of the value:
-            // "Wallet 1;https://..."
-            const text = decodeUtf8(payload);
-            return text === null ? null : text.slice(text.lastIndexOf(';') + 1);
-        }
+        case Ndef.TNF_MIME_MEDIA:
+            return type.toLowerCase() === 'text/plain'
+                ? decodeUtf8(payload)
+                : null;
         default:
             return null;
     }
@@ -117,12 +102,6 @@ interface TagRecord {
 const readTagRecord = (record: NdefRecord): TagRecord | null => {
     const text = decodeNdefRecord(record)?.trim();
     if (!text) return null;
-    if (record.tnf === Ndef.TNF_MIME_MEDIA) {
-        const mimeType = recordType(record).toLowerCase();
-        if (CDF_TYPES.has(mimeType)) {
-            return { text, isWallet: true, kind: CDF_TYPES.get(mimeType) };
-        }
-    }
     const scheme = text.match(/^lnurl([pw]):/i)?.[1].toLowerCase();
     return {
         text,
@@ -134,10 +113,9 @@ const readTagRecord = (record: NdefRecord): TagRecord | null => {
 /**
  * Which of a tag's records to act on. A tag can hold several (e.g. a web
  * page first, for phones without a wallet, and the wallet data after it),
- * so the first that looks like wallet data wins. A CDF record counts as
- * wallet data whatever its URL looks like. With `prefer`, an LNURL request
- * of that kind (by CDF type or lnurlp:/lnurlw: scheme) wins over the
- * others, for a card that can be both paid and withdrawn from. Without
+ * so the first that looks like wallet data wins. With `prefer`, an LNURL
+ * request of that kind (by lnurlp:/lnurlw: scheme) wins over the others,
+ * for a card that can be both paid and withdrawn from. Without
  * wallet data, the first record that has text is used.
  */
 export function pickNfcRecord(

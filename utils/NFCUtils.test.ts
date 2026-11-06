@@ -168,19 +168,9 @@ describe('decodeNdefRecord', () => {
     });
 
     it.each([
-        ['with a label', 'Wallet 1;https://w.example.org/w?id=1'],
-        ['without a label', 'https://w.example.org/w?id=1']
-    ])('reads a CDF record %s', (_, text) => {
-        expect(decodeNdefRecord(mimeRecord('cdf/lnw', text))).toBe(
-            'https://w.example.org/w?id=1'
-        );
-    });
-
-    it.each([
         ['an Android application record', Ndef.androidApplicationRecord('x')],
         ['another MIME type', mimeRecord('image/png', 'png')],
-        ['a CDF base URL', mimeRecord('cdf/lnpb', 'https://node.example/')],
-        ['a CDF key for another coin', mimeRecord('cdf/pklitecoin', 'T')],
+        ['a CDF record', mimeRecord('cdf/lnw', 'https://w.example.org/w')],
         ['a smart poster', record(Ndef.TNF_WELL_KNOWN, 'Sp', [0x00])],
         ['an empty record', record(Ndef.TNF_EMPTY, '', [])]
     ])('returns null for %s', (_, ndefRecord) => {
@@ -191,10 +181,6 @@ describe('decodeNdefRecord', () => {
 describe('pickNfcRecord', () => {
     const SITE = 'https://bitcoin.example.org/get-a-wallet';
     const site = uriRecord(SITE);
-    // CDF-003's examples: LNURLs written as plain URLs, without "lnurl"
-    const PAY = 'https://mywallet.example.org/payurl?id=123';
-    const WITHDRAW = 'https://mywallet.example.org/withdrawurl?id=123';
-    const WIF = '5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ';
 
     it.each([
         ['an ecash token URI', `cashu://${TOKEN}`],
@@ -213,20 +199,6 @@ describe('pickNfcRecord', () => {
     });
 
     it.each([
-        ['cdf/lnw', `Card;${WITHDRAW}`, WITHDRAW],
-        ['cdf/lnp', PAY, PAY],
-        ['CDF/LNW', WITHDRAW, WITHDRAW],
-        ['cdf/pkbitcoin', WIF, WIF]
-    ])(
-        'skips a web page in front of a %s record whatever it holds',
-        (type, text, expected) => {
-            expect(pickNfcRecord([site, mimeRecord(type, text)])).toBe(
-                expected
-            );
-        }
-    );
-
-    it.each([
         ['"cashub" in another case', 'https://shop.example.org/cashubox'],
         [
             '"cashuA" without a token body',
@@ -239,12 +211,11 @@ describe('pickNfcRecord', () => {
         ).toBe('lightning:lnbc1a');
     });
 
-    it('does not take CDF base URL and suffix records for wallet data', () => {
+    it('ignores CDF records', () => {
         expect(
             pickNfcRecord([
                 site,
-                mimeRecord('cdf/lnpb', 'https://mycoolnode.example.org/'),
-                mimeRecord('cdf/lnpp', 'Wallet 1;/lnpay?someid=123')
+                mimeRecord('cdf/lnw', 'Card;https://card.example.org/w?id=1')
             ])
         ).toBe(SITE);
     });
@@ -259,18 +230,6 @@ describe('pickNfcRecord', () => {
     });
 
     describe('with a preferred request', () => {
-        const card = [
-            site,
-            mimeRecord('cdf/lnp', `Card;${PAY}`),
-            mimeRecord('cdf/lnw', `Card;${WITHDRAW}`)
-        ];
-
-        it('takes the CDF record of that kind', () => {
-            expect(pickNfcRecord(card, 'withdraw')).toBe(WITHDRAW);
-            expect(pickNfcRecord(card, 'pay')).toBe(PAY);
-            expect(pickNfcRecord(card)).toBe(PAY);
-        });
-
         it('takes an lnurlp: or lnurlw: URI of that kind', () => {
             const uris = [
                 uriRecord('lnurlw://card.example.com/w'),
@@ -354,21 +313,17 @@ describe('scanNfcTag', () => {
         ).resolves.toBe('https://card.example.com/lnurlw?p=1');
     });
 
-    it('reads the CDF withdraw record of a card that can also be paid', async () => {
-        const withdraw = 'https://mywallet.example.org/withdrawurl?id=123';
+    it('reads the withdraw record of a card that can also be paid', async () => {
         await expect(
             tap(
                 [
                     uriRecord('https://bitcoin.example.org/'),
-                    mimeRecord(
-                        'cdf/lnp',
-                        'Card;https://mywallet.example.org/payurl?id=123'
-                    ),
-                    mimeRecord('cdf/lnw', `Card;${withdraw}`)
+                    uriRecord('lnurlp://card.example.com/p'),
+                    uriRecord('lnurlw://card.example.com/w')
                 ],
                 'withdraw'
             )
-        ).resolves.toBe(withdraw);
+        ).resolves.toBe('lnurlw://card.example.com/w');
     });
 
     it('resolves undefined for a tag without NDEF records', async () => {
