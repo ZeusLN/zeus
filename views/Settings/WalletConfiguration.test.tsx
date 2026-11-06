@@ -1210,6 +1210,58 @@ describe('WalletConfiguration', () => {
         });
     });
 
+    describe('restoring an embedded LND wallet', () => {
+        // Wallet A was restored earlier and its recovery has not run yet
+        const restore = async (recoveryCipherSeed?: string) => {
+            const updateSettings = jest.fn(() => Promise.resolve());
+            const view: any = new WalletConfiguration({
+                navigation: { reset: jest.fn(), navigate: jest.fn() },
+                route: { params: { newEntry: true } },
+                SettingsStore: {
+                    settings: { privacy: {}, selectedNode: 0 },
+                    updateSettings,
+                    setConnectingStatus: jest.fn()
+                }
+            } as any);
+            view.setState = (update: any) => Object.assign(view.state, update);
+            Object.assign(view.state, {
+                implementation: 'embedded-lnd',
+                lndDir: 'walletB'
+            });
+
+            view.saveWalletConfiguration(recoveryCipherSeed, true);
+            await new Promise(setImmediate);
+
+            const current = {
+                nodes: [{}],
+                recovery: true,
+                recoveryWalletDirs: ['walletA']
+            };
+            return (updateSettings.mock.calls as any[]).map(([update]) =>
+                typeof update === 'function' ? update(current) : update
+            );
+        };
+
+        it('keeps wallet A pending when wallet B is restored from an aezeed', async () => {
+            const updates = await restore('aezeed words');
+
+            expect(updates).toContainEqual({
+                recovery: true,
+                recoveryWalletDirs: ['walletA', 'walletB']
+            });
+        });
+
+        it('leaves the recovery settings alone without a cipher seed', async () => {
+            const updates = await restore();
+
+            expect(updates.length).toBeGreaterThan(0);
+            for (const update of updates) {
+                expect(update).not.toHaveProperty('recovery');
+                expect(update).not.toHaveProperty('recoveryWalletDirs');
+            }
+        });
+    });
+
     describe('new LDK Node wallet', () => {
         it('builds the node with the default scorer URL', async () => {
             const view: any = new WalletConfiguration({

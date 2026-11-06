@@ -52,6 +52,7 @@ import { fetchLncData } from '../utils/LncFetchUtils';
 import WalletRefreshRunner from '../utils/WalletRefreshRunner';
 import Storage from '../storage';
 import { sourceMethods } from './lncTestUtils';
+import * as WalletRecoveryUtils from '../utils/WalletRecoveryUtils';
 
 const native = NativeModules.LncModule;
 const connected = new Map<string, boolean>();
@@ -172,8 +173,9 @@ function setup() {
             },
             themeColor: () => '#000',
             isLightTheme: () => false,
-            autoPurgeLegacyKeychain: jest.fn(),
-            isWipePending: async () => false
+            isWipePending: async () => false,
+            ...WalletRecoveryUtils,
+            autoPurgeLegacyKeychain: jest.fn()
         }
     );
     const view = new Wallet();
