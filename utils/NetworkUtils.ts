@@ -1,5 +1,6 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
+import { isPrivateHost, urlHost } from './HostUtils';
 import { doTorRequestRaw, RequestMethod } from './TorUtils';
 
 // A minimal subset of the ReactNativeBlobUtil fetch response that ancillary
@@ -71,13 +72,15 @@ const torFetch = async (
 // Transport-agnostic HTTP request for ancillary (non-node) service calls.
 // When Tor is enabled for the active node, or the host is a .onion service,
 // the request is routed through the embedded Tor daemon; otherwise it uses
-// ReactNativeBlobUtil directly. A .onion host is never handed to the system
-// stack, which would resolve it through the local DNS resolver and send the
-// request to whatever address comes back, so if Tor is unavailable the
-// request fails rather than falling back to clearnet. In both cases the
-// returned value exposes the same ReactNativeBlobUtil-compatible surface, so
-// status-based branching and body parsing at the call site are identical
-// regardless of transport.
+// ReactNativeBlobUtil directly. A private or loopback host (a mempool
+// instance on the LAN, say) goes direct even with Tor enabled: Tor exits
+// cannot reach it, and the request stays on the local network. A .onion
+// host is never handed to the system stack, which would resolve it through
+// the local DNS resolver and send the request to whatever address comes
+// back, so if Tor is unavailable the request fails rather than falling back
+// to clearnet. In both cases the returned value exposes the same
+// ReactNativeBlobUtil-compatible surface, so status-based branching and body
+// parsing at the call site are identical regardless of transport.
 // Not async: without Tor the caller gets ReactNativeBlobUtil's own promise,
 // so a caller with a deadline can cancel() the request. A Tor request has no
 // cancel and ends at the daemon's own timeout.
@@ -88,7 +91,7 @@ const networkFetch = ({
     body,
     enableTor
 }: NetworkFetchArgs): Promise<NetworkResponse> & { cancel?: () => void } => {
-    if (enableTor || isOnionUrl(url)) {
+    if (isOnionUrl(url) || (enableTor && !isPrivateHost(urlHost(url)))) {
         return torFetch(method, url, headers, body);
     }
 
