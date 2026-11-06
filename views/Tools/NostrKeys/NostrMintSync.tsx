@@ -17,6 +17,7 @@ import CashuStore from '../../../stores/CashuStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+import DateTimeUtils from '../../../utils/DateTimeUtils';
 
 interface NostrMintSyncProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -191,9 +192,9 @@ export default class NostrMintSync extends React.Component<
                                 keyValue={localeString(
                                     'views.Tools.NostrKeys.lastBackup'
                                 )}
-                                value={new Date(
-                                    nostrMintBackupTimestamp * 1000
-                                ).toLocaleString()}
+                                value={DateTimeUtils.formatDateTime(
+                                    new Date(nostrMintBackupTimestamp * 1000)
+                                )}
                             />
                         )}
 

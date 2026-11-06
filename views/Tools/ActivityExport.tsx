@@ -23,6 +23,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import {
     getFormattedDateTime,
     convertActivityToCsv,
@@ -388,10 +389,10 @@ export default class ActivityExport extends React.Component<
                                                             fontSize: 16
                                                         }}
                                                     >
-                                                        {(
+                                                        {DateTimeUtils.formatDate(
                                                             fromDate ||
-                                                            new Date()
-                                                        ).toLocaleDateString()}
+                                                                new Date()
+                                                        )}
                                                     </Text>
                                                 </TouchableOpacity>
                                             )}
@@ -472,9 +473,9 @@ export default class ActivityExport extends React.Component<
                                                             fontSize: 16
                                                         }}
                                                     >
-                                                        {(
+                                                        {DateTimeUtils.formatDate(
                                                             toDate || new Date()
-                                                        ).toLocaleDateString()}
+                                                        )}
                                                     </Text>
                                                 </TouchableOpacity>
                                             )}

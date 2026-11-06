@@ -1,3 +1,14 @@
+jest.mock('../stores/Stores', () => ({
+    settingsStore: {
+        settings: {
+            display: {
+                dateFormat: 'Default',
+                timeFormat: '24h',
+                showSeconds: false
+            }
+        }
+    }
+}));
 const mockZipFolder = jest.fn().mockResolvedValue(undefined);
 const mockUnzipFile = jest.fn().mockResolvedValue(undefined);
 const mockEncryptFile = jest.fn().mockResolvedValue(undefined);

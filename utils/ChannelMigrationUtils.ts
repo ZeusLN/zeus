@@ -7,6 +7,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { localeString } from './LocaleUtils';
 import { stopLnd } from './LndMobileUtils';
 import BackendUtils from './BackendUtils';
+import DateTimeUtils from './DateTimeUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import Base64Utils from './Base64Utils';
 import { isReservedSigningMessage } from './LnurlAuthUtils';
@@ -371,7 +372,9 @@ export const uploadChannelBackupToOlympus = async (
         };
 
         if (last_backup_at) {
-            const dateStr = new Date(last_backup_at).toLocaleString();
+            const dateStr = DateTimeUtils.formatDateTime(
+                new Date(last_backup_at)
+            );
 
             Alert.alert(
                 localeString(
@@ -501,7 +504,9 @@ export const restoreChannelBackupFromOlympus = async (
         }
 
         const userConfirmed = await new Promise<boolean>((resolve) => {
-            const dateStr = new Date(last_backup_at).toLocaleString();
+            const dateStr = DateTimeUtils.formatDateTime(
+                new Date(last_backup_at)
+            );
             Alert.alert(
                 localeString('views.Tools.migration.export.backupFound'),
                 localeString(

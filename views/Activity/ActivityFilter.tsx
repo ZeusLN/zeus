@@ -15,6 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import BackendUtils from '../../utils/BackendUtils';
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -120,8 +121,8 @@ export default class ActivityFilter extends React.Component<
 
         // The JSON round-trip deep-clones the filters but turns the
         // startDate/endDate Date instances into ISO strings, which throws
-        // downstream (getFullYear in ActivityFilterUtils, toLocaleDateString
-        // in render). Revive them like ActivityStore.getFilters does.
+        // downstream (getFullYear in ActivityFilterUtils).
+        // Revive them like ActivityStore.getFilters does.
         const newFilters: Filter = JSON.parse(
             JSON.stringify(filters),
             (key, value) =>
@@ -309,7 +310,6 @@ export default class ActivityFilter extends React.Component<
             workingEndDate,
             expandedSections
         } = this.state;
-        const locale = SettingsStore?.settings?.locale;
         const {
             filters,
             setAmountFilter,
@@ -367,84 +367,85 @@ export default class ActivityFilter extends React.Component<
             lsps7State
         ]);
 
-        const DateFilter = (props: { type: 'startDate' | 'endDate' }) => (
-            <View
-                style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    justifyContent: 'flex-end',
-                    alignItems: 'center'
-                }}
-            >
-                <Text
+        const DateFilter = (props: { type: 'startDate' | 'endDate' }) => {
+            const date = props.type === 'startDate' ? startDate : endDate;
+
+            return (
+                <View
                     style={{
-                        fontFamily: 'PPNeueMontreal-Book',
-                        color: themeColor('text'),
-                        marginRight: 15
+                        flex: 1,
+                        flexDirection: 'row',
+                        justifyContent: 'flex-end',
+                        alignItems: 'center'
                     }}
                 >
-                    {(props.type === 'startDate'
-                        ? startDate
-                        : endDate
-                    )?.toLocaleDateString(locale)}
-                </Text>
-                <Button
-                    onPress={() => {
-                        if (props.type === 'startDate') {
-                            this.setState({
-                                setStartDate: true,
-                                workingStartDate: startDate
-                                    ? startDate
-                                    : endDate ?? new Date()
-                            });
-                        } else {
-                            this.setState({
-                                setEndDate: true,
-                                workingEndDate: endDate ? endDate : new Date()
-                            });
-                        }
-                    }}
-                    buttonStyle={{
-                        backgroundColor: themeColor('secondary'),
-                        paddingLeft: 15,
-                        paddingRight: 15,
-                        height: 40,
-                        borderRadius: 6
-                    }}
-                    titleStyle={{
-                        color: themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
-                    }}
-                    title={
-                        (props.type === 'startDate' && startDate) ||
-                        (props.type === 'endDate' && endDate)
-                            ? localeString('views.ActivityFilter.edit')
-                            : localeString('views.ActivityFilter.set')
-                    }
-                />
-                {((props.type === 'startDate' && startDate) ||
-                    (props.type === 'endDate' && endDate)) && (
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color: themeColor('text'),
+                            marginRight: 15
+                        }}
+                    >
+                        {date ? DateTimeUtils.formatDate(date) : ''}
+                    </Text>
                     <Button
+                        onPress={() => {
+                            if (props.type === 'startDate') {
+                                this.setState({
+                                    setStartDate: true,
+                                    workingStartDate: startDate
+                                        ? startDate
+                                        : endDate ?? new Date()
+                                });
+                            } else {
+                                this.setState({
+                                    setEndDate: true,
+                                    workingEndDate: endDate
+                                        ? endDate
+                                        : new Date()
+                                });
+                            }
+                        }}
                         buttonStyle={{
-                            backgroundColor: themeColor('error'),
-                            marginLeft: 15,
+                            backgroundColor: themeColor('secondary'),
+                            paddingLeft: 15,
+                            paddingRight: 15,
                             height: 40,
                             borderRadius: 6
                         }}
-                        icon={{
-                            name: 'delete',
-                            size: 20,
-                            color: themeColor('text')
+                        titleStyle={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
                         }}
-                        onPress={() => {
-                            props.type === 'startDate'
-                                ? clearStartDateFilter()
-                                : clearEndDateFilter();
-                        }}
+                        title={
+                            date
+                                ? localeString('views.ActivityFilter.edit')
+                                : localeString('views.ActivityFilter.set')
+                        }
                     />
-                )}
-            </View>
-        );
+                    {date && (
+                        <Button
+                            buttonStyle={{
+                                backgroundColor: themeColor('error'),
+                                marginLeft: 15,
+                                height: 40,
+                                borderRadius: 6
+                            }}
+                            icon={{
+                                name: 'delete',
+                                size: 20,
+                                color: themeColor('text')
+                            }}
+                            onPress={() => {
+                                props.type === 'startDate'
+                                    ? clearStartDateFilter()
+                                    : clearEndDateFilter();
+                            }}
+                        />
+                    )}
+                </View>
+            );
+        };
 
         const FILTERS = [
             {
