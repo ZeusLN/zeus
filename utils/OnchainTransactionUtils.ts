@@ -27,6 +27,16 @@ export const UNCONFIRMED: TransactionPageRequest = {
     max_transactions: 0
 };
 
+// Every transaction, oldest block first, then the unmined ones.
+export const ALL_FORWARD: TransactionPageRequest = {
+    start_height: 0,
+    end_height: -1,
+    max_transactions: 0
+};
+
+const byConfirmations = <T extends OnchainTransaction>(a: T, b: T) =>
+    Number(a.num_confirmations || 0) - Number(b.num_confirmations || 0);
+
 // lnd's GetTransactions (0.19+) pages a list in which unconfirmed
 // transactions come after every confirmed one, and only then sorts the page
 // by confirmations. A capped request in block order returns the oldest
@@ -44,6 +54,20 @@ export const getNewestTransactions = async <T extends OnchainTransaction>({
         ...NEWEST_CONFIRMED,
         max_transactions: limit
     });
+
+    // lnd on a SQL database (sqlite, postgres) returns no mined
+    // transactions for a backwards range that starts above the wallet's
+    // newest block, which a start height of -1 always does: the kvdb cursor
+    // can't step back from past the last key
+    // (https://github.com/lightningnetwork/lnd/issues/11533). Only the
+    // unconfirmed ones come back, so read everything forwards instead. A
+    // wallet with no mined transactions makes the same second request on any
+    // database.
+    if (!confirmed.some((tx) => Number(tx.num_confirmations || 0) > 0)) {
+        const all = (await fetchPage(ALL_FORWARD)).sort(byConfirmations);
+        return limit === 0 ? all : all.slice(0, limit);
+    }
+
     // A short page already includes the unconfirmed transactions. A longer
     // one means the node ignored the cap and sent everything, as does a
     // limit of 0.
@@ -62,10 +86,6 @@ export const getNewestTransactions = async <T extends OnchainTransaction>({
             seen.add(tx.tx_hash);
             return true;
         })
-        .sort(
-            (a, b) =>
-                Number(a.num_confirmations || 0) -
-                Number(b.num_confirmations || 0)
-        )
+        .sort(byConfirmations)
         .slice(0, limit);
 };

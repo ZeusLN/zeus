@@ -213,6 +213,30 @@ describe('EmbeddedLND.getTransactions', () => {
         ]);
     });
 
+    it('reads every transaction forwards when the newest page has no mined ones', async () => {
+        mockGetTransactions.mockImplementation(async (request: any) =>
+            request.end_height === 1
+                ? decodedTransactions([
+                      { tx_hash: 'pending0', num_confirmations: 0 }
+                  ])
+                : decodedTransactions([
+                      { tx_hash: 'pending0', num_confirmations: 0 },
+                      { tx_hash: 'tx1', num_confirmations: 2 }
+                  ])
+        );
+
+        const { transactions } = await embeddedLnd.getTransactions();
+
+        expect(mockGetTransactions.mock.calls.map(([r]) => r)).toEqual([
+            { start_height: -1, end_height: 1, max_transactions: 500 },
+            { start_height: 0, end_height: -1, max_transactions: 0 }
+        ]);
+        expect(transactions.map((tx: any) => tx.tx_hash)).toEqual([
+            'pending0',
+            'tx1'
+        ]);
+    });
+
     it('passes an explicit range through as one request', async () => {
         mockGetTransactions.mockResolvedValue(decodedTransactions([]));
 
@@ -232,7 +256,8 @@ describe('EmbeddedLND.getTransactions', () => {
         const { transactions } = await embeddedLnd.getTransactions();
 
         expect(transactions).toEqual([]);
-        expect(mockGetTransactions).toHaveBeenCalledTimes(1);
+        // the empty newest page could be lnd on a SQL database
+        expect(mockGetTransactions).toHaveBeenCalledTimes(2);
     });
 });
 

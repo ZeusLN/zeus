@@ -916,6 +916,35 @@ describe('LightningNodeConnect', () => {
             ]);
         });
 
+        it('reads every transaction forwards when the newest page has no mined ones', async () => {
+            // lnd on a SQL database answers a backwards range from -1 with
+            // only the unconfirmed transactions
+            lnc.lnd.lightning.getTransactions.mockImplementation(
+                async (request: any) => ({
+                    transactions:
+                        request.endHeight === 1
+                            ? PENDING
+                            : [...PENDING, ...NEWEST]
+                })
+            );
+
+            const { transactions } = await backend.getTransactions();
+
+            expect(
+                lnc.lnd.lightning.getTransactions.mock.calls.map(
+                    ([request]: any[]) => request
+                )
+            ).toEqual([
+                { startHeight: -1, endHeight: 1, maxTransactions: 500 },
+                { startHeight: 0, endHeight: -1, maxTransactions: 0 }
+            ]);
+            expect(transactions.map((t: any) => t.tx_hash)).toEqual([
+                'tx1',
+                'tx2',
+                'pending0'
+            ]);
+        });
+
         it('makes one uncapped request when max_transactions is 0', async () => {
             await backend.getTransactions({ max_transactions: 0 });
 
