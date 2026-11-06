@@ -18,7 +18,7 @@ jest.mock('../../stores/SettingsStore', () => ({
     BLOCK_EXPLORER_KEYS: [],
     DEFAULT_MEMPOOL_INSTANCE: 'https://mempool.space',
     MEMPOOL_INSTANCE_KEYS: [],
-    getLspConfigForNetwork: jest.fn(() => ({}))
+    getLdkNodeLspConfig: jest.fn(() => ({ trustedPeers0conf: [] }))
 }));
 jest.mock('../../utils/BackendUtils', () => ({}));
 jest.mock('../../utils/LocaleUtils');

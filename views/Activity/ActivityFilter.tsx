@@ -324,6 +324,7 @@ export default class ActivityFilter extends React.Component<
             lightning,
             onChain,
             cashu,
+            splices,
             swaps,
             lsps1,
             lsps7,
@@ -469,6 +470,13 @@ export default class ActivityFilter extends React.Component<
                 var: 'cashu',
                 type: 'Toggle',
                 condition: BackendUtils.supportsCashuWallet()
+            },
+            {
+                label: localeString('views.ActivityFilter.splices'),
+                value: splices,
+                var: 'splices',
+                type: 'Toggle',
+                condition: BackendUtils.supportsSplicing()
             },
             {
                 label: localeString('views.ActivityFilter.services'),

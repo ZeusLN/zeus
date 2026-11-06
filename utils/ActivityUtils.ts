@@ -29,6 +29,9 @@ export const getRightTitleTheme = (item: any): ActivityRightTitleTheme => {
         return 'text';
     }
 
+    // moves funds between the wallet's own on-chain and Lightning balances
+    if (item.model === 'Splice') return 'text';
+
     if (item.model === 'LSPS1Order' || item.model === 'LSPS7Order') {
         switch (item.state) {
             case LSPOrderState.CREATED:

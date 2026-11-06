@@ -7,6 +7,7 @@ import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
 import Swap from '../models/Swap';
+import Splice from '../models/Splice';
 import { LSPActivity, LSPOrderState } from '../models/LSP';
 
 type ActivityItem =
@@ -17,6 +18,7 @@ type ActivityItem =
     | CashuPayment
     | CashuToken
     | Swap
+    | Splice
     | LSPActivity;
 
 import { localeString } from './LocaleUtils';
@@ -55,6 +57,12 @@ class ActivityFilterUtils {
                         activity instanceof CashuPayment ||
                         activity instanceof CashuToken
                     )
+            );
+        }
+
+        if (filter.splices == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => !(activity instanceof Splice)
             );
         }
 

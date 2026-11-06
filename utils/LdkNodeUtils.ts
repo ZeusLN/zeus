@@ -23,6 +23,18 @@ export type SupportedNetwork =
 
 export type EsploraServer = { key: string; value: string };
 
+export type LspNodeConfig = {
+    nodeId: string;
+    address: string;
+    token?: string | null;
+};
+
+// The dedicated LSPS2 LSP registered in the running node, if any. Settings
+// only take effect when the node is built, so receives check this instead.
+let activeLsps2NodeId: string | undefined;
+
+export const getActiveLsps2NodeId = (): string | undefined => activeLsps2NodeId;
+
 // Default Esplora servers
 export const ESPLORA_SERVERS_MAINNET: EsploraServer[] = [
     { key: 'ZEUS', value: 'https://electrs.zeusln.com' },
@@ -236,6 +248,7 @@ async function initNode({
     scorerUrl,
     listeningAddresses,
     lsps1Config,
+    lsps2Config,
     trustedPeers0conf,
     vssServerUrl,
     failOnVssError
@@ -248,11 +261,8 @@ async function initNode({
     rgsServerUrl?: string;
     scorerUrl?: string;
     listeningAddresses?: string[];
-    lsps1Config?: {
-        nodeId: string;
-        address: string;
-        token?: string | null;
-    };
+    lsps1Config?: LspNodeConfig;
+    lsps2Config?: LspNodeConfig;
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
     failOnVssError?: boolean;
@@ -268,7 +278,8 @@ async function initNode({
     const vssKey = deriveVssSigningKeyFromSeed(Buffer.from(seedHex, 'hex'));
     const vssStoreId = Buffer.from(vssKey.publicKey).toString('hex');
 
-    return await LdkNode.utils.initializeNode({
+    activeLsps2NodeId = undefined;
+    const result = await LdkNode.utils.initializeNode({
         network: networkType,
         storagePath,
         esploraServerUrl: esploraUrl,
@@ -278,6 +289,7 @@ async function initNode({
         scorerUrl,
         listeningAddresses,
         lsps1Config,
+        lsps2Config,
         trustedPeers0conf,
         vssConfig: {
             url: vssUrl,
@@ -286,6 +298,8 @@ async function initNode({
         vssKey,
         failOnVssError
     });
+    activeLsps2NodeId = result.lsps2NodeId;
+    return result;
 }
 
 /**
@@ -302,6 +316,7 @@ export async function createLdkNodeWallet({
     scorerUrl,
     listeningAddresses,
     lsps1Config,
+    lsps2Config,
     trustedPeers0conf,
     vssServerUrl,
     failOnVssError
@@ -315,11 +330,8 @@ export async function createLdkNodeWallet({
     rgsServerUrl?: string;
     scorerUrl?: string;
     listeningAddresses?: string[];
-    lsps1Config?: {
-        nodeId: string;
-        address: string;
-        token?: string | null;
-    };
+    lsps1Config?: LspNodeConfig;
+    lsps2Config?: LspNodeConfig;
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
     failOnVssError?: boolean;
@@ -349,6 +361,7 @@ export async function createLdkNodeWallet({
             scorerUrl,
             listeningAddresses,
             lsps1Config,
+            lsps2Config,
             trustedPeers0conf,
             vssServerUrl,
             failOnVssError
@@ -396,6 +409,7 @@ export async function startLdkNodeWallet({
     scorerUrl,
     listeningAddresses,
     lsps1Config,
+    lsps2Config,
     trustedPeers0conf,
     vssServerUrl,
     skipInit,
@@ -409,11 +423,8 @@ export async function startLdkNodeWallet({
     rgsServerUrl?: string;
     scorerUrl?: string;
     listeningAddresses?: string[];
-    lsps1Config?: {
-        nodeId: string;
-        address: string;
-        token?: string | null;
-    };
+    lsps1Config?: LspNodeConfig;
+    lsps2Config?: LspNodeConfig;
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
     skipInit?: boolean;
@@ -444,6 +455,7 @@ export async function startLdkNodeWallet({
             scorerUrl,
             listeningAddresses,
             lsps1Config,
+            lsps2Config,
             trustedPeers0conf,
             vssServerUrl,
             failOnVssError: !hasLocalDb

@@ -40,6 +40,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
         supportsCashuWallet: () => false,
         supportsFlowLSP: () => false,
         supportsNostrWalletConnectService: () => false,
+        supportsSplicing: jest.fn(() => false),
         clearCachedCalls: () => {}
     };
     const ldk = {
@@ -125,7 +126,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             BackendUtils,
             ...ldk,
             ...lnd,
-            getLspConfigForNetwork: () => ({}),
+            getLdkNodeLspConfig: () => ({ trustedPeers0conf: [] }),
             DEFAULT_SCORER_URL: 'scorer',
             DEFAULT_VSS_SERVER: 'vss',
             localeString: (s: string) => s,
@@ -176,6 +177,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
         'LightningAddressStore',
         'LnurlPayStore',
         'NotesStore',
+        'SpliceStore',
         'SwapStore',
         'NostrWalletConnectStore',
         'UnitsStore'
@@ -200,6 +202,8 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
     view.props.SwapStore.fetchAndUpdateSwaps = jest.fn();
     view.props.LSPStore.initFlowLSP = jest.fn();
     view.props.PosStore.getOrders = jest.fn();
+    view.props.SpliceStore.stopTracking = jest.fn();
+    view.props.SpliceStore.trackSplices = jest.fn();
     view.state = { initialLoad: false, unlocked: true };
     view.setState = (patch: any) => Object.assign(view.state, patch);
     view.processPendingShareIntent = jest.fn();
@@ -207,6 +211,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
     const refresh = () => view.getSettingsAndNavigate();
     const runner = new WalletRefreshRunner(settings, () => true, refresh);
     return {
+        BackendUtils,
         settings,
         view,
         runner,
@@ -240,6 +245,25 @@ it('control: a refresh with no switch connects and clears connecting', async () 
     expect(view.props.NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
     expect(view.props.ChannelsStore.getChannels).toHaveBeenCalledTimes(1);
     expect(settings.connecting).toBe(false);
+});
+
+it('follows splices once connected to a backend that can splice', async () => {
+    const { BackendUtils, view, runner, refresh } = setup(1);
+    BackendUtils.supportsSplicing.mockReturnValue(true);
+    await runner.run(refresh);
+    expect(view.props.SpliceStore.stopTracking).toHaveBeenCalledTimes(1);
+    expect(view.props.SpliceStore.trackSplices).toHaveBeenCalledTimes(1);
+    expect(
+        view.props.SpliceStore.stopTracking.mock.invocationCallOrder[0]
+    ).toBeLessThan(
+        view.props.SpliceStore.trackSplices.mock.invocationCallOrder[0]
+    );
+});
+
+it('does not follow splices on a backend that cannot splice', async () => {
+    const { view, runner, refresh } = setup(1);
+    await runner.run(refresh);
+    expect(view.props.SpliceStore.trackSplices).not.toHaveBeenCalled();
 });
 
 it('hands a wipe that did not finish to the Lockscreen before connecting', async () => {

@@ -9,6 +9,12 @@ const mockBolt12DecodeOffer = jest.fn();
 const mockListChannels = jest.fn();
 const mockCloseChannel = jest.fn();
 const mockForceCloseChannel = jest.fn();
+const mockListBalances = jest.fn();
+const mockStatus = jest.fn();
+const mockListUtxos = jest.fn();
+const mockReceiveViaJitChannel = jest.fn();
+const mockNewOnchainAddress = jest.fn();
+const mockSpliceOut = jest.fn();
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
@@ -17,7 +23,17 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
             listChannels: (...args: any[]) => mockListChannels(...args),
             closeChannel: (...args: any[]) => mockCloseChannel(...args),
             forceCloseChannel: (...args: any[]) =>
-                mockForceCloseChannel(...args)
+                mockForceCloseChannel(...args),
+            spliceOut: (...args: any[]) => mockSpliceOut(...args)
+        },
+        node: {
+            listBalances: (...args: any[]) => mockListBalances(...args),
+            status: (...args: any[]) => mockStatus(...args)
+        },
+        onchain: {
+            listUtxos: (...args: any[]) => mockListUtxos(...args),
+            newOnchainAddress: (...args: any[]) =>
+                mockNewOnchainAddress(...args)
         },
         payments: {
             listPayments: (...args: any[]) => mockListPayments(...args)
@@ -26,7 +42,9 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
             sendBolt11: (...args: any[]) => mockSendBolt11(...args),
             receiveBolt11: (...args: any[]) => mockReceiveBolt11(...args),
             receiveVariableAmountBolt11: (...args: any[]) =>
-                mockReceiveVariableAmountBolt11(...args)
+                mockReceiveVariableAmountBolt11(...args),
+            receiveViaJitChannel: (...args: any[]) =>
+                mockReceiveViaJitChannel(...args)
         },
         spontaneous: {
             sendSpontaneousPayment: (...args: any[]) =>
@@ -49,6 +67,7 @@ jest.mock('../utils/LocaleUtils');
 
 import LdkNode from './LdkNode';
 import Payment from '../models/Payment';
+import Bolt11Utils from '../utils/Bolt11Utils';
 
 const PAYMENT_ID = 'payment-id';
 
@@ -664,5 +683,459 @@ describe('LdkNode.getPayments', () => {
         expect(payment.getPreimage).toEqual('');
         expect(payment.isIncomplete).toBe(true);
         expect(payment.isFailed).toBe(false);
+    });
+});
+
+describe('LdkNode.getBlockchainBalance', () => {
+    const mockBalances = (balances: {
+        totalOnchainBalanceSats: number;
+        spendableOnchainBalanceSats: number;
+        totalAnchorChannelsReserveSats: number;
+    }) =>
+        mockListBalances.mockResolvedValue({
+            totalLightningBalanceSats: 0,
+            lightningBalances: [],
+            pendingBalancesFromChannelClosures: [],
+            ...balances
+        });
+
+    beforeEach(() => jest.clearAllMocks());
+
+    it('reports the anchor channel reserve alongside the balances', async () => {
+        mockBalances({
+            totalOnchainBalanceSats: 130000,
+            spendableOnchainBalanceSats: 75000,
+            totalAnchorChannelsReserveSats: 25000
+        });
+
+        expect(await new LdkNode().getBlockchainBalance()).toEqual({
+            total_balance: '130000',
+            confirmed_balance: '100000',
+            unconfirmed_balance: '30000',
+            reserved_balance_anchor_chan: '25000'
+        });
+    });
+
+    it('reports a zero reserve without anchor channels', async () => {
+        mockBalances({
+            totalOnchainBalanceSats: 50000,
+            spendableOnchainBalanceSats: 50000,
+            totalAnchorChannelsReserveSats: 0
+        });
+
+        const balance = await new LdkNode().getBlockchainBalance();
+        expect(balance.confirmed_balance).toEqual('50000');
+        expect(balance.reserved_balance_anchor_chan).toEqual('0');
+    });
+
+    it('still reports the reserve once it exceeds the spendable balance', async () => {
+        mockBalances({
+            totalOnchainBalanceSats: 20000,
+            spendableOnchainBalanceSats: 0,
+            totalAnchorChannelsReserveSats: 25000
+        });
+        mockListUtxos.mockResolvedValue([
+            { txid: 'aa', vout: 0, value_sats: 20000, is_spent: false }
+        ]);
+        mockListPayments.mockResolvedValue([
+            { kind: { type: 'onchain', txid: 'aa', confirmationHeight: 100 } }
+        ]);
+        mockStatus.mockResolvedValue({ currentBestBlock_height: 105 });
+
+        const balance = await new LdkNode().getBlockchainBalance();
+        expect(balance.confirmed_balance).toEqual('20000');
+        expect(balance.reserved_balance_anchor_chan).toEqual('25000');
+    });
+});
+
+describe('LdkNode.createInvoice', () => {
+    const SAT = 1000;
+    const channel = (inboundSats: number, extra: any = {}) => ({
+        isChannelReady: true,
+        inboundCapacityMsat: inboundSats * SAT,
+        ...extra
+    });
+    const jitPayment = (openingFeeMsat: number) => ({
+        id: 'jit',
+        direction: 'inbound',
+        status: 'pending',
+        kind: {
+            type: 'bolt11Jit',
+            hash: 'hash',
+            lspFeeLimits: { maxTotalOpeningFeeMsat: openingFeeMsat }
+        }
+    });
+    const create = (value: string, lsps2_jit = true) =>
+        new LdkNode().createInvoice({
+            value,
+            memo: 'memo',
+            expiry_seconds: '3600',
+            lsps2_jit
+        });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
+            payment_hash: 'hash'
+        } as any);
+        mockReceiveBolt11.mockResolvedValue('lnbc-plain');
+        mockReceiveVariableAmountBolt11.mockResolvedValue('lnbc-variable');
+        mockReceiveViaJitChannel.mockResolvedValue('lnbc-jit');
+        mockListPayments.mockResolvedValue([jitPayment(10_000 * SAT)]);
+    });
+
+    it('creates a plain invoice when existing inbound can take it', async () => {
+        mockListChannels.mockResolvedValue([channel(60_000)]);
+
+        const result = await create('50000');
+
+        expect(mockReceiveViaJitChannel).not.toHaveBeenCalled();
+        expect(result).toEqual({
+            payment_request: 'lnbc-plain',
+            r_hash: 'hash',
+            add_index: ''
+        });
+    });
+
+    it('buys a JIT channel when inbound is short and returns its fee', async () => {
+        mockListChannels.mockResolvedValue([]);
+
+        const result = await create('50000');
+
+        expect(mockReceiveViaJitChannel).toHaveBeenCalledWith({
+            amountMsat: 50_000 * SAT,
+            description: 'memo',
+            expirySecs: 3600,
+            maxLspFeeLimitMsat: 50_000 * SAT - 1
+        });
+        expect(result).toEqual({
+            payment_request: 'lnbc-jit',
+            r_hash: 'hash',
+            add_index: '',
+            lsps2_jit: true,
+            lsp_fee_msat: 10_000 * SAT
+        });
+    });
+
+    it('adds up inbound across channels', async () => {
+        mockListChannels.mockResolvedValue([channel(30_000), channel(30_000)]);
+
+        await create('50000');
+
+        expect(mockReceiveViaJitChannel).not.toHaveBeenCalled();
+    });
+
+    it('keeps a margin back on each channel', async () => {
+        mockListChannels.mockResolvedValue([channel(50_000)]);
+
+        await create('50000');
+
+        expect(mockReceiveViaJitChannel).toHaveBeenCalled();
+    });
+
+    it("respects a channel's per-payment cap", async () => {
+        mockListChannels.mockResolvedValue([
+            channel(500_000, { inboundHtlcMaximumMsat: 40_000 * SAT })
+        ]);
+
+        await create('50000');
+
+        expect(mockReceiveViaJitChannel).toHaveBeenCalled();
+    });
+
+    it('ignores channels that are not ready', async () => {
+        mockListChannels.mockResolvedValue([
+            channel(500_000, { isChannelReady: false })
+        ]);
+
+        await create('50000');
+
+        expect(mockReceiveViaJitChannel).toHaveBeenCalled();
+    });
+
+    it('never buys a channel unless the caller allows it', async () => {
+        mockListChannels.mockResolvedValue([]);
+
+        await create('50000', false);
+
+        expect(mockListChannels).not.toHaveBeenCalled();
+        expect(mockReceiveViaJitChannel).not.toHaveBeenCalled();
+        expect(mockReceiveBolt11).toHaveBeenCalled();
+    });
+
+    it('keeps no-amount invoices plain', async () => {
+        mockListChannels.mockResolvedValue([]);
+
+        await create('0');
+
+        expect(mockReceiveViaJitChannel).not.toHaveBeenCalled();
+        expect(mockReceiveVariableAmountBolt11).toHaveBeenCalled();
+    });
+
+    it('explains LSP failures in plain language', async () => {
+        mockListChannels.mockResolvedValue([]);
+        mockReceiveViaJitChannel.mockRejectedValue(
+            new Error('Failed to request inbound liquidity.')
+        );
+
+        await expect(create('50000')).rejects.toThrow(
+            'stores.InvoicesStore.lsps2.requestFailed'
+        );
+    });
+});
+
+describe('LdkNode received JIT payments', () => {
+    const received = (kind: any) => ({
+        id: 'jit',
+        direction: 'inbound',
+        status: 'succeeded',
+        amountMsat: 40_000_000,
+        latestUpdateTimestamp: 0,
+        kind: { hash: 'hash', ...kind }
+    });
+    const lookup = (kind: any) => {
+        mockListPayments.mockResolvedValue([received(kind)]);
+        return new LdkNode().lookupInvoice({ r_hash: 'hash' });
+    };
+
+    beforeEach(() => jest.clearAllMocks());
+
+    it('reports the fee the LSP withheld next to the net amount', async () => {
+        const invoice = await lookup({
+            type: 'bolt11Jit',
+            counterpartySkimmedFeeMsat: 10_000_000
+        });
+
+        expect(invoice.lsp_fee_msat).toEqual('10000000');
+        expect(invoice.amt_paid_sat).toEqual('40000');
+    });
+
+    it('reports no fee for a plain payment, from either platform', async () => {
+        // Android leaves the key out, iOS sends null
+        expect((await lookup({ type: 'bolt11' })).lsp_fee_msat).toBeUndefined();
+        expect(
+            (
+                await lookup({
+                    type: 'bolt11Jit',
+                    counterpartySkimmedFeeMsat: null
+                })
+            ).lsp_fee_msat
+        ).toBeUndefined();
+    });
+});
+
+describe('LdkNode.watchSpliceEvents', () => {
+    let ldk: LdkNode;
+    let emit: (event: any) => void;
+    let unsubscribe: jest.Mock;
+
+    beforeEach(() => {
+        ldk = new LdkNode();
+        unsubscribe = jest.fn();
+        ldk.subscribeToEvents = (callback: any) => {
+            emit = callback;
+            return unsubscribe;
+        };
+    });
+
+    it('reports a negotiated splice with its new funding output', () => {
+        const onEvent = jest.fn();
+        ldk.watchSpliceEvents(onEvent);
+
+        emit({
+            type: 'splicePending',
+            channelId: 'chan',
+            userChannelId: 'user-chan',
+            counterpartyNodeId: '02peer',
+            newFundingTxo_txid: 'splice-txid',
+            newFundingTxo_vout: 1
+        });
+
+        expect(onEvent).toHaveBeenCalledWith({
+            type: 'splicePending',
+            userChannelId: 'user-chan',
+            channelId: 'chan',
+            txid: 'splice-txid',
+            vout: 1
+        });
+    });
+
+    it.each(['spliceFailed', 'channelReady', 'channelClosed'])(
+        'reports %s for its channel',
+        (type) => {
+            const onEvent = jest.fn();
+            ldk.watchSpliceEvents(onEvent);
+
+            emit({ type, channelId: 'chan', userChannelId: 'user-chan' });
+
+            expect(onEvent).toHaveBeenCalledWith({
+                type,
+                userChannelId: 'user-chan',
+                channelId: 'chan'
+            });
+        }
+    );
+
+    it('ignores events unrelated to splices', () => {
+        const onEvent = jest.fn();
+        ldk.watchSpliceEvents(onEvent);
+
+        emit({ type: 'paymentReceived', paymentHash: 'hash', amountMsat: 1 });
+        emit({
+            type: 'channelPending',
+            channelId: 'chan',
+            userChannelId: 'user-chan'
+        });
+
+        expect(onEvent).not.toHaveBeenCalled();
+    });
+
+    it('returns the event unsubscribe function', () => {
+        expect(ldk.watchSpliceEvents(jest.fn())).toBe(unsubscribe);
+    });
+});
+
+describe('LdkNode.getSpliceTransactionStatus', () => {
+    const { settingsStore } = require('../stores/Stores');
+    const realFetch = global.fetch;
+    const answer = (body: any, ok = true, status = 200) => {
+        global.fetch = jest.fn(async () => ({
+            ok,
+            status,
+            json: async () => body
+        })) as any;
+    };
+
+    beforeEach(() => {
+        settingsStore.ldkEsploraServer = 'https://mutinynet.com/api/';
+    });
+
+    afterEach(() => {
+        global.fetch = realFetch;
+        delete settingsStore.ldkEsploraServer;
+    });
+
+    it("asks the node's own Esplora server for the splice transaction", async () => {
+        answer({ status: { confirmed: false }, vout: [] });
+
+        await new LdkNode().getSpliceTransactionStatus('splice-txid', 0);
+
+        expect(global.fetch).toHaveBeenCalledWith(
+            'https://mutinynet.com/api/tx/splice-txid'
+        );
+    });
+
+    it('reads the confirmation block and the new funding output', async () => {
+        answer({
+            status: { confirmed: true, block_height: 3563900 },
+            vout: [{ value: 210615 }, { value: 313436 }]
+        });
+
+        const status = await new LdkNode().getSpliceTransactionStatus(
+            'splice-txid',
+            1
+        );
+
+        expect(status).toEqual({
+            confirmationHeight: 3563900,
+            fundingSats: 313436
+        });
+    });
+
+    it('has no height while the transaction is unconfirmed', async () => {
+        answer({ status: { confirmed: false }, vout: [{ value: 313436 }] });
+
+        const status = await new LdkNode().getSpliceTransactionStatus(
+            'splice-txid',
+            0
+        );
+
+        expect(status).toEqual({
+            confirmationHeight: undefined,
+            fundingSats: 313436
+        });
+    });
+
+    it('has no funding value without the output index', async () => {
+        answer({ status: { confirmed: false }, vout: [{ value: 313436 }] });
+
+        const status = await new LdkNode().getSpliceTransactionStatus(
+            'splice-txid'
+        );
+
+        expect(status.fundingSats).toBeUndefined();
+    });
+
+    it('fails when the server has not seen the transaction', async () => {
+        answer({}, false, 404);
+
+        await expect(
+            new LdkNode().getSpliceTransactionStatus('splice-txid', 0)
+        ).rejects.toThrow('404');
+    });
+});
+
+describe('LdkNode.spliceOut', () => {
+    const splicingNode = () => {
+        const ldk = new LdkNode();
+        (ldk as any).spliceAndWait = (
+            _: string,
+            request: () => Promise<void>
+        ) => request().then(() => ({ success: true }));
+        return ldk;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockListChannels.mockResolvedValue([
+            {
+                fundingTxo_txid: 'funding-txid',
+                userChannelId: 'user-chan',
+                counterpartyNodeId: '02peer'
+            }
+        ]);
+        mockNewOnchainAddress.mockResolvedValue('tb1qwallet');
+        mockSpliceOut.mockResolvedValue(undefined);
+    });
+
+    it('pays a fresh address of our own wallet when none is given', async () => {
+        await splicingNode().spliceOut({
+            fundingTxid: 'funding-txid',
+            amountSats: 30000
+        });
+
+        expect(mockSpliceOut).toHaveBeenCalledWith({
+            userChannelId: 'user-chan',
+            counterpartyNodeId: '02peer',
+            address: 'tb1qwallet',
+            spliceAmountSats: 30000
+        });
+    });
+
+    it('pays the given address without taking one from the wallet', async () => {
+        await splicingNode().spliceOut({
+            fundingTxid: 'funding-txid',
+            amountSats: 30000,
+            address: 'tb1qexternal'
+        });
+
+        expect(mockNewOnchainAddress).not.toHaveBeenCalled();
+        expect(mockSpliceOut).toHaveBeenCalledWith(
+            expect.objectContaining({ address: 'tb1qexternal' })
+        );
+    });
+
+    it('does not splice when no wallet address can be taken', async () => {
+        mockNewOnchainAddress.mockRejectedValue(
+            new Error('Node not initialized')
+        );
+
+        await expect(
+            splicingNode().spliceOut({
+                fundingTxid: 'funding-txid',
+                amountSats: 30000
+            })
+        ).rejects.toThrow('Node not initialized');
+        expect(mockSpliceOut).not.toHaveBeenCalled();
     });
 });

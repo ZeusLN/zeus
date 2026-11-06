@@ -324,6 +324,41 @@ const forceCloseChannel = async ({
     );
 };
 
+const spliceIn = async ({
+    userChannelId,
+    counterpartyNodeId,
+    spliceAmountSats
+}: {
+    userChannelId: string;
+    counterpartyNodeId: string;
+    spliceAmountSats: number;
+}): Promise<void> => {
+    return await LdkNodeModule.spliceIn(
+        userChannelId,
+        counterpartyNodeId,
+        spliceAmountSats
+    );
+};
+
+const spliceOut = async ({
+    userChannelId,
+    counterpartyNodeId,
+    address,
+    spliceAmountSats
+}: {
+    userChannelId: string;
+    counterpartyNodeId: string;
+    address: string;
+    spliceAmountSats: number;
+}): Promise<void> => {
+    return await LdkNodeModule.spliceOut(
+        userChannelId,
+        counterpartyNodeId,
+        address,
+        spliceAmountSats
+    );
+};
+
 // ============================================================================
 // On-chain Functions
 // ============================================================================
@@ -436,6 +471,46 @@ const receiveVariableAmountBolt11 = async ({
     const result = await LdkNodeModule.receiveVariableAmountBolt11(
         description,
         expirySecs
+    );
+    return result.invoice;
+};
+
+// Creates an invoice that routes through the LSPS2 LSP, which opens a
+// channel to us when it is paid and withholds its fee from the payment.
+// Without a fee limit, the LSP's cheapest offer is accepted at any cost.
+const receiveViaJitChannel = async ({
+    amountMsat,
+    description,
+    expirySecs,
+    maxLspFeeLimitMsat
+}: {
+    amountMsat: number;
+    description: string;
+    expirySecs: number;
+    maxLspFeeLimitMsat?: number;
+}): Promise<string> => {
+    const result = await LdkNodeModule.receiveViaJitChannel(
+        amountMsat,
+        description,
+        expirySecs,
+        maxLspFeeLimitMsat ?? 0
+    );
+    return result.invoice;
+};
+
+const receiveVariableAmountViaJitChannel = async ({
+    description,
+    expirySecs,
+    maxProportionalLspFeeLimitPpmMsat
+}: {
+    description: string;
+    expirySecs: number;
+    maxProportionalLspFeeLimitPpmMsat?: number;
+}): Promise<string> => {
+    const result = await LdkNodeModule.receiveVariableAmountViaJitChannel(
+        description,
+        expirySecs,
+        maxProportionalLspFeeLimitPpmMsat ?? 0
     );
     return result.invoice;
 };
@@ -858,6 +933,7 @@ const initializeNode = async ({
     scorerUrl,
     listeningAddresses,
     lsps1Config,
+    lsps2Config,
     trustedPeers0conf,
     vssConfig,
     vssKey,
@@ -876,6 +952,12 @@ const initializeNode = async ({
         address: string;
         token?: string | null;
     };
+    // a dedicated LSPS2 LSP; without one the LSPS1 node is used
+    lsps2Config?: {
+        nodeId: string;
+        address: string;
+        token?: string | null;
+    };
     trustedPeers0conf?: string[];
     vssConfig?: {
         url: string;
@@ -883,7 +965,7 @@ const initializeNode = async ({
     };
     vssKey?: { privateKey: Uint8Array; publicKey: Uint8Array };
     failOnVssError?: boolean;
-}): Promise<{ vssError?: string }> => {
+}): Promise<{ vssError?: string; lsps2NodeId?: string }> => {
     const t0 = Date.now();
     const elapsed = () => `${Date.now() - t0}ms`;
     console.log('LDK Node: Initializing...');
@@ -927,18 +1009,6 @@ const initializeNode = async ({
             );
         }
 
-        // Also configure LSPS2 with the same LSP for JIT channels
-        try {
-            await setLiquiditySourceLsps2({
-                nodeId: lsps1Config.nodeId,
-                address: lsps1Config.address,
-                token: lsps1Config.token
-            });
-            console.log('LDK Node: LSPS2 liquidity source configured');
-        } catch (e) {
-            console.log('LDK Node: LSPS2 configuration failed');
-        }
-
         // Also configure LSPS7 with the same LSP for channel lease extensions
         try {
             await setLiquiditySourceLsps7({
@@ -949,6 +1019,30 @@ const initializeNode = async ({
             console.log('LDK Node: LSPS7 liquidity source configured');
         } catch (e) {
             console.log('LDK Node: LSPS7 configuration failed');
+        }
+    }
+
+    // Without a dedicated LSPS2 LSP the LSPS1 node stays the LSPS2 source.
+    // That registration is load-bearing for Flow: ldk-node gives only the
+    // LSPS2 LSP's inbound channels 100% max HTLC value in flight (10%
+    // otherwise), and Flow sends most of a new channel in one HTLC.
+    const lsps2Source = lsps2Config ?? lsps1Config;
+    let lsps2NodeId: string | undefined;
+    if (lsps2Source && lsps2Source.nodeId && lsps2Source.address) {
+        try {
+            await setLiquiditySourceLsps2({
+                nodeId: lsps2Source.nodeId,
+                address: lsps2Source.address,
+                token: lsps2Source.token
+            });
+            if (lsps2Config) lsps2NodeId = lsps2Config.nodeId;
+            console.log(
+                `LDK Node: LSPS2 liquidity source configured${
+                    lsps2Config ? ' (dedicated LSP)' : ''
+                }`
+            );
+        } catch (e) {
+            console.log('LDK Node: LSPS2 configuration failed');
         }
     }
 
@@ -1034,7 +1128,7 @@ const initializeNode = async ({
             Date.now() - t0
         }ms`
     );
-    return { vssError };
+    return { vssError, lsps2NodeId };
 };
 
 // ============================================================================
@@ -1132,6 +1226,17 @@ export interface ILdkNodeInjections {
             counterpartyNodeId: string;
             reason?: string;
         }) => Promise<void>;
+        spliceIn: (params: {
+            userChannelId: string;
+            counterpartyNodeId: string;
+            spliceAmountSats: number;
+        }) => Promise<void>;
+        spliceOut: (params: {
+            userChannelId: string;
+            counterpartyNodeId: string;
+            address: string;
+            spliceAmountSats: number;
+        }) => Promise<void>;
     };
     onchain: {
         newOnchainAddress: () => Promise<string>;
@@ -1164,6 +1269,17 @@ export interface ILdkNodeInjections {
         receiveVariableAmountBolt11: (params: {
             description: string;
             expirySecs: number;
+        }) => Promise<string>;
+        receiveViaJitChannel: (params: {
+            amountMsat: number;
+            description: string;
+            expirySecs: number;
+            maxLspFeeLimitMsat?: number;
+        }) => Promise<string>;
+        receiveVariableAmountViaJitChannel: (params: {
+            description: string;
+            expirySecs: number;
+            maxProportionalLspFeeLimitPpmMsat?: number;
         }) => Promise<string>;
         sendBolt11: (params: {
             invoice: string;
@@ -1299,6 +1415,11 @@ export interface ILdkNodeInjections {
                 address: string;
                 token?: string | null;
             };
+            lsps2Config?: {
+                nodeId: string;
+                address: string;
+                token?: string | null;
+            };
             trustedPeers0conf?: string[];
             vssConfig?: {
                 url: string;
@@ -1309,7 +1430,7 @@ export interface ILdkNodeInjections {
                 publicKey: Uint8Array;
             };
             failOnVssError?: boolean;
-        }) => Promise<{ vssError?: string }>;
+        }) => Promise<{ vssError?: string; lsps2NodeId?: string }>;
     };
 }
 
@@ -1360,7 +1481,9 @@ const LdkNodeInjection: ILdkNodeInjections = {
         openChannelFundMax,
         openChannelWithUtxos,
         closeChannel,
-        forceCloseChannel
+        forceCloseChannel,
+        spliceIn,
+        spliceOut
     },
     onchain: {
         newOnchainAddress,
@@ -1373,6 +1496,8 @@ const LdkNodeInjection: ILdkNodeInjections = {
     bolt11: {
         receiveBolt11,
         receiveVariableAmountBolt11,
+        receiveViaJitChannel,
+        receiveVariableAmountViaJitChannel,
         sendBolt11,
         sendBolt11UsingAmount,
         sendBolt11Probes,
