@@ -1,7 +1,7 @@
 // LnurlPayUtils.ts
 import url from 'url';
 import BigNumber from 'bignumber.js';
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { decodelnurl } from 'js-lnurl/lib/helpers';
 
 import Base64Utils from './Base64Utils';

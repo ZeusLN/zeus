@@ -36,7 +36,7 @@ jest.mock('react-native-notifications', () => ({
 }));
 
 import * as nostrTools from 'nostr-tools';
-import { hexToBytes } from '@noble/hashes/utils';
+import { hexToBytes } from '@noble/hashes/utils.js';
 
 import BackendUtils from './BackendUtils';
 import NostrConnectUtils from './NostrConnectUtils';

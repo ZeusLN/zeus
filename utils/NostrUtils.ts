@@ -1,5 +1,5 @@
 import { nip05, nip19 } from 'nostr-tools';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 /**
  * Validates an npub string format using regex.

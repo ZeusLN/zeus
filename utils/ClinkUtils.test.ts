@@ -1,5 +1,5 @@
 import { bech32 } from '@scure/base';
-import { hexToBytes } from '@noble/hashes/utils';
+import { hexToBytes } from '@noble/hashes/utils.js';
 import { Relay } from 'nostr-tools';
 
 import ClinkUtils, {
