@@ -5,6 +5,11 @@ jest.mock('../utils/BackendUtils', () => ({
     isLNDBased: jest.fn(() => true),
     supportsChannelMemo: jest.fn(() => true),
     openChannelSync: jest.fn(),
+    openChannelStream: jest.fn(),
+    fundPsbt: jest.fn(),
+    signPsbt: jest.fn(),
+    fundingStateStep: jest.fn(),
+    connectPeer: jest.fn(),
     getPendingChannels: jest.fn(),
     getChannels: jest.fn(),
     supportsClosedChannels: () => false,
@@ -27,6 +32,11 @@ const supportsChannelMemo = BackendUtils.supportsChannelMemo as jest.Mock;
 const openChannelSync = BackendUtils.openChannelSync as jest.Mock;
 const getPendingChannels = BackendUtils.getPendingChannels as jest.Mock;
 const getChannels = BackendUtils.getChannels as jest.Mock;
+const openChannelStream = BackendUtils.openChannelStream as jest.Mock;
+const fundPsbt = BackendUtils.fundPsbt as jest.Mock;
+const signPsbt = BackendUtils.signPsbt as jest.Mock;
+const fundingStateStep = BackendUtils.fundingStateStep as jest.Mock;
+const connectPeer = BackendUtils.connectPeer as jest.Mock;
 
 // cln-rest skips the node-info enrichment reaction; the open path only
 // looks at the implementation to decide whether to keep the host
@@ -368,4 +378,362 @@ describe('ChannelsStore.syncOpensInFlight', () => {
 
         expect(store.syncOpensInFlight).toBe(2);
     });
+});
+
+describe('ChannelsStore.openChannel through openChannelStream', () => {
+    const PSBT = 'cHNidP8BAFICAAAAAQ==';
+    const never = () => new Promise<any>(() => undefined);
+
+    const held = () => {
+        let resolve: (value: any) => void = () => undefined;
+        let reject: (error: Error) => void = () => undefined;
+        const promise = new Promise<any>((res, rej) => {
+            resolve = res;
+            reject = rej;
+        });
+        return { promise, resolve, reject };
+    };
+
+    const psbtFund = (pending_chan_id: string) => ({
+        result: {
+            pending_chan_id,
+            psbt_fund: {
+                funding_address: `bc1q${pending_chan_id}`,
+                funding_amount: 1,
+                psbt: PSBT
+            }
+        }
+    });
+
+    // an account other than the default one funds the channel through a
+    // PSBT, so the open goes through openChannelStream
+    const openStreamed = (store: ChannelsStore) =>
+        (store as any).openChannel(
+            new OpenChannelRequest({
+                node_pubkey_string: '02peer',
+                local_funding_amount: '100000',
+                sat_per_vbyte: '2',
+                account: 'imported'
+            })
+        );
+
+    // as OpenChannel does on mount
+    const enterScreen = (store: ChannelsStore) => store.resetOpenChannel();
+
+    const fundingSteps = () =>
+        fundingStateStep.mock.calls.map(([step]: any) => step);
+
+    const flush = async () => {
+        for (let i = 0; i < 10; i++) {
+            await new Promise<void>((resolve) => setImmediate(resolve));
+        }
+    };
+
+    beforeEach(() => {
+        jest.useRealTimers();
+        [
+            openChannelStream,
+            fundPsbt,
+            signPsbt,
+            fundingStateStep,
+            connectPeer,
+            openChannelSync
+        ].forEach((mock) => mock.mockReset());
+        // a newer open stays pending unless a test answers it
+        openChannelStream.mockImplementation(never);
+        openChannelSync.mockImplementation(never);
+        fundPsbt.mockResolvedValue({ funded_psbt: PSBT });
+        signPsbt.mockResolvedValue({ signed_psbt: PSBT });
+        fundingStateStep.mockResolvedValue({});
+    });
+
+    it('shows a current streamed open as opened', async () => {
+        openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+        const store = makeStore();
+        enterScreen(store);
+        openStreamed(store);
+        await flush();
+
+        expect(fundingSteps()).toEqual([
+            { psbt_verify: { funded_psbt: PSBT, pending_chan_id: 'chan-1' } },
+            {
+                psbt_finalize: { signed_psbt: PSBT, pending_chan_id: 'chan-1' }
+            }
+        ]);
+        expect(store.channelSuccess).toBe(true);
+        expect(store.errorOpenChannel).toBe(false);
+        expect(store.openingChannel).toBe(false);
+    });
+
+    it.each([
+        [
+            'the stream',
+            (error: Error) => openChannelStream.mockRejectedValueOnce(error)
+        ],
+        [
+            'funding the PSBT',
+            (error: Error) => {
+                openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+                fundPsbt.mockRejectedValueOnce(error);
+            }
+        ],
+        [
+            'verifying the PSBT',
+            (error: Error) => {
+                openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+                fundingStateStep.mockRejectedValueOnce(error);
+            }
+        ],
+        [
+            'publishing',
+            (error: Error) => {
+                openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+                fundingStateStep.mockResolvedValueOnce({
+                    publish_error: error.message
+                });
+            }
+        ]
+    ])('shows a current streamed open failing at %s', async (_, failWith) => {
+        failWith(new Error('peer is not online'));
+        const store = makeStore();
+        enterScreen(store);
+        openStreamed(store);
+        await flush();
+
+        expect(store.errorOpenChannel).toBe(true);
+        expect(store.errorMsgChannel).toBe('peer is not online');
+        expect(store.openingChannel).toBe(false);
+        expect(store.channelSuccess).toBe(false);
+    });
+
+    it("hands a current open's unsigned PSBT to the PSBT screen", async () => {
+        openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+        // an imported account has no keys on the node
+        signPsbt.mockRejectedValue(new Error('no keys'));
+        fundingStateStep.mockImplementation(async (step: any) =>
+            step.psbt_finalize ? { publish_error: 'not signed' } : {}
+        );
+        const store = makeStore();
+        enterScreen(store);
+        openStreamed(store);
+        await flush();
+
+        expect(store.funded_psbt).toBe(PSBT);
+        expect(store.errorOpenChannel).toBe(true);
+        expect(store.openingChannel).toBe(false);
+    });
+
+    it("does not show a superseded open's channel as the newer open's", async () => {
+        const first = held();
+        openChannelStream.mockReturnValueOnce(first.promise);
+        const store = makeStore();
+        enterScreen(store);
+        openStreamed(store);
+
+        // the user leaves the spinner, comes back and opens again
+        enterScreen(store);
+        openStreamed(store);
+        first.resolve(psbtFund('chan-1'));
+        await flush();
+
+        expect(store.channelSuccess).toBe(false);
+        expect(store.errorOpenChannel).toBe(false);
+        expect(store.openingChannel).toBe(true);
+        expect(store.funding_txid_str).toBe(null);
+        // the earlier open still funds its own channel on the node, and
+        // its channel stays out of the newer open's list
+        expect(fundingSteps()).toEqual([
+            { psbt_verify: { funded_psbt: PSBT, pending_chan_id: 'chan-1' } },
+            {
+                psbt_finalize: { signed_psbt: PSBT, pending_chan_id: 'chan-1' }
+            }
+        ]);
+        expect(store.pending_chan_ids).toEqual([]);
+    });
+
+    it.each([
+        [
+            'the stream',
+            (hold: Promise<any>) => openChannelStream.mockReturnValueOnce(hold)
+        ],
+        [
+            'funding the PSBT',
+            (hold: Promise<any>) => {
+                openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+                fundPsbt.mockReturnValueOnce(hold);
+            }
+        ],
+        [
+            'verifying the PSBT',
+            (hold: Promise<any>) => {
+                openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+                fundingStateStep.mockReturnValueOnce(hold);
+            }
+        ]
+    ])(
+        "does not end a newer open with a superseded open's error at %s",
+        async (_, holdAt) => {
+            const step = held();
+            holdAt(step.promise);
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            await flush();
+
+            enterScreen(store);
+            openStreamed(store);
+            step.reject(new Error('peer is not online'));
+            await flush();
+
+            expect(store.errorOpenChannel).toBe(false);
+            expect(store.errorMsgChannel).toBe(null);
+            // submit stays disabled while the newer open runs
+            expect(store.openingChannel).toBe(true);
+        }
+    );
+
+    it("does not end a newer open with a superseded open's publish error", async () => {
+        const verify = held();
+        openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+        fundingStateStep.mockReturnValueOnce(verify.promise);
+        const store = makeStore();
+        enterScreen(store);
+        openStreamed(store);
+        await flush();
+
+        enterScreen(store);
+        openStreamed(store);
+        verify.resolve({ publish_error: 'peer is not online' });
+        await flush();
+
+        expect(store.errorOpenChannel).toBe(false);
+        expect(store.errorMsgChannel).toBe(null);
+        expect(store.openingChannel).toBe(true);
+    });
+
+    it.each([
+        ['is refused', (finalize: any) => finalize.reject(new Error('no'))],
+        [
+            'reports a publish error',
+            (finalize: any) => finalize.resolve({ publish_error: 'not signed' })
+        ]
+    ])(
+        "does not hand a superseded open's PSBT to the PSBT screen when its finalize %s",
+        async (_, land) => {
+            const finalize = held();
+            openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+            signPsbt.mockRejectedValue(new Error('no keys'));
+            fundingStateStep.mockImplementation((step: any) =>
+                step.psbt_finalize ? finalize.promise : Promise.resolve({})
+            );
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            await flush();
+            expect(fundingSteps()).toHaveLength(2);
+
+            enterScreen(store);
+            openStreamed(store);
+            land(finalize);
+            await flush();
+
+            // OpenChannel navigates to the PSBT screen when this is set
+            expect(store.funded_psbt).toBe('');
+            expect(store.errorOpenChannel).toBe(false);
+            expect(store.openingChannel).toBe(true);
+        }
+    );
+
+    it('funds a newer open with only its own channel when a superseded stream lands mid-open', async () => {
+        const first = held();
+        const secondFunding = held();
+        openChannelStream
+            .mockReturnValueOnce(first.promise)
+            .mockResolvedValueOnce(psbtFund('chan-2'));
+        fundPsbt
+            .mockReturnValueOnce(secondFunding.promise)
+            .mockResolvedValueOnce({ funded_psbt: 'psbt-1' });
+        // keep each open's PSBT so the steps show which open sent them
+        signPsbt.mockResolvedValue({});
+        const store = makeStore();
+        enterScreen(store);
+        openStreamed(store);
+
+        enterScreen(store);
+        openStreamed(store);
+        await flush();
+        first.resolve(psbtFund('chan-1'));
+        await flush();
+        secondFunding.resolve({ funded_psbt: 'psbt-2' });
+        await flush();
+
+        expect(fundingSteps()).toHaveLength(4);
+        expect(fundingSteps()).toEqual(
+            expect.arrayContaining([
+                {
+                    psbt_verify: {
+                        funded_psbt: 'psbt-1',
+                        pending_chan_id: 'chan-1'
+                    }
+                },
+                {
+                    psbt_finalize: {
+                        signed_psbt: 'psbt-1',
+                        pending_chan_id: 'chan-1'
+                    }
+                },
+                {
+                    psbt_verify: {
+                        funded_psbt: 'psbt-2',
+                        pending_chan_id: 'chan-2'
+                    }
+                },
+                {
+                    psbt_finalize: {
+                        signed_psbt: 'psbt-2',
+                        pending_chan_id: 'chan-2'
+                    }
+                }
+            ])
+        );
+        expect(store.pending_chan_ids).toEqual(['chan-2']);
+        expect(store.channelSuccess).toBe(true);
+        expect(store.openingChannel).toBe(false);
+    });
+
+    it.each([
+        ['connects', (connect: any) => connect.resolve({})],
+        [
+            'was already connected',
+            (connect: any) =>
+                connect.reject(new Error('already connected to peer'))
+        ]
+    ])(
+        'does not open a channel when a peer that %s lands after a reset',
+        async (_, land) => {
+            const connect = held();
+            connectPeer.mockReturnValueOnce(connect.promise);
+            const store = makeStore();
+            const connecting = store.connectPeer(
+                new OpenChannelRequest({
+                    node_pubkey_string: '02peer',
+                    host: 'peer.example.com:9735',
+                    local_funding_amount: '100000',
+                    sat_per_vbyte: '2',
+                    account: 'default'
+                })
+            );
+            await flush();
+
+            // the user leaves while the peer connects and comes back
+            enterScreen(store);
+            land(connect);
+            await connecting;
+            await flush();
+
+            expect(store.channelRequest).toBeFalsy();
+            expect(openChannelSync).not.toHaveBeenCalled();
+            expect(openChannelStream).not.toHaveBeenCalled();
+        }
+    );
 });

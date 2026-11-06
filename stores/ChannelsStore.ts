@@ -827,6 +827,9 @@ export default class ChannelsStore {
         silent?: boolean
     ) => {
         this.resetOpenChannel(silent);
+        // a connect that lands after the next reset must not start an open
+        const seq = this.openChannelSeq;
+        const isCurrent = () => seq === this.openChannelSeq;
         this.channelRequest = undefined;
         if (!silent) this.connectingToPeer = true;
 
@@ -880,7 +883,8 @@ export default class ChannelsStore {
                             this.errorMsgPeer = null;
                             this.peerSuccess = true;
                         }
-                        if (!connectPeerOnly) this.channelRequest = request;
+                        if (!connectPeerOnly && isCurrent())
+                            this.channelRequest = request;
                     });
                     resolve(true);
                 })
@@ -898,7 +902,7 @@ export default class ChannelsStore {
                             error.toString().includes('already')
                         ) {
                             if (!connectPeerOnly) {
-                                this.channelRequest = request;
+                                if (isCurrent()) this.channelRequest = request;
                             } else {
                                 if (!silent) {
                                     this.errorMsgPeer =
@@ -990,7 +994,12 @@ export default class ChannelsStore {
         }
     };
 
-    private handleChannelOpen = (request: any, outputs?: any) => {
+    private handleChannelOpen = (
+        request: any,
+        outputs: any,
+        pendingChanIds: Array<string>,
+        isCurrent: () => boolean
+    ) => {
         const { account, sat_per_vbyte, utxos } = request;
 
         const inputs: any = [];
@@ -1031,8 +1040,8 @@ export default class ChannelsStore {
                         return;
                     });
 
-                for (let i = 0; i < this.pending_chan_ids.length - 1; i++) {
-                    const pending_chan_id = this.pending_chan_ids[i];
+                for (let i = 0; i < pendingChanIds.length - 1; i++) {
+                    const pending_chan_id = pendingChanIds[i];
                     await BackendUtils.fundingStateStep({
                         psbt_verify: {
                             funded_psbt,
@@ -1046,9 +1055,7 @@ export default class ChannelsStore {
                     psbt_verify: {
                         funded_psbt,
                         pending_chan_id:
-                            this.pending_chan_ids[
-                                this.pending_chan_ids.length - 1
-                            ]
+                            pendingChanIds[pendingChanIds.length - 1]
                     }
                 })
                     .then((data: any) => {
@@ -1057,6 +1064,7 @@ export default class ChannelsStore {
                                 data.publish_error
                             );
                             runInAction(() => {
+                                if (!isCurrent()) return;
                                 this.errorMsgChannel = errorMsg;
                                 this.output_index = null;
                                 this.funding_txid_str = null;
@@ -1076,13 +1084,14 @@ export default class ChannelsStore {
                                 psbt_finalize: {
                                     signed_psbt: formattedPsbt,
                                     pending_chan_id:
-                                        this.pending_chan_ids[
-                                            this.pending_chan_ids.length - 1
+                                        pendingChanIds[
+                                            pendingChanIds.length - 1
                                         ]
                                 }
                             })
                                 .then((data: any) => {
                                     runInAction(() => {
+                                        if (!isCurrent()) return;
                                         if (data.publish_error) {
                                             this.funded_psbt = formattedPsbt;
                                             this.output_index = null;
@@ -1104,6 +1113,7 @@ export default class ChannelsStore {
                                 })
                                 .catch(() =>
                                     runInAction(() => {
+                                        if (!isCurrent()) return;
                                         this.funded_psbt = formattedPsbt;
                                         this.output_index = null;
                                         this.funding_txid_str = null;
@@ -1119,6 +1129,7 @@ export default class ChannelsStore {
                     .catch((error: any) => {
                         const errorMsg = errorToUserFriendly(error);
                         runInAction(() => {
+                            if (!isCurrent()) return;
                             this.errorMsgChannel = errorMsg;
                             this.output_index = null;
                             this.funding_txid_str = null;
@@ -1133,6 +1144,7 @@ export default class ChannelsStore {
             .catch((error: any) => {
                 const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
+                    if (!isCurrent()) return;
                     this.errorMsgChannel = errorMsg;
                     this.output_index = null;
                     this.funding_txid_str = null;
@@ -1146,7 +1158,11 @@ export default class ChannelsStore {
     };
 
     @action
-    private handleChannelOpenError = (error: Error) => {
+    private handleChannelOpenError = (
+        error: Error,
+        isCurrent: () => boolean
+    ) => {
+        if (!isCurrent()) return;
         this.errorMsgChannel = errorToUserFriendly(error);
         this.output_index = null;
         this.funding_txid_str = null;
@@ -1179,8 +1195,15 @@ export default class ChannelsStore {
         this.openOutcomeUnknown = false;
         this.openingChannel = true;
 
+        const seq = ++this.openChannelSeq;
+        const isCurrent = () => seq === this.openChannelSeq;
+
         if (request?.account !== 'default' || multipleChans) {
             const outputs: any = {};
+            // resetOpenChannel() replaces the list, so an open it superseded
+            // keeps funding its own channels and stays out of the next
+            // open's list
+            const pendingChanIds = this.pending_chan_ids;
             if (multipleChans) {
                 let base_psbt = '';
                 request.funding_shim = {
@@ -1194,7 +1217,7 @@ export default class ChannelsStore {
                 BackendUtils.openChannelStream(request)
                     .then(async (data: any) => {
                         const { psbt_fund, pending_chan_id } = data.result;
-                        this.pending_chan_ids.push(pending_chan_id);
+                        pendingChanIds.push(pending_chan_id);
                         outputs[psbt_fund.funding_address] =
                             psbt_fund.funding_amount;
 
@@ -1235,13 +1258,16 @@ export default class ChannelsStore {
                                         );
                                     const { psbt_fund, pending_chan_id } =
                                         data.result;
-                                    this.pending_chan_ids.push(pending_chan_id);
+                                    pendingChanIds.push(pending_chan_id);
                                     outputs[psbt_fund.funding_address] =
                                         psbt_fund.funding_amount;
                                     base_psbt = psbt_fund.psbt;
                                 } catch (error: any) {
                                     // stop the batch here
-                                    this.handleChannelOpenError(error);
+                                    this.handleChannelOpenError(
+                                        error,
+                                        isCurrent
+                                    );
                                     return;
                                 }
                             } else if (request.additionalChannels) {
@@ -1267,24 +1293,27 @@ export default class ChannelsStore {
                                     .then((data: any) => {
                                         const { psbt_fund, pending_chan_id } =
                                             data.result;
-                                        this.pending_chan_ids.push(
-                                            pending_chan_id
-                                        );
+                                        pendingChanIds.push(pending_chan_id);
                                         outputs[psbt_fund.funding_address] =
                                             psbt_fund.funding_amount;
                                         this.handleChannelOpen(
                                             request,
-                                            outputs
+                                            outputs,
+                                            pendingChanIds,
+                                            isCurrent
                                         );
                                     })
                                     .catch((error: Error) => {
-                                        this.handleChannelOpenError(error);
+                                        this.handleChannelOpenError(
+                                            error,
+                                            isCurrent
+                                        );
                                     });
                             }
                         }
                     })
                     .catch((error: Error) => {
-                        this.handleChannelOpenError(error);
+                        this.handleChannelOpenError(error, isCurrent);
                     });
             } else {
                 request.funding_shim = {
@@ -1296,15 +1325,20 @@ export default class ChannelsStore {
                 BackendUtils.openChannelStream(request)
                     .then((data: any) => {
                         const { psbt_fund, pending_chan_id } = data.result;
-                        this.pending_chan_ids.push(pending_chan_id);
+                        pendingChanIds.push(pending_chan_id);
                         if (psbt_fund?.funding_address) {
                             outputs[psbt_fund.funding_address] =
                                 psbt_fund.funding_amount;
                         }
-                        this.handleChannelOpen(request, outputs);
+                        this.handleChannelOpen(
+                            request,
+                            outputs,
+                            pendingChanIds,
+                            isCurrent
+                        );
                     })
                     .catch((error: Error) => {
-                        this.handleChannelOpenError(error);
+                        this.handleChannelOpenError(error, isCurrent);
                     });
             }
         } else {
@@ -1315,8 +1349,6 @@ export default class ChannelsStore {
                     : undefined;
             if (memo) request.memo = memo;
 
-            const seq = ++this.openChannelSeq;
-            const isCurrent = () => seq === this.openChannelSeq;
             this.syncOpensInFlight++;
 
             const onOpened = (data: any) =>
