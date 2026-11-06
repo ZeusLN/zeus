@@ -5,7 +5,9 @@ export enum MintPaymentStatus {
     REQUESTING = 'requesting',
     PAYING = 'paying',
     SUCCESS = 'success',
-    FAILED = 'failed'
+    FAILED = 'failed',
+    // The mint has taken the ecash for this part but has not settled it
+    IN_FLIGHT = 'inFlight'
 }
 
 export interface MintProgressInfo {
