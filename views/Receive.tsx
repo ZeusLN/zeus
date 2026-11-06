@@ -551,6 +551,11 @@ export default class Receive extends React.Component<
         if (route.params?.amount !== prevRoute.params?.amount) {
             const { reset } = InvoicesStore;
 
+            // the invoice on screen is replaced: its watchers, or an
+            // invoice request still pending, must not mark this screen
+            // paid or record a payment for the order
+            this.invoiceRequestId++;
+            this.stopWatchers();
             reset();
             const { amount, lnurlParams: lnurl } = route.params ?? {};
 
