@@ -97,7 +97,11 @@ const swapStore = () => {
     return store;
 };
 
-const props = (store: any, params: any) =>
+// At 1 sat/vB the claim fee stays at the 300 sat quote (the 152 vB floor is
+// lower), so the network fee does not change when the rate arrives after a
+// flip and nothing works the amounts out again. At 5 sat/vB the claim fee is
+// 760.
+const props = (store: any, params: any, rate = 1) =>
     ({
         navigation: { addListener: jest.fn(() => jest.fn()) },
         route: { params },
@@ -113,7 +117,7 @@ const props = (store: any, params: any) =>
             // the mempool rate fetched when the screen turns to reverse
             getOnchainFeesviaMempool: jest
                 .fn()
-                .mockResolvedValue({ fastestFee: 5 })
+                .mockResolvedValue({ fastestFee: rate })
         },
         NodeInfoStore: {
             testnet: false,
@@ -172,10 +176,9 @@ describe('Swaps route params that change the direction', () => {
             initialReverse: true
         });
 
-        // 10,000,000 - 5% - 760 - 400: the 300 sat claim quote is below
-        // the 5 sat/vB x 152 vB floor
+        // 10,000,000 - 5% - 300 - 400
         expect(sendInput().props.amount).toBe('10000000');
-        expect(receiveInput().props.amount).toBe('9498840');
+        expect(receiveInput().props.amount).toBe('9499300');
         expect(serviceFeeShown()).toBe(500000);
 
         await act(async () => initiate().props.onPress());
@@ -190,13 +193,13 @@ describe('Swaps route params that change the direction', () => {
     it('does the same when the params carry only the direction', async () => {
         await enterAmountThenScan({ initialReverse: true });
 
-        expect(receiveInput().props.amount).toBe('9498840');
+        expect(receiveInput().props.amount).toBe('9499300');
         expect(serviceFeeShown()).toBe(500000);
     });
 
     it('works out the receive amount with the claim fee at a rate fetched before the scan', async () => {
         const store = swapStore();
-        const view = await render(<Swaps {...props(store, {})} />);
+        const view = await render(<Swaps {...props(store, {}, 5)} />);
         // turning to reverse and back fetches the mempool rate and keeps it
         await act(async () => fireEvent.press(byType('ArrowDown')[0]));
         await act(async () => fireEvent.press(byType('ArrowDown')[0]));
@@ -205,10 +208,14 @@ describe('Swaps route params that change the direction', () => {
         );
         await view.rerender(
             <Swaps
-                {...props(store, {
-                    initialInvoice: ADDRESS,
-                    initialReverse: true
-                })}
+                {...props(
+                    store,
+                    {
+                        initialInvoice: ADDRESS,
+                        initialReverse: true
+                    },
+                    5
+                )}
             />
         );
         await act(async () => {});
@@ -220,16 +227,20 @@ describe('Swaps route params that change the direction', () => {
 
     it('keeps the send amount when the receive amount was typed before the scan', async () => {
         const store = swapStore();
-        const view = await render(<Swaps {...props(store, {})} />);
+        const view = await render(<Swaps {...props(store, {}, 5)} />);
         await act(async () =>
             receiveInput().props.onAmountChange('10000000', '10000000')
         );
         await view.rerender(
             <Swaps
-                {...props(store, {
-                    initialInvoice: ADDRESS,
-                    initialReverse: true
-                })}
+                {...props(
+                    store,
+                    {
+                        initialInvoice: ADDRESS,
+                        initialReverse: true
+                    },
+                    5
+                )}
             />
         );
         await act(async () => {});
@@ -266,13 +277,13 @@ describe('Swaps route params that change the direction', () => {
         );
         await act(async () => {});
 
-        // (10,000,000 + 760 + 400) / 0.95, rounded up: the swap pays out the
+        // (10,000,000 + 300 + 400) / 0.95, rounded up: the swap pays out the
         // amount the QR code asks for
         const send = Number(sendInput().props.amount);
         expect(receiveInput().props.amount).toBe('10000000');
-        expect(send - Math.ceil(send * 0.05) - 1160).toBeGreaterThanOrEqual(
+        expect(send - Math.ceil(send * 0.05) - 700).toBeGreaterThanOrEqual(
             10000000
         );
-        expect(send).toBe(10527537);
+        expect(send).toBe(10527053);
     });
 });
