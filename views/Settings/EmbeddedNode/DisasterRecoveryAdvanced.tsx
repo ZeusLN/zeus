@@ -39,7 +39,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
 
     componentDidMount(): void {
         const { ChannelBackupStore } = this.props;
-        ChannelBackupStore.reset();
+        ChannelBackupStore.resetRecoveryState();
         ChannelBackupStore.advancedRecoveryList();
     }
 

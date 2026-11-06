@@ -61,7 +61,22 @@ export default class ChannelBackupStore {
 
     @action
     public reset = () => {
+        // Remove the listener before dropping it, or initSubscribeChannelEvents
+        // adds another one on every connect
+        try {
+            this.channelEventsSubscription?.remove?.();
+        } catch (error: any) {
+            console.error(
+                'remove channel events listener error: ' + error?.message
+            );
+        }
         this.channelEventsSubscription = null;
+        this.resetRecoveryState();
+    };
+
+    // Clears the recovery screen state without stopping automatic backups
+    @action
+    public resetRecoveryState = () => {
         this.error_msg = '';
         this.error = false;
         this.loading = false;

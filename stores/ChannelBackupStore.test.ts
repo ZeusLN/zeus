@@ -4,7 +4,12 @@ jest.mock('react-native-blob-util', () => ({
 }));
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
-    default: { channel: { subscribeChannelEvents: jest.fn() } }
+    default: {
+        channel: {
+            subscribeChannelEvents: jest.fn(),
+            decodeChannelEvent: jest.fn()
+        }
+    }
 }));
 jest.mock('../lndmobile/channel', () => ({
     exportAllChannelBackups: jest.fn()
@@ -13,9 +18,21 @@ jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: { signMessage: jest.fn() }
 }));
+// The live SubscribeChannelEvents listeners, as the native emitter holds them
+const mockListeners: Array<(event: any) => Promise<void>> = [];
 jest.mock('../utils/LndMobileUtils', () => ({
     LndMobileEventEmitter: {
-        addListener: jest.fn(() => ({ remove: jest.fn() }))
+        addListener: jest.fn(
+            (_: string, listener: (event: any) => Promise<void>) => {
+                mockListeners.push(listener);
+                return {
+                    remove: jest.fn(() => {
+                        const index = mockListeners.indexOf(listener);
+                        if (index !== -1) mockListeners.splice(index, 1);
+                    })
+                };
+            }
+        )
     }
 }));
 jest.mock('../storage', () => ({
@@ -32,6 +49,7 @@ import ChannelBackupStore, {
     LAST_CHANNEL_BACKUP_TIME
 } from './ChannelBackupStore';
 import BackendUtils from '../utils/BackendUtils';
+import lndMobile from '../lndmobile/LndMobileInjection';
 import { exportAllChannelBackups } from '../lndmobile/channel';
 import Storage from '../storage';
 
@@ -87,6 +105,7 @@ describe('ChannelBackupStore', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockListeners.length = 0;
         (BackendUtils.signMessage as jest.Mock).mockResolvedValue({
             zbase: 'signature'
         });
@@ -351,6 +370,93 @@ describe('ChannelBackupStore', () => {
             await store.initSubscribeChannelEvents();
 
             expect(backupChannels).toHaveBeenCalledTimes(expected ? 1 : 0);
+        });
+    });
+
+    // Wallet.tsx calls reset and then initSubscribeChannelEvents on every
+    // connect
+    describe('channel events listener', () => {
+        beforeEach(() => {
+            // A recent successful backup, so init itself doesn't back up
+            (Storage.getItem as jest.Mock).mockImplementation(
+                async (key: string) =>
+                    key === LAST_CHANNEL_BACKUP_STATUS
+                        ? 'SUCCESS'
+                        : key === LAST_CHANNEL_BACKUP_TIME
+                        ? `${new Date()}`
+                        : null
+            );
+            (lndMobile.channel.decodeChannelEvent as jest.Mock).mockReturnValue(
+                { open_channel: {} }
+            );
+        });
+
+        it('reset removes the listener', async () => {
+            const store = createStore();
+            await store.initSubscribeChannelEvents();
+            expect(mockListeners).toHaveLength(1);
+
+            store.reset();
+
+            expect(mockListeners).toHaveLength(0);
+            expect(store.channelEventsSubscription).toBeNull();
+        });
+
+        it('init, reset, init leaves exactly one listener', async () => {
+            const store = createStore();
+            await store.initSubscribeChannelEvents();
+            store.reset();
+            await store.initSubscribeChannelEvents();
+
+            expect(mockListeners).toHaveLength(1);
+        });
+
+        it('backs up once per channel event after a reconnect', async () => {
+            const store = createStore();
+            const backupChannels = jest
+                .spyOn(store, 'backupChannels')
+                .mockResolvedValue(true);
+            await store.initSubscribeChannelEvents();
+            store.reset();
+            await store.initSubscribeChannelEvents();
+            expect(backupChannels).not.toHaveBeenCalled();
+
+            await Promise.all(
+                mockListeners.map((listener) => listener({ data: 'event' }))
+            );
+
+            expect(backupChannels).toHaveBeenCalledTimes(1);
+        });
+
+        it('reset still clears its state when remove throws', async () => {
+            const store = createStore();
+            store.channelEventsSubscription = {
+                remove: () => {
+                    throw new Error('already removed');
+                }
+            };
+            store.error = true;
+
+            expect(() => store.reset()).not.toThrow();
+            expect(store.channelEventsSubscription).toBeNull();
+            expect(store.error).toBe(false);
+        });
+
+        // DisasterRecoveryAdvanced clears the recovery state on mount and
+        // must not stop automatic backups
+        it('resetRecoveryState keeps the listener', async () => {
+            const store = createStore();
+            await store.initSubscribeChannelEvents();
+            store.error = true;
+            store.error_msg = 'failed';
+            store.loading = true;
+
+            store.resetRecoveryState();
+
+            expect(mockListeners).toHaveLength(1);
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+            expect(store.loading).toBe(false);
         });
     });
 });
