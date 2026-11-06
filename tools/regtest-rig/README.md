@@ -2,8 +2,9 @@
 
 A regtest device-test rig for Zeus on an Android emulator: bitcoind, three
 lnd nodes, optional electrs, cdk-mintd (fakewallet) and nostr-rs-relay in
-Docker, plus host helpers (stub Olympus Flow LSP, LNURL-withdraw server, NWC
-client) and scripts that drive the app over Metro's CDP inspector.
+Docker, plus host helpers (stub Olympus Flow LSP, LNURL-withdraw server,
+LNURL-auth service, NWC client) and scripts that drive the app over Metro's
+CDP inspector.
 
 The rig is regtest-only. Never point it, or a wallet it configures, at
 mainnet, testnet with real value, or real funds. The macaroons, certs and
@@ -66,8 +67,10 @@ lib/prelude.js      in-app helper object globalThis.Z
 lib/stub-lsp.js     stub Olympus Flow LSP
 lib/stub-lsp-amount.js  the stub's wrapped-invoice amount (msat)
 lib/lnurlw.js       LNURL-withdraw server
+lib/lnurla.js       LNURL-auth (LUD-04) service over TLS
+lib/lnurla-routes.js  its k1 / signature / login logic
 lib/nwc.js          NWCClient from @getalby/sdk
-bin/                up down ca avd app metro cdp zeus lsp lnurlw nwc
+bin/                up down ca avd app metro cdp zeus lsp lnurlw lnurla nwc
                     pay mine decode ln shot teardown
 rig.test.js         Jest contract test (app names the rig uses, helpers,
                     bin/up against test-fixtures/docker, a fake docker)
@@ -91,6 +94,7 @@ Ports are `PORT_BASE + offset` (PORT_BASE=24600), all bound to 127.0.0.1:
 | bob REST/gRPC/p2p | 24620/24621/24622 | | relay | 24660 |
 | carol REST/gRPC/p2p | 24630/24631/24632 | | stub LSP | 24670 |
 | Metro | 24690 | | LNURL server | 24680 |
+| | | | LNURL-auth service (TLS) | 24681 |
 
 Android: private adb server on 5137, emulator console 5640 (serial
 `emulator-5640`), AVD `zrig` from
@@ -183,6 +187,11 @@ it and point `ZEUS_DIR` (or `bin/metro start --dir`) at the PR worktree.
   hangs until it expires.
 - `bin/lnurlw start|stop|make <id> [--hold] [--delay MS] [--pay] [--min] [--max]|release <id>|log`.
   Feed a string to the app with `bin/cdp --async "return await Z.handle('LNURL1...')"`.
+- `bin/lnurla start|stop|make [login|register|link|auth]|logins|log`. `make`
+  prints an `LNURL1...` login link with a fresh k1; feed it to the app with
+  `Z.handle` and press Login. `logins` lists the linking key of every
+  accepted login, which is how to check that two app builds (or a
+  migration) keep the same LNURL-auth identity for a wallet and domain.
 - `bin/nwc create <name> [budget]|info|balance|make <name> <sats>|pay <name> <bolt11>|lookup|list`.
 - `bin/pay <bolt11> [--from node] [--amt sats] [--async]`, `bin/mine [N]`,
   `bin/decode <bolt11>`, `bin/ln <alice|bob|carol|btc> args...`.
@@ -258,6 +267,10 @@ Verified).
   `.default`. Hermes `String(fn)` is bytecode, so match fibers by rendered
   text. Android dev bundle URL:
   `index.bundle?platform=android&dev=true&minify=false`.
+  Hermes rejects source that contains a character outside the BMP ("Invalid
+  UTF-8 code point 0xd83d"): write emoji and other non-ASCII text as `\u`
+  escapes, or put the code in a file generated with escapes and use
+  `bin/cdp -f`.
 - **lncli in the polarlightning image.** The entrypoint only drops to the
   lnd user for a bare `lnd` command, and an explicit `--lnddir` makes both
   lnd and lncli ignore `--tlscertpath`. The compose file runs `gosu lnd lnd`
@@ -277,6 +290,16 @@ Verified).
 - **LNURL-withdraw.** `http://localhost:<LNURL_PORT>` through adb reverse
   works because the withdraw path does not apply the LNURL host policy
   (LnurlPay does). Use bech32 `LNURL1...` strings (`bin/lnurlw make`).
+- **LNURL-auth.** LnurlAuth does apply the host policy: https only, and no
+  `localhost` or private IP literal. So the service runs over TLS as
+  `https://<LNURLA_HOST>:<LNURLA_PORT>`, where LNURLA_HOST defaults to
+  `auth.lvh.me`, a public name that resolves to 127.0.0.1 (the emulator
+  then reaches the host through adb reverse). `bin/ca` issues its cert from
+  the rig CA, so rerun `bin/avd install-ca` only if the CA itself changed.
+  The linking key is per domain, so keep LNURLA_HOST fixed when comparing
+  builds. If public DNS for lvh.me is unavailable, pick another name that
+  resolves to 127.0.0.1, delete `state/<RIG_NAME>/tls/lnurla` and rerun
+  `bin/ca` (the CA and node certs are kept).
 - **NWC.** Zeus rate-limits make_invoice to 5 per minute per connection.
   nostr-rs-relay allows 32 subscriptions per socket. The app sees the relay
   as `ws://localhost:<RELAY_PORT>`; lib/nwc.js rewrites that to 127.0.0.1
@@ -318,6 +341,12 @@ Verified).
   unrelated code.
 - **Egress checks.** `ping` and `nc` from `adb shell` say nothing useful
   about what the app can reach. Run a `fetch` over CDP instead.
+- **Emulator without a default network.** Sometimes the AVD boots with
+  wlan0/eth0 up but no default route; the app then gets "Unable to resolve
+  host" for every name (LNURLA_HOST included) while localhost through adb
+  reverse still works. Check `adb shell dumpsys connectivity | grep 'Active
+  default network'`; toggling `adb shell cmd connectivity airplane-mode
+  enable` then `disable` brings it back.
 - **Embedded Tor.** On a fresh AVD the first Tor start can time out
   ("Failed to initialize Tor service"), and onion connects can need a few
   Retry taps.

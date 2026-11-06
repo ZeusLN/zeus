@@ -79,6 +79,13 @@ const {
     STORAGE_KEY
 } = require('../../stores/SettingsStore');
 const { verifyWrappedInvoice } = require('../../utils/LspUtils');
+const { createLnurlAuth } = require('./lib/lnurla-routes');
+const { verifyLnurlAuthCallback } = require('../../utils/LnurlPayUtils');
+const {
+    ecdsaSignDERHex,
+    getCompressedPublicKeyHex
+} = require('../../utils/SigningUtils');
+const { secp256k1 } = require('@noble/curves/secp256k1.js');
 
 const StorageMock = jest.requireMock('../../storage');
 
@@ -545,5 +552,112 @@ describe('regtest rig: bin/up against a fake docker', () => {
 
         calls = up(null, { ...cashu, MINT_MAX_DELAY: '9' });
         expect(mintRestarted(calls)).toBe(true);
+    });
+});
+
+describe('regtest rig: LNURL-auth service', () => {
+    const ORIGIN = 'https://auth.lvh.me:24681';
+    const newService = () =>
+        createLnurlAuth({
+            origin: ORIGIN,
+            now: () => '2026-01-01T00:00:00.000Z',
+            encodeLnurl: (u) =>
+                bech32
+                    .encode('lnurl', bech32.toWords(Buffer.from(u)), 2000)
+                    .toUpperCase(),
+            // same verifier as lib/lnurla.js
+            verify: (sigHex, k1Hex, keyHex) =>
+                secp256k1.verify(
+                    Buffer.from(sigHex, 'hex'),
+                    Buffer.from(k1Hex, 'hex'),
+                    Buffer.from(keyHex, 'hex'),
+                    { prehash: false, format: 'der', lowS: false }
+                )
+        });
+    const linkingKey = new Uint8Array(32).fill(7);
+    // what views/LnurlAuth.tsx sends: the linking key and a DER signature of
+    // k1, from the app's own signing helpers
+    const appCallback = (k1, priv = linkingKey) =>
+        new URLSearchParams({
+            tag: 'login',
+            k1,
+            key: getCompressedPublicKeyHex(priv),
+            sig: ecdsaSignDERHex(Buffer.from(k1, 'hex'), priv)
+        });
+
+    it('issues a bech32 login link with a fresh 32-byte k1', () => {
+        const service = newService();
+        const { lnurl, url, k1 } = service.make();
+        const decoded = Buffer.from(
+            bech32.fromWords(bech32.decode(lnurl, 2000).words)
+        ).toString();
+
+        expect(decoded).toBe(url);
+        expect(k1).toMatch(/^[0-9a-f]{64}$/);
+        expect(url).toBe(`${ORIGIN}/login?tag=login&k1=${k1}&action=login`);
+        expect(service.make().k1).not.toBe(k1);
+    });
+
+    it('uses a host the app accepts for LNURL-auth', () => {
+        const { url } = newService().make();
+        expect(verifyLnurlAuthCallback(url, 'auth.lvh.me')).toEqual({
+            ok: true
+        });
+        // why the service is not on localhost like the LNURL-withdraw stub
+        const local = url.replace('auth.lvh.me', 'localhost');
+        expect(verifyLnurlAuthCallback(local, 'localhost').ok).toBe(false);
+    });
+
+    it('accepts a login signed by the app and records the key', () => {
+        const service = newService();
+        const { k1 } = service.make();
+
+        expect(service.callback(appCallback(k1))).toEqual({ status: 'OK' });
+        expect(service.logins()).toEqual([
+            {
+                at: '2026-01-01T00:00:00.000Z',
+                action: 'login',
+                k1,
+                key: getCompressedPublicKeyHex(linkingKey)
+            }
+        ]);
+    });
+
+    it('accepts each k1 once', () => {
+        const service = newService();
+        const { k1 } = service.make();
+        service.callback(appCallback(k1));
+
+        expect(service.callback(appCallback(k1))).toEqual({
+            status: 'ERROR',
+            reason: 'unknown or already used k1'
+        });
+    });
+
+    it('rejects a signature that is not by the given key', () => {
+        const service = newService();
+        const { k1 } = service.make();
+        const query = appCallback(k1);
+        query.set('key', getCompressedPublicKeyHex(new Uint8Array(32).fill(9)));
+
+        expect(service.callback(query).status).toBe('ERROR');
+        expect(service.logins()).toEqual([]);
+    });
+
+    it('rejects an unknown k1 and malformed key or sig', () => {
+        const service = newService();
+        const { k1 } = service.make();
+
+        expect(service.callback(appCallback('ab'.repeat(32))).status).toBe(
+            'ERROR'
+        );
+        const badKey = appCallback(k1);
+        badKey.set('key', 'deadbeef');
+        expect(service.callback(badKey).reason).toMatch(
+            /compressed public key/
+        );
+        const badSig = appCallback(k1);
+        badSig.set('sig', 'not-hex');
+        expect(service.callback(badSig).reason).toMatch(/DER signature/);
     });
 });

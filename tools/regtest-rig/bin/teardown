@@ -18,6 +18,7 @@ done
 
 stop_proc lsp
 stop_proc lnurlw
+stop_proc lnurla
 stop_proc metro
 if [ "$KEEP_AVD" = 1 ]; then "$RIG_DIR/bin/avd" stop; else "$RIG_DIR/bin/avd" delete; fi
 "$RIG_DIR/bin/avd" adb-kill

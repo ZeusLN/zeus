@@ -11,6 +11,7 @@ usage_if_help "$@"
 
 stop_proc lsp
 stop_proc lnurlw
+stop_proc lnurla
 compose --profile lsp --profile cashu --profile nwc --profile ldk down -v --remove-orphans
 rm -rf "$STATE/macaroons" "$STATE/pubkeys.json" "$STATE/urls.json" "$STATE/nwc"
 log "stack removed"

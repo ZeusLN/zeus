@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# ca: generate a throwaway CA and CA-signed TLS certs for alice, bob, carol.
+# ca: generate a throwaway CA and CA-signed TLS certs for alice, bob, carol
+# and the LNURL-auth service (lnurla, for LNURLA_HOST).
 #
 # usage: bin/ca [--force]
 #
@@ -32,14 +33,17 @@ if [ "$FORCE" = 1 ] || [ ! -f "$D/ca.crt" ]; then
     log "CA created: $D/ca.crt"
 fi
 
-for n in alice bob carol; do
+# lnurla is the LNURL-auth service (bin/lnurla), served as LNURLA_HOST
+for n in alice bob carol lnurla; do
     nd="$D/$n"
     if [ -f "$nd/tls.cert" ] && [ "$FORCE" = 0 ]; then continue; fi
     mkdir -p "$nd"
+    san="DNS:localhost,DNS:$n,IP:127.0.0.1,IP:::1,IP:10.0.2.2"
+    [ "$n" = lnurla ] && san="DNS:$LNURLA_HOST,DNS:localhost,IP:127.0.0.1"
     "$OPENSSL" ecparam -name prime256v1 -genkey -noout -out "$nd/tls.key" 2>/dev/null
     "$OPENSSL" req -new -key "$nd/tls.key" -subj "/CN=$n" -out "$nd/tls.csr"
     cat >"$nd/ext.cnf" <<EOF
-subjectAltName=DNS:localhost,DNS:$n,IP:127.0.0.1,IP:::1,IP:10.0.2.2
+subjectAltName=$san
 basicConstraints=CA:FALSE
 extendedKeyUsage=serverAuth
 keyUsage=critical,digitalSignature,keyEncipherment
