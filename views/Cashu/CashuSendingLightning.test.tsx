@@ -231,4 +231,71 @@ describe('CashuSendingLightning', () => {
         expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(2);
         expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
     });
+
+    // getPayReq(donation, true) replaces CashuStore.payReq with the
+    // donation invoice
+    it('keeps showing the main payment after the donation is paid', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const mainHash = 'aa'.repeat(32);
+        const cashuStore: any = {
+            ...buildCashuStore(),
+            payReq: {
+                payment_hash: mainHash,
+                getMemo: 'coffee',
+                getRequestAmount: 100
+            }
+        };
+        cashuStore.getPayReq.mockImplementation(async () => {
+            cashuStore.payReq = {
+                payment_hash: 'dd'.repeat(32),
+                getMemo: 'ZEUS donation',
+                getRequestAmount: 25
+            };
+        });
+        cashuStore.payLnInvoiceFromEcash
+            .mockResolvedValueOnce(undefined)
+            .mockResolvedValueOnce({
+                amount: 25,
+                payment_preimage: 'ee'.repeat(32)
+            });
+        const lnurlPayStore = {
+            paymentHash: mainHash,
+            lightningAddress: 'alice@friends.example',
+            domain: 'friends.example',
+            successAction: { tag: 'message', message: 'Thanks!' }
+        };
+        const donationView = () => (
+            <CashuSendingLightning
+                navigation={navigation}
+                route={{ params: donationParams } as any}
+                CashuStore={cashuStore}
+                ContactStore={{ contacts: [] } as any}
+                LnurlPayStore={lnurlPayStore as any}
+            />
+        );
+
+        const { rerender } = await render(donationView());
+        cashuStore.paymentSuccess = true;
+        await rerender(donationView());
+        await waitFor(() =>
+            expect(
+                screen.container.queryAll(
+                    (n) =>
+                        n.type === 'DonationInfoModal' &&
+                        n.props.donationHandled
+                )
+            ).toHaveLength(1)
+        );
+        await rerender(donationView());
+
+        const details = screen.container.queryAll(
+            (n) => n.type === 'PaymentDetailsSheet'
+        )[0].props;
+        expect(details.paymentHash).toBe(mainHash);
+        expect(details.memo).toBe('coffee');
+        expect(details.lightningAddress).toBe('alice@friends.example');
+        expect(
+            screen.container.queryAll((n) => n.type === 'LnurlPaySuccess')
+        ).toHaveLength(1);
+    });
 });
