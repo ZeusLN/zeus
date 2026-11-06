@@ -158,7 +158,7 @@ jest.mock('../utils/RatingUtils', () => ({
     RATING_DISMISSED_KEY: 'ratingDismissedPermanently'
 }));
 
-import hashjs from 'hash.js';
+import { createHash } from 'node:crypto';
 // @ts-ignore: Networking is exported at runtime but missing from the legacy typings
 import { BackHandler, Networking, Platform } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -192,7 +192,9 @@ const mockedStorageGetItem = Storage.getItem as jest.Mock;
 const mockedSleep = sleep as jest.Mock;
 const mockedStorageRemoveItem = Storage.removeItem as jest.Mock;
 
-const lncHash = (value: string) => hashjs.sha256().update(value).digest('hex');
+// Node's crypto, so the expected keys do not depend on the app's hashing library
+const lncHash = (value: string) =>
+    createHash('sha256').update(value, 'utf8').digest('hex');
 
 // clearKey() clears each key via Storage.removeItem(rawKey); asserting on it is
 // the cleanest way to prove a namespaced key was targeted by a wipe.
@@ -1294,7 +1296,10 @@ describe('CDK database deletion', () => {
         // Must match the native modules (CashuDevKitModule.kt/.swift):
         // first 8 bytes of sha256(space-joined mnemonic) as hex
         const walletDbHash = (mnemonic: string) =>
-            hashjs.sha256().update(mnemonic).digest('hex').slice(0, 16);
+            createHash('sha256')
+                .update(mnemonic, 'utf8')
+                .digest('hex')
+                .slice(0, 16);
 
         it('deletes the db and sidecars derived from the stored cashu seed', async () => {
             const words = ['abandon', 'ability', 'able', 'about'];

@@ -13,6 +13,7 @@ jest.mock('../utils/TorUtils', () => ({
 }));
 
 import LndHub from './LndHub';
+import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import { settingsStore } from '../stores/Stores';
 
 describe('LndHub requests', () => {
@@ -309,5 +310,73 @@ describe('LndHub capability flags', () => {
             store.username = 'admin';
             expect(lndHub.supportsLightningSends()).toBe(true);
         });
+    });
+});
+
+// LndHub has no node key, so lnurlAuth derives one from the account
+// credentials. Strings become bytes with Base64Utils.stringToUint8Array (one
+// byte per code point, the low byte of its first UTF-16 unit), not UTF-8, so
+// non-ASCII passwords are pinned too: changing the encoding would change
+// those users' LNURL-auth identities. Expected values computed with Node's
+// crypto and @noble/curves.
+describe('LndHub.lnurlAuth', () => {
+    const setCredentials = (fields: any) => {
+        Object.keys(settingsStore).forEach(
+            (key) => delete (settingsStore as any)[key]
+        );
+        Object.assign(settingsStore, fields);
+    };
+
+    const hashingKeyHex = async () => {
+        const { signature } = await new LndHub().lnurlAuth(
+            LNURLAUTH_CANONICAL_PHRASE
+        );
+        return Buffer.from(signature).toString('hex');
+    };
+
+    it.each([
+        [
+            'an ASCII password',
+            'hunter2',
+            '5fbf62e4cc87325806d9991ec117b613b3ed677b9b88bb327bd19a4af2f63a4f'
+        ],
+        [
+            'a non-ASCII password',
+            'pässwörd₿😀',
+            'c222097aec5d0bda2e2befde259f1ef90747434c59974d254fbcfdd237a60693'
+        ]
+    ])(
+        'derives the Alby hashing key for %s',
+        async (_name, password, expected) => {
+            setCredentials({
+                settings: { lndHubLnAuthMode: 'Alby' },
+                username: 'alice',
+                password
+            });
+            expect(await hashingKeyHex()).toBe(expected);
+        }
+    );
+
+    it('uses Alby mode by default', async () => {
+        setCredentials({
+            settings: {},
+            username: 'alice',
+            password: 'hunter2'
+        });
+        expect(await hashingKeyHex()).toBe(
+            '5fbf62e4cc87325806d9991ec117b613b3ed677b9b88bb327bd19a4af2f63a4f'
+        );
+    });
+
+    it('uses the credential bytes as the BlueWallet hashing key', async () => {
+        setCredentials({
+            settings: { lndHubLnAuthMode: 'BlueWallet' },
+            username: 'alice',
+            password: 'pässwörd₿😀'
+        });
+        // lndhub://alice:pässwörd₿😀 with ä, ö, ₿ and 😀 reduced to e4, f6, bf, 3d
+        expect(await hashingKeyHex()).toBe(
+            '6c6e646875623a2f2f616c6963653a70e4737377f67264bf3d'
+        );
     });
 });

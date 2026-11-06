@@ -23,6 +23,7 @@ jest.mock('./CoreLightningRequestHandler', () => ({
 }));
 
 import CLNRest from './CLNRest';
+import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import Payment from '../models/Payment';
 
 // CLNRest's own `getURL` is not reachable with ws=true today — its single
@@ -306,5 +307,29 @@ describe('CLNRest.createWithdrawalRequest', () => {
             amount: 100_000,
             description: 'pocket money'
         });
+    });
+});
+
+// LNURL-auth hashing key: sha256 of the node's signature string, one byte
+// per code point (Base64Utils.stringToUint8Array). Expected value computed
+// with Node's crypto; a changed value would change every LNURL-auth identity.
+describe('CLNRest.lnurlAuth', () => {
+    it('returns sha256 of the node signature as the hashing key', async () => {
+        const backend: any = new CLNRest();
+        backend.signMessage = jest.fn().mockResolvedValue({
+            signature:
+                'd7xkpk3e8zfm6rjd9x6zgttdqohkxyqgcxkxrg4uhhrbg5fh1sx7kwsfdr6pmsxjhb9pwftgj8uznsyqdbj4ri8p3bp9m6ux8kqxoaz'
+        });
+
+        const { signature } = await backend.lnurlAuth(
+            LNURLAUTH_CANONICAL_PHRASE
+        );
+
+        expect(backend.signMessage).toHaveBeenCalledWith(
+            LNURLAUTH_CANONICAL_PHRASE
+        );
+        expect(Buffer.from(signature).toString('hex')).toBe(
+            '974844ab2f50a8fc85ca54a9fc686854e902ad46f1b72219d05e0f371f29bb8c'
+        );
     });
 });

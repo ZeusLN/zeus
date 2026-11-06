@@ -42,6 +42,7 @@ jest.mock('../utils/RatingUtils', () => ({
     RATING_MODAL_TRIGGER_DELAY: 1000
 }));
 
+import { createHash } from 'node:crypto';
 import TransactionsStore, {
     PAYMENT_TRACK_POLL_MS,
     PAYMENT_TRACK_MAX_FAILURES,
@@ -835,6 +836,26 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         expect(store.paymentInFlight).toBe(false);
         expect(store.status).toBe('SUCCEEDED');
         expect(store.error).toBe(false);
+    });
+
+    it('sends sha256 of the keysend preimage as the payment hash', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValue(
+            new Promise(() => {})
+        );
+
+        const store = newStore('lnd');
+        store.sendPayment({ pubkey: '02' + 'ab'.repeat(32), amount: '1000' });
+        await flush();
+
+        const data = (BackendUtils.payLightningInvoice as jest.Mock).mock
+            .calls[0][0];
+        const [secret] = Object.values(data.dest_custom_records) as string[];
+        const preimage = Buffer.from(secret, 'base64');
+        expect(preimage).toHaveLength(32);
+        // Node's crypto, independent of the app's hashing library
+        expect(Buffer.from(data.payment_hash, 'base64').toString('hex')).toBe(
+            createHash('sha256').update(preimage).digest('hex')
+        );
     });
 
     it('shows a timed-out payment the node never recorded as not sent', async () => {

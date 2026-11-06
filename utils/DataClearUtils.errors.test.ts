@@ -182,7 +182,7 @@ jest.mock('../utils/RatingUtils', () => ({
     RATING_DISMISSED_KEY: 'ratingDismissedPermanently'
 }));
 
-import hashjs from 'hash.js';
+import { createHash } from 'node:crypto';
 import { NativeModules, Platform } from 'react-native';
 
 import Storage from '../storage';
@@ -568,10 +568,9 @@ describe('clearNodeKeychainData step failures', () => {
         lndDir: 'lnd-uuid',
         pairingPhrase: 'pair words'
     };
-    const lncKey = `lnc-rn:${hashjs
-        .sha256()
-        .update('pair words')
-        .digest('hex')}`;
+    // sha256('pair words'), computed with Node's crypto
+    const lncKey =
+        'lnc-rn:0288e85088358337f998c63fbcb30580cbf9c6bce149b855ecba1cb3e74fb0cb';
 
     it('clears the remaining Cashu suffixes and LNC credentials after one key reset rejects', async () => {
         for (const suffix of CASHU_KEY_SUFFIXES) {
@@ -676,9 +675,8 @@ describe('clearCDKDatabase / clearCDKDatabaseForNode step failures', () => {
         async (_step, failOnPath) => {
             const words = ['one', 'two'];
             seedEverywhere('lnd-uuid-cashu-seed-phrase', JSON.stringify(words));
-            const hash = hashjs
-                .sha256()
-                .update(words.join(' '))
+            const hash = createHash('sha256')
+                .update(words.join(' '), 'utf8')
                 .digest('hex')
                 .slice(0, 16);
             const base = `${dir}/cashu_wallet_${hash}.db`;
