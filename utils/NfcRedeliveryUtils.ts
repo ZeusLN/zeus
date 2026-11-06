@@ -4,21 +4,28 @@
 // on purpose soon after.
 export const REDELIVERY_WINDOW_MS = 5000;
 
-let lastTag: { text: string; endedAt: number } | undefined;
+let lastTag: { texts: string[]; endedAt: number } | undefined;
 
-/** Records the text of the tag an NFC session read, as the session ends */
-export function noteTagSessionEnded(text: string): void {
-    lastTag = { text: text.trim(), endedAt: Date.now() };
+/**
+ * Records the text of every record of the tag an NFC session read, as the
+ * session ends. The intent carries the tag's first record, which needn't
+ * be the one the session acted on.
+ */
+export function noteTagSessionEnded(texts: string[]): void {
+    lastTag = {
+        texts: texts.map((text) => text.trim()).filter(Boolean),
+        endedAt: Date.now()
+    };
 }
 
 /**
- * Whether NFC intent data is the tag the last session read, delivered again
- * by Android. Each session's tag is matched once.
+ * Whether NFC intent data is a record of the tag the last session read,
+ * delivered again by Android. Each session's tag is matched once.
  */
 export function isTagRedelivery(text: string): boolean {
     if (
         !lastTag ||
-        lastTag.text !== text.trim() ||
+        !lastTag.texts.includes(text.trim()) ||
         Date.now() - lastTag.endedAt >= REDELIVERY_WINDOW_MS
     ) {
         return false;
