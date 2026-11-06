@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { Notifications } from 'react-native-notifications';
 import { Relay, generateSecretKey, getPublicKey } from 'nostr-tools';
-import { bytesToHex } from '@noble/hashes/utils.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import {
     Nip47NotificationType,
@@ -170,7 +170,11 @@ export default class NostrConnectUtils {
                     node.lndhubUrl,
                     node.username && node.password
                         ? bytesToHex(
-                              sha256(`${node.username}:${node.password}`)
+                              sha256(
+                                  utf8ToBytes(
+                                      `${node.username}:${node.password}`
+                                  )
+                              )
                           )
                         : node.username
                 ];
@@ -187,10 +191,12 @@ export default class NostrConnectUtils {
         if (!fields.some(Boolean)) return undefined;
         return bytesToHex(
             sha256(
-                JSON.stringify([
-                    implementation,
-                    ...fields.map((field) => field || '')
-                ])
+                utf8ToBytes(
+                    JSON.stringify([
+                        implementation,
+                        ...fields.map((field) => field || '')
+                    ])
+                )
             )
         );
     }
