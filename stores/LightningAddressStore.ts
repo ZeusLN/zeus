@@ -74,6 +74,14 @@ export default class LightningAddressStore {
     @observable public paid: any = [];
     @observable public minimumSats: number;
     @observable public socket: any;
+    // Set from prepareToAutomaticallyAcceptCashu until the socket is
+    // assigned, so a second call during the auth request opens no other
+    private socketPending: boolean = false;
+    // Bumped by reset(): a socket or Redeem All started before it belongs
+    // to the previous wallet and stops at its next step
+    private generation: number = 0;
+    // Quotes with a redeem in flight (socket event, Redeem All)
+    private redeemingQuotes = new Set<string>();
     // Push
     @observable public currentDeviceToken: string;
     @observable public serviceDeviceToken: string;
@@ -550,6 +558,10 @@ export default class LightningAddressStore {
         localNotification?: boolean,
         skipMintCheck?: boolean
     ) => {
+        // The socket event and Redeem All can name the same quote; let
+        // the redeem in flight finish it
+        if (this.redeemingQuotes.has(quote_id)) return true;
+
         this.error = false;
         this.error_msg = '';
 
@@ -624,6 +636,7 @@ export default class LightningAddressStore {
             }
         };
 
+        this.redeemingQuotes.add(quote_id);
         try {
             const response = await this.cashuStore.checkInvoicePaid(
                 quote_id,
@@ -721,6 +734,8 @@ export default class LightningAddressStore {
                 );
             });
             return true;
+        } finally {
+            this.redeemingQuotes.delete(quote_id);
         }
     };
 
@@ -756,6 +771,7 @@ export default class LightningAddressStore {
 
     @action
     public redeemAllOpenPaymentsCashu = async (localNotification?: boolean) => {
+        const generation = this.generation;
         this.redeemingAll = true;
         // Each redeemCashu call clears the error first, so a mint rejection
         // would be wiped by the next payment. redeemCashu only returns
@@ -767,6 +783,7 @@ export default class LightningAddressStore {
             const totalPayments = openPaymentsToProcess.length;
 
             for (let i = 0; i < totalPayments; i++) {
+                if (generation !== this.generation) break;
                 const item = openPaymentsToProcess[i];
                 const isLast = i === totalPayments - 1; // True if this is the last item
 
@@ -787,18 +804,33 @@ export default class LightningAddressStore {
                 }
             }
         } finally {
-            if (rejected) this.rejectUntrustedMint(localNotification);
-            runInAction(() => {
-                this.status(true).catch((e) =>
-                    console.log('Error fetching Lightning address status', e)
-                );
-                this.redeemingAll = false;
-            });
+            // after a reset, the next wallet's state is not this run's to
+            // report on or clear
+            if (generation === this.generation) {
+                if (rejected) this.rejectUntrustedMint(localNotification);
+                runInAction(() => {
+                    this.status(true).catch((e) =>
+                        console.log(
+                            'Error fetching Lightning address status',
+                            e
+                        )
+                    );
+                    this.redeemingAll = false;
+                });
+            }
         }
     };
 
     private subscribeUpdatesCashu = async () => {
-        const { verification, signature } = await this.getAuthData();
+        const generation = this.generation;
+        let auth: Auth;
+        try {
+            auth = await this.getAuthData();
+        } finally {
+            if (generation === this.generation) this.socketPending = false;
+        }
+        if (generation !== this.generation) return;
+        const { verification, signature } = auth;
 
         this.socket = io(LNURL_HOST, {
             path: LNURL_SOCKET_PATH
@@ -810,6 +842,7 @@ export default class LightningAddressStore {
         });
 
         this.socket.on('paid', (data: any) => {
+            if (generation !== this.generation) return;
             const { quote_id, mint_url, amount_msat } = data;
             this.redeemCashu(
                 quote_id,
@@ -824,7 +857,10 @@ export default class LightningAddressStore {
     };
 
     public prepareToAutomaticallyAcceptCashu = () => {
-        if (this.socket && this.socket.connected) return;
+        // socket.io's `connected` stays false until the handshake is done,
+        // so a socket that is still connecting counts as open
+        if (this.socket || this.socketPending) return;
+        this.socketPending = true;
         this.redeemAllOpenPaymentsCashu(true).catch((e) =>
             console.log('Error redeeming payments', e)
         );
@@ -844,6 +880,9 @@ export default class LightningAddressStore {
         // reject calls with 'invalid signature'
         this.auth = undefined;
         this.authDate = undefined;
+        this.generation += 1;
+        this.socketPending = false;
+        this.redeemingAll = false;
         if (this.socket) this.socket.disconnect();
         this.socket = undefined;
         this.lightningAddress = '';
