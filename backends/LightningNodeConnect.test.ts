@@ -34,7 +34,8 @@ jest.mock('./LNC/credentialStore', () => {
     return {
         __esModule: true,
         default: MockCredentialStore,
-        hash: (value: string) => `ns-${value}`
+        hash: (value: string) => `ns-${value}`,
+        rememberCredentials: jest.fn()
     };
 });
 
@@ -90,6 +91,7 @@ import { NativeEventEmitter, NativeModules } from 'react-native';
 import LightningNodeConnect from './LightningNodeConnect';
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import { settingsStore } from '../stores/Stores';
+import { rememberCredentials } from './LNC/credentialStore';
 
 const mockSettings = settingsStore as any;
 
@@ -119,6 +121,13 @@ describe('LightningNodeConnect', () => {
 
             expect(a._namespace).toBe('ns-phrase-a');
             expect(b._namespace).toBe('ns-phrase-b');
+        });
+
+        it('allows credential writes for the wallet it opens', async () => {
+            const backend = new LightningNodeConnect();
+            await openWallet(backend, 'phrase-a');
+
+            expect(rememberCredentials).toHaveBeenCalledWith('phrase-a');
         });
 
         it('keeps a dial in progress instead of re-initializing', async () => {
