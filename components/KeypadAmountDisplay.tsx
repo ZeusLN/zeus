@@ -38,6 +38,7 @@ interface KeypadAmountDisplayProps {
     FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;
     children?: React.ReactNode;
+    testID?: string;
 }
 
 @inject('FiatStore', 'UnitsStore')
@@ -207,7 +208,8 @@ export default class KeypadAmountDisplay extends React.Component<
             forceUnit,
             FiatStore,
             UnitsStore,
-            children
+            children,
+            testID
         } = this.props;
         const units = forceUnit || UnitsStore!.units;
         const { symbol, space, rtl } =
@@ -294,6 +296,11 @@ export default class KeypadAmountDisplay extends React.Component<
                 ]}
             >
                 <Animated.View
+                    testID={testID}
+                    // Read as one amount ("1,234 sats") rather than digit by
+                    // digit
+                    accessible
+                    accessibilityLabel={`${prefix}${formattedNumber}${suffix}`}
                     style={{
                         transform: [{ translateX: shakeAnimation }]
                     }}
