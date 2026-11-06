@@ -481,6 +481,7 @@ export default class TransactionsStore {
                         this.publishSuccess = true;
                         this.loading = false;
                         this.channelsStore.resetOpenChannel();
+                        this.channelsStore.resetPendingChannels();
                     });
                 }
             })
@@ -527,6 +528,7 @@ export default class TransactionsStore {
                         this.publishSuccess = true;
                         this.loading = false;
                         this.channelsStore.resetOpenChannel();
+                        this.channelsStore.resetPendingChannels();
                     });
                 }
             })
