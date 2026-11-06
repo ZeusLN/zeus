@@ -138,7 +138,8 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             retryOnTransientError,
             restartNeeded: jest.fn(),
             LinkingUtils,
-            Storage: { getItem: async () => false },
+            Storage: { getItem: async () => false, setItem: async () => {} },
+            IS_BACKED_UP_KEY: 'test-backed-up-flag',
             CHANNEL_MIGRATION_ACTIVE: 'test-migration-flag',
             processSharedQRImageFast: async () => null,
             Platform: { OS: 'ios' },
@@ -607,5 +608,114 @@ describe('error-screen Retry', () => {
         } finally {
             jest.useRealTimers();
         }
+    });
+});
+
+// A pending seed restore recovers its channel backup on the connect. A
+// refresh while the node syncs leaves it for later. The skip used to read
+// the sync state from before the connect reset SyncStore, so a reconnect
+// during a restore's sync returned before clearing connecting (#5583)
+describe('pending recovery on embedded LND', () => {
+    const setupRecovery = () => {
+        const ctx = setup(2);
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        Object.assign(ctx.settings.settings, {
+            recovery: true,
+            automaticDisasterRecoveryBackup: true
+        });
+        const { SyncStore, ChannelBackupStore } = ctx.view.props;
+        // the previous connect's sync loop is still running
+        SyncStore.isSyncing = true;
+        SyncStore.reset = jest.fn(() => (SyncStore.isSyncing = false));
+        // startLnd starts the sync loop once RPC is ready
+        ctx.lnd.startLnd.mockImplementation(async () => {
+            SyncStore.isSyncing = true;
+        });
+        ChannelBackupStore.recoverStaticChannelBackup = jest.fn(async () => {});
+        ChannelBackupStore.initSubscribeChannelEvents = jest.fn();
+        return ctx;
+    };
+
+    it('a reconnect while the previous sync runs recovers and ends the connect', async () => {
+        const { settings, view, runner, refresh } = setupRecovery();
+        const { ChannelBackupStore } = view.props;
+
+        await runner.run(refresh);
+
+        expect(settings.connecting).toBe(false);
+        expect(
+            ChannelBackupStore.recoverStaticChannelBackup
+        ).toHaveBeenCalledTimes(1);
+        expect(settings.updateSettings.mock.calls).toEqual([
+            [{ recovery: false }]
+        ]);
+        expect(
+            ChannelBackupStore.initSubscribeChannelEvents
+        ).toHaveBeenCalledTimes(1);
+        expect(view.props.LSPStore.initFlowLSP).toHaveBeenCalledTimes(1);
+    });
+
+    it('a refresh while the node syncs skips the recovery and still finishes', async () => {
+        const { settings, view, runner, refresh, LinkingUtils } =
+            setupRecovery();
+        const { ChannelBackupStore } = view.props;
+        settings.connecting = false;
+
+        await runner.run(refresh);
+
+        expect(
+            ChannelBackupStore.recoverStaticChannelBackup
+        ).not.toHaveBeenCalled();
+        expect(settings.updateSettings).not.toHaveBeenCalled();
+        expect(
+            ChannelBackupStore.initSubscribeChannelEvents
+        ).not.toHaveBeenCalled();
+        expect(view.props.LSPStore.initFlowLSP).toHaveBeenCalledTimes(1);
+        expect(LinkingUtils.processPendingDeepLink).toHaveBeenCalledTimes(1);
+        expect(settings.connecting).toBe(false);
+    });
+
+    it('a refresh after the sync finished recovers', async () => {
+        const { settings, view, runner, refresh } = setupRecovery();
+        settings.connecting = false;
+        view.props.SyncStore.isSyncing = false;
+
+        await runner.run(refresh);
+
+        expect(
+            view.props.ChannelBackupStore.recoverStaticChannelBackup
+        ).toHaveBeenCalledTimes(1);
+        expect(settings.updateSettings.mock.calls).toEqual([
+            [{ recovery: false }]
+        ]);
+    });
+
+    it('a recovery superseded by a wallet switch writes nothing', async () => {
+        const { settings, view, runner, refresh } = setupRecovery();
+        const { ChannelBackupStore } = view.props;
+        const recover = deferred();
+        ChannelBackupStore.recoverStaticChannelBackup.mockReturnValueOnce(
+            recover.promise
+        );
+        const initial = runner.run(refresh);
+        await flush();
+        expect(
+            ChannelBackupStore.recoverStaticChannelBackup
+        ).toHaveBeenCalledTimes(1);
+
+        select(settings, 1);
+        recover.resolve();
+        await initial;
+
+        expect(settings.updateSettings).not.toHaveBeenCalled();
+        expect(
+            ChannelBackupStore.initSubscribeChannelEvents
+        ).not.toHaveBeenCalled();
+        // only the remote wallet's follow-up connect clears connecting
+        expect(settings.setConnectingStatus.mock.calls).toEqual([
+            [true],
+            [false]
+        ]);
+        expect(settings.connecting).toBe(false);
     });
 });
