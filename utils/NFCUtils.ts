@@ -40,12 +40,17 @@ export function decodeNdefUriPayload(data: Uint8Array): string | null {
 export type NfcRequestKind = 'pay' | 'withdraw';
 
 // The Crypto Data Format records (github.com/agama-point/cdf-rfc, CDF-003)
-// Zeus can act on, with the LNURL request each holds. A bitcoin private key
-// opens the sweeper. The base URL and suffix records (cdf/lnpb, cdf/lnpp,
-// cdf/lnpw) are not read: neither part is a request on its own.
+// Zeus can act on, with the LNURL request each holds. A bitcoin address is
+// a payment destination and a bitcoin private key opens the sweeper. The
+// base URL and suffix records (cdf/lnpb, cdf/lnpp, cdf/lnpw) are not read:
+// neither part is a request on its own.
 const CDF_TYPES = new Map<string, NfcRequestKind | undefined>([
     ['cdf/lnp', 'pay'],
     ['cdf/lnw', 'withdraw'],
+    ['cdf/pbitcoin', undefined],
+    ['cdf/kbitcoin', undefined],
+    // the private key type's name before the 2026-11-05 revision. No coin
+    // is named "kbitcoin", so it can't be read as an address type.
     ['cdf/pkbitcoin', undefined]
 ]);
 
@@ -74,9 +79,10 @@ export function decodeNdefRecord(record: NdefRecord): string | null {
             if (mimeType === 'text/plain') return decodeUtf8(payload);
             if (!CDF_TYPES.has(mimeType)) return null;
             // CDF records can put a label in front of the value:
-            // "Wallet 1;https://..."
+            // "Wallet 1;https://...". CDF-003 has readers split at the
+            // first ";" (a ";" in a URL is written as %3B).
             const text = decodeUtf8(payload);
-            return text === null ? null : text.slice(text.lastIndexOf(';') + 1);
+            return text === null ? null : text.slice(text.indexOf(';') + 1);
         }
         default:
             return null;

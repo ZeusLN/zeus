@@ -176,11 +176,21 @@ describe('decodeNdefRecord', () => {
         );
     });
 
+    it('splits a CDF label from the value at the first semicolon', () => {
+        expect(
+            decodeNdefRecord(
+                mimeRecord('cdf/lnw', 'Card;https://w.example.org/w?n=a;b')
+            )
+        ).toBe('https://w.example.org/w?n=a;b');
+    });
+
     it.each([
         ['an Android application record', Ndef.androidApplicationRecord('x')],
         ['another MIME type', mimeRecord('image/png', 'png')],
         ['a CDF base URL', mimeRecord('cdf/lnpb', 'https://node.example/')],
-        ['a CDF key for another coin', mimeRecord('cdf/pklitecoin', 'T')],
+        ['a CDF key for another coin', mimeRecord('cdf/klitecoin', 'T')],
+        ['a CDF address for another coin', mimeRecord('cdf/plitecoin', 'L')],
+        ['a 2021 CDF key for another coin', mimeRecord('cdf/pklitecoin', 'T')],
         ['a smart poster', record(Ndef.TNF_WELL_KNOWN, 'Sp', [0x00])],
         ['an empty record', record(Ndef.TNF_EMPTY, '', [])]
     ])('returns null for %s', (_, ndefRecord) => {
@@ -195,6 +205,7 @@ describe('pickNfcRecord', () => {
     const PAY = 'https://mywallet.example.org/payurl?id=123';
     const WITHDRAW = 'https://mywallet.example.org/withdrawurl?id=123';
     const WIF = '5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ';
+    const ADDRESS = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
 
     it.each([
         ['an ecash token URI', `cashu://${TOKEN}`],
@@ -216,7 +227,9 @@ describe('pickNfcRecord', () => {
         ['cdf/lnw', `Card;${WITHDRAW}`, WITHDRAW],
         ['cdf/lnp', PAY, PAY],
         ['CDF/LNW', WITHDRAW, WITHDRAW],
-        ['cdf/pkbitcoin', WIF, WIF]
+        ['cdf/kbitcoin', `Paper wallet;${WIF}`, WIF],
+        ['cdf/pkbitcoin', WIF, WIF],
+        ['cdf/pbitcoin', `Savings;${ADDRESS}`, ADDRESS]
     ])(
         'skips a web page in front of a %s record whatever it holds',
         (type, text, expected) => {
