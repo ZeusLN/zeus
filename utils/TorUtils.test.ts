@@ -189,6 +189,37 @@ describe('doTorRequest errors', () => {
         }
     );
 
+    it.each([
+        ['an error object with no message', '{"error":{"code":1}}', 'HTTP 500'],
+        [
+            'a non-string nested message',
+            '{"message":"outer","error":{"message":123}}',
+            'outer'
+        ],
+        [
+            'an empty nested message',
+            '{"message":"outer","error":{"message":""}}',
+            'outer'
+        ],
+        ['a string error', '{"error":"Not authorized"}', 'Not authorized'],
+        ['a non-JSON body', 'Bad Gateway', 'Bad Gateway'],
+        ['an empty body', '', 'HTTP 500']
+    ])('throws the right message for %s', async (_label, body, expected) => {
+        (RnTor.httpPost as jest.Mock).mockResolvedValue({
+            status_code: 500,
+            body
+        });
+
+        const error = await doTorRequest(
+            'https://node.onion:8080/v1/pay',
+            RequestMethod.POST,
+            '{}'
+        ).catch((e: any) => e);
+
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe(expected);
+    });
+
     it('does not tag a transport failure', async () => {
         (RnTor.httpPost as jest.Mock).mockResolvedValue({
             error: 'circuit closed'

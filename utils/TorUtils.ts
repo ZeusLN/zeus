@@ -1,6 +1,7 @@
 import { RnTor } from 'react-native-nitro-tor';
 import RNFS from 'react-native-fs';
 import { grpcErrorCode, markRestErrorResponse } from './PaymentLookupUtils';
+import { restErrorMessage } from './ErrorUtils';
 
 const SOCKS_PORT = 9056;
 const TARGET_PORT = 9057;
@@ -135,11 +136,7 @@ const doTorRequest = async (
 
     if (response.status_code >= 300) {
         const message =
-            (parsedBody &&
-                typeof parsedBody === 'object' &&
-                (parsedBody.error?.message ||
-                    parsedBody.message ||
-                    parsedBody.error)) ||
+            restErrorMessage(parsedBody) ||
             (typeof parsedBody === 'string' && parsedBody) ||
             `HTTP ${response.status_code}`;
         throw markRestErrorResponse(
