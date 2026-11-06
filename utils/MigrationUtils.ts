@@ -936,11 +936,11 @@ class MigrationsUtils {
     // On iOS they are invisible to the user, yet still swept into
     // iCloud/iTunes backups, so they are purged here. Android Downloads is
     // left to clearAllData: users can still see those files, and config
-    // backups saved there through the save dialog are deliberate. One-shot best-effort cleanup; the flag is set regardless of outcome
-    // because a failed unlink (scoped storage, file owned by a previous
-    // install) can never succeed on a later retry. Runs before the settings
-    // blob is even read, so it covers both the legacy and modern
-    // (zeus-settings-v2) paths.
+    // backups saved there through the save dialog are deliberate. One-shot
+    // best-effort cleanup; the flag is set regardless of outcome because a
+    // failed unlink (scoped storage, file owned by a previous install) can
+    // never succeed on a later retry. Runs before the settings blob is even
+    // read, so it covers both the legacy and modern (zeus-settings-v2) paths.
     public async purgeLegacyExportFiles() {
         const MOD_KEY_EXPORT_FILES = 'legacy-export-file-cleanup';
         const modExportFiles = await EncryptedStorage.getItem(
