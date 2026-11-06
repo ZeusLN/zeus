@@ -2041,12 +2041,21 @@
     picocolors "^1.1.1"
     plist "^3.1.0"
 
-"@react-native-vector-icons/feather@13.1.5":
-  version "13.1.5"
-  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/feather/-/feather-13.1.5.tgz#c8864015611ecacb60bd1039e908f12fc3e6af1e"
-  integrity sha512-DyMKRFC6B0WnCMaWz13p/QJVTx5TecgkDBhLPxYbmQxIRxv1AmW2+2KyJE5P5z0G2uOCKmIUVPajCBr1TGzrcA==
+"@react-native-vector-icons/common@^14.0.0":
+  version "14.0.0"
+  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/common/-/common-14.0.0.tgz#728d207dcbae05165a99d2cdc689bdecc3489ded"
+  integrity sha512-wlNieCygX7DWFjMDjYuFfk4mcQVLkF1XTm/spxKdlrQMSofzvLOHSd4vkeQwDsWz/D4wbZPdzU3++crmi/x8XA==
   dependencies:
-    "@react-native-vector-icons/common" "^13.0.4"
+    find-up "^8.0.0"
+    picocolors "^1.1.1"
+    plist "^3.1.0"
+
+"@react-native-vector-icons/feather@14.0.0":
+  version "14.0.0"
+  resolved "https://registry.yarnpkg.com/@react-native-vector-icons/feather/-/feather-14.0.0.tgz#1797332b9679d3efe507fc536ee7562ab17a5d8b"
+  integrity sha512-Du0m+U5oKye8MJylwZjc/3ojIGglE7E6QB6TAbxHNRoFQnEnscHISTan0cEUdUBJrWDmZu6yl0eEn0/wktN7dA==
+  dependencies:
+    "@react-native-vector-icons/common" "^14.0.0"
 
 "@react-native-vector-icons/fontawesome@13.1.5":
   version "13.1.5"
