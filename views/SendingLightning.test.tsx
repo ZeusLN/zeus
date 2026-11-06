@@ -272,6 +272,78 @@ describe('SendingLightning hardware back', () => {
     });
 });
 
+describe('SendingLightning payment still pending', () => {
+    const STILL_PENDING = 'views.SendingLightning.stillPending';
+    let onBack: () => boolean;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.spyOn(BackHandler, 'addEventListener').mockImplementation(
+            (_event: any, listener: any) => {
+                onBack = listener;
+                return { remove: jest.fn() } as any;
+            }
+        );
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+        jest.restoreAllMocks();
+    });
+
+    // the send request is open and the send guard is held, e.g. a hold
+    // invoice the recipient has not settled yet
+    const sending = { loading: true, paymentInFlight: true };
+
+    it('offers a way back to the wallet once the payment has been pending a while', async () => {
+        const navigation = await renderView(sending);
+
+        expect(screen.queryByText(STILL_PENDING)).not.toBeOnTheScreen();
+        expect(
+            screen.queryByRole('button', { name: GO_TO_WALLET })
+        ).not.toBeOnTheScreen();
+
+        await act(async () => {
+            jest.advanceTimersByTime(10000);
+        });
+
+        expect(screen.getByText(STILL_PENDING)).toBeOnTheScreen();
+        await fireEvent.press(
+            screen.getByRole('button', { name: GO_TO_WALLET })
+        );
+        expect(navigation.popTo).toHaveBeenCalledWith('Wallet');
+        expect(navigation.goBack).not.toHaveBeenCalled();
+    });
+
+    it('returns to the wallet on hardware back once the exit is offered', async () => {
+        const navigation = await renderView(sending);
+
+        expect(onBack()).toBe(true);
+        expect(navigation.popTo).not.toHaveBeenCalled();
+
+        await act(async () => {
+            jest.advanceTimersByTime(10000);
+        });
+
+        expect(onBack()).toBe(true);
+        expect(navigation.popTo).toHaveBeenCalledWith('Wallet');
+        expect(navigation.goBack).not.toHaveBeenCalled();
+    });
+
+    it('does not offer it when no payment holds the send guard', async () => {
+        await renderView({ loading: true, paymentInFlight: false });
+
+        await act(async () => {
+            jest.advanceTimersByTime(10000);
+        });
+
+        expect(screen.queryByText(STILL_PENDING)).not.toBeOnTheScreen();
+        expect(
+            screen.queryByRole('button', { name: GO_TO_WALLET })
+        ).not.toBeOnTheScreen();
+    });
+});
+
 describe('SendingLightning recipient', () => {
     // a Lightning address looked up earlier for another invoice
     const lnurlPay = {
