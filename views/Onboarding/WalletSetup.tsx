@@ -10,6 +10,7 @@ import Text from '../../components/Text';
 
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 
 interface WalletSetupProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -48,6 +49,10 @@ export default class WalletSetup extends React.Component<WalletSetupProps, {}> {
                             <View style={styles.buttonsContainer}>
                                 <View style={styles.buttonWrapper}>
                                     <Button
+                                        testID={
+                                            TEST_IDS.walletSetup
+                                                .createWalletButton
+                                        }
                                         title={localeString(
                                             'views.WalletSetup.createNewWallet'
                                         )}
@@ -58,6 +63,10 @@ export default class WalletSetup extends React.Component<WalletSetupProps, {}> {
                                 </View>
                                 <View style={styles.buttonWrapper}>
                                     <Button
+                                        testID={
+                                            TEST_IDS.walletSetup
+                                                .connectRemoteNodeButton
+                                        }
                                         title={localeString(
                                             'views.WalletSetup.connectRemoteNode'
                                         )}

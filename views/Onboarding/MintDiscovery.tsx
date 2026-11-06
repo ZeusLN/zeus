@@ -21,6 +21,7 @@ import TextInput from '../../components/TextInput';
 import CashuStore, { ScoredMint } from '../../stores/CashuStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import MintAvatar from '../../components/MintAvatar';
@@ -188,6 +189,7 @@ export default class MintDiscovery extends React.Component<
 
         return (
             <TouchableOpacity
+                testID={TEST_IDS.mintDiscovery.option(mode)}
                 style={[
                     styles.optionItem,
                     { backgroundColor: themeColor('background') },
@@ -332,6 +334,7 @@ export default class MintDiscovery extends React.Component<
                                 {localeString('views.Cashu.AddMint.enterNpub')}
                             </Text>
                             <TextInput
+                                testID={TEST_IDS.mintDiscovery.npubInput}
                                 placeholder="npub1..."
                                 value={customNpub}
                                 onChangeText={this.validateAndSetNpub}
@@ -346,6 +349,7 @@ export default class MintDiscovery extends React.Component<
                             />
                             {npubError ? (
                                 <Text
+                                    testID={TEST_IDS.mintDiscovery.npubError}
                                     style={{
                                         ...styles.npubError,
                                         color: themeColor('warning')
@@ -356,6 +360,9 @@ export default class MintDiscovery extends React.Component<
                             ) : null}
                             <View style={{ marginTop: 10 }}>
                                 <Button
+                                    testID={
+                                        TEST_IDS.mintDiscovery.fetchMintsButton
+                                    }
                                     title={localeString(
                                         'views.MintDiscovery.fetchMints'
                                     )}
@@ -497,6 +504,7 @@ export default class MintDiscovery extends React.Component<
                     }}
                 >
                     <Button
+                        testID={TEST_IDS.mintDiscovery.selectButton}
                         title={localeString('general.select')}
                         onPress={this.handleNext}
                         disabled={isLoading && discoverMode !== 'later'}

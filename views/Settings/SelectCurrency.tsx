@@ -19,6 +19,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import Storage from '../../storage';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 
 import Star from '../../assets/images/SVG/Star.svg';
@@ -100,6 +101,7 @@ export default class SelectCurrency extends React.Component<
 
         return (
             <ListItem
+                testID={TEST_IDS.selectCurrency.option(item.value)}
                 containerStyle={{
                     borderBottomWidth: 0,
                     backgroundColor: 'transparent'
@@ -249,6 +251,7 @@ export default class SelectCurrency extends React.Component<
                         navigation={navigation}
                     />
                     <SearchBar
+                        testID={TEST_IDS.selectCurrency.searchInput}
                         placeholder={localeString('general.search')}
                         // @ts-ignore:next-line
                         onChangeText={this.updateSearch}
