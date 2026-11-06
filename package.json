@@ -59,7 +59,7 @@
   "dependencies": {
     "@bitcoinerlab/secp256k1": "1.2.0",
     "@getalby/sdk": "9.0.0",
-    "@keystonehq/bc-ur-registry": "0.8.0",
+    "@keystonehq/bc-ur-registry": "0.8.1",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",
     "@ngraveio/bc-ur": "1.1.13",
     "@noble/curves": "2.4.0",
@@ -114,7 +114,7 @@
     "mobx": "5.15.7",
     "mobx-react": "6.1.4",
     "moment": "2.31.0",
-    "nostr-tools": "2.25.2",
+    "nostr-tools": "2.25.5",
     "object-hash": "3.0.0",
     "pako": "3.0.3",
     "process": "0.11.10",

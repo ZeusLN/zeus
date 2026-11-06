@@ -1685,10 +1685,10 @@
   resolved "https://registry.yarnpkg.com/@keystonehq/alias-sampling/-/alias-sampling-0.1.2.tgz#63af931ffe6500aef4c0d87775a5b279189abf8d"
   integrity sha512-5ukLB3bcgltgaFfQfYKYwHDUbwHicekYo53fSEa7xhVkAEqsA74kxdIwoBIURmGUtXe3EVIRm4SYlgcrt2Ri0w==
 
-"@keystonehq/bc-ur-registry@0.8.0":
-  version "0.8.0"
-  resolved "https://registry.yarnpkg.com/@keystonehq/bc-ur-registry/-/bc-ur-registry-0.8.0.tgz#3c31a9520b99f07aa459999e7e9a66058768d93e"
-  integrity sha512-o+R1r68SoTemZXiH4W6GPiU1e64YPuIoxXqqFNTIRvEV6c7NoKrDiYgnsARZpxn6sseElmJ2c2O8s8nXKrHVTg==
+"@keystonehq/bc-ur-registry@0.8.1":
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/@keystonehq/bc-ur-registry/-/bc-ur-registry-0.8.1.tgz#4f9c74101872be0dca95b9040dc1b0993a6c6ee6"
+  integrity sha512-HihSu8hJ3y1aCWZvV0uCTFN61X1/QLOXhAlXZgl2J1dxXVzFk0k7BCl1zYOaf26xFbTv9v9iCkBCMKI4ulGKYg==
   dependencies:
     "@ngraveio/bc-ur" "^1.1.5"
     bs58check "^2.1.2"
@@ -7413,10 +7413,10 @@ normalize-svg-path@^1.0.1:
   dependencies:
     svg-arc-to-cubic-bezier "^3.0.0"
 
-nostr-tools@2.25.2:
-  version "2.25.2"
-  resolved "https://registry.yarnpkg.com/nostr-tools/-/nostr-tools-2.25.2.tgz#cedec2f8024c190506cf9925e082810e1be98525"
-  integrity sha512-7JAx+brEPmqGz1yzaK9MOxvis/Nl1B38j9hVsBSRDMRmxk5XSc0+5LlPEYbzeiUyk41RURBDcfuMzmaT754HAg==
+nostr-tools@2.25.5:
+  version "2.25.5"
+  resolved "https://registry.yarnpkg.com/nostr-tools/-/nostr-tools-2.25.5.tgz#59123a96ad0d3c118035358e6a0bafbd70a8ffd1"
+  integrity sha512-CpDtEU1BM2AYjUwB8YnDM30unve8Uaf+FpB2P5qTP0RrB1Oz9zGzGD+n3jh6DSNXSg1Cpq7M6N6eazTYCJZ1HA==
   dependencies:
     "@noble/ciphers" "2.1.1"
     "@noble/curves" "2.0.1"
@@ -7424,7 +7424,6 @@ nostr-tools@2.25.2:
     "@scure/base" "2.0.0"
     "@scure/bip32" "2.0.1"
     "@scure/bip39" "2.0.1"
-    nostr-wasm "0.1.0"
 
 nostr-tools@^2.23.3:
   version "2.23.3"
