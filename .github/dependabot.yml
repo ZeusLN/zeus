@@ -22,8 +22,16 @@ updates:
       # lists cocoapods. When `bundle` is macOS's Ruby 2.6 and `pod` comes
       # from Homebrew (Xcode Cloud, most dev Macs), its first probe writes a
       # Gemfile.lock stamped with Homebrew Ruby's Bundler and the next
-      # `bundle` call fails on it, breaking `yarn install`.
+      # `bundle` call fails on it, breaking `yarn install`. Dependabot
+      # treats 0.1 -> 0.3 as a minor update, so ignore every version and
+      # bump pod-install by hand after checking Xcode Cloud.
       - dependency-name: "pod-install"
+      # readable-stream stays on 1.x: the rn-nodeify `_stream_*` aliases in
+      # package.json point at `readable-stream/transform`, `/readable`,
+      # `/writable`, `/duplex` and `/passthrough`. 3.x drops all but
+      # readable.js from the package root and 4.x ships only lib/, so Metro
+      # fails to resolve them while Jest and tsc stay green.
+      - dependency-name: "readable-stream"
         update-types: ["version-update:semver-major"]
       # slider 5.2.2 adds a pan recognizer to every iOS slider: a drag that
       # starts on the track now moves the value (e.g. the NWC budget) and
