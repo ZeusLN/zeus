@@ -139,6 +139,17 @@ CI green is necessary, never sufficient. The evidence bar (CONTRIBUTING.md + PR 
 3. **Screenshots/video for UI changes** (CONTRIBUTING.md). CONTRIBUTING.md asks for UI changes to be tested on both platforms because rendering differs; under item 1, add an iOS run when the UI is iOS-specific or renders differently there. First-time contributors MUST attach screenshot/video proof for features/UI or the PR is closed within 24 hours (CONTRIBUTING.md "Proof of Work").
 4. **Regression test with every bug fix** where the logic is unit-testable (CONTRIBUTING.md).
 
+**Android device tests: use `tools/regtest-rig`.** It runs a regtest stack (bitcoind, lnd alice/bob/carol with channels; optional stub Flow LSP, cdk-mintd fakewallet, nostr-rs-relay, electrs) plus its own AVD on a private adb server, and drives the app over Metro's CDP inspector, so a test case is a few shell commands with JSON results and screenshots you can attach to the PR. It does not replace the Android-sufficient rule in item 1; it is the recommended way to meet it. Quickstart from `tools/regtest-rig/` (prerequisites, profiles and traps in `tools/regtest-rig/README.md`):
+
+```bash
+cp .env.example .env                 # set APK (a debug APK) and PROFILES
+bin/up && bin/avd create && bin/avd boot && bin/avd install-ca
+bin/app setup && bin/metro start && bin/app restart
+bin/zeus add-lnd alice --select      # then drive the case with bin/cdp, bin/pay, bin/shot
+```
+
+`bin/teardown` removes everything the rig started. The rig is regtest-only; never point it at mainnet or real funds. iOS steps in its README are unverified.
+
 **Which backends to actually test** — guidance derived from the capability matrix (authoritative flags live in **zeus-backends-and-capabilities**); the template asks you to report honestly, not to test all 7 for every change:
 
 | Change class | Minimum sensible manual matrix |

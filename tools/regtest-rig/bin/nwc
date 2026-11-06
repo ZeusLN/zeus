@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# nwc: Nostr Wallet Connect between the app (wallet service) and a host client.
+#
+# usage: bin/nwc create <name> [budget_sats]
+#            creates a connection in Zeus over CDP on ws://localhost:RELAY_PORT
+#            (nostrWalletConnectStore.createConnection) and saves the URI to
+#            state/<RIG_NAME>/nwc/<name>.uri
+#        bin/nwc info|balance <name>
+#        bin/nwc make <name> <sats> [description]   make_invoice from the host
+#        bin/nwc pay <name> <bolt11>                pay_invoice from the host
+#        bin/nwc lookup <name> <payment_hash>
+#        bin/nwc list <name> [limit]
+#
+# Needs profile nwc (relay) and bin/app reverse (the app reaches the relay
+# as ws://localhost:RELAY_PORT). Limits: Zeus allows 5 make_invoice calls per
+# minute per connection; nostr-rs-relay allows 32 subscriptions per socket,
+# so use a fresh connection per batch when stress testing.
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+mkdir -p "$STATE/nwc"
+cmd="${1:-}"; name="${2:-}"
+[ -n "$name" ] || die "usage: bin/nwc <create|info|balance|make|pay|lookup|list> <name> ..."
+uri="$STATE/nwc/$name.uri"
+client() { node "$RIG_DIR/lib/nwc.js" "$uri" "$@"; }
+need_uri() { [ -f "$uri" ] || die "no connection '$name'; run bin/nwc create $name"; }
+
+case "$cmd" in
+    create)
+        budget="${3:-}"
+        b=""; [ -n "$budget" ] && b=", budgetAmount: $budget"
+        out=$(node "$RIG_DIR/lib/cdp.js" --timeout 90000 --async "
+            const n = Z.S().nostrWalletConnectStore;
+            if (n.initializeService && !n.walletServiceKeys) { try { await n.initializeService(); } catch (e) {} }
+            const url = await n.createConnection({ name: $(printf '%s' "$name" | jq -Rs .), relayUrl: 'ws://localhost:$RELAY_PORT'$b });
+            return url;")
+        [[ "$out" == nostr+walletconnect://* ]] || die "createConnection failed: $out"
+        echo "$out" >"$uri"
+        log "connection $name saved to $uri"
+        echo "$out" ;;
+    info|balance) need_uri; client "$cmd" ;;
+    make)
+        need_uri; [ $# -ge 3 ] || die "usage: bin/nwc make <name> <sats> [description]"
+        client make "$(jq -nc --argjson a "$3" --arg d "${4:-regtest-rig nwc}" '{amount: ($a*1000), description: $d}')" ;;
+    pay)
+        need_uri; [ $# -ge 3 ] || die "usage: bin/nwc pay <name> <bolt11>"
+        client pay "$(jq -nc --arg i "${3#lightning:}" '{invoice: $i}')" ;;
+    lookup) need_uri; client lookup "$(jq -nc --arg h "$3" '{payment_hash: $h}')" ;;
+    list) need_uri; client list "$(jq -nc --argjson l "${3:-10}" '{limit: $l}')" ;;
+    *) die "unknown command $cmd (see --help)" ;;
+esac

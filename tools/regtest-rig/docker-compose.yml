@@ -1,0 +1,119 @@
+# tools/regtest-rig stack. Always run through bin/* (they set -p $RIG_NAME and
+# export the port variables from env.sh). Every published port binds to
+# 127.0.0.1; the emulator reaches them through adb reverse.
+#
+# Base: bitcoind, lnd alice/bob/carol. Profiles: ldk (electrs/esplora),
+# cashu (cdk-mintd fakewallet), nwc (nostr-rs-relay). The lsp profile has no
+# container; bin/up starts the stub LSP as a host process.
+
+x-lnd: &lnd
+  image: polarlightning/lnd:0.20.0-beta
+  depends_on: [bitcoind]
+  restart: on-failure
+  # The image entrypoint only drops to the lnd user for a bare "lnd" command,
+  # so the sh -c wrapper uses gosu itself. Running as root would put the
+  # lnddir in /root/.lnd, and an explicit --lnddir makes lnd ignore
+  # --tlscertpath.
+  healthcheck:
+    test: ["CMD-SHELL", "lncli --network=regtest --tlscertpath=/tls/tls.cert --macaroonpath=/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon getinfo >/dev/null 2>&1"]
+    interval: 3s
+    timeout: 5s
+    retries: 60
+
+x-lnd-args: &lnd_args >-
+  --noseedbackup --trickledelay=5000 --listen=0.0.0.0:9735
+  --rpclisten=0.0.0.0:10009 --restlisten=0.0.0.0:8080
+  --tlscertpath=/tls/tls.cert --tlskeypath=/tls/tls.key
+  --bitcoin.active --bitcoin.regtest --bitcoin.node=bitcoind
+  --bitcoind.rpchost=bitcoind --bitcoind.rpcuser=polaruser --bitcoind.rpcpass=polarpass
+  --bitcoind.zmqpubrawblock=tcp://bitcoind:28334 --bitcoind.zmqpubrawtx=tcp://bitcoind:28335
+  --protocol.option-scid-alias --protocol.zero-conf --protocol.wumbo-channels
+  --accept-keysend --accept-amp
+
+services:
+  bitcoind:
+    image: polarlightning/bitcoind:30.0
+    command: >-
+      bitcoind -regtest=1 -server=1 -txindex=1 -rpcuser=polaruser -rpcpassword=polarpass
+      -rpcbind=0.0.0.0 -rpcallowip=0.0.0.0/0 -rpcport=18443 -dnsseed=0
+      -zmqpubrawblock=tcp://0.0.0.0:28334 -zmqpubrawtx=tcp://0.0.0.0:28335
+      -fallbackfee=0.0002 -listen=1 -listenonion=0 -whitelist=0.0.0.0/0
+      -blockfilterindex=1 -peerblockfilters=1
+    healthcheck:
+      test: ["CMD-SHELL", "bitcoin-cli -regtest -rpcuser=polaruser -rpcpassword=polarpass getblockchaininfo >/dev/null 2>&1"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+    ports:
+      - "127.0.0.1:${BTC_RPC_PORT}:18443"
+      - "127.0.0.1:${BTC_P2P_PORT}:18444"
+
+  alice:
+    <<: *lnd
+    command: ["sh", "-c", "exec gosu lnd lnd --alias=alice --externalip=alice $$0", *lnd_args]
+    volumes: ["${STATE}/tls/alice:/tls:ro"]
+    ports:
+      - "127.0.0.1:${ALICE_REST_PORT}:8080"
+      - "127.0.0.1:${ALICE_GRPC_PORT}:10009"
+      - "127.0.0.1:${ALICE_P2P_PORT}:9735"
+
+  bob:
+    <<: *lnd
+    command: ["sh", "-c", "exec gosu lnd lnd --alias=bob --externalip=bob $$0", *lnd_args]
+    volumes: ["${STATE}/tls/bob:/tls:ro"]
+    ports:
+      - "127.0.0.1:${BOB_REST_PORT}:8080"
+      - "127.0.0.1:${BOB_GRPC_PORT}:10009"
+      - "127.0.0.1:${BOB_P2P_PORT}:9735"
+
+  carol:
+    <<: *lnd
+    command: ["sh", "-c", "exec gosu lnd lnd --alias=carol --externalip=carol $$0", *lnd_args]
+    volumes: ["${STATE}/tls/carol:/tls:ro"]
+    ports:
+      - "127.0.0.1:${CAROL_REST_PORT}:8080"
+      - "127.0.0.1:${CAROL_GRPC_PORT}:10009"
+      - "127.0.0.1:${CAROL_P2P_PORT}:9735"
+
+  electrs:
+    profiles: ["ldk"]
+    image: mempool/electrs@sha256:35963870c36a8da5fff8310e94df15869d0e97788bdaa11e63901cdb26fd781a
+    depends_on: [bitcoind]
+    entrypoint: ["/bin/electrs"]
+    command: ["-vv", "--network", "regtest", "--jsonrpc-import",
+              "--daemon-rpc-addr", "bitcoind:18443", "--cookie", "polaruser:polarpass",
+              "--db-dir", "/db", "--http-addr", "0.0.0.0:3002",
+              "--electrum-rpc-addr", "0.0.0.0:60401", "--cors", "*",
+              "--main-loop-delay", "200"]
+    ports:
+      - "127.0.0.1:${ESPLORA_PORT}:3002"
+      - "127.0.0.1:${ELECTRUM_PORT}:60401"
+
+  mint:
+    profiles: ["cashu"]
+    image: cashubtc/mintd:0.18.1
+    user: root
+    # cdk-mintd 0.18 keeps its config in the database: init once, then
+    # stage the (possibly edited) TOML on every start so delay changes apply.
+    entrypoint: ["sh", "-c", "if [ -f /work/.init ]; then cdk-mintd -w /work config apply --file /cfg/config.toml; else cdk-mintd -w /work config init --new-mint --file /cfg/config.toml && touch /work/.init; fi && exec cdk-mintd -w /work --enable-logging"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8085/v1/info >/dev/null 2>&1 || curl -fs http://127.0.0.1:8085/v1/info >/dev/null"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+    environment:
+      CDK_MINTD_MNEMONIC: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+    volumes:
+      - "${STATE}/mint:/cfg:ro"
+      - "mintwork:/work"
+    ports:
+      - "127.0.0.1:${MINT_PORT}:8085"
+
+  relay:
+    profiles: ["nwc"]
+    image: scsibug/nostr-rs-relay@sha256:48d54c2d2781577cf3ed2951112f0953dc2c5e7c9d2ea20c64e8c0fa37d16e4d
+    ports:
+      - "127.0.0.1:${RELAY_PORT}:8080"
+
+volumes:
+  mintwork: {}

@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# lnurla: LNURL-auth test service (lib/lnurla.js) on LNURLA_PORT, over TLS
+# as https://<LNURLA_HOST>:<LNURLA_PORT>.
+#
+# usage: bin/lnurla start|stop|log
+#        bin/lnurla make [login|register|link|auth]
+#            prints a bech32 LNURL1... login link with a fresh one-time k1
+#        bin/lnurla logins
+#            prints every accepted login (key per k1) as JSON
+#
+# LnurlAuth requires https and a public host name, so LNURLA_HOST must
+# resolve to 127.0.0.1 (auth.lvh.me does in public DNS). bin/ca issues its
+# certificate; bin/avd install-ca makes the app trust it.
+# Feed a link to the app with:
+#   bin/cdp --async "return await Z.handle('<LNURL1...>')"
+# then press Login on the LnurlAuth screen. Logins are logged to
+# state/<RIG_NAME>/logs/lnurla.events.log.
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+CA="$STATE/tls/ca.crt"
+req() {
+    curl -fs --cacert "$CA" --resolve "$LNURLA_HOST:$LNURLA_PORT:127.0.0.1" \
+        "https://$LNURLA_HOST:$LNURLA_PORT$1"
+}
+
+case "${1:-}" in
+    start)
+        [ -f "$STATE/tls/lnurla/tls.cert" ] || "$RIG_DIR/bin/ca"
+        start_proc lnurla node "$RIG_DIR/lib/lnurla.js"
+        wait_until 20 req /ping || die "lnurla did not answer; see $STATE/logs/lnurla.log" ;;
+    stop) stop_proc lnurla ;;
+    make) req "/make?action=${2:-login}" | jq -r .lnurl ;;
+    logins) req /logins | jq .logins ;;
+    log) tail -n 50 "$STATE/logs/lnurla.events.log" ;;
+    *) die "usage: bin/lnurla start|stop|make [action]|logins|log (see --help)" ;;
+esac

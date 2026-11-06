@@ -17,7 +17,9 @@ module.exports = [
             'babel.config.js',
             'metro.config.js',
             'react-native.config.js',
-            'index.js'
+            'index.js',
+            // generated per-run files (Metro config, logs) of the regtest rig
+            'tools/regtest-rig/state/**'
         ]
     },
 

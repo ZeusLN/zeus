@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# ln: run lncli on a rig node, or bitcoin-cli with "btc".
+#
+# usage: bin/ln alice|bob|carol <lncli args...>
+#        bin/ln btc <bitcoin-cli args...>   (wallet: -rpcwallet=rig)
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "${1:-}"
+[ $# -ge 1 ] || die "usage: bin/ln <alice|bob|carol|btc> args..."
+n="$1"; shift
+if [ "$n" = btc ]; then btc "$@"; else lncli "$n" "$@"; fi

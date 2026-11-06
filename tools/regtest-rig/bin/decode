@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# decode: decode a bolt11 with lncli decodepayreq (via bob).
+#
+# usage: bin/decode <bolt11>
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+[ $# -ge 1 ] || die "usage: bin/decode <bolt11>"
+lncli bob decodepayreq "${1#lightning:}"

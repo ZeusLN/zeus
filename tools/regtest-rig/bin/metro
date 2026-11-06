@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# metro: run Metro for a Zeus checkout on METRO_PORT.
+#
+# usage: bin/metro start [--dir PATH] [--reset-cache]
+#        bin/metro stop|status|log
+#        bin/metro check <symbol>   fetch the Android dev bundle and count
+#                                   occurrences of <symbol> (use a PR-only
+#                                   string to prove which checkout is served)
+#
+# --dir overrides ZEUS_DIR for this run (it is recorded in
+# state/<RIG_NAME>/metro.dir so bin/cdp and helpers find the same `ws`).
+# The generated config (state/<RIG_NAME>/metro.config.js) wraps the
+# checkout's metro.config.js, sets projectRoot, turns watchman off and, when
+# node_modules is a symlink, adds its real path to watchFolders and
+# nodeModulesPaths. The app always talks to localhost:8081; bin/app reverse
+# maps that to METRO_PORT.
+#
+# Switching checkouts: bin/app terminate first (Fast Refresh hot-loads the
+# new code into a live app), then stop/start Metro with --dir.
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+cmd="${1:-}"; shift || true
+DIR="$ZEUS_DIR"; RESET=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dir) DIR="$(cd "$2" && pwd)"; shift 2 ;;
+        --reset-cache) RESET=(--reset-cache); shift ;;
+        *) [ "$cmd" = check ] && break; die "unknown arg $1" ;;
+    esac
+done
+
+case "$cmd" in
+    start)
+        [ -d "$DIR/node_modules" ] || die "$DIR has no node_modules (run yarn install there)"
+        if proc_running metro; then
+            log "metro already running for $(cat "$STATE/metro.dir" 2>/dev/null)"; exit 0
+        fi
+        lsof -nP -iTCP:"$METRO_PORT" -sTCP:LISTEN >/dev/null 2>&1 && die "port $METRO_PORT already in use"
+        echo "$DIR" >"$STATE/metro.dir"
+        cat >"$STATE/metro.config.js" <<EOF
+const fs = require('fs');
+const path = require('path');
+const root = $(printf "%s" "$DIR" | jq -Rs .);
+const base = require(path.join(root, 'metro.config.js'));
+const nmLink = path.join(root, 'node_modules');
+const nm = fs.realpathSync(nmLink);
+const extra = nm !== nmLink ? [nm] : [];
+module.exports = {
+    ...base,
+    projectRoot: root,
+    watchFolders: [...(base.watchFolders || []), ...extra],
+    resolver: {
+        ...(base.resolver || {}),
+        useWatchman: false,
+        nodeModulesPaths: [...((base.resolver && base.resolver.nodeModulesPaths) || []), nm]
+    }
+};
+EOF
+        # start_proc needs the cwd to be the checkout
+        ( cd "$DIR" && start_proc metro node "$DIR/node_modules/.bin/react-native" start \
+            --port "$METRO_PORT" --config "$STATE/metro.config.js" ${RESET[@]+"${RESET[@]}"} )
+        wait_until 90 curl -fs "localhost:$METRO_PORT/status" || die "metro did not come up; see $STATE/logs/metro.log"
+        log "metro up on :$METRO_PORT serving $DIR" ;;
+    stop) stop_proc metro ;;
+    status)
+        if curl -fs "localhost:$METRO_PORT/status" >/dev/null; then
+            echo "running on :$METRO_PORT serving $(cat "$STATE/metro.dir" 2>/dev/null)"
+        else echo stopped; exit 1; fi ;;
+    log) tail -n 60 "$STATE/logs/metro.log" ;;
+    check)
+        [ $# -ge 1 ] || die "usage: bin/metro check <symbol>"
+        f="$STATE/run/android.bundle"
+        curl -fs "localhost:$METRO_PORT/index.bundle?platform=android&dev=true&minify=false" -o "$f" \
+            || die "bundle fetch failed"
+        echo "$(grep -c -F -- "$1" "$f" || true) occurrences of '$1' in the bundle served for $(cat "$STATE/metro.dir")" ;;
+    *) die "usage: bin/metro start|stop|status|log|check (see --help)" ;;
+esac

@@ -245,6 +245,37 @@ adb logcat -s NostrConnectService:* NostrConnectModule:* ReactNativeJS:*
   scope of any breakpoint. No Reactotron/Flipper integration is configured
   (verified: no such deps in package.json).
 
+### Inspecting and driving a dev app over CDP (`tools/regtest-rig`)
+
+`tools/regtest-rig/bin/cdp` evaluates JS inside a running dev build through
+Metro's CDP inspector (`lib/cdp.js`), without a debugger UI. It reads
+`METRO_PORT` and the served checkout from the rig's env, so start Metro with
+`bin/metro start` first (see **zeus-run-and-operate** and
+`tools/regtest-rig/README.md`). Every call first installs `globalThis.Z`
+from `tools/regtest-rig/lib/prelude.js`:
+
+- `Z.S()` is the `stores/Stores.ts` module (store instances), e.g.
+  `bin/cdp --async 'return Z.S().invoicesStore.payment_request'`.
+- `Z.status()`, `Z.nodes()`, `Z.route()` give the selected node, wallet
+  list and navigation stack; `Z.go(route, params)`, `Z.home()` and
+  `Z.handle(input)` (runs `utils/handleAnything.ts` and navigates) move the
+  app.
+- `Z.screenText()`, `Z.hasText(s)` and `Z.press(label)` read and tap the
+  rendered tree by text (Hermes `String(fn)` is bytecode, so matching is by
+  rendered text).
+- `Z.wrap(obj, 'method', 'tag')` plus `Z.log(clear)` trace calls and
+  results; `Z.captureConsole()` and `Z.logbox()` collect console and LogBox
+  messages into the same log.
+- `Z.mod('path/File.ts')` loads any module by its dev-bundle path, so
+  helpers survive module-ID changes between checkouts.
+
+`bin/cdp --async '<body>'` runs an async function body and prints the JSON
+it returns (RN's promise polyfill is not awaited by `Runtime.evaluate`, so
+the result is stored in a global and polled). `bin/cdp --targets` lists
+Metro's debug targets. The helpers depend on module paths, export shapes and
+store method names; when a PR renames those, update `lib/prelude.js` and
+`bin/zeus` in the same PR.
+
 ## 3) Network debugging
 
 ### How requests flow (verified in `backends/LND.ts` + `utils/TorUtils.ts`)

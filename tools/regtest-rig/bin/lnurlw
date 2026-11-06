@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# lnurlw: LNURL-withdraw test server (lib/lnurlw.js) on LNURL_PORT.
+#
+# usage: bin/lnurlw start|stop|log
+#        bin/lnurlw make <id> [--hold] [--delay MS] [--pay] [--min MSAT] [--max MSAT]
+#            prints a bech32 LNURL1... string. --hold keeps the withdrawRequest
+#            response pending until "release"; --pay makes bob pay the
+#            invoice the wallet posts to the callback.
+#        bin/lnurlw release <id>
+#
+# Feed the string to the app with:
+#   bin/cdp --async "return await Z.handle('<LNURL1...>')"
+# Callbacks are logged to state/<RIG_NAME>/logs/lnurlw.events.log.
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+case "${1:-}" in
+    start)
+        start_proc lnurlw node "$RIG_DIR/lib/lnurlw.js"
+        wait_until 20 curl -fs "localhost:$LNURL_PORT/make/ping" || die "lnurlw did not answer; see $STATE/logs/lnurlw.log" ;;
+    stop) stop_proc lnurlw ;;
+    make)
+        [ $# -ge 2 ] || die "usage: bin/lnurlw make <id> [--hold] [--delay MS] [--pay] [--min MSAT] [--max MSAT]"
+        id="$2"; shift 2; q=""
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --hold) q="$q&hold=1"; shift ;;
+                --pay) q="$q&pay=1"; shift ;;
+                --delay) q="$q&delay=$2"; shift 2 ;;
+                --min) q="$q&min=$2"; shift 2 ;;
+                --max) q="$q&max=$2"; shift 2 ;;
+                *) die "unknown arg $1" ;;
+            esac
+        done
+        [ -n "$q" ] && q="?${q#&}"
+        curl -fs "localhost:$LNURL_PORT/make/$id$q" | jq -r .lnurl ;;
+    release) curl -fs "localhost:$LNURL_PORT/release/${2:?usage: bin/lnurlw release <id>}"; echo ;;
+    log) tail -n 50 "$STATE/logs/lnurlw.events.log" ;;
+    *) die "usage: bin/lnurlw start|stop|make|release|log (see --help)" ;;
+esac
