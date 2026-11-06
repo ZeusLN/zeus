@@ -37,6 +37,7 @@ interface RecommendedSettingsProps {
             enableCashu?: boolean;
             discoverMode?: DiscoverMode;
             initialMintUrls?: string[];
+            mintSelectionMade?: boolean;
             clipboard?: boolean;
             fiatEnabled?: boolean;
             selectedCurrency?: string;
@@ -54,6 +55,10 @@ interface RecommendedSettingsState {
     selectedCurrency: string;
     fiatRatesSource: string;
     initialMintUrls: string[];
+    // True once the user has explicitly chosen mints in MintDiscovery. When set,
+    // we honor initialMintUrls verbatim (including empty) instead of falling back
+    // to the recommended top mints.
+    mintSelectionMade: boolean;
     implementation: string;
     choosingPeers: boolean;
     creatingWallet: boolean;
@@ -74,6 +79,7 @@ export default class RecommendedSettings extends React.Component<
         selectedCurrency: DEFAULT_FIAT,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
         initialMintUrls: [],
+        mintSelectionMade: false,
         implementation: 'ldk-node',
         choosingPeers: false,
         creatingWallet: false,
@@ -123,6 +129,9 @@ export default class RecommendedSettings extends React.Component<
         if (params.initialMintUrls) {
             this.setState({ initialMintUrls: params.initialMintUrls });
         }
+        if (params.mintSelectionMade !== undefined) {
+            this.setState({ mintSelectionMade: params.mintSelectionMade });
+        }
         if (params.clipboard !== undefined) {
             this.setState({ clipboard: params.clipboard });
         }
@@ -150,12 +159,16 @@ export default class RecommendedSettings extends React.Component<
             selectedCurrency,
             fiatRatesSource,
             initialMintUrls,
+            mintSelectionMade,
             implementation
         } = this.state;
 
-        // Use stored mint URLs or compute from top scored mints
+        // Use the mints the user chose. Only fall back to the recommended top
+        // mints when the user never opened MintDiscovery; once they have made an
+        // explicit selection we honor it verbatim, including an empty set (they
+        // deselected every recommended mint).
         let mintUrls = initialMintUrls;
-        if (enableCashu && mintUrls.length === 0) {
+        if (enableCashu && mintUrls.length === 0 && !mintSelectionMade) {
             const topMints = CashuStore.getTopScoredMints(
                 5,
                 discoverMode === 'all' ? 'all' : 'zeus'
@@ -216,6 +229,7 @@ export default class RecommendedSettings extends React.Component<
             fiatEnabled,
             selectedCurrency,
             initialMintUrls,
+            mintSelectionMade,
             implementation,
             choosingPeers,
             creatingWallet,
@@ -289,11 +303,13 @@ export default class RecommendedSettings extends React.Component<
             discoverMode !== 'zeus' ||
             implementation !== 'ldk-node';
 
-        // Use initialMintUrls from MintDiscovery when available,
-        // otherwise compute from the store
+        // Use initialMintUrls from MintDiscovery when available, otherwise
+        // compute from the store. Once the user has made an explicit selection
+        // we mirror it exactly (including empty) rather than re-adding the
+        // recommended top mints they deselected.
         let displayMintUrls: string[] = [];
         if (enableCashu && !isLater) {
-            if (initialMintUrls.length > 0) {
+            if (initialMintUrls.length > 0 || mintSelectionMade) {
                 displayMintUrls = initialMintUrls;
             } else {
                 const topMints = CashuStore.getTopScoredMints(
