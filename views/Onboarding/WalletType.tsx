@@ -55,7 +55,7 @@ export default class WalletType extends React.Component<WalletTypeProps, {}> {
         const returnTo = route.params?.returnTo;
 
         if (returnTo) {
-            navigation.navigate(returnTo, { enableCashu });
+            navigation.popTo(returnTo, { enableCashu });
         } else {
             navigation.navigate('NodeChoice', { enableCashu });
         }
