@@ -78,6 +78,9 @@ export default class LightningAddressStore {
     @observable public paid: any = [];
     @observable public minimumSats: number;
     @observable public socket: any;
+    // Bumped by reset(): an auth request started before it belongs to
+    // the previous wallet and must not fill the cache
+    private generation: number = 0;
     // Push
     @observable public currentDeviceToken: string;
     @observable public serviceDeviceToken: string;
@@ -106,6 +109,7 @@ export default class LightningAddressStore {
         if (this.auth && this.authDate && this.authDate > tenMinutesAgo) {
             return this.auth;
         } else {
+            const generation = this.generation;
             const authResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
                 `${LNURL_HOST}/api/lnurl/auth`,
@@ -124,11 +128,17 @@ export default class LightningAddressStore {
             }
             const signData = await BackendUtils.signMessage(verification);
             const signature = signData.zbase || signData.signature;
+            const auth = { verification, signature };
 
-            this.auth = { verification, signature };
-            this.authDate = new Date(Date.now());
+            // a reset during this request means the signature is for the
+            // previous wallet; caching it would make the next wallet's
+            // calls fail with 'invalid signature' for up to 10 minutes
+            if (generation === this.generation) {
+                this.auth = auth;
+                this.authDate = new Date(Date.now());
+            }
 
-            return this.auth;
+            return auth;
         }
     };
 
@@ -863,6 +873,7 @@ export default class LightningAddressStore {
         // reject calls with 'invalid signature'
         this.auth = undefined;
         this.authDate = undefined;
+        this.generation += 1;
         if (this.socket) this.socket.disconnect();
         this.socket = undefined;
         this.lightningAddress = '';
