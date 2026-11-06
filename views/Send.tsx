@@ -322,7 +322,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     scanNfc = async () => {
-        const str = await scanNfcTag(this.props.ModalStore);
+        const str = await scanNfcTag(this.props.ModalStore, 'pay');
         if (str) this.validateAddress(str);
     };
 

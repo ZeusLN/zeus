@@ -75,8 +75,10 @@ jest.mock('../stores/SettingsStore', () => ({
 import * as React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import type { TestInstance } from 'test-renderer';
+import NfcManager from 'react-native-nfc-manager';
 import Send from './Send';
 import BackendUtils from '../utils/BackendUtils';
+import { scanNfcTag } from '../utils/NFCUtils';
 
 const BALANCE = 500000;
 
@@ -613,5 +615,21 @@ describe('Send keysend fee limit', () => {
                 max_fee_percent: '0.5'
             })
         );
+    });
+});
+
+describe('Send NFC scan', () => {
+    afterEach(() => (NfcManager.isSupported as jest.Mock).mockReset());
+
+    it('asks for the pay record of a tag that can also be withdrawn from', async () => {
+        (NfcManager.isSupported as jest.Mock).mockResolvedValue(true);
+        (scanNfcTag as jest.Mock).mockResolvedValue(undefined);
+        await renderView();
+        // Header is mocked, so draw its buttons on their own
+        await render(hosts('Header')[0].props.rightComponent);
+
+        await fireEvent.press(hosts('NFC')[0]);
+
+        expect(scanNfcTag).toHaveBeenCalledWith(expect.anything(), 'pay');
     });
 });

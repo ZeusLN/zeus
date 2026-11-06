@@ -1,6 +1,10 @@
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('mobx-react', () => ({
-    inject: () => (component: any) => component,
+    // keeps the store names, so a test can check what the view asks for
+    inject:
+        (...stores: string[]) =>
+        (component: any) =>
+            Object.assign(component, { injectedStores: stores }),
     observer: (component: any) => component
 }));
 jest.mock('@rneui/themed', () => ({
@@ -82,6 +86,7 @@ const WITHDRAW_RESPONSE = [
     'ChoosePaymentMethod',
     { lnurlParams: withdrawParams }
 ];
+const CASHU_RESPONSE = ['CashuToken', { token: 'cashuBtoken', decoded: {} }];
 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -116,6 +121,15 @@ const makeView = (amount: string, satAmount: number, cashuStore: any = {}) => {
     return { view, navigate, CashuStore, PosStore, subscribeInvoice };
 };
 
+describe('ReceiveEcash stores', () => {
+    it('is given the ModalStore that scanning a tag needs', () => {
+        expect(
+            (ReceiveEcash as unknown as { injectedStores: string[] })
+                .injectedStores
+        ).toContain('ModalStore');
+    });
+});
+
 describe('ReceiveEcash NFC scan', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -123,6 +137,15 @@ describe('ReceiveEcash NFC scan', () => {
         (handleAnything as unknown as jest.Mock).mockResolvedValue(
             WITHDRAW_RESPONSE
         );
+    });
+
+    it('asks for the withdraw record of a tag that can also be paid', async () => {
+        const { view } = makeView('25.00', 25000);
+
+        await view.scanNfc();
+        await flush();
+
+        expect(scanNfcTag).toHaveBeenCalledWith(expect.anything(), 'withdraw');
     });
 
     it('withdraws the sats of the invoice on screen, not the route param', async () => {
@@ -165,6 +188,43 @@ describe('ReceiveEcash NFC scan', () => {
         expect(navigate).toHaveBeenCalledWith('ChoosePaymentMethod', {
             lnurlParams: withdrawParams
         });
+    });
+
+    // #5524: an ecash token on a tag did nothing, or showed the error
+    it('opens a tapped ecash token outside POS mode', async () => {
+        const { view, navigate, CashuStore } = makeView('1000', 1000);
+        view.props.SettingsStore.posStatus = 'inactive';
+        (handleAnything as unknown as jest.Mock).mockResolvedValue(
+            CASHU_RESPONSE
+        );
+        const setState = jest
+            .spyOn(view, 'setState')
+            .mockImplementation(() => {});
+
+        await view.scanNfc();
+        await flush();
+
+        expect(navigate).toHaveBeenCalledWith('CashuToken', CASHU_RESPONSE[1]);
+        expect(CashuStore.createInvoice).not.toHaveBeenCalled();
+        expect(setState).not.toHaveBeenCalledWith({ nfcError: true });
+    });
+
+    it('shows the NFC error for an ecash token in POS mode', async () => {
+        // the token is not tied to the order on screen
+        const { view, navigate, CashuStore } = makeView('1000', 1000);
+        (handleAnything as unknown as jest.Mock).mockResolvedValue(
+            CASHU_RESPONSE
+        );
+        const setState = jest
+            .spyOn(view, 'setState')
+            .mockImplementation(() => {});
+
+        await view.scanNfc();
+        await flush();
+
+        expect(navigate).not.toHaveBeenCalled();
+        expect(CashuStore.createInvoice).not.toHaveBeenCalled();
+        expect(setState).toHaveBeenCalledWith({ nfcError: true });
     });
 });
 
