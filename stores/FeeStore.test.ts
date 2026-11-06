@@ -1,6 +1,10 @@
 jest.mock('../stores/Stores', () => ({}));
-jest.mock('react-native-blob-util', () => ({}));
-jest.mock('../utils/UrlUtils', () => ({}));
+jest.mock('react-native-blob-util', () => ({
+    fetch: jest.fn()
+}));
+jest.mock('../utils/UrlUtils', () => ({
+    getMempoolApiUrl: jest.fn(() => 'https://mempool.space/api')
+}));
 jest.mock('../utils/ErrorUtils', () => ({
     errorToUserFriendly: (e: any) => e?.message ?? String(e)
 }));
@@ -12,8 +16,10 @@ jest.mock('../utils/BackendUtils', () => ({
     }
 }));
 
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import FeeStore from './FeeStore';
 import BackendUtils from '../utils/BackendUtils';
+import UrlUtils from '../utils/UrlUtils';
 
 const newStore = () => new FeeStore({} as any, {} as any);
 
@@ -266,5 +272,172 @@ describe('FeeStore.getForwardingHistory', () => {
         expect(store.forwardingEvents).toHaveLength(1);
         expect(store.forwardingEvents[0].feeSat).toBe(2);
         expect(store.earnedDuringTimeframe.toNumber()).toBe(2);
+    });
+});
+
+describe('FeeStore.getOnchainFeesviaMempool', () => {
+    const mockedFetch = jest.mocked(ReactNativeBlobUtil.fetch);
+
+    beforeEach(() => {
+        mockedFetch.mockReset();
+        jest.mocked(UrlUtils.getMempoolApiUrl).mockReturnValue(
+            'https://mempool.space/api'
+        );
+        // Keep test output clean
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('resolves undefined and sets error on a non-200 response', async () => {
+        const store = newStore();
+        store.recommendedFees = { fastestFee: 3 }; // Seed stale rates
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 500 }),
+            json: () => ({})
+        } as any);
+
+        const result = await store.getOnchainFeesviaMempool();
+
+        expect(result).toBeUndefined();
+        expect(store.error).toBe(true);
+        expect(store.recommendedFees).toEqual({}); // no stale rates left behind
+        expect(store.loading).toBe(false);
+    });
+
+    it('resolves undefined and sets error on a thrown network error', async () => {
+        const store = newStore();
+        store.recommendedFees = { fastestFee: 3 }; // Seed stale rates
+        mockedFetch.mockRejectedValueOnce(new Error('Network error'));
+
+        const result = await store.getOnchainFeesviaMempool();
+
+        expect(result).toBeUndefined();
+        expect(store.error).toBe(true);
+        expect(store.recommendedFees).toEqual({});
+        expect(store.loading).toBe(false);
+    });
+
+    it.each([
+        [{ fastestFee: 50000, halfHourFee: 40000 }],
+        [{ fastestFee: 10, hourFee: 50000 }]
+    ])(
+        'resolves undefined and sets error on an implausible payload (%j)',
+        async (payload) => {
+            const store = newStore();
+            store.recommendedFees = { fastestFee: 3 }; // Seed stale rates
+            mockedFetch.mockResolvedValueOnce({
+                info: () => ({ status: 200 }),
+                json: () => payload
+            } as any);
+
+            const result = await store.getOnchainFeesviaMempool();
+
+            expect(result).toBeUndefined();
+            expect(store.error).toBe(true);
+            expect(store.recommendedFees).toEqual({}); // no stale rates left behind
+            expect(store.loading).toBe(false);
+        }
+    );
+
+    it('resolves undefined when response.json() throws', async () => {
+        const store = newStore();
+        store.recommendedFees = { fastestFee: 3 }; // Seed stale rates
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 200 }),
+            json: () => {
+                throw new SyntaxError('Unexpected token <');
+            }
+        } as any);
+
+        const result = await store.getOnchainFeesviaMempool();
+
+        expect(result).toBeUndefined();
+        expect(store.error).toBe(true);
+        expect(store.recommendedFees).toEqual({});
+        expect(store.loading).toBe(false);
+    });
+
+    it('resolves undefined when fastestFee is missing', async () => {
+        const store = newStore();
+        store.recommendedFees = { fastestFee: 3 }; // Seed stale rates
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 200 }),
+            json: () => ({ halfHourFee: 8, hourFee: 5 })
+        } as any);
+
+        const result = await store.getOnchainFeesviaMempool();
+
+        expect(result).toBeUndefined();
+        expect(store.error).toBe(true);
+        expect(store.recommendedFees).toEqual({});
+    });
+
+    it.each([[null], [[]]])(
+        'resolves undefined on a non-object body (%j)',
+        async (body) => {
+            const store = newStore();
+            store.recommendedFees = { fastestFee: 3 };
+            mockedFetch.mockResolvedValueOnce({
+                info: () => ({ status: 200 }),
+                json: () => body
+            } as any);
+
+            const result = await store.getOnchainFeesviaMempool();
+
+            expect(result).toBeUndefined();
+            expect(store.error).toBe(true);
+            expect(store.recommendedFees).toEqual({});
+        }
+    );
+
+    it('raises sub-1 rates to 1', async () => {
+        const store = newStore();
+        const fees = { fastestFee: 0.5, halfHourFee: 8, hourFee: 5 };
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 200 }),
+            json: () => fees
+        } as any);
+
+        const result = await store.getOnchainFeesviaMempool();
+        expect(result).toEqual({ fastestFee: 1, halfHourFee: 8, hourFee: 5 });
+        expect(store.error).toBe(false);
+        expect(store.recommendedFees).toEqual({
+            fastestFee: 1,
+            halfHourFee: 8,
+            hourFee: 5
+        });
+    });
+
+    it('sets loading, resets error, and stores rates on success', async () => {
+        const store = newStore();
+        store.error = true;
+        store.recommendedFees = { fastestFee: 3 };
+        const fees = { fastestFee: 10, halfHourFee: 8, hourFee: 5 };
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 200 }),
+            json: () => fees
+        } as any);
+
+        const promise = store.getOnchainFeesviaMempool();
+
+        // Check in-flight state before resolving
+        expect(store.loading).toBe(true);
+        expect(store.error).toBe(false);
+        expect(store.recommendedFees).toEqual({});
+
+        const result = await promise;
+
+        // Check final state
+        expect(result).toEqual(fees);
+        expect(store.recommendedFees).toEqual(fees);
+        expect(store.loading).toBe(false);
+        expect(mockedFetch).toHaveBeenCalledWith(
+            'get',
+            'https://mempool.space/api/v1/fees/recommended'
+        );
     });
 });
