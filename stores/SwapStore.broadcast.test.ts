@@ -321,19 +321,30 @@ describe('SwapStore.broadcastSwapTransaction', () => {
         ).resolves.toBe(CLAIM_TXID);
 
         expect(torMock).toHaveBeenCalledTimes(3);
-        expect(torMock).toHaveBeenCalledWith(MEMPOOL_TX, 'POST', CLAIM_HEX, {
-            'Content-Type': 'text/plain'
-        });
+        expect(torMock).toHaveBeenCalledWith(
+            MEMPOOL_TX,
+            'POST',
+            CLAIM_HEX,
+            {
+                'Content-Type': 'text/plain'
+            },
+            false,
+            undefined
+        );
         expect(torMock).toHaveBeenCalledWith(
             HOST_TX,
             'POST',
             JSON.stringify({ hex: CLAIM_HEX }),
-            { 'Content-Type': 'application/json' }
+            { 'Content-Type': 'application/json' },
+            false,
+            undefined
         );
         expect(torMock).toHaveBeenCalledWith(
             LOOKUP,
             'GET',
             undefined,
+            undefined,
+            false,
             undefined
         );
         expect(fetchMock).not.toHaveBeenCalled();
@@ -538,7 +549,14 @@ describe('SwapStore.getReverseLockupTransactionHex', () => {
         await expect(
             newStore({}, true).getReverseLockupTransactionHex('swap', HOST)
         ).resolves.toEqual({ status: 'found', hex: 'lockuphex' });
-        expect(torMock).toHaveBeenCalledWith(URL, 'GET', undefined, undefined);
+        expect(torMock).toHaveBeenCalledWith(
+            URL,
+            'GET',
+            undefined,
+            undefined,
+            false,
+            undefined
+        );
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
