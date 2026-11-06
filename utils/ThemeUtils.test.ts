@@ -194,4 +194,43 @@ describe('ThemeUtils', () => {
         }
         mockSettings.display.theme = 'dark';
     });
+
+    describe('monochrome theme', () => {
+        beforeEach(() => {
+            mockSettings.display.theme = 'monochrome';
+        });
+
+        afterEach(() => {
+            mockSettings.display.theme = 'dark';
+        });
+
+        it('uses white accents on a black gradient', () => {
+            expect(themeColor('background')).toBe('#000');
+            expect(themeColor('gradientBackground')).toEqual([
+                '#141414',
+                '#000000'
+            ]);
+            expect(themeColor('secondary')).toBe('#1F1F1F');
+            expect(themeColor('highlight')).toBe('#FFFFFF');
+            expect(themeColor('buttonBackground')).toBe('#FFFFFF');
+            expect(themeColor('buttonText')).toBe('#000000');
+        });
+
+        // Inverted (light on dark) QR codes fail in scanners that do not
+        // try inversion, so keep the code itself black on white
+        it('draws the QR in black on white', () => {
+            expect(themeColor('qr')).toBe('#000000');
+            expect(themeColor('qrBackground')).toBe('#FFFFFF');
+        });
+
+        it('falls back to the Dark palette for colors it does not set', () => {
+            expect(themeColor('text')).toBe('white');
+            expect(themeColor('success')).toBe('#46BE43');
+            expect(themeColor('error')).toBe('#992600');
+        });
+
+        it('is a dark theme', () => {
+            expect(isLightTheme()).toBe(false);
+        });
+    });
 });
