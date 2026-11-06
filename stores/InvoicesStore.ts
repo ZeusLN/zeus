@@ -16,7 +16,6 @@ import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
 import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
-import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
 import WithdrawalRequest from '../models/WithdrawalRequest';
@@ -95,14 +94,6 @@ export default class InvoicesStore {
                         this.pay_req.destination,
                         Math.ceil(this.pay_req.getRequestAmount)
                     );
-                }
-                // Send probes for LDK Node to warm up the scorer
-                // while the user reviews the payment request
-                if (
-                    this.pay_req &&
-                    this.settingsStore.implementation === 'ldk-node'
-                ) {
-                    this.sendLdkProbes();
                 }
             }
         );
@@ -1131,25 +1122,5 @@ export default class InvoicesStore {
                 if (requestId !== this.payReqRequestId) return;
                 this.getRoutesError();
             });
-    };
-
-    /**
-     * Send probes along the payment path for LDK Node.
-     * This warms up the probabilistic scorer so the actual
-     * payment has better routing information. Fire-and-forget.
-     * Only probes fixed-amount invoices — variable-amount
-     * invoices can't be probed without knowing the amount.
-     */
-    private sendLdkProbes = async () => {
-        try {
-            const amount = this.pay_req?.getRequestAmount;
-            if (!amount || Number(amount) <= 0) return;
-
-            await LdkNodeInjection.bolt11.sendBolt11Probes({
-                invoice: this.paymentRequest
-            });
-        } catch {
-            // Probe failures are expected and non-fatal
-        }
     };
 }
