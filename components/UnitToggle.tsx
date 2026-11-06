@@ -14,6 +14,7 @@ interface UnitToggleProps {
     SettingsStore?: SettingsStore;
     onToggle?: () => void;
     onOpenModal?: () => void;
+    testID?: string;
 }
 
 const getFlagForFiat = (fiatCode: string): string => {
@@ -33,7 +34,8 @@ const splitFlags = (flags: string): string[] => {
 @observer
 export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
     render() {
-        const { UnitsStore, SettingsStore, onToggle, onOpenModal } = this.props;
+        const { UnitsStore, SettingsStore, onToggle, onOpenModal, testID } =
+            this.props;
         const { changeUnits, units } = UnitsStore!;
         const { settings } = SettingsStore!;
         const { fiat, fiatEnabled } = settings;
@@ -97,6 +99,7 @@ export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
         return (
             <React.Fragment>
                 <Button
+                    testID={testID}
                     title={getDisplayTitle()}
                     icon={{
                         name: 'import-export',
