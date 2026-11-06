@@ -900,6 +900,15 @@ export default class NostrConnectUtils {
         return false;
     }
 
+    // NIP-47 hashes are hex; LND REST returns r_hash as base64, which
+    // Invoice.getFormattedRhash only turns into base64url
+    static paymentHashToHex(hash?: string): string {
+        if (!hash) return '';
+        if (/^[0-9a-fA-F]{64}$/.test(hash)) return hash.toLowerCase();
+        const hex = Base64Utils.base64UrlToHex(hash);
+        return hex.length === 64 ? hex : hash;
+    }
+
     static async decodeInvoiceTagsForMakeInvoice(
         paymentRequest: string,
         rHash?: string
@@ -909,7 +918,8 @@ export default class NostrConnectUtils {
         expiryTime: number;
     }> {
         const isLightning = rHash !== undefined;
-        let paymentHash = isLightning ? rHash || '' : '';
+        const rHashHex = NostrConnectUtils.paymentHashToHex(rHash);
+        let paymentHash = isLightning ? rHashHex : '';
         let descriptionHash = '';
         let expiryTime = 0;
 
@@ -918,7 +928,7 @@ export default class NostrConnectUtils {
                 paymentRequest
             );
             if (isLightning) {
-                paymentHash = decoded.paymentHash || rHash!;
+                paymentHash = decoded.paymentHash || rHashHex;
                 descriptionHash = decoded.descriptionHash;
                 expiryTime =
                     decoded?.expiryTime ||
@@ -943,8 +953,8 @@ export default class NostrConnectUtils {
                     DEFAULT_INVOICE_EXPIRY_SECONDS;
                 return { paymentHash: '', descriptionHash: '', expiryTime };
             }
-            if (!paymentHash && rHash) {
-                paymentHash = rHash;
+            if (!paymentHash && rHashHex) {
+                paymentHash = rHashHex;
             }
             if (!paymentHash) {
                 throw new Error(
