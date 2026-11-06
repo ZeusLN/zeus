@@ -1012,6 +1012,8 @@ describe('CLNRest capability flags', () => {
         supportsTaproot: true,
         supportsBumpFee: false,
         supportsOnchainSendFeeRate: true,
+        supportsOnchainSendAutoFeeRate: false,
+        supportsOnchainSendSubSatFeeRate: false,
         supportsChannelOpenFeeRate: true,
         supportsChannelOpenMinConfs: true,
         supportsFlowLSP: false,
