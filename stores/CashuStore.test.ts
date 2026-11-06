@@ -28,7 +28,9 @@ jest.mock('@nostr-dev-kit/ndk', () => ({
 }));
 jest.mock('../utils/NostrUtils', () => ({}));
 jest.mock('../utils/NostrMintBackup', () => ({}));
-jest.mock('../utils/MigrationUtils', () => ({}));
+jest.mock('../utils/MigrationUtils', () => ({
+    migrateCashuSeedVersion: jest.fn().mockResolvedValue(undefined)
+}));
 jest.mock('../utils/ThemeUtils', () => ({}));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../NavigationService', () => ({}));
@@ -43,7 +45,11 @@ jest.mock('../cashu-cdk', () => ({
     addMint: jest.fn(),
     getMintUrls: jest.fn(),
     removeMint: jest.fn().mockResolvedValue(undefined),
-    deleteWalletDatabase: jest.fn().mockResolvedValue(undefined)
+    deleteWalletDatabase: jest.fn().mockResolvedValue(undefined),
+    getBalances: jest.fn().mockResolvedValue({}),
+    getTotalBalance: jest.fn().mockResolvedValue(0),
+    listTransactions: jest.fn().mockResolvedValue([]),
+    receive: jest.fn()
 }));
 jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(true),
@@ -2099,5 +2105,141 @@ describe('CashuStore.createInvoice lnurl-withdraw callback', () => {
         );
 
         expect(createMintQuote).toHaveBeenCalled();
+    });
+});
+
+// Switching wallets calls reset() and then initializeWallets() for the next
+// wallet. Native initializeWallet keeps the previous wallet's handles when
+// building the new ones fails, so the store must not treat CDK as ready
+// until the next wallet's init succeeds.
+describe('CashuStore reset on a wallet switch', () => {
+    const SHARED_MINT = 'https://shared.mint';
+    // BIP-39 all-ones test vector, never a real wallet.
+    const nextMnemonic = `${'zoo '.repeat(11)}wrong`;
+    let stored: Record<string, string>;
+
+    const switchableStore = () => {
+        const settingsStore: any = {
+            implementation: 'lnd',
+            lndDir: 'wallet-a',
+            settings: {}
+        };
+        const store = new CashuStore(
+            settingsStore,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        jest.spyOn(store, 'startConnectivityMonitoring').mockReturnValue(
+            undefined
+        );
+        jest.spyOn(store, 'initializeWallet').mockResolvedValue(
+            undefined as any
+        );
+        jest.spyOn(store, 'fetchMintInfo').mockResolvedValue(undefined as any);
+        jest.spyOn(store, 'checkPendingItems').mockResolvedValue(
+            undefined as any
+        );
+        return { store, settingsStore };
+    };
+
+    const initFirstWallet = async (store: CashuStore) => {
+        store.seedPhrase = words;
+        expect(await store.initializeCDK()).toBe(true);
+        expect(store.cdkInitialized).toBe(true);
+        (CashuDevKit.initializeWallet as jest.Mock).mockClear();
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        Platform.OS = 'ios';
+        stored = {
+            'wallet-b-cashu-mintUrls': JSON.stringify([SHARED_MINT]),
+            'wallet-b-cashu-selectedMintUrl': SHARED_MINT
+        };
+        (Storage.getItem as jest.Mock).mockImplementation(
+            async (key: string) => stored[key] ?? false
+        );
+        (getRawItem as jest.Mock).mockReset().mockResolvedValue(null);
+        (CashuDevKit.getMintUrls as jest.Mock).mockResolvedValue([SHARED_MINT]);
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        (Storage.getItem as jest.Mock).mockReset();
+        (CashuDevKit.getMintUrls as jest.Mock).mockReset();
+        jest.restoreAllMocks();
+    });
+
+    it('clears cdkInitialized and the CDK balances and history', async () => {
+        const { store } = switchableStore();
+        await initFirstWallet(store);
+        store.mintBalances = { [SHARED_MINT]: 21 };
+        store.cdkInvoices = [{ quote: 'q1' } as any];
+
+        store.reset();
+
+        expect(store.cdkInitialized).toBe(false);
+        expect(store.mintBalances).toEqual({});
+        expect(store.cdkInvoices).toEqual([]);
+    });
+
+    it("does not use the previous wallet's CDK when the next wallet fails to initialize", async () => {
+        const { store, settingsStore } = switchableStore();
+        await initFirstWallet(store);
+
+        settingsStore.lndDir = 'wallet-b';
+        store.reset();
+        // The next wallet has no local seed and its synchronizable-partition
+        // check fails, so initializeCDK fails closed before native init
+        (getRawItem as jest.Mock).mockRejectedValue(
+            new Error('keychain unavailable')
+        );
+        await store.initializeWallets();
+
+        expect(CashuDevKit.initializeWallet).not.toHaveBeenCalled();
+        expect(store.mintUrls).toEqual([SHARED_MINT]);
+        expect(store.cdkInitialized).toBe(false);
+
+        await store.syncCDKBalances();
+        expect(CashuDevKit.getBalances).not.toHaveBeenCalled();
+        expect(CashuDevKit.getTotalBalance).not.toHaveBeenCalled();
+
+        await expect(store.receiveTokenCDK('cashuBtoken')).rejects.toThrow(
+            'CDK not initialized'
+        );
+        await expect(
+            store.meltCDK(SHARED_MINT, 'lnbc1invoice')
+        ).rejects.toThrow('CDK not initialized');
+        await expect(store.createMintQuoteCDK(SHARED_MINT, 21)).rejects.toThrow(
+            'CDK not initialized'
+        );
+        expect(CashuDevKit.receive).not.toHaveBeenCalled();
+        expect(CashuDevKit.createMeltQuote).not.toHaveBeenCalled();
+        expect(CashuDevKit.addMint).not.toHaveBeenCalled();
+    });
+
+    it('initializes the next wallet on a normal switch', async () => {
+        const { store, settingsStore } = switchableStore();
+        await initFirstWallet(store);
+
+        settingsStore.lndDir = 'wallet-b';
+        stored['wallet-b-cashu-seed-phrase'] = JSON.stringify(
+            nextMnemonic.split(' ')
+        );
+        stored['wallet-b-cashu-seed-version'] = 'v2-bip39';
+        store.reset();
+        await store.initializeWallets();
+
+        expect(CashuDevKit.initializeWallet).toHaveBeenCalledTimes(1);
+        expect(CashuDevKit.initializeWallet).toHaveBeenCalledWith(
+            nextMnemonic,
+            'sat'
+        );
+        expect(store.cdkInitialized).toBe(true);
+        expect(store.mintUrls).toEqual([SHARED_MINT]);
+        expect(CashuDevKit.getBalances).toHaveBeenCalled();
     });
 });
