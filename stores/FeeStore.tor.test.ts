@@ -59,6 +59,8 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
                 URL,
                 'GET',
                 undefined,
+                undefined,
+                false,
                 undefined
             );
         } else {
@@ -87,6 +89,8 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
             `${ONION_API}/v1/fees/recommended`,
             'GET',
             undefined,
+            undefined,
+            false,
             undefined
         );
         expect(store.recommendedFees).toEqual(FEES);

@@ -25,6 +25,11 @@ export const CHANNEL_MIGRATION_ACTIVE = 'channel_migration_active';
 
 const VALID_CHANNEL_DB_EXTENSIONS = ['.zip'];
 
+// The channel backup upload and download carry the whole encrypted LND data
+// directory as base64. Over Tor the request timeout is a deadline for the
+// entire transfer, and the default 60 s is too short for a large one.
+export const CHANNEL_BACKUP_TRANSFER_TIMEOUT_MS = 15 * 60 * 1000;
+
 const getGraphDir = (lndDir: string, isTestnet: boolean): string => {
     const network = isTestnet ? 'testnet' : 'mainnet';
     const rootPath = Platform.select({
@@ -311,7 +316,8 @@ export const uploadChannelBackupToOlympus = async (
                         signature: uploadSignature,
                         backup: encryptedBase64
                     }),
-                    enableTor: settingsStore.enableTor
+                    enableTor: settingsStore.enableTor,
+                    timeoutMs: CHANNEL_BACKUP_TRANSFER_TIMEOUT_MS
                 });
 
                 const status = backupResponse.info().status;
@@ -589,7 +595,8 @@ export const restoreChannelBackupFromOlympus = async (
                 message: restoreAuth.verification,
                 signature: restoreSignature
             }),
-            enableTor: settingsStore.enableTor
+            enableTor: settingsStore.enableTor,
+            timeoutMs: CHANNEL_BACKUP_TRANSFER_TIMEOUT_MS
         });
 
         const restoreStatus = restoreResponse.info().status;

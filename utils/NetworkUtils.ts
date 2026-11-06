@@ -37,6 +37,11 @@ interface NetworkFetchArgs {
     headers?: any;
     body?: string;
     enableTor?: boolean;
+    // Deadline for a Tor request, from connect to the end of the response
+    // body (TorUtils defaults to 60 s). Requests that move a large body
+    // need more. Not applied without Tor, where ReactNativeBlobUtil's
+    // connect and read timeouts only fire when no data moves.
+    timeoutMs?: number;
 }
 
 // Whether a URL's host is a Tor onion service. Returns false on any URL that
@@ -53,13 +58,16 @@ const torFetch = async (
     method: HttpMethod,
     url: string,
     headers?: any,
-    body?: string
+    body?: string,
+    timeoutMs?: number
 ): Promise<NetworkResponse> => {
     const { status, body: responseBody } = await doTorRequestRaw(
         url,
         toRequestMethod(method),
         body,
-        headers
+        headers,
+        false,
+        timeoutMs
     );
     return {
         info: () => ({ status }),
@@ -89,10 +97,11 @@ const networkFetch = ({
     url,
     headers,
     body,
-    enableTor
+    enableTor,
+    timeoutMs
 }: NetworkFetchArgs): Promise<NetworkResponse> & { cancel?: () => void } => {
     if (isOnionUrl(url) || (enableTor && !isPrivateHost(urlHost(url)))) {
-        return torFetch(method, url, headers, body);
+        return torFetch(method, url, headers, body, timeoutMs);
     }
 
     return ReactNativeBlobUtil.fetch(method, url, headers, body);
