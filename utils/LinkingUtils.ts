@@ -8,9 +8,9 @@ import { startedByInAppRestart } from './InAppRestartUtils';
 import { settingsStore } from '../stores/Stores';
 
 // Payment status screens that must never be popped out from under an
-// in-flight payment by a deep link. Mirrors App.tsx
+// in-flight payment by a deep link or share intent. Mirrors App.tsx
 // SCREENS_WITH_CUSTOM_BACK_HANDLER's payment entries.
-const SENDING_SCREENS = [
+export const SENDING_SCREENS = [
     'SendingLightning',
     'SendingOnChain',
     'CashuSendingLightning'
