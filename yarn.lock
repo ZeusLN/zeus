@@ -8289,10 +8289,10 @@ react-native-svg@15.16.0:
     css-select "^5.1.0"
     css-tree "^1.1.3"
 
-react-native-system-navigation-bar@2.8.0:
-  version "2.8.0"
-  resolved "https://registry.yarnpkg.com/react-native-system-navigation-bar/-/react-native-system-navigation-bar-2.8.0.tgz#68b0359121fc08751436a01e44639cb3b39bdad8"
-  integrity sha512-VaBdTAUCnKfngphHJxZn/Axs6pzANYOr3UQDb9+iOzwqN6br43S4yFtqnnH85WPSMa+4aiOdm0AivG9e0tPUnA==
+react-native-system-navigation-bar@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/react-native-system-navigation-bar/-/react-native-system-navigation-bar-3.0.1.tgz#49a24ca4b9d5f2fe995bbcfbea7d93fb27a69490"
+  integrity sha512-OVhf/QB333GJSo3Mvxjl5y1+gT4Kfvlkivzka9fyvwUsvN/7M5grtR0v8C5+CfSrLzaDeGlpfTz0WB+IiuuJsQ==
 
 react-native-udp@4.1.7:
   version "4.1.7"

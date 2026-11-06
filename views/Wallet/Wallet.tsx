@@ -25,7 +25,6 @@ import {
 } from '@react-navigation/native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import SystemNavigationBar from 'react-native-system-navigation-bar';
 
 import ChannelsPane from '../Channels/ChannelsPane';
 import BalancePane from './BalancePane';
@@ -69,7 +68,8 @@ import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
 import { fetchLncData } from '../../utils/LncFetchUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
-import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { applySystemNavigationBarTheme } from '../../utils/SystemNavigationBarUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import WalletRefreshRunner from '../../utils/WalletRefreshRunner';
 
@@ -470,13 +470,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 bridgeJavaStrings(locale);
             }
 
-            SystemNavigationBar.setNavigationColor(
-                themeColor('background'),
-                isLightTheme() ? 'dark' : 'light'
-            );
-            SystemNavigationBar.setNavigationBarDividerColor(
-                themeColor('secondary')
-            );
+            applySystemNavigationBarTheme();
             const loginRequired = SettingsStore.loginRequired();
             const posEnabled =
                 settings?.pos?.posEnabled &&

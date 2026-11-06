@@ -2,7 +2,6 @@ import * as React from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import SystemNavigationBar from 'react-native-system-navigation-bar';
 
 import ClockIcon from '../../assets/images/SVG/Clock.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
@@ -12,7 +11,8 @@ import SettingsStore, {
     THEME_KEYS
 } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
-import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { applySystemNavigationBarTheme } from '../../utils/SystemNavigationBarUtils';
 
 import Text from '../../components/Text';
 import DropdownSetting from '../../components/DropdownSetting';
@@ -132,13 +132,7 @@ export default class Display extends React.Component<
                             await updateSettingsGroup('display', {
                                 theme: value
                             });
-                            SystemNavigationBar.setNavigationColor(
-                                themeColor('background'),
-                                isLightTheme() ? 'dark' : 'light'
-                            );
-                            SystemNavigationBar.setNavigationBarDividerColor(
-                                themeColor('secondary')
-                            );
+                            applySystemNavigationBarTheme();
                         }}
                         values={THEME_KEYS}
                     />
