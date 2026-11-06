@@ -1,12 +1,21 @@
+import { localeString } from './LocaleUtils';
 import { networkFetch } from './NetworkUtils';
 
 export const SWAP_STATUS_POLL_MS = 5000;
+// Consecutive failed polls before the poller reports an error. A single Tor
+// circuit failure is common and the next poll usually succeeds.
+export const SWAP_STATUS_MAX_FAILURES = 3;
 
 // Stands in for the swap-update WebSocket when Tor is enabled. The platform
 // WebSocket cannot use Tor, so this polls GET {endpoint}/swap/{id} over Tor
 // and replays each status change as a swap.update message. It implements the
 // part of the WebSocket interface SwapDetails uses, so both transports share
 // the same update handlers.
+//
+// After SWAP_STATUS_MAX_FAILURES failed polls in a row it calls onerror once,
+// as a WebSocket would on a dropped connection, and keeps polling. When a
+// poll gets a response again it calls onopen, as on a reconnect, so the
+// caller can clear the error.
 export default class SwapStatusPoller {
     onopen: (() => void) | null = null;
     onmessage: ((event: { data: string }) => any) | null = null;
@@ -15,6 +24,8 @@ export default class SwapStatusPoller {
 
     private closed = false;
     private lastStatus?: string;
+    private failures = 0;
+    private errorReported = false;
     private timer?: ReturnType<typeof setTimeout>;
 
     constructor(
@@ -50,6 +61,7 @@ export default class SwapStatusPoller {
 
     private async poll() {
         if (this.closed) return;
+        let responded = false;
         try {
             const response = await networkFetch({
                 method: 'GET',
@@ -63,21 +75,47 @@ export default class SwapStatusPoller {
             if (status >= 400 && status < 500 && result?.error) {
                 // The server rejected the request itself (e.g. unknown
                 // swap); retrying will not help
+                responded = true;
                 await this.emit({ id: this.swapId, error: result.error });
-            } else if (
-                status < 300 &&
-                result?.status &&
-                result.status !== this.lastStatus
-            ) {
-                this.lastStatus = result.status;
-                await this.emit({ id: this.swapId, ...result });
+            } else if (status < 300) {
+                responded = true;
+                if (result?.status && result.status !== this.lastStatus) {
+                    this.lastStatus = result.status;
+                    await this.emit({ id: this.swapId, ...result });
+                }
             }
         } catch (err) {
             // Tor circuits fail now and then; try again on the next tick
             console.warn('Swap status poll failed', err);
         }
+        // A server error counts as a failure too, so a provider that keeps
+        // answering 5xx is reported
+        if (responded) this.recovered();
+        else this.failed();
         if (!this.closed) {
             this.timer = setTimeout(() => this.poll(), this.intervalMs);
+        }
+    }
+
+    private recovered() {
+        this.failures = 0;
+        if (this.errorReported && !this.closed) {
+            this.errorReported = false;
+            this.onopen?.();
+        }
+    }
+
+    private failed() {
+        this.failures += 1;
+        if (
+            this.failures >= SWAP_STATUS_MAX_FAILURES &&
+            !this.errorReported &&
+            !this.closed
+        ) {
+            this.errorReported = true;
+            this.onerror?.({
+                message: localeString('views.SwapDetails.statusUnavailable')
+            });
         }
     }
 }
