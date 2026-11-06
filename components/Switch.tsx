@@ -7,10 +7,11 @@ interface SwitchProps {
     onValueChange?: any;
     disabled?: boolean;
     trackEnabledColor?: string;
+    testID?: string;
 }
 
 function Switch(props: SwitchProps) {
-    const { value, onValueChange, disabled, trackEnabledColor } = props;
+    const { value, onValueChange, disabled, trackEnabledColor, testID } = props;
     return (
         <RNSwitch
             value={value}
@@ -26,6 +27,7 @@ function Switch(props: SwitchProps) {
                 alignSelf: 'flex-end'
             }}
             disabled={disabled}
+            testID={testID}
         />
     );
 }
