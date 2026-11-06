@@ -44,6 +44,13 @@ jest.mock('./SettingsStore', () => ({
     default: class {},
     DEFAULT_SWAP_HOST_MAINNET: 'https://satsrouting.exchange/v2',
     DEFAULT_SWAP_HOST_TESTNET: 'https://api.testnet.boltz.exchange/v2',
+    LEGACY_ZEUS_SWAP_HOST_MAINNET: 'https://swaps.zeuslsp.com/api/v2',
+    LEGACY_ZEUS_SWAP_HOST_TESTNET: 'https://testnet-swaps.zeuslsp.com/api/v2',
+    RETIRED_SWAP_HOSTS_MAINNET: ['https://boltz-api.eldamar.icu/v2'],
+    RETIRED_SWAP_HOSTS_MAINNET_V2: [
+        'https://api.boltz.exchange/v2',
+        'https://api.middle-way.space/v2'
+    ],
     SWAP_HOST_KEYS_MAINNET: [
         {
             key: 'SATS Routing',
@@ -239,7 +246,7 @@ const useRealSha256 = () =>
 const hostPreimage = (preimage?: string) =>
     blobFetch.mockResolvedValue({ json: () => ({ preimage }) });
 
-describe('SwapStore.isSubmarineSwapInvoicePaid', () => {
+describe('SwapStore.checkSubmarineSwapInvoice', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         useRealSha256();
@@ -247,20 +254,20 @@ describe('SwapStore.isSubmarineSwapInvoicePaid', () => {
         hostPreimage(undefined);
     });
 
-    const isPaid = () =>
-        buildStore().isSubmarineSwapInvoicePaid(SWAP_ID, SWAP_INVOICE, HOST);
+    const check = () =>
+        buildStore().checkSubmarineSwapInvoice(SWAP_ID, SWAP_INVOICE, HOST);
 
-    it('is true when the node reports the invoice paid', async () => {
+    it('is paid when the node reports the invoice paid', async () => {
         lookupInvoice.mockResolvedValue({ state: 'SETTLED', settled: true });
 
-        await expect(isPaid()).resolves.toBe(true);
+        await expect(check()).resolves.toBe('paid');
         expect(lookupInvoice).toHaveBeenCalledWith({
             r_hash: SWAP_INVOICE_HASH
         });
         expect(blobFetch).not.toHaveBeenCalled();
     });
 
-    it("is true when the host's preimage hashes to the payment hash", async () => {
+    it("is paid when the host's preimage hashes to the payment hash", async () => {
         // stand in for SHA256 so this preimage hashes to the invoice's
         // payment hash
         const preimage = '11'.repeat(32);
@@ -271,41 +278,69 @@ describe('SwapStore.isSubmarineSwapInvoicePaid', () => {
         );
         hostPreimage(preimage);
 
-        await expect(isPaid()).resolves.toBe(true);
+        await expect(check()).resolves.toBe('paid');
         expect(blobFetch.mock.calls[0].slice(0, 2)).toEqual([
             'GET',
             `${HOST}/swap/submarine/${SWAP_ID}/preimage`
         ]);
     });
 
-    it('is false while the node holds the invoice unpaid and the host has no preimage', async () => {
+    it('is unpaid while the node holds the invoice unpaid and the host has no preimage', async () => {
         lookupInvoice.mockResolvedValue({ state: 'OPEN', settled: false });
 
-        await expect(isPaid()).resolves.toBe(false);
+        await expect(check()).resolves.toBe('unpaid');
     });
 
-    it('is false for a preimage of another payment hash', async () => {
+    it('is unpaid for a preimage of another payment hash', async () => {
         hostPreimage('22'.repeat(32));
 
-        await expect(isPaid()).resolves.toBe(false);
+        await expect(check()).resolves.toBe('unpaid');
     });
 
-    it('is false for a malformed preimage', async () => {
+    it('is unpaid for a malformed preimage', async () => {
         hostPreimage('not hex');
 
-        await expect(isPaid()).resolves.toBe(false);
+        await expect(check()).resolves.toBe('unpaid');
     });
 
-    it('is false when the host cannot be reached', async () => {
+    it('is unknown when the host cannot be reached', async () => {
         blobFetch.mockRejectedValue(new Error('offline'));
 
-        await expect(isPaid()).resolves.toBe(false);
+        await expect(check()).resolves.toBe('unknown');
     });
 
-    it('is false for an invoice that does not decode', async () => {
+    it('is unknown when the host does not answer with JSON', async () => {
+        blobFetch.mockResolvedValue({
+            json: () => {
+                throw new SyntaxError('Unexpected token <');
+            }
+        });
+
+        await expect(check()).resolves.toBe('unknown');
+    });
+
+    it('is unknown when the host holds the preimage request', async () => {
+        jest.useFakeTimers();
+        try {
+            const cancel = jest.fn();
+            blobFetch.mockReturnValue(
+                Object.assign(new Promise(() => undefined), { cancel })
+            );
+
+            const result = check();
+            await jest.advanceTimersByTimeAsync(5000);
+
+            await expect(result).resolves.toBe('unknown');
+            expect(cancel).toHaveBeenCalledTimes(1);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
+    it('is unpaid for an invoice that does not decode', async () => {
         await expect(
-            buildStore().isSubmarineSwapInvoicePaid(SWAP_ID, 'lnbc-bad', HOST)
-        ).resolves.toBe(false);
+            buildStore().checkSubmarineSwapInvoice(SWAP_ID, 'lnbc-bad', HOST)
+        ).resolves.toBe('unpaid');
         expect(lookupInvoice).not.toHaveBeenCalled();
     });
 });
@@ -351,6 +386,7 @@ describe('SwapStore.fetchAndUpdateSwaps and transaction.claimed', () => {
         const swap = await poll(submarineSwap, SwapState.TransactionClaimed);
 
         expect(swap.status).toBe(SwapState.TransactionClaimed);
+        expect(swap.claimVerified).toBe(true);
     });
 
     it('keeps the stored status of a claim nothing confirms', async () => {
@@ -367,6 +403,27 @@ describe('SwapStore.fetchAndUpdateSwaps and transaction.claimed', () => {
         const swap = await poll(submarineSwap, SwapState.TransactionClaimed);
 
         expect(swap.status).toBe(SwapState.TransactionMempool);
+        expect(swap.claimVerified).toBeUndefined();
+    });
+
+    it('keeps the stored status when the preimage request fails', async () => {
+        lookupInvoice.mockRejectedValue(new Error('unable to locate invoice'));
+        (Storage.getItem as jest.Mock).mockImplementation(async (k) =>
+            k === SWAPS_KEY ? JSON.stringify([submarineSwap]) : null
+        );
+        blobFetch.mockImplementation(async (_method: string, url: string) => {
+            if (url.endsWith('/preimage')) throw new Error('offline');
+            return { json: () => ({ status: SwapState.TransactionClaimed }) };
+        });
+
+        await buildStore().fetchAndUpdateSwaps();
+
+        const call = (Storage.setItem as jest.Mock).mock.calls.find(
+            ([k]) => k === SWAPS_KEY
+        );
+        expect(JSON.parse(call[1])[0].status).toBe(
+            SwapState.TransactionMempool
+        );
     });
 
     it('records the claim of a swap without an invoice, as before', async () => {
@@ -375,6 +432,7 @@ describe('SwapStore.fetchAndUpdateSwaps and transaction.claimed', () => {
         const swap = await poll(rescued, SwapState.TransactionClaimed);
 
         expect(swap.status).toBe(SwapState.TransactionClaimed);
+        expect(swap.claimVerified).toBeUndefined();
         expect(lookupInvoice).not.toHaveBeenCalled();
     });
 
@@ -392,6 +450,7 @@ describe('SwapStore.fetchAndUpdateSwaps and transaction.claimed', () => {
         );
 
         expect(swap.status).toBe(SwapState.TransactionClaimed);
+        expect(swap.claimVerified).toBeUndefined();
         expect(lookupInvoice).not.toHaveBeenCalled();
     });
 
@@ -449,6 +508,82 @@ describe('SwapStore.fetchAndUpdateSwaps and transaction.claimed', () => {
 
             expect(swap.status).toBe(SwapState.TransactionMempool);
         });
+    });
+});
+
+describe('SwapStore.isRetiredSwapHost', () => {
+    const store = buildStore();
+
+    it.each([
+        'https://swaps.zeuslsp.com/api/v2',
+        'https://testnet-swaps.zeuslsp.com/api/v2',
+        'https://boltz-api.eldamar.icu/v2',
+        'https://api.boltz.exchange/v2',
+        'https://api.middle-way.space/v2',
+        // stored with a trailing slash, without /v2, or in another case
+        'https://api.boltz.exchange/v2/',
+        'https://api.boltz.exchange',
+        'https://API.Boltz.Exchange/v2'
+    ])('is true for %s', (endpoint) => {
+        expect(store.isRetiredSwapHost(endpoint)).toBe(true);
+    });
+
+    it.each([
+        'https://satsrouting.exchange/v2',
+        'https://api.testnet.boltz.exchange/v2',
+        'https://api.boltz.exchange.example/v2',
+        '',
+        undefined
+    ])('is false for %s', (endpoint) => {
+        expect(store.isRetiredSwapHost(endpoint)).toBe(false);
+    });
+});
+
+describe('SwapStore.markClaimVerified', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('records the check on the stored swap and keeps its other fields', async () => {
+        (Storage.getItem as jest.Mock).mockImplementation(async (k) =>
+            k === SWAPS_KEY
+                ? JSON.stringify([
+                      {
+                          id: SWAP_ID,
+                          status: SwapState.TransactionClaimed,
+                          invoice: SWAP_INVOICE
+                      },
+                      { id: 'other', status: SwapState.TransactionClaimed }
+                  ])
+                : null
+        );
+
+        await expect(buildStore().markClaimVerified(SWAP_ID)).resolves.toBe(
+            true
+        );
+
+        const call = (Storage.setItem as jest.Mock).mock.calls.find(
+            ([k]) => k === SWAPS_KEY
+        );
+        expect(JSON.parse(call[1])).toEqual([
+            {
+                id: SWAP_ID,
+                status: SwapState.TransactionClaimed,
+                invoice: SWAP_INVOICE,
+                claimVerified: true
+            },
+            { id: 'other', status: SwapState.TransactionClaimed }
+        ]);
+    });
+
+    it('is false when storage fails', async () => {
+        const error = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => undefined);
+        (Storage.getItem as jest.Mock).mockRejectedValue(new Error('locked'));
+
+        await expect(buildStore().markClaimVerified(SWAP_ID)).resolves.toBe(
+            false
+        );
+        error.mockRestore();
     });
 });
 

@@ -32,7 +32,8 @@ import {
     calculateSendAmount,
     deriveSwapPreimage,
     rescuedLockupFloor,
-    isAlreadyBroadcastError
+    isAlreadyBroadcastError,
+    nativeSwapEndpoint
 } from '../utils/SwapUtils';
 import AddressUtils from '../utils/AddressUtils';
 import BackendUtils from '../utils/BackendUtils';
@@ -42,6 +43,10 @@ import NodeInfoStore from './NodeInfoStore';
 import SettingsStore, {
     DEFAULT_SWAP_HOST_MAINNET,
     DEFAULT_SWAP_HOST_TESTNET,
+    LEGACY_ZEUS_SWAP_HOST_MAINNET,
+    LEGACY_ZEUS_SWAP_HOST_TESTNET,
+    RETIRED_SWAP_HOSTS_MAINNET,
+    RETIRED_SWAP_HOSTS_MAINNET_V2,
     SWAP_HOST_KEYS_TESTNET,
     SWAP_HOST_KEYS_MAINNET
 } from './SettingsStore';
@@ -54,6 +59,11 @@ import {
     privateKeyFromKeys,
     preimageHexFrom
 } from '../models/ClaimTransaction';
+
+// Whether a claimed submarine swap's invoice is known to be paid. unknown:
+// the node did not confirm it and the host could not be asked (no answer,
+// timeout, or an answer that is not JSON).
+export type SubmarineInvoiceCheck = 'paid' | 'unpaid' | 'unknown';
 
 export type ReverseLockupFetch =
     | { status: 'found'; hex: string }
@@ -245,6 +255,14 @@ const repairRescuedPreimage = (stored: any, rescued: any) => {
 // so the two together stay within the 10s the swap status poll is given.
 // A request that runs out counts as not confirmed.
 const SWAP_CLAIM_CHECK_TIMEOUT_MS = 5000;
+
+// Swap hosts that no longer answer
+const RETIRED_SWAP_HOSTS = [
+    LEGACY_ZEUS_SWAP_HOST_MAINNET,
+    LEGACY_ZEUS_SWAP_HOST_TESTNET,
+    ...RETIRED_SWAP_HOSTS_MAINNET,
+    ...RETIRED_SWAP_HOSTS_MAINNET_V2
+].map((host) => nativeSwapEndpoint(host).toLowerCase());
 
 // Rejects with 'Request timeout' when the request has not settled after
 // ms, then calls onTimeout (to cancel it, where it can be). It rejects
@@ -1548,23 +1566,23 @@ export default class SwapStore {
      * can only claim the lockup with the invoice's preimage, which it learns
      * by paying the invoice, and a swap stored as claimed is not polled or
      * offered a refund again, so the host's transaction.claimed is only
-     * recorded once this is true: the node reports the invoice paid, or the
-     * preimage the host gives for the swap hashes to the payment hash. False
-     * when neither confirms it, also when the node or host can't be reached
-     * or does not answer within SWAP_CLAIM_CHECK_TIMEOUT_MS.
+     * recorded once this is paid: the node reports the invoice paid, or the
+     * preimage the host gives for the swap hashes to the payment hash.
+     * unknown when the node does not confirm it and the host does not
+     * answer with JSON within SWAP_CLAIM_CHECK_TIMEOUT_MS, unpaid otherwise.
      */
-    public isSubmarineSwapInvoicePaid = async (
+    public checkSubmarineSwapInvoice = async (
         id: string,
         invoice: string,
         endpoint?: string
-    ): Promise<boolean> => {
+    ): Promise<SubmarineInvoiceCheck> => {
         let paymentHash: string | undefined;
         try {
             paymentHash = Bolt11Utils.decode(invoice).payment_hash;
         } catch (e) {
-            return false;
+            return 'unpaid';
         }
-        if (!paymentHash) return false;
+        if (!paymentHash) return 'unpaid';
         paymentHash = paymentHash.toLowerCase();
 
         try {
@@ -1577,12 +1595,13 @@ export default class SwapStore {
                 typeof response === 'object' &&
                 new Invoice(response).isPaid
             ) {
-                return true;
+                return 'paid';
             }
         } catch (e) {
             // backends throw for an invoice the node did not issue
         }
 
+        let result: any;
         try {
             const request = ReactNativeBlobUtil.fetch(
                 'GET',
@@ -1594,14 +1613,38 @@ export default class SwapStore {
                 SWAP_CLAIM_CHECK_TIMEOUT_MS,
                 () => request.cancel?.()
             );
-            const preimage = response.json()?.preimage;
-            return (
-                typeof preimage === 'string' &&
-                /^[0-9a-f]{64}$/i.test(preimage) &&
-                crypto.sha256(Buffer.from(preimage, 'hex')).toString('hex') ===
-                    paymentHash
-            );
+            result = response.json();
         } catch (e) {
+            return 'unknown';
+        }
+        const preimage = result?.preimage;
+        return typeof preimage === 'string' &&
+            /^[0-9a-f]{64}$/i.test(preimage) &&
+            crypto.sha256(Buffer.from(preimage, 'hex')).toString('hex') ===
+                paymentHash
+            ? 'paid'
+            : 'unpaid';
+    };
+
+    /**
+     * Whether a swap was made on a host that no longer answers, so a check
+     * against the host can't be made
+     */
+    public isRetiredSwapHost = (endpoint?: string): boolean =>
+        !!endpoint &&
+        RETIRED_SWAP_HOSTS.includes(nativeSwapEndpoint(endpoint).toLowerCase());
+
+    /**
+     * Records that a submarine swap's claim was checked against its
+     * invoice, so SwapDetails does not check it again
+     */
+    public markClaimVerified = async (swapId: string): Promise<boolean> => {
+        try {
+            return await this.updateStoredSwap(swapId, {
+                claimVerified: true
+            });
+        } catch (error) {
+            console.error('Error recording a verified swap claim:', error);
             return false;
         }
     };
@@ -1628,6 +1671,8 @@ export default class SwapStore {
             // a fresh read below: other fields may be written to the stored
             // swaps while the requests are out
             const statuses = new Map<string, SwapState>();
+            // claims recorded after checkSubmarineSwapInvoice confirmed them
+            const verifiedClaims = new Set<string>();
 
             const pollStatus = async (swap: any) => {
                 if (!swap?.id) return;
@@ -1671,15 +1716,17 @@ export default class SwapStore {
                     // The host can answer with any JSON. The status is
                     // stored and later used as text and as an object key.
                     const result = await response.json();
-                    if (
+                    const checkClaim =
                         result?.status === SwapState.TransactionClaimed &&
                         swap.type === SwapType.Submarine &&
-                        swap.invoice &&
-                        !(await this.isSubmarineSwapInvoicePaid(
+                        swap.invoice;
+                    if (
+                        checkClaim &&
+                        (await this.checkSubmarineSwapInvoice(
                             swap.id,
                             swap.invoice,
                             host
-                        ))
+                        )) !== 'paid'
                     ) {
                         // keep the stored status, so the swap is polled
                         // again and SwapDetails can offer the refund
@@ -1691,6 +1738,7 @@ export default class SwapStore {
                         typeof result.status === 'string'
                     ) {
                         statuses.set(swap.id, result.status);
+                        if (checkClaim) verifiedClaims.add(swap.id);
                     }
                 } catch (err: any) {
                     console.warn(
@@ -1720,7 +1768,13 @@ export default class SwapStore {
                         : [])
                 ].map((swap: any) => {
                     if (swap?.id && statuses.has(swap.id)) {
-                        return { ...swap, status: statuses.get(swap.id) };
+                        return {
+                            ...swap,
+                            status: statuses.get(swap.id),
+                            ...(verifiedClaims.has(swap.id)
+                                ? { claimVerified: true }
+                                : {})
+                        };
                     }
                     // stored before only strings were accepted as a status
                     if (swap?.status && typeof swap.status !== 'string') {

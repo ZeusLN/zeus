@@ -111,6 +111,8 @@ interface SwapDetailsState {
     // the host reported a submarine swap claimed, but its invoice is not
     // known to be paid
     unverifiedClaim: boolean;
+    // a stored claim could not be checked: the host could not be asked
+    claimNotice: string | null;
 }
 
 // how often to re-check an unconfirmed or unreachable lockup
@@ -133,7 +135,8 @@ export default class SwapDetails extends React.Component<
             swapTreeToggle: false,
             swapData: new Swap(props.route.params.swapData),
             lockupNotice: null,
-            unverifiedClaim: false
+            unverifiedClaim: false,
+            claimNotice: null
         };
     }
 
@@ -169,9 +172,18 @@ export default class SwapDetails extends React.Component<
                     updates: swapData.status,
                     socketConnected: false
                 });
-                // a claim stored before it was checked against the invoice
-                if (swapData.status === SwapState.TransactionClaimed) {
-                    this.checkSubmarineClaim(swapData.id);
+                // a claim stored before it was checked against the
+                // invoice. A swap stored without its host, or made on one
+                // that no longer answers, can't be checked against it.
+                const endpoint =
+                    this.props.route.params.endpoint || swapData.endpoint;
+                if (
+                    swapData.status === SwapState.TransactionClaimed &&
+                    !swapData.claimVerified &&
+                    endpoint &&
+                    !this.props.SwapStore?.isRetiredSwapHost(endpoint)
+                ) {
+                    this.checkSubmarineClaim(swapData.id, true);
                 }
                 return;
             }
@@ -483,20 +495,38 @@ export default class SwapDetails extends React.Component<
 
     /**
      * Whether a submarine swap the host reports as claimed has a paid
-     * invoice. If not, says so and offers the refund. A swap without an
+     * invoice, recording it when it does. If not, says so and offers the
+     * refund. For a claim stored earlier (stored), a host that can't be
+     * asked gets a note to check again later instead. A swap without an
      * invoice (a rescued one) has nothing to check against and passes.
      */
-    checkSubmarineClaim = async (swapId: string): Promise<boolean> => {
-        const { endpoint, invoice } = this.props.route.params;
-        const swapInvoice = invoice || this.state.swapData?.invoice;
+    checkSubmarineClaim = async (
+        swapId: string,
+        stored = false
+    ): Promise<boolean> => {
+        const { SwapStore } = this.props;
+        const { swapData } = this.state;
+        const endpoint = this.props.route.params.endpoint || swapData?.endpoint;
+        const swapInvoice =
+            this.props.route.params.invoice || swapData?.invoice;
         if (!swapInvoice) return true;
 
-        const paid = await this.props.SwapStore?.isSubmarineSwapInvoicePaid(
+        const check = await SwapStore?.checkSubmarineSwapInvoice(
             swapId,
             swapInvoice,
             endpoint
         );
-        if (paid) return true;
+        if (check === 'paid') {
+            await SwapStore?.markClaimVerified(swapId);
+            return true;
+        }
+
+        if (stored && check === 'unknown') {
+            this.setState({
+                claimNotice: localeString('views.SwapDetails.claimNotChecked')
+            });
+            return false;
+        }
 
         this.setState({
             unverifiedClaim: true,
@@ -1255,8 +1285,14 @@ export default class SwapDetails extends React.Component<
     render() {
         const { navigation, SwapStore } = this.props;
 
-        const { updates, error, failureReason, swapData, lockupNotice } =
-            this.state;
+        const {
+            updates,
+            error,
+            failureReason,
+            swapData,
+            lockupNotice,
+            claimNotice
+        } = this.state;
 
         const serviceProvider = this.props.route.params?.serviceProvider ?? '';
 
@@ -1384,6 +1420,9 @@ export default class SwapDetails extends React.Component<
                     )}
                     {lockupNotice && !error && (
                         <WarningMessage message={lockupNotice} />
+                    )}
+                    {claimNotice && !error && (
+                        <WarningMessage message={claimNotice} />
                     )}
                     {error && (
                         <ErrorMessage

@@ -130,7 +130,9 @@ const renderView = async (
         getReverseSwapReceiveAmount: jest.fn(() => 0),
         updateSwapStatus: jest.fn().mockResolvedValue(undefined),
         verifyReverseLockup: jest.fn().mockResolvedValue({ status: 'ok' }),
-        isSubmarineSwapInvoicePaid: jest.fn().mockResolvedValue(true),
+        checkSubmarineSwapInvoice: jest.fn().mockResolvedValue('paid'),
+        markClaimVerified: jest.fn().mockResolvedValue(true),
+        isRetiredSwapHost: jest.fn(() => false),
         resolveClaimAddress: jest.fn(
             async ({ destinationAddress }: any) =>
                 destinationAddress || 'bc1qwallet'
@@ -1640,11 +1642,12 @@ describe('SwapDetails submarine swap reported claimed', () => {
 
         await sendStatus('transaction.claimed');
 
-        expect(store.isSubmarineSwapInvoicePaid).toHaveBeenCalledWith(
+        expect(store.checkSubmarineSwapInvoice).toHaveBeenCalledWith(
             'swap',
             'lnbc1swapinvoice',
             'https://provider.test/v2'
         );
+        expect(store.markClaimVerified).toHaveBeenCalledWith('swap');
         expect(store.updateSwapStatus).toHaveBeenCalledWith(
             'swap',
             'transaction.claimed',
@@ -1656,17 +1659,21 @@ describe('SwapDetails submarine swap reported claimed', () => {
         expect(socket.close).toHaveBeenCalled();
     });
 
-    it('keeps the swap open and offers the refund when the payment is not confirmed', async () => {
-        const { store } = await renderView(SUBMARINE);
-        store.isSubmarineSwapInvoicePaid.mockResolvedValue(false);
+    it.each(['unpaid', 'unknown'])(
+        'keeps the swap open and offers the refund when the payment is %s',
+        async (check) => {
+            const { store } = await renderView(SUBMARINE);
+            store.checkSubmarineSwapInvoice.mockResolvedValue(check);
 
-        await sendStatus('transaction.claimed');
+            await sendStatus('transaction.claimed');
 
-        expect(store.updateSwapStatus).not.toHaveBeenCalled();
-        expect(errorShown()).toBe('views.SwapDetails.claimNotVerified');
-        expect(refundOffered()).toBe(true);
-        expect(socket.close).toHaveBeenCalled();
-    });
+            expect(store.updateSwapStatus).not.toHaveBeenCalled();
+            expect(store.markClaimVerified).not.toHaveBeenCalled();
+            expect(errorShown()).toBe('views.SwapDetails.claimNotVerified');
+            expect(refundOffered()).toBe(true);
+            expect(socket.close).toHaveBeenCalled();
+        }
+    );
 
     it('does not check a swap without an invoice', async () => {
         const { store } = await renderView({
@@ -1676,7 +1683,7 @@ describe('SwapDetails submarine swap reported claimed', () => {
 
         await sendStatus('transaction.claimed');
 
-        expect(store.isSubmarineSwapInvoicePaid).not.toHaveBeenCalled();
+        expect(store.checkSubmarineSwapInvoice).not.toHaveBeenCalled();
         expect(store.updateSwapStatus).toHaveBeenCalledWith(
             'swap',
             'transaction.claimed',
@@ -1685,34 +1692,108 @@ describe('SwapDetails submarine swap reported claimed', () => {
         );
     });
 
-    it('checks a claim stored earlier when the swap is opened', async () => {
-        const isPaid = jest.fn().mockResolvedValue(false);
+    const STORED_CLAIM = { ...SUBMARINE, status: SwapState.TransactionClaimed };
+
+    // Opens a swap stored as claimed; the store's check gives check
+    const openStoredClaim = async (
+        check: string,
+        swapData: any = {},
+        params: any = {},
+        storeOverrides: any = {}
+    ) => {
         const { store } = await renderView(
-            { ...SUBMARINE, status: SwapState.TransactionClaimed },
+            { ...STORED_CLAIM, ...swapData },
+            params,
             {},
-            {},
-            { isSubmarineSwapInvoicePaid: isPaid }
+            {
+                checkSubmarineSwapInvoice: jest.fn().mockResolvedValue(check),
+                ...storeOverrides
+            }
         );
         await act(async () => {});
+        return store;
+    };
+
+    it('checks a claim stored earlier when the swap is opened', async () => {
+        const store = await openStoredClaim('unpaid');
 
         expect(global.WebSocket).not.toHaveBeenCalled();
-        expect(store.isSubmarineSwapInvoicePaid).toHaveBeenCalledWith(
+        expect(store.checkSubmarineSwapInvoice).toHaveBeenCalledWith(
             'swap',
             'lnbc1swapinvoice',
             'https://provider.test/v2'
         );
+        expect(store.markClaimVerified).not.toHaveBeenCalled();
         expect(errorShown()).toBe('views.SwapDetails.claimNotVerified');
+        expect(noticeShown()).toBeUndefined();
         expect(refundOffered()).toBe(true);
     });
 
-    it('shows a stored claim the invoice confirms as done', async () => {
-        await renderView({
-            ...SUBMARINE,
-            status: SwapState.TransactionClaimed
-        });
-        await act(async () => {});
+    it('shows a stored claim the invoice confirms as done, and records the check', async () => {
+        const store = await openStoredClaim('paid');
 
+        expect(store.markClaimVerified).toHaveBeenCalledWith('swap');
+        expect(errorShown()).toBeUndefined();
+        expect(noticeShown()).toBeUndefined();
+        expect(refundOffered()).toBe(false);
+    });
+
+    it('shows a note without a refund when the host of a stored claim cannot be asked', async () => {
+        const store = await openStoredClaim('unknown');
+
+        expect(store.markClaimVerified).not.toHaveBeenCalled();
+        expect(errorShown()).toBeUndefined();
+        expect(noticeShown()).toBe('views.SwapDetails.claimNotChecked');
+        expect(refundOffered()).toBe(false);
+    });
+
+    it('does not check a stored claim that was checked when it was recorded', async () => {
+        const store = await openStoredClaim('unpaid', { claimVerified: true });
+
+        expect(store.checkSubmarineSwapInvoice).not.toHaveBeenCalled();
         expect(errorShown()).toBeUndefined();
         expect(refundOffered()).toBe(false);
+    });
+
+    it('does not check a stored claim made on a host that no longer answers', async () => {
+        const store = await openStoredClaim(
+            'unpaid',
+            {},
+            { endpoint: 'https://api.boltz.exchange/v2' },
+            { isRetiredSwapHost: jest.fn(() => true) }
+        );
+
+        expect(store.isRetiredSwapHost).toHaveBeenCalledWith(
+            'https://api.boltz.exchange/v2'
+        );
+        expect(store.checkSubmarineSwapInvoice).not.toHaveBeenCalled();
+        expect(errorShown()).toBeUndefined();
+        expect(refundOffered()).toBe(false);
+    });
+
+    it('does not check a stored claim without a host', async () => {
+        const store = await openStoredClaim(
+            'unpaid',
+            {},
+            { endpoint: undefined }
+        );
+
+        expect(store.checkSubmarineSwapInvoice).not.toHaveBeenCalled();
+        expect(errorShown()).toBeUndefined();
+        expect(refundOffered()).toBe(false);
+    });
+
+    it("checks a stored claim against the swap's own host when none is passed", async () => {
+        const store = await openStoredClaim(
+            'paid',
+            { endpoint: 'https://stored.test/v2' },
+            { endpoint: undefined }
+        );
+
+        expect(store.checkSubmarineSwapInvoice).toHaveBeenCalledWith(
+            'swap',
+            'lnbc1swapinvoice',
+            'https://stored.test/v2'
+        );
     });
 });
