@@ -3937,6 +3937,288 @@ describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
         expect(subscribed.activity).toEqual([]);
     });
 
+    describe('other requests after the connections are reloaded', () => {
+        const BUDGET_SATS = 100000;
+        const PAID_SATS = 5003;
+
+        beforeEach(() => {
+            jest.spyOn(
+                NostrConnectUtils,
+                'decodeInvoiceTagsForMakeInvoice'
+            ).mockResolvedValue({
+                paymentHash: hex64('d'),
+                descriptionHash: '',
+                expiryTime: 4_000_000_000
+            });
+        });
+
+        // Subscribes, reloads the connections (as the connections list
+        // does on focus), then pays through the subscribed handler
+        const payAfterReload = async (
+            permissions: string[],
+            overrides: Record<string, any> = {}
+        ) => {
+            const collaborators = payCollaborators();
+            collaborators.transactionsStore.getPaymentOutcome.mockReturnValue({
+                payment_preimage: 'aa'.repeat(32),
+                payment_fee: 3
+            });
+            const harness = await startService(
+                [{ permissions, maxAmountSats: BUDGET_SATS }],
+                {
+                    ...collaborators,
+                    invoicesStore: {
+                        invoices: [],
+                        createUnifiedInvoice: jest.fn().mockResolvedValue({
+                            paymentRequest: 'lnbc1made-after-reload',
+                            rHash: hex64('d')
+                        }),
+                        getInvoices: jest.fn().mockResolvedValue([])
+                    },
+                    ...overrides
+                }
+            );
+            const [subscribed] = harness.connections;
+            await harness.store.loadConnections();
+            const [reloaded] = harness.store.connections;
+            expect(reloaded).not.toBe(subscribed);
+
+            const paid = await clientFor(subscribed).payInvoice({ invoice });
+            expect(paid.error).toBeUndefined();
+            expect(reloaded.totalSpendSats).toBe(PAID_SATS);
+
+            return { ...harness, subscribed, reloaded };
+        };
+
+        it('keeps the pay debit when make_invoice records its activity', async () => {
+            const { store, subscribed, reloaded } = await payAfterReload([
+                'pay_invoice',
+                'make_invoice'
+            ]);
+
+            const made = await clientFor(subscribed).makeInvoice({
+                amount: 1000_000
+            });
+
+            expect(made.error).toBeUndefined();
+            expect(store.connections[0] === reloaded).toBe(true);
+            expect(reloaded.totalSpendSats).toBe(PAID_SATS);
+            expect(reloaded.activity.map((a) => a.type)).toEqual([
+                'pay_invoice',
+                'make_invoice'
+            ]);
+
+            await jest.advanceTimersByTimeAsync(1000);
+            const [persisted] = persistedConnections();
+            expect(persisted.totalSpendSats).toBe(PAID_SATS);
+            expect(persisted.activity).toHaveLength(2);
+
+            // as after an app restart
+            await store.loadConnections();
+            expect(store.connections[0].totalSpendSats).toBe(PAID_SATS);
+        });
+
+        it('records make_invoice on the stored connection when a reload lands while the invoice is created', async () => {
+            const { store, subscribed, invoicesStore } = await payAfterReload([
+                'pay_invoice',
+                'make_invoice'
+            ]);
+            await jest.advanceTimersByTimeAsync(1000);
+            const created = holdNextCall(invoicesStore.createUnifiedInvoice);
+
+            const making = clientFor(subscribed).makeInvoice({
+                amount: 1000_000
+            });
+            await created.entered;
+            const [beforeReload] = store.connections;
+            await store.loadConnections();
+            const [reloadedAgain] = store.connections;
+            expect(reloadedAgain).not.toBe(beforeReload);
+            created.release({
+                paymentRequest: 'lnbc1made-after-reload',
+                rHash: hex64('d')
+            });
+            const made = await making;
+
+            expect(made.error).toBeUndefined();
+            expect(store.connections[0] === reloadedAgain).toBe(true);
+            expect(reloadedAgain.totalSpendSats).toBe(PAID_SATS);
+            expect(reloadedAgain.activity.map((a) => a.type)).toEqual([
+                'pay_invoice',
+                'make_invoice'
+            ]);
+        });
+
+        it('debits the stored connection when a reload lands while the payment is sent', async () => {
+            const { store, subscribed, transactionsStore } =
+                await payAfterReload(['pay_invoice']);
+            await jest.advanceTimersByTimeAsync(1000);
+            const sent = holdNextCall(transactionsStore.sendPaymentSilently);
+            (
+                NostrConnectUtils.decodeInvoiceTags as jest.Mock
+            ).mockResolvedValue({
+                paymentRequest: 'lnbc1second-payment',
+                paymentHash: hex64('e'),
+                descriptionHash: '',
+                description: '',
+                amount: 5000,
+                expiryTime: 0,
+                createdAt: 0,
+                isExpired: false,
+                network: 'bitcoin'
+            });
+
+            const paying = clientFor(subscribed).payInvoice({
+                invoice: 'lnbc1second-payment'
+            });
+            await sent.entered;
+            await store.loadConnections();
+            const [reloadedAgain] = store.connections;
+            sent.release({});
+            const paid = await paying;
+
+            expect(paid.error).toBeUndefined();
+            expect(store.connections[0] === reloadedAgain).toBe(true);
+            expect(reloadedAgain.totalSpendSats).toBe(2 * PAID_SATS);
+            expect(reloadedAgain.activity).toHaveLength(2);
+        });
+
+        it('reports the budget left after the pay debit from get_balance', async () => {
+            const { subscribed } = await payAfterReload([
+                'pay_invoice',
+                'get_balance'
+            ]);
+
+            const balance = await clientFor(subscribed).getBalance();
+
+            expect(balance).toEqual({
+                result: { balance: (BUDGET_SATS - PAID_SATS) * 1000 },
+                error: undefined
+            });
+        });
+
+        it('finds the payment made after the reload with lookup_invoice', async () => {
+            const { subscribed } = await payAfterReload([
+                'pay_invoice',
+                'lookup_invoice'
+            ]);
+
+            const found = await clientFor(subscribed).lookupInvoice({
+                payment_hash: hex64('c')
+            });
+
+            expect(found.error).toBeUndefined();
+            expect(found.result?.payment_hash).toBe(hex64('c'));
+        });
+
+        it('lists the payment made after the reload with list_transactions', async () => {
+            const { subscribed } = await payAfterReload([
+                'pay_invoice',
+                'list_transactions'
+            ]);
+
+            const listed = await clientFor(subscribed).listTransactions({});
+
+            expect(listed.error).toBeUndefined();
+            expect(listed.result?.transactions).toHaveLength(1);
+            expect(listed.result?.transactions[0].payment_hash).toBe(
+                hex64('c')
+            );
+        });
+
+        it('applies an edit to the stored connection when a reload lands while it waits for a request', async () => {
+            const { store, subscribed, invoicesStore } = await payAfterReload([
+                'pay_invoice',
+                'make_invoice'
+            ]);
+            await jest.advanceTimersByTimeAsync(1000);
+            const created = holdNextCall(invoicesStore.createUnifiedInvoice);
+            const making = clientFor(subscribed).makeInvoice({
+                amount: 1000_000
+            });
+            await created.entered;
+
+            const updating = store.updateConnection(subscribed.id, {
+                name: 'Renamed'
+            });
+            await flushMicrotasks();
+            await store.loadConnections();
+            const [reloadedAgain] = store.connections;
+            created.release({
+                paymentRequest: 'lnbc1made-after-reload',
+                rHash: hex64('d')
+            });
+            await making;
+            const updated = await updating;
+
+            expect(updated.success).toBe(true);
+            expect(store.connections[0] === reloadedAgain).toBe(true);
+            expect(reloadedAgain.name).toBe('Renamed');
+            expect(reloadedAgain.totalSpendSats).toBe(PAID_SATS);
+            expect(reloadedAgain.activity).toHaveLength(2);
+
+            await jest.advanceTimersByTimeAsync(1000);
+            const [persisted] = persistedConnections();
+            expect(persisted.name).toBe('Renamed');
+            expect(persisted.totalSpendSats).toBe(PAID_SATS);
+        });
+
+        it('keeps the pay debit when list_transactions settles an earlier payment', async () => {
+            const earlier = 'lnbc1settled-while-offline';
+            const collaborators = payCollaborators();
+            collaborators.transactionsStore.getPaymentOutcome.mockReturnValue({
+                payment_preimage: 'aa'.repeat(32),
+                payment_fee: 3
+            });
+            const { store, connections, paymentsStore } = await startService(
+                [
+                    {
+                        permissions: ['pay_invoice', 'list_transactions'],
+                        maxAmountSats: BUDGET_SATS,
+                        activity: [
+                            {
+                                id: earlier,
+                                type: 'pay_invoice',
+                                payment_source: 'lightning',
+                                status: 'failed',
+                                satAmount: 1000,
+                                paymentHash: hex64('f'),
+                                error: 'views.SendingLightning.paymentTimedOut',
+                                createdAt: new Date(Date.now() - 60_000)
+                            }
+                        ]
+                    }
+                ],
+                collaborators
+            );
+            const [subscribed] = connections;
+            await store.loadConnections();
+            const [reloaded] = store.connections;
+            await clientFor(subscribed).payInvoice({ invoice });
+            expect(reloaded.totalSpendSats).toBe(PAID_SATS);
+            // the node now lists the earlier payment as settled
+            paymentsStore.payments = [
+                new Payment({
+                    payment_request: earlier,
+                    payment_hash: hex64('f'),
+                    status: 'SUCCEEDED',
+                    value_sat: 1000,
+                    fee_sat: '0',
+                    payment_preimage: hex64('9')
+                })
+            ];
+
+            const listed = await clientFor(subscribed).listTransactions({});
+
+            expect(listed.error).toBeUndefined();
+            expect(store.connections[0] === reloaded).toBe(true);
+            expect(reloaded.totalSpendSats).toBe(PAID_SATS + 1000);
+            expect(
+                reloaded.activity.find((a) => a.id === earlier)?.status
+            ).toBe('success');
+        });
+    });
+
     it('does not melt ecash when the wallet is switched before the request starts', async () => {
         const payLnInvoiceFromEcash = jest.fn();
         const { store, settingsStore } = createStore({

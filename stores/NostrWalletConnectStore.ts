@@ -1029,33 +1029,36 @@ export default class NostrWalletConnectStore {
                     this.unsubscribeFromConnection(connectionId);
                 }
 
+                // The connections may have been reloaded while in-flight
+                // requests finished, so update the stored object
+                const stored = this.storedConnection(connection);
                 runInAction(() => {
-                    const oldBudgetRenewal = connection.budgetRenewal;
+                    const oldBudgetRenewal = stored.budgetRenewal;
                     const newBudgetRenewal = updates.budgetRenewal;
 
                     // Read before the assign, or an added or removed budget
                     // is never seen as a change
-                    const hadBudget = connection.hasBudgetLimit;
-                    Object.assign(connection, updates);
+                    const hadBudget = stored.hasBudgetLimit;
+                    Object.assign(stored, updates);
                     if (rotatedSecret) {
-                        connection.pubkey = rotatedSecret.connectionPublicKey;
+                        stored.pubkey = rotatedSecret.connectionPublicKey;
                     }
 
                     // An update that omits maxAmountSats leaves the limit as is
-                    const hasBudget = connection.hasBudgetLimit;
+                    const hasBudget = stored.hasBudgetLimit;
                     const budgetRenewalChanged =
                         newBudgetRenewal !== undefined &&
                         newBudgetRenewal !== oldBudgetRenewal;
 
                     if (!hadBudget && hasBudget) {
-                        connection.resetBudget();
+                        stored.resetBudget();
                     } else if (hadBudget && !hasBudget) {
-                        connection.lastBudgetReset = undefined;
-                        connection.totalSpendSats = 0;
+                        stored.lastBudgetReset = undefined;
+                        stored.totalSpendSats = 0;
                     } else if (hasBudget && budgetRenewalChanged) {
-                        connection.resetBudget();
+                        stored.resetBudget();
                     }
-                    this.findAndUpdateConnection(connection);
+                    this.findAndUpdateConnection(stored);
                 });
 
                 if (relayUrlChanged) {
@@ -1071,7 +1074,7 @@ export default class NostrWalletConnectStore {
                     // If subscribe/save fails here, still return the pairing URL so
                     // the UI can show the QR; subscription recovers on restart.
                     try {
-                        await this.subscribeToConnection(connection);
+                        await this.subscribeToConnection(stored);
                         await this.saveConnections();
                     } catch (error) {
                         console.warn(
@@ -1087,7 +1090,7 @@ export default class NostrWalletConnectStore {
                     };
                 }
 
-                await this.subscribeToConnection(connection);
+                await this.subscribeToConnection(stored);
                 return { success: true };
             } finally {
                 // Pop only our own entry: a concurrent delete or another
@@ -1591,10 +1594,9 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         save: boolean = true
     ): void {
-        const { index } = this.getConnection({ connectionId: connection.id });
-        if (index !== -1) {
-            this.connections[index] = connection;
-        }
+        // Never put the object back into this.connections: after a reload
+        // it may be a stale copy, and replacing the stored one would drop
+        // the changes made to it. Callers pass the stored connection.
         runInAction(() => {
             connection.syncWarnings(this.maxBudgetLimit);
         });
@@ -1687,14 +1689,14 @@ export default class NostrWalletConnectStore {
             if (connection.hasPermission('get_info')) {
                 handler.getInfo = () =>
                     this.withGlobalHandler(connection.id, () =>
-                        this.handleGetInfo(connection)
+                        this.handleGetInfo(this.storedConnection(connection))
                     );
             }
 
             if (connection.hasPermission('get_balance')) {
                 handler.getBalance = () =>
                     this.withGlobalHandler(connection.id, () =>
-                        this.handleGetBalance(connection)
+                        this.handleGetBalance(this.storedConnection(connection))
                     );
             }
 
@@ -1703,15 +1705,11 @@ export default class NostrWalletConnectStore {
                 // this connection was subscribed for; see payRequestRejection
                 const isCurrent = this.settingsStore.getConnectionGuard();
                 const payWithCashu = this.isCashuConfigured;
-                // loadConnections replaces the stored connection objects
-                // without resubscribing, so pay with the one stored when the
-                // request starts. If there is none, the subscribed object is
-                // passed and payRequestRejection rejects it.
+                // Pay with the connection stored when the request starts.
+                // If there is none, the subscribed object is passed and
+                // payRequestRejection rejects it.
                 const pay = (request: Nip47PayInvoiceRequest) => {
-                    const { connection: stored } = this.getConnection({
-                        connectionId: connection.id
-                    });
-                    const current = stored ?? connection;
+                    const current = this.storedConnection(connection);
                     return payWithCashu
                         ? this.handleCashuPayInvoice(
                               current,
@@ -1742,14 +1740,20 @@ export default class NostrWalletConnectStore {
             if (connection.hasPermission('make_invoice')) {
                 handler.makeInvoice = (request: Nip47MakeInvoiceRequest) =>
                     this.withGlobalHandler(connection.id, () =>
-                        this.handleMakeInvoice(connection, request)
+                        this.handleMakeInvoice(
+                            this.storedConnection(connection),
+                            request
+                        )
                     );
             }
 
             if (connection.hasPermission('lookup_invoice')) {
                 handler.lookupInvoice = (request: Nip47LookupInvoiceRequest) =>
                     this.withGlobalHandler(connection.id, () =>
-                        this.handleLookupInvoice(connection, request)
+                        this.handleLookupInvoice(
+                            this.storedConnection(connection),
+                            request
+                        )
                     );
             }
 
@@ -1758,7 +1762,10 @@ export default class NostrWalletConnectStore {
                     request: Nip47ListTransactionsRequest
                 ) =>
                     this.withGlobalHandler(connection.id, () =>
-                        this.handleListTransactions(connection, request)
+                        this.handleListTransactions(
+                            this.storedConnection(connection),
+                            request
+                        )
                     );
             }
 
@@ -2162,6 +2169,21 @@ export default class NostrWalletConnectStore {
         }
     }
 
+    // loadConnections replaces the stored connection objects without
+    // resubscribing, and runs on every focus of the connections list. A
+    // handler that kept the object it was subscribed with would read a
+    // stale budget, and its next write would put that object back over the
+    // stored one, dropping every debit made since the reload. Handlers and
+    // the activity writers that run after an await use this to get the
+    // stored connection with the same id. If there is none, `connection`
+    // is returned, and the request gate or payRequestRejection rejects it.
+    private storedConnection(connection: NWCConnection): NWCConnection {
+        const { connection: stored } = this.getConnection({
+            connectionId: connection.id
+        });
+        return stored ?? connection;
+    }
+
     // Checked when a queued pay request starts and again before each later
     // call to the node or mint, since the request may wait up to
     // MAX_PAYMENT_QUEUE_WAIT_MS in the queue and then on the node.
@@ -2408,8 +2430,10 @@ export default class NostrWalletConnectStore {
                 paymentRequest,
                 rHash
             );
+        // The connections may have been reloaded while the invoice was made
+        const stored = this.storedConnection(connection);
         runInAction(() => {
-            connection.activity.push({
+            stored.activity.push({
                 id: invoice?.getPaymentRequest || paymentRequest,
                 status,
                 invoice,
@@ -2420,8 +2444,8 @@ export default class NostrWalletConnectStore {
                 createdAt: new Date(),
                 expiresAt: new Date(expiryTime * 1000)
             });
-            this.pruneConnectionActivity(connection);
-            this.findAndUpdateConnection(connection);
+            this.pruneConnectionActivity(stored);
+            this.findAndUpdateConnection(stored);
         });
         this.recordMakeInvoiceRateLimitTimestamp(connection.id);
         return NostrConnectUtils.buildMakeInvoiceSuccessPayload(
@@ -3914,7 +3938,7 @@ export default class NostrWalletConnectStore {
         type,
         payment_source,
         decoded,
-        connection,
+        connection: requestConnection,
         amountSats,
         feeSats = 0,
         paymentHash: paymentHashParam
@@ -3930,6 +3954,8 @@ export default class NostrWalletConnectStore {
     }): Promise<void> {
         const { paymentRequest, paymentHash: decodedPaymentHash } =
             await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
+        // The connections may have been reloaded during the payment
+        const connection = this.storedConnection(requestConnection);
         const id = paymentRequest || rawInvoice;
         const paymentHash =
             paymentHashParam ||
@@ -3991,7 +4017,7 @@ export default class NostrWalletConnectStore {
 
     private async recordPendingPayment({
         rawInvoice,
-        connection,
+        connection: requestConnection,
         amountSats,
         feeLimitSats,
         payment_source,
@@ -4008,6 +4034,7 @@ export default class NostrWalletConnectStore {
     }): Promise<void> {
         const { paymentRequest, paymentHash: decodedPaymentHash } =
             await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
+        const connection = this.storedConnection(requestConnection);
         const id = paymentRequest || rawInvoice;
         const paymentHash =
             passedPaymentHash ||
@@ -4040,7 +4067,7 @@ export default class NostrWalletConnectStore {
 
     private async recordFailedPayment({
         rawInvoice,
-        connection,
+        connection: requestConnection,
         amountSats,
         payment_source,
         errorMessage = localeString('error.paymentFailed'),
@@ -4057,6 +4084,7 @@ export default class NostrWalletConnectStore {
 
         const { paymentRequest, paymentHash: decodedPaymentHash } =
             await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
+        const connection = this.storedConnection(requestConnection);
         const id = paymentRequest || rawInvoice;
         const paymentHash =
             passedPaymentHash || decodedPaymentHash || undefined;
