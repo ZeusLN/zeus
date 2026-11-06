@@ -246,8 +246,10 @@ const repairRescuedPreimage = (stored: any, rescued: any) => {
 // A request that runs out counts as not confirmed.
 const SWAP_CLAIM_CHECK_TIMEOUT_MS = 5000;
 
-// Rejects when the request has not settled after ms, after calling
-// onTimeout (to cancel it, where it can be)
+// Rejects with 'Request timeout' when the request has not settled after
+// ms, then calls onTimeout (to cancel it, where it can be). It rejects
+// first: RNBlobUtil's cancel() rejects the request with 'canceled'
+// synchronously, and the race would settle with that instead.
 const withTimeout = <T>(
     request: Promise<T>,
     ms: number,
@@ -258,8 +260,8 @@ const withTimeout = <T>(
         request,
         new Promise<never>((_, reject) => {
             timer = setTimeout(() => {
-                onTimeout?.();
                 reject(new Error('Request timeout'));
+                onTimeout?.();
             }, ms);
         })
     ]).finally(() => clearTimeout(timer));
@@ -1654,25 +1656,17 @@ export default class SwapStore {
                 // Boltz host migration) and won't know this swap's ID
                 const host = swap.endpoint || this.getHost;
 
-                let timer: ReturnType<typeof setTimeout> | undefined;
                 try {
                     const request = ReactNativeBlobUtil.fetch(
                         'GET',
                         `${host}/swap/${swap.id}`,
                         this.getHeaders
                     );
-                    const response = await Promise.race([
+                    const response = await withTimeout(
                         request,
-                        new Promise<never>((_, reject) => {
-                            timer = setTimeout(() => {
-                                // reject first: cancel() rejects request
-                                // with 'canceled' synchronously, and the
-                                // race would settle with that instead
-                                reject(new Error('Request timeout'));
-                                request.cancel?.();
-                            }, SWAP_STATUS_TIMEOUT_MS);
-                        })
-                    ]);
+                        SWAP_STATUS_TIMEOUT_MS,
+                        () => request.cancel?.()
+                    );
 
                     // The host can answer with any JSON. The status is
                     // stored and later used as text and as an object key.
@@ -1703,8 +1697,6 @@ export default class SwapStore {
                         `Failed to fetch status for swap ${swap.id}`,
                         err
                     );
-                } finally {
-                    clearTimeout(timer);
                 }
             };
 
