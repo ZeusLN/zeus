@@ -1927,10 +1927,27 @@ export default class LdkNode {
         invreq: string;
         label: string;
     }): Promise<any> => {
-        const invoiceStr =
+        const { invoice, paymentHash } =
             await LdkNodeInjection.bolt12.bolt12RequestRefundPayment(invreq);
 
-        return { bolt12: invoiceStr };
+        // requestRefundPayment only creates the invoice and sends it to the
+        // payer; nothing has been received yet. Callers treat a resolved
+        // result as paid (CLN's sendinvoice resolves once the invoice is
+        // paid), so wait for the inbound payment, as long as sendinvoice
+        // waits by default. ldk-node stores a refund payment under its
+        // payment hash, so the invoice's hash is the payment id.
+        const { hash, pending } = await this.awaitPaymentCompletion(
+            paymentHash,
+            90,
+            { pendingOnTimeout: true }
+        );
+        if (pending) {
+            throw new Error(
+                localeString('backends.LdkNode.withdrawalRequestNotPaid')
+            );
+        }
+
+        return { bolt12: invoice, payment_hash: hash };
     };
 
     // ========================================================================
