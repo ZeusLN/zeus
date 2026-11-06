@@ -3208,6 +3208,31 @@ export default class NostrWalletConnectStore {
             return { result: undefined, error: budgetCheck.error };
         }
 
+        // The mint can spend up to the melt quote's fee reserve on top of
+        // the amount, and nothing caps the fee below that, so the budget
+        // has to cover both. getPayReq above fetched the quote. A negative
+        // reserve from the mint must not shrink the amount checked.
+        const feeReserveSats = Math.max(
+            0,
+            Math.ceil(Number(this.cashuStore.feeEstimate)) || 0
+        );
+        if (
+            feeReserveSats > 0 &&
+            !connection.canSpend(amountSats + feeReserveSats)
+        ) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget',
+                    {
+                        amount: amountSats.toString(),
+                        feeReserve: feeReserveSats.toString(),
+                        remaining: connection.remainingBudget.toString()
+                    }
+                ),
+                Nip47ErrorCode.INSUFFICIENT_BALANCE
+            );
+        }
+
         const currentBalance = this.cashuStore.totalBalanceSats || 0;
         if (currentBalance < amountSats) {
             return NostrConnectUtils.createNip47Error(
