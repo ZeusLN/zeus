@@ -228,7 +228,7 @@ describe('LinkingUtils share intents', () => {
     it('drops a tag Android delivers again after an NFC payment session', async () => {
         Platform.OS = 'android';
         const tag = 'BITCOIN:?LIGHTNING=LNBC210N1XYZ&CREQ=CREQB1QYQQSE';
-        noteTagSessionEnded(tag);
+        noteTagSessionEnded([tag]);
         NativeModules.MobileTools.getIntentNfcData.mockResolvedValue(tag);
         const navigation = makeNavigation(['Wallet', 'CREQPayment']);
 
@@ -242,7 +242,7 @@ describe('LinkingUtils share intents', () => {
 
     it('handles a different tag after an NFC payment session', async () => {
         Platform.OS = 'android';
-        noteTagSessionEnded('creqAoWFhZA');
+        noteTagSessionEnded(['creqAoWFhZA']);
         NativeModules.MobileTools.getIntentNfcData.mockResolvedValue(
             'lightning:lnbc1nfc'
         );

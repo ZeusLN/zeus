@@ -514,8 +514,9 @@ export interface NfcTapOptions {
  *
  * Any other tag content comes back as 'read' so the caller can route it
  * without a second tap. A CREQ that can't be paid also comes back as 'read'
- * when it sits in a URI with other payment methods, so the user can pick
- * one of those instead. With an expected request, both are failures.
+ * when it sits in a URI with other payment methods, or the tag has other
+ * records, so the user can pick one of those instead. With an expected
+ * request, both are failures.
  */
 export async function payViaNfcTap(
     modalStore: ModalStore,
@@ -530,7 +531,7 @@ export async function payViaNfcTap(
 
     let cancelled = false;
     let connected = false;
-    let tagText: string | undefined;
+    let tagTexts: string[] = [];
     const stopWatchingModal = cancelOnModalClose(modalStore, () => {
         cancelled = true;
     });
@@ -572,16 +573,18 @@ export async function payViaNfcTap(
 
         // the request can sit behind other records, such as a web page
         const tagRecords = records || [];
-        const text =
-            tagRecords
-                .map((record) => decodeNdefRecord(record)?.trim())
-                .find(
-                    (recordText) => recordText && extractTagCREQ(recordText)
-                ) ??
-            pickNfcRecord(tagRecords, 'pay') ??
-            '';
-        tagText = text;
-        const creq = text ? extractTagCREQ(text) : undefined;
+        const recordTexts = tagRecords.map((record) =>
+            decodeNdefRecord(record)?.trim()
+        );
+        tagTexts = recordTexts.filter((recordText): recordText is string =>
+            Boolean(recordText)
+        );
+        const creqIndex = recordTexts.findIndex(
+            (recordText) => recordText && extractTagCREQ(recordText)
+        );
+        const creqText = recordTexts[creqIndex];
+        const text = creqText ?? pickNfcRecord(tagRecords, 'pay') ?? '';
+        const creq = creqText ? extractTagCREQ(creqText) : undefined;
         if (!creq) {
             return expected
                 ? {
@@ -591,10 +594,19 @@ export async function payViaNfcTap(
                 : { status: 'read', text: text || undefined };
         }
 
-        const hasOtherMethods = creq !== text && !expected;
+        // another way to pay: the rest of the request's URI, else the
+        // tag's other records
+        const otherMethod = expected
+            ? undefined
+            : creq !== text
+            ? text
+            : pickNfcRecord(
+                  tagRecords.filter((_, i) => i !== creqIndex),
+                  'pay'
+              );
         const cannotPay = (error: string): NfcTapResult =>
-            hasOtherMethods
-                ? { status: 'read', text }
+            otherMethod
+                ? { status: 'read', text: otherMethod }
                 : { status: 'failed', error: localeString(error) };
 
         let creqParams: CREQParams;
@@ -682,6 +694,6 @@ export async function payViaNfcTap(
         stopWatchingModal();
         if (Platform.OS === 'android') modalStore.toggleAndroidNfcModal(false);
         NfcManager.cancelTechnologyRequest().catch(() => 0);
-        if (tagText) noteTagSessionEnded(tagText);
+        if (tagTexts.length) noteTagSessionEnded(tagTexts);
     }
 }

@@ -633,6 +633,15 @@ describe('payViaNfcTap', () => {
         });
 
         const NUMO_TAG = 'BITCOIN:?LIGHTNING=LNBC210N1XYZ&CREQ=CREQB1QYQQSE';
+        const ADDRESS = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
+
+        // a read-only NTAG215 with an address and a bare request after it
+        const addressThenRequest = () => {
+            nfc.requestTechnology.mockResolvedValue('Ndef');
+            nfc.getTag.mockResolvedValue({
+                ndefMessage: [textRecord(ADDRESS), textRecord('creqb1qyqqse')]
+            });
+        };
 
         // Android reads the NDEF message during discovery
         const cacheNdef = (text: string) =>
@@ -784,6 +793,28 @@ describe('payViaNfcTap', () => {
                 text: NUMO_TAG
             });
             expect(cashuStore.sendTokenForRequest).not.toHaveBeenCalled();
+        });
+
+        it("offers the tag's other records when its bare CREQ cannot be paid", async () => {
+            addressThenRequest();
+            const cashuStore = makeCashuStore();
+
+            await expect(pay(cashuStore)).resolves.toEqual({
+                status: 'read',
+                text: ADDRESS
+            });
+            expect(cashuStore.sendTokenForRequest).not.toHaveBeenCalled();
+        });
+
+        it("prefers the request's URI to the tag's other records", async () => {
+            fakeType4Tag(NUMO_TAG);
+            nfc.getTag.mockResolvedValue({
+                ndefMessage: [textRecord(ADDRESS), textRecord(NUMO_TAG)]
+            });
+
+            await expect(
+                pay(makeCashuStore({ mintBalances: {} }))
+            ).resolves.toEqual({ status: 'read', text: NUMO_TAG });
         });
 
         it('only pays from a mint the request lists', async () => {
@@ -1015,6 +1046,17 @@ describe('payViaNfcTap', () => {
                     error: 'views.Cashu.CREQPayment.noCompatibleMint'
                 });
             });
+
+            it("fails instead of routing the tag's other records", async () => {
+                addressThenRequest();
+
+                await expect(
+                    pay(makeCashuStore(), undefined, { expected: confirmed })
+                ).resolves.toEqual({
+                    status: 'failed',
+                    error: 'utils.NFCUtils.tagNotWritable'
+                });
+            });
         });
 
         it('cancels the pending request when the NFC modal is dismissed', async () => {
@@ -1056,6 +1098,15 @@ describe('payViaNfcTap', () => {
                     expect(isTagRedelivery(text)).toBe(true);
                 }
             );
+
+            // the intent carries the first record, not the request's
+            it('recognizes the first record of a tag with several', async () => {
+                addressThenRequest();
+
+                await pay(makeCashuStore());
+
+                expect(isTagRedelivery(ADDRESS)).toBe(true);
+            });
         });
 
         it('stops early when NFC is off', async () => {
