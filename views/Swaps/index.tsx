@@ -979,7 +979,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         // LSPStore.zeroConfFee: that is the latest preview, which an amount
         // recalculation replaces while the invoice stays, and it does not
         // apply to a pasted invoice.
-        const zeroConfFee =
+        const invoiceLspFee =
             enableLSP &&
             !!invoice &&
             invoice === generatedInvoice &&
@@ -987,7 +987,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 ? generatedInvoiceLspFee
                 : undefined;
         // a boolean, so a fee of 0 is not rendered as a bare text child
-        const showLspFee = zeroConfFee !== undefined;
+        const showLspFee = invoiceLspFee !== undefined;
 
         const { fiatRates } = FiatStore;
         const { settings, updateSettings } = SettingsStore;
@@ -2212,7 +2212,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 true;
                                                             navigation.navigate(
                                                                 new BigNumber(
-                                                                    zeroConfFee
+                                                                    invoiceLspFee
                                                                 ).gt(1000)
                                                                     ? 'LspExplanationFees'
                                                                     : 'LspExplanationRouting'
@@ -2243,7 +2243,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             >
                                                                 {localeString(
                                                                     new BigNumber(
-                                                                        zeroConfFee
+                                                                        invoiceLspFee
                                                                     ).gt(1000)
                                                                         ? 'views.Receive.lspExplainer'
                                                                         : 'views.Receive.lspExplainerRouting'
@@ -2251,7 +2251,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             </Text>
                                                             <Amount
                                                                 sats={
-                                                                    zeroConfFee
+                                                                    invoiceLspFee
                                                                 }
                                                                 fixedUnits="sats"
                                                             />
@@ -2362,14 +2362,17 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 }
                                                             );
 
+                                                        // From this request's result, not the
+                                                        // InvoicesStore fields: those belong to a
+                                                        // newer request if one was made meanwhile.
                                                         if (reverse) {
                                                             if (
-                                                                InvoicesStore.onChainAddress
+                                                                created?.onChainAddress
                                                             ) {
                                                                 this.setState(
                                                                     {
                                                                         invoice:
-                                                                            InvoicesStore.onChainAddress,
+                                                                            created.onChainAddress,
                                                                         error: ''
                                                                     },
                                                                     () =>
@@ -2386,17 +2389,16 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             }
                                                         } else {
                                                             if (
-                                                                InvoicesStore.payment_request
+                                                                created?.paymentRequest
                                                             ) {
                                                                 this.setState(
                                                                     {
                                                                         invoice:
-                                                                            InvoicesStore.payment_request,
+                                                                            created.paymentRequest,
                                                                         generatedInvoice:
-                                                                            created?.paymentRequest ||
-                                                                            '',
+                                                                            created.paymentRequest,
                                                                         generatedInvoiceLspFee:
-                                                                            created?.lspFeeSats ??
+                                                                            created.lspFeeSats ??
                                                                             null,
                                                                         error: ''
                                                                     },
