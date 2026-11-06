@@ -1595,7 +1595,7 @@ PODS:
     - Yoga
   - react-native-hce (0.3.0):
     - React
-  - react-native-image-picker (8.2.1):
+  - react-native-image-picker (8.3.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1671,7 +1671,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context (5.10.1):
+  - react-native-safe-area-context (5.11.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1684,8 +1684,8 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-safe-area-context/common (= 5.10.1)
-    - react-native-safe-area-context/fabric (= 5.10.1)
+    - react-native-safe-area-context/common (= 5.11.1)
+    - react-native-safe-area-context/fabric (= 5.11.1)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -1695,7 +1695,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/common (5.10.1):
+  - react-native-safe-area-context/common (5.11.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1717,7 +1717,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/fabric (5.10.1):
+  - react-native-safe-area-context/fabric (5.11.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2333,7 +2333,7 @@ PODS:
     - React-Core
   - RNFS (2.20.0):
     - React-Core
-  - RNGestureHandler (3.3.0):
+  - RNGestureHandler (3.4.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2499,7 +2499,7 @@ PODS:
     - ReactNativeDependencies
     - RNWorklets
     - Yoga
-  - RNScreens (4.29.0):
+  - RNScreens (4.30.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2521,9 +2521,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNScreens/common (= 4.29.0)
+    - RNScreens/common (= 4.30.1)
     - Yoga
-  - RNScreens/common (4.29.0):
+  - RNScreens/common (4.30.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -3144,7 +3144,7 @@ SPEC CHECKSUMS:
   react-native-encrypted-storage: 569d114e329b1c2c2d9f8c84bcdbe4478dda2258
   react-native-get-random-values: 47482cc9fc5e687bda7fb2db7dc43f493e9ac967
   react-native-hce: ad5462e792d84e87924308dda1ee516757f1c0eb
-  react-native-image-picker: 9342d3dc0c986cf9ff559d2701a0b71cccdc71ac
+  react-native-image-picker: 75fb1e6b05aebef8e3fceee06572ae7579cd1522
   react-native-netinfo: aac21e38ce217d5625187e3388fba2ff22a422d1
   react-native-nfc-manager: 2949055c7321cd7776455b3c5860cf7cc3cd8c28
   react-native-notifications: e2d3c022d6077de7e420ba5c01b4bd9464f3941d
@@ -3152,7 +3152,7 @@ SPEC CHECKSUMS:
   react-native-qr-kit: a40acb98a771a6e614602b5dd53546a5c51e8af4
   react-native-randombytes: 4eeddad82d1fd57adda1cd5beffe67d041c9d6de
   react-native-restart: 0c6179d5c98d68e31fe2764f17f9ae906c9da182
-  react-native-safe-area-context: ec6954aaf61fa1985272c71b5ca32ebc3e87c3a6
+  react-native-safe-area-context: bcda756e1a9f94e4da773273a62b7d52473d3dc4
   react-native-slider: b721d071c57cf0540e0914a13cb28370932c868e
   react-native-udp: 806f16ab890dd838bc073afcebd6a221d4965572
   react-native-vector-icons-feather: 97025b189d9584d77215cec3445cec275e92c4f7
@@ -3204,11 +3204,11 @@ SPEC CHECKSUMS:
   RNDateTimePicker: 9bca909443c02b4ed19163b0118820b5f32c6098
   RNDeviceInfo: 4c852998208b60dc192ae3529e5867817719ad1e
   RNFS: 89de7d7f4c0f6bafa05343c578f61118c8282ed8
-  RNGestureHandler: 17695582bac32ffb8f6b9cb91b9a6544857444a7
+  RNGestureHandler: 110192d73793ea46f30a406e5b37a9ac55d7da39
   RNKeychain: 4401ed081850a03ecc1256db7a5520f4a795ec1c
   RNReactNativeHapticFeedback: e02c88d691f8e2f759f5ccd5fa31e2c2c16ec356
   RNReanimated: b4bbfb7defea492f92cb127868199eb568469da5
-  RNScreens: 285954d1b32eac45b9fefe5c6218251e157e6453
+  RNScreens: d1799430bc8fa47acdb46e12762ea71f36c4b624
   RNShare: b2551b7495babb1339f0e846667b1de542935bd5
   RNSVG: a1c26dc446043d4b5d74a41e260a87b201c59da3
   RNWorklets: 8a2c1711bd0246839bbd3e3ff0ec49b699f68899
