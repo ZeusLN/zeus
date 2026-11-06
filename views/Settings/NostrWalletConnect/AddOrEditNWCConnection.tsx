@@ -197,8 +197,11 @@ export default class AddOrEditNWCConnection extends React.Component<
                 );
             const showCustomExpiryInput = selectedExpiryPresetIndex === 4;
             let customExpiryValue = connection.customExpiryValue || null;
-            let customExpiryUnit =
-                connection.customExpiryUnit || NostrConnectUtils.TIME_UNITS[1];
+            let customExpiryUnit = connection.customExpiryUnit
+                ? NostrConnectUtils.normalizeTimeUnit(
+                      connection.customExpiryUnit
+                  )
+                : NostrConnectUtils.TIME_UNITS[1];
             const isCustomRelay = !DEFAULT_NOSTR_RELAYS.find(
                 (relay) => relay === connection.relayUrl
             );
@@ -267,8 +270,13 @@ export default class AddOrEditNWCConnection extends React.Component<
         ) {
             originalState.customExpiryValue =
                 originalConnection.customExpiryValue || undefined;
-            originalState.customExpiryUnit =
-                originalConnection.customExpiryUnit;
+            // Older builds saved the translated label, which
+            // loadConnectionForEdit normalizes for the current state
+            originalState.customExpiryUnit = originalConnection.customExpiryUnit
+                ? NostrConnectUtils.normalizeTimeUnit(
+                      originalConnection.customExpiryUnit
+                  )
+                : originalConnection.customExpiryUnit;
         }
         return !isEqual(currentState, originalState);
     };
@@ -1458,12 +1466,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                         selectedValue={
                                                             customExpiryUnit
                                                         }
-                                                        values={NostrConnectUtils.TIME_UNITS.map(
-                                                            (unit) => ({
-                                                                key: unit,
-                                                                value: unit
-                                                            })
-                                                        )}
+                                                        values={NostrConnectUtils.getTimeUnitOptions()}
                                                         onValueChange={(
                                                             value: string
                                                         ) => {
