@@ -50,6 +50,7 @@ import {
     startLnd,
     stopLnd,
     expressGraphSync,
+    getErrorMessage,
     isLndError,
     isTransientRpcError,
     LndErrorCode,
@@ -580,10 +581,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         // then on this run must stop without writing state, including
         // setConnectingStatus(false), which would end the newer connect.
         const isCurrent = SettingsStore.getConnectionGuard();
+        const { connecting } = SettingsStore;
         try {
             await this.fetchDataCore(transientRetryCount, isCurrent);
         } catch (error) {
-            if (isCurrent()) throw error;
+            if (isCurrent()) {
+                if (connecting) this.showConnectError(error);
+                throw error;
+            }
             console.log('[Wallet] superseded refresh failed:', error);
         } finally {
             // Single release point: every exit from fetchDataCore (success,
@@ -594,6 +599,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore.releaseFetchLock(seq);
         }
     }
+
+    // A connect that fails before loading node info, with no store
+    // reporting the failure, would leave a wallet with neither data nor the
+    // error screen's Retry, so report it here
+    showConnectError = (error: unknown) => {
+        const { NodeInfoStore, BalanceStore, SettingsStore } = this.props;
+        if (
+            NodeInfoStore.error ||
+            SettingsStore.error ||
+            BalanceStore.error ||
+            NodeInfoStore.nodeInfo?.version
+        )
+            return;
+        SettingsStore.error = true;
+        SettingsStore.errorMsg = getErrorMessage(error);
+    };
 
     private async fetchDataCore(
         transientRetryCount: number,
@@ -998,6 +1019,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             // the full stop/init/start cycle and stack a
                             // second restart alert on top of this one
                             setConnectingStatus(false);
+                            // the iOS prompt only has an OK button
+                            this.showConnectError(error);
                             restartNeeded(true);
                             return;
                         }
