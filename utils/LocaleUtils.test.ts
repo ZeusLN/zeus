@@ -32,6 +32,11 @@ jest.mock('../locales/en.json', () => ({
     'test.greeting': 'Hello {{name}}',
     'test.repeated': '{{name}} and {{name}}',
     'test.dotted': '{{a.b}} and {{axb}}',
+    'test.send': 'Send {{name}}: {{amount}}',
+    'test.paren': 'Value {{a(}} and {{a}}',
+    'test.proto': '{{constructor}} {{toString}}',
+    'test.strayBraces': 'Pay {{{amount}}} and {{ {{amount}}',
+    'test.closingInKey': '{{a}b}}',
     'test.emptyInDe': 'English value',
     'androidNotification.nodeRunningBackground': 'nodeRunningBackground',
     'androidNotification.shutdown': 'shutdown',
@@ -153,6 +158,36 @@ describe('localeString substitutions and fallbacks', () => {
     it('treats regex metacharacters in substitution keys literally', () => {
         expect(localeString('test.dotted', { 'a.b': 'first' })).toBe(
             'first and {{axb}}'
+        );
+        expect(localeString('test.paren', { 'a(': 'paren' })).toBe(
+            'Value paren and {{a}}'
+        );
+    });
+
+    it('does not re-expand placeholders in substitution values', () => {
+        expect(
+            localeString('test.send', { name: '{{amount}}', amount: 5 })
+        ).toBe('Send {{amount}}: 5');
+        expect(
+            localeString('test.send', { amount: 5, name: '{{amount}}' })
+        ).toBe('Send {{amount}}: 5');
+    });
+
+    it('does not look up substitutions on the Object prototype', () => {
+        expect(localeString('test.proto', { name: 'x' })).toBe(
+            '{{constructor}} {{toString}}'
+        );
+    });
+
+    it('handles stray braces consistently with check-locales parity', () => {
+        expect(localeString('test.strayBraces', { amount: 5 })).toBe(
+            'Pay {5} and {{ 5'
+        );
+    });
+
+    it('leaves placeholders containing closing braces as literal text', () => {
+        expect(localeString('test.closingInKey', { 'a}b': 'foo' })).toBe(
+            '{{a}b}}'
         );
     });
 
