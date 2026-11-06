@@ -179,8 +179,9 @@ describe('LinkingUtils.handleDeepLink', () => {
     });
 });
 
-// processSharedQRImageFast clears the intent when it reads it. A second
-// clear here would discard a share that arrived between the two.
+// processSharedQRImageFast takes the share (reads and clears it) in one
+// native call. A second take here would consume a share that arrived between
+// the two.
 describe('LinkingUtils share intents', () => {
     const { Linking, NativeModules, Platform } = require('react-native');
     const { processSharedQRImageFast } = require('./ShareIntentProcessor');
@@ -196,7 +197,7 @@ describe('LinkingUtils share intents', () => {
         LinkingUtils.resetShareIntentFlag();
         NativeModules.MobileTools = {
             getIntentNfcData: jest.fn().mockResolvedValue(null),
-            clearSharedIntent: jest.fn().mockResolvedValue(true)
+            takeSharedImageBase64: jest.fn().mockResolvedValue('QRIMAGE')
         };
         processSharedQRImageFast.mockResolvedValue({
             success: true,
@@ -209,7 +210,7 @@ describe('LinkingUtils share intents', () => {
         Platform.OS = originalOS;
     });
 
-    it('hands an Android share to the processing screen without clearing it again', async () => {
+    it('hands an Android share to the processing screen without taking it again', async () => {
         Platform.OS = 'android';
         const navigation = makeNavigation(['Wallet']);
 
@@ -220,11 +221,11 @@ describe('LinkingUtils share intents', () => {
             payload
         );
         expect(
-            NativeModules.MobileTools.clearSharedIntent
+            NativeModules.MobileTools.takeSharedImageBase64
         ).not.toHaveBeenCalled();
     });
 
-    it('hands an iOS share URL to the processing screen without clearing it again', async () => {
+    it('hands an iOS share URL to the processing screen without taking it again', async () => {
         Platform.OS = 'ios';
         jest.spyOn(Linking, 'getInitialURL').mockResolvedValue(
             'zeusln://share'
@@ -238,7 +239,7 @@ describe('LinkingUtils share intents', () => {
             payload
         );
         expect(
-            NativeModules.MobileTools.clearSharedIntent
+            NativeModules.MobileTools.takeSharedImageBase64
         ).not.toHaveBeenCalled();
     });
 });
