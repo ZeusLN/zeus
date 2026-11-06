@@ -74,7 +74,7 @@
     "@react-native-documents/picker": "12.0.3",
     "@react-native-picker/picker": "2.11.4",
     "@react-native-vector-icons/feather": "13.1.5",
-    "@react-native-vector-icons/fontawesome": "13.1.5",
+    "@react-native-vector-icons/fontawesome": "14.0.0",
     "@react-native-vector-icons/material-design-icons": "13.1.5",
     "@react-native-vector-icons/material-icons": "13.1.5",
     "@react-navigation/bottom-tabs": "7.21.0",
