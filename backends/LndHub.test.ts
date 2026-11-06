@@ -230,6 +230,7 @@ const EXPECTED_FLAGS: { [flag: string]: boolean } = {
     supportsOnchainSendMax: false,
     supportsChannelMemo: false,
     supportsOnchainBatching: false,
+    supportsOnchainFeeEstimation: false,
     supportsChannelBatching: false,
     supportsChannelFundMax: false,
     supportsLSPScustomMessage: false,
