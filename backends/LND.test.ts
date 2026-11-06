@@ -797,6 +797,7 @@ describe('LND.getTransactions', () => {
         const urls: string[] = [];
         lnd.getRequest = jest.fn(async (route: string) => {
             urls.push(route);
+            if (route === '/v1/getinfo') return { block_height: tip };
             const params = new URLSearchParams(route.split('?')[1]);
             const startHeight = Number(params.get('start_height') || 0);
             const endHeight = Number(params.get('end_height') || -1);
@@ -870,19 +871,21 @@ describe('LND.getTransactions', () => {
         ]);
     });
 
-    it('reads every transaction forwards from lnd on a SQL database', async () => {
-        const { lnd, urls } = serve([800_000, 800_001], 1, { sql: true });
+    it('reads the recent blocks forwards, then older ones backwards, from lnd on a SQL database', async () => {
+        const { lnd, urls } = serve([800_000, 899_999], 1, { sql: true });
 
         const { transactions } = await lnd.getTransactions();
 
         expect(transactions.map((tx: any) => tx.tx_hash)).toEqual([
             'pending0',
-            'h800001',
+            'h899999',
             'h800000'
         ]);
         expect(urls).toEqual([
             '/v1/transactions?end_height=1&start_height=-1&max_transactions=500',
-            '/v1/transactions?end_height=-1&max_transactions=0'
+            '/v1/getinfo',
+            '/v1/transactions?end_height=-1&start_height=895969&max_transactions=0',
+            '/v1/transactions?end_height=1&start_height=895968&max_transactions=198'
         ]);
     });
 

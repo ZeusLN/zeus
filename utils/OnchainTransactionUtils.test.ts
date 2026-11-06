@@ -2,6 +2,8 @@ import {
     ALL_FORWARD,
     DEFAULT_MAX_TRANSACTIONS,
     getNewestTransactions,
+    SQL_MAX_TRANSACTIONS,
+    SQL_RECENT_BLOCKS,
     TransactionPageRequest
 } from './OnchainTransactionUtils';
 
@@ -166,39 +168,174 @@ describe('getNewestTransactions', () => {
     });
 
     describe('on a SQL database', () => {
-        const ALL_FORWARD_CALL = {
-            start_height: 0,
+        const getTipHeight = async () => TIP;
+        const RECENT_CALL = {
+            start_height: TIP - SQL_RECENT_BLOCKS + 1,
             end_height: -1,
             max_transactions: 0
         };
+        const olderCall = (max_transactions: number) => ({
+            start_height: TIP - SQL_RECENT_BLOCKS,
+            end_height: 1,
+            max_transactions
+        });
+        const OLDEST_CALL = {
+            start_height: 0,
+            end_height: -1,
+            max_transactions: SQL_MAX_TRANSACTIONS
+        };
 
-        it('reads every transaction forwards when the newest page has no mined ones', async () => {
+        // one transaction in each of these blocks
+        const at = (heights: number[]): FakeTx[] =>
+            heights.map((block_height) => ({
+                tx_hash: `h${block_height}`,
+                block_height,
+                num_confirmations: TIP - block_height + 1
+            }));
+        const range = (from: number, count: number) =>
+            Array.from({ length: count }, (_, i) => from + i);
+        const hashes = (txs: FakeTx[]) => txs.map((tx) => tx.tx_hash);
+
+        // 50 transactions in the last 50 blocks, 300 long before them
+        const recentAndOlder = () => {
+            const recent = at(range(TIP - 49, 50));
+            const older = at(range(800_000, 300));
+            return { recent, older, all: [...older, ...recent] };
+        };
+
+        it('reads the recent blocks forwards, then older ones backwards from below them', async () => {
+            const { recent, older, all } = recentAndOlder();
+            const { fetchPage, calls } = fakeLnd(all, pending, { sql: true });
+
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight
+            });
+
+            expect(txs).toHaveLength(SQL_MAX_TRANSACTIONS);
+            expect(hashes(txs)).toEqual([
+                'pending0',
+                'pending1',
+                ...hashes([...recent].reverse()),
+                ...hashes(older.slice(152).reverse())
+            ]);
+            expect(calls).toEqual([
+                NEWEST_CONFIRMED_CALL,
+                RECENT_CALL,
+                olderCall(148)
+            ]);
+        });
+
+        it('returns every transaction of a wallet below the cap', async () => {
             const confirmed = mined(10);
             const { fetchPage, calls } = fakeLnd(confirmed, pending, {
                 sql: true
             });
 
-            const txs = await getNewestTransactions({ fetchPage });
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight
+            });
 
-            expect(txs).toHaveLength(12);
-            expect(txs.slice(0, 2)).toEqual(pending);
-            expect(txs.slice(2)).toEqual([...confirmed].reverse());
-            expect(calls).toEqual([NEWEST_CONFIRMED_CALL, ALL_FORWARD_CALL]);
-            expect(ALL_FORWARD).toEqual(ALL_FORWARD_CALL);
+            expect(txs).toEqual([...pending, ...[...confirmed].reverse()]);
+            expect(calls).toEqual([
+                NEWEST_CONFIRMED_CALL,
+                RECENT_CALL,
+                olderCall(188)
+            ]);
         });
 
-        it('keeps the newest transactions when the wallet exceeds the limit', async () => {
+        it('keeps the newest of the recent blocks when they hold more than the cap', async () => {
             const confirmed = mined(600);
             const { fetchPage, calls } = fakeLnd(confirmed, pending, {
                 sql: true
             });
 
-            const txs = await getNewestTransactions({ fetchPage });
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight
+            });
 
-            expect(txs).toHaveLength(DEFAULT_MAX_TRANSACTIONS);
-            expect(txs.slice(0, 2)).toEqual(pending);
-            expect(txs.slice(2)).toEqual(confirmed.slice(102).reverse());
-            expect(calls).toEqual([NEWEST_CONFIRMED_CALL, ALL_FORWARD_CALL]);
+            expect(txs).toEqual([
+                ...pending,
+                ...confirmed.slice(402).reverse()
+            ]);
+            expect(calls).toEqual([NEWEST_CONFIRMED_CALL, RECENT_CALL]);
+        });
+
+        it('caps the result at a smaller limit', async () => {
+            const { recent, all } = recentAndOlder();
+            const { fetchPage, calls } = fakeLnd(all, pending, { sql: true });
+
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight,
+                limit: 20
+            });
+
+            expect(hashes(txs)).toEqual([
+                'pending0',
+                'pending1',
+                ...hashes(recent.slice(32).reverse())
+            ]);
+            expect(calls).toHaveLength(2);
+        });
+
+        it('reads a capped page from the first block when the recent blocks hold no mined transaction', async () => {
+            const confirmed = at(range(800_000, 20));
+            const { fetchPage, calls } = fakeLnd(confirmed, pending, {
+                sql: true
+            });
+
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight
+            });
+
+            expect(txs).toEqual([...pending, ...[...confirmed].reverse()]);
+            expect(calls).toEqual([
+                NEWEST_CONFIRMED_CALL,
+                RECENT_CALL,
+                OLDEST_CALL
+            ]);
+        });
+
+        it('reads everything when an idle wallet holds more than the cap', async () => {
+            const confirmed = at(range(800_000, 300));
+            const { fetchPage, calls } = fakeLnd(confirmed, pending, {
+                sql: true
+            });
+
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight
+            });
+
+            expect(txs).toEqual([
+                ...pending,
+                ...confirmed.slice(102).reverse()
+            ]);
+            expect(calls).toEqual([
+                NEWEST_CONFIRMED_CALL,
+                RECENT_CALL,
+                OLDEST_CALL,
+                ALL_FORWARD
+            ]);
+        });
+
+        it('skips the recent blocks when the tip height is unavailable', async () => {
+            const confirmed = mined(10);
+            const { fetchPage, calls } = fakeLnd(confirmed, pending, {
+                sql: true
+            });
+
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight: () => Promise.reject(new Error('offline'))
+            });
+
+            expect(txs).toHaveLength(12);
+            expect(calls).toEqual([NEWEST_CONFIRMED_CALL, OLDEST_CALL]);
         });
 
         it('returns everything when the limit is 0', async () => {
@@ -207,28 +344,38 @@ describe('getNewestTransactions', () => {
                 sql: true
             });
 
-            const txs = await getNewestTransactions({ fetchPage, limit: 0 });
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight,
+                limit: 0
+            });
 
             expect(txs).toHaveLength(602);
             expect(txs[2]).toEqual(confirmed[599]);
             expect(calls).toEqual([
                 { ...NEWEST_CONFIRMED_CALL, max_transactions: 0 },
-                ALL_FORWARD_CALL
+                { start_height: 0, end_height: -1, max_transactions: 0 }
             ]);
         });
 
-        it('falls back on lnd < 0.19 too, which ignores the cap', async () => {
-            const confirmed = mined(600);
-            const { fetchPage, calls } = fakeLnd(confirmed, pending, {
+        it('caps the result on lnd < 0.19 too, which ignores the cap', async () => {
+            const { recent, older, all } = recentAndOlder();
+            const { fetchPage } = fakeLnd(all, pending, {
                 sql: true,
                 ignoresMax: true
             });
 
-            const txs = await getNewestTransactions({ fetchPage });
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight
+            });
 
-            expect(txs).toHaveLength(DEFAULT_MAX_TRANSACTIONS);
-            expect(txs[2]).toEqual(confirmed[599]);
-            expect(calls).toHaveLength(2);
+            expect(hashes(txs)).toEqual([
+                'pending0',
+                'pending1',
+                ...hashes([...recent].reverse()),
+                ...hashes(older.slice(152).reverse())
+            ]);
         });
     });
 

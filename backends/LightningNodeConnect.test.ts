@@ -916,15 +916,20 @@ describe('LightningNodeConnect', () => {
             ]);
         });
 
-        it('reads every transaction forwards when the newest page has no mined ones', async () => {
+        it('reads the recent blocks forwards, then older ones backwards, when the newest page has no mined ones', async () => {
             // lnd on a SQL database answers a backwards range from -1 with
             // only the unconfirmed transactions
+            lnc.lnd.lightning.getInfo.mockResolvedValue({
+                blockHeight: 900_000
+            });
             lnc.lnd.lightning.getTransactions.mockImplementation(
                 async (request: any) => ({
                     transactions:
-                        request.endHeight === 1
+                        request.startHeight === -1
                             ? PENDING
-                            : [...PENDING, ...NEWEST]
+                            : request.endHeight === -1
+                            ? [...PENDING, tx('tx2', 1)]
+                            : [tx('tx1', 5000)]
                 })
             );
 
@@ -936,7 +941,8 @@ describe('LightningNodeConnect', () => {
                 )
             ).toEqual([
                 { startHeight: -1, endHeight: 1, maxTransactions: 500 },
-                { startHeight: 0, endHeight: -1, maxTransactions: 0 }
+                { startHeight: 895_969, endHeight: -1, maxTransactions: 0 },
+                { startHeight: 895_968, endHeight: 1, maxTransactions: 198 }
             ]);
             expect(transactions.map((t: any) => t.tx_hash)).toEqual([
                 'tx1',
