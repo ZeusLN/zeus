@@ -162,14 +162,28 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     // Helper Methods
     // ========================================================================
     /**
-     * Parse P2PK spending conditions from JSON
+     * Parse P2PK spending conditions from JSON. Throws instead of returning
+     * null for anything it cannot convert: null means "no conditions" to CDK
+     * and would mint or send an unlocked token.
      */
-    private fun parseP2PKConditions(json: JSONObject): SpendingConditions? {
+    private fun parseP2PKConditions(json: JSONObject): SpendingConditions {
         val kind = json.optString("kind")
-        if (kind != "P2PK") return null
+        require(kind == "P2PK") { "Unsupported spending condition kind: $kind" }
 
-        val data = json.optJSONObject("data") ?: return null
-        val pubkeyHex = data.optString("pubkey").takeIf { it.isNotEmpty() } ?: return null
+        val data = requireNotNull(json.optJSONObject("data")) {
+            "P2PK spending conditions require a pubkey"
+        }
+        val pubkeyHex = data.opt("pubkey") as? String ?: ""
+        require(pubkeyHex.isNotEmpty()) { "P2PK spending conditions require a pubkey" }
+
+        // An unknown field (e.g. a camelCase numSigs) is rejected rather than
+        // ignored, which would lock to fewer signers than the caller wrote.
+        val knownKeys = setOf(
+            "pubkey", "locktime", "pubkeys", "refund_keys",
+            "num_sigs", "num_sigs_refund", "sig_flag"
+        )
+        val unknownKey = data.keys().asSequence().sorted().firstOrNull { it !in knownKeys }
+        require(unknownKey == null) { "Unsupported P2PK field: $unknownKey" }
 
         // NUT-11 tags must be omitted entirely when they don't apply. Emitting
         // them with a value of 0 (["locktime", "0"], ["n_sigs", "0"],
@@ -179,19 +193,16 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         val numSigs = optionalPositiveULong(data, "num_sigs")
         val numSigsRefund = optionalPositiveULong(data, "num_sigs_refund")
 
-        val pubkeys = data.optJSONArray("pubkeys")?.let { arr ->
-            (0 until arr.length()).mapNotNull { i ->
-                arr.optString(i).takeIf { it.isNotEmpty() }
-            }
-        } ?: emptyList()
+        val pubkeys = optionalKeyList(data, "pubkeys")
+        val refundKeys = optionalKeyList(data, "refund_keys")
 
-        val refundKeys = data.optJSONArray("refund_keys")?.let { arr ->
-            (0 until arr.length()).mapNotNull { i ->
-                arr.optString(i).takeIf { it.isNotEmpty() }
-            }
-        } ?: emptyList()
-
-        val sigFlag: UByte = if (data.optString("sig_flag") == "SigAll") 1.toUByte() else 0.toUByte()
+        // A present but unrecognised sig_flag is rejected rather than read as
+        // SigInputs, so the lock is never weaker than the caller asked for.
+        val sigFlag: UByte = when (val raw = if (data.isNull("sig_flag")) null else data.opt("sig_flag")) {
+            null, "SigInputs" -> 0.toUByte()
+            "SigAll" -> 1.toUByte()
+            else -> throw IllegalArgumentException("Unsupported sig_flag: $raw")
+        }
 
         // NUT-11: "If n_sigs or n_sigs_refund ... exceeds the total number of
         // keys in its pathway, the P2PK secret is malformed and the Proof
@@ -227,10 +238,39 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     /**
      * Returns the value at [key] only when it is a positive integer, so that
      * optional NUT-11 tags stay absent instead of being serialized as 0.
+     * A present value that is not a non-negative integer (or a string of
+     * one) throws instead of being dropped.
      */
     private fun optionalPositiveULong(json: JSONObject, key: String): ULong? {
         if (!json.has(key) || json.isNull(key)) return null
-        return readPositiveLong(json, key).takeIf { it > 0L }?.toULong()
+        val parsed: Long? = when (val raw = json.opt(key)) {
+            is Int -> raw.toLong()
+            is Long -> raw
+            is Double -> raw.takeIf {
+                it % 1.0 == 0.0 && it < Long.MAX_VALUE.toDouble()
+            }?.toLong()
+            is String -> raw.toLongOrNull()
+            else -> null
+        }
+        val value = requireNotNull(parsed?.takeIf { it >= 0L }) {
+            "$key must be a non-negative integer"
+        }
+        return value.takeIf { it > 0L }?.toULong()
+    }
+
+    /**
+     * Reads an optional array of hex pubkeys. Every entry must be a
+     * non-empty string: dropping a bad entry would change which keys the
+     * lock names.
+     */
+    private fun optionalKeyList(json: JSONObject, key: String): List<String> {
+        if (!json.has(key) || json.isNull(key)) return emptyList()
+        val arr = requireNotNull(json.opt(key) as? JSONArray) { "$key must be an array" }
+        return (0 until arr.length()).map { i ->
+            requireNotNull((arr.opt(i) as? String)?.takeIf { it.isNotEmpty() }) {
+                "$key entries must be non-empty strings"
+            }
+        }
     }
 
     private fun readPositiveLong(json: JSONObject, key: String): Long {
@@ -1293,15 +1333,13 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
         scope.launch {
             try {
-                // Parse spending conditions if provided. Only tolerate a
-                // malformed JSON *blob* silently (treat as "no conditions");
-                // a validation failure inside well-formed conditions (e.g. an
-                // impossible num_sigs) must fail loudly instead of quietly
-                // minting an unlocked proof the caller never asked for.
+                // Parse spending conditions if provided. Conditions that
+                // cannot be parsed or converted (malformed JSON, a non-P2PK
+                // kind, an impossible num_sigs) must fail loudly instead of
+                // quietly minting an unlocked proof the caller never asked
+                // for.
                 val conditions = conditionsJson?.let { json ->
-                    val parsed = runCatching { JSONObject(json) }.getOrNull()
-                        ?: return@let null
-                    parseP2PKConditions(parsed)
+                    parseP2PKConditions(JSONObject(json))
                 }
                 val wallet = getWallet(mintUrl)
                 val proofs = wallet.mint(
@@ -1495,9 +1533,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
                     includeFee = parsed.optBoolean("include_fee", false)
 
-                    // Parse spending conditions (P2PK) if provided
-                    parsed.optJSONObject("conditions")?.let { cond ->
-                        conditions = parseP2PKConditions(cond)
+                    // Parse spending conditions (P2PK) if provided. A present
+                    // value that is not an object is rejected, not dropped.
+                    if (parsed.has("conditions") && !parsed.isNull("conditions")) {
+                        conditions = parseP2PKConditions(parsed.getJSONObject("conditions"))
                     }
 
                     // Parse send_kind
