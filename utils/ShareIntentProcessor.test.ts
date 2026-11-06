@@ -19,6 +19,7 @@ jest.mock('../stores/Stores', () => ({
 
 import { NativeModules } from 'react-native';
 import {
+    SHARED_IMAGE_TIMEOUT_MS,
     authenticatedShareIntent,
     processSharedQRImageFast,
     walletSelectedShareIntent
@@ -199,6 +200,53 @@ describe('processSharedQRImageFast', () => {
         const result = await processSharedQRImageFast();
 
         expect(result?.params.base64Image).toBe('QRIMAGE');
+    });
+
+    // The image is served by the app that shared it, and Wallet's start-up
+    // waits for this before it opens the Lockscreen. One that never serves
+    // it must not hold start-up forever.
+    describe('a share the sending app never serves', () => {
+        beforeEach(() => {
+            jest.useFakeTimers();
+            jest.spyOn(console, 'error').mockImplementation(() => {});
+        });
+        afterEach(() => jest.useRealTimers());
+
+        it('gives up after SHARED_IMAGE_TIMEOUT_MS', async () => {
+            getSharedImageBase64.mockReturnValueOnce(new Promise(() => {}));
+            let settled = false;
+
+            const result = processSharedQRImageFast().finally(
+                () => (settled = true)
+            );
+            await jest.advanceTimersByTimeAsync(SHARED_IMAGE_TIMEOUT_MS - 1);
+            expect(settled).toBe(false);
+            await jest.advanceTimersByTimeAsync(1);
+
+            expect(await result).toEqual({
+                success: false,
+                error: 'utils.shareIntent.processingError'
+            });
+            expect(clearSharedIntent).not.toHaveBeenCalled();
+        });
+
+        it('reads again once the stalled read has given up', async () => {
+            getSharedImageBase64.mockReturnValueOnce(new Promise(() => {}));
+
+            const stalled = processSharedQRImageFast();
+            await jest.advanceTimersByTimeAsync(SHARED_IMAGE_TIMEOUT_MS);
+            await stalled;
+
+            const result = await processSharedQRImageFast();
+
+            expect(result?.params.base64Image).toBe('QRIMAGE');
+        });
+
+        it('leaves no timer behind once the image is read', async () => {
+            await processSharedQRImageFast();
+
+            expect(jest.getTimerCount()).toBe(0);
+        });
     });
 });
 

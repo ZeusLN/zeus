@@ -4,6 +4,12 @@ import { settingsStore } from '../stores/Stores';
 
 const { MobileTools } = NativeModules;
 
+// Wallet.getSettingsAndNavigate waits for the shared image before it opens
+// the Lockscreen, and the image is served by the app that shared it. Give up
+// after the native read's own deadline (MobileTools.SHARED_IMAGE_TIMEOUT_MS,
+// 5 s) plus time spent queued behind other native calls.
+export const SHARED_IMAGE_TIMEOUT_MS = 8000;
+
 // A shared image on its way to the ShareIntentProcessing screen, with the
 // gates it still has to clear
 export interface ShareIntentPayload {
@@ -37,9 +43,20 @@ export const processSharedQRImageFast =
     async (): Promise<ShareIntentResult | null> => {
         if (readInFlight) return null;
         readInFlight = true;
+        let timeout: ReturnType<typeof setTimeout> | undefined;
         try {
-            // Get the shared image as base64 from Android intent
-            const base64Image = await MobileTools.getSharedImageBase64();
+            // Get the shared image as base64 from Android intent. A read that
+            // gives up is a processing error; the intent is left in place, so
+            // the next read asks for the image again.
+            const base64Image = await Promise.race([
+                MobileTools.getSharedImageBase64(),
+                new Promise<never>((_, reject) => {
+                    timeout = setTimeout(
+                        () => reject(new Error('Shared image read timed out')),
+                        SHARED_IMAGE_TIMEOUT_MS
+                    );
+                })
+            ]);
 
             if (!base64Image) return null;
 
@@ -85,6 +102,7 @@ export const processSharedQRImageFast =
                 error: localeString('utils.shareIntent.processingError')
             };
         } finally {
+            clearTimeout(timeout);
             readInFlight = false;
         }
     };
