@@ -509,7 +509,22 @@ export default class Send extends React.Component<SendProps, SendState> {
                 });
                 return;
             }
-            this.props.InvoicesStore.getPayReq(res.invoice);
+            // fetchinvoice succeeds when the issuer answers with an invoice
+            // for another amount than the one requested, so decode it and
+            // refuse it unless it is for the amount entered. A decode
+            // failure is left to PaymentRequest, which shows it.
+            await this.props.InvoicesStore.getPayReq(res.invoice);
+            const { pay_req } = this.props.InvoicesStore;
+            if (pay_req && pay_req.getRequestAmount !== Number(satAmount)) {
+                this.props.InvoicesStore.clearPayReq();
+                this.setState({
+                    loading: false,
+                    error_msg: localeString(
+                        'views.Send.payBolt12.invoiceAmountMismatch'
+                    )
+                });
+                return;
+            }
             this.props.navigation.navigate('PaymentRequest');
             this.setState({
                 loading: false,
