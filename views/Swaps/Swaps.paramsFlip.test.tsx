@@ -62,7 +62,7 @@ jest.mock('../../assets/images/SVG/Key.svg', () => 'KeyIcon');
 
 import * as React from 'react';
 import BigNumber from 'bignumber.js';
-import { act, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import Swaps from './index';
 import { reverseClaimMinerFee } from '../../utils/FeeUtils';
 
@@ -190,6 +190,53 @@ describe('Swaps route params that change the direction', () => {
     it('does the same when the params carry only the direction', async () => {
         await enterAmountThenScan({ initialReverse: true });
 
+        expect(receiveInput().props.amount).toBe('9498840');
+        expect(serviceFeeShown()).toBe(500000);
+    });
+
+    it('works out the receive amount with the claim fee at a rate fetched before the scan', async () => {
+        const store = swapStore();
+        const view = await render(<Swaps {...props(store, {})} />);
+        // turning to reverse and back fetches the mempool rate and keeps it
+        await act(async () => fireEvent.press(byType('ArrowDown')[0]));
+        await act(async () => fireEvent.press(byType('ArrowDown')[0]));
+        await act(async () =>
+            sendInput().props.onAmountChange('10000000', '10000000')
+        );
+        await view.rerender(
+            <Swaps
+                {...props(store, {
+                    initialInvoice: ADDRESS,
+                    initialReverse: true
+                })}
+            />
+        );
+        await act(async () => {});
+
+        // 10,000,000 - 5% - 760 - 400, the same as the network fee shown
+        expect(sendInput().props.amount).toBe('10000000');
+        expect(receiveInput().props.amount).toBe('9498840');
+    });
+
+    it('keeps the send amount when the receive amount was typed before the scan', async () => {
+        const store = swapStore();
+        const view = await render(<Swaps {...props(store, {})} />);
+        await act(async () =>
+            receiveInput().props.onAmountChange('10000000', '10000000')
+        );
+        await view.rerender(
+            <Swaps
+                {...props(store, {
+                    initialInvoice: ADDRESS,
+                    initialReverse: true
+                })}
+            />
+        );
+        await act(async () => {});
+
+        // the mempool rate that lands after the flip changes the receive
+        // amount, not the send amount the flip kept
+        expect(sendInput().props.amount).toBe('10000000');
         expect(receiveInput().props.amount).toBe('9498840');
         expect(serviceFeeShown()).toBe(500000);
     });

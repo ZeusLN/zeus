@@ -465,18 +465,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     // The receive amount and service fee for the send amount on screen, with
     // the quote of the given direction. Route params can change the
     // direction after an amount was entered (a scanned address flips it to
-    // a reverse swap); the amounts must then follow the new quote.
+    // a reverse swap); the amounts must then follow the new quote. The send
+    // amount is kept, so later fee changes work from it too.
     amountsForDirection = (reverse: boolean) => {
-        const { SwapStore, SettingsStore, FiatStore, UnitsStore } = this.props;
+        const { SwapStore } = this.props;
         const info: any = reverse ? SwapStore.reverseInfo : SwapStore.subInfo;
         const serviceFeePct = info?.fees?.percentage || 0;
-        const networkFee = (
-            reverse
-                ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
-                      info?.fees?.minerFees?.lockup || 0
-                  )
-                : new BigNumber(info?.fees?.minerFees || 0)
-        ).toNumber();
+        const networkFee = this.networkFeeSats(reverse);
 
         const inputSats = new BigNumber(this.state.inputSats || 0);
         const outputSats = calculateReceiveAmount(
@@ -486,39 +481,16 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             reverse
         );
 
-        let outputDisplay = '';
-        if (outputSats.isGreaterThan(0)) {
-            const { units } = UnitsStore;
-            if (units === 'fiat') {
-                const { fiat } = SettingsStore.settings;
-                const { fiatRates } = FiatStore;
-                const fiatEntry =
-                    fiat && fiatRates
-                        ? fiatRates.filter(
-                              (entry: any) => entry.code === fiat
-                          )[0]
-                        : null;
-                const rate = fiatEntry ? fiatEntry.rate : 0;
-                outputDisplay = outputSats
-                    .div(SATS_PER_BTC)
-                    .times(rate)
-                    .toFixed(2);
-            } else if (units === 'BTC') {
-                outputDisplay = outputSats.div(SATS_PER_BTC).toFixed(8);
-            } else if (units === 'sats') {
-                outputDisplay = outputSats.toFixed(0);
-            }
-        }
-
         return {
             outputSats,
-            outputDisplay,
+            outputDisplay: this.satsDisplay(outputSats),
             serviceFeeSats: calculateServiceFeeOnSend(
                 inputSats,
                 serviceFeePct,
                 networkFee,
                 reverse
-            )
+            ),
+            lastEditedAmount: 'input' as const
         };
     };
 
@@ -592,13 +564,23 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
             // amounts entered before the params change the direction were
             // worked out with the other direction's quote
-            const { outputSats, outputDisplay, serviceFeeSats } = this.state;
+            const {
+                outputSats,
+                outputDisplay,
+                serviceFeeSats,
+                lastEditedAmount
+            } = this.state;
             const amounts =
                 initialReverse !== undefined &&
                 initialReverse !== this.state.reverse &&
                 new BigNumber(this.state.inputSats || 0).isGreaterThan(0)
                     ? this.amountsForDirection(initialReverse)
-                    : { outputSats, outputDisplay, serviceFeeSats };
+                    : {
+                          outputSats,
+                          outputDisplay,
+                          serviceFeeSats,
+                          lastEditedAmount
+                      };
 
             if (
                 initialReverse !== undefined &&
