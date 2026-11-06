@@ -86,10 +86,12 @@ export default class ChannelsStore {
     // it, so a late result (e.g. a timeout lookup) for an earlier open is
     // dropped
     private openChannelSeq = 0;
-    // openChannelSync requests that have not settled yet, including the
-    // lookup after a timeout. resetOpenChannel() leaves this alone: leaving
-    // the screen does not stop the node from opening the channel, so
-    // OpenChannel does not submit again until they settle
+    // opens that have not settled yet: openChannelSync requests, including
+    // the lookup after a timeout, and streamed opens until their funding
+    // flow ends (opened, failed, or the PSBT handed to the user to sign).
+    // resetOpenChannel() leaves this alone: leaving the screen does not stop
+    // the node from opening the channel, so OpenChannel does not submit
+    // again until they settle
     @observable public syncOpensInFlight = 0;
     @observable public closeChannelErr: string | null;
     @observable public closingChannel = false;
@@ -1004,7 +1006,8 @@ export default class ChannelsStore {
         request: any,
         outputs: any,
         pendingChanIds: Array<string>,
-        isCurrent: () => boolean
+        isCurrent: () => boolean,
+        finish: () => void
     ) => {
         const { account, sat_per_vbyte, utxos } = request;
 
@@ -1070,6 +1073,7 @@ export default class ChannelsStore {
                                 data.publish_error
                             );
                             runInAction(() => {
+                                finish();
                                 if (!isCurrent()) return;
                                 this.errorMsgChannel = errorMsg;
                                 this.output_index = null;
@@ -1097,6 +1101,7 @@ export default class ChannelsStore {
                             })
                                 .then((data: any) => {
                                     runInAction(() => {
+                                        finish();
                                         if (!isCurrent()) return;
                                         if (data.publish_error) {
                                             this.funded_psbt = formattedPsbt;
@@ -1119,6 +1124,7 @@ export default class ChannelsStore {
                                 })
                                 .catch(() =>
                                     runInAction(() => {
+                                        finish();
                                         if (!isCurrent()) return;
                                         this.funded_psbt = formattedPsbt;
                                         this.output_index = null;
@@ -1135,6 +1141,7 @@ export default class ChannelsStore {
                     .catch((error: any) => {
                         const errorMsg = errorToUserFriendly(error);
                         runInAction(() => {
+                            finish();
                             if (!isCurrent()) return;
                             this.errorMsgChannel = errorMsg;
                             this.output_index = null;
@@ -1150,6 +1157,7 @@ export default class ChannelsStore {
             .catch((error: any) => {
                 const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
+                    finish();
                     if (!isCurrent()) return;
                     this.errorMsgChannel = errorMsg;
                     this.output_index = null;
@@ -1166,8 +1174,10 @@ export default class ChannelsStore {
     @action
     private handleChannelOpenError = (
         error: Error,
-        isCurrent: () => boolean
+        isCurrent: () => boolean,
+        finish: () => void
     ) => {
+        finish();
         if (!isCurrent()) return;
         this.errorMsgChannel = errorToUserFriendly(error);
         this.output_index = null;
@@ -1210,6 +1220,17 @@ export default class ChannelsStore {
             // keeps funding its own channels and stays out of the next
             // open's list
             const pendingChanIds = this.pending_chan_ids;
+            // counted once per open, also for a batch; the first end of the
+            // funding flow stops the count
+            this.syncOpensInFlight++;
+            let finished = false;
+            const finish = () => {
+                if (finished) return;
+                finished = true;
+                runInAction(() => {
+                    this.syncOpensInFlight--;
+                });
+            };
             if (multipleChans) {
                 let base_psbt = '';
                 request.funding_shim = {
@@ -1272,7 +1293,8 @@ export default class ChannelsStore {
                                     // stop the batch here
                                     this.handleChannelOpenError(
                                         error,
-                                        isCurrent
+                                        isCurrent,
+                                        finish
                                     );
                                     return;
                                 }
@@ -1306,20 +1328,22 @@ export default class ChannelsStore {
                                             request,
                                             outputs,
                                             pendingChanIds,
-                                            isCurrent
+                                            isCurrent,
+                                            finish
                                         );
                                     })
                                     .catch((error: Error) => {
                                         this.handleChannelOpenError(
                                             error,
-                                            isCurrent
+                                            isCurrent,
+                                            finish
                                         );
                                     });
                             }
                         }
                     })
                     .catch((error: Error) => {
-                        this.handleChannelOpenError(error, isCurrent);
+                        this.handleChannelOpenError(error, isCurrent, finish);
                     });
             } else {
                 request.funding_shim = {
@@ -1340,11 +1364,12 @@ export default class ChannelsStore {
                             request,
                             outputs,
                             pendingChanIds,
-                            isCurrent
+                            isCurrent,
+                            finish
                         );
                     })
                     .catch((error: Error) => {
-                        this.handleChannelOpenError(error, isCurrent);
+                        this.handleChannelOpenError(error, isCurrent, finish);
                     });
             }
         } else {

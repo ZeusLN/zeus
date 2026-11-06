@@ -737,6 +737,165 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
         }
     );
 
+    describe('syncOpensInFlight', () => {
+        const openBatch = (store: ChannelsStore, extra = 1) =>
+            (store as any).openChannel(
+                new OpenChannelRequest({
+                    node_pubkey_string: '02peer',
+                    local_funding_amount: '100000',
+                    sat_per_vbyte: '2',
+                    account: 'default',
+                    additionalChannels: Array.from(
+                        { length: extra },
+                        (_, i) => ({
+                            node_pubkey_string: `02extra${i}`,
+                            satAmount: '50000'
+                        })
+                    )
+                })
+            );
+
+        it('counts a streamed open until it finishes, across a reset', async () => {
+            const first = held();
+            openChannelStream.mockReturnValueOnce(first.promise);
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            expect(store.syncOpensInFlight).toBe(1);
+
+            // the user leaves the spinner and comes back to the screen
+            enterScreen(store);
+            expect(store.openingChannel).toBe(false);
+            // so OpenChannel offers no second open yet
+            expect(store.syncOpensInFlight).toBe(1);
+
+            first.resolve(psbtFund('chan-1'));
+            await flush();
+            expect(store.syncOpensInFlight).toBe(0);
+        });
+
+        it.each([
+            ['opens', () => undefined],
+            [
+                'fails at the stream',
+                () => {
+                    // drop the answer queued below
+                    openChannelStream.mockReset();
+                    openChannelStream.mockRejectedValueOnce(
+                        new Error('peer is not online')
+                    );
+                }
+            ],
+            [
+                'fails funding the PSBT',
+                () => fundPsbt.mockRejectedValueOnce(new Error('no funds'))
+            ],
+            [
+                'fails verifying the PSBT',
+                () =>
+                    fundingStateStep.mockRejectedValueOnce(
+                        new Error('psbt invalid')
+                    )
+            ],
+            [
+                'gets a publish error on verify',
+                () =>
+                    fundingStateStep.mockResolvedValueOnce({
+                        publish_error: 'peer is not online'
+                    })
+            ],
+            [
+                'fails finalizing',
+                () =>
+                    fundingStateStep.mockImplementation(async (step: any) => {
+                        if (step.psbt_finalize) throw new Error('no');
+                        return {};
+                    })
+            ],
+            [
+                'hands the PSBT to the user to sign',
+                () => {
+                    signPsbt.mockRejectedValue(new Error('no keys'));
+                    fundingStateStep.mockImplementation(async (step: any) =>
+                        step.psbt_finalize
+                            ? { publish_error: 'not signed' }
+                            : {}
+                    );
+                }
+            ]
+        ])('stops counting a streamed open that %s', async (_, setUp) => {
+            openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+            setUp();
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            expect(store.syncOpensInFlight).toBe(1);
+
+            await flush();
+            expect(store.syncOpensInFlight).toBe(0);
+        });
+
+        it.each([
+            ['opens', (first: any) => first.resolve(psbtFund('chan-1'))],
+            [
+                'fails',
+                (first: any) => first.reject(new Error('peer is not online'))
+            ]
+        ])(
+            'stops counting a superseded streamed open that %s',
+            async (_, land) => {
+                const first = held();
+                openChannelStream.mockReturnValueOnce(first.promise);
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+
+                enterScreen(store);
+                openStreamed(store);
+                expect(store.syncOpensInFlight).toBe(2);
+
+                land(first);
+                await flush();
+                // the newer open is still pending
+                expect(store.syncOpensInFlight).toBe(1);
+            }
+        );
+
+        it('counts a batch open once until the batch finishes', async () => {
+            const last = held();
+            openChannelStream
+                .mockResolvedValueOnce(psbtFund('chan-a'))
+                .mockReturnValueOnce(last.promise);
+            const store = makeStore();
+            enterScreen(store);
+            openBatch(store);
+            await flush();
+            expect(store.syncOpensInFlight).toBe(1);
+
+            last.resolve(psbtFund('chan-b'));
+            await flush();
+            expect(store.channelSuccess).toBe(true);
+            expect(store.syncOpensInFlight).toBe(0);
+        });
+
+        it('stops counting a batch once when a channel fails', async () => {
+            openChannelStream
+                .mockResolvedValueOnce(psbtFund('chan-a'))
+                .mockRejectedValueOnce(new Error('peer is not online'))
+                .mockResolvedValueOnce(psbtFund('chan-c'));
+            const store = makeStore();
+            enterScreen(store);
+            openBatch(store, 2);
+            expect(store.syncOpensInFlight).toBe(1);
+
+            await flush();
+            // the batch stops at the failed channel, so the last one is
+            // not opened
+            expect(openChannelStream).toHaveBeenCalledTimes(2);
+            expect(store.syncOpensInFlight).toBe(0);
+        });
+    });
+
     describe('a silent connectPeer', () => {
         // the LSP connects ZEUS makes on its own (LSPStore info refresh,
         // the LSP invoice in InvoicesStore, the LSPS1 screen)
