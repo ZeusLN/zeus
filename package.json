@@ -11,13 +11,15 @@
       "<rootDir>/utils/BigNumberConfig.ts"
     ],
     "moduleNameMapper": {
-      "^@react-native/assets-registry/registry$": "react-native/src/asset-registry"
+      "^@react-native/assets-registry/registry$": "react-native/src/asset-registry",
+      "^@branta-ops/branta$": "<rootDir>/node_modules/@branta-ops/branta/dist/index.js",
+      "^@branta-ops/branta/v2$": "<rootDir>/node_modules/@branta-ops/branta/dist/v2/index.js"
     },
     "watchPathIgnorePatterns": [
       "<rootDir>/node_modules"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|@react-navigation|dateformat|nostr-tools|@noble|@scure|uuid|uint8array-tools|query-string|decode-uri-component|filter-obj|split-on-first)/)"
+      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|@react-navigation|dateformat|nostr-tools|@branta-ops|@nostr|@noble|@scure|uuid|uint8array-tools|query-string|decode-uri-component|filter-obj|split-on-first)/)"
     ],
     "testPathIgnorePatterns": [
       "zeus_modules"
@@ -58,10 +60,12 @@
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "1.2.0",
+    "@branta-ops/branta": "3.2.2",
     "@getalby/sdk": "9.0.0",
     "@keystonehq/bc-ur-registry": "0.8.1",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",
     "@ngraveio/bc-ur": "1.1.13",
+    "@noble/ciphers": "0.5.3",
     "@noble/curves": "2.4.0",
     "@noble/hashes": "2.4.0",
     "@noble/secp256k1": "1.6.3",
@@ -138,6 +142,7 @@
     "react-native-image-picker": "8.3.0",
     "react-native-keychain": "10.0.0",
     "react-native-nfc-manager": "3.17.5",
+    "react-native-nitro-tor": "0.6.1",
     "react-native-notifications": "5.2.2",
     "react-native-print": "0.11.0",
     "react-native-qr-kit": "1.1.6",
@@ -152,7 +157,6 @@
     "react-native-svg": "15.16.0",
     "react-native-svg-transformer": "1.5.3",
     "react-native-system-navigation-bar": "2.8.0",
-    "react-native-nitro-tor": "0.6.1",
     "react-native-udp": "4.1.7",
     "react-native-view-shot": "6.2.1",
     "react-native-vision-camera": "4.7.3",

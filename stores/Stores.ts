@@ -1,6 +1,7 @@
 import ActivityStore from './ActivityStore';
 import AlertStore from './AlertStore';
 import BalanceStore from './BalanceStore';
+import BrantaStore from './BrantaStore';
 import CashuStore from './CashuStore';
 import ChannelBackupStore from './ChannelBackupStore';
 import ChannelsStore from './ChannelsStore';
@@ -63,6 +64,7 @@ export const transactionsStore = new TransactionsStore(
 export const unitsStore = new UnitsStore(settingsStore, fiatStore);
 export const paymentsStore = new PaymentsStore(settingsStore, channelsStore);
 export const lnurlPayStore = new LnurlPayStore(settingsStore, nodeInfoStore);
+export const brantaStore = new BrantaStore(settingsStore);
 export const feeStore = new FeeStore(settingsStore, nodeInfoStore);
 export const syncStore = new SyncStore(settingsStore, connectivityStore);
 export const utxosStore = new UTXOsStore(settingsStore, syncStore);

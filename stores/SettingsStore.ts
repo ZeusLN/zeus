@@ -192,6 +192,10 @@ interface EcashSettings {
     initialMintUrls?: string[];
 }
 
+interface BrantaSettings {
+    enabled: boolean;
+}
+
 interface SwapsSettings {
     hostMainnet: string;
     hostTestnet: string;
@@ -272,6 +276,7 @@ export interface Settings {
     selectNodeOnStartup: boolean;
     ecash: EcashSettings;
     networking?: NetworkingSettings;
+    branta: BrantaSettings;
 }
 
 interface NetworkingSettings {
@@ -1718,7 +1723,10 @@ export const DEFAULT_SETTINGS: Settings = {
     networking: {
         disableOfflineCheck: false
     },
-    selectNodeOnStartup: false
+    selectNodeOnStartup: false,
+    branta: {
+        enabled: true
+    }
 };
 
 // Settings whose changes never need a Wallet refetch: bookkeeping values
