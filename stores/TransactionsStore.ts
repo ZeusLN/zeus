@@ -1390,6 +1390,10 @@ export default class TransactionsStore {
         if (result.error) {
             outcome.error = true;
             outcome.error_msg = errorToUserFriendly(result.message);
+        } else if (outcome.error) {
+            // e.g. a timed-out shape with no status: don't report the
+            // payment as complete as well as failed
+            if (result.status) outcome.status = result.status;
         } else {
             outcome.status = result.status || 'complete';
         }
