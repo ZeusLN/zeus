@@ -254,6 +254,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     local_funding_amount: ''
                 },
                 true,
+                true,
                 true
             );
         } catch (err) {

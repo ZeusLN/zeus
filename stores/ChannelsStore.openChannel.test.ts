@@ -736,4 +736,206 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             expect(openChannelStream).not.toHaveBeenCalled();
         }
     );
+
+    describe('a silent connectPeer', () => {
+        // the LSP connects ZEUS makes on its own (LSPStore info refresh,
+        // the LSP invoice in InvoicesStore, the LSPS1 screen)
+        const lspConnect = (store: ChannelsStore) =>
+            store.connectPeer(
+                {
+                    node_pubkey_string: '03lsp',
+                    host: 'lsp.example.com:9735',
+                    local_funding_amount: ''
+                } as any,
+                false,
+                true,
+                true
+            );
+
+        const userConnect = (store: ChannelsStore, connectPeerOnly = false) =>
+            store.connectPeer(
+                new OpenChannelRequest({
+                    node_pubkey_string: '02peer',
+                    host: 'peer.example.com:9735',
+                    local_funding_amount: '100000',
+                    sat_per_vbyte: '2',
+                    account: 'default'
+                }),
+                false,
+                connectPeerOnly
+            );
+
+        const openState = (store: ChannelsStore) => ({
+            channelSuccess: store.channelSuccess,
+            openingChannel: store.openingChannel,
+            errorOpenChannel: store.errorOpenChannel,
+            errorMsgChannel: store.errorMsgChannel,
+            funding_txid_str: store.funding_txid_str,
+            output_index: store.output_index,
+            funded_psbt: store.funded_psbt,
+            pending_chan_ids: [...store.pending_chan_ids],
+            channelRequest: store.channelRequest,
+            peerSuccess: store.peerSuccess,
+            connectingToPeer: store.connectingToPeer,
+            errorPeerConnect: store.errorPeerConnect,
+            errorMsgPeer: store.errorMsgPeer
+        });
+
+        const lspAnswers: Array<[string, () => void]> = [
+            ['connects', () => connectPeer.mockResolvedValueOnce({})],
+            [
+                'fails',
+                () =>
+                    connectPeer.mockRejectedValueOnce(
+                        new Error('peer is not online')
+                    )
+            ]
+        ];
+
+        it.each(lspAnswers)(
+            "lets the user's channel open when a silent connect %s during the user's connect",
+            async (_, lspAnswer) => {
+                const user = held();
+                connectPeer.mockReturnValueOnce(user.promise);
+                const store = makeStore();
+                enterScreen(store);
+                const connecting = userConnect(store);
+                await flush();
+
+                lspAnswer();
+                await lspConnect(store).catch(() => undefined);
+                expect(store.connectingToPeer).toBe(true);
+
+                user.resolve({});
+                await connecting;
+                await flush();
+
+                expect(openChannelSync).toHaveBeenCalledTimes(1);
+                expect(
+                    openChannelSync.mock.calls[0][0].node_pubkey_string
+                ).toBe('02peer');
+                expect(store.openingChannel).toBe(true);
+            }
+        );
+
+        it.each(lspAnswers)(
+            'keeps an open running when a silent connect %s',
+            async (_, lspAnswer) => {
+                const first = held();
+                openChannelSync.mockReturnValueOnce(first.promise);
+                const store = makeStore();
+                enterScreen(store);
+                open(store);
+
+                lspAnswer();
+                await lspConnect(store).catch(() => undefined);
+                // submit stays disabled while the open runs
+                expect(store.openingChannel).toBe(true);
+
+                first.resolve({ funding_txid_str: 'abc', output_index: 0 });
+                await flush();
+
+                expect(store.channelSuccess).toBe(true);
+                expect(store.funding_txid_str).toBe('abc');
+            }
+        );
+
+        it.each(lspAnswers)(
+            "leaves an opened channel's state alone when a silent connect %s",
+            async (_, lspAnswer) => {
+                openChannelSync.mockResolvedValueOnce({
+                    funding_txid_str: 'abc',
+                    output_index: 0
+                });
+                const store = makeStore();
+                enterScreen(store);
+                open(store);
+                await flush();
+                expect(store.channelSuccess).toBe(true);
+                const before = openState(store);
+
+                lspAnswer();
+                await lspConnect(store).catch(() => undefined);
+
+                expect(openState(store)).toEqual(before);
+            }
+        );
+
+        it.each(lspAnswers)(
+            'leaves a PSBT handed to the user alone when a silent connect %s',
+            async (_, lspAnswer) => {
+                openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+                signPsbt.mockRejectedValue(new Error('no keys'));
+                fundingStateStep.mockImplementation(async (step: any) =>
+                    step.psbt_finalize ? { publish_error: 'not signed' } : {}
+                );
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+                await flush();
+                expect(store.funded_psbt).toBe(PSBT);
+                expect(store.pending_chan_ids).toEqual(['chan-1']);
+                const before = openState(store);
+
+                lspAnswer();
+                await lspConnect(store).catch(() => undefined);
+
+                expect(openState(store)).toEqual(before);
+            }
+        );
+
+        it.each(lspAnswers)(
+            "leaves the user's peer error alone when a silent connect %s",
+            async (_, lspAnswer) => {
+                connectPeer.mockRejectedValueOnce(
+                    new Error('connection refused')
+                );
+                const store = makeStore();
+                enterScreen(store);
+                await userConnect(store, true).catch(() => undefined);
+                expect(store.errorMsgPeer).toBe('connection refused');
+                const before = openState(store);
+
+                lspAnswer();
+                await lspConnect(store).catch(() => undefined);
+
+                expect(openState(store)).toEqual(before);
+            }
+        );
+
+        it("still resets an opened channel's state for the user's own connect", async () => {
+            openChannelSync.mockResolvedValueOnce({
+                funding_txid_str: 'abc',
+                output_index: 0
+            });
+            connectPeer.mockResolvedValueOnce({});
+            const store = makeStore();
+            enterScreen(store);
+            open(store);
+            await flush();
+            expect(store.channelSuccess).toBe(true);
+
+            await userConnect(store, true);
+
+            expect(store.channelSuccess).toBe(false);
+            expect(store.funding_txid_str).toBe(null);
+            expect(store.peerSuccess).toBe(true);
+        });
+
+        it("still drops an open's result after the user's own connect", async () => {
+            const first = held();
+            openChannelSync.mockReturnValueOnce(first.promise);
+            connectPeer.mockResolvedValueOnce({});
+            const store = makeStore();
+            enterScreen(store);
+            open(store);
+
+            await userConnect(store, true);
+            first.resolve({ funding_txid_str: 'abc', output_index: 0 });
+            await flush();
+
+            expect(store.channelSuccess).toBe(false);
+            expect(store.funding_txid_str).toBe(null);
+        });
+    });
 });

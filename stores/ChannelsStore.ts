@@ -826,12 +826,17 @@ export default class ChannelsStore {
         connectPeerOnly?: boolean,
         silent?: boolean
     ) => {
-        this.resetOpenChannel(silent);
+        // a silent connect is one ZEUS makes on its own (an LSP), so it
+        // leaves the user's peer and open channel state alone, and does not
+        // supersede the user's connect or open
+        if (!silent) {
+            this.resetOpenChannel();
+            this.channelRequest = undefined;
+            this.connectingToPeer = true;
+        }
         // a connect that lands after the next reset must not start an open
         const seq = this.openChannelSeq;
         const isCurrent = () => seq === this.openChannelSeq;
-        this.channelRequest = undefined;
-        if (!silent) this.connectingToPeer = true;
 
         // additional channels only matter when opening, the connect-peer-only
         // mode hides them from the form
@@ -883,7 +888,7 @@ export default class ChannelsStore {
                             this.errorMsgPeer = null;
                             this.peerSuccess = true;
                         }
-                        if (!connectPeerOnly && isCurrent())
+                        if (!silent && !connectPeerOnly && isCurrent())
                             this.channelRequest = request;
                     });
                     resolve(true);
@@ -893,8 +898,8 @@ export default class ChannelsStore {
                         if (!silent) {
                             this.connectingToPeer = false;
                             this.peerSuccess = false;
+                            this.channelSuccess = false;
                         }
-                        this.channelSuccess = false;
                         // handle error
                         if (
                             error &&
@@ -902,7 +907,8 @@ export default class ChannelsStore {
                             error.toString().includes('already')
                         ) {
                             if (!connectPeerOnly) {
-                                if (isCurrent()) this.channelRequest = request;
+                                if (!silent && isCurrent())
+                                    this.channelRequest = request;
                             } else {
                                 if (!silent) {
                                     this.errorMsgPeer =

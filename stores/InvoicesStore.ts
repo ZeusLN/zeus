@@ -539,6 +539,7 @@ export default class InvoicesStore {
                             local_funding_amount: ''
                         },
                         false,
+                        true,
                         true
                     );
                 } catch (e) {}

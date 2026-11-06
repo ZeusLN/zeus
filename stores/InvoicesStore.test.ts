@@ -2167,7 +2167,18 @@ describe('InvoicesStore superseded invoice requests', () => {
                 value: '50000'
             });
             await flush();
-            expect(store.channelsStore.connectPeer).toHaveBeenCalled();
+            // silent: an LSP connect of our own leaves the open channel
+            // form alone
+            expect(store.channelsStore.connectPeer).toHaveBeenCalledWith(
+                {
+                    host: 'lsp.example:9735',
+                    node_pubkey_string: 'lsp',
+                    local_funding_amount: ''
+                },
+                false,
+                true,
+                true
+            );
             store.reset();
             connected.resolve(undefined);
 
