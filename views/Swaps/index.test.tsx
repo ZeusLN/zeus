@@ -150,3 +150,123 @@ describe('Swaps: Generate invoice LSP decision', () => {
         ).toMatchObject(lsp(false));
     });
 });
+
+describe('Swaps: reverse fee lookup', () => {
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    const makeView = (
+        getOnchainFeesviaMempool: jest.Mock,
+        preferredMempoolRate?: string
+    ) => {
+        const routeParams = {};
+        const view = new Swap({
+            navigation: { navigate: jest.fn() },
+            route: { params: routeParams },
+            NodeInfoStore: {},
+            SwapStore: {
+                clearError: jest.fn(),
+                subInfo: {},
+                reverseInfo: {},
+                getReverseClaimMinerFee: () => undefined,
+                loading: true
+            },
+            UnitsStore: { units: 'sats', getNextUnit: () => 'BTC' },
+            FiatStore: { fiatRates: [] },
+            SettingsStore: {
+                settings: {
+                    enableLSP: true,
+                    payments: preferredMempoolRate
+                        ? { preferredMempoolRate }
+                        : {}
+                }
+            },
+            FeeStore: { getOnchainFeesviaMempool },
+            InvoicesStore: {
+                createUnifiedInvoice: jest.fn(),
+                onChainAddress: 'bc1...'
+            },
+            LSPStore: {}
+        } as any);
+
+        const setStateSpy = jest
+            .spyOn(view, 'setState')
+            .mockImplementation(() => {});
+
+        view.state = { ...view.state, reverse: true };
+
+        const prevProps = {
+            navigation: { navigate: jest.fn() },
+            route: { params: routeParams }
+        };
+        const prevState = { ...view.state, reverse: false };
+
+        return { view, prevProps, prevState, setStateSpy };
+    };
+
+    it('does not log an error when the fee fetch resolves undefined', async () => {
+        const consoleErrorSpy = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+
+        const getOnchainFeesviaMempool = jest.fn().mockResolvedValue(undefined);
+        const { view, prevProps, prevState, setStateSpy } = makeView(
+            getOnchainFeesviaMempool
+        );
+
+        await view.componentDidUpdate(prevProps as any, prevState as any);
+
+        expect(getOnchainFeesviaMempool).toHaveBeenCalled();
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+
+        // Assert the finally block ran, but the fee was NOT set
+        expect(setStateSpy).toHaveBeenCalledWith({ feeRateLookupDone: true });
+        expect(
+            setStateSpy.mock.calls.some(([s]) => 'fee' in (s as object))
+        ).toBe(false);
+    });
+
+    it('sets the fee when the fetch resolves a valid rate', async () => {
+        const getOnchainFeesviaMempool = jest
+            .fn()
+            .mockResolvedValue({ fastestFee: 9 });
+        const { view, prevProps, prevState, setStateSpy } = makeView(
+            getOnchainFeesviaMempool
+        );
+
+        await view.componentDidUpdate(prevProps as any, prevState as any);
+
+        expect(getOnchainFeesviaMempool).toHaveBeenCalled();
+        expect(setStateSpy).toHaveBeenCalledWith({ fee: '9' });
+        expect(setStateSpy).toHaveBeenCalledWith({ feeRateLookupDone: true });
+    });
+
+    it('uses the preferred mempool rate when available', async () => {
+        const getOnchainFeesviaMempool = jest
+            .fn()
+            .mockResolvedValue({ fastestFee: 9, hourFee: 4 });
+        const { view, prevProps, prevState, setStateSpy } = makeView(
+            getOnchainFeesviaMempool,
+            'hourFee'
+        );
+
+        await view.componentDidUpdate(prevProps as any, prevState as any);
+
+        expect(setStateSpy).toHaveBeenCalledWith({ fee: '4' });
+    });
+
+    it('falls back to fastestFee when the preferred rate is missing', async () => {
+        const getOnchainFeesviaMempool = jest
+            .fn()
+            .mockResolvedValue({ fastestFee: 9 });
+        const { view, prevProps, prevState, setStateSpy } = makeView(
+            getOnchainFeesviaMempool,
+            'economyFee'
+        );
+
+        await view.componentDidUpdate(prevProps as any, prevState as any);
+
+        expect(setStateSpy).toHaveBeenCalledWith({ fee: '9' });
+    });
+});
