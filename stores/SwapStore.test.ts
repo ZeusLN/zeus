@@ -532,6 +532,100 @@ describe('SwapStore swap status from the host', () => {
             ]);
         }
     );
+
+    describe('after this wallet refunded the swap', () => {
+        const REFUND_TXID = 'refund-txid';
+        const REFUNDED_SWAP = {
+            ...STORED_SWAP,
+            status: SwapState.TransactionRefunded,
+            txid: REFUND_TXID
+        };
+
+        it('keeps the refund when the host sends swap.expired', async () => {
+            stored[SWAPS_KEY] = JSON.stringify([REFUNDED_SWAP]);
+
+            await buildStore().updateSwapStatus(
+                SWAP_ID,
+                SwapState.SwapExpired,
+                true,
+                'swap expired'
+            );
+
+            expect(storedSwaps()).toEqual([REFUNDED_SWAP]);
+        });
+
+        it('keeps a refund stored while the status poll was out', async () => {
+            // lockupFailed is offered a refund and, unlike swap.expired,
+            // is still polled
+            stored[SWAPS_KEY] = JSON.stringify([
+                { ...STORED_SWAP, status: SwapState.TransactionLockupFailed }
+            ]);
+            let answerStatus: (value: any) => void = () => {};
+            (ReactNativeBlobUtil.fetch as jest.Mock).mockImplementation(
+                () => new Promise((resolve) => (answerStatus = resolve))
+            );
+            const store = buildStore();
+
+            // the poll is out when the refund lands
+            const refresh = store.fetchAndUpdateSwaps();
+            await new Promise((resolve) => setImmediate(resolve));
+            await store.updateSwapOnRefund(SWAP_ID, REFUND_TXID);
+            answerStatus({ json: () => ({ status: SwapState.SwapExpired }) });
+            await refresh;
+
+            expect(storedSwaps()).toEqual([REFUNDED_SWAP]);
+            expect(store.swaps.map((s: any) => s.status)).toEqual([
+                SwapState.TransactionRefunded
+            ]);
+        });
+
+        it('still takes the status of a swap with no refund txid', async () => {
+            // a reverse swap the host itself refunded
+            stored[REVERSE_SWAPS_KEY] = JSON.stringify([
+                {
+                    ...STORED_SWAP,
+                    type: SwapType.Reverse,
+                    status: SwapState.TransactionRefunded
+                }
+            ]);
+
+            await buildStore().updateSwapStatus(
+                SWAP_ID,
+                SwapState.SwapExpired,
+                false
+            );
+
+            expect(JSON.parse(stored[REVERSE_SWAPS_KEY])[0].status).toBe(
+                SwapState.SwapExpired
+            );
+        });
+    });
+
+    it('applies a status update that follows another', async () => {
+        await buildStore().updateSwapStatus(
+            SWAP_ID,
+            SwapState.TransactionMempool,
+            true
+        );
+
+        expect(storedSwaps()).toEqual([
+            { ...STORED_SWAP, status: SwapState.TransactionMempool }
+        ]);
+    });
+
+    it('stores a polled claim of a swap whose claim was pending', async () => {
+        stored[SWAPS_KEY] = JSON.stringify([
+            { ...STORED_SWAP, status: SwapState.TransactionClaimPending }
+        ]);
+        pollAnswer({ status: SwapState.TransactionClaimed });
+        const store = buildStore();
+        await store.fetchAndUpdateSwaps();
+
+        expect(storedSwaps()[0].status).toBe(SwapState.TransactionClaimed);
+        expect(store.swaps.map((s: any) => s.status)).toEqual([
+            SwapState.TransactionClaimed
+        ]);
+    });
 });
 
 describe('SwapStore.fetchAndUpdateSwaps', () => {
