@@ -150,6 +150,58 @@ describe('networkFetch', () => {
     });
 
     describe('when Tor is enabled', () => {
+        it.each([
+            'http://192.168.1.10:3006/api/v1/fees/recommended',
+            'http://10.0.0.5/api/blocks/tip/height',
+            'http://172.20.1.1:8999/api/tx',
+            'http://umbrel.local:3006/api/tx',
+            'http://UMBREL.LOCAL./api/tx',
+            'http://[fd00::1]:3006/api/tx',
+            'http://[fe80::1]/api/tx',
+            'http://localhost:3006/api/tx',
+            'http://127.0.0.1:3006/api/tx'
+        ])(
+            'sends private host %s direct, since Tor cannot reach it',
+            async (url) => {
+                const blobResponse = { info: () => ({ status: 200 }) };
+                mockFetch.mockResolvedValue(blobResponse);
+
+                const response = await networkFetch({
+                    method: 'GET',
+                    url,
+                    enableTor: true
+                });
+
+                expect(mockFetch).toHaveBeenCalledWith(
+                    'GET',
+                    url,
+                    undefined,
+                    undefined
+                );
+                expect(RnTor.httpGet).not.toHaveBeenCalled();
+                expect(response).toBe(blobResponse);
+            }
+        );
+
+        it.each([
+            'https://mempool.space/api/tx',
+            'https://172.32.0.1/api/tx',
+            'https://192.168.evil.com/api/tx',
+            'https://local.example.com/api/tx',
+            'https://[2001:db8::1]/api/tx'
+        ])('sends public host %s over Tor', async (url) => {
+            (RnTor.httpGet as jest.Mock).mockResolvedValue({
+                status_code: 200,
+                body: '{}',
+                error: null
+            });
+
+            await networkFetch({ method: 'GET', url, enableTor: true });
+
+            expect(RnTor.httpGet).toHaveBeenCalledTimes(1);
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
         it('routes a GET through the Tor daemon and exposes a blob-util-compatible response', async () => {
             (RnTor.httpGet as jest.Mock).mockResolvedValue({
                 status_code: 200,
