@@ -194,7 +194,13 @@ describe('Swaps: LSP fee shown with the invoice', () => {
     // setState applied synchronously. `created` is what the next
     // createUnifiedInvoice call returns; `previewDuringRequest` is a
     // preview fee that lands after its quote, before it returns.
-    const makeView = (created: any, previewDuringRequest?: number) => {
+    // `newerRequest` stands for an invoice request made elsewhere while
+    // this one runs, which takes over the shared InvoicesStore fields.
+    const makeView = (
+        created: any,
+        previewDuringRequest?: number,
+        newerRequest?: (invoicesStore: any) => void
+    ) => {
         const navigate = jest.fn();
         const lspStore: any = {
             getZeroConfFee: jest.fn(() => Promise.resolve()),
@@ -210,6 +216,7 @@ describe('Swaps: LSP fee shown with the invoice', () => {
                 lspStore.zeroConfFee = created.lspFeeSats ?? undefined;
                 if (previewDuringRequest !== undefined)
                     lspStore.zeroConfFee = previewDuringRequest;
+                newerRequest?.(invoicesStore);
                 return created;
             })
         };
@@ -254,7 +261,7 @@ describe('Swaps: LSP fee shown with the invoice', () => {
             enableLSP: true,
             flowLspNotConfigured: false
         };
-        return { view, navigate, lspStore, swapStore };
+        return { view, navigate, lspStore, swapStore, invoicesStore };
     };
 
     const find = (view: any, test: (e: any) => boolean) =>
@@ -330,6 +337,54 @@ describe('Swaps: LSP fee shown with the invoice', () => {
             fee: 10000,
             explanation: 'LspExplanationFees'
         });
+    });
+
+    it('shows the invoice it made and its fee when a newer request takes the shared fields', async () => {
+        const created = {
+            rHash: 'hash',
+            paymentRequest: 'lnbc-wrapped',
+            lspFeeSats: 10000
+        };
+
+        // another screen's invoice
+        const other = makeView(created, undefined, (invoicesStore) => {
+            invoicesStore.payment_request = 'lnbc-other';
+            invoicesStore.payment_request_lsp_fee = 500;
+        });
+        await pressGenerate(other.view);
+        expect(other.view.state.invoice).toBe('lnbc-wrapped');
+        expect(other.view.state.error).toBe('');
+        expect(feeRow(other.view, other.navigate)).toEqual({
+            fee: 10000,
+            explanation: 'LspExplanationFees'
+        });
+
+        // a reset
+        const reset = makeView(created, undefined, (invoicesStore) => {
+            invoicesStore.payment_request = null;
+        });
+        await pressGenerate(reset.view);
+        expect(reset.view.state.invoice).toBe('lnbc-wrapped');
+        expect(reset.view.state.error).toBe('');
+        expect(feeRow(reset.view, reset.navigate)?.fee).toBe(10000);
+    });
+
+    it('fills a reverse swap address from its own request, not a newer one', async () => {
+        const { view } = makeView(
+            { rHash: 'hash', paymentRequest: 'lnbc1', onChainAddress: ADDRESS },
+            undefined,
+            (invoicesStore) => {
+                invoicesStore.onChainAddress = 'bc1qother';
+            }
+        );
+        view.state = { ...view.state, reverse: true };
+
+        await find(
+            view,
+            (e) => e.props.title === 'views.Swaps.generateOnchainAddress'
+        ).props.onPress();
+        expect(view.state.invoice).toBe(ADDRESS);
+        expect(view.state.error).toBe('');
     });
 
     it('keeps the invoice and its own fee when the amount is worked out again, and drops both when the amount is edited', async () => {
