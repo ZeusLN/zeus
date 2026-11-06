@@ -194,13 +194,15 @@ open class Lnd {
     return flags
   }
 
-  func startLnd(_ args: String, lndDir: String, isTorEnabled: Bool, isTestnet: Bool, lndStartedCallback: @escaping Callback) -> Void {
+  func startLnd(_ args: String, lndDir: String, isTestnet: Bool, lndStartedCallback: @escaping Callback) -> Void {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
     let lndPath = applicationSupport.appendingPathComponent(lndDir, isDirectory: true)
 
-    var lndArgs = "--nolisten --lnddir=\"\(lndPath.path)\" --wtclient.active" + args
-    if (isTorEnabled) {
-      lndArgs += " --tor.active"
+    // Tor args (tor.active, tor.socks) are composed on the JS side
+    // and arrive via `args`.
+    var lndArgs = "--nolisten --lnddir=\"\(lndPath.path)\" --wtclient.active"
+    if (!args.isEmpty) {
+      lndArgs += " " + args
     }
 
     let started: Callback = {(data: Data?, error: Error?) in {
