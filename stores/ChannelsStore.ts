@@ -1175,7 +1175,7 @@ export default class ChannelsStore {
                 };
 
                 BackendUtils.openChannelStream(request)
-                    .then((data: any) => {
+                    .then(async (data: any) => {
                         const { psbt_fund, pending_chan_id } = data.result;
                         this.pending_chan_ids.push(pending_chan_id);
                         outputs[psbt_fund.funding_address] =
@@ -1208,20 +1208,25 @@ export default class ChannelsStore {
                                         i
                                     ].satAmount.toString();
 
-                                BackendUtils.openChannelStream(request)
-                                    .then((data: any) => {
-                                        const { psbt_fund, pending_chan_id } =
-                                            data.result;
-                                        this.pending_chan_ids.push(
-                                            pending_chan_id
+                                // open one at a time, so the final channel
+                                // starts the funding flow only after every
+                                // earlier channel has its funding output
+                                try {
+                                    const data: any =
+                                        await BackendUtils.openChannelStream(
+                                            request
                                         );
-                                        outputs[psbt_fund.funding_address] =
-                                            psbt_fund.funding_amount;
-                                        base_psbt = psbt_fund.psbt;
-                                    })
-                                    .catch((error: Error) => {
-                                        this.handleChannelOpenError(error);
-                                    });
+                                    const { psbt_fund, pending_chan_id } =
+                                        data.result;
+                                    this.pending_chan_ids.push(pending_chan_id);
+                                    outputs[psbt_fund.funding_address] =
+                                        psbt_fund.funding_amount;
+                                    base_psbt = psbt_fund.psbt;
+                                } catch (error: any) {
+                                    // stop the batch here
+                                    this.handleChannelOpenError(error);
+                                    return;
+                                }
                             } else if (request.additionalChannels) {
                                 // final chan
                                 request.funding_shim = {
