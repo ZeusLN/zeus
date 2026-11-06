@@ -294,6 +294,33 @@ it('switching away from a loading LDK Node leaves its alerts and connect to the 
     expect(settings.connecting).toBe(false);
 });
 
+// The next wallet's stop() makes the native module reject the old wallet's
+// in-flight build with build_cancelled instead of publishing its node
+it("a cancelled LDK Node build does not fail the next wallet's connect", async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const { settings, view, runner, refresh, ldk } = setup(0);
+    const ldkStart = deferred<any>();
+    ldk.startLdkNodeWallet.mockReturnValue(ldkStart.promise);
+    const initial = runner.run(refresh);
+    await flush();
+
+    select(settings, 1);
+    ldkStart.reject(
+        Object.assign(
+            new Error('The node was stopped before its build finished'),
+            { code: 'build_cancelled' }
+        )
+    );
+    await initial;
+
+    expect(settings.error).toBe(false);
+    expect(settings.errorMsg).toBe('');
+    expect(ldk.waitForLdkNodeReady).not.toHaveBeenCalled();
+    expect(settings.setConnectingStatus.mock.calls).toEqual([[true], [false]]);
+    expect(view.props.NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
+    expect(settings.connecting).toBe(false);
+});
+
 it("a remote node's late failure does not end the next wallet's connect", async () => {
     const { settings, view, runner, refresh } = setup(1);
     const { NodeInfoStore } = view.props;
