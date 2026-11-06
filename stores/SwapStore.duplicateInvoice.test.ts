@@ -325,6 +325,28 @@ describe('SwapStore.createSubmarineSwap for an invoice that already has a swap',
         expect(navigation.navigate).toHaveBeenCalledTimes(1);
     });
 
+    it('takes a new request for an invoice once reading the node info for it has thrown', async () => {
+        hostWithoutTheCheck();
+        const store = newStore();
+        const { nodeInfo } = store.nodeInfoStore;
+        // nodeInfo.nodeId throws, after the payment hash is reserved
+        store.nodeInfoStore.nodeInfo = undefined;
+
+        await expect(
+            store.createSubmarineSwap(INVOICE, newNavigation())
+        ).resolves.toBeUndefined();
+        expect(store.apiError).not.toBe('');
+        expect(store.loading).toBe(false);
+
+        store.nodeInfoStore.nodeInfo = nodeInfo;
+        const navigation = newNavigation();
+        await store.createSubmarineSwap(INVOICE, navigation);
+
+        expect(createRequests).toHaveLength(1);
+        expect(storedIds()).toEqual(['swap-1']);
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
+    });
+
     it('makes the first swap for an invoice', async () => {
         hostWithoutTheCheck();
         const store = newStore();

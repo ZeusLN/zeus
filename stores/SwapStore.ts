@@ -540,16 +540,12 @@ export default class SwapStore {
      * from the host, and our own refund mark is set when the refund is
      * broadcast, not when it confirms.
      */
-    private isInvoiceInUse = (swaps: any[], invoice: string): boolean => {
-        const paymentHash = this.paymentHashOf(invoice);
-        // an invoice we cannot decode is left to the host to refuse
-        if (!paymentHash) return false;
-        return swaps.some(
+    private isInvoiceInUse = (swaps: any[], paymentHash: string): boolean =>
+        swaps.some(
             (swap: any) =>
                 typeof swap?.invoice === 'string' &&
                 this.paymentHashOf(swap.invoice) === paymentHash
         );
-    };
 
     private paymentHashOf = (paymentRequest: string): string | undefined => {
         try {
@@ -573,25 +569,29 @@ export default class SwapStore {
         if (paymentHash && this.submarineSwapsInFlight.has(paymentHash)) {
             return;
         }
-
-        runInAction(() => {
-            this.loading = true;
-        });
-        const { implementation } = this.settingsStore;
-        const { nodeInfo } = this.nodeInfoStore;
-        const nodePubkey = nodeInfo.nodeId;
-        // the quote the Swaps screen showed when the user started the swap
-        const fees = this.subInfo?.fees;
-        const pairHash = this.subInfo?.hash;
-        const apiUrl = UrlUtils.getMempoolApiUrl(nodeInfo);
         if (paymentHash) this.submarineSwapsInFlight.add(paymentHash);
+        // everything after the reservation is inside the try, so a throw
+        // cannot skip the release in finally
         try {
+            runInAction(() => {
+                this.loading = true;
+            });
+            const { implementation } = this.settingsStore;
+            const { nodeInfo } = this.nodeInfoStore;
+            const nodePubkey = nodeInfo.nodeId;
+            // the quote the Swaps screen showed when the user started the swap
+            const fees = this.subInfo?.fees;
+            const pairHash = this.subInfo?.hash;
+            const apiUrl = UrlUtils.getMempoolApiUrl(nodeInfo);
+
             // before a refund key is used and the host sees the invoice
             const storedSwaps = await Storage.getItem(SWAPS_KEY);
+            // an invoice we cannot decode is left to the host to refuse
             if (
+                paymentHash &&
                 this.isInvoiceInUse(
                     storedSwaps ? JSON.parse(storedSwaps) : [],
-                    invoice
+                    paymentHash
                 )
             ) {
                 runInAction(() => {
