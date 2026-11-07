@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- OpenSSL for Android, built by scripts/openssl-android/build.sh. The
+     .aar beside this file comes from fetch-libraries.sh. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>app.zeusln.thirdparty</groupId>
+  <artifactId>openssl</artifactId>
+  <version>3.6.2-zeus1</version>
+  <packaging>aar</packaging>
+</project>

@@ -17,6 +17,8 @@ RESTORE_ANDROID_SHA256=$(jq "['zeus-cashu-restore']['androidSha256']")
 RESTORE_IOS_SHA256=$(jq "['zeus-cashu-restore']['iosSha256']")
 RESTORE_ANDROID_BINDINGS_SHA256=$(jq "['zeus-cashu-restore']['androidBindingsSha256']")
 RESTORE_IOS_BINDINGS_SHA256=$(jq "['zeus-cashu-restore']['iosBindingsSha256']")
+OPENSSL_ANDROID_VERSION=$(jq "['openssl-android']['version']")
+OPENSSL_ANDROID_SHA256=$(jq "['openssl-android']['androidSha256']")
 
 # Every hash must be 64-char lowercase hex. Fail closed on empty/malformed
 # values: macOS sha256sum -c exits 0 on improperly formatted lines, so a
@@ -26,7 +28,8 @@ for HASH in "$EMBEDDED_LND_ANDROID_SHA256" "$EMBEDDED_LND_IOS_SHA256" \
             "$CDK_ANDROID_SHA256" \
             "$CDK_IOS_SHA256" "$CDK_IOS_BINDINGS_SHA256" \
             "$RESTORE_ANDROID_SHA256" "$RESTORE_IOS_SHA256" \
-            "$RESTORE_ANDROID_BINDINGS_SHA256" "$RESTORE_IOS_BINDINGS_SHA256"; do
+            "$RESTORE_ANDROID_BINDINGS_SHA256" "$RESTORE_IOS_BINDINGS_SHA256" \
+            "$OPENSSL_ANDROID_SHA256"; do
     if ! echo "$HASH" | grep -qE '^[0-9a-f]{64}$'; then
         echo "Invalid or missing sha256 in $LV: '$HASH'" >&2
         exit 1
@@ -76,6 +79,26 @@ if ! echo "$EMBEDDED_LND_ANDROID_SHA256 android/lndmobile/$EMBEDDED_LND_ANDROID_
     # check checksum
     if ! echo "$EMBEDDED_LND_ANDROID_SHA256 android/lndmobile/$EMBEDDED_LND_ANDROID_FILE" | sha256sum -c -; then
         echo "Android checksum failed" >&2
+        exit 1
+    fi
+fi
+
+# OpenSSL for op-sqlite's SQLCipher build, from ZeusLN/openssl-android.
+# Gradle reads it from the local Maven repository in android/openssl (see
+# android/build.gradle).
+OPENSSL_ANDROID_FILE=openssl-${OPENSSL_ANDROID_VERSION#v}.aar
+OPENSSL_ANDROID_DIR=android/openssl/app/zeusln/thirdparty/openssl/${OPENSSL_ANDROID_VERSION#v}
+OPENSSL_ANDROID_LINK=https://github.com/ZeusLN/openssl-android/releases/download/$OPENSSL_ANDROID_VERSION/$OPENSSL_ANDROID_FILE
+
+if ! echo "$OPENSSL_ANDROID_SHA256 $OPENSSL_ANDROID_DIR/$OPENSSL_ANDROID_FILE" | sha256sum -c -; then
+    echo "OpenSSL Android library file missing or checksum failed" >&2
+
+    mkdir -p $OPENSSL_ANDROID_DIR
+    rm -f $OPENSSL_ANDROID_DIR/$OPENSSL_ANDROID_FILE
+    curl -fL $OPENSSL_ANDROID_LINK > $OPENSSL_ANDROID_DIR/$OPENSSL_ANDROID_FILE
+
+    if ! echo "$OPENSSL_ANDROID_SHA256 $OPENSSL_ANDROID_DIR/$OPENSSL_ANDROID_FILE" | sha256sum -c -; then
+        echo "OpenSSL Android checksum failed" >&2
         exit 1
     fi
 fi

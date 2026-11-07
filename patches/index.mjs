@@ -9,6 +9,7 @@ import { patchReanimatedSetFixes } from './patch-reanimated-set-fixes.mjs';
 import { patchKeychainCloudSync } from './patch-keychain-cloudsync.mjs';
 import { patchKeychainAtomicUpdate } from './patch-keychain-atomic-update.mjs';
 import { patchBlobUtilNoRetry } from './patch-blob-util-no-retry.mjs';
+import { patchOpSqliteCommonCrypto } from './patch-op-sqlite-commoncrypto.mjs';
 
 console.log('Running postinstall patches...\n');
 
@@ -22,6 +23,7 @@ console.log('Running postinstall patches...\n');
         patchKeychainCloudSync();
         patchKeychainAtomicUpdate();
         patchBlobUtilNoRetry();
+        patchOpSqliteCommonCrypto();
     } catch (error) {
         console.error(`\nPostinstall patch failed:\n\n${error.message}\n`);
         process.exit(1);
