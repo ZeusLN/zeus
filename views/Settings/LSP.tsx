@@ -39,6 +39,11 @@ interface LSPState {
 @inject('NodeInfoStore', 'SettingsStore')
 @observer
 export default class LSP extends React.Component<LSPProps, LSPState> {
+    // the last discount code entered and the host it was entered for, so
+    // editing the host back restores it
+    private savedAccessKey: string;
+    private savedAccessKeyHost: string;
+
     constructor(props: LSPProps) {
         super(props);
 
@@ -52,6 +57,8 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
             accessKey: settings.lspAccessKey ?? '',
             requestSimpleTaproot: settings?.requestSimpleTaproot ?? true
         };
+        this.savedAccessKey = this.state.accessKey;
+        this.savedAccessKeyHost = this.state.lsp ?? '';
     }
 
     render() {
@@ -235,14 +242,31 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                 <TextInput
                                     value={lsp}
                                     onChangeText={async (text: string) => {
-                                        this.setState({ lsp: text });
-                                        await updateSettings(
-                                            isMutinynet
+                                        // the discount code was issued for
+                                        // its host; don't send it to
+                                        // another one
+                                        const nextAccessKey =
+                                            text.trim() ===
+                                            this.savedAccessKeyHost.trim()
+                                                ? this.savedAccessKey
+                                                : '';
+                                        const accessKeyChanged =
+                                            nextAccessKey !==
+                                            this.state.accessKey;
+                                        this.setState({
+                                            lsp: text,
+                                            accessKey: nextAccessKey
+                                        });
+                                        await updateSettings({
+                                            ...(isMutinynet
                                                 ? { lspMutinynet: text }
                                                 : isTestNet
                                                 ? { lspTestnet: text }
-                                                : { lspMainnet: text }
-                                        );
+                                                : { lspMainnet: text }),
+                                            ...(accessKeyChanged && {
+                                                lspAccessKey: nextAccessKey
+                                            })
+                                        });
                                     }}
                                     locked={!enableLSP}
                                     autoCapitalize="none"
@@ -269,6 +293,9 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                 <TextInput
                                     value={accessKey}
                                     onChangeText={async (text: string) => {
+                                        this.savedAccessKey = text;
+                                        this.savedAccessKeyHost =
+                                            this.state.lsp;
                                         this.setState({ accessKey: text });
                                         await updateSettings({
                                             lspAccessKey: text
@@ -328,6 +355,9 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                                 : isTestNet
                                                 ? DEFAULT_LSP_TESTNET
                                                 : DEFAULT_LSP_MAINNET;
+                                            this.savedAccessKey = '';
+                                            this.savedAccessKeyHost =
+                                                defaultLsp;
                                             this.setState({
                                                 enableLSP: true,
                                                 lsp: defaultLsp,
