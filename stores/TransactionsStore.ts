@@ -152,7 +152,8 @@ export default class TransactionsStore {
     // true from the dispatch of an on-chain send until its outcome is known,
     // funding, finalizing, broadcasting and a timeout lookup included.
     // `loading` is shared with other operations (getTransactions), so it
-    // can't serve as the double-submission guard
+    // can't serve as the double-submission guard. reset() keeps it: the
+    // send's request can still go out after a reconnect
     @observable public onchainSendInFlight = false;
     // sendCoinsSeq of the send holding onchainSendInFlight (null when none)
     private onchainSendOwnerSeq: number | null = null;
@@ -214,8 +215,9 @@ export default class TransactionsStore {
         this.sendCoinsSeq++;
         this.loading = false;
         this.sendOutcomeUnknown = false;
-        this.onchainSendInFlight = false;
-        this.onchainSendOwnerSeq = null;
+        // onchainSendInFlight is left alone: an on-chain send still waiting
+        // on the node may yet broadcast, and only its own settling may
+        // release the guard
         this.paymentInFlight = false;
         this.inFlightOwnerSeq = null;
         this.inFlightPaymentHash = null;

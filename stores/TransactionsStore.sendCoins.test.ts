@@ -267,7 +267,7 @@ describe('TransactionsStore.sendCoins', () => {
         expect(store.error_msg).toBe(null);
     });
 
-    it("does not report an earlier send's txid for a newer send", async () => {
+    it("does not report an earlier send's txid for the next send", async () => {
         sendCoins.mockRejectedValueOnce(new Error('Request timeout'));
         let answerLookup: (result: any) => void = () => undefined;
         getTransactions.mockReturnValueOnce(
@@ -280,24 +280,29 @@ describe('TransactionsStore.sendCoins', () => {
         await jest.advanceTimersByTimeAsync(0);
         expect(getTransactions).toHaveBeenCalledTimes(1);
 
-        // the newer send, started after a reset, is still waiting on the
-        // node when the earlier send's lookup finds it
+        // the earlier send's lookup finds it after a reset; the guard holds
+        // the next send until then
         store.reset();
-        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
-        store.sendCoins(request());
         answerLookup({
             transactions: [
                 { tx_hash: 'old', label: sendCoins.mock.calls[0][0].label }
             ]
         });
         await settle();
+        expect(store.txid).toBe(null);
+        expect(store.publishSuccess).toBe(false);
 
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
+        await settle();
+
+        expect(sendCoins).toHaveBeenCalledTimes(2);
         expect(store.txid).toBe(null);
         expect(store.publishSuccess).toBe(false);
         expect(store.loading).toBe(true);
     });
 
-    it("does not end a newer send with an earlier send's error", async () => {
+    it("does not end the next send with an earlier send's error", async () => {
         let rejectFirst: (error: Error) => void = () => undefined;
         sendCoins.mockReturnValueOnce(
             new Promise((_, reject) => {
@@ -308,11 +313,16 @@ describe('TransactionsStore.sendCoins', () => {
         store.sendCoins(request());
 
         store.reset();
-        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
-        store.sendCoins(request());
         rejectFirst(new Error('insufficient funds'));
         await settle();
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe(null);
 
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
+        await settle();
+
+        expect(sendCoins).toHaveBeenCalledTimes(2);
         expect(store.error).toBe(false);
         expect(store.error_msg).toBe(null);
         expect(store.loading).toBe(true);
@@ -358,7 +368,7 @@ describe('TransactionsStore.sendCoins', () => {
         expect(store.publishSuccess).toBe(false);
     });
 
-    it("does not report an earlier send's answer for a newer send", async () => {
+    it("does not report an earlier send's answer for the next send", async () => {
         let answer: (data: any) => void = () => undefined;
         sendCoins.mockReturnValueOnce(
             new Promise((resolve) => {
@@ -369,11 +379,14 @@ describe('TransactionsStore.sendCoins', () => {
         store.sendCoins(request());
 
         store.reset();
-        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
-        store.sendCoins(request());
         answer({ txid: 'old' });
         await settle();
 
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
+        await settle();
+
+        expect(sendCoins).toHaveBeenCalledTimes(2);
         expect(store.txid).toBe(null);
         expect(store.publishSuccess).toBe(false);
         expect(store.loading).toBe(true);
@@ -488,9 +501,9 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
         expect(store.error_msg).toBe('insufficient fee');
     });
 
-    // Send A's finalizePsbt answers after a reset and a newer send B,
-    // which is still waiting on the node
-    const finalizeAfterNewerSend = async () => {
+    // Send A's finalizePsbt answers after a reset; send B starts once A
+    // has settled and is still waiting on the node
+    const finalizeAfterReset = async () => {
         let finalizeA: (data: any) => void = () => undefined;
         finalizePsbt.mockReturnValueOnce(
             new Promise((resolve) => {
@@ -503,11 +516,16 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
         expect(finalizePsbt).toHaveBeenCalledTimes(1);
 
         store.reset();
-        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
-        store.sendCoins(request());
         finalizeA({ raw_final_tx: '0200' });
         await settle();
         return store;
+    };
+
+    const startNextSend = async (store: any) => {
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
+        await settle();
+        expect(sendCoins).toHaveBeenCalledTimes(1);
     };
 
     const expectNewerSendPending = (store: any) => {
@@ -522,11 +540,12 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
         ['found', [{ tx_hash: 'batchtxid' }]],
         ['missing', []]
     ])(
-        'does not publish an earlier send finalized after a newer send (lookup %s)',
+        'does not publish an earlier send finalized after a reset (lookup %s)',
         async (_, transactions) => {
             publishTransaction.mockRejectedValue(new Error('Request timeout'));
             getTransactions.mockResolvedValue({ transactions });
-            const store = await finalizeAfterNewerSend();
+            const store = await finalizeAfterReset();
+            await startNextSend(store);
 
             expect(publishTransaction).not.toHaveBeenCalled();
             expect(getTransactions).not.toHaveBeenCalled();
@@ -538,7 +557,7 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
         ['found', [{ tx_hash: 'batchtxid' }]],
         ['missing', []]
     ])(
-        'does not end a newer send with an earlier publish timeout (lookup %s)',
+        'does not end the next send with an earlier publish timeout (lookup %s)',
         async (_, transactions) => {
             let rejectPublish: (error: Error) => void = () => undefined;
             publishTransaction.mockReturnValueOnce(
@@ -553,17 +572,16 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
             expect(publishTransaction).toHaveBeenCalledTimes(1);
 
             store.reset();
-            sendCoins.mockReturnValueOnce(new Promise(() => undefined));
-            store.sendCoins(request());
             rejectPublish(new Error('Request timeout'));
             await settle();
+            await startNextSend(store);
 
             expect(getTransactions).not.toHaveBeenCalled();
             expectNewerSendPending(store);
         }
     );
 
-    it('does not end a newer send with an earlier finalize error', async () => {
+    it('does not end the next send with an earlier finalize error', async () => {
         let rejectFinalize: (error: Error) => void = () => undefined;
         finalizePsbt.mockReturnValueOnce(
             new Promise((_resolve, reject) => {
@@ -575,15 +593,14 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
         await jest.advanceTimersByTimeAsync(0);
 
         store.reset();
-        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
-        store.sendCoins(request());
         rejectFinalize(new Error('finalize failed'));
         await settle();
+        await startNextSend(store);
 
         expectNewerSendPending(store);
     });
 
-    it('does not end a newer send with an earlier publish error', async () => {
+    it('does not end the next send with an earlier publish error', async () => {
         let answerPublish: (data: any) => void = () => undefined;
         publishTransaction.mockReturnValueOnce(
             new Promise((resolve) => {
@@ -595,10 +612,9 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
         await jest.advanceTimersByTimeAsync(0);
 
         store.reset();
-        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
-        store.sendCoins(request());
         answerPublish({ publish_error: 'insufficient fee' });
         await settle();
+        await startNextSend(store);
 
         expectNewerSendPending(store);
     });
@@ -762,7 +778,7 @@ describe('TransactionsStore.sendCoins double-submission guard', () => {
         expect(store.onchainSendInFlight).toBe(false);
     });
 
-    it('releases the guard on reset', async () => {
+    it('keeps the guard across a reset until the pending send settles', async () => {
         let answer: (data: any) => void = () => undefined;
         sendCoins.mockReturnValueOnce(
             new Promise((resolve) => {
@@ -772,13 +788,20 @@ describe('TransactionsStore.sendCoins double-submission guard', () => {
         const store = newStore();
         store.sendCoins(request());
         store.reset();
-        expect(store.onchainSendInFlight).toBe(false);
+        expect(store.onchainSendInFlight).toBe(true);
 
-        // the earlier send answering does not end the newer one's guard
-        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        // the earlier send may still go out, so a send after the reset is
+        // refused until it answers
         store.sendCoins(request());
+        expect(sendCoins).toHaveBeenCalledTimes(1);
+
         answer({ txid: 'old' });
         await settle();
+        expect(store.onchainSendInFlight).toBe(false);
+        expect(store.txid).toBe(null);
+
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
         expect(sendCoins).toHaveBeenCalledTimes(2);
         expect(store.onchainSendInFlight).toBe(true);
     });
