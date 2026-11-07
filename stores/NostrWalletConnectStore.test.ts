@@ -1000,8 +1000,11 @@ describe('NostrWalletConnectStore concurrent connection changes', () => {
         });
         await settle(rotationSubscribe.entered);
         const updateSubscribe = relayFor(NEW_RELAY).holdNextSubscribe();
+        // A permission change, so the update opens its own subscription
+        // instead of waiting for the rotation's
         const update = store.updateConnection(connection.id, {
-            name: 'Renamed App'
+            name: 'Renamed App',
+            permissions: ['get_info', 'get_balance', 'make_invoice']
         });
         await settle(updateSubscribe.entered);
 
@@ -1065,8 +1068,11 @@ describe('NostrWalletConnectStore concurrent connection changes', () => {
         });
         await settle(firstSubscribe.entered);
         const secondSubscribe = relayFor(OLD_RELAY).holdNextSubscribe();
+        // A permission change, so the second update opens its own
+        // subscription instead of waiting for the first one's
         const secondUpdate = store.updateConnection(connection.id, {
-            name: 'Second'
+            name: 'Second',
+            permissions: ['get_info', 'get_balance', 'make_invoice']
         });
         await settle(secondSubscribe.entered);
 
@@ -1265,6 +1271,40 @@ describe('NostrWalletConnectStore overlapping subscribes', () => {
 
         await settle(store.deleteConnection(connection.id));
         expect(liveSubscriptions(connection)).toBe(0);
+    });
+
+    it('keeps the in-flight subscription when an overlapping subscribe for the same configuration would fail', async () => {
+        silence('error');
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const firstSubscribe = relay.holdNextSubscribe();
+
+        const first = subscribe(store, connection);
+        await settle(firstSubscribe.entered);
+        // Any relay subscribe made from here on fails, except the held
+        // first one, which goes through
+        relay.failSubscribe = true;
+        const second = subscribe(store, connection);
+        await flushMicrotasks();
+        relay.failSubscribe = false;
+        firstSubscribe.release();
+        await flushMicrotasks();
+        relay.failSubscribe = true;
+        await settle(Promise.all([first, second]));
+
+        expect(liveSubscriptions(connection)).toBe(1);
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            true
+        );
+        // The second subscribe waited for the first instead of opening its own
+        expect(relay.subscribe).toHaveBeenCalledTimes(1);
+        relay.failSubscribe = false;
+        expect((await clientFor(connection).getBalance()).error).toBe(
+            undefined
+        );
     });
 
     it('drops an older in-flight subscribe once an update resubscribes with new permissions', async () => {
