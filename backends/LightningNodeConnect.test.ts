@@ -954,6 +954,28 @@ describe('LightningNodeConnect on-chain sends', () => {
     });
 });
 
+describe('LightningNodeConnect.abandonChannel', () => {
+    // as ChannelsStore abandons a channel lnd verified but never funded
+    it('abandons a pending funding shim channel by its outpoint', async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        (lnc.lnd.lightning as any).abandonChannel = jest.fn(async () => ({}));
+
+        await backend.abandonChannel(['ab'.repeat(32), '2', true]);
+
+        expect((lnc.lnd.lightning as any).abandonChannel).toHaveBeenCalledWith({
+            channelPoint: {
+                fundingTxidStr: 'ab'.repeat(32),
+                fundingTxidBytes: undefined,
+                outputIndex: 2
+            },
+            pendingFundingShimOnly: true
+        });
+    });
+});
+
 describe('LightningNodeConnect.releaseOutput', () => {
     it('releases a leased output through the wallet kit', async () => {
         mockSettings.implementation = 'lightning-node-connect';

@@ -20,7 +20,11 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { getCooperativeCloses, getForceCloses } from '../utils/BalanceUtils';
-import { findChannelByMemo, makeOpenMemo } from '../utils/ChannelOpenUtils';
+import {
+    findChannelByMemo,
+    getFundingOutpoints,
+    makeOpenMemo
+} from '../utils/ChannelOpenUtils';
 import { isRequestTimeout } from '../utils/RequestTimeoutUtils';
 
 interface ChannelInfoIndex {
@@ -70,6 +74,39 @@ const releaseLeases = (lockedUtxos: Array<any>) =>
                 console.log('Could not release a leased input', error)
             )
     );
+
+// A channel that passed psbt_verify is no longer a funding intent, so
+// shim_cancel does not reach it: lnd keeps it pending, waiting for a
+// funding transaction ZEUS will not publish, and peers that allow one
+// pending channel refuse new ones. AbandonChannel with
+// pending_funding_shim_only removes such a channel from this node only;
+// the peer drops it on its own timeout. Best effort, and only for a PSBT
+// that was never handed to psbt_finalize.
+const abandonVerifiedChannels = (
+    psbt: string,
+    fundingAddresses: Array<string>
+) => {
+    let outpoints: Array<{ funding_txid_str: string; output_index: number }>;
+    try {
+        outpoints = getFundingOutpoints(psbt, fundingAddresses);
+    } catch (error: any) {
+        console.log('Could not read the funding outpoints', error);
+        return;
+    }
+    outpoints.forEach(({ funding_txid_str, output_index }) =>
+        Promise.resolve()
+            .then(() =>
+                BackendUtils.abandonChannel([
+                    funding_txid_str,
+                    String(output_index),
+                    true
+                ])
+            )
+            .catch((error: any) =>
+                console.log('Could not abandon a verified channel', error)
+            )
+    );
+};
 
 const openChannelStreamWithTimeout = (request: OpenChannelRequest) => {
     // the request object is reused for every stream of a batch
@@ -1099,12 +1136,19 @@ export default class ChannelsStore {
 
         // the inputs fundPsbt leased for the funding transaction
         let lockedUtxos: Array<any> = [];
+        // the PSBT lnd accepted in a psbt_verify, if any
+        let verifiedPsbt: string | undefined;
         // a flow that ends before psbt_finalize has published nothing:
-        // give the inputs back and end lnd's PSBT flow for every channel
+        // give the inputs back, end lnd's PSBT flow for the channels still
+        // waiting for one, and abandon the channels lnd already verified
         const abandon = () => {
             releaseLeases(lockedUtxos);
             lockedUtxos = [];
             pendingChanIds.forEach(cancelShim);
+            if (verifiedPsbt) {
+                abandonVerifiedChannels(verifiedPsbt, Object.keys(outputs));
+                verifiedPsbt = undefined;
+            }
         };
 
         BackendUtils.fundPsbt(fundPsbtRequest)
@@ -1133,6 +1177,7 @@ export default class ChannelsStore {
                             skip_finalize: true
                         }
                     });
+                    verifiedPsbt = funded_psbt;
                 }
 
                 BackendUtils.fundingStateStep({
@@ -1143,6 +1188,7 @@ export default class ChannelsStore {
                     }
                 })
                     .then((data: any) => {
+                        verifiedPsbt = funded_psbt;
                         if (data.publish_error) {
                             const errorMsg = errorToUserFriendly(
                                 data.publish_error

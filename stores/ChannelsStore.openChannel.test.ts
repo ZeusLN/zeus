@@ -10,6 +10,7 @@ jest.mock('../utils/BackendUtils', () => ({
     signPsbt: jest.fn(),
     fundingStateStep: jest.fn(),
     releaseOutput: jest.fn(),
+    abandonChannel: jest.fn(),
     connectPeer: jest.fn(),
     getPendingChannels: jest.fn(),
     getChannels: jest.fn(),
@@ -19,6 +20,10 @@ jest.mock('../utils/BackendUtils', () => ({
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
+jest.mock('../utils/ChannelOpenUtils', () => ({
+    ...jest.requireActual('../utils/ChannelOpenUtils'),
+    getFundingOutpoints: jest.fn(() => [])
+}));
 jest.mock('../utils/ErrorUtils', () => ({
     errorToUserFriendly: (e: any) => e?.message ?? String(e)
 }));
@@ -26,7 +31,10 @@ jest.mock('../utils/ErrorUtils', () => ({
 import ChannelsStore from './ChannelsStore';
 import BackendUtils from '../utils/BackendUtils';
 import OpenChannelRequest from '../models/OpenChannelRequest';
-import { OPEN_MEMO_PREFIX } from '../utils/ChannelOpenUtils';
+import {
+    OPEN_MEMO_PREFIX,
+    getFundingOutpoints
+} from '../utils/ChannelOpenUtils';
 
 const isLNDBased = BackendUtils.isLNDBased as jest.Mock;
 const supportsChannelMemo = BackendUtils.supportsChannelMemo as jest.Mock;
@@ -38,6 +46,7 @@ const fundPsbt = BackendUtils.fundPsbt as jest.Mock;
 const signPsbt = BackendUtils.signPsbt as jest.Mock;
 const fundingStateStep = BackendUtils.fundingStateStep as jest.Mock;
 const releaseOutput = BackendUtils.releaseOutput as jest.Mock;
+const abandonChannel = BackendUtils.abandonChannel as jest.Mock;
 const connectPeer = BackendUtils.connectPeer as jest.Mock;
 
 // cln-rest skips the node-info enrichment reaction; the open path only
@@ -441,10 +450,14 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             signPsbt,
             fundingStateStep,
             releaseOutput,
+            abandonChannel,
             connectPeer,
             openChannelSync
         ].forEach((mock) => mock.mockReset());
         releaseOutput.mockResolvedValue({});
+        abandonChannel.mockResolvedValue({});
+        (getFundingOutpoints as jest.Mock).mockReset();
+        (getFundingOutpoints as jest.Mock).mockReturnValue([]);
         // a newer open stays pending unless a test answers it
         openChannelStream.mockImplementation(never);
         openChannelSync.mockImplementation(never);
@@ -1401,6 +1414,126 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             expect(store.channelSuccess).toBe(true);
             expect(releaseOutput).not.toHaveBeenCalled();
             expect(cancels()).toEqual([]);
+        });
+
+        describe('channels lnd already verified', () => {
+            // the outpoints lnd recorded for the batch's channels
+            const OUTPOINTS = [
+                { funding_txid_str: 'unsigned-txid', output_index: 0 },
+                { funding_txid_str: 'unsigned-txid', output_index: 2 }
+            ];
+            const abandoned = () =>
+                abandonChannel.mock.calls.map(([params]: any) => params);
+            const failVerifyOf = (pendingChanId: string) =>
+                fundingStateStep.mockImplementation(async (step: any) => {
+                    if (step.psbt_verify?.pending_chan_id === pendingChanId)
+                        throw new Error('psbt invalid');
+                    return {};
+                });
+            const startBatch = () => {
+                openChannelStream
+                    .mockResolvedValueOnce(psbtFund('chan-a'))
+                    .mockResolvedValueOnce(psbtFund('chan-b'))
+                    .mockResolvedValueOnce(psbtFund('chan-c'));
+                const store = makeStore();
+                enterScreen(store);
+                openBatchOf3(store);
+                return store;
+            };
+
+            beforeEach(() => {
+                (getFundingOutpoints as jest.Mock).mockReturnValue(OUTPOINTS);
+            });
+
+            it('abandons them when the last verify fails', async () => {
+                failVerifyOf('chan-c');
+                startBatch();
+                await flush();
+
+                expect(getFundingOutpoints).toHaveBeenCalledWith(PSBT, [
+                    'bc1qchan-a',
+                    'bc1qchan-b',
+                    'bc1qchan-c'
+                ]);
+                expect(abandoned()).toEqual([
+                    ['unsigned-txid', '0', true],
+                    ['unsigned-txid', '2', true]
+                ]);
+                // and the leases and shims go back as before
+                expect(released()).toEqual(LOCKED);
+                expect(new Set(cancels())).toEqual(
+                    new Set(['chan-a', 'chan-b', 'chan-c'])
+                );
+            });
+
+            it('abandons them when a later skip_finalize verify fails', async () => {
+                failVerifyOf('chan-b');
+                startBatch();
+                await flush();
+
+                expect(abandoned()).toHaveLength(2);
+            });
+
+            it('abandons nothing when the first verify fails', async () => {
+                failVerifyOf('chan-a');
+                startBatch();
+                await flush();
+
+                expect(abandonChannel).not.toHaveBeenCalled();
+                expect(released()).toEqual(LOCKED);
+            });
+
+            it('abandons nothing for a single open whose verify fails', async () => {
+                openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+                failStep('psbt_verify', new Error('psbt invalid'));
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+                await flush();
+
+                expect(abandonChannel).not.toHaveBeenCalled();
+            });
+
+            it('abandons nothing once psbt_finalize was sent', async () => {
+                openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+                failStep('psbt_finalize', new Error('no'));
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+                await flush();
+
+                // the funding transaction may have been published
+                expect(abandonChannel).not.toHaveBeenCalled();
+                expect(store.funded_psbt).toBe(PSBT);
+            });
+
+            it('abandons nothing for a superseded open whose finalize fails', async () => {
+                const first = held();
+                openChannelStream.mockReturnValueOnce(first.promise);
+                failStep('psbt_finalize', new Error('no'));
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+                enterScreen(store);
+
+                first.resolve(psbtFund('chan-1'));
+                await flush();
+                expect(abandonChannel).not.toHaveBeenCalled();
+            });
+
+            it('still ends the open when abandoning fails', async () => {
+                failVerifyOf('chan-c');
+                abandonChannel.mockRejectedValue(new Error('offline'));
+                (getFundingOutpoints as jest.Mock).mockImplementation(() => {
+                    throw new Error('bad psbt');
+                });
+                const store = startBatch();
+                await flush();
+
+                expect(store.errorMsgChannel).toBe('psbt invalid');
+                expect(store.syncOpensInFlight).toBe(0);
+                expect(released()).toEqual(LOCKED);
+            });
         });
 
         it('still ends the open when a release fails', async () => {

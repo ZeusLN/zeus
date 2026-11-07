@@ -943,6 +943,24 @@ describe('LND.sendCoins', () => {
     });
 });
 
+describe('LND.abandonChannel', () => {
+    // as ChannelsStore abandons a channel lnd verified but never funded
+    it('abandons a pending funding shim channel by its outpoint', () => {
+        const lnd = new LND();
+        const deleteRequest = jest
+            .spyOn(lnd, 'deleteRequest')
+            .mockResolvedValue({});
+
+        lnd.abandonChannel(['ab'.repeat(32), '2', true]);
+
+        expect(deleteRequest).toHaveBeenCalledWith(
+            `/v1/channels/abandon/${'ab'.repeat(
+                32
+            )}/2?pending_funding_shim_only=true`
+        );
+    });
+});
+
 describe('LND.releaseOutput', () => {
     it('releases a leased output through the wallet kit', () => {
         const lnd = new LND();

@@ -147,6 +147,7 @@ class BackendUtils {
 
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
     releaseOutput = (...args: any[]) => this.call('releaseOutput', args);
+    abandonChannel = (...args: any[]) => this.call('abandonChannel', args);
     signPsbt = (...args: any[]) => this.call('signPsbt', args);
     finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);
     publishTransaction = (...args: any[]) =>

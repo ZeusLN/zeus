@@ -21,6 +21,7 @@ const mockListPayments = jest.fn();
 const mockGetTransactions = jest.fn();
 const mockSendCoins = jest.fn();
 const mockOpenChannel = jest.fn();
+const mockAbandonChannel = jest.fn();
 const mockSignMessageNodePubkey = jest.fn();
 const mockVerifyMessageNodePubkey = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
@@ -37,6 +38,7 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
         channel: {
             closeChannel: (...args: any[]) => mockCloseChannel(...args),
             openChannel: (...args: any[]) => mockOpenChannel(...args),
+            abandonChannel: (...args: any[]) => mockAbandonChannel(...args),
             // test events carry the decoded update as JSON
             decodeCloseStatusUpdate: (data: string) => JSON.parse(data),
             decodeOpenStatusUpdate: (data: string) => JSON.parse(data)
@@ -512,6 +514,22 @@ describe('EmbeddedLND on-chain sends', () => {
             undefined,
             undefined,
             'ZEUS send 0123456789abcdef'
+        );
+    });
+});
+
+describe('EmbeddedLND.abandonChannel', () => {
+    // as ChannelsStore abandons a channel lnd verified but never funded
+    it('abandons a pending funding shim channel by its outpoint', async () => {
+        mockAbandonChannel.mockResolvedValue({ status: 'abandoned' });
+
+        await new EmbeddedLND().abandonChannel(['ab'.repeat(32), '2', true]);
+
+        expect(mockAbandonChannel).toHaveBeenCalledWith(
+            'ab'.repeat(32),
+            2,
+            true,
+            undefined
         );
     });
 });
