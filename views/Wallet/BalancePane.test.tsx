@@ -11,7 +11,7 @@ jest.mock('../../utils/MigrationUtils', () => ({
     IS_BACKED_UP_KEY: 'backup-complete-v2'
 }));
 jest.mock('../../utils/ChannelMigrationUtils', () => ({
-    CHANNEL_MIGRATION_ACTIVE: 'channel_migration_active'
+    unlockWalletFromMigration: jest.fn(async () => {})
 }));
 jest.mock('../../utils/NavigationUtils', () => ({
     reAuthNavigation: jest.fn()
@@ -40,11 +40,14 @@ jest.mock('../../assets/images/SVG/Clock.svg', () => 'ClockIcon');
 jest.mock('../../assets/images/SVG/Lock.svg', () => 'LockIcon');
 
 import * as React from 'react';
+import { Alert } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import RNRestart from 'react-native-restart';
 
 import BalancePane from './BalancePane';
 import Storage from '../../storage';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
+import { unlockWalletFromMigration } from '../../utils/ChannelMigrationUtils';
 
 const BACKUP_TITLE = 'views.Wallet.BalancePane.backup.title';
 const FOLDER_MISSING_TITLE = 'views.Wallet.lndFolderMissing.title';
@@ -60,11 +63,17 @@ const renderPane = async ({
     implementation = 'embedded-lnd',
     lndFolderMissing = false,
     isSyncing = false,
+    isChannelMigrating = false,
+    lndDir,
+    onUnlock = jest.fn(),
     balances = {}
 }: {
     implementation?: string;
     lndFolderMissing?: boolean;
     isSyncing?: boolean;
+    isChannelMigrating?: boolean;
+    lndDir?: string;
+    onUnlock?: jest.Mock;
     balances?: Record<string, any>;
 } = {}) => {
     const listeners: { [event: string]: () => void } = {};
@@ -81,7 +90,8 @@ const renderPane = async ({
             {...({
                 navigation,
                 loading: false,
-                isChannelMigrating: false,
+                isChannelMigrating,
+                onUnlock,
                 BalanceStore: {
                     lightningBalance: 50_000,
                     totalBlockchainBalance: 80_000,
@@ -100,6 +110,7 @@ const renderPane = async ({
                 SettingsStore: {
                     implementation,
                     lndFolderMissing,
+                    lndDir,
                     settings: {}
                 },
                 SyncStore: { isSyncing, isBusy: isSyncing },
@@ -227,5 +238,27 @@ describe('BalancePane missing LND folder card', () => {
         await renderPane({ implementation: 'lnd', lndFolderMissing: true });
 
         expect(screen.queryByText(FOLDER_MISSING_TITLE)).not.toBeOnTheScreen();
+    });
+});
+
+describe('BalancePane channel migration lock', () => {
+    it('unlocks only the selected wallet when the migration is cancelled', async () => {
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const onUnlock = jest.fn();
+        await renderPane({
+            isChannelMigrating: true,
+            lndDir: 'wallet-b',
+            onUnlock
+        });
+
+        await fireEvent.press(
+            screen.getByText('views.Wallet.BalancePane.migration.action.unlock')
+        );
+        const buttons: any[] = alert.mock.calls[0][2]!;
+        await act(async () => buttons[1].onPress());
+
+        expect(unlockWalletFromMigration).toHaveBeenCalledWith('wallet-b');
+        expect(onUnlock).toHaveBeenCalledTimes(1);
+        expect(RNRestart.Restart).toHaveBeenCalledTimes(1);
     });
 });
