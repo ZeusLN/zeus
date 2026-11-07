@@ -40,6 +40,7 @@ import {
     deriveSwapPreimage,
     aggregateMusigKeys,
     rescuedLockupFloor,
+    submarineSwapPaidBySend,
     swapNetworkName,
     isAlreadyBroadcastError,
     buildReverseSwapLeaves,
@@ -1667,5 +1668,93 @@ describe('SwapUtils', () => {
                 reason
             });
         });
+    });
+});
+
+describe('submarineSwapPaidBySend', () => {
+    const SWAP = {
+        id: 'swap',
+        type: 'Submarine',
+        address: 'bc1pswapaddress',
+        bip21: 'bitcoin:bc1pswapaddress?amount=0.001004'
+    };
+    const stack = (swapData: any, destination: any) => [
+        { name: 'Wallet' },
+        { name: 'SwapDetails', params: { swapData } },
+        { name: 'Send', params: { destination } },
+        { name: 'VerifyOnChain', params: { destination, fee: '5' } },
+        { name: 'SendingOnChain' }
+    ];
+
+    it('returns the swap a send from its pay button went to', () => {
+        expect(submarineSwapPaidBySend(stack(SWAP, 'bc1pswapaddress'))).toBe(
+            'swap'
+        );
+    });
+
+    it('matches a destination the QR code gave in upper case', () => {
+        expect(submarineSwapPaidBySend(stack(SWAP, 'BC1PSWAPADDRESS'))).toBe(
+            'swap'
+        );
+    });
+
+    it('falls back to the lockup address of older swaps', () => {
+        const { address: _address, ...older } = SWAP;
+        expect(
+            submarineSwapPaidBySend(
+                stack(
+                    { ...older, lockupAddress: 'bc1pswapaddress' },
+                    'bc1pswapaddress'
+                )
+            )
+        ).toBe('swap');
+    });
+
+    it('ignores a send whose address the user changed', () => {
+        expect(
+            submarineSwapPaidBySend(stack(SWAP, 'bc1qsomewhereelse'))
+        ).toBeUndefined();
+    });
+
+    it('ignores reverse swaps, which are paid over Lightning', () => {
+        expect(
+            submarineSwapPaidBySend(
+                stack({ ...SWAP, type: 'Reverse' }, 'bc1pswapaddress')
+            )
+        ).toBeUndefined();
+    });
+
+    it('ignores sends not started from a swap', () => {
+        expect(
+            submarineSwapPaidBySend([
+                { name: 'Wallet' },
+                {
+                    name: 'VerifyOnChain',
+                    params: { destination: 'bc1pswapaddress' }
+                },
+                { name: 'SendingOnChain' }
+            ])
+        ).toBeUndefined();
+    });
+
+    it('ignores a SwapDetails opened above the send', () => {
+        expect(
+            submarineSwapPaidBySend([
+                {
+                    name: 'VerifyOnChain',
+                    params: { destination: 'bc1pswapaddress' }
+                },
+                { name: 'SwapDetails', params: { swapData: SWAP } }
+            ])
+        ).toBeUndefined();
+    });
+
+    it('ignores sends without a VerifyOnChain step', () => {
+        expect(
+            submarineSwapPaidBySend([
+                { name: 'SwapDetails', params: { swapData: SWAP } },
+                { name: 'SendingOnChain' }
+            ])
+        ).toBeUndefined();
     });
 });
