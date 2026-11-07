@@ -137,7 +137,9 @@ describe('LightningAddressStore', () => {
         it.each([
             ['an object', {}],
             ['a string', 'x'],
-            ['a number', 5]
+            ['a number', 5],
+            ['null', null],
+            ['missing', undefined]
         ])(
             'stores no open payments when paid is %s',
             async (_name: string, paid: any) => {
