@@ -5332,9 +5332,6 @@ export default class CashuStore {
             isProcessing: true
         });
 
-        // Parts a reconcile pass recorded as paid while they were checked
-        const settledByReconcile = new Set<CashuPayment>();
-
         const meltResults = await Promise.all(
             plannedMeltQuotes.map(
                 async ({ mintUrl, meltQuote, useRegularMelt }, index) => {
@@ -5356,7 +5353,6 @@ export default class CashuStore {
                             )
                         ) {
                             if (recorded && !recorded.isInTransit) {
-                                settledByReconcile.add(recorded);
                                 mintProgressInfo[index].status =
                                     MintPaymentStatus.SUCCESS;
                                 mintProgressInfo[index].error = undefined;
@@ -5688,9 +5684,23 @@ export default class CashuStore {
             return;
         }
 
-        this.payments?.push(
-            ...segmentPayments.filter((p) => !settledByReconcile.has(p))
-        );
+        // A paid part stays tracked until every part is done, so a reconcile
+        // pass in the meantime may have recorded it already. Keep one entry
+        // per quote: the one from the melt result, which has the fee.
+        runInAction(() => {
+            const payments = [...(this.payments || [])];
+            for (const payment of segmentPayments) {
+                const quoteId = payment.meltResponse?.quote?.quote;
+                const index = quoteId
+                    ? payments.findIndex(
+                          (p) => p.meltResponse?.quote?.quote === quoteId
+                      )
+                    : -1;
+                if (index > -1) payments[index] = payment;
+                else payments.push(payment);
+            }
+            this.payments = payments;
+        });
         await Storage.setItem(
             `${this.getNodeDir()}-cashu-payments`,
             this.payments

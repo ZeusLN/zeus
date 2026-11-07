@@ -714,6 +714,49 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(cdk.listTransactions).toHaveBeenCalled();
     });
 
+    it('records a paid part once when reconcile settles it while another part is still melting', async () => {
+        const store = await plannedStore();
+        cdk.melt.mockImplementation(async (mintUrl: string) => {
+            if (mintUrl === A) return paid(546, 1);
+            // A has been paid and is still tracked while B melts. A reconcile
+            // pass in that window finds A paid and records it.
+            await flush();
+            await store.reconcilePendingMelts();
+            return paid(454, 2, '');
+        });
+        cdk.checkMeltQuote.mockImplementation(async (_m: string, id: string) =>
+            id === `cdk-mpp-${A}`
+                ? {
+                      id,
+                      amount: 546,
+                      fee_reserve: 1,
+                      state: 'PAID',
+                      expiry: 9999999999,
+                      payment_preimage: PREIMAGE
+                  }
+                : heldQuote(id)
+        );
+
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+
+        expect(cdk.checkMeltQuote).toHaveBeenCalledWith(A, `cdk-mpp-${A}`);
+        expect(store.paymentSuccess).toBe(true);
+        expect(store.paymentFee).toBe(3);
+        // one entry per quote, with the fee the melt reported
+        expect(
+            store.payments!.map((p) => [
+                p.meltResponse.quote!.quote,
+                p.isInTransit,
+                p.fee,
+                !!p.fee_unknown
+            ])
+        ).toEqual([
+            [`cdk-mpp-${A}`, false, 1, false],
+            [`cdk-mpp-${B}`, false, 2, false]
+        ]);
+        expect(store.pendingMelts).toEqual([]);
+    });
+
     it('counts a part that paid no fee', async () => {
         const store = await plannedStore();
         cdk.melt.mockImplementation(async (mintUrl: string) =>
