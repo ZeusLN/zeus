@@ -22,6 +22,7 @@ import {
     WarningMessage
 } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
+import ShowHideToggle from '../../components/ShowHideToggle';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
@@ -50,6 +51,8 @@ interface PointOfSaleState {
     taxPercentage: string;
     enablePrinter: boolean;
     defaultView: string;
+    hidden: boolean;
+    squareAccessTokenFocused: boolean;
 }
 
 @inject('SettingsStore')
@@ -69,7 +72,9 @@ export default class PointOfSale extends React.Component<
         showKeypad: true,
         taxPercentage: '',
         enablePrinter: false,
-        defaultView: 'Products'
+        defaultView: 'Products',
+        hidden: true,
+        squareAccessTokenFocused: false
     };
 
     async componentDidMount() {
@@ -121,7 +126,9 @@ export default class PointOfSale extends React.Component<
             showKeypad,
             taxPercentage,
             enablePrinter,
-            defaultView
+            defaultView,
+            hidden,
+            squareAccessTokenFocused
         } = this.state;
         const { settings, updateSettingsGroup, updateSettingsGroupDebounced } =
             SettingsStore;
@@ -215,18 +222,57 @@ export default class PointOfSale extends React.Component<
                                         'views.Settings.POS.squareAccessToken'
                                     )}
                                 </Text>
-                                <TextInput
-                                    value={squareAccessToken}
-                                    onChangeText={(text: string) => {
-                                        this.setState({
-                                            squareAccessToken: text
-                                        });
-
-                                        updateSettingsGroupDebounced('pos', {
-                                            squareAccessToken: text
-                                        });
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center'
                                     }}
-                                />
+                                >
+                                    <TextInput
+                                        value={squareAccessToken}
+                                        onChangeText={(text: string) => {
+                                            this.setState({
+                                                squareAccessToken: text
+                                            });
+
+                                            updateSettingsGroupDebounced(
+                                                'pos',
+                                                {
+                                                    squareAccessToken: text
+                                                }
+                                            );
+                                        }}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        secureTextEntry={hidden}
+                                        locked={
+                                            hidden &&
+                                            !!squareAccessToken &&
+                                            !squareAccessTokenFocused
+                                        }
+                                        onFocus={() =>
+                                            this.setState({
+                                                squareAccessTokenFocused: true
+                                            })
+                                        }
+                                        onBlur={() =>
+                                            this.setState({
+                                                squareAccessTokenFocused: false
+                                            })
+                                        }
+                                        style={{
+                                            flex: 1,
+                                            marginRight: 15
+                                        }}
+                                    />
+                                    <ShowHideToggle
+                                        onPress={() =>
+                                            this.setState({
+                                                hidden: !hidden
+                                            })
+                                        }
+                                    />
+                                </View>
 
                                 <Text
                                     style={{
