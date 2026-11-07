@@ -1,25 +1,44 @@
 import { NativeModules, Platform } from 'react-native';
-import * as Keychain from 'react-native-keychain';
 
 export const KEY_PREFIX = 'zeus:';
 
 /**
+ * ZEUS's own native keychain module (#4471), replacing react-native-keychain.
+ * iOS keeps using the same keychain items (internet passwords, server
+ * "zeus:<key>"); Android keeps its own encrypted files and reads entries
+ * react-native-keychain wrote. Missing entries resolve to null; anything
+ * that cannot be read rejects, so a failed read is never mistaken for a
+ * missing value.
+ */
+interface SecureStorageModule {
+    get(server: string, cloudSync: boolean): Promise<string | null>;
+    set(server: string, value: string, cloudSync: boolean): Promise<boolean>;
+    remove(server: string, cloudSync: boolean): Promise<boolean>;
+    listServers(cloudSync: boolean): Promise<string[]>;
+    wipe(): Promise<boolean>;
+}
+
+const secureStorage = (): SecureStorageModule => {
+    const module = NativeModules.ZeusSecureStorage;
+    if (!module) {
+        throw new Error('ZeusSecureStorage native module is not available');
+    }
+    return module;
+};
+
+/**
  * Lists the servers of all keychain internet-password items in one
- * partition (synchronizable or not) via the KeychainAudit native module.
- * iOS only; resolves to [] elsewhere (Android has no partition split).
+ * partition (synchronizable or not). iOS only; resolves to [] elsewhere
+ * (Android has no partition split).
  */
 export const getInternetPasswordServers = async (
     synchronizable: boolean
 ): Promise<string[]> => {
     if (Platform.OS !== 'ios') return [];
-    const KeychainAudit = NativeModules.KeychainAudit;
-    if (!KeychainAudit) {
-        // Must be an error, not an empty result: callers treat [] as "no
-        // entries exist" and would set one-shot migration flags on it,
-        // permanently skipping work that was never done.
-        throw new Error('KeychainAudit native module is not available');
-    }
-    return KeychainAudit.getInternetPasswordServers(synchronizable);
+    // A missing module throws rather than resolving []: callers treat [] as
+    // "no entries exist" and would set one-shot migration flags on it,
+    // permanently skipping work that was never done.
+    return secureStorage().listServers(synchronizable);
 };
 
 /**
@@ -35,41 +54,50 @@ export const getRawItem = async (
     server: string,
     cloudSync: boolean
 ): Promise<string | null> => {
-    const response: any = await Keychain.getInternetCredentials(
-        server,
-        cloudSync ? { cloudSync: true } : undefined
-    );
-    if (response && typeof response.password === 'string') {
-        return response.password;
-    }
-    return null;
+    const value = await secureStorage().get(server, cloudSync);
+    return typeof value === 'string' ? value : null;
 };
 
-/**
- * Writes a raw server into the non-synchronizable (device-local)
- * partition. No cloudSync option is passed: with the patched
- * react-native-keychain, absent and false both mean local, and omitting
- * the option keeps this correct even on an unpatched build.
- */
+/** Writes a raw server into the non-synchronizable (device-local) partition. */
 export const setRawLocalItem = async (
     server: string,
     value: string
 ): Promise<boolean> => {
-    const response = await Keychain.setInternetCredentials(
-        server,
-        server,
-        value
-    );
-    return !!response;
+    // The module resolves true or rejects; a false result is still treated
+    // as a failed write
+    return (await secureStorage().set(server, value, false)) !== false;
+};
+
+/**
+ * Development only: writes into either partition, so the recovery tool can
+ * recreate the legacy layouts it scans. App data is never written to the
+ * synchronizable (iCloud) partition.
+ */
+export const setRawItemForDevelopment = async (
+    server: string,
+    value: string,
+    cloudSync: boolean
+): Promise<void> => {
+    if (!__DEV__) {
+        throw new Error('setRawItemForDevelopment is development only');
+    }
+    await secureStorage().set(server, value, cloudSync);
 };
 
 export const removeRawItem = async (
     server: string,
     cloudSync: boolean
 ): Promise<void> => {
-    await Keychain.resetInternetCredentials(
-        cloudSync ? { server, cloudSync: true } : { server }
-    );
+    await secureStorage().remove(server, cloudSync);
+};
+
+/**
+ * Deletes everything the module stores. On Android that is its own files
+ * and key plus every entry react-native-keychain left behind; on iOS every
+ * internet-password item the app owns, in both partitions.
+ */
+export const wipeSecureStorage = async (): Promise<void> => {
+    await secureStorage().wipe();
 };
 
 class Storage {
@@ -86,19 +114,9 @@ class Storage {
 
     private prefixKey = (key: string) => `${KEY_PREFIX}${key}`;
 
-    getItem = async (key: string) => {
-        const prefixedKey = this.prefixKey(key);
-        const response: any = await Keychain.getInternetCredentials(
-            prefixedKey,
-            {
-                cloudSync: false
-            }
-        );
-
-        if (response && response.password) {
-            return response.password;
-        }
-        return false;
+    getItem = async (key: string): Promise<any> => {
+        const value = await getRawItem(this.prefixKey(key), false);
+        return value ? value : false;
     };
 
     setItem = async (key: string, value: any) => {
@@ -107,35 +125,21 @@ class Storage {
             return false;
         }
 
-        const prefixedKey = this.prefixKey(key);
         const stringValue =
             typeof value === 'string' ? value : JSON.stringify(value);
 
-        // Keychain rejects empty/null passwords with EmptyParameterException.
         // getItem returns `false` for both unset and empty values, so routing
         // empty writes through removeItem preserves the observable semantics.
         if (stringValue == null || stringValue === '') {
             return this.removeItem(key);
         }
 
-        const response = await Keychain.setInternetCredentials(
-            prefixedKey,
-            prefixedKey,
-            stringValue,
-            {
-                cloudSync: false
-            }
-        );
-        return response;
+        return setRawLocalItem(this.prefixKey(key), stringValue);
     };
 
     removeItem = async (key: string) => {
-        const prefixedKey = this.prefixKey(key);
-        const response = await Keychain.resetInternetCredentials({
-            server: prefixedKey,
-            cloudSync: false
-        });
-        return response;
+        await removeRawItem(this.prefixKey(key), false);
+        return true;
     };
 }
 
