@@ -1,4 +1,9 @@
 jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
+// NetworkUtils loads TorUtils, whose native Tor module jest cannot parse
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: {}
+}));
 jest.mock('./SettingsStore', () => ({
     __esModule: true,
     default: class {}

@@ -6,6 +6,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { localeString } from './LocaleUtils';
 import { stopLnd } from './LndMobileUtils';
+import { networkFetch } from './NetworkUtils';
 import BackendUtils from './BackendUtils';
 import { isValidAuthChallenge } from './AuthChallengeUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
@@ -16,12 +17,18 @@ import { sleep } from './SleepUtils';
 import { zipFolder, unzipFile, encryptFile, decryptFile } from './ZipUtils';
 
 import { BACKUPS_HOST } from '../stores/ChannelBackupStore';
+import { settingsStore } from '../stores/Stores';
 
 import Storage from '../storage';
 
 export const CHANNEL_MIGRATION_ACTIVE = 'channel_migration_active';
 
 const VALID_CHANNEL_DB_EXTENSIONS = ['.zip'];
+
+// The channel backup upload and download carry the whole encrypted LND data
+// directory as base64. Over Tor the request timeout is a deadline for the
+// entire transfer, and the default 60 s is too short for a large one.
+export const CHANNEL_BACKUP_TRANSFER_TIMEOUT_MS = 15 * 60 * 1000;
 
 const getGraphDir = (lndDir: string, isTestnet: boolean): string => {
     const network = isTestnet ? 'testnet' : 'mainnet';
@@ -163,12 +170,13 @@ export const uploadChannelBackupToOlympus = async (
 
         // 1. Authentication for status to check for existing backup
         console.log('Authenticating for status check...');
-        const statusAuthResponse = await ReactNativeBlobUtil.fetch(
-            'POST',
-            `${BACKUPS_HOST}/api/auth`,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({ pubkey })
-        );
+        const statusAuthResponse = await networkFetch({
+            method: 'post',
+            url: `${BACKUPS_HOST}/api/auth`,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pubkey }),
+            enableTor: settingsStore.enableTor
+        });
 
         if (statusAuthResponse.info().status !== 200) {
             throw new Error('Authentication failed');
@@ -193,16 +201,17 @@ export const uploadChannelBackupToOlympus = async (
                 localeString('views.Tools.migration.export.checkingStatus')
             );
         console.log('Checking backup status...');
-        const statusResponse = await ReactNativeBlobUtil.fetch(
-            'POST',
-            `${BACKUPS_HOST}/api/status`,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({
+        const statusResponse = await networkFetch({
+            method: 'post',
+            url: `${BACKUPS_HOST}/api/status`,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 pubkey,
                 signature: statusSignature,
                 message: statusAuth.verification
-            })
-        );
+            }),
+            enableTor: settingsStore.enableTor
+        });
 
         if (statusResponse.info().status !== 200) {
             throw new Error('Status check failed');
@@ -223,12 +232,13 @@ export const uploadChannelBackupToOlympus = async (
                         )
                     );
                 console.log('Authenticating for uploading backup...');
-                const uploadAuthResponse = await ReactNativeBlobUtil.fetch(
-                    'POST',
-                    `${BACKUPS_HOST}/api/auth`,
-                    { 'Content-Type': 'application/json' },
-                    JSON.stringify({ pubkey })
-                );
+                const uploadAuthResponse = await networkFetch({
+                    method: 'post',
+                    url: `${BACKUPS_HOST}/api/auth`,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pubkey }),
+                    enableTor: settingsStore.enableTor
+                });
 
                 if (uploadAuthResponse.info().status !== 200) {
                     throw new Error('Authentication failed');
@@ -296,17 +306,19 @@ export const uploadChannelBackupToOlympus = async (
                         localeString('views.Tools.migration.export.uploading')
                     );
                 console.log('Uploading encrypted backup...');
-                const backupResponse = await ReactNativeBlobUtil.fetch(
-                    'POST',
-                    `${BACKUPS_HOST}/api/channels-backup`,
-                    { 'Content-Type': 'application/json' },
-                    JSON.stringify({
+                const backupResponse = await networkFetch({
+                    method: 'post',
+                    url: `${BACKUPS_HOST}/api/channels-backup`,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
                         pubkey,
                         message: uploadAuth.verification,
                         signature: uploadSignature,
                         backup: encryptedBase64
-                    })
-                );
+                    }),
+                    enableTor: settingsStore.enableTor,
+                    timeoutMs: CHANNEL_BACKUP_TRANSFER_TIMEOUT_MS
+                });
 
                 const status = backupResponse.info().status;
                 if (status === 413) {
@@ -443,12 +455,13 @@ export const restoreChannelBackupFromOlympus = async (
     try {
         // 1. Authentication for status to check for existing backup
         console.log('Authenticating for status check...');
-        const statusAuthResponse = await ReactNativeBlobUtil.fetch(
-            'POST',
-            `${BACKUPS_HOST}/api/auth`,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({ pubkey })
-        );
+        const statusAuthResponse = await networkFetch({
+            method: 'post',
+            url: `${BACKUPS_HOST}/api/auth`,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pubkey }),
+            enableTor: settingsStore.enableTor
+        });
 
         if (statusAuthResponse.info().status !== 200) {
             throw new Error('Authentication failed');
@@ -468,16 +481,17 @@ export const restoreChannelBackupFromOlympus = async (
         const statusSignature = statusSignData.signature;
 
         console.log('Checking backup status...');
-        const statusResponse = await ReactNativeBlobUtil.fetch(
-            'POST',
-            `${BACKUPS_HOST}/api/status`,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({
+        const statusResponse = await networkFetch({
+            method: 'post',
+            url: `${BACKUPS_HOST}/api/status`,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 pubkey,
                 signature: statusSignature,
                 message: statusAuth.verification
-            })
-        );
+            }),
+            enableTor: settingsStore.enableTor
+        });
 
         if (statusResponse.info().status !== 200) {
             throw new Error('Status check failed');
@@ -541,12 +555,13 @@ export const restoreChannelBackupFromOlympus = async (
 
         // 2. Authenticatication for restoring backup
         console.log('Authenticating for restore...');
-        const restoreAuthResponse = await ReactNativeBlobUtil.fetch(
-            'POST',
-            `${BACKUPS_HOST}/api/auth`,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({ pubkey })
-        );
+        const restoreAuthResponse = await networkFetch({
+            method: 'post',
+            url: `${BACKUPS_HOST}/api/auth`,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pubkey }),
+            enableTor: settingsStore.enableTor
+        });
 
         if (restoreAuthResponse.info().status !== 200) {
             throw new Error('Authentication failed');
@@ -571,16 +586,18 @@ export const restoreChannelBackupFromOlympus = async (
         const tempEncPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-restore-${timestamp}.enc`;
         const tempZipPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-restore-${timestamp}.zip`;
 
-        const restoreResponse = await ReactNativeBlobUtil.fetch(
-            'POST',
-            `${BACKUPS_HOST}/api/restore-channels`,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({
+        const restoreResponse = await networkFetch({
+            method: 'post',
+            url: `${BACKUPS_HOST}/api/restore-channels`,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 pubkey,
                 message: restoreAuth.verification,
                 signature: restoreSignature
-            })
-        );
+            }),
+            enableTor: settingsStore.enableTor,
+            timeoutMs: CHANNEL_BACKUP_TRANSFER_TIMEOUT_MS
+        });
 
         const restoreStatus = restoreResponse.info().status;
         if (restoreStatus !== 200) {
