@@ -131,6 +131,7 @@ interface WalletConfigurationState {
     dismissCustodialWarning: boolean;
     implementation: Implementations;
     certVerification: boolean;
+    pinnedCerts?: string[];
     saved: boolean;
     active: boolean;
     index: number | null;
@@ -139,6 +140,10 @@ interface WalletConfigurationState {
     importError: string;
     showLndHubModal: boolean;
     showCertModal: boolean;
+    // true when the cert warning modal was opened from the Save button
+    // (config already has verification off); false when opened by the
+    // user turning the Certificate Verification switch off
+    certModalSavesConfig: boolean;
     enableTor: boolean;
     interfaceKeys: Array<any>;
     photo?: string;
@@ -218,7 +223,8 @@ export default class WalletConfiguration extends React.Component<
         active: false,
         newEntry: false,
         implementation: 'ldk-node',
-        certVerification: false,
+        certVerification: true,
+        pinnedCerts: undefined,
         enableTor: false,
         existingAccount: false,
         suggestImport: '',
@@ -226,6 +232,7 @@ export default class WalletConfiguration extends React.Component<
         lndhubUrl: '',
         showLndHubModal: false,
         showCertModal: false,
+        certModalSavesConfig: false,
         username: '',
         password: '',
         hidden: true,
@@ -283,11 +290,12 @@ export default class WalletConfiguration extends React.Component<
     // are still saved with the node, and a stale error flag keeps Save
     // disabled. saved: false shows Save on an existing wallet.
     //
+    // Certificate Verification resets to on and pinned certificates are
+    // dropped, since they belong to the previous server.
     // keepCertVerification (used by the clipboard imports) keeps the
-    // user's Certificate Verification choice instead of the dropdown's
-    // per-interface value, so an import never turns verification off. The
-    // lndhub form forces verification on and hides the switch, so a value
-    // carried to or from lndhub is not the user's and is reset.
+    // user's Certificate Verification choice instead. The lndhub form
+    // forces verification on and hides the switch, so a value carried to
+    // or from lndhub is not the user's and is reset.
     resetConnection = (
         implementation: Implementations,
         {
@@ -301,7 +309,8 @@ export default class WalletConfiguration extends React.Component<
             implementation !== 'lndhub' &&
             this.state.implementation !== 'lndhub'
                 ? this.state.certVerification
-                : implementation === 'lndhub',
+                : true,
+        pinnedCerts: undefined,
         host: '',
         port: '',
         macaroonHex: '',
@@ -332,7 +341,7 @@ export default class WalletConfiguration extends React.Component<
         const { suggestImport } = this.state;
 
         if (suggestImport.includes('lndconnect://')) {
-            const { host, port, macaroonHex } =
+            const { host, port, macaroonHex, pinnedCerts } =
                 ConnectionFormatUtils.processLndConnectUrl(suggestImport);
 
             // An lndconnect string describes an LND REST node. A Core
@@ -346,6 +355,7 @@ export default class WalletConfiguration extends React.Component<
                 port,
                 portError: this.isInvalidPort(port),
                 macaroonHex: macaroonHex || '',
+                pinnedCerts,
                 suggestImport: '',
                 importError: '',
                 enableTor: host.includes('.onion')
@@ -397,13 +407,15 @@ export default class WalletConfiguration extends React.Component<
                 rune,
                 port,
                 enableTor,
-                implementation
+                implementation,
+                pinnedCerts
             }: {
                 host: string;
                 rune: string;
                 port: string;
                 enableTor: boolean;
                 implementation: Implementations;
+                pinnedCerts?: string[];
             } = ConnectionFormatUtils.processCLNRestConnectUrl(suggestImport);
 
             this.setState({
@@ -415,6 +427,7 @@ export default class WalletConfiguration extends React.Component<
                 port,
                 portError: this.isInvalidPort(port),
                 enableTor,
+                pinnedCerts,
                 suggestImport: '',
                 importError: ''
             });
@@ -510,6 +523,7 @@ export default class WalletConfiguration extends React.Component<
                 rune,
                 implementation,
                 certVerification,
+                pinnedCerts,
                 enableTor,
                 photo,
                 // LNDHub
@@ -551,7 +565,8 @@ export default class WalletConfiguration extends React.Component<
                 macaroonHex,
                 rune,
                 implementation: implementation || 'lnd',
-                certVerification,
+                certVerification: certVerification ?? true,
+                pinnedCerts,
                 index,
                 active,
                 saved,
@@ -676,6 +691,7 @@ export default class WalletConfiguration extends React.Component<
             password,
             implementation,
             certVerification,
+            pinnedCerts,
             index,
             pairingPhrase,
             mailboxServer,
@@ -724,6 +740,7 @@ export default class WalletConfiguration extends React.Component<
             password,
             implementation,
             certVerification,
+            pinnedCerts,
             enableTor,
             pairingPhrase,
             mailboxServer,
@@ -879,6 +896,7 @@ export default class WalletConfiguration extends React.Component<
             password,
             implementation,
             certVerification,
+            pinnedCerts,
             pairingPhrase,
             mailboxServer,
             customMailboxServer,
@@ -899,6 +917,7 @@ export default class WalletConfiguration extends React.Component<
             password,
             implementation,
             certVerification,
+            pinnedCerts,
             enableTor,
             pairingPhrase,
             mailboxServer,
@@ -1539,6 +1558,7 @@ export default class WalletConfiguration extends React.Component<
             newEntry,
             implementation,
             certVerification,
+            pinnedCerts,
             enableTor,
             photo,
             interfaceKeys,
@@ -1547,6 +1567,7 @@ export default class WalletConfiguration extends React.Component<
             importError,
             showLndHubModal,
             showCertModal,
+            certModalSavesConfig,
             pairingPhrase,
             mailboxServer,
             customMailboxServer,
@@ -1601,6 +1622,7 @@ export default class WalletConfiguration extends React.Component<
             implementation !== 'lightning-node-connect' &&
             !isLocalImpl &&
             implementation !== 'nostr-wallet-connect';
+        const hasPinnedCerts = (pinnedCerts?.length ?? 0) > 0;
 
         // The banner only needs to let the user recognise the string;
         // the credentials it carries stay masked like the fields below
@@ -1867,10 +1889,24 @@ export default class WalletConfiguration extends React.Component<
                                     <View style={styles.button}>
                                         <Button
                                             title={localeString(
-                                                'views.Settings.WalletConfiguration.certificateUnderstand'
+                                                certModalSavesConfig
+                                                    ? 'views.Settings.WalletConfiguration.certificateUnderstand'
+                                                    : 'views.Settings.WalletConfiguration.certificateUnderstandDisable'
                                             )}
                                             onPress={() => {
-                                                this.saveWalletConfiguration();
+                                                if (certModalSavesConfig) {
+                                                    this.saveWalletConfiguration();
+                                                } else {
+                                                    // Opened from the
+                                                    // Certificate
+                                                    // Verification switch:
+                                                    // apply the opt-out the
+                                                    // user just confirmed
+                                                    this.setState({
+                                                        certVerification: false,
+                                                        saved: false
+                                                    });
+                                                }
                                                 this.setState({
                                                     showCertModal: false
                                                 });
@@ -3172,15 +3208,75 @@ export default class WalletConfiguration extends React.Component<
                                         )}
                                     </Text>
                                     <Switch
-                                        value={certVerification}
-                                        onValueChange={() =>
-                                            this.setState({
-                                                certVerification:
-                                                    !certVerification,
-                                                saved: false
-                                            })
+                                        value={
+                                            hasPinnedCerts
+                                                ? true
+                                                : certVerification
                                         }
+                                        disabled={hasPinnedCerts}
+                                        onValueChange={() => {
+                                            if (certVerification) {
+                                                // Turning verification off
+                                                // exposes the connection to
+                                                // MITM, so require the
+                                                // warning modal before
+                                                // applying
+                                                this.setState({
+                                                    showCertModal: true,
+                                                    certModalSavesConfig: false
+                                                });
+                                            } else {
+                                                this.setState({
+                                                    certVerification: true,
+                                                    saved: false
+                                                });
+                                            }
+                                        }}
                                     />
+                                    {hasPinnedCerts && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    top: 20,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.certificatePinned'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    ...styles.button,
+                                                    marginTop: 30
+                                                }}
+                                            >
+                                                <Button
+                                                    title={localeString(
+                                                        'views.Settings.AddEditNode.removePinnedCertificate'
+                                                    )}
+                                                    onPress={() =>
+                                                        // Fail safe: dropping
+                                                        // the pin falls back
+                                                        // to CA verification,
+                                                        // never to the
+                                                        // stored trust-all
+                                                        // opt-out
+                                                        this.setState({
+                                                            pinnedCerts:
+                                                                undefined,
+                                                            certVerification:
+                                                                true,
+                                                            saved: false
+                                                        })
+                                                    }
+                                                    secondary
+                                                />
+                                            </View>
+                                        </>
+                                    )}
                                 </>
                             )}
                         </View>
@@ -3515,6 +3611,7 @@ export default class WalletConfiguration extends React.Component<
                                             if (
                                                 !saved &&
                                                 !certVerification &&
+                                                !hasPinnedCerts &&
                                                 !enableTor &&
                                                 !isLocalImpl &&
                                                 implementation !==
@@ -3528,7 +3625,8 @@ export default class WalletConfiguration extends React.Component<
                                                 !this.hasInsecureCleartextTransport()
                                             ) {
                                                 this.setState({
-                                                    showCertModal: true
+                                                    showCertModal: true,
+                                                    certModalSavesConfig: true
                                                 });
                                             } else {
                                                 this.saveWalletConfiguration();
@@ -3611,9 +3709,10 @@ export default class WalletConfiguration extends React.Component<
                             />
                         )}
 
-                        {!saved && certVerification && !enableTor && (
-                            <CertInstallInstructions />
-                        )}
+                        {!saved &&
+                            supportsCertVerification &&
+                            certVerification &&
+                            !enableTor && <CertInstallInstructions />}
 
                         {saved && !active && !newEntry && (
                             <View style={styles.button}>
