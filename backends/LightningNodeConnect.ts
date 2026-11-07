@@ -1035,33 +1035,44 @@ export default class LightningNodeConnect {
         string,
         {
             client?: any;
+            requestId?: string;
             listener?: EmitterSubscription;
             watchers: Set<(event: any) => void>;
         }
     >();
 
     private watchSharedStream = (
-        key: string,
-        start: () => string,
+        method: string,
         onEvent: (event: any) => void
     ): (() => void) => {
-        let shared = this.sharedStreams.get(key);
+        let shared = this.sharedStreams.get(method);
         if (!shared) {
             shared = { watchers: new Set() };
-            this.sharedStreams.set(key, shared);
+            this.sharedStreams.set(method, shared);
         }
         const stream = shared;
         // a new client (wallet switch or reconnect) needs its own stream
         const client = this.lnc;
         if (stream.client !== client) {
-            const eventName = start();
+            // A previous client's stream keeps emitting under the same
+            // name until it closes, so only events with this stream's
+            // request id are delivered or can end it
+            const requestId = newStreamRequestId();
+            const eventName = client.subscribe(method, {}, requestId);
             stream.client = client;
+            stream.requestId = requestId;
             if (!stream.listener) {
                 const { LncModule } = NativeModules;
                 const eventEmitter = new NativeEventEmitter(LncModule);
                 stream.listener = eventEmitter.addListener(
                     eventName,
                     (event: any) => {
+                        if (
+                            !stream.requestId ||
+                            !isEventForRequest(event, stream.requestId)
+                        ) {
+                            return;
+                        }
                         // EOF or an error string ends the stream: start a
                         // new one for the next watcher
                         if (event?.result) {
@@ -1090,13 +1101,11 @@ export default class LightningNodeConnect {
         onInvoice: () => void
     ): (() => void) => {
         const stopTransactions = this.watchSharedStream(
-            'transactions',
-            this.subscribeTransactions,
+            'lnrpc.Lightning.SubscribeTransactions',
             onTransaction
         );
         const stopInvoices = this.watchSharedStream(
-            'invoices',
-            this.subscribeInvoices,
+            'lnrpc.Lightning.SubscribeInvoices',
             onInvoice
         );
         return () => {
@@ -1166,8 +1175,7 @@ export default class LightningNodeConnect {
         onReceived: (payload: { amountSat: number; txid: string }) => void
     ): (() => void) => {
         const stop = this.watchSharedStream(
-            'transactions',
-            this.subscribeTransactions,
+            'lnrpc.Lightning.SubscribeTransactions',
             (event: any) => {
                 if (event.result) {
                     if (
