@@ -130,6 +130,40 @@ describe('Payment.getFee', () => {
         expect(new Payment({ payment_route: {} }).getFee).toBe('0');
     });
 
+    // LNbits' LndHub extension sends fee_msat and fee as negative numbers
+    // for an outgoing payment (#5254)
+    it('reads the fee of an LNbits /gettxs row as positive', () => {
+        const payment = new Payment({
+            type: 'paid_invoice',
+            fee_msat: -5000,
+            fee: -5,
+            value: 100,
+            timestamp: 1700000000
+        });
+        expect(payment.getFee).toBe('5');
+    });
+
+    it('reads the fee of an LNbits /payinvoice response as positive', () => {
+        const payment = new Payment({
+            payment_error: '',
+            payment_preimage: 'ab'.repeat(32),
+            payment_route: {},
+            fee_msat: -5000,
+            fee: -5
+        });
+        expect(payment.getFee).toBe('5');
+    });
+
+    it('reads a negative LndHub fee without fee_msat as positive', () => {
+        expect(new Payment({ fee: -3, value: 1 }).getFee).toBe('3');
+    });
+
+    it('reads an lnd fee_msat unchanged', () => {
+        expect(new Payment({ fee_sat: '2', fee_msat: '2500' }).getFee).toBe(
+            '2.5'
+        );
+    });
+
     it('prefers the lnd fee fields', () => {
         const payment = new Payment({
             fee: '1',

@@ -331,9 +331,11 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getFee(): string {
-        // lnd - prefer fee_msat for precision when available, regardless of fee_sat
+        // lnd - prefer fee_msat for precision when available, regardless of fee_sat.
+        // LNbits' LndHub extension also sends fee_msat (and fee), but as a
+        // negative number for an outgoing payment, so the magnitude is read
         if (this.fee_msat && this.fee_msat !== '0') {
-            const feeInSats = Number(this.fee_msat) / 1000;
+            const feeInSats = Math.abs(Number(this.fee_msat)) / 1000;
             const result = feeInSats.toString();
             return result;
         }
@@ -360,8 +362,10 @@ export default class Payment extends BaseModel {
         }
 
         // LndHub: fee on /gettxs rows, payment_route.total_fees on the
-        // /payinvoice response
-        const lndhubFee = Number(this.fee ?? this.payment_route?.total_fees);
+        // /payinvoice response. LNbits reports fee negative
+        const lndhubFee = Math.abs(
+            Number(this.fee ?? this.payment_route?.total_fees)
+        );
         if (lndhubFee > 0) {
             return lndhubFee.toString();
         }
