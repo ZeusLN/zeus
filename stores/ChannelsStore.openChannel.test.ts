@@ -894,6 +894,101 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             expect(openChannelStream).toHaveBeenCalledTimes(2);
             expect(store.syncOpensInFlight).toBe(0);
         });
+
+        describe('a stream that never answers', () => {
+            const STREAM_TIMEOUT_MS = 60000;
+
+            beforeEach(() => {
+                // flush() waits on setImmediate
+                jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+            });
+
+            afterEach(() => {
+                jest.useRealTimers();
+            });
+
+            it('stops counting the open and ends it with an error', async () => {
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+                expect(store.syncOpensInFlight).toBe(1);
+
+                await jest.advanceTimersByTimeAsync(STREAM_TIMEOUT_MS - 1);
+                expect(store.syncOpensInFlight).toBe(1);
+                expect(store.openingChannel).toBe(true);
+
+                await jest.advanceTimersByTimeAsync(1);
+                await flush();
+                expect(store.syncOpensInFlight).toBe(0);
+                expect(store.openingChannel).toBe(false);
+                expect(store.errorOpenChannel).toBe(true);
+                expect(store.errorMsgChannel).toBe(
+                    'stores.ChannelsStore.openStreamTimeout'
+                );
+            });
+
+            it('does not fund a channel whose stream answers after the timeout', async () => {
+                const first = held();
+                openChannelStream.mockReturnValueOnce(first.promise);
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+
+                await jest.advanceTimersByTimeAsync(STREAM_TIMEOUT_MS);
+                first.resolve(psbtFund('chan-1'));
+                await flush();
+
+                expect(fundPsbt).not.toHaveBeenCalled();
+                expect(fundingStateStep).not.toHaveBeenCalled();
+                expect(store.pending_chan_ids).toEqual([]);
+                expect(store.channelSuccess).toBe(false);
+                expect(store.syncOpensInFlight).toBe(0);
+            });
+
+            it('stops counting a superseded open without ending the newer one', async () => {
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+                await jest.advanceTimersByTimeAsync(STREAM_TIMEOUT_MS / 2);
+
+                enterScreen(store);
+                openStreamed(store);
+                expect(store.syncOpensInFlight).toBe(2);
+
+                await jest.advanceTimersByTimeAsync(STREAM_TIMEOUT_MS / 2);
+                await flush();
+                expect(store.syncOpensInFlight).toBe(1);
+                expect(store.openingChannel).toBe(true);
+                expect(store.errorOpenChannel).toBe(false);
+            });
+
+            it('stops counting a batch whose first stream never answers', async () => {
+                const store = makeStore();
+                enterScreen(store);
+                openBatch(store);
+                expect(store.syncOpensInFlight).toBe(1);
+
+                await jest.advanceTimersByTimeAsync(STREAM_TIMEOUT_MS);
+                await flush();
+                expect(openChannelStream).toHaveBeenCalledTimes(1);
+                expect(store.syncOpensInFlight).toBe(0);
+                expect(store.errorOpenChannel).toBe(true);
+            });
+
+            it('does not end an open whose stream answered in time', async () => {
+                openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+                await flush();
+                expect(store.channelSuccess).toBe(true);
+
+                await jest.advanceTimersByTimeAsync(STREAM_TIMEOUT_MS);
+                expect(store.channelSuccess).toBe(true);
+                expect(store.errorOpenChannel).toBe(false);
+                expect(store.syncOpensInFlight).toBe(0);
+            });
+        });
     });
 
     describe('a silent connectPeer', () => {

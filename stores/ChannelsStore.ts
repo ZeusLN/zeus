@@ -37,6 +37,36 @@ interface PendingHTLC {
     forwarding_htlc_index?: number;
 }
 
+// openChannelStream has no request timeout on LND REST (WebSocket),
+// embedded LND or LNC (stream listeners), unlike openChannelSync. A stream
+// that never yields psbt_fund would keep its open counted in
+// syncOpensInFlight for good, so it is given up after this long. Nothing
+// is spent before ZEUS funds the PSBT, so a late psbt_fund is dropped.
+const OPEN_CHANNEL_STREAM_TIMEOUT_MS = 60000;
+
+const openChannelStreamWithTimeout = (request: OpenChannelRequest) =>
+    new Promise<any>((resolve, reject) => {
+        const timeoutId = setTimeout(
+            () =>
+                reject(
+                    new Error(
+                        localeString('stores.ChannelsStore.openStreamTimeout')
+                    )
+                ),
+            OPEN_CHANNEL_STREAM_TIMEOUT_MS
+        );
+        BackendUtils.openChannelStream(request).then(
+            (data: any) => {
+                clearTimeout(timeoutId);
+                resolve(data);
+            },
+            (error: any) => {
+                clearTimeout(timeoutId);
+                reject(error);
+            }
+        );
+    });
+
 export enum ChannelsType {
     Open = 0,
     Pending = 1,
@@ -1241,7 +1271,7 @@ export default class ChannelsStore {
                     }
                 };
 
-                BackendUtils.openChannelStream(request)
+                openChannelStreamWithTimeout(request)
                     .then(async (data: any) => {
                         const { psbt_fund, pending_chan_id } = data.result;
                         pendingChanIds.push(pending_chan_id);
@@ -1280,7 +1310,7 @@ export default class ChannelsStore {
                                 // earlier channel has its funding output
                                 try {
                                     const data: any =
-                                        await BackendUtils.openChannelStream(
+                                        await openChannelStreamWithTimeout(
                                             request
                                         );
                                     const { psbt_fund, pending_chan_id } =
@@ -1317,7 +1347,7 @@ export default class ChannelsStore {
                                         i
                                     ].satAmount.toString();
 
-                                BackendUtils.openChannelStream(request)
+                                openChannelStreamWithTimeout(request)
                                     .then((data: any) => {
                                         const { psbt_fund, pending_chan_id } =
                                             data.result;
@@ -1352,7 +1382,7 @@ export default class ChannelsStore {
                         pending_chan_id: randomBytes(32).toString('base64')
                     }
                 };
-                BackendUtils.openChannelStream(request)
+                openChannelStreamWithTimeout(request)
                     .then((data: any) => {
                         const { psbt_fund, pending_chan_id } = data.result;
                         pendingChanIds.push(pending_chan_id);
