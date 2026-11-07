@@ -236,23 +236,24 @@ describe('LegacyExportUtils', () => {
             await promptLegacyExportCleanup(unlocked);
 
             const message = lastMessage();
-            expect(message).toContain(
-                'left 1 export file (0 wallet config backups, 1 activity CSV) in'
+            expect(message).toBe(
+                'Older ZEUS versions left 1 export file (0 wallet config backups, 1 activity CSV) in the ZEUS folder of the Files app, which this version no longer shows. Share it now to keep a copy, or delete it. Both remove it from this device. If you choose Not now, ZEUS will ask again the next time it starts.'
             );
             expect(message).not.toContain(CONFIG_WARNING);
         });
 
-        it('uses the singular for one config backup', async () => {
+        it('uses the singular throughout the message for one file', async () => {
             mockDocuments([file('20260101-120000.zeus-wallet-config-backup')]);
 
             await promptLegacyExportCleanup(unlocked);
 
-            expect(lastMessage()).toContain(
-                'left 1 export file (1 wallet config backup, 0 activity CSVs) in'
+            expect(lastMessage()).toBe(
+                'Older ZEUS versions left 1 export file (1 wallet config backup, 0 activity CSVs) in the ZEUS folder of the Files app, which this version no longer shows. Share it now to keep a copy, or delete it. Both remove it from this device. If you choose Not now, ZEUS will ask again the next time it starts.' +
+                    `\n\n${CONFIG_WARNING}`
             );
         });
 
-        it('uses the plural for several config backups and CSVs', async () => {
+        it('uses the plural throughout the message for several files', async () => {
             mockDocuments([
                 file('20260101-120000.zeus-wallet-config-backup'),
                 file('20260102-120000.zeus-wallet-config-backup'),
@@ -262,8 +263,9 @@ describe('LegacyExportUtils', () => {
 
             await promptLegacyExportCleanup(unlocked);
 
-            expect(lastMessage()).toContain(
-                'left 4 export files (2 wallet config backups, 2 activity CSVs) in'
+            expect(lastMessage()).toBe(
+                'Older ZEUS versions left 4 export files (2 wallet config backups, 2 activity CSVs) in the ZEUS folder of the Files app, which this version no longer shows. Share them now to keep a copy, or delete them. Both remove them from this device. If you choose Not now, ZEUS will ask again the next time it starts.' +
+                    `\n\n${CONFIG_WARNING}`
             );
         });
 
