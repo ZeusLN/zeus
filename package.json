@@ -103,7 +103,7 @@
     "fast-crc32c": "2.0.0",
     "fast-sha256": "1.3.0",
     "hash.js": "1.1.7",
-    "humanize-duration": "3.35.0",
+    "humanize-duration": "3.35.1",
     "identicon.js": "2.3.3",
     "js-lnurl": "0.6.0",
     "js-sha256": "0.12.0",
