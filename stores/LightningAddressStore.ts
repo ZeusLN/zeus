@@ -407,6 +407,18 @@ export default class LightningAddressStore {
                 noffer
             } = statusData;
 
+            // The list is server-supplied: keep it only when it is an
+            // array, and only its entries that are objects, so one bad
+            // entry cannot break the Lightning address screen or Redeem All
+            const openPayments = Array.isArray(paid)
+                ? paid.filter(
+                      (item: any) =>
+                          item !== null &&
+                          typeof item === 'object' &&
+                          !Array.isArray(item)
+                  )
+                : [];
+
             runInAction(() => {
                 if (!isRedeem) {
                     this.error = false;
@@ -415,7 +427,7 @@ export default class LightningAddressStore {
                 this.loading = false;
                 // only Cashu payments can be redeemed in the app; held
                 // payments to a retired Zaplocker address are dropped
-                this.paid = addressType === 'cashu' ? paid || [] : [];
+                this.paid = addressType === 'cashu' ? openPayments : [];
                 this.minimumSats = minimumSats;
                 this.lightningAddressHandle = handle;
                 this.lightningAddressDomain = domain;
