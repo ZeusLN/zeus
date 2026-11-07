@@ -4135,6 +4135,102 @@ describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
             expect(reloadedAgain.activity).toHaveLength(2);
         });
 
+        // Pays a second invoice and reloads the connections while the
+        // request waits on `hold`. `editStored` changes the stored copy
+        // the reload reads.
+        const reloadWhilePaying = async (
+            hold: (harness: any) => jest.Mock,
+            editStored: (stored: any) => any = (stored) => stored
+        ) => {
+            const harness = await payAfterReload(['pay_invoice']);
+            const { store, subscribed } = harness;
+            await jest.advanceTimersByTimeAsync(1000);
+            (
+                NostrConnectUtils.decodeInvoiceTags as jest.Mock
+            ).mockResolvedValue({
+                paymentRequest: 'lnbc1second-payment',
+                paymentHash: hex64('e'),
+                descriptionHash: '',
+                description: '',
+                amount: 5000,
+                expiryTime: 0,
+                createdAt: 0,
+                isExpired: false,
+                network: 'bitcoin'
+            });
+            const held = hold(harness);
+            const waiting = createHold<any>();
+            held.mockImplementationOnce(async (...args: any[]) => {
+                await waiting.wait();
+                return held.getMockImplementation()!(...args);
+            });
+            const sendsBefore =
+                harness.transactionsStore.sendPaymentSilently.mock.calls.length;
+
+            const paying = clientFor(subscribed).payInvoice({
+                invoice: 'lnbc1second-payment'
+            });
+            await settle(waiting.entered);
+            storedItems.set(
+                NWC_CONNECTIONS_KEY,
+                JSON.stringify(persistedConnections().map(editStored))
+            );
+            await store.loadConnections();
+            const [reloadedAgain] = store.connections;
+            waiting.release(undefined);
+            const paid = await settle(paying);
+            const sends =
+                harness.transactionsStore.sendPaymentSilently.mock.calls
+                    .length - sendsBefore;
+
+            return { ...harness, paid, reloadedAgain, sends };
+        };
+
+        it('pays when a reload lands while the invoice is decoded', async () => {
+            const { store, paid, reloadedAgain, sends } =
+                await reloadWhilePaying(
+                    () => BackendUtils.decodePaymentRequest as jest.Mock
+                );
+
+            expect(paid.error).toBeUndefined();
+            expect(sends).toBe(1);
+            expect(store.connections[0]).toBe(reloadedAgain);
+            expect(reloadedAgain.totalSpendSats).toBe(2 * PAID_SATS);
+        });
+
+        it('pays when a reload lands while the balance is read', async () => {
+            const { store, paid, reloadedAgain, sends } =
+                await reloadWhilePaying(
+                    ({ balanceStore }) => balanceStore.getLightningBalance
+                );
+
+            expect(paid.error).toBeUndefined();
+            expect(sends).toBe(1);
+            expect(store.connections[0]).toBe(reloadedAgain);
+            expect(reloadedAgain.totalSpendSats).toBe(2 * PAID_SATS);
+        });
+
+        it('does not pay when the reloaded connection has another client pubkey', async () => {
+            const { paid, reloadedAgain, sends } = await reloadWhilePaying(
+                ({ balanceStore }) => balanceStore.getLightningBalance,
+                (stored) => ({ ...stored, pubkey: hex64('f') })
+            );
+
+            expect(paid).toEqual(UNAUTHORIZED);
+            expect(sends).toBe(0);
+            expect(reloadedAgain.totalSpendSats).toBe(PAID_SATS);
+        });
+
+        it('does not pay when the reloaded connection belongs to another node', async () => {
+            const { paid, sends } = await reloadWhilePaying(
+                ({ balanceStore }) => balanceStore.getLightningBalance,
+                (stored) => ({ ...stored, nodePubkey: 'another-node' })
+            );
+
+            expect(paid.error).toBeDefined();
+            expect(sends).toBe(0);
+        });
+
         it('reports the budget left after the pay debit from get_balance', async () => {
             const { subscribed } = await payAfterReload([
                 'pay_invoice',

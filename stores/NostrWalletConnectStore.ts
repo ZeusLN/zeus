@@ -2200,8 +2200,11 @@ export default class NostrWalletConnectStore {
     // when the request is admitted. Deleting or updating a connection waits
     // for its admitted requests to finish, so a payment that was queued
     // when the user deleted the connection or removed its pay permission
-    // would still be sent. The connection must also still be the stored
-    // object, since that is the one whose budget is debited and saved.
+    // would still be sent. The stored connection with the same id must
+    // also still have the same client pubkey and the current wallet. It is
+    // compared by these rather than by object, since loadConnections replaces the stored objects on every
+    // focus of the connections list; callers then use the stored one,
+    // whose budget is debited and saved.
     private payRequestRejection(
         isCurrent: () => boolean,
         connection: NWCConnection
@@ -2220,8 +2223,16 @@ export default class NostrWalletConnectStore {
         const { connection: stored } = this.getConnection({
             connectionId: connection.id
         });
-        if (stored !== connection) {
+        if (!stored || stored.pubkey !== connection.pubkey) {
             return this.unauthorizedConnectionResponse<Nip47ErrorResponse>();
+        }
+        if (!this.connectionBelongsToCurrentWallet(stored)) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.walletIdentityUnavailable'
+                ),
+                Nip47ErrorCode.INTERNAL_ERROR
+            );
         }
         return this.mutationRejection<Nip47ErrorResponse>(connection.id);
     }
@@ -2972,6 +2983,8 @@ export default class NostrWalletConnectStore {
 
         const { paymentRequest, paymentHash: decodedPaymentHash } =
             await NostrConnectUtils.decodeInvoiceTags(request.invoice);
+        // The connections may have been reloaded during the awaits above
+        connection = this.storedConnection(connection);
         const existing = connection.findPayInvoiceActivity(
             paymentRequest || request.invoice,
             decodedPaymentHash
@@ -3058,6 +3071,7 @@ export default class NostrWalletConnectStore {
             connection
         );
         if (rejectedAfterBalance) return rejectedAfterBalance;
+        connection = this.storedConnection(connection);
 
         // the fee cap is limited to the budget left after the amount.
         // Backends that ignore fee_limit_sat (LndHub) keep the full cap and
@@ -3325,6 +3339,8 @@ export default class NostrWalletConnectStore {
             );
         }
 
+        // The connections may have been reloaded during the awaits above
+        connection = this.storedConnection(connection);
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
             amountSats,
