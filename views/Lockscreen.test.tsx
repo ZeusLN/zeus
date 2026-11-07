@@ -66,6 +66,9 @@ jest.mock('../utils/DataClearUtils', () => ({
     isWipePending: jest.fn(),
     markWipePending: jest.fn()
 }));
+jest.mock('../utils/LegacyExportUtils', () => ({
+    promptLegacyExportCleanup: jest.fn()
+}));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/LockKdf');
 jest.mock('../utils/RestartUtils', () => ({
@@ -82,6 +85,7 @@ jest.mock('react-native-randombytes', () => ({
 }));
 
 import { verifyBiometry } from '../utils/BiometricUtils';
+import { promptLegacyExportCleanup } from '../utils/LegacyExportUtils';
 import {
     clearAllData,
     isWipePending,
@@ -130,11 +134,13 @@ const renderLockscreen = async (
     updateSettings: jest.Mock,
     {
         biometry = false,
+        posEnabled = false,
         posStatus = 'inactive',
         params = {},
         settings = { pinVerifier }
     }: {
         biometry?: boolean;
+        posEnabled?: boolean;
         posStatus?: string;
         params?: any;
         settings?: any;
@@ -145,7 +151,7 @@ const renderLockscreen = async (
         posStatus,
         triggerSettingsRefresh: false,
         isBiometryConfigured: jest.fn(() => biometry),
-        isPosEnabled: jest.fn(() => false),
+        isPosEnabled: jest.fn(() => posEnabled),
         loginRequired: jest.fn(() => true),
         setLoginStatus: jest.fn(),
         setPosStatus: jest.fn(),
@@ -708,6 +714,107 @@ describe('Lockscreen with a passphrase', () => {
         );
 
         expect(navigation.pop).toHaveBeenCalledTimes(1);
+    });
+});
+
+// Leaving the POS till for the wallet pops back to Wallet without rerunning
+// its startup path, so the Lockscreen offers the legacy export prompt that
+// path would show. promptLegacyExportCleanup itself refuses to show while
+// locked or in POS and shows at most once per launch.
+describe('Lockscreen legacy export prompt', () => {
+    // what the till's wallet button opens
+    const posExit = {
+        posEnabled: true,
+        posStatus: 'active',
+        params: { pendingNavigation: { screen: 'Wallet' } }
+    };
+
+    it('prompts after a PIN unlock out of POS into the wallet', async () => {
+        const updateSettings = makeUpdateSettings({ pinVerifier });
+        const { SettingsStore, navigation } = await renderLockscreen(
+            updateSettings,
+            posExit
+        );
+        expect(promptLegacyExportCleanup).not.toHaveBeenCalled();
+
+        await submitPin();
+        await untilCalled(promptLegacyExportCleanup as jest.Mock);
+
+        expect(SettingsStore.setPosStatus).toHaveBeenCalledWith('inactive');
+        expect(navigation.popTo).toHaveBeenCalledWith('Wallet', {});
+        expect(promptLegacyExportCleanup).toHaveBeenCalledTimes(1);
+        expect(promptLegacyExportCleanup).toHaveBeenCalledWith(SettingsStore);
+        // after the login and the POS exit, so its own checks pass
+        const promptOrder = (promptLegacyExportCleanup as jest.Mock).mock
+            .invocationCallOrder[0];
+        expect(promptOrder).toBeGreaterThan(
+            SettingsStore.setLoginStatus.mock.invocationCallOrder[0]
+        );
+        expect(promptOrder).toBeGreaterThan(
+            SettingsStore.setPosStatus.mock.invocationCallOrder[0]
+        );
+    });
+
+    it('prompts after a biometric unlock out of POS into the wallet', async () => {
+        (verifyBiometry as jest.Mock).mockResolvedValue(true);
+        const { SettingsStore, navigation } = await renderLockscreen(
+            makeUpdateSettings({ pinVerifier }),
+            { ...posExit, biometry: true }
+        );
+
+        expect(SettingsStore.setPosStatus).toHaveBeenCalledWith('inactive');
+        expect(navigation.popTo).toHaveBeenCalledWith('Wallet', {});
+        expect(promptLegacyExportCleanup).toHaveBeenCalledTimes(1);
+        expect(promptLegacyExportCleanup).toHaveBeenCalledWith(SettingsStore);
+    });
+
+    it('does not prompt before the PIN is entered or after a wrong one', async () => {
+        const updateSettings = makeUpdateSettings({ pinVerifier });
+        await renderLockscreen(updateSettings, posExit);
+        await submitWrongPin();
+        await untilCalled(updateSettings);
+        await waitFor(() =>
+            expect(
+                screen.getByRole('button', { name: 'Submit PIN' })
+            ).toBeOnTheScreen()
+        );
+
+        expect(promptLegacyExportCleanup).not.toHaveBeenCalled();
+    });
+
+    it('does not prompt when POS resumes into the till without a PIN', async () => {
+        const { navigation } = await renderLockscreen(jest.fn(), {
+            posEnabled: true,
+            posStatus: 'active'
+        });
+
+        expect(navigation.popTo).toHaveBeenCalledWith('Wallet', {});
+        expect(promptLegacyExportCleanup).not.toHaveBeenCalled();
+    });
+
+    it('does not prompt on an unlock into another screen', async () => {
+        const { navigation } = await renderLockscreen(
+            makeUpdateSettings({ pinVerifier }),
+            {
+                ...posExit,
+                params: { pendingNavigation: { screen: 'Menu' } }
+            }
+        );
+        await submitPin();
+        await untilCalled(navigation.popTo);
+
+        expect(promptLegacyExportCleanup).not.toHaveBeenCalled();
+    });
+
+    it('leaves the launch unlock to Wallet, which reruns its startup path', async () => {
+        const { navigation } = await renderLockscreen(
+            makeUpdateSettings({ pinVerifier })
+        );
+        await submitPin();
+        await untilCalled(navigation.pop);
+
+        expect(navigation.pop).toHaveBeenCalledTimes(1);
+        expect(promptLegacyExportCleanup).not.toHaveBeenCalled();
     });
 });
 

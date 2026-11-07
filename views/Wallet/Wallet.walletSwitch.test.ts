@@ -256,8 +256,10 @@ it('control: a refresh with no switch connects and clears connecting', async () 
     expect(view.props.NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
     expect(view.props.ChannelsStore.getChannels).toHaveBeenCalledTimes(1);
     expect(settings.connecting).toBe(false);
-    // the legacy export prompt comes after the connect, not during it
+    // the legacy export prompt comes after the connect, not during it,
+    // and gets the store so it can check the login and POS state itself
     expect(mockPromptLegacyExportCleanup).toHaveBeenCalledTimes(1);
+    expect(mockPromptLegacyExportCleanup).toHaveBeenCalledWith(settings);
     expect(
         mockPromptLegacyExportCleanup.mock.invocationCallOrder[0]
     ).toBeGreaterThan(
@@ -521,6 +523,8 @@ describe('session start', () => {
 
         expect(settings.posStatus).toBe('active');
         expect(settings.sessionStarted()).toBe(true);
+        // the till stays prompt-free; the Lockscreen asks on the way out
+        expect(mockPromptLegacyExportCleanup).not.toHaveBeenCalled();
     });
 
     it('leaves the session unstarted and opens the Lockscreen when a PIN is set', async () => {
