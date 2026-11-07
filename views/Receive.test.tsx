@@ -354,7 +354,9 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 const makeNfcView = (
     amount: string,
     satAmount: number,
-    createFails = false
+    createFails = false,
+    // Receive opened without an amount param, e.g. from the wallet
+    params: any = { amount }
 ) => {
     const navigate = jest.fn();
     const InvoicesStore = {
@@ -367,7 +369,7 @@ const makeNfcView = (
     const PosStore = { recordPayment: jest.fn(), clearOrderInvoice: jest.fn() };
     const view = new Receive({
         navigation: { navigate },
-        route: { params: { amount } },
+        route: { params },
         BalanceStore: { getCombinedBalance: jest.fn() },
         InvoicesStore,
         LSPStore: { reset: jest.fn() },
@@ -645,6 +647,69 @@ describe('Receive after its params change', () => {
         expect(InvoicesStore.reset).toHaveBeenCalled();
         expect(InvoicesStore.setWatchedInvoicePaid).not.toHaveBeenCalled();
         expect(PosStore.recordPayment).not.toHaveBeenCalled();
+    });
+
+    describe('on a Receive opened without an amount param', () => {
+        // the amount, if any, was entered on this screen, so it is only
+        // in state
+        const makeView = (satAmount: number, createFails = false) =>
+            makeNfcView(String(satAmount), satAmount, createFails, {});
+
+        it('stops watching the previous invoice after a zero-amount withdraw tap', async () => {
+            const { view, navigate, InvoicesStore, PosStore } = makeView(0);
+            view.subscribeInvoice('rhash-old', 'bc1qold');
+
+            await view.scanNfc();
+            await flush();
+            expect(navigate).toHaveBeenCalledWith('Receive', {
+                lnurlParams: withdrawParams
+            });
+            await changeParams(view, navigate.mock.calls[0][1]);
+            pay('rhash-old', { amountSat: 25000, preimage: 'pre' });
+            pay('bc1qold', { amountSat: 25000, txid: 'txid' });
+
+            expect(InvoicesStore.reset).toHaveBeenCalled();
+            expect(InvoicesStore.setWatchedInvoicePaid).not.toHaveBeenCalled();
+            expect(PosStore.recordPayment).not.toHaveBeenCalled();
+            // the withdraw form shows the withdraw's maximum and description
+            expect(view.state.value).toBe('1000');
+            expect(view.state.memo).toBe('card');
+        });
+
+        it('stops watching the previous invoice after a failed withdraw invoice', async () => {
+            const { view, navigate, InvoicesStore, PosStore } = makeView(
+                25000,
+                true
+            );
+            view.subscribeInvoice('rhash-old', 'bc1qold');
+
+            await view.scanNfc();
+            await flush();
+            expect(navigate).toHaveBeenCalledWith('Receive', {
+                satAmount: 25000,
+                lnurlParams: withdrawParams
+            });
+            await changeParams(view, navigate.mock.calls[0][1]);
+            pay('rhash-old', { amountSat: 25000, preimage: 'pre' });
+            pay('bc1qold', { amountSat: 25000, txid: 'txid' });
+
+            expect(InvoicesStore.reset).toHaveBeenCalled();
+            expect(InvoicesStore.setWatchedInvoicePaid).not.toHaveBeenCalled();
+            expect(PosStore.recordPayment).not.toHaveBeenCalled();
+        });
+
+        it('keeps watching when neither the amount nor the withdraw changes', async () => {
+            const { view, InvoicesStore } = makeView(0);
+            view.subscribeInvoice('rhash-old');
+
+            await changeParams(view, { selectedIndex: 1 });
+            pay('rhash-old', { amountSat: 1000, preimage: 'pre' });
+
+            expect(InvoicesStore.reset).not.toHaveBeenCalled();
+            expect(InvoicesStore.setWatchedInvoicePaid).toHaveBeenCalledWith(
+                1000
+            );
+        });
     });
 
     it('watches no invoice requested before the change', async () => {
