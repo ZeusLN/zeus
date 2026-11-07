@@ -1517,6 +1517,88 @@ describe('NostrWalletConnectStore relay release', () => {
         expect(relays.has(THIRD_RELAY)).toBe(false);
         expect(relayFor(OLD_RELAY).close).not.toHaveBeenCalled();
     });
+
+    it('closes every relay after unsubscribing when a reset tears the service down', async () => {
+        const {
+            store,
+            connections: [first, second]
+        } = await startService([{}, { relayUrl: NEW_RELAY }]);
+        const oldRelay = relayFor(OLD_RELAY);
+        const newRelay = relayFor(NEW_RELAY);
+        const subscribedAtClose: number[] = [];
+        for (const relay of [oldRelay, newRelay]) {
+            relay.close.mockImplementation(() => {
+                subscribedAtClose.push(relay.handlers.size);
+                relay.connected = false;
+            });
+        }
+
+        await store.reset(true);
+
+        expect(oldRelay.close).toHaveBeenCalledTimes(1);
+        expect(newRelay.close).toHaveBeenCalledTimes(1);
+        expect(subscribedAtClose).toEqual([0, 0]);
+        expect((store as any).nwcWalletServices.size).toBe(0);
+        expect(isSubscribed(first)).toBe(false);
+        expect(isSubscribed(second)).toBe(false);
+    });
+
+    it('closes the remaining relays when one fails to close on reset', async () => {
+        silence('warn');
+        const { store } = await startService([{}, { relayUrl: NEW_RELAY }]);
+        const oldRelay = relayFor(OLD_RELAY);
+        const newRelay = relayFor(NEW_RELAY);
+        oldRelay.close.mockImplementation(() => {
+            throw new Error('close failed');
+        });
+
+        await store.reset(true);
+
+        expect(oldRelay.close).toHaveBeenCalled();
+        expect(newRelay.close).toHaveBeenCalled();
+        expect((store as any).nwcWalletServices.size).toBe(0);
+    });
+
+    it('closes and clears every relay when unsubscribing fails on reset', async () => {
+        const { store } = await startService([{}, { relayUrl: NEW_RELAY }]);
+        const oldRelay = relayFor(OLD_RELAY);
+        const newRelay = relayFor(NEW_RELAY);
+        jest.spyOn(
+            store as any,
+            'unsubscribeFromAllConnections'
+        ).mockImplementation(async () => {
+            // A release scheduled while the unsubscribe runs must not
+            // survive the reset and close a relay the next start opens
+            (store as any).scheduleReleaseUnusedRelayService(OLD_RELAY);
+            throw new Error('unsubscribe failed');
+        });
+
+        await expect(store.reset(true)).rejects.toThrow('unsubscribe failed');
+
+        expect(oldRelay.close).toHaveBeenCalledTimes(1);
+        expect(newRelay.close).toHaveBeenCalledTimes(1);
+        expect((store as any).nwcWalletServices.size).toBe(0);
+        expect((store as any).publishedRelays.size).toBe(0);
+        expect((store as any).scheduledRelayReleases.size).toBe(0);
+    });
+
+    it('keeps the relays open when a reset keeps the service attached', async () => {
+        const {
+            store,
+            connections: [first, second]
+        } = await startService([{}, { relayUrl: NEW_RELAY }]);
+        const oldRelay = relayFor(OLD_RELAY);
+        const newRelay = relayFor(NEW_RELAY);
+
+        // AppState 'inactive' on iOS with active connections
+        await store.reset();
+
+        expect(oldRelay.close).not.toHaveBeenCalled();
+        expect(newRelay.close).not.toHaveBeenCalled();
+        expect((store as any).nwcWalletServices.size).toBe(2);
+        expect(isSubscribed(first)).toBe(true);
+        expect(isSubscribed(second)).toBe(true);
+    });
 });
 
 describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
