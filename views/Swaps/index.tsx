@@ -503,21 +503,18 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         // Existing fee fetching logic
         if (!prevState.reverse && this.state.reverse) {
             try {
-                const feesObj: {
-                    economyFee: number;
-                    fastestFee: number;
-                    halfHourFee: number;
-                    hourFee: number;
-                    minimumFee: number;
-                } = await FeeStore.getOnchainFeesviaMempool();
+                const feesObj: { [key: string]: number } | undefined =
+                    await FeeStore.getOnchainFeesviaMempool();
 
                 const preferredMempoolRate =
                     settings?.payments?.preferredMempoolRate || 'fastestFee';
 
                 const feeRate =
-                    feesObj[preferredMempoolRate as keyof typeof feesObj] ??
-                    feesObj.fastestFee;
-                this.setState({ fee: feeRate.toString() });
+                    feesObj?.[preferredMempoolRate] ?? feesObj?.fastestFee;
+
+                if (feeRate !== undefined) {
+                    this.setState({ fee: feeRate.toString() });
+                }
             } catch (error) {
                 console.error('Failed to fetch mempool fees:', error);
             } finally {
