@@ -197,26 +197,31 @@ export const promptLegacyExportCleanup = async (
     const configs = pending.config.length;
     const csvs = pending.csv.length;
     // literal keys, so check-locales can find them
-    let message = localeString('views.Wallet.legacyExports.message', {
-        files: localeString(
-            total === 1
-                ? 'views.Wallet.legacyExports.filesSingular'
-                : 'views.Wallet.legacyExports.files',
-            { count: total }
-        ),
-        configs: localeString(
-            configs === 1
-                ? 'views.Wallet.legacyExports.configsSingular'
-                : 'views.Wallet.legacyExports.configs',
-            { count: configs }
-        ),
-        csvs: localeString(
-            csvs === 1
-                ? 'views.Wallet.legacyExports.csvsSingular'
-                : 'views.Wallet.legacyExports.csvs',
-            { count: csvs }
-        )
-    });
+    let message = localeString(
+        total === 1
+            ? 'views.Wallet.legacyExports.messageSingular'
+            : 'views.Wallet.legacyExports.message',
+        {
+            files: localeString(
+                total === 1
+                    ? 'views.Wallet.legacyExports.filesSingular'
+                    : 'views.Wallet.legacyExports.files',
+                { count: total }
+            ),
+            configs: localeString(
+                configs === 1
+                    ? 'views.Wallet.legacyExports.configsSingular'
+                    : 'views.Wallet.legacyExports.configs',
+                { count: configs }
+            ),
+            csvs: localeString(
+                csvs === 1
+                    ? 'views.Wallet.legacyExports.csvsSingular'
+                    : 'views.Wallet.legacyExports.csvs',
+                { count: csvs }
+            )
+        }
+    );
     if (configs > 0) {
         message += `\n\n${localeString(
             'views.Wallet.legacyExports.configWarning'
