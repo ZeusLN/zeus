@@ -1106,6 +1106,109 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
                     expect(store.channelSuccess).toBe(false);
                 });
 
+                // the final channel, which starts the funding, is opened
+                // only after the middle one answers
+                describe('a batch whose middle stream answers late', () => {
+                    const startBatch = (middle: () => Promise<any>) => {
+                        answerStreams(
+                            () => Promise.resolve(psbtFund('chan-a')),
+                            middle,
+                            () => Promise.resolve(psbtFund('chan-c'))
+                        );
+                        const store = makeStore();
+                        enterScreen(store);
+                        openBatch(store, 2);
+                        return store;
+                    };
+
+                    it('does not fund before every stream has answered', async () => {
+                        const store = startBatch(never);
+                        await flush();
+
+                        expect(fundPsbt).not.toHaveBeenCalled();
+                        expect(store.syncOpensInFlight).toBe(1);
+                        expect(store.openingChannel).toBe(true);
+                    });
+
+                    it('stops the batch with the middle channel failure', async () => {
+                        const middle = held();
+                        const store = startBatch(() => middle.promise);
+                        await flush();
+
+                        middle.reject(new Error('peer is not online'));
+                        await flush();
+                        expect(fundPsbt).not.toHaveBeenCalled();
+                        expect(psbtSteps()).toEqual([]);
+                        expect(new Set(cancels())).toEqual(new Set(shimIds));
+                        expect(store.errorOpenChannel).toBe(true);
+                        expect(store.errorMsgChannel).toBe(
+                            'peer is not online'
+                        );
+                        expect(store.channelSuccess).toBe(false);
+                        expect(store.syncOpensInFlight).toBe(0);
+                    });
+
+                    it('stops the batch when the middle channel times out', async () => {
+                        const store = startBatch(never);
+                        await flush();
+
+                        await jest.advanceTimersByTimeAsync(STREAM_TIMEOUT_MS);
+                        await flush();
+                        expect(fundPsbt).not.toHaveBeenCalled();
+                        expect(new Set(cancels())).toEqual(new Set(shimIds));
+                        expect(store.errorMsgChannel).toBe(
+                            'stores.ChannelsStore.openStreamTimeout'
+                        );
+                        expect(store.syncOpensInFlight).toBe(0);
+                    });
+
+                    it('funds every channel, finalizing the last, once the middle one answers', async () => {
+                        const middle = held();
+                        const store = startBatch(() => middle.promise);
+                        await flush();
+
+                        middle.resolve(psbtFund('chan-b'));
+                        await flush();
+                        expect(fundPsbt).toHaveBeenCalledTimes(1);
+                        expect(fundPsbt.mock.calls[0][0].raw.outputs).toEqual({
+                            'bc1qchan-a': 1,
+                            'bc1qchan-b': 1,
+                            'bc1qchan-c': 1
+                        });
+                        expect(psbtSteps()).toEqual([
+                            {
+                                psbt_verify: {
+                                    funded_psbt: PSBT,
+                                    pending_chan_id: 'chan-a',
+                                    skip_finalize: true
+                                }
+                            },
+                            {
+                                psbt_verify: {
+                                    funded_psbt: PSBT,
+                                    pending_chan_id: 'chan-b',
+                                    skip_finalize: true
+                                }
+                            },
+                            {
+                                psbt_verify: {
+                                    funded_psbt: PSBT,
+                                    pending_chan_id: 'chan-c'
+                                }
+                            },
+                            {
+                                psbt_finalize: {
+                                    signed_psbt: PSBT,
+                                    pending_chan_id: 'chan-c'
+                                }
+                            }
+                        ]);
+                        expect(cancels()).toEqual([]);
+                        expect(store.channelSuccess).toBe(true);
+                        expect(store.syncOpensInFlight).toBe(0);
+                    });
+                });
+
                 it('stops counting a batch whose funding cannot start', async () => {
                     answerStreams(
                         () => Promise.resolve(psbtFund('chan-a')),
