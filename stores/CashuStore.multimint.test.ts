@@ -997,6 +997,95 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(final.mints[0].status).toBe(MintPaymentStatus.FAILED);
     });
 
+    it('keeps a part in flight when its melt throws and its quote cannot be checked', async () => {
+        const store = await plannedStore();
+        cdk.melt.mockImplementation(async (mintUrl: string) => {
+            if (mintUrl === B) throw new Error('connection lost');
+            return paid(546, 1);
+        });
+        cdk.checkMeltQuote.mockRejectedValue(new Error('mint unreachable'));
+        const onProgress = jest.fn();
+
+        await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
+
+        expect(cdk.checkMeltQuote).toHaveBeenCalledWith(B, `cdk-mpp-${B}`);
+        expect(store.paymentSuccess).toBe(true);
+        expect(
+            store.payments!.map((p) => [
+                p.mintUrl,
+                p.isInTransit,
+                p.meltResponse.quote!.quote
+            ])
+        ).toEqual([
+            [B, true, `cdk-mpp-${B}`],
+            [A, false, `cdk-mpp-${A}`]
+        ]);
+        expect(pendingQuotes(store)).toEqual([`cdk-mpp-${B}`]);
+        expect(storage.setItem).toHaveBeenCalledWith(
+            'node1-cashu-pending-melts',
+            [expect.objectContaining({ quote: `cdk-mpp-${B}` })]
+        );
+        const final = onProgress.mock.calls.at(-1)[0];
+        expect(final.mints.map((m: any) => [m.mintUrl, m.status])).toEqual([
+            [A, MintPaymentStatus.SUCCESS],
+            [B, MintPaymentStatus.IN_FLIGHT]
+        ]);
+    });
+
+    it.each([
+        ['settled paid', 'PAID', undefined, [['SUCCEEDED', A]], []],
+        ['settled unpaid', 'UNPAID', undefined, [], []],
+        [
+            'found still in flight',
+            'UNPAID',
+            'saga-1',
+            [['IN_FLIGHT', A]],
+            [`regular-${A}`]
+        ]
+    ])(
+        'does not add an in-flight entry for a part reconcile %s while it was being checked',
+        async (_label, state, usedBy, recorded, tracked) => {
+            const store = await regularPlannedStore();
+            cdk.melt.mockRejectedValue(new Error('connection lost'));
+            // A reconcile pass resumes the melt saga at the same moment, so
+            // CDK refuses the pay path's check
+            cdk.checkMeltQuote
+                .mockImplementationOnce(async () => {
+                    await store.reconcilePendingMelts();
+                    throw new Error('Concurrent update detected');
+                })
+                .mockResolvedValueOnce({
+                    id: `regular-${A}`,
+                    amount: 1000,
+                    fee_reserve: 3,
+                    state,
+                    expiry: 9999999999,
+                    payment_preimage: state === 'PAID' ? PREIMAGE : null,
+                    used_by_operation: usedBy
+                });
+            const onProgress = jest.fn();
+
+            await store.payLnInvoiceFromEcash({
+                paymentRequest: INVOICE,
+                onProgress
+            });
+
+            expect(cdk.checkMeltQuote).toHaveBeenCalledTimes(2);
+            expect(pendingQuotes(store)).toEqual(tracked);
+            expect(store.payments!.map((p) => [p.status, p.mintUrl])).toEqual(
+                recorded
+            );
+            expect(store.paymentErrorMsg).toBe(
+                'stores.CashuStore.paymentInFlight'
+            );
+            const final = onProgress.mock.calls.at(-1)[0];
+            expect(final.mints[0].status).toBe(MintPaymentStatus.IN_FLIGHT);
+        }
+    );
+
     it('turns a melt fee mismatch into a message naming the mint', async () => {
         const store = await plannedStore();
         cdk.melt.mockImplementation(async (mintUrl: string) => {

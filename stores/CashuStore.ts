@@ -5339,7 +5339,20 @@ export default class CashuStore {
                     // still pay it. Record it as in flight and leave it
                     // tracked, so reconcilePendingMelts settles it either way.
                     const reportInFlight = async (melt: PendingMelt) => {
-                        await this.recordInFlightPayment(melt, payReq);
+                        // A reconcile pass may have settled or recorded the
+                        // melt while the quote was being checked
+                        if (
+                            this.pendingMelts.some(
+                                (pending) => pending.quote === melt.quote
+                            ) &&
+                            !(this.payments || []).some(
+                                (payment) =>
+                                    payment.meltResponse?.quote?.quote ===
+                                    melt.quote
+                            )
+                        ) {
+                            await this.recordInFlightPayment(melt, payReq);
+                        }
                         const reason = localeString(
                             'stores.CashuStore.paymentInFlight'
                         );
@@ -5456,10 +5469,13 @@ export default class CashuStore {
                             if (!checked || outcome !== 'paid') {
                                 if (outcome === 'unpaid') {
                                     await this.untrackPendingMelt(quote.id);
-                                } else if (outcome) {
-                                    return await reportInFlight(pendingMelt);
+                                    throw meltError;
                                 }
-                                throw meltError;
+                                // Still held by CDK, or the check failed
+                                // (mint unreachable, or CDK busy with the
+                                // quote elsewhere) and the part may still
+                                // settle
+                                return await reportInFlight(pendingMelt);
                             }
 
                             meltResult = {
