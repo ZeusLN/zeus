@@ -174,7 +174,7 @@
     "@babel/plugin-proposal-optional-chaining": "7.21.0",
     "@babel/preset-env": "7.29.7",
     "@babel/preset-typescript": "7.29.7",
-    "@babel/runtime": "7.26.10",
+    "@babel/runtime": "7.29.10",
     "@react-native-community/cli": "20.2.0",
     "@react-native/babel-preset": "0.88.1",
     "@react-native/eslint-config": "0.88.1",
