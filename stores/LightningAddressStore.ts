@@ -15,6 +15,7 @@ import {
     INVALID_AUTH_CHALLENGE_ERROR
 } from '../utils/AuthChallengeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { getLocalizedSatsUnitLabel } from '../utils/AmountUtils';
 
 import Storage from '../storage';
 
@@ -622,8 +623,7 @@ export default class LightningAddressStore {
             const title = localeString('zeuspay.paymentReceived.title');
             const body = localeString('zeuspay.paymentReceived.body', {
                 value: value_commas,
-                unit:
-                    value_commas === '1' ? 'sat' : localeString('general.sats')
+                unit: getLocalizedSatsUnitLabel(value_commas !== '1')
             });
             if (Platform.OS === 'android') {
                 // @ts-ignore:next-line
