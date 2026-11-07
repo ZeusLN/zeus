@@ -2107,10 +2107,15 @@ export default class SwapStore {
     };
 
     /**
-     * Moves the key index counter past the swaps given, never back.
+     * Moves an existing key index counter past the swaps given, never back.
+     * A missing counter is left missing: the swaps may come from a host
+     * other than the current one, and a counter set from them would stop
+     * generateNewKey from asking the current host which indexes it has
+     * seen. The rescued swaps are in storage, which that lookup counts.
      */
     private advanceLastUsedKey = (swaps: any[]): Promise<void> =>
         this.withKeyIndex(async () => {
+            if (!(await Storage.getItem(SWAPS_LAST_USED_KEY))) return;
             const next = keyIndexAfter(swaps);
             if (next > (await this.getLastUsedKey())) {
                 await this.setLastUsedKey(next);
@@ -2144,7 +2149,12 @@ export default class SwapStore {
                     xpub: this.getXpub(mnemonic)
                 })
             );
-            hostSwaps = JSON.parse(response.data || '[]');
+            // only a 200 with a list answers the question; an error
+            // status or empty body must not read as "no swaps", which
+            // would start the counter at 0
+            if (response.info().status === 200 && response.data) {
+                hostSwaps = JSON.parse(response.data);
+            }
         } catch (error) {
             console.error('Could not list the swaps of the rescue key:', error);
         }

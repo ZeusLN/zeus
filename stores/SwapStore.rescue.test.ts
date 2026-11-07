@@ -758,10 +758,15 @@ describe('SwapStore key index after a rescue key restore', () => {
         ).toString('hex');
     };
 
+    const answer = (status: number, data: string) => ({
+        info: () => ({ status }),
+        data
+    });
+
     const hostLists = (swaps: any[]) =>
-        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
-            data: JSON.stringify(swaps)
-        });
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue(
+            answer(200, JSON.stringify(swaps))
+        );
 
     const HOST_SWAPS = [
         {
@@ -828,7 +833,10 @@ describe('SwapStore key index after a rescue key restore', () => {
 
     it.each([
         ['cannot be reached', () => Promise.reject(new Error('offline'))],
-        ['answers with an error', async () => ({ data: '{"error":"nope"}' })]
+        ['answers with an error', async () => answer(400, '{"error":"nope"}')],
+        ['answers 200 with an empty body', async () => answer(200, '')],
+        ['answers 500 with an empty body', async () => answer(500, '')],
+        ['answers a list with an error status', async () => answer(503, '[]')]
     ])(
         'creates no key while the host %s',
         async (_, answer: () => Promise<any>) => {
@@ -881,7 +889,7 @@ describe('SwapStore key index after a rescue key restore', () => {
         jest.spyOn(console, 'error').mockImplementation(() => {});
         (ReactNativeBlobUtil.fetch as jest.Mock)
             .mockRejectedValueOnce(new Error('offline'))
-            .mockResolvedValue({ data: JSON.stringify(HOST_SWAPS) });
+            .mockResolvedValue(answer(200, JSON.stringify(HOST_SWAPS)));
         const store = newStore();
 
         const [failed, next] = await Promise.allSettled([
@@ -918,6 +926,54 @@ describe('SwapStore key index after a rescue key restore', () => {
         });
 
         expect(storageBacking[SWAPS_LAST_USED_KEY]).toBe('2');
+    });
+
+    it('leaves a missing counter to the current host after Restore swaps from another', async () => {
+        // another host lists the swap at index 1; the current host has
+        // seen indexes up to 5 under the same key
+        (ReactNativeBlobUtil.fetch as jest.Mock)
+            .mockResolvedValueOnce(answer(200, JSON.stringify(HOST_SWAPS)))
+            .mockResolvedValueOnce(
+                answer(
+                    200,
+                    JSON.stringify([
+                        {
+                            id: 'current-host',
+                            type: 'submarine',
+                            refundDetails: { keyIndex: 5 }
+                        }
+                    ])
+                )
+            );
+        const store = newStore();
+
+        await store.getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+        expect(storageBacking[SWAPS_LAST_USED_KEY]).toBeUndefined();
+
+        const { index } = await store.generateNewKey();
+
+        expect(index).toBe(6);
+        expect((ReactNativeBlobUtil.fetch as jest.Mock).mock.calls[1][1]).toBe(
+            'https://satsrouting.exchange/v2/swap/restore'
+        );
+    });
+
+    it('counts the swaps rescued from another host when the current host lists none', async () => {
+        (ReactNativeBlobUtil.fetch as jest.Mock)
+            .mockResolvedValueOnce(answer(200, JSON.stringify(HOST_SWAPS)))
+            .mockResolvedValueOnce(answer(200, '[]'));
+        const store = newStore();
+
+        await store.getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+        const { index } = await store.generateNewKey();
+
+        expect(index).toBe(2);
     });
 
     it('never moves the counter back', async () => {
