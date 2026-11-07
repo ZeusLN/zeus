@@ -25,6 +25,81 @@ describe('ContactStore', () => {
         navigation = { popTo: jest.fn() };
     });
 
+    describe('loadContacts', () => {
+        it('keeps well-formed contacts as they are', async () => {
+            const alice = {
+                contactId: 'a1b2',
+                lnAddress: ['alice@example.com'],
+                bolt12Address: [],
+                bolt12Offer: [],
+                noffer: [],
+                onchainAddress: [],
+                pubkey: [],
+                cashuPubkey: [],
+                nip05: [],
+                nostrNpub: [],
+                name: 'Alice',
+                description: 'friend',
+                photo: null,
+                banner: null,
+                isFavourite: false
+            };
+            getItemMock.mockResolvedValue(JSON.stringify([alice]));
+
+            await store.loadContacts();
+
+            expect(store.contacts).toEqual([alice]);
+            expect(store.loading).toBe(false);
+        });
+
+        it('fills in missing fields and drops values of the wrong type', async () => {
+            getItemMock.mockResolvedValue(
+                JSON.stringify([
+                    {
+                        contactId: '1',
+                        name: 'Bob',
+                        lnAddress: ['bob@example.com'],
+                        isFavourite: true
+                    },
+                    {
+                        contactId: '2',
+                        name: [['Mallory']],
+                        description: 5,
+                        lnAddress: [['mallory@example.com']],
+                        pubkey: 'not a list'
+                    },
+                    { id: 'legacy', name: 'Carol' }
+                ])
+            );
+
+            await store.loadContacts();
+
+            const [bob, mallory, carol] = store.contacts;
+            expect(bob).toMatchObject({
+                contactId: '1',
+                name: 'Bob',
+                description: '',
+                lnAddress: ['bob@example.com'],
+                onchainAddress: [],
+                pubkey: [],
+                isFavourite: true
+            });
+            expect(mallory).toMatchObject({
+                contactId: '2',
+                name: '',
+                description: '',
+                lnAddress: [],
+                pubkey: []
+            });
+            expect(carol).toMatchObject({ id: 'legacy', name: 'Carol' });
+            expect(
+                store.contacts.find((contact: any) =>
+                    contact.pubkey.includes('02abc')
+                )
+            ).toBeUndefined();
+        });
+    });
+
     describe('saveContact (new contact)', () => {
         it('assigns a fresh contactId even if contactDetails carries a stale one', async () => {
             // Regression for #4387: a stale prefillContact leaking its

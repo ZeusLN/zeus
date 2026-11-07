@@ -5,6 +5,43 @@ import RNFS from 'react-native-fs';
 import { getAvatarInitials } from '../utils/DisplayUtils';
 import { getPhoto } from '../utils/PhotoUtils';
 
+const asString = (value: any): string =>
+    typeof value === 'string' ? value : '';
+
+const asStringOrNull = (value: any): string | null =>
+    typeof value === 'string' ? value : null;
+
+const asStringArray = (value: any): Array<string> =>
+    Array.isArray(value)
+        ? value.filter((item: any) => typeof item === 'string')
+        : [];
+
+// Contacts come from storage, Nostr profiles and zeuscontact: cards, so any
+// field can be missing or of the wrong type. Keep only the known fields,
+// coerced to the types the screens expect.
+export const normalizeContactData = (data: any) => {
+    const contact = data && typeof data === 'object' ? data : {};
+    const normalized: any = {
+        contactId: asString(contact.contactId),
+        lnAddress: asStringArray(contact.lnAddress),
+        bolt12Address: asStringArray(contact.bolt12Address),
+        bolt12Offer: asStringArray(contact.bolt12Offer),
+        noffer: asStringArray(contact.noffer),
+        onchainAddress: asStringArray(contact.onchainAddress),
+        pubkey: asStringArray(contact.pubkey),
+        cashuPubkey: asStringArray(contact.cashuPubkey),
+        nip05: asStringArray(contact.nip05),
+        nostrNpub: asStringArray(contact.nostrNpub),
+        name: asString(contact.name),
+        description: asString(contact.description),
+        photo: asStringOrNull(contact.photo),
+        banner: asStringOrNull(contact.banner),
+        isFavourite: contact.isFavourite === true
+    };
+    if (typeof contact.id === 'string') normalized.id = contact.id;
+    return normalized;
+};
+
 export default class Contact extends BaseModel {
     id: string; // deprecated
     public contactId: string;
@@ -22,6 +59,10 @@ export default class Contact extends BaseModel {
     public photo: string | null;
     public banner: string | null;
     public isFavourite: boolean;
+
+    constructor(data?: any) {
+        super(normalizeContactData(data));
+    }
 
     @computed public get getContactId(): string {
         return this.contactId || this.id;
