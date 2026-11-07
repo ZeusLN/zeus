@@ -32,7 +32,7 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import Storage from '../storage';
 
-import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
+import SettingsStore, { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 import ContactStore, { CONTACTS_KEY } from '../stores/ContactStore';
 
 import SelectOff from '../assets/images/SVG/Select Off.svg';
@@ -42,6 +42,7 @@ import { ContactAvatar } from '../components/ContactAvatar';
 interface NostrContactsProps {
     navigation: NativeStackNavigationProp<any, any>;
     ContactStore: ContactStore;
+    SettingsStore: SettingsStore;
 }
 
 interface NostrContactsState {
@@ -174,7 +175,7 @@ const ContactItem = React.memo(
     )
 );
 
-@inject('ContactStore')
+@inject('ContactStore', 'SettingsStore')
 @observer
 export default class NostrContacts extends React.Component<
     NostrContactsProps,
@@ -258,7 +259,10 @@ export default class NostrContacts extends React.Component<
             pubkey = NostrUtils.npubToHex(account) || '';
         } else if (this.state.isValidNip05) {
             try {
-                const lookup: any = await NostrUtils.queryNip05Profile(account);
+                const lookup: any = await NostrUtils.queryNip05Profile(
+                    account,
+                    this.props.SettingsStore.enableTor
+                );
                 pubkey = lookup.pubkey;
             } catch (e) {
                 this.setState({
