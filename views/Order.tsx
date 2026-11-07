@@ -27,7 +27,11 @@ import { SATS_PER_BTC } from '../utils/UnitsUtils';
 import { getFormattedAmount } from '../utils/AmountUtils';
 
 import BackendUtils from '../utils/BackendUtils';
-import { calculateTaxSats, calculateTotalSats } from '../utils/PosUtils';
+import {
+    calculateTaxSats,
+    calculateTotalSats,
+    isPayableSatsAmount
+} from '../utils/PosUtils';
 import FiatStore from '../stores/FiatStore';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
@@ -1342,7 +1346,10 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     }
                                 )
                             }
-                            disabled={isNaN(Number(totalSats))}
+                            disabled={
+                                !isPayableSatsAmount(totalSats) ||
+                                (units === 'fiat' && !(Number(rate) > 0))
+                            }
                         />
                     )}
 

@@ -85,3 +85,17 @@ export const calculateTaxSats = (
             .toFixed(0);
     }
 };
+
+/**
+ * Whether an order total can be invoiced: a finite, positive whole number
+ * of sats. A missing or zero fiat rate yields 0, NaN or Infinity here.
+ *
+ * @param sats - The order total in sats
+ * @returns - true if an invoice can be created for this amount
+ */
+export const isPayableSatsAmount = (
+    sats: string | number | undefined
+): boolean => {
+    const amount = new BigNumber(sats ?? NaN);
+    return amount.isFinite() && amount.isInteger() && amount.gt(0);
+};

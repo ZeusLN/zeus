@@ -1,4 +1,9 @@
-import { calculateTaxSats, calculateTotalSats } from './PosUtils';
+import BigNumber from 'bignumber.js';
+import {
+    calculateTaxSats,
+    calculateTotalSats,
+    isPayableSatsAmount
+} from './PosUtils';
 
 jest.mock('./UnitsUtils', () => ({
     SATS_PER_BTC: 100000000
@@ -133,5 +138,29 @@ describe('calculateTaxSats', () => {
         const subTotalSats = '2000';
         const result = calculateTaxSats(lineItems, subTotalSats, rate);
         expect(result).toBe('0');
+    });
+});
+
+describe('isPayableSatsAmount', () => {
+    it.each(['1', '10800', 21, '2100000000000000'])('accepts %s', (sats) => {
+        expect(isPayableSatsAmount(sats)).toBe(true);
+    });
+
+    it.each([
+        ['0', '0'],
+        ['a negative amount', '-10800'],
+        ['Infinity (rate 0)', 'Infinity'],
+        ['-Infinity', '-Infinity'],
+        ['NaN', 'NaN'],
+        ['a fraction', '1.5'],
+        ['an empty string', ''],
+        ['undefined', undefined]
+    ])('rejects %s', (_, sats) => {
+        expect(isPayableSatsAmount(sats)).toBe(false);
+    });
+
+    it('rejects the total computed for a fiat order with a zero rate', () => {
+        const sats = new BigNumber(1000).div(100).div('0.00').toFixed(0);
+        expect(isPayableSatsAmount(sats)).toBe(false);
     });
 });
