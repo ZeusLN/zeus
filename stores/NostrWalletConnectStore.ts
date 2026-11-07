@@ -199,6 +199,7 @@ export default class NostrWalletConnectStore {
     private iosAudioSuspendedUnsub: (() => void) | null = null;
     private iosAudioAppStateListener: AppStateSubscription | null = null;
     private androidReconnectionListener: EmitterSubscription | null = null;
+    private androidServiceStoppedListener: EmitterSubscription | null = null;
     private appStateListener: AppStateSubscription | null = null;
     private androidLogListener: EmitterSubscription | null = null;
     private _scheduledSave: ReturnType<typeof setTimeout> | null = null;
@@ -206,6 +207,9 @@ export default class NostrWalletConnectStore {
     // stored connections (see withConnectionsWrite)
     private _connectionsWrite: Promise<void> = Promise.resolve();
     private resetInFlight: Promise<void> | null = null;
+    // Bumped by every teardown, so an initializeService() that a reset ran
+    // during (node switch, Android Stop Service) does not finish over it
+    private resetGeneration = 0;
     private lastPendingPaymentStatusFetchByConnection = new Map<
         string,
         number
@@ -290,6 +294,7 @@ export default class NostrWalletConnectStore {
             console.log('NWC: skipping initialization - already initialized');
             return;
         }
+        const generation = this.resetGeneration;
         await this.loadInitialSettings();
         const hasActiveConnections = this.activeConnections.length > 0;
         if (!hasActiveConnections) {
@@ -306,7 +311,13 @@ export default class NostrWalletConnectStore {
         });
         try {
             await this.initializeNWCWalletServices();
-            const started = await this.startService(hasActiveConnections);
+            const started = await this.startService(
+                hasActiveConnections,
+                generation
+            );
+            // The reset already cleared this state, and a newer
+            // initializeService() may be running
+            if (this.wasResetSince(generation)) return;
             if (!started) {
                 runInAction(() => {
                     this.isInitialized = false;
@@ -317,6 +328,7 @@ export default class NostrWalletConnectStore {
             }
             await this.loadMaxBudget();
             await this.checkAndResetAllBudgets();
+            if (this.wasResetSince(generation)) return;
             if (Platform.OS === 'android') {
                 this.setupAndroidReconnectionListener();
                 this.setupAppStateMonitoring();
@@ -333,6 +345,7 @@ export default class NostrWalletConnectStore {
             });
         } catch (error) {
             console.error('Failed to initialize NWC service:', error);
+            if (this.wasResetSince(generation)) return;
             const errorMessage =
                 (error instanceof Error ? error.message : String(error)) ||
                 localeString(
@@ -392,7 +405,10 @@ export default class NostrWalletConnectStore {
         }
     };
     @action
-    private startService = async (hasActiveConnections = false) => {
+    private startService = async (
+        hasActiveConnections = false,
+        generation = this.resetGeneration
+    ) => {
         try {
             if (!this.walletServiceKeys?.privateKey) {
                 throw new Error(
@@ -414,11 +430,13 @@ export default class NostrWalletConnectStore {
                 );
             }
             setTimeout(async () => {
+                if (this.wasResetSince(generation)) return;
                 await this.subscribeToAllConnections();
             }, SERVICE_START_DELAY_MS);
             return true;
         } catch (error) {
             console.error('Failed to start NWC service:', error);
+            if (this.wasResetSince(generation)) return false;
             const errorMessage =
                 (error instanceof Error ? error.message : String(error)) ||
                 localeString(
@@ -445,6 +463,7 @@ export default class NostrWalletConnectStore {
                     this.persistentNWCServiceEnabled));
         if (!skipTeardown) {
             this.isInitialized = false;
+            this.resetGeneration++;
             const previousReset = this.resetInFlight;
             const teardown = (async () => {
                 if (previousReset) {
@@ -498,6 +517,10 @@ export default class NostrWalletConnectStore {
             this.loadingMsg = undefined;
         });
     };
+
+    private wasResetSince(generation: number): boolean {
+        return this.resetGeneration !== generation;
+    }
 
     public isServiceReady(): boolean {
         return (
@@ -4373,6 +4396,9 @@ export default class NostrWalletConnectStore {
                     );
                 }
 
+                // initialize() starts the service, and with it the Stop
+                // Service action, so listen before it resolves
+                this.setupAndroidServiceStoppedListener();
                 await NostrConnectModule.initialize();
                 this.updateAndroidTranslationCache();
             } catch (serviceError) {
@@ -4415,6 +4441,51 @@ export default class NostrWalletConnectStore {
                 await this.handleAndroidReconnectionCheck();
             }
         );
+    }
+    // Android: "Stop Service" on the NWC notification. The native service
+    // only keeps the process alive; the relay subscriptions that answer
+    // paired apps live here. Kept across reset(), like the binding itself.
+    private setupAndroidServiceStoppedListener() {
+        if (this.androidServiceStoppedListener) {
+            this.androidServiceStoppedListener.remove();
+        }
+        this.androidServiceStoppedListener = DeviceEventEmitter.addListener(
+            'NostrConnectServiceStopped',
+            async (payload?: { fromNotification?: boolean }) => {
+                await this.handleAndroidServiceStopped(
+                    payload?.fromNotification === true
+                );
+            }
+        );
+    }
+    private async handleAndroidServiceStopped(
+        fromNotification: boolean
+    ): Promise<void> {
+        // Turning Persistent Mode off also stops the native service, but
+        // NWC then keeps running while ZEUS is open
+        try {
+            if (fromNotification) {
+                console.log('Android: Background service stopped by the user');
+                await this.reset(true);
+            }
+        } catch (error) {
+            console.warn(
+                'Android: Failed to reset NWC after Stop Service:',
+                error instanceof Error ? error.message : String(error)
+            );
+        } finally {
+            // Android only destroys a stopped service once nothing is bound
+            // to it, and initialize() only starts it again after an unbind
+            try {
+                const { NostrConnectModule } = NativeModules;
+                await NostrConnectModule.unbindNostrConnectService();
+            } catch (error) {
+                console.warn(
+                    'Android: Failed to unbind background service:',
+                    error
+                );
+            }
+        }
     }
     private async setupAndroidLogListener() {
         if (this.androidLogListener) {
