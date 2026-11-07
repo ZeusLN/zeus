@@ -17,6 +17,8 @@ const SOURCE_DIRS = [
 ];
 
 const NOBLE_HASHES_SUBPATH = /['"]@noble\/hashes\/([^'"]+)['"]/g;
+const LEGACY_HASH_IMPORT =
+    /(?:from\s+|require\()['"](create-hash|fast-sha256|hash\.js|js-sha256|object-hash|scrypt-js|sha\.js)(?:\/[^'"]*)?['"]/;
 
 const sourceFiles = (entry: string): string[] => {
     if (!fs.existsSync(entry)) return [];
@@ -48,6 +50,20 @@ describe('@noble/hashes imports', () => {
                         ([, subpath]) => !subpath.endsWith('.js')
                     )
                 )
+                .map(({ line, number }) => `${file}:${number}: ${line.trim()}`)
+        );
+
+        expect(offenders).toEqual([]);
+    });
+
+    it('rejects legacy hash package imports', () => {
+        const offenders = SOURCE_DIRS.flatMap(sourceFiles).flatMap((file) =>
+            fs
+                .readFileSync(file)
+                .toString('utf8')
+                .split('\n')
+                .map((line, index) => ({ line, number: index + 1 }))
+                .filter(({ line }) => LEGACY_HASH_IMPORT.test(line))
                 .map(({ line, number }) => `${file}:${number}: ${line.trim()}`)
         );
 
