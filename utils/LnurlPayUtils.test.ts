@@ -6,6 +6,7 @@ import { bech32 } from 'bech32';
 import Base64Utils from './Base64Utils';
 import Bolt11Utils from './Bolt11Utils';
 import {
+    getLnurlHost,
     getLnurlpUrl,
     getLnurlMetadataHash,
     verifyLnurlPayInvoice,
@@ -216,6 +217,38 @@ describe('LnurlPayUtils', () => {
             expect(
                 verifyLnurlPayInvoice('nope', METADATA, new BigNumber(21000)).ok
             ).toBe(false);
+        });
+    });
+
+    describe('getLnurlHost', () => {
+        it('returns the host of a plain callback', () => {
+            expect(getLnurlHost('https://pay.example.com/cb')).toBe(
+                'pay.example.com'
+            );
+            expect(getLnurlHost('https://Pay.Example.com:8443/cb?a=1')).toBe(
+                'pay.example.com'
+            );
+        });
+
+        it('returns the host the request goes to where js-lnurl reads another', () => {
+            [
+                'https://other.example\\@shop.example/cb',
+                'https://other.example#@shop.example/cb'
+            ].forEach((callback) =>
+                expect(getLnurlHost(callback)).toBe('other.example')
+            );
+        });
+
+        it('ignores userinfo', () => {
+            expect(
+                getLnurlHost('https://shop.example@pay.example.com/cb')
+            ).toBe('pay.example.com');
+        });
+
+        it('returns an empty string when there is no host to name', () => {
+            expect(getLnurlHost('')).toBe('');
+            expect(getLnurlHost('not a url')).toBe('');
+            expect(getLnurlHost(undefined as any)).toBe('');
         });
     });
 
@@ -457,9 +490,9 @@ describe('LnurlPayUtils', () => {
 
         it('rejects the backslash-userinfo parser-confusion PoC', () => {
             // js-lnurl getDomain sees victim.example (signing/display);
-            // url.parse and native HTTP stacks contact attacker.example
+            // url.parse and native HTTP stacks contact other.example
             const result = verifyLnurlAuthCallback(
-                `https://attacker.example\\@victim.example/?tag=login&k1=${K1}`,
+                `https://other.example\\@victim.example/?tag=login&k1=${K1}`,
                 'victim.example'
             );
             expect(result.ok).toBe(false);
@@ -469,7 +502,7 @@ describe('LnurlPayUtils', () => {
         it('rejects a callback whose host differs from the signing domain', () => {
             expect(
                 verifyLnurlAuthCallback(
-                    `https://attacker.example/auth?tag=login&k1=${K1}`,
+                    `https://other.example/auth?tag=login&k1=${K1}`,
                     'victim.example'
                 ).ok
             ).toBe(false);

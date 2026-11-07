@@ -123,3 +123,99 @@ describe('EcashSwipeableRow lnurl resolve', () => {
         expect(navigation.navigate).not.toHaveBeenCalled();
     });
 });
+
+describe('EcashSwipeableRow LNURL requests', () => {
+    const mountRow = async (lnurlParams?: any) => {
+        const ref = React.createRef<any>();
+        const navigation = { navigate: jest.fn() };
+        await render(
+            <EcashSwipeableRow
+                {...({
+                    ref,
+                    lightning: asLnurl('https://example.com/lnurl'),
+                    lnurlParams,
+                    locked: true,
+                    navigation,
+                    SyncStore: { isSyncing: false }
+                } as any)}
+            >
+                <Text>Withdraw</Text>
+            </EcashSwipeableRow>
+        );
+        return { ref, navigation };
+    };
+
+    // A locked row with an LNURL starts the request when tapped
+    const tapLnurl = async (lnurlParams?: any) => {
+        const { navigation } = await mountRow(lnurlParams);
+        await fireEvent.press(screen.getByText('Withdraw'));
+        // the request is started but not awaited by the press handler
+        await new Promise(setImmediate);
+        return navigation;
+    };
+
+    let alertSpy: jest.SpyInstance;
+    beforeEach(() => {
+        mockFetchLnurlParams.mockReset();
+        alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+    afterEach(() => alertSpy.mockRestore());
+
+    it('names the host the LNURL error came from', async () => {
+        mockFetchLnurlParams.mockResolvedValue({
+            status: 'ERROR',
+            reason: 'Claim your refund',
+            // js-lnurl's getDomain reads shop.example out of this URL
+            domain: 'shop.example',
+            url: 'https://other.example\\@shop.example/lnurl'
+        });
+
+        await tapLnurl();
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'other.example says: Claim your refund',
+            expect.any(Array),
+            { cancelable: false }
+        );
+    });
+
+    it('rejects an LNURL error from an onion host named by the request host', async () => {
+        // Pressing the row would leave this rejection unhandled, so call the
+        // handler directly
+        const { ref, navigation } = await mountRow();
+
+        await expect(
+            ref.current.handleLnurlRequest(
+                undefined,
+                {
+                    status: 'ERROR',
+                    reason: 'Claim your refund',
+                    domain: 'shop.example',
+                    url: 'http://abc.onion\\@shop.example/lnurl'
+                },
+                navigation
+            )
+        ).rejects.toThrow('abc.onion says: Claim your refund');
+        expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    // the resolve refuses these callbacks too; params handed to the row
+    // already resolved are checked here
+    it.each(['https:///a.example/cb', 'https://\\a.example/cb'])(
+        'refuses a withdraw whose callback %s has no host',
+        async (callback) => {
+            const navigation = await tapLnurl({
+                tag: 'withdrawRequest',
+                callback,
+                k1: 'k1'
+            });
+
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            expect(alertSpy).toHaveBeenCalledWith(
+                'general.error',
+                'utils.handleAnything.invalidLnurlParams'
+            );
+        }
+    );
+});
