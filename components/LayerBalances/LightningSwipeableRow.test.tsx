@@ -2,7 +2,11 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-jest.mock('react-native-blob-util', () => ({}));
+// the request fetchLnurlParams sends for each hop
+const mockFetch = jest.fn();
+jest.mock('react-native-blob-util', () => ({
+    config: () => ({ fetch: (...args: any[]) => mockFetch(...args) })
+}));
 // clearnet lookups go through the redirect-checking fetch
 const mockFetchLnurlUrl = jest.fn();
 // the lnurl resolve behind getLnurlParams
@@ -56,13 +60,15 @@ const asLnurl = (target: string) =>
     );
 
 // A locked row pays its destination when tapped
-const tapRow = async (lightningAddress?: string, lightning?: string) => {
+const tapRow = (lightningAddress?: string, lightning?: string) =>
+    tapRowWith({ lightningAddress, lightning });
+
+const tapRowWith = async (destination: any) => {
     const navigation = { navigate: jest.fn() };
     await render(
         <LightningSwipeableRow
             {...({
-                lightningAddress,
-                lightning,
+                ...destination,
                 locked: true,
                 navigation,
                 SyncStore: { isSyncing: false }
@@ -341,5 +347,84 @@ describe('LightningSwipeableRow lnurl resolve', () => {
 
         expectAlert('utils.handleAnything.invalidLnurlParams');
         expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+});
+
+describe('LightningSwipeableRow LNURL errors', () => {
+    let alertSpy: jest.SpyInstance;
+    beforeEach(() => {
+        mockFetch.mockReset();
+        // resolve for real, over the mocked request
+        mockFetchLnurlParams.mockImplementation(
+            jest.requireActual('../../utils/LnurlFetchUtils').fetchLnurlParams
+        );
+        mockSettingsStore.enableTor = false;
+        alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+    afterEach(() => alertSpy.mockRestore());
+
+    const alertedMessage = () => alertSpy.mock.calls[0]?.[1];
+
+    // #5060: this error used to end up as an unhandled rejection
+    it('alerts on an .onion LNURL error response', async () => {
+        const navigation = await tapRowWith({
+            lnurlParams: {
+                status: 'ERROR',
+                domain: ONION,
+                reason: 'unreachable'
+            }
+        });
+
+        expect(alertedMessage()).toBe(`${ONION} says: unreachable`);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    // decode-uri-component's `$\`` / `$'` blowup (#4553). The resolve
+    // refuses the query before any request; the row shows the same message
+    // handleAnything does, not the raw URIError.
+    it('alerts that a LNURL with an undecodable query is invalid', async () => {
+        const query = '%24%60x%24%27y'.repeat(100) + '%';
+
+        const navigation = await tapRowWith({
+            lightning: `lnurlp://example.com/pay?x=${query}`
+        });
+
+        expect(alertedMessage()).toBe(
+            'utils.handleAnything.invalidLnurlParams'
+        );
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('keeps the host policy message for a refused LNURL', async () => {
+        const navigation = await tapRowWith({
+            lightning: 'lnurlp://192.168.1.1/pay'
+        });
+
+        expect(alertedMessage()).toBe('utils.lnurl.unsafeEndpoint');
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('opens LnurlPay for a valid LNURL', async () => {
+        mockFetch.mockResolvedValue({
+            info: () => ({ status: 200 }),
+            json: () => ({
+                tag: 'payRequest',
+                callback: 'https://example.com/callback',
+                metadata: '[]'
+            })
+        });
+        const lightning = 'lnurlp://example.com/pay';
+
+        const navigation = await tapRowWith({ lightning });
+
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'LnurlPay',
+            expect.objectContaining({
+                lnurlParams: expect.objectContaining({ lnurlText: lightning })
+            })
+        );
+        expect(alertSpy).not.toHaveBeenCalled();
     });
 });

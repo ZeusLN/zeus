@@ -145,24 +145,13 @@ export default class LightningSwipeableRow extends Component<
             try {
                 params = await getLnurlParams(lightning ?? '');
             } catch (e: any) {
-                // a host policy refusal carries its own message; anything
-                // else is js-lnurl failing on a malformed link
-                Alert.alert(
-                    localeString('general.error'),
-                    isUnsafeLnurlError(e)
-                        ? e.message
-                        : localeString(
-                              'utils.handleAnything.invalidLnurlParams'
-                          ),
-                    [
-                        {
-                            text: localeString('general.ok'),
-                            onPress: () => void 0
-                        }
-                    ],
-                    { cancelable: false }
+                // A host policy refusal keeps its own message. Anything else
+                // (a query that does not decode throws URIError) gets the
+                // message handleAnything shows. fetchLnInvoice alerts it.
+                if (isUnsafeLnurlError(e)) throw e;
+                throw new Error(
+                    localeString('utils.handleAnything.invalidLnurlParams')
                 );
-                return;
             }
         }
         if (
@@ -261,15 +250,23 @@ export default class LightningSwipeableRow extends Component<
                 });
             }
         } catch (e: any) {
-            // fetchLnInvoice does not await this, so anything rethrown
-            // would be lost and the tap would do nothing
-            Alert.alert(
-                localeString('general.error'),
-                e?.message || error,
-                [{ text: localeString('general.ok'), onPress: () => void 0 }],
-                { cancelable: false }
-            );
+            // fetchLnInvoice alerts it
+            throw new Error(e?.message || error);
         }
+    };
+
+    private showError = (error: any) => {
+        Alert.alert(
+            localeString('general.error'),
+            error?.message || String(error),
+            [
+                {
+                    text: localeString('general.ok'),
+                    onPress: () => void 0
+                }
+            ],
+            { cancelable: false }
+        );
     };
 
     private fetchLnInvoice = async () => {
@@ -294,17 +291,29 @@ export default class LightningSwipeableRow extends Component<
                 isValid: true
             });
         } else if (lightningAddress) {
-            this.handleLightningAddress(lightningAddress, navigation, settings);
+            try {
+                await this.handleLightningAddress(
+                    lightningAddress,
+                    navigation,
+                    settings
+                );
+            } catch (error) {
+                this.showError(error);
+            }
         } else if (
             lightning?.toLowerCase().startsWith('lnurl') ||
             lnurlParams
         ) {
-            this.handleLnurlRequest(
-                lightning,
-                lnurlParams,
-                navigation,
-                settings
-            );
+            try {
+                await this.handleLnurlRequest(
+                    lightning,
+                    lnurlParams,
+                    navigation,
+                    settings
+                );
+            } catch (error) {
+                this.showError(error);
+            }
         } else {
             invoicesStore.getPayReq(lightning ?? '');
             navigation.navigate('PaymentRequest', {});
