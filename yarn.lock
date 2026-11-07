@@ -8172,10 +8172,10 @@ react-native-keychain@10.0.0:
   resolved "https://registry.yarnpkg.com/react-native-keychain/-/react-native-keychain-10.0.0.tgz#1de6f54d27b2376deaac4d51883c066f53b7be7b"
   integrity sha512-YzPKSAnSzGEJ12IK6CctNLU79T1W15WDrElRQ+1/FsOazGX9ucFPTQwgYe8Dy8jiSEDJKM4wkVa3g4lD2Z+Pnw==
 
-react-native-nfc-manager@3.17.5:
-  version "3.17.5"
-  resolved "https://registry.yarnpkg.com/react-native-nfc-manager/-/react-native-nfc-manager-3.17.5.tgz#3ceb54791c174afa90037721a64ef094806ba5e9"
-  integrity sha512-gQNI6scRPxFGWoTgV2zbbh+ORJtfivnctfT3F1+DgrDpHqbPQNC8pp8BGRxPKzJrsjKcKmW+uIYugVNgMb3wJg==
+react-native-nfc-manager@4.2.0:
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/react-native-nfc-manager/-/react-native-nfc-manager-4.2.0.tgz#27f10a407089d6e78cb571f7f898f651b403cadb"
+  integrity sha512-3LCVChwRxtGG89vMTSWgrGhxIYfM9WCkJ8qO5dGTy/E8X7US5XjSN3Xg2JbN6k2iPZKWVue3qImqhGpuJsqKFw==
 
 react-native-nitro-tor@0.6.1:
   version "0.6.1"
