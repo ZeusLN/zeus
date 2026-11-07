@@ -1923,7 +1923,7 @@ export default class NostrWalletConnectStore {
             fn: async () => {
                 await nwcWalletService.publishWalletServiceInfoEvent(
                     privateKey,
-                    NostrConnectUtils.getWalletServiceMethods(),
+                    NostrConnectUtils.getWalletServiceMethods() as any,
                     NostrConnectUtils.getNotifications()
                 );
                 runInAction(() => {

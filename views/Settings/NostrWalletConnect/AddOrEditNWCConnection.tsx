@@ -12,7 +12,6 @@ import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import isEqual from 'lodash/isEqual';
-import Slider from '@react-native-community/slider';
 import { Nip47Method } from '@getalby/sdk';
 
 import Screen from '../../../components/Screen';
@@ -44,6 +43,8 @@ import NWCConnection, {
     PermissionType,
     TimeUnit
 } from '../../../models/NWCConnection';
+
+const MAX_BUDGET = 2_100_000_000_000_000; // 21M BTC in sats
 
 interface AddOrEditNWCConnectionProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -88,7 +89,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             connectionName: '',
             selectedRelayUrl: DEFAULT_NOSTR_RELAYS[0],
             customRelayUrl: '',
-            selectedPermissions: NostrConnectUtils.getFullAccessPermissions(),
+            selectedPermissions:
+                NostrConnectUtils.getFullAccessPermissions() as Nip47Method[],
             selectedBudgetRenewalIndex: 0,
             expiresAt: NostrConnectUtils.getExpiryDateFromPreset(0),
             error: '',
@@ -306,7 +308,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             showCustomExpiryInput,
             customExpiryValue,
             budgetValue,
-            maxBudgetLimit,
             customRelayUrl,
             selectedRelayUrl
         } = this.state;
@@ -335,12 +336,12 @@ export default class AddOrEditNWCConnection extends React.Component<
             }
         }
 
-        if (NostrConnectUtils.hasPaymentPermissions(selectedPermissions)) {
-            if (budgetValue === 0 && maxBudgetLimit >= 0) {
-                return false;
-            }
+        if (
+            NostrConnectUtils.hasPaymentPermissions(selectedPermissions) &&
+            budgetValue === 0
+        ) {
+            return false;
         }
-
         return true;
     };
 
@@ -430,35 +431,6 @@ export default class AddOrEditNWCConnection extends React.Component<
         });
     };
 
-    getBudgetStep = (maxLimit: number): number => {
-        if (maxLimit <= 0) return 1;
-        if (maxLimit <= 1000) return 1;
-        const dynamicStep = Math.max(1, Math.floor(maxLimit / 1000));
-        const orderOfMagnitude = Math.floor(Math.log10(dynamicStep));
-        const roundedStep = Math.pow(10, orderOfMagnitude);
-        return roundedStep;
-    };
-
-    handleBudgetValueChange = (value: number) => {
-        const clampedValue = Math.max(
-            0,
-            Math.min(Math.round(value), this.state.maxBudgetLimit || 0)
-        );
-
-        this.setState(
-            {
-                budgetValue: clampedValue,
-                error: ''
-            },
-            () => {
-                if (this.state.originalConnection) {
-                    const hasChanges = this.checkForChanges();
-                    this.setState({ hasChanges });
-                }
-            }
-        );
-    };
-
     selectExpiryPreset = (presetIndex: number) => {
         const expiryDate = NostrConnectUtils.getExpiryDateFromPreset(
             presetIndex,
@@ -524,6 +496,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         }
 
         const value = parseInt(numericText, 10);
+        if (value > MAX_BUDGET) return;
 
         if (value < 0) {
             this.updateStateWithChangeTracking({
@@ -532,9 +505,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             });
             return;
         }
-        const clampedValue = Math.min(value, this.state.maxBudgetLimit);
         this.updateStateWithChangeTracking({
-            budgetValue: clampedValue,
+            budgetValue: value,
             error: ''
         });
     };
@@ -550,7 +522,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryValue,
             customExpiryUnit,
             showCustomExpiryInput,
-            maxBudgetLimit,
             customRelayUrl
         } = this.state;
 
@@ -577,14 +548,15 @@ export default class AddOrEditNWCConnection extends React.Component<
         };
 
         // Budget is required when pay_invoice is among the permissions
-        if (NostrConnectUtils.hasPaymentPermissions(selectedPermissions)) {
-            if (budgetValue === 0 && maxBudgetLimit > 0) {
-                throw new Error(
-                    localeString(
-                        'views.Settings.NostrWalletConnect.validation.budgetRequired'
-                    )
-                );
-            }
+        if (
+            NostrConnectUtils.hasPaymentPermissions(selectedPermissions) &&
+            budgetValue === 0
+        ) {
+            throw new Error(
+                localeString(
+                    'views.Settings.NostrWalletConnect.validation.budgetRequired'
+                )
+            );
         }
 
         if (budgetValue > 0) {
@@ -1132,7 +1104,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     </Body>
                                 </View>
 
-                                {/* Budget Input and Slider */}
+                                {/* Budget Input */}
                                 <View
                                     style={{
                                         marginHorizontal: 5,
@@ -1140,106 +1112,28 @@ export default class AddOrEditNWCConnection extends React.Component<
                                         marginBottom: 5
                                     }}
                                 >
-                                    {maxBudgetLimit > 0 ? (
-                                        <>
-                                            {/* Custom Budget Input */}
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'views.Settings.NostrWalletConnect.budgetPlaceholder'
-                                                )}
-                                                value={
-                                                    budgetValue > 0
-                                                        ? numberWithCommas(
-                                                              budgetValue.toString()
-                                                          )
-                                                        : ''
-                                                }
-                                                onChangeText={
-                                                    this
-                                                        .handleCustomBudgetValueChange
-                                                }
-                                                keyboardType="numeric"
-                                                style={styles.textInput}
-                                            />
-                                            {/* Slider */}
-                                            <View
-                                                style={{
-                                                    marginLeft: 10,
-                                                    marginRight: 10
-                                                }}
-                                            >
-                                                <Slider
-                                                    style={{
-                                                        width: '100%',
-                                                        height: 30,
-                                                        marginTop: 10
-                                                    }}
-                                                    minimumValue={0}
-                                                    maximumValue={
-                                                        maxBudgetLimit
-                                                    }
-                                                    value={budgetValue}
-                                                    step={this.getBudgetStep(
-                                                        maxBudgetLimit
-                                                    )}
-                                                    onValueChange={
-                                                        this
-                                                            .handleBudgetValueChange
-                                                    }
-                                                    minimumTrackTintColor={themeColor(
-                                                        'highlight'
-                                                    )}
-                                                    maximumTrackTintColor={themeColor(
-                                                        'secondary'
-                                                    )}
-                                                />
-                                                <View
-                                                    style={{
-                                                        flexDirection: 'row',
-                                                        justifyContent:
-                                                            'space-between',
-                                                        marginTop: 8
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            fontFamily:
-                                                                'PPNeueMontreal-Book',
-                                                            fontSize: 12
-                                                        }}
-                                                    >
-                                                        {'0'}{' '}
-                                                        {localeString(
-                                                            'general.sats'
-                                                        )}
-                                                    </Text>
-                                                    <Text
-                                                        style={{
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            fontFamily:
-                                                                'PPNeueMontreal-Book',
-                                                            fontSize: 12
-                                                        }}
-                                                    >
-                                                        {numberWithCommas(
-                                                            maxBudgetLimit.toString()
-                                                        )}{' '}
-                                                        {localeString(
-                                                            'general.sats'
-                                                        )}
-                                                    </Text>
-                                                </View>
-                                            </View>
-                                        </>
-                                    ) : (
+                                    <TextInput
+                                        placeholder={localeString(
+                                            'views.Settings.NostrWalletConnect.budgetPlaceholder'
+                                        )}
+                                        value={
+                                            budgetValue > 0
+                                                ? numberWithCommas(
+                                                      budgetValue.toString()
+                                                  )
+                                                : ''
+                                        }
+                                        onChangeText={
+                                            this.handleCustomBudgetValueChange
+                                        }
+                                        keyboardType="numeric"
+                                        style={styles.textInput}
+                                    />
+                                    {maxBudgetLimit === 0 && (
                                         <View
                                             style={{
-                                                padding: 20,
+                                                padding: 12,
+                                                marginTop: 8,
                                                 alignItems: 'center',
                                                 backgroundColor:
                                                     themeColor('secondary'),
