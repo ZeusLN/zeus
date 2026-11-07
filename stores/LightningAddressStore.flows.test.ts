@@ -830,6 +830,103 @@ describe('LightningAddressStore flows', () => {
             expect(store.error).toBe(false);
             expect(store.error_msg).toBe('');
         });
+
+        it('does not redeem a quote again while it is being redeemed', async () => {
+            const { store } = redeemStore();
+            let markPaid: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaid = resolve))
+            );
+            reply('/api/lnurl/nuts/redeem', ok(), ok());
+
+            const first = store.redeemCashu('q1', MINT, 1000);
+            const second = store.redeemCashu('q1', MINT, 1000);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(1);
+            expect(store.redeeming).toBe(true);
+
+            markPaid({ isPaid: true });
+            await expect(first).resolves.toBe(true);
+            await expect(second).resolves.toBe(true);
+            expect(callsTo('/api/lnurl/nuts/redeem')).toHaveLength(1);
+
+            // once the first redeem is done, the quote can be tried again
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            await store.redeemCashu('q1', MINT, 1000);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(2);
+        });
+
+        it('gives a second redeem of the same quote the outcome of the one in flight', async () => {
+            const { store } = redeemStore();
+            let markPaid: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaid = resolve))
+            );
+            reply('/api/lnurl/nuts/redeem', ok({ token: 'cashuBtoken' }));
+            cashuStore.decodeTokenCDK.mockResolvedValue({
+                mint_url: 'https://other.mint'
+            });
+
+            // socket event first, then Redeem All reaches the same quote
+            const first = store.redeemCashu('q1', MINT, 1000, false, true);
+            const second = store.redeemCashu('q1', MINT, 1000, true);
+            markPaid({ isPaid: true });
+
+            await expect(first).resolves.toBe(false);
+            await expect(second).resolves.toBe(false);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(1);
+            expect(cashuStore.receiveTokenCDK).not.toHaveBeenCalled();
+        });
+
+        it('shows a mint rejection to a second caller even when the first was silent', async () => {
+            const { store } = redeemStore();
+            let markPaid: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaid = resolve))
+            );
+            reply('/api/lnurl/nuts/redeem', ok({ token: 'cashuBtoken' }));
+            cashuStore.decodeTokenCDK.mockResolvedValue({
+                mint_url: 'https://other.mint'
+            });
+
+            // socket event (no alerts), then the user taps the payment
+            const first = store.redeemCashu('q1', MINT, 1000, false, true);
+            const tap = store.redeemCashu('q1', MINT, 1000);
+            markPaid({ isPaid: true });
+            await Promise.all([first, tap]);
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.mintMismatch'
+            );
+        });
+
+        it('starts a new redeem for a quote after reset', async () => {
+            const { store } = redeemStore();
+            let markPaid: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaid = resolve))
+            );
+            reply('/api/lnurl/nuts/redeem', ok(), ok());
+
+            const stale = store.redeemCashu('q1', MINT, 1000);
+            store.reset();
+            // the next connection's redeem of the same quote runs itself
+            let markPaidAgain: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaidAgain = resolve))
+            );
+            const current = store.redeemCashu('q1', MINT, 1000);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(2);
+
+            // the stale redeem ending does not drop the current one
+            markPaid({ isPaid: false });
+            await stale;
+            store.redeemCashu('q1', MINT, 1000);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(2);
+
+            markPaidAgain({ isPaid: true });
+            await current;
+        });
     });
 
     describe('deletePayment', () => {
@@ -936,10 +1033,13 @@ describe('LightningAddressStore flows', () => {
     });
 
     describe('automatic Cashu redemption', () => {
-        const newSocket = (connected = false) => {
+        // socket.io's `active` stays true while the socket connects or
+        // reconnects and turns false once the server ends the session
+        const newSocket = (connected = false, active = true) => {
             const handlers: { [event: string]: (data: any) => void } = {};
             const socket: any = {
                 connected,
+                active,
                 emit: jest.fn(),
                 disconnect: jest.fn(),
                 on: jest.fn((event: string, handler: any) => {
@@ -992,6 +1092,193 @@ describe('LightningAddressStore flows', () => {
 
             expect(redeemAll).not.toHaveBeenCalled();
             expect(ioMock).not.toHaveBeenCalled();
+        });
+
+        it('opens one socket when called again during the auth request', async () => {
+            const store = newStore();
+            const { socket } = newSocket();
+            ioMock.mockReturnValue(socket);
+            // the signature is usually cached, so both calls get past
+            // the auth step
+            Object.assign(store, {
+                auth: { verification: 'v', signature: 'zsig' },
+                authDate: new Date()
+            });
+            const redeemAll = jest
+                .spyOn(store, 'redeemAllOpenPaymentsCashu')
+                .mockResolvedValue(undefined);
+
+            store.prepareToAutomaticallyAcceptCashu();
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+
+            expect(ioMock).toHaveBeenCalledTimes(1);
+            expect(redeemAll).toHaveBeenCalledTimes(1);
+        });
+
+        it('does nothing while a socket is still connecting', async () => {
+            const store = newStore();
+            ioMock.mockReturnValue(newSocket(false).socket);
+            reply('/api/lnurl/auth', ok({ verification: 'v' }));
+            const redeemAll = jest
+                .spyOn(store, 'redeemAllOpenPaymentsCashu')
+                .mockResolvedValue(undefined);
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+
+            expect(ioMock).toHaveBeenCalledTimes(1);
+            expect(redeemAll).toHaveBeenCalledTimes(1);
+        });
+
+        it('opens a new socket after the server ends the session', async () => {
+            const store = newStore();
+            store.socket = newSocket(false, false).socket;
+            const { socket } = newSocket();
+            ioMock.mockReturnValue(socket);
+            reply('/api/lnurl/auth', ok({ verification: 'v' }));
+            const redeemAll = jest
+                .spyOn(store, 'redeemAllOpenPaymentsCashu')
+                .mockResolvedValue(undefined);
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+
+            expect(redeemAll).toHaveBeenCalledTimes(1);
+            expect(ioMock).toHaveBeenCalledTimes(1);
+            expect(store.socket.disconnect).toBe(socket.disconnect);
+        });
+
+        it('tries again after the auth request fails', async () => {
+            const store = newStore();
+            ioMock.mockReturnValue(newSocket().socket);
+            reply(
+                '/api/lnurl/auth',
+                new Error('offline'),
+                ok({ verification: 'v' })
+            );
+            jest.spyOn(store, 'redeemAllOpenPaymentsCashu').mockResolvedValue(
+                undefined
+            );
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+            expect(ioMock).not.toHaveBeenCalled();
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+            expect(ioMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not open a socket for the previous wallet when reset runs during the auth request', async () => {
+            const store = newStore();
+            const { socket } = newSocket();
+            ioMock.mockReturnValue(socket);
+            reply(
+                '/api/lnurl/auth',
+                ok({ verification: 'v' }),
+                ok({ verification: 'v2' })
+            );
+            jest.spyOn(store, 'redeemAllOpenPaymentsCashu').mockResolvedValue(
+                undefined
+            );
+
+            store.prepareToAutomaticallyAcceptCashu();
+            store.reset();
+            await flushPromises();
+
+            expect(ioMock).not.toHaveBeenCalled();
+            expect(store.socket).toBeUndefined();
+
+            // the next wallet gets its own socket
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+
+            expect(ioMock).toHaveBeenCalledTimes(1);
+            expect(store.socket.disconnect).toBe(socket.disconnect);
+        });
+
+        it('ignores payment events from a socket opened before reset', async () => {
+            const store = newStore();
+            const { socket, handlers } = newSocket();
+            ioMock.mockReturnValue(socket);
+            reply('/api/lnurl/auth', ok({ verification: 'v' }));
+            jest.spyOn(store, 'redeemAllOpenPaymentsCashu').mockResolvedValue(
+                undefined
+            );
+            const redeem = jest
+                .spyOn(store, 'redeemCashu')
+                .mockResolvedValue(true);
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+            store.reset();
+
+            expect(socket.disconnect).toHaveBeenCalled();
+            handlers.paid({
+                quote_id: 'q9',
+                mint_url: MINT,
+                amount_msat: 5000
+            });
+            expect(redeem).not.toHaveBeenCalled();
+        });
+
+        it('stops Redeem All at the next payment after reset', async () => {
+            const store = newStore();
+            store.paid = [
+                { quote_id: 'q1', mint_url: MINT, amount_msat: 1000 },
+                { quote_id: 'q2', mint_url: MINT, amount_msat: 2000 }
+            ];
+            const status = jest
+                .spyOn(store, 'status')
+                .mockResolvedValue(undefined);
+            let finishRedeem: (value: boolean) => void = () => {};
+            const redeem = jest
+                .spyOn(store, 'redeemCashu')
+                .mockReturnValueOnce(
+                    new Promise((resolve) => (finishRedeem = resolve))
+                )
+                .mockResolvedValue(true);
+
+            const run = store.redeemAllOpenPaymentsCashu(true);
+            expect(redeem).toHaveBeenCalledTimes(1);
+            store.reset();
+
+            finishRedeem(true);
+            await run;
+
+            expect(redeem).toHaveBeenCalledTimes(1);
+            // the refresh would be for the previous wallet
+            expect(status).not.toHaveBeenCalled();
+            expect(store.redeemingAll).toBe(false);
+        });
+
+        it('keeps the running Redeem All flag when an older one ends', async () => {
+            const store = newStore();
+            store.paid = [
+                { quote_id: 'q1', mint_url: MINT, amount_msat: 1000 }
+            ];
+            jest.spyOn(store, 'status').mockResolvedValue(undefined);
+            let finishRedeem: (value: boolean) => void = () => {};
+            jest.spyOn(store, 'redeemCashu')
+                .mockReturnValueOnce(
+                    new Promise((resolve) => (finishRedeem = resolve))
+                )
+                .mockReturnValueOnce(new Promise(() => {}));
+
+            const stale = store.redeemAllOpenPaymentsCashu(true);
+            store.reset();
+            store.paid = [
+                { quote_id: 'q2', mint_url: MINT, amount_msat: 2000 }
+            ];
+            store.redeemAllOpenPaymentsCashu(true);
+
+            finishRedeem(true);
+            await stale;
+
+            expect(store.redeemingAll).toBe(true);
         });
 
         it('logs an auth failure instead of opening a socket', async () => {
