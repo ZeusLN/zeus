@@ -170,6 +170,7 @@ function setup() {
             themeColor: () => '#000',
             isLightTheme: () => false,
             autoPurgeLegacyKeychain: jest.fn(),
+            promptLegacyExportCleanup: jest.fn(),
             isWipePending: async () => false
         }
     );
