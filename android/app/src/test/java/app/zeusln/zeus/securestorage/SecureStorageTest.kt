@@ -60,6 +60,35 @@ class SecureStorageTest {
     }
 
     @Test
+    fun dropsTheNewCopyOfAnEntryAnOlderBuildDeleted() {
+        storage.set("zeus:a", "v1")
+        legacy.delete("zeus:a")
+
+        assertNull(storage.get("zeus:a"))
+        assertNull(store.read("zeus:a"))
+
+        // a later release that makes the new store authoritative must not
+        // bring the deleted value back
+        File(dir, SecureFileStore.AUTHORITATIVE_MARKER).createNewFile()
+        assertNull(storage.get("zeus:a"))
+    }
+
+    @Test
+    fun stillReportsADeletedEntryMissingWhenItsNewCopyCannotBeDropped() {
+        storage.set("zeus:a", "v1")
+        legacy.delete("zeus:a")
+        dir.setWritable(false)
+        try {
+            assertNull(storage.get("zeus:a"))
+        } finally {
+            dir.setWritable(true)
+        }
+        // the next read tries again
+        assertNull(storage.get("zeus:a"))
+        assertNull(store.read("zeus:a"))
+    }
+
+    @Test
     fun failsTheWriteWhenTheLegacyWriteFails() {
         storage.set("zeus:a", "old")
         prefs.failWrites = true
