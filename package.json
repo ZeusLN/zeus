@@ -191,7 +191,7 @@
     "@types/sha.js": "2.4.4",
     "@typescript-eslint/eslint-plugin": "8.72.1",
     "@typescript-eslint/parser": "8.72.1",
-    "babel-jest": "29.7.0",
+    "babel-jest": "30.5.2",
     "concurrently": "10.0.6",
     "eslint": "9.39.4",
     "eslint-import-resolver-typescript": "4.4.5",
