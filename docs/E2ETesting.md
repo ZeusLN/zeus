@@ -98,7 +98,16 @@ Android runs a debug build against Metro. The emulator defaults to the
 | `onboarding/mintDiscovery` | Every mint source, top mints, custom npub field and validation, choosing later, backing out versus selecting |
 | `onboarding/walletSettings` | Clipboard switch and its explainer, fiat switch, rates source, currency search and selection, security settings, changes carried to the summary |
 | `onboarding/walletCreation` | Creating the wallet starts and shows its progress screen |
+| `wallet/keypad` | Entering, grouping, deleting and clearing an amount, singular sat, ecash and self-custody modes, switching units through the currency picker, requesting ecash, the send options |
+| `wallet/walletHome` | Wallet tabs, the balance of each layer, the activity list, the header menu and wallet list |
 | `walletConfiguration` | Picking a backend for a remote wallet connection |
 
-Wallet creation stops at the progress screen: finishing it starts a real
-mainnet node that needs network access and syncs in the background.
+The `wallet/` specs create a real wallet first, with a flow from
+`e2e/flows/wallet.ts`. Each builds and starts an LDK Node on mainnet, so those
+specs need network access and take a minute or two to reach the wallet. Detox
+stops waiting for the app to go idle while the node starts.
+
+- `createEcashWallet()`: the recommended ecash wallet, for tests that need a
+  mint. It waits for the recommended mints, which come from Nostr relays; if
+  the relays return none, the spec fails in its setup.
+- `createSelfCustodialWallet()`: a self-custodial wallet, which needs no mint.
