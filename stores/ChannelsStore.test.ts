@@ -748,4 +748,176 @@ describe('ChannelsStore batch channel open', () => {
         expect(store.errorOpenChannel).toBe(true);
         expect(store.errorMsgChannel).toBe('Request timeout');
     });
+
+    describe('dispatch order', () => {
+        // A is opened first, B in between and C last; C's psbt_finalize is
+        // what makes LND publish the batch
+        const threeChannelRequest = () => {
+            const request = batchRequest();
+            request.additionalChannels.push({
+                node_pubkey_string: 'ghi',
+                host: 'peer-c.example.com:9735',
+                satAmount: '200000'
+            });
+            return request;
+        };
+
+        const streamResult = (pending_chan_id: string) =>
+            ({
+                result: {
+                    pending_chan_id,
+                    psbt_fund: {
+                        funding_address: `bc1q${pending_chan_id}`,
+                        funding_amount: 1,
+                        psbt: PSBT
+                    }
+                }
+            } as any);
+
+        // the request object is reused between channels, so record what
+        // each openChannelStream call was sent at the time it was made
+        let dispatched: Array<{ node: string; no_publish: boolean }>;
+
+        const streamReplies = (replies: Array<() => Promise<any>>) => {
+            dispatched = [];
+            jest.mocked(BackendUtils.openChannelStream)
+                .mockReset()
+                .mockImplementation((request: any) => {
+                    dispatched.push({
+                        node: request.node_pubkey_string,
+                        no_publish: request.funding_shim.psbt_shim.no_publish
+                    });
+                    return replies[dispatched.length - 1]();
+                });
+        };
+
+        // the pending_chan_ids handleChannelOpen worked from, read when it
+        // finalizes
+        let idsAtFinalize: Array<string> | undefined;
+
+        beforeEach(() => {
+            idsAtFinalize = undefined;
+            jest.mocked(BackendUtils.fundingStateStep).mockImplementation(
+                (step: any) => {
+                    if (step.psbt_finalize) {
+                        idsAtFinalize = [...store.pending_chan_ids];
+                    }
+                    return Promise.resolve({});
+                }
+            );
+        });
+
+        it('opens the final channel only after the one before it is pending', async () => {
+            let answerB: (value: any) => void = () => {};
+            streamReplies([
+                () => Promise.resolve(streamResult('chan-a')),
+                () => new Promise((resolve) => (answerB = resolve)),
+                () => Promise.resolve(streamResult('chan-c'))
+            ]);
+
+            await store.connectPeer(threeChannelRequest());
+            await flushPromises();
+
+            // B's peer has not answered yet, so C must not be opened: its
+            // psbt_fund would start the funding flow without B's output
+            expect(dispatched).toEqual([
+                { node: 'abc', no_publish: true },
+                { node: 'def', no_publish: true }
+            ]);
+            expect(BackendUtils.fundPsbt).not.toHaveBeenCalled();
+
+            answerB(streamResult('chan-b'));
+            await flushPromises();
+
+            expect(dispatched).toEqual([
+                { node: 'abc', no_publish: true },
+                { node: 'def', no_publish: true },
+                { node: 'ghi', no_publish: false }
+            ]);
+            expect(idsAtFinalize).toEqual(['chan-a', 'chan-b', 'chan-c']);
+            expect(BackendUtils.fundPsbt).toHaveBeenCalledTimes(1);
+            expect(
+                Object.keys(
+                    jest.mocked(BackendUtils.fundPsbt).mock.calls[0][0].raw
+                        .outputs
+                )
+            ).toEqual(['bc1qchan-a', 'bc1qchan-b', 'bc1qchan-c']);
+            expect(fundingSteps()).toEqual([
+                {
+                    psbt_verify: {
+                        funded_psbt: PSBT,
+                        pending_chan_id: 'chan-a',
+                        skip_finalize: true
+                    }
+                },
+                {
+                    psbt_verify: {
+                        funded_psbt: PSBT,
+                        pending_chan_id: 'chan-b',
+                        skip_finalize: true
+                    }
+                },
+                {
+                    psbt_verify: {
+                        funded_psbt: PSBT,
+                        pending_chan_id: 'chan-c'
+                    }
+                },
+                {
+                    psbt_finalize: {
+                        signed_psbt: PSBT,
+                        pending_chan_id: 'chan-c'
+                    }
+                }
+            ]);
+            expect(store.channelSuccess).toBe(true);
+            expect(store.errorOpenChannel).toBe(false);
+        });
+
+        it('stops the batch when a channel before the final one is rejected', async () => {
+            streamReplies([
+                () => Promise.resolve(streamResult('chan-a')),
+                () => Promise.reject(new Error('peer b rejected the channel')),
+                () => Promise.resolve(streamResult('chan-c'))
+            ]);
+
+            await store.connectPeer(threeChannelRequest());
+            await flushPromises();
+
+            // opening C anyway would fund and publish a transaction without
+            // B's channel, and its success would replace B's error
+            expect(dispatched).toEqual([
+                { node: 'abc', no_publish: true },
+                { node: 'def', no_publish: true }
+            ]);
+            expect(BackendUtils.fundPsbt).not.toHaveBeenCalled();
+            expect(BackendUtils.fundingStateStep).not.toHaveBeenCalled();
+            expect(store.channelSuccess).toBe(false);
+            expect(store.errorOpenChannel).toBe(true);
+            expect(store.errorMsgChannel).toBe('peer b rejected the channel');
+        });
+
+        it('keeps opening the second of two channels after the first is pending', async () => {
+            let answerA: (value: any) => void = () => {};
+            streamReplies([
+                () => new Promise((resolve) => (answerA = resolve)),
+                () => Promise.resolve(streamResult('chan-b'))
+            ]);
+
+            await store.connectPeer(batchRequest());
+            await flushPromises();
+
+            expect(dispatched).toEqual([{ node: 'abc', no_publish: true }]);
+
+            answerA(streamResult('chan-a'));
+            await flushPromises();
+
+            expect(dispatched).toEqual([
+                { node: 'abc', no_publish: true },
+                { node: 'def', no_publish: false }
+            ]);
+            expect(idsAtFinalize).toEqual(['chan-a', 'chan-b']);
+            expect(store.channelSuccess).toBe(true);
+        });
+    });
 });
