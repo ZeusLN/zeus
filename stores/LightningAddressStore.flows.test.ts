@@ -840,20 +840,41 @@ describe('LightningAddressStore flows', () => {
             reply('/api/lnurl/nuts/redeem', ok(), ok());
 
             const first = store.redeemCashu('q1', MINT, 1000);
-            await expect(store.redeemCashu('q1', MINT, 1000)).resolves.toBe(
-                true
-            );
+            const second = store.redeemCashu('q1', MINT, 1000);
             expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(1);
             expect(store.redeeming).toBe(true);
 
             markPaid({ isPaid: true });
             await expect(first).resolves.toBe(true);
+            await expect(second).resolves.toBe(true);
             expect(callsTo('/api/lnurl/nuts/redeem')).toHaveLength(1);
 
             // once the first redeem is done, the quote can be tried again
             cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
             await store.redeemCashu('q1', MINT, 1000);
             expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(2);
+        });
+
+        it('gives a second redeem of the same quote the outcome of the one in flight', async () => {
+            const { store } = redeemStore();
+            let markPaid: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaid = resolve))
+            );
+            reply('/api/lnurl/nuts/redeem', ok({ token: 'cashuBtoken' }));
+            cashuStore.decodeTokenCDK.mockResolvedValue({
+                mint_url: 'https://other.mint'
+            });
+
+            // socket event first, then Redeem All reaches the same quote
+            const first = store.redeemCashu('q1', MINT, 1000, false, true);
+            const second = store.redeemCashu('q1', MINT, 1000, true);
+            markPaid({ isPaid: true });
+
+            await expect(first).resolves.toBe(false);
+            await expect(second).resolves.toBe(false);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(1);
+            expect(cashuStore.receiveTokenCDK).not.toHaveBeenCalled();
         });
     });
 
@@ -961,10 +982,13 @@ describe('LightningAddressStore flows', () => {
     });
 
     describe('automatic Cashu redemption', () => {
-        const newSocket = (connected = false) => {
+        // socket.io's `active` stays true while the socket connects or
+        // reconnects and turns false once the server ends the session
+        const newSocket = (connected = false, active = true) => {
             const handlers: { [event: string]: (data: any) => void } = {};
             const socket: any = {
                 connected,
+                active,
                 emit: jest.fn(),
                 disconnect: jest.fn(),
                 on: jest.fn((event: string, handler: any) => {
@@ -1056,6 +1080,24 @@ describe('LightningAddressStore flows', () => {
 
             expect(ioMock).toHaveBeenCalledTimes(1);
             expect(redeemAll).toHaveBeenCalledTimes(1);
+        });
+
+        it('opens a new socket after the server ends the session', async () => {
+            const store = newStore();
+            store.socket = newSocket(false, false).socket;
+            const { socket } = newSocket();
+            ioMock.mockReturnValue(socket);
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            const redeemAll = jest
+                .spyOn(store, 'redeemAllOpenPaymentsCashu')
+                .mockResolvedValue(undefined);
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+
+            expect(redeemAll).toHaveBeenCalledTimes(1);
+            expect(ioMock).toHaveBeenCalledTimes(1);
+            expect(store.socket.disconnect).toBe(socket.disconnect);
         });
 
         it('tries again after the auth request fails', async () => {

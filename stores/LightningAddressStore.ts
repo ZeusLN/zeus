@@ -84,8 +84,9 @@ export default class LightningAddressStore {
     // Bumped by reset(): a socket or Redeem All started before it belongs
     // to the previous wallet and stops at its next step
     private generation: number = 0;
-    // Quotes with a redeem in flight (socket event, Redeem All)
-    private redeemingQuotes = new Set<string>();
+    // Redeems in flight by quote id (socket event, Redeem All, a tap on
+    // a payment)
+    private redeemingQuotes = new Map<string, Promise<boolean>>();
     // Push
     @observable public currentDeviceToken: string;
     @observable public serviceDeviceToken: string;
@@ -568,8 +569,32 @@ export default class LightningAddressStore {
         });
     };
 
+    public redeemCashu = (
+        quote_id: string,
+        mint_url: string,
+        amount_msat: number,
+        skipStatus?: boolean,
+        localNotification?: boolean,
+        skipMintCheck?: boolean
+    ): Promise<boolean> => {
+        // The socket event and Redeem All can name the same quote; the
+        // second caller waits for the redeem in flight and gets its result
+        const inFlight = this.redeemingQuotes.get(quote_id);
+        if (inFlight) return inFlight;
+        const redeem = this.redeemQuote(
+            quote_id,
+            mint_url,
+            amount_msat,
+            skipStatus,
+            localNotification,
+            skipMintCheck
+        ).finally(() => this.redeemingQuotes.delete(quote_id));
+        this.redeemingQuotes.set(quote_id, redeem);
+        return redeem;
+    };
+
     @action
-    public redeemCashu = async (
+    private redeemQuote = async (
         quote_id: string,
         mint_url: string,
         amount_msat: number,
@@ -577,10 +602,6 @@ export default class LightningAddressStore {
         localNotification?: boolean,
         skipMintCheck?: boolean
     ) => {
-        // The socket event and Redeem All can name the same quote; let
-        // the redeem in flight finish it
-        if (this.redeemingQuotes.has(quote_id)) return true;
-
         this.error = false;
         this.error_msg = '';
 
@@ -655,7 +676,6 @@ export default class LightningAddressStore {
             }
         };
 
-        this.redeemingQuotes.add(quote_id);
         try {
             const response = await this.cashuStore.checkInvoicePaid(
                 quote_id,
@@ -753,8 +773,6 @@ export default class LightningAddressStore {
                 );
             });
             return true;
-        } finally {
-            this.redeemingQuotes.delete(quote_id);
         }
     };
 
@@ -876,9 +894,11 @@ export default class LightningAddressStore {
     };
 
     public prepareToAutomaticallyAcceptCashu = () => {
-        // socket.io's `connected` stays false until the handshake is done,
-        // so a socket that is still connecting counts as open
-        if (this.socket || this.socketPending) return;
+        // socket.io's `active` stays true while the socket connects or
+        // reconnects, so a socket that is still connecting counts as open.
+        // It turns false when the server ends the session, which socket.io
+        // does not recover from, and a new socket is opened then.
+        if (this.socket?.active || this.socketPending) return;
         this.socketPending = true;
         this.redeemAllOpenPaymentsCashu(true).catch((e) =>
             console.log('Error redeeming payments', e)
