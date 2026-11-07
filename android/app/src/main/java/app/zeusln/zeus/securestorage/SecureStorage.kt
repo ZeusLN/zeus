@@ -11,8 +11,9 @@ import android.util.Log
  * to it, so it is never behind the new store.
  *
  * - Reads use the legacy entry and copy it into the new store, read back,
- *   when the two differ. A missing legacy entry is missing, even if the
- *   new store still has a copy: an older build may have deleted it.
+ *   when the two differ. A missing legacy entry is missing, and a new
+ *   copy of it is deleted: only an older build removes the legacy entry
+ *   alone, and the copy must not outlive it.
  * - An unreadable legacy entry falls back to the new copy. With no
  *   readable copy the legacy error is passed on: an unreadable entry is
  *   never reported as missing.
@@ -39,7 +40,11 @@ class SecureStorage(
             Log.w(TAG, "Unreadable legacy entry, using its new copy", e)
             return copy
         }
-        if (value != null && readNewOrNull(name) != value) copy(name, value)
+        if (value == null) {
+            dropNewCopy(name)
+        } else if (readNewOrNull(name) != value) {
+            copy(name, value)
+        }
         return value
     }
 
@@ -95,6 +100,18 @@ class SecureStorage(
         } catch (e: Exception) {
             null
         }
+
+    // The legacy entry is gone, so a new copy can only be one an older build
+    // left behind when it deleted the entry. Drop it, or a later release that
+    // makes the new store authoritative would bring the value back. A failed
+    // delete is not an error for the caller: the next read tries again.
+    private fun dropNewCopy(name: String) {
+        try {
+            store.delete(name)
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not drop the copy of a deleted entry", e)
+        }
+    }
 
     // A failed copy is not an error for the caller: the legacy entry stays
     // and the next read tries again.
