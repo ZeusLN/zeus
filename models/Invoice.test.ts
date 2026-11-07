@@ -241,3 +241,83 @@ describe('Invoice.getRequestAmount', () => {
         expect(new Invoice({}).getRequestAmount).toBe(0);
     });
 });
+
+describe('Invoice.getTimestamp', () => {
+    it('uses created_at for an unpaid NWC (NIP-47) transaction', () => {
+        const invoice = new Invoice({
+            state: 'pending',
+            created_at: 1793874662,
+            expires_at: 1793878262,
+            settled_at: 0
+        });
+
+        expect(invoice.getTimestamp).toBe(1793874662);
+    });
+
+    it('uses created_at for an expired NWC transaction, which has no settled_at', () => {
+        const invoice = new Invoice({
+            state: 'failed',
+            created_at: 1793869622,
+            expires_at: 1793873222,
+            settled_at: 0
+        });
+
+        expect(invoice.getTimestamp).toBe(1793869622);
+    });
+
+    it('keeps the earlier fields first, so other backends are unchanged', () => {
+        expect(
+            new Invoice({ creation_date: '1700000000', created_at: 5 })
+                .getTimestamp
+        ).toBe('1700000000');
+        expect(
+            new Invoice({ paid_at: 1700000900, created_at: 5 }).getTimestamp
+        ).toBe(1700000900);
+        expect(
+            new Invoice({ timestamp: 1700000100, created_at: 5 }).getTimestamp
+        ).toBe(1700000100);
+    });
+
+    it('still falls back to the settle time, and to 0 with nothing to go on', () => {
+        expect(new Invoice({ settle_date: '1700000500' }).getTimestamp).toBe(
+            '1700000500'
+        );
+        expect(new Invoice({}).getTimestamp).toBe(0);
+    });
+
+    it('sorts an NWC list newest first, whatever the state', () => {
+        // transactions as list_transactions returns them
+        const tx = (
+            hash: string,
+            state: string,
+            created: number,
+            settled = 0
+        ) => ({
+            payment_hash: hash,
+            state,
+            created_at: created,
+            expires_at: created + 3600,
+            settled_at: settled
+        });
+        const invoices = [
+            tx('pending-new', 'pending', 1000),
+            tx('settled-mid', 'settled', 700, 700),
+            tx('pending-mid', 'pending', 800),
+            tx('failed-old', 'failed', 100),
+            tx('settled-old', 'settled', 400, 400)
+        ].map((row) => new Invoice(row as any));
+
+        const sorted = invoices
+            .slice()
+            .sort((a, b) => Number(b.getTimestamp) - Number(a.getTimestamp))
+            .map((invoice: any) => invoice.payment_hash);
+
+        expect(sorted).toEqual([
+            'pending-new',
+            'pending-mid',
+            'settled-mid',
+            'settled-old',
+            'failed-old'
+        ]);
+    });
+});

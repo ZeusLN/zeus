@@ -153,6 +153,7 @@ export default class Invoice extends BaseModel {
             this.paid_at ||
             this.creation_date ||
             this.timestamp ||
+            this.created_at ||
             this.settled_at ||
             this.settle_date ||
             0
