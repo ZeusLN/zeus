@@ -108,6 +108,11 @@ interface SwapDetailsState {
     lockupNotice: string | null;
     // the current rate, for a reverse swap with none stored
     currentClaimFeeRate?: number;
+    // the host reported a submarine swap claimed, but its invoice is not
+    // known to be paid
+    unverifiedClaim: boolean;
+    // a stored claim could not be checked: the host could not be asked
+    claimNotice: string | null;
 }
 
 // how often to re-check an unconfirmed or unreachable lockup
@@ -129,7 +134,9 @@ export default class SwapDetails extends React.Component<
             socketConnected: true,
             swapTreeToggle: false,
             swapData: new Swap(props.route.params.swapData),
-            lockupNotice: null
+            lockupNotice: null,
+            unverifiedClaim: false,
+            claimNotice: null
         };
     }
 
@@ -165,6 +172,19 @@ export default class SwapDetails extends React.Component<
                     updates: swapData.status,
                     socketConnected: false
                 });
+                // a claim stored before it was checked against the
+                // invoice. A swap stored without its host, or made on one
+                // that no longer answers, can't be checked against it.
+                const endpoint =
+                    this.props.route.params.endpoint || swapData.endpoint;
+                if (
+                    swapData.status === SwapState.TransactionClaimed &&
+                    !swapData.claimVerified &&
+                    endpoint &&
+                    !this.props.SwapStore?.isRetiredSwapHost(endpoint)
+                ) {
+                    this.checkSubmarineClaim(swapData.id, true);
+                }
                 return;
             }
 
@@ -340,6 +360,18 @@ export default class SwapDetails extends React.Component<
                 return;
             }
 
+            // the host can only claim with the invoice's preimage; until
+            // the payment is confirmed, keep the swap open for a refund
+            if (
+                isSubmarineSwap &&
+                data.status === SwapState.TransactionClaimed &&
+                !(await this.checkSubmarineClaim(createdResponse.id))
+            ) {
+                webSocket.close();
+                this.setState({ loading: false, socketConnected: false });
+                return;
+            }
+
             // Update the status in the component state
             this.setState({
                 updates: data.status,
@@ -459,6 +491,48 @@ export default class SwapDetails extends React.Component<
                 webSocket.close();
             }
         };
+    };
+
+    /**
+     * Whether a submarine swap the host reports as claimed has a paid
+     * invoice, recording it when it does. If not, says so and offers the
+     * refund. For a claim stored earlier (stored), a host that can't be
+     * asked gets a note to check again later instead. A swap without an
+     * invoice (a rescued one) has nothing to check against and passes.
+     */
+    checkSubmarineClaim = async (
+        swapId: string,
+        stored = false
+    ): Promise<boolean> => {
+        const { SwapStore } = this.props;
+        const { swapData } = this.state;
+        const endpoint = this.props.route.params.endpoint || swapData?.endpoint;
+        const swapInvoice =
+            this.props.route.params.invoice || swapData?.invoice;
+        if (!swapInvoice) return true;
+
+        const check = await SwapStore?.checkSubmarineSwapInvoice(
+            swapId,
+            swapInvoice,
+            endpoint
+        );
+        if (check === 'paid') {
+            await SwapStore?.markClaimVerified(swapId);
+            return true;
+        }
+
+        if (stored && check === 'unknown') {
+            this.setState({
+                claimNotice: localeString('views.SwapDetails.claimNotChecked')
+            });
+            return false;
+        }
+
+        this.setState({
+            unverifiedClaim: true,
+            error: localeString('views.SwapDetails.claimNotVerified')
+        });
+        return false;
     };
 
     getReverseSwapUpdates = (
@@ -1211,8 +1285,14 @@ export default class SwapDetails extends React.Component<
     render() {
         const { navigation, SwapStore } = this.props;
 
-        const { updates, error, failureReason, swapData, lockupNotice } =
-            this.state;
+        const {
+            updates,
+            error,
+            failureReason,
+            swapData,
+            lockupNotice,
+            claimNotice
+        } = this.state;
 
         const serviceProvider = this.props.route.params?.serviceProvider ?? '';
 
@@ -1340,6 +1420,9 @@ export default class SwapDetails extends React.Component<
                     )}
                     {lockupNotice && !error && (
                         <WarningMessage message={lockupNotice} />
+                    )}
+                    {claimNotice && !error && (
+                        <WarningMessage message={claimNotice} />
                     )}
                     {error && (
                         <ErrorMessage
@@ -1525,7 +1608,7 @@ export default class SwapDetails extends React.Component<
                         secondary
                     />
                 )}
-                {showRefundButton && (
+                {(showRefundButton || this.state.unverifiedClaim) && (
                     <Button
                         title={localeString('views.Swaps.refundSwap')}
                         containerStyle={{ paddingVertical: 10 }}
