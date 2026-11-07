@@ -2171,6 +2171,10 @@ export default class SettingsStore {
                 if (!isEqual(this.settings, migratedSettings)) {
                     this.settings = migratedSettings;
                 }
+                // Not a settings migration: it clears Storage markers under
+                // its own one-shot flag, so it stays outside
+                // runSettingsMigrations' version stamp.
+                await MigrationsUtils.migrateScbBackupFormat();
             } else {
                 console.log('attempting to load legacy settings');
 
