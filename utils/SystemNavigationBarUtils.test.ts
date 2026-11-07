@@ -50,12 +50,31 @@ describe('applySystemNavigationBarTheme', () => {
         expect(bar.setBarStyle).toHaveBeenCalledWith('dark', 'both');
     });
 
-    it('does not throw when the native call rejects', async () => {
-        mockIsLightTheme.mockReturnValue(false);
+    it('still sets the icon style and divider when the bar color rejects', async () => {
+        mockIsLightTheme.mockReturnValue(true);
         bar.setBarColor.mockRejectedValueOnce(new Error('bad color'));
         jest.spyOn(console, 'log').mockImplementation(() => {});
 
         await expect(applySystemNavigationBarTheme()).resolves.toBeUndefined();
-        expect(bar.setDividerColor).not.toHaveBeenCalled();
+        expect(bar.setBarStyle).toHaveBeenCalledWith('dark', 'both');
+        expect(bar.setDividerColor).toHaveBeenCalledWith('#202020');
+    });
+
+    it('still sets the divider when the icon style rejects', async () => {
+        mockIsLightTheme.mockReturnValue(false);
+        bar.setBarStyle.mockRejectedValueOnce(new Error('no activity'));
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+
+        await expect(applySystemNavigationBarTheme()).resolves.toBeUndefined();
+        expect(bar.setDividerColor).toHaveBeenCalledWith('#202020');
+    });
+
+    it('applies the calls in order: bar color, icon style, divider', async () => {
+        mockIsLightTheme.mockReturnValue(false);
+        await applySystemNavigationBarTheme();
+
+        const order = (m: jest.Mock) => m.mock.invocationCallOrder[0];
+        expect(order(bar.setBarColor)).toBeLessThan(order(bar.setBarStyle));
+        expect(order(bar.setBarStyle)).toBeLessThan(order(bar.setDividerColor));
     });
 });
