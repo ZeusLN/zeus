@@ -76,7 +76,10 @@ const loadApp = () => {
     }
 
     const overrides: { [specifier: string]: () => any } = {
-        './stores/Stores': () => ({ settingsStore }),
+        './stores/Stores': () => ({
+            settingsStore,
+            torStore: { initialize: jest.fn() }
+        }),
         // mobx-react 6 requires react-dom, which is not installed
         'mobx-react': () => ({
             Provider: Passthrough,
