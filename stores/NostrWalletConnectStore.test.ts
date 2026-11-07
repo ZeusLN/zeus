@@ -372,12 +372,19 @@ function installCollaboratorDefaults() {
 }
 
 // SettingsStore's connection guard fails once connectionSeq moves on, as
-// it does on a wallet switch or reconnect.
+// it does on a wallet switch or reconnect, and once the selected index
+// changes unless ignoreSelectedNode is passed.
 function withConnectionGuard(settingsStore: any) {
     settingsStore.connectionSeq ??= 0;
-    settingsStore.getConnectionGuard ??= () => {
+    settingsStore.getConnectionGuard ??= ({
+        ignoreSelectedNode = false
+    } = {}) => {
         const seq = settingsStore.connectionSeq;
-        return () => settingsStore.connectionSeq === seq;
+        const { selectedNode } = settingsStore.settings;
+        return () =>
+            settingsStore.connectionSeq === seq &&
+            (ignoreSelectedNode ||
+                settingsStore.settings.selectedNode === selectedNode);
     };
     return settingsStore;
 }
@@ -3986,6 +3993,104 @@ describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
 
         expect(await queued).toEqual(SWITCHED);
         expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(1);
+    });
+
+    describe('when the wallet list changes', () => {
+        const wallet = (host: string) => ({
+            implementation: 'lnd',
+            host,
+            port: '8080'
+        });
+        const [W0, W1, W2, W3] = ['w0', 'w1', 'w2', 'w3'].map((name) =>
+            wallet(`${name}.example`)
+        );
+
+        // Subscribed while W2, the third of three wallets, is selected
+        const startOnW2 = () => {
+            const { settingsStore } = createCollaborators();
+            settingsStore.settings = {
+                ...settingsStore.settings,
+                nodes: [W0, W1, W2],
+                selectedNode: 2
+            };
+            const collaborators = payCollaborators();
+            collaborators.transactionsStore.getPaymentOutcome.mockReturnValue({
+                payment_preimage: 'aa'.repeat(32),
+                payment_fee: 3
+            });
+            return startService(
+                [{ permissions: ['pay_invoice'], maxAmountSats: 100000 }],
+                { ...collaborators, settingsStore }
+            );
+        };
+
+        // Deleting an inactive wallet changes only the settings: no
+        // reconnect and no resubscribe
+        const replaceWallets = (
+            settingsStore: any,
+            nodes: object[],
+            selectedNode: number
+        ) => {
+            settingsStore.settings = {
+                ...settingsStore.settings,
+                nodes,
+                selectedNode
+            };
+        };
+
+        it('pays after a wallet listed above the selected one is deleted', async () => {
+            const {
+                settingsStore,
+                transactionsStore,
+                connections: [connection]
+            } = await startOnW2();
+            replaceWallets(settingsStore, [W1, W2], 1);
+
+            const response = await clientFor(connection).payInvoice({
+                invoice
+            });
+
+            expect(response.error).toBeUndefined();
+            expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                1
+            );
+        });
+
+        it('does not pay when another wallet is selected without a reconnect', async () => {
+            const {
+                settingsStore,
+                transactionsStore,
+                connections: [connection]
+            } = await startOnW2();
+            replaceWallets(settingsStore, [W0, W1, W2], 0);
+
+            const response = await clientFor(connection).payInvoice({
+                invoice
+            });
+
+            expect(response).toEqual(SWITCHED);
+            expect(
+                transactionsStore.sendPaymentSilently
+            ).not.toHaveBeenCalled();
+        });
+
+        it('does not pay when another wallet takes the selected index', async () => {
+            const {
+                settingsStore,
+                transactionsStore,
+                connections: [connection]
+            } = await startOnW2();
+            replaceWallets(settingsStore, [W0, W1, W3], 2);
+
+            const response = await clientFor(connection).payInvoice({
+                invoice
+            });
+
+            expect(response).toEqual(SWITCHED);
+            expect(
+                transactionsStore.sendPaymentSilently
+            ).not.toHaveBeenCalled();
+        });
     });
 
     // The connections list reloads the connections on every focus, which

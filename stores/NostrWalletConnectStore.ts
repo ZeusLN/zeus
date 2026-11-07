@@ -1703,7 +1703,7 @@ export default class NostrWalletConnectStore {
             if (connection.hasPermission('pay_invoice')) {
                 // Captured here so a pay request can be held to the wallet
                 // this connection was subscribed for; see payRequestRejection
-                const isCurrent = this.settingsStore.getConnectionGuard();
+                const isCurrent = this.getWalletGuard();
                 const payWithCashu = this.isCashuConfigured;
                 // Pay with the connection stored when the request starts.
                 // If there is none, the subscribed object is passed and
@@ -2184,6 +2184,26 @@ export default class NostrWalletConnectStore {
         return stored ?? connection;
     }
 
+    private selectedWalletConfigId(): string | undefined {
+        const { nodes, selectedNode } = this.settingsStore.settings;
+        return NostrConnectUtils.getWalletConfigId(nodes?.[selectedNode || 0]);
+    }
+
+    // The connection guard for a pay handler, which keeps it until the
+    // connections are resubscribed. It compares the selected wallet's
+    // config rather than its index: deleting a wallet listed above the
+    // selected one moves the index without a switch, reconnect or
+    // resubscribe, so an index check would fail every later request.
+    private getWalletGuard(): () => boolean {
+        const isConnectionCurrent = this.settingsStore.getConnectionGuard({
+            ignoreSelectedNode: true
+        });
+        const walletConfigId = this.selectedWalletConfigId();
+        return () =>
+            isConnectionCurrent() &&
+            this.selectedWalletConfigId() === walletConfigId;
+    }
+
     // Checked when a queued pay request starts and again before each later
     // call to the node or mint, since the request may wait up to
     // MAX_PAYMENT_QUEUE_WAIT_MS in the queue and then on the node.
@@ -2192,9 +2212,9 @@ export default class NostrWalletConnectStore {
     // wallet switch does not stop pay handlers that are queued or awaiting
     // the node. A handler that outlives the switch would read the balance of
     // and pay from the newly selected wallet, which never granted the
-    // connection. `isCurrent` is the connection guard captured when the
-    // connection was subscribed; it fails after any wallet switch or
-    // reconnect, both of which also resubscribe the connections.
+    // connection. `isCurrent` is the guard from getWalletGuard, captured
+    // when the connection was subscribed; it fails after any wallet switch
+    // or reconnect, both of which also resubscribe the connections.
     //
     // withGlobalHandler only checks for a pending delete, rotate or update
     // when the request is admitted. Deleting or updating a connection waits

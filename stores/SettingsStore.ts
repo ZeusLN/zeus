@@ -2580,7 +2580,12 @@ export default class SettingsStore {
     // Snapshot both selection and reconnect generation. A connect or refresh
     // that outlives a wallet switch (or a reconnect of the same wallet) must
     // not write the newer connection's loading/error/connecting state.
-    public getConnectionGuard = () => {
+    //
+    // Deleting a wallet listed above the selected one moves the selected
+    // index without a switch or reconnect. A guard held until something
+    // resubscribes (the NWC pay handlers) passes `ignoreSelectedNode` and
+    // compares the selected wallet itself.
+    public getConnectionGuard = ({ ignoreSelectedNode = false } = {}) => {
         const {
             implementation,
             pairingPhrase,
@@ -2591,7 +2596,8 @@ export default class SettingsStore {
         const selectedNode = this.settings.selectedNode;
         return () =>
             this.connectionSeq === connectionSeq &&
-            this.settings.selectedNode === selectedNode &&
+            (ignoreSelectedNode ||
+                this.settings.selectedNode === selectedNode) &&
             this.implementation === implementation &&
             this.pairingPhrase === pairingPhrase &&
             this.mailboxServer === mailboxServer &&
