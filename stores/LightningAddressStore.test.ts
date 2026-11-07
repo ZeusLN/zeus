@@ -21,11 +21,17 @@ jest.mock('../storage', () => ({
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import Storage from '../storage';
 import LightningAddressStore, {
-    HASHES_STORAGE_STRING
+    HASHES_STORAGE_STRING,
+    REDEEM_ALL_TOTAL_HOLD_MS
 } from './LightningAddressStore';
 
-const newStore = (settings: any = {}) =>
-    new LightningAddressStore(
+// A finished Redeem All batch starts a hold timer; reset every store after
+// each test so no timer outlives it
+const createdStores: LightningAddressStore[] = [];
+afterEach(() => createdStores.splice(0).forEach((store) => store.reset()));
+
+const newStore = (settings: any = {}) => {
+    const store = new LightningAddressStore(
         {
             cashuWallets: { 'https://mint.test': { pubkey: '02ab' } }
         } as any,
@@ -36,6 +42,9 @@ const newStore = (settings: any = {}) =>
             updateSettingsGroup: jest.fn().mockResolvedValue(undefined)
         } as any
     );
+    createdStores.push(store);
+    return store;
+};
 
 const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -168,6 +177,200 @@ describe('LightningAddressStore', () => {
             ]);
             expect(status).toHaveBeenCalledWith(true);
             expect(store.redeemingAll).toBe(false);
+        });
+
+        describe('progress', () => {
+            const payments = (...amounts: any[]) =>
+                amounts.map((amount_msat, i) => ({
+                    quote_id: `q${i + 1}`,
+                    mint_url: 'https://mint.test',
+                    amount_msat
+                }));
+
+            const setUp = (paid: any[]) => {
+                const store = newStore();
+                store.paid = paid;
+                jest.spyOn(store, 'status').mockResolvedValue(undefined as any);
+                return store;
+            };
+
+            // a finished batch starts the hold timer
+            beforeEach(() => jest.useFakeTimers());
+            afterEach(() => jest.useRealTimers());
+
+            it('counts every redeemed payment and its amount', async () => {
+                const store = setUp(payments(1000, 2000, 3000));
+                jest.spyOn(store, 'redeemCashu').mockResolvedValue(true);
+
+                await store.redeemAllOpenPaymentsCashu();
+
+                expect(store.redeemAllTotal).toBe(3);
+                expect(store.redeemAllRedeemed).toBe(3);
+                expect(store.redeemAllAmountMsat).toBe(6000);
+            });
+
+            it('updates the count after each payment', async () => {
+                const store = setUp(payments(1000, 2000, 3000));
+                const seen: number[][] = [];
+                jest.spyOn(store, 'redeemCashu').mockImplementation(
+                    async () => {
+                        seen.push([
+                            store.redeemAllRedeemed,
+                            store.redeemAllAmountMsat,
+                            store.redeemAllTotal
+                        ]);
+                        return true;
+                    }
+                );
+
+                await store.redeemAllOpenPaymentsCashu();
+
+                // oldest (last in the list) first
+                expect(seen).toEqual([
+                    [0, 0, 3],
+                    [1, 3000, 3],
+                    [2, 5000, 3]
+                ]);
+            });
+
+            it('does not count a payment whose redeem failed', async () => {
+                const store = setUp(payments(1000, 2000, 3000));
+                jest.spyOn(store, 'redeemCashu').mockImplementation(
+                    async (quote_id: string) => {
+                        // redeemCashu clears the error at the start of
+                        // every call and records a handled failure in it
+                        store.error = quote_id === 'q2';
+                        return true;
+                    }
+                );
+
+                await store.redeemAllOpenPaymentsCashu();
+
+                expect(store.redeemAllRedeemed).toBe(2);
+                expect(store.redeemAllAmountMsat).toBe(4000);
+            });
+
+            it('does not count a payment rejected for its mint', async () => {
+                const store = setUp(payments(1000, 2000, 3000));
+                jest.spyOn(store, 'redeemCashu').mockImplementation(
+                    async (quote_id: string) => quote_id !== 'q3'
+                );
+
+                await store.redeemAllOpenPaymentsCashu(true);
+
+                expect(store.redeemAllRedeemed).toBe(2);
+                expect(store.redeemAllAmountMsat).toBe(3000);
+            });
+
+            it('does not count a payment that threw, and keeps counting the rest', async () => {
+                const store = setUp(payments(1000, 2000, 3000));
+                jest.spyOn(store, 'redeemCashu').mockImplementation(
+                    async (quote_id: string) => {
+                        if (quote_id === 'q3') throw new Error('boom');
+                        return true;
+                    }
+                );
+
+                await store.redeemAllOpenPaymentsCashu();
+
+                expect(store.redeemAllRedeemed).toBe(2);
+                expect(store.redeemAllAmountMsat).toBe(3000);
+            });
+
+            it('counts a payment with a missing or non-numeric amount as 0 msat', async () => {
+                const store = setUp(payments(undefined, 'abc', 2000));
+                jest.spyOn(store, 'redeemCashu').mockResolvedValue(true);
+
+                await store.redeemAllOpenPaymentsCashu();
+
+                expect(store.redeemAllRedeemed).toBe(3);
+                expect(store.redeemAllAmountMsat).toBe(2000);
+            });
+
+            it('keeps the total on screen for a while after a multi-payment batch', async () => {
+                const store = setUp(payments(1000, 2000));
+                jest.spyOn(store, 'redeemCashu').mockResolvedValue(true);
+
+                await store.redeemAllOpenPaymentsCashu();
+
+                expect(store.redeemingAll).toBe(false);
+                expect(store.showRedeemAllTotal).toBe(true);
+
+                jest.advanceTimersByTime(REDEEM_ALL_TOTAL_HOLD_MS - 1);
+                expect(store.showRedeemAllTotal).toBe(true);
+
+                jest.advanceTimersByTime(1);
+                expect(store.showRedeemAllTotal).toBe(false);
+                // the final numbers stay readable while the view fades back
+                expect(store.redeemAllRedeemed).toBe(2);
+            });
+
+            it('does not hold the total for a single payment', async () => {
+                const store = setUp(payments(1000));
+                jest.spyOn(store, 'redeemCashu').mockResolvedValue(true);
+
+                await store.redeemAllOpenPaymentsCashu();
+
+                expect(store.showRedeemAllTotal).toBe(false);
+            });
+
+            it('does not hold the total when nothing was redeemed', async () => {
+                const store = setUp(payments(1000, 2000));
+                jest.spyOn(store, 'redeemCashu').mockImplementation(
+                    async () => {
+                        store.error = true;
+                        return true;
+                    }
+                );
+
+                await store.redeemAllOpenPaymentsCashu();
+
+                expect(store.showRedeemAllTotal).toBe(false);
+            });
+
+            it('starts a new batch from zero and drops the previous hold', async () => {
+                const store = setUp(payments(1000, 2000));
+                const redeem = jest
+                    .spyOn(store, 'redeemCashu')
+                    .mockResolvedValue(true);
+                await store.redeemAllOpenPaymentsCashu();
+                expect(store.showRedeemAllTotal).toBe(true);
+
+                store.paid = payments(5000, 6000, 7000);
+                const seen: boolean[] = [];
+                redeem.mockImplementation(async () => {
+                    seen.push(store.showRedeemAllTotal);
+                    return true;
+                });
+                const second = store.redeemAllOpenPaymentsCashu();
+                expect(store.redeemAllTotal).toBe(3);
+                expect(store.redeemAllRedeemed).toBe(0);
+                expect(store.redeemAllAmountMsat).toBe(0);
+                await second;
+
+                expect(seen).toEqual([false, false, false]);
+                expect(store.redeemAllAmountMsat).toBe(18000);
+
+                // the first batch's timer no longer ends the second hold
+                jest.advanceTimersByTime(REDEEM_ALL_TOTAL_HOLD_MS - 1);
+                expect(store.showRedeemAllTotal).toBe(true);
+                jest.advanceTimersByTime(1);
+                expect(store.showRedeemAllTotal).toBe(false);
+            });
+
+            it('clears progress and the hold on reset', async () => {
+                const store = setUp(payments(1000, 2000));
+                jest.spyOn(store, 'redeemCashu').mockResolvedValue(true);
+                await store.redeemAllOpenPaymentsCashu();
+
+                store.reset();
+
+                expect(store.showRedeemAllTotal).toBe(false);
+                expect(store.redeemAllTotal).toBe(0);
+                expect(store.redeemAllRedeemed).toBe(0);
+                expect(store.redeemAllAmountMsat).toBe(0);
+                expect(jest.getTimerCount()).toBe(0);
+            });
         });
     });
 
@@ -304,6 +507,7 @@ const makeStore = (configuredMintUrl?: string, localMintUrls?: string[]) => {
         nodeInfoStore,
         settingsStore
     );
+    createdStores.push(store);
     return { store, checkInvoicePaid, cashuStore };
 };
 

@@ -21,6 +21,8 @@ import Storage from '../storage';
 const LNURL_HOST = 'https://zeuspay.com';
 const LNURL_SOCKET_PATH = '/stream';
 
+export const REDEEM_ALL_TOTAL_HOLD_MS = 2000;
+
 export const LEGACY_ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
 export const LEGACY_HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 
@@ -73,6 +75,13 @@ export default class LightningAddressStore {
     @observable public loading: boolean = false;
     @observable public redeeming: boolean = false;
     @observable public redeemingAll: boolean = false;
+    // Progress of the current (or last) Redeem All batch
+    @observable public redeemAllTotal: number = 0;
+    @observable public redeemAllRedeemed: number = 0;
+    @observable public redeemAllAmountMsat: number = 0;
+    // Keeps the batch total on screen briefly after the batch finishes
+    @observable public showRedeemAllTotal: boolean = false;
+    private redeemAllTotalTimer?: ReturnType<typeof setTimeout>;
     @observable public error: boolean = false;
     @observable public error_msg: string | undefined;
     @observable public paid: any = [];
@@ -764,6 +773,11 @@ export default class LightningAddressStore {
     @action
     public redeemAllOpenPaymentsCashu = async (localNotification?: boolean) => {
         this.redeemingAll = true;
+        this.clearRedeemAllTotalTimer();
+        this.showRedeemAllTotal = false;
+        this.redeemAllTotal = 0;
+        this.redeemAllRedeemed = 0;
+        this.redeemAllAmountMsat = 0;
         // Each redeemCashu call clears the error first, so a mint rejection
         // would be wiped by the next payment. redeemCashu only returns
         // false on a mint rejection; surface it once the loop is done.
@@ -772,6 +786,7 @@ export default class LightningAddressStore {
         try {
             const openPaymentsToProcess = this.paid.slice().reverse();
             const totalPayments = openPaymentsToProcess.length;
+            this.redeemAllTotal = totalPayments;
 
             for (let i = 0; i < totalPayments; i++) {
                 const item = openPaymentsToProcess[i];
@@ -789,6 +804,17 @@ export default class LightningAddressStore {
                         !isLast // skipMintCheck
                     );
                     if (redeemed === false) rejected = true;
+                    // redeemCashu also resolves true when it handled a
+                    // failure (quote not paid, mint error) and records
+                    // that in `error`, which it clears at the start of
+                    // every call, so only a clean result counts here.
+                    if (redeemed === true && !this.error) {
+                        runInAction(() => {
+                            this.redeemAllRedeemed += 1;
+                            this.redeemAllAmountMsat +=
+                                Number(item.amount_msat) || 0;
+                        });
+                    }
                 } catch (e) {
                     console.log('Error redeeming open payment', e);
                 }
@@ -800,8 +826,22 @@ export default class LightningAddressStore {
                     console.log('Error fetching Lightning address status', e)
                 );
                 this.redeemingAll = false;
+                if (this.redeemAllTotal > 1 && this.redeemAllRedeemed > 0) {
+                    this.showRedeemAllTotal = true;
+                    this.redeemAllTotalTimer = setTimeout(() => {
+                        runInAction(() => {
+                            this.showRedeemAllTotal = false;
+                        });
+                        this.redeemAllTotalTimer = undefined;
+                    }, REDEEM_ALL_TOTAL_HOLD_MS);
+                }
             });
         }
+    };
+
+    private clearRedeemAllTotalTimer = () => {
+        if (this.redeemAllTotalTimer) clearTimeout(this.redeemAllTotalTimer);
+        this.redeemAllTotalTimer = undefined;
     };
 
     private subscribeUpdatesCashu = async () => {
@@ -861,6 +901,11 @@ export default class LightningAddressStore {
         this.zeusPlusAnnualFeeSats = undefined;
         this.legacyAccount = false;
         this.perks = [];
+        this.clearRedeemAllTotalTimer();
+        this.showRedeemAllTotal = false;
+        this.redeemAllTotal = 0;
+        this.redeemAllRedeemed = 0;
+        this.redeemAllAmountMsat = 0;
     };
 
     @action
