@@ -78,6 +78,9 @@ jest.mock('react-native-blob-util', () => ({
         })
     }
 }));
+jest.mock('react-native-notifications', () => ({
+    Notifications: { removeAllDeliveredNotifications: jest.fn() }
+}));
 
 jest.mock('../cashu-cdk', () => ({
     __esModule: true,
