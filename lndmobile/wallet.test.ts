@@ -3,6 +3,7 @@ jest.mock('./utils', () => ({
 }));
 
 import { sendCommand } from './utils';
+import { walletrpc } from '../proto/lightning';
 import { bumpFee, bumpForceCloseFee, fundPsbt, releaseOutput } from './wallet';
 
 describe('wallet', () => {
@@ -100,6 +101,43 @@ describe('wallet', () => {
         const { method, options } = (sendCommand as jest.Mock).mock.lastCall[0];
         expect(method).toBe('WalletKitReleaseOutput');
         expect(options).toEqual({ id, outpoint });
+    });
+
+    it('encodes a lease from a decoded FundPsbt response unchanged', async () => {
+        const id = new Uint8Array(32).fill(7);
+        const txidBytes = new Uint8Array(32).map((_, i) => i);
+        // the response as sendCommand decodes it for EmbeddedLND.fundPsbt
+        const funded = walletrpc.FundPsbtResponse.decode(
+            walletrpc.FundPsbtResponse.encode(
+                walletrpc.FundPsbtResponse.create({
+                    funded_psbt: new Uint8Array([1]),
+                    locked_utxos: [
+                        {
+                            id,
+                            outpoint: {
+                                txid_bytes: txidBytes,
+                                output_index: 3
+                            }
+                        }
+                    ]
+                })
+            ).finish()
+        );
+        const lease = funded.locked_utxos[0];
+
+        await releaseOutput({ id: lease.id, outpoint: lease.outpoint });
+
+        const { options } = (sendCommand as jest.Mock).mock.lastCall[0];
+        const sent = walletrpc.ReleaseOutputRequest.decode(
+            walletrpc.ReleaseOutputRequest.encode(
+                walletrpc.ReleaseOutputRequest.create(options)
+            ).finish()
+        );
+        expect(Array.from(sent.id)).toEqual(Array.from(id));
+        expect(Array.from(sent.outpoint!.txid_bytes!)).toEqual(
+            Array.from(txidBytes)
+        );
+        expect(sent.outpoint!.output_index).toBe(3);
     });
 
     describe('fundPsbt', () => {

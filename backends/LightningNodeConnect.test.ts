@@ -999,6 +999,59 @@ describe('LightningNodeConnect.releaseOutput', () => {
     });
 });
 
+describe('LightningNodeConnect.releaseOutput with a fundPsbt lease', () => {
+    // lnc-rn resolves a response with camelCase keys, as lnd's JSON names
+    const TXID =
+        '9693dd6cb6d04f538647e26d54e722bc097ec2952f3ab871939e630da95bcd50';
+    const TXID_BYTES = Buffer.from(TXID, 'hex').reverse().toString('base64');
+    const LOCK_ID = Buffer.alloc(32, 7).toString('base64');
+
+    it('sends the lease back with proto field names lnd reads', async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        (lnc.lnd as any).walletKit = {
+            fundPsbt: jest.fn(async () => ({
+                fundedPsbt: 'cHNidP8BAFICAAAAAQ==',
+                changeOutputIndex: 1,
+                lockedUtxos: [
+                    {
+                        id: LOCK_ID,
+                        outpoint: {
+                            txidBytes: TXID_BYTES,
+                            txidStr: TXID,
+                            outputIndex: 3
+                        },
+                        expiration: '1700000600'
+                    }
+                ]
+            })),
+            releaseOutput: jest.fn(async () => ({
+                status: `output ${TXID}:3 released`
+            }))
+        };
+
+        const funded: any = await backend.fundPsbt({} as any);
+        // as ChannelsStore releases each entry of locked_utxos
+        const { id, outpoint } = funded.locked_utxos[0];
+        await backend.releaseOutput({ id, outpoint });
+
+        // lnc-rn sends the request as JSON without renaming keys, and lnd's
+        // JSON parser takes the proto field names
+        const [request] = (lnc.lnd as any).walletKit.releaseOutput.mock
+            .calls[0];
+        expect(JSON.parse(JSON.stringify(request))).toEqual({
+            id: LOCK_ID,
+            outpoint: {
+                txid_bytes: TXID_BYTES,
+                txid_str: TXID,
+                output_index: 3
+            }
+        });
+    });
+});
+
 describe('LightningNodeConnect channel opens', () => {
     it('passes the channel memo to lnd', async () => {
         mockSettings.implementation = 'lightning-node-connect';
