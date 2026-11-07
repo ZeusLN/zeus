@@ -39,6 +39,7 @@ jest.mock('../utils/MigrationUtils', () => ({
     keychainDesyncMigration: jest.fn().mockResolvedValue(undefined),
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),
     purgeRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
+    retireWalletSeedRescueKey: jest.fn().mockResolvedValue(undefined),
     // getSettings adopts the return value (the queue's authoritative
     // object when consolidation routes through updateSettings), so the
     // stub must hand the settings back rather than resolve undefined
@@ -627,6 +628,22 @@ describe('SettingsStore.updateSettings', () => {
         expect(after.fiat).toEqual('CAD');
         expect(store.settings.fiat).toEqual('CAD');
         expect(persistedSettings().fiat).toEqual('CAD');
+    });
+
+    it('checks the swap rescue key against the loaded wallets', async () => {
+        const MigrationUtils = require('../utils/MigrationUtils');
+        MigrationUtils.retireWalletSeedRescueKey.mockClear();
+        const nodes = [
+            { implementation: 'ldk-node', ldkMnemonic: 'abandon ability' }
+        ];
+        seedSettings({ nodes });
+        const store = new SettingsStore();
+
+        await store.getSettings();
+
+        expect(MigrationUtils.retireWalletSeedRescueKey).toHaveBeenCalledWith(
+            expect.objectContaining({ nodes })
+        );
     });
 
     it('keeps processing queued updates after one rejects', async () => {

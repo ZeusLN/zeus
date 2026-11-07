@@ -85,6 +85,10 @@ import {
     purgeLegacyRescueKeyFiles,
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
+import {
+    getRetiredKeychainServers,
+    retireWalletSeedRescueKeyCopies
+} from './RescueKeyRetirementUtils';
 
 import {
     TimePeriod,
@@ -925,6 +929,33 @@ class MigrationsUtils {
         await this.writeFlag(MOD_KEY_RESCUE_FILE);
     }
 
+    // v13.0.0 to v13.1.3 stored an LDK Node wallet's own mnemonic as the
+    // swap rescue key, and 13.2.0 only stopped doing so for new keys. The
+    // swap host receives the rescue key's master xpub on "Restore swaps",
+    // so a rescue key that is a configured wallet's mnemonic is removed,
+    // together with its key index, and the Swaps screen asks for a new
+    // one. Saved swaps keep their own keys and preimages, so their claims
+    // and refunds do not need the rescue key. The notice flag is written
+    // first and the rescue key last, so a crash mid-way retries on the
+    // next load. Every keychain copy is removed, including the iCloud
+    // and unprefixed ones (see retireWalletSeedRescueKeyCopies).
+    public async retireWalletSeedRescueKey(settings: any) {
+        const MOD_KEY_WALLET_SEED_RESCUE_KEY =
+            'swaps-rescue-key-wallet-seed-v1';
+        const mod = await this.readFlag(MOD_KEY_WALLET_SEED_RESCUE_KEY);
+        if (mod) return;
+
+        try {
+            await retireWalletSeedRescueKeyCopies(settings?.nodes);
+        } catch (e) {
+            // flag left unset, so the next load retries
+            console.warn('Could not retire the swap rescue key', e);
+            return;
+        }
+
+        await this.writeFlag(MOD_KEY_WALLET_SEED_RESCUE_KEY);
+    }
+
     public async storageMigrationV2(settings: any) {
         const migrationTasks = [];
 
@@ -1472,8 +1503,16 @@ class MigrationsUtils {
 
             console.log('Attempting keychain desync migration...');
 
+            // Retired servers (a swap rescue key that was a wallet seed) are
+            // not copied back, same as in verifyPurgePreflight: an older
+            // build on another device can write the seed into iCloud again
+            // after retirement, and that migration does not run twice. An
+            // unreadable list throws to the catch below, which leaves the
+            // flag unset so the next boot retries.
+            const retired = new Set(await getRetiredKeychainServers());
             const syncServers = (await getInternetPasswordServers(true)).filter(
-                (server) => server.startsWith(KEY_PREFIX)
+                (server) =>
+                    server.startsWith(KEY_PREFIX) && !retired.has(server)
             );
 
             // Failures are contained PER KEY: SecItemCopyMatching returns

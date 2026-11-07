@@ -3,7 +3,9 @@
 // keychain namespace) and keychainCloudSyncMigration (unprefixed keychain
 // entries -> zeus: keychain namespace). Both backends are in-memory fakes
 // and the real storage/index.ts runs on top of the keychain fake, so every
-// test asserts what each store holds afterwards.
+// test asserts what each store holds afterwards. retireWalletSeedRescueKey
+// is also run here together with the real keychain purge
+// (KeychainPurgeUtils), which reads both partitions of the same fake.
 //
 // Kept separate from MigrationUtils.test.ts, which mocks ../storage
 // wholesale.
@@ -134,7 +136,11 @@ jest.mock('../stores/SettingsStore', () => ({
 
 import * as Keychain from 'react-native-keychain';
 
-import MigrationUtils from './MigrationUtils';
+import { NativeModules, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import MigrationUtils, { KEYCHAIN_DESYNC_KEY } from './MigrationUtils';
+import { autoPurgeLegacyKeychain } from './KeychainPurgeUtils';
 import { hash } from '../backends/LNC/credentialStore';
 // The mocked store; read through require because jest.mock factories run
 // before this file's own const declarations are initialised
@@ -631,4 +637,106 @@ describe('keychainCloudSyncMigration', () => {
     it.todo(
         'BUG: a failed Cashu pass is never retried, because the next boot sees the main flag set and marks the Cashu flag without migrating'
     );
+});
+
+// The migration used to remove only the device-local zeus: entry. On iOS the
+// keychain purge preflight then copied the synchronizable zeus: entry back
+// into the local partition, so the wallet seed was the rescue key again.
+describe('retireWalletSeedRescueKey with the keychain purge', () => {
+    const ldkMnemonic =
+        'legal winner thank year wave sausage worth useful legal winner thank yellow';
+    const independentKey =
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    const settings = {
+        nodes: [{ implementation: 'ldk-node', ldkNodeDir: 'a', ldkMnemonic }]
+    };
+    const RESCUE = 'zeus:swaps-rescue-key';
+    const LAST_USED = 'zeus:swaps-last-used-key';
+    const NOTICE = 'swaps-rescue-key-replaced';
+    const asyncData = new Map<string, string>();
+    let replacedOS: { restore: () => void };
+    const originalKeychainAudit = NativeModules.KeychainAudit;
+
+    // One app start: the settings load runs the migration (getSettings),
+    // then the wallet view runs the purge (autoPurgeLegacyKeychain)
+    const appStart = async () => {
+        MigrationUtils.clearConfirmedFlags();
+        await MigrationUtils.retireWalletSeedRescueKey(settings);
+        await autoPurgeLegacyKeychain();
+    };
+
+    beforeEach(() => {
+        replacedOS = jest.replaceProperty(Platform, 'OS', 'ios');
+        NativeModules.KeychainAudit = {
+            getInternetPasswordServers: async (synchronizable: boolean) =>
+                Array.from(
+                    mockKeychain[synchronizable ? 'sync' : 'local'].keys()
+                )
+        };
+        asyncData.clear();
+        (AsyncStorage.setItem as jest.Mock).mockImplementation(
+            async (key: string, value: string) => {
+                asyncData.set(key, value);
+            }
+        );
+        (AsyncStorage.getItem as jest.Mock).mockImplementation(
+            async (key: string) => asyncData.get(key) ?? null
+        );
+        mockKeychain.local.set(
+            `zeus:${SETTINGS_KEY}`,
+            JSON.stringify(settings)
+        );
+        mockEncrypted.data.set(KEYCHAIN_DESYNC_KEY, 'true');
+    });
+
+    afterEach(() => {
+        replacedOS.restore();
+        NativeModules.KeychainAudit = originalKeychainAudit;
+    });
+
+    it('keeps a wallet-seed rescue key and its index out of both partitions across the purge and the next start', async () => {
+        for (const partition of [mockKeychain.local, mockKeychain.sync]) {
+            partition.set(RESCUE, ldkMnemonic);
+            partition.set(LAST_USED, '4');
+        }
+        // pre-2026 unprefixed copies of the rescue key
+        mockKeychain.local.set('swaps-rescue-key', ldkMnemonic);
+        mockKeychain.sync.set('swaps-rescue-key', ldkMnemonic);
+
+        await appStart();
+        await appStart();
+
+        for (const partition of [mockKeychain.local, mockKeychain.sync]) {
+            expect(partition.has(RESCUE)).toBe(false);
+            expect(partition.has(LAST_USED)).toBe(false);
+            expect(partition.has('swaps-rescue-key')).toBe(false);
+        }
+        expect(asyncData.get(NOTICE)).toBe('true');
+    });
+
+    it('does not restore a retired copy that reappears in iCloud before the purge', async () => {
+        mockKeychain.local.set(RESCUE, ldkMnemonic);
+        mockKeychain.local.set(LAST_USED, '4');
+
+        await MigrationUtils.retireWalletSeedRescueKey(settings);
+        // e.g. synced from another device that has not been updated yet
+        mockKeychain.sync.set(RESCUE, ldkMnemonic);
+        mockKeychain.sync.set(LAST_USED, '4');
+        await autoPurgeLegacyKeychain();
+
+        expect(mockKeychain.local.has(RESCUE)).toBe(false);
+        expect(mockKeychain.local.has(LAST_USED)).toBe(false);
+    });
+
+    it('still copies an independent iCloud rescue key into the local partition before purging it', async () => {
+        mockKeychain.sync.set(RESCUE, independentKey);
+        mockKeychain.sync.set(LAST_USED, '7');
+
+        await appStart();
+
+        expect(mockKeychain.local.get(RESCUE)).toBe(independentKey);
+        expect(mockKeychain.local.get(LAST_USED)).toBe('7');
+        expect(mockKeychain.sync.has(RESCUE)).toBe(false);
+        expect(asyncData.has(NOTICE)).toBe(false);
+    });
 });
