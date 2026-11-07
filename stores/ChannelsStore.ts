@@ -41,23 +41,44 @@ interface PendingHTLC {
 // embedded LND or LNC (stream listeners), unlike openChannelSync. A stream
 // that never yields psbt_fund would keep its open counted in
 // syncOpensInFlight for good, so it is given up after this long. Nothing
-// is spent before ZEUS funds the PSBT, so a late psbt_fund is dropped.
+// is spent before ZEUS funds the PSBT, so a late psbt_fund is dropped and
+// its shim cancelled.
 const OPEN_CHANNEL_STREAM_TIMEOUT_MS = 60000;
 
-const openChannelStreamWithTimeout = (request: OpenChannelRequest) =>
-    new Promise<any>((resolve, reject) => {
-        const timeoutId = setTimeout(
-            () =>
-                reject(
-                    new Error(
-                        localeString('stores.ChannelsStore.openStreamTimeout')
-                    )
-                ),
-            OPEN_CHANNEL_STREAM_TIMEOUT_MS
+// Ends lnd's PSBT funding flow for a shim ZEUS will not fund, so the node
+// and the peer drop the pending channel instead of waiting for lnd's own
+// PSBT timeout. Best effort: lnd refuses it when it holds no funding
+// intent for the id (the flow already ended or has not started), and it
+// never spends anything.
+const cancelShim = (pending_chan_id: string) =>
+    Promise.resolve()
+        .then(() =>
+            BackendUtils.fundingStateStep({ shim_cancel: { pending_chan_id } })
+        )
+        .catch((error: any) =>
+            console.log('Could not cancel the funding shim', error)
         );
+
+const openChannelStreamWithTimeout = (request: OpenChannelRequest) => {
+    // the request object is reused for every stream of a batch
+    const pendingChanId: string | undefined =
+        request.funding_shim?.psbt_shim?.pending_chan_id;
+    return new Promise<any>((resolve, reject) => {
+        let timedOut = false;
+        const timeoutId = setTimeout(() => {
+            timedOut = true;
+            reject(
+                new Error(
+                    localeString('stores.ChannelsStore.openStreamTimeout')
+                )
+            );
+        }, OPEN_CHANNEL_STREAM_TIMEOUT_MS);
         BackendUtils.openChannelStream(request).then(
             (data: any) => {
                 clearTimeout(timeoutId);
+                // the funding intent exists now, so a cancel sent at the
+                // timeout may have come too early
+                if (timedOut && pendingChanId) cancelShim(pendingChanId);
                 resolve(data);
             },
             (error: any) => {
@@ -66,6 +87,7 @@ const openChannelStreamWithTimeout = (request: OpenChannelRequest) =>
             }
         );
     });
+};
 
 export enum ChannelsType {
     Open = 0,
@@ -1250,8 +1272,9 @@ export default class ChannelsStore {
             // keeps funding its own channels and stays out of the next
             // open's list
             const pendingChanIds = this.pending_chan_ids;
-            // counted once per open, also for a batch; the first end of the
-            // funding flow stops the count
+            // counted once per open, also for a batch, until its funding
+            // flow ends: funded, failed, handed to the user to sign, or
+            // stopped before funding started
             this.syncOpensInFlight++;
             let finished = false;
             const finish = () => {
@@ -1261,12 +1284,31 @@ export default class ChannelsStore {
                     this.syncOpensInFlight--;
                 });
             };
+            // the pending_chan_ids ZEUS put in this open's funding shims
+            const shimIds: string[] = [];
+            const newShimId = () => {
+                const pending_chan_id = randomBytes(32).toString('base64');
+                shimIds.push(pending_chan_id);
+                return pending_chan_id;
+            };
             if (multipleChans) {
+                // the first stream error or timeout stops the batch before
+                // anything is funded: its shims are cancelled and it ends
+                // with that error. The final channel, which starts the
+                // funding, is opened only after every earlier one answered
+                let stopped = false;
+                const stopBatch = (error: Error) => {
+                    if (stopped) return;
+                    stopped = true;
+                    shimIds.forEach(cancelShim);
+                    this.handleChannelOpenError(error, isCurrent, finish);
+                };
+
                 let base_psbt = '';
                 request.funding_shim = {
                     psbt_shim: {
                         base_psbt,
-                        pending_chan_id: randomBytes(32).toString('base64'),
+                        pending_chan_id: newShimId(),
                         no_publish: true
                     }
                 };
@@ -1291,8 +1333,7 @@ export default class ChannelsStore {
                                 request.funding_shim = {
                                     psbt_shim: {
                                         base_psbt,
-                                        pending_chan_id:
-                                            randomBytes(32).toString('base64'),
+                                        pending_chan_id: newShimId(),
                                         no_publish: true
                                     }
                                 };
@@ -1321,11 +1362,7 @@ export default class ChannelsStore {
                                     base_psbt = psbt_fund.psbt;
                                 } catch (error: any) {
                                     // stop the batch here
-                                    this.handleChannelOpenError(
-                                        error,
-                                        isCurrent,
-                                        finish
-                                    );
+                                    stopBatch(error);
                                     return;
                                 }
                             } else if (request.additionalChannels) {
@@ -1333,8 +1370,7 @@ export default class ChannelsStore {
                                 request.funding_shim = {
                                     psbt_shim: {
                                         base_psbt,
-                                        pending_chan_id:
-                                            randomBytes(32).toString('base64'),
+                                        pending_chan_id: newShimId(),
                                         no_publish: false
                                     }
                                 };
@@ -1362,24 +1398,19 @@ export default class ChannelsStore {
                                             finish
                                         );
                                     })
-                                    .catch((error: Error) => {
-                                        this.handleChannelOpenError(
-                                            error,
-                                            isCurrent,
-                                            finish
-                                        );
-                                    });
+                                    // the stream failed, or
+                                    // handleChannelOpen threw before its
+                                    // first request: nothing funds
+                                    .catch(stopBatch);
                             }
                         }
                     })
-                    .catch((error: Error) => {
-                        this.handleChannelOpenError(error, isCurrent, finish);
-                    });
+                    .catch(stopBatch);
             } else {
                 request.funding_shim = {
                     psbt_shim: {
                         base_psbt: '',
-                        pending_chan_id: randomBytes(32).toString('base64')
+                        pending_chan_id: newShimId()
                     }
                 };
                 openChannelStreamWithTimeout(request)
@@ -1399,6 +1430,7 @@ export default class ChannelsStore {
                         );
                     })
                     .catch((error: Error) => {
+                        shimIds.forEach(cancelShim);
                         this.handleChannelOpenError(error, isCurrent, finish);
                     });
             }

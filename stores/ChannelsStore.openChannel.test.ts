@@ -430,7 +430,9 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
     };
 
     beforeEach(() => {
-        jest.useRealTimers();
+        // fake timers drop the stream timeouts of opens left pending;
+        // flush() waits on setImmediate
+        jest.useFakeTimers({ doNotFake: ['setImmediate'] });
         [
             openChannelStream,
             fundPsbt,
@@ -445,6 +447,10 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
         fundPsbt.mockResolvedValue({ funded_psbt: PSBT });
         signPsbt.mockResolvedValue({ signed_psbt: PSBT });
         fundingStateStep.mockResolvedValue({});
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
     });
 
     it('shows a current streamed open as opened', async () => {
@@ -939,7 +945,9 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
                 await flush();
 
                 expect(fundPsbt).not.toHaveBeenCalled();
-                expect(fundingStateStep).not.toHaveBeenCalled();
+                expect(
+                    fundingSteps().filter((step: any) => !step.shim_cancel)
+                ).toEqual([]);
                 expect(store.pending_chan_ids).toEqual([]);
                 expect(store.channelSuccess).toBe(false);
                 expect(store.syncOpensInFlight).toBe(0);
@@ -973,6 +981,146 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
                 expect(openChannelStream).toHaveBeenCalledTimes(1);
                 expect(store.syncOpensInFlight).toBe(0);
                 expect(store.errorOpenChannel).toBe(true);
+            });
+
+            describe('stopping the node-side flow', () => {
+                // the pending_chan_id ZEUS put in each stream's funding shim,
+                // read when the stream starts since a batch reuses the
+                // request object
+                let shimIds: string[];
+                const answerStreams = (...answers: Array<() => Promise<any>>) =>
+                    openChannelStream.mockImplementation((req: any) => {
+                        shimIds.push(
+                            req.funding_shim.psbt_shim.pending_chan_id
+                        );
+                        const next = answers.shift();
+                        return next ? next() : never();
+                    });
+                const cancels = () =>
+                    fundingSteps()
+                        .filter((step: any) => step.shim_cancel)
+                        .map((step: any) => step.shim_cancel.pending_chan_id);
+                const psbtSteps = () =>
+                    fundingSteps().filter((step: any) => !step.shim_cancel);
+
+                beforeEach(() => {
+                    shimIds = [];
+                });
+
+                it('cancels the shim of a stream that times out', async () => {
+                    answerStreams();
+                    const store = makeStore();
+                    enterScreen(store);
+                    openStreamed(store);
+
+                    await jest.advanceTimersByTimeAsync(STREAM_TIMEOUT_MS);
+                    await flush();
+                    expect(shimIds).toHaveLength(1);
+                    expect(cancels()).toEqual(shimIds);
+                });
+
+                it('cancels the shim again when its psbt_fund arrives after the timeout', async () => {
+                    const first = held();
+                    answerStreams(() => first.promise);
+                    const store = makeStore();
+                    enterScreen(store);
+                    openStreamed(store);
+
+                    await jest.advanceTimersByTimeAsync(STREAM_TIMEOUT_MS);
+                    first.resolve(psbtFund('chan-1'));
+                    await flush();
+                    expect(cancels()).toEqual([shimIds[0], shimIds[0]]);
+                    expect(fundPsbt).not.toHaveBeenCalled();
+                });
+
+                it('cancels the shim of a stream that fails', async () => {
+                    answerStreams(() =>
+                        Promise.reject(new Error('peer is not online'))
+                    );
+                    const store = makeStore();
+                    enterScreen(store);
+                    openStreamed(store);
+                    await flush();
+
+                    expect(cancels()).toEqual(shimIds);
+                    expect(store.errorMsgChannel).toBe('peer is not online');
+                });
+
+                it('does not cancel a shim whose open went through', async () => {
+                    answerStreams(() => Promise.resolve(psbtFund('chan-1')));
+                    const store = makeStore();
+                    enterScreen(store);
+                    openStreamed(store);
+                    await flush();
+
+                    expect(store.channelSuccess).toBe(true);
+                    expect(cancels()).toEqual([]);
+                });
+
+                it('stops a batch when a channel fails, without funding the rest', async () => {
+                    answerStreams(
+                        () => Promise.resolve(psbtFund('chan-a')),
+                        () => Promise.reject(new Error('peer is not online')),
+                        () => Promise.resolve(psbtFund('chan-c'))
+                    );
+                    const store = makeStore();
+                    enterScreen(store);
+                    openBatch(store, 2);
+                    await flush();
+
+                    // the last channel is never opened
+                    expect(shimIds).toHaveLength(2);
+                    expect(fundPsbt).not.toHaveBeenCalled();
+                    expect(psbtSteps()).toEqual([]);
+                    expect(new Set(cancels())).toEqual(new Set(shimIds));
+                    expect(store.syncOpensInFlight).toBe(0);
+                    expect(store.errorOpenChannel).toBe(true);
+                    expect(store.channelSuccess).toBe(false);
+                });
+
+                it('stops a batch whose middle stream times out before the last one answers', async () => {
+                    const last = held();
+                    answerStreams(
+                        () => Promise.resolve(psbtFund('chan-a')),
+                        never,
+                        () => last.promise
+                    );
+                    const store = makeStore();
+                    enterScreen(store);
+                    openBatch(store, 2);
+                    await flush();
+                    expect(store.syncOpensInFlight).toBe(1);
+
+                    await jest.advanceTimersByTimeAsync(STREAM_TIMEOUT_MS);
+                    await flush();
+                    expect(store.syncOpensInFlight).toBe(0);
+                    expect(store.errorMsgChannel).toBe(
+                        'stores.ChannelsStore.openStreamTimeout'
+                    );
+                    expect(new Set(cancels())).toEqual(new Set(shimIds));
+
+                    last.resolve(psbtFund('chan-c'));
+                    await flush();
+                    expect(fundPsbt).not.toHaveBeenCalled();
+                    expect(psbtSteps()).toEqual([]);
+                    expect(store.channelSuccess).toBe(false);
+                });
+
+                it('stops counting a batch whose funding cannot start', async () => {
+                    answerStreams(
+                        () => Promise.resolve(psbtFund('chan-a')),
+                        () => Promise.resolve(psbtFund('chan-b'))
+                    );
+                    // BackendUtils.call() returns false for a missing method
+                    fundPsbt.mockReturnValueOnce(false);
+                    const store = makeStore();
+                    enterScreen(store);
+                    openBatch(store);
+                    await flush();
+
+                    expect(store.syncOpensInFlight).toBe(0);
+                    expect(store.errorOpenChannel).toBe(true);
+                });
             });
 
             it('does not end an open whose stream answered in time', async () => {

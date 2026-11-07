@@ -891,7 +891,12 @@ describe('ChannelsStore batch channel open', () => {
                 { node: 'def', no_publish: true }
             ]);
             expect(BackendUtils.fundPsbt).not.toHaveBeenCalled();
-            expect(BackendUtils.fundingStateStep).not.toHaveBeenCalled();
+            // the only funding steps cancel the shims of A and B
+            expect(
+                jest
+                    .mocked(BackendUtils.fundingStateStep)
+                    .mock.calls.map(([step]: any) => Object.keys(step))
+            ).toEqual([['shim_cancel'], ['shim_cancel']]);
             expect(store.channelSuccess).toBe(false);
             expect(store.errorOpenChannel).toBe(true);
             expect(store.errorMsgChannel).toBe('peer b rejected the channel');
