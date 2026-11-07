@@ -48,8 +48,8 @@ class Bolt11Utils {
     // Decoding triggers ECDSA pubkey recovery via @noble/secp256k1, which is
     // ~5–20 ms per call on a phone. The Activity view calls decode() repeatedly
     // for the same payment_request strings (once per invoice, sometimes twice),
-    // so an LRU cache keyed by the raw input collapses those into a single
-    // recovery per unique invoice.
+    // so an LRU cache keyed by the lowercase input collapses those into a
+    // single recovery per unique invoice.
     private readonly CACHE_LIMIT = 256;
     private cache: Map<string, DecodedBolt11> = new Map();
 
@@ -71,7 +71,16 @@ class Bolt11Utils {
         if (paymentRequest.slice(0, 2).toLowerCase() !== 'ln')
             throw new Error('Not a proper lightning payment request');
 
+        // Check case before the cache, which is keyed on the lowercase form
+        // and would otherwise return a hit for a mixed-case string that bech32
+        // rejects.
         const cacheKey = paymentRequest.toLowerCase();
+        if (
+            paymentRequest !== cacheKey &&
+            paymentRequest !== paymentRequest.toUpperCase()
+        )
+            throw new Error('Mixed-case string');
+
         const cached = this.cache.get(cacheKey);
         if (cached) {
             // Move to MRU position by re-inserting.
@@ -82,7 +91,11 @@ class Bolt11Utils {
 
         const sections: Bolt11Section[] = [];
         const decoded = bech32.decode(paymentRequest, Number.MAX_SAFE_INTEGER);
-        paymentRequest = paymentRequest.toLowerCase();
+        // 7 words of timestamp plus the 104-word signature
+        if (decoded.words.length < 7 + 104) {
+            throw new Error('Invoice is too short to hold a signature');
+        }
+        paymentRequest = cacheKey;
         const prefix = decoded.prefix;
         let words = decoded.words;
         let letters = paymentRequest.slice(prefix.length + 1);
@@ -136,16 +149,14 @@ class Bolt11Utils {
         let satoshis: number | null = null;
         let millisatoshis: string | null = null;
         if (amountValue) {
-            try {
-                satoshis = this.hrpToSat(amountValue + amountDivisor);
-            } catch (e) {
-                satoshis = null;
-            }
-            try {
-                millisatoshis = this.hrpToMillisat(amountValue + amountDivisor);
-            } catch (e) {
-                millisatoshis = null;
-            }
+            // An invalid multiplier or an amount the spec rejects fails the
+            // decode. Treating it as no amount would let the user enter one.
+            millisatoshis = this.hrpToMillisat(amountValue + amountDivisor);
+            // null for a valid amount that is not a whole number of satoshis
+            const msat = new BigNumber(millisatoshis);
+            satoshis = msat.mod(1000).isZero()
+                ? msat.idiv(1000).toNumber()
+                : null;
         }
 
         sections.push({
@@ -503,21 +514,13 @@ class Bolt11Utils {
         const msat = divisor
             ? valueBN.times(this.MILLISATS_PER_BTC).idiv(this.DIVISORS[divisor])
             : valueBN.times(this.MILLISATS_PER_BTC);
-        if (
-            (divisor === 'p' && !valueBN.mod(10).isZero()) ||
-            msat.gt(this.MAX_MILLISATS)
-        ) {
+        if (divisor === 'p' && !valueBN.mod(10).isZero()) {
+            throw new Error('Amount is not a whole millisatoshi');
+        }
+        if (msat.gt(this.MAX_MILLISATS)) {
             throw new Error('Amount is outside of valid range');
         }
         return msat.toString();
-    };
-
-    private hrpToSat = (hrp: string): number => {
-        const msat = new BigNumber(this.hrpToMillisat(hrp));
-        if (!msat.mod(1000).isZero()) {
-            throw new Error('Amount is outside of valid range');
-        }
-        return msat.idiv(1000).toNumber();
     };
 
     private wordsToHex = (words: number[]): string | undefined => {
