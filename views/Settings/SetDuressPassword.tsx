@@ -11,6 +11,11 @@ import TextInput from '../../components/TextInput';
 
 import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import {
+    deriveVerifier,
+    verifySecret,
+    hasVerifier
+} from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -22,10 +27,11 @@ interface SetDuressPassphraseProps {
 interface SetDuressPassphraseState {
     duressPassphrase: string;
     duressPassphraseConfirm: string;
-    savedDuressPassphrase: string;
+    hasSavedDuressPassphrase: boolean;
     duressPassphraseMismatchError: boolean;
     duressPassphraseInvalidError: boolean;
     duressPassphraseEmptyError: boolean;
+    saveError: boolean;
 }
 
 @inject('SettingsStore')
@@ -37,10 +43,11 @@ export default class SetDuressPassphrase extends React.Component<
     state = {
         duressPassphrase: '',
         duressPassphraseConfirm: '',
-        savedDuressPassphrase: '',
+        hasSavedDuressPassphrase: false,
         duressPassphraseMismatchError: false,
         duressPassphraseInvalidError: false,
-        duressPassphraseEmptyError: false
+        duressPassphraseEmptyError: false,
+        saveError: false
     };
 
     async componentDidMount() {
@@ -48,9 +55,11 @@ export default class SetDuressPassphrase extends React.Component<
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
-        if (settings.duressPassphrase) {
-            this.setState({ savedDuressPassphrase: settings.duressPassphrase });
-        }
+        this.setState({
+            hasSavedDuressPassphrase: hasVerifier(
+                settings.duressPassphraseVerifier
+            )
+        });
     }
 
     renderSeparator = () => (
@@ -75,19 +84,6 @@ export default class SetDuressPassphrase extends React.Component<
             return;
         }
 
-        const settings = await getSettings();
-
-        if (
-            duressPassphrase !== '' &&
-            duressPassphrase === settings.passphrase
-        ) {
-            this.setState({
-                duressPassphraseInvalidError: true
-            });
-
-            return;
-        }
-
         if (duressPassphrase === '') {
             this.setState({
                 duressPassphraseEmptyError: true
@@ -95,19 +91,47 @@ export default class SetDuressPassphrase extends React.Component<
             return;
         }
 
-        await updateSettings({ duressPassphrase }).then(() => {
-            getSettings();
-            navigation.popTo('Security');
-        });
+        // A failed key derivation or settings write rejects. Nothing is
+        // saved in that case, so the user is told and can save again.
+        try {
+            const settings = await getSettings();
+
+            if (
+                await verifySecret(
+                    duressPassphrase,
+                    settings.passphraseVerifier
+                )
+            ) {
+                this.setState({
+                    duressPassphraseInvalidError: true
+                });
+
+                return;
+            }
+
+            const duressPassphraseVerifier = await deriveVerifier(
+                duressPassphrase
+            );
+            await updateSettings({ duressPassphraseVerifier });
+        } catch (error) {
+            console.error('Failed to save the duress password', error);
+            this.setState({ saveError: true });
+            return;
+        }
+
+        getSettings();
+        navigation.popTo('Security');
     };
 
     deleteDuressPassword = async () => {
         const { SettingsStore, navigation } = this.props;
         const { updateSettings } = SettingsStore;
 
-        await updateSettings({ duressPassphrase: '' }).then(() => {
-            navigation.popTo('Security');
-        });
+        await updateSettings({ duressPassphraseVerifier: undefined }).then(
+            () => {
+                navigation.popTo('Security');
+            }
+        );
     };
 
     render() {
@@ -115,10 +139,11 @@ export default class SetDuressPassphrase extends React.Component<
         const {
             duressPassphrase,
             duressPassphraseConfirm,
-            savedDuressPassphrase,
+            hasSavedDuressPassphrase,
             duressPassphraseMismatchError,
             duressPassphraseInvalidError,
-            duressPassphraseEmptyError
+            duressPassphraseEmptyError,
+            saveError
         } = this.state;
 
         return (
@@ -127,7 +152,7 @@ export default class SetDuressPassphrase extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            savedDuressPassphrase
+                            hasSavedDuressPassphrase
                                 ? 'views.Settings.ChangeDuressPassword.title'
                                 : 'views.Settings.SetDuressPassword.title'
                         ),
@@ -166,6 +191,13 @@ export default class SetDuressPassphrase extends React.Component<
                             )}
                         />
                     )}
+                    {saveError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.Security.saveFailed'
+                            )}
+                        />
+                    )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.newDuressPassword')}
                     </Text>
@@ -178,7 +210,8 @@ export default class SetDuressPassphrase extends React.Component<
                                 duressPassphrase: text,
                                 duressPassphraseMismatchError: false,
                                 duressPassphraseInvalidError: false,
-                                duressPassphraseEmptyError: false
+                                duressPassphraseEmptyError: false,
+                                saveError: false
                             })
                         }
                         autoCapitalize="none"
@@ -206,7 +239,8 @@ export default class SetDuressPassphrase extends React.Component<
                                 duressPassphraseConfirm: text,
                                 duressPassphraseMismatchError: false,
                                 duressPassphraseInvalidError: false,
-                                duressPassphraseEmptyError: false
+                                duressPassphraseEmptyError: false,
+                                saveError: false
                             })
                         }
                         autoCapitalize="none"
@@ -239,7 +273,7 @@ export default class SetDuressPassphrase extends React.Component<
                             onPress={() => this.saveSettings()}
                         />
                     </View>
-                    {!!savedDuressPassphrase && (
+                    {hasSavedDuressPassphrase && (
                         <View style={{ paddingTop: 10, margin: 10 }}>
                             <Button
                                 title={localeString(

@@ -110,8 +110,17 @@ import Storage, {
     getRawItem,
     setRawLocalItem
 } from '../storage';
+import { deriveVerifier, hasVerifier } from './LockVerifierUtils';
 
 export const KEYCHAIN_DESYNC_KEY = 'keychain-desync-v1';
+const MOD_KEY_LOCK_VERIFIER = 'lock-verifier-hash-mod';
+const RESTAMP_KEY = 'ios-keychain-accessible-restamp-v1';
+const LOCK_CREDENTIAL_FIELDS: Array<{ plain: string; verifier: string }> = [
+    { plain: 'pin', verifier: 'pinVerifier' },
+    { plain: 'duressPin', verifier: 'duressPinVerifier' },
+    { plain: 'passphrase', verifier: 'passphraseVerifier' },
+    { plain: 'duressPassphrase', verifier: 'duressPassphraseVerifier' }
+];
 
 class MigrationsUtils {
     // One-shot migration flags that have read 'true' in this process.
@@ -490,6 +499,12 @@ class MigrationsUtils {
         // legacy values.
         this.applyMissingSettingsGroups(newSettings);
 
+        // hash any plaintext PIN/passphrase (and duress) into salted
+        // verifiers, in memory only: storageMigrationV2 persists the result
+        // in its single write. The flag is left to the modern load path,
+        // which sees no plaintext left and stamps it.
+        await this.applyLockCredentialVerifiers(newSettings);
+
         return newSettings;
     }
 
@@ -682,6 +697,123 @@ class MigrationsUtils {
 
         settings.settingsVersion = SETTINGS_VERSION;
         return changed;
+    }
+
+    // Replace plaintext app-lock credentials with salted PBKDF2 verifiers and
+    // strip the plaintext fields. Historically the PIN, passphrase and their
+    // duress variants were stored verbatim in the settings blob alongside every
+    // wallet secret, and login was a direct string compare - so anyone who
+    // could read the blob (root/jailbreak dump, or an iOS backup migration)
+    // recovered the credentials and could tell which one was the duress
+    // trigger. Runs on the modern (zeus-settings-v2) load path; the legacy
+    // path hashes in memory via applyLockCredentialVerifiers. The MOD flag
+    // only skips the work when the blob holds no plaintext: an older copy
+    // can be written back after the flag is stamped (Keychain Recovery's
+    // restoreSettings, or the iOS synchronizable-partition fallback on a
+    // restored device, where the flag came across in the backup), and
+    // skipping it would boot with no lock and keep the plaintext.
+    //
+    // Like runSettingsMigrations, the blob is only ever persisted from inside
+    // the updateSettings queue: outside it `settings` is a snapshot that a
+    // concurrent update could have superseded, so the work is routed through
+    // a no-op update whose critical section re-enters here with inQueue set.
+    public async migrateLockCredentialsToVerifiers(
+        settings: any,
+        inQueue: boolean = false
+    ) {
+        if (!settings) return settings;
+        const hasPlaintext = this.hasLegacyLockCredentials(settings);
+        if (!hasPlaintext && (await this.readFlag(MOD_KEY_LOCK_VERIFIER))) {
+            return settings;
+        }
+
+        if (hasPlaintext) {
+            if (!inQueue) return await settingsStore.updateSettings({});
+            await this.applyLockCredentialVerifiers(settings);
+            // A write of our own even though applySettingsUpdate persists
+            // right after: the flag below must only be stamped once the
+            // hashed blob has landed.
+            const persisted = await settingsStore.setSettings(settings);
+            if (!persisted) {
+                // The write failed (wipe write-latch engaged, or the keychain
+                // call itself failed). Leave the MOD flag unset so the
+                // migration re-runs on the next load: stamping it now would
+                // strand a persisted blob that still holds plaintext
+                // credentials and no verifiers, and the app would boot with
+                // no lock configured at all.
+                return settings;
+            }
+        }
+
+        // Only reached once the v2 blob holds no plaintext, and before the
+        // flag is stamped so a failure here retries on the next load.
+        if (!(await this.removeLegacySettingsBlob())) return settings;
+
+        await this.writeFlag(MOD_KEY_LOCK_VERIFIER);
+        return settings;
+    }
+
+    private hasLegacyLockCredentials(settings: any): boolean {
+        return LOCK_CREDENTIAL_FIELDS.some(
+            ({ plain }) => settings?.[plain] !== undefined
+        );
+    }
+
+    // Hashes each plaintext credential into its verifier field (unless one
+    // already exists) and deletes the plaintext. In memory only; returns
+    // whether anything changed.
+    public async applyLockCredentialVerifiers(settings: any): Promise<boolean> {
+        if (!settings) return false;
+        let changed = false;
+        for (const { plain, verifier } of LOCK_CREDENTIAL_FIELDS) {
+            const value = settings[plain];
+            if (typeof value === 'string' && value.length > 0) {
+                // don't clobber a verifier that already exists
+                if (!hasVerifier(settings[verifier])) {
+                    settings[verifier] = await deriveVerifier(value);
+                }
+                changed = true;
+            }
+            if (settings[plain] !== undefined) {
+                delete settings[plain];
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    // Delete the pre-v2 'zeus-settings' blob. storageMigrationV2 copies it
+    // forward but never deletes it, so for anyone who came through the
+    // legacy path it still holds every wallet secret (and, until this
+    // migration, the plaintext lock credentials). EncryptedStorage writes it
+    // with no accessibility class, so on iOS it gets the default
+    // kSecAttrAccessibleWhenUnlocked and moves to a new device through
+    // encrypted backups. zeus-settings-v2 is THIS_DEVICE_ONLY and stays
+    // behind, so getSettings on the restored device would fall back to this
+    // blob and load its wallets with no lock. This also removes it from the
+    // KeychainRecoveryUtils sources; what it held is a copy from before the
+    // v2 migration.
+    //
+    // Only deleted once the v2 blob is in the device-local partition: on
+    // iOS the settings being migrated can be the synchronizable-partition
+    // fallback copy, and the legacy blob must not go while that is the only
+    // other copy. Returns whether the blob is gone; never throws, so a
+    // keychain error cannot fail the settings load.
+    private async removeLegacySettingsBlob(): Promise<boolean> {
+        const LEGACY_SETTINGS_KEY = 'zeus-settings';
+        try {
+            if (!(await EncryptedStorage.getItem(LEGACY_SETTINGS_KEY))) {
+                return true;
+            }
+            if (!(await Storage.getItem(STORAGE_KEY))) return false;
+            // removeItem rejects when the item is missing, so only reached
+            // after the read above found it
+            await EncryptedStorage.removeItem(LEGACY_SETTINGS_KEY);
+            return true;
+        } catch (error) {
+            console.error('Failed to remove the legacy settings blob', error);
+            return false;
+        }
     }
 
     // Rewrite persisted v1 RGS endpoints to their v2 equivalents in a
@@ -1542,6 +1674,191 @@ class MigrationsUtils {
             // synchronizable-partition fallback covers this boot instead.
             console.error('Keychain desync migration failed', error);
         }
+    }
+
+    // Rewrite one keychain item in place so it picks up the current write
+    // options (accessibility class). Returns false only on a failed write;
+    // an unset key is success.
+    private async restampKey(key: string): Promise<boolean> {
+        try {
+            const value = await Storage.getItem(key);
+            // false covers unset and empty values; nothing to rewrite
+            if (value === false || value == null) return true;
+            const written = await Storage.setItem(key, value);
+            return written !== false;
+        } catch (e) {
+            console.error(`[Restamp] Failed to rewrite ${key}:`, e);
+            return false;
+        }
+    }
+
+    // One-shot iOS pass: rewrite existing keychain items in place so they
+    // pick up AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY. The accessibility class
+    // only applies when an item is written, so anything persisted before
+    // that option was added - including write-once secrets such as LNC
+    // credentials, Cashu seed material, NWC nostr keys, contacts and notes -
+    // would otherwise keep the migratable AFTER_FIRST_UNLOCK class and ride
+    // an encrypted backup to a new device. Walks the same key inventory as
+    // keychainCloudSyncMigration. Entries with no index (lnurlpay:<hash>,
+    // pos-<orderId>) cannot be enumerated from JS and are accepted as
+    // residual: they hold payment metadata, not key material. The flag is
+    // only stamped once every rewrite succeeds, so a partial failure retries
+    // on the next load; rewrites are idempotent.
+    //
+    // Rewrites the settings blob too, so like runSettingsMigrations it only
+    // runs inside the updateSettings queue: called outside it, it routes
+    // through a no-op update whose critical section re-enters here with
+    // inQueue set. Returns the settings the caller should adopt.
+    public async restampKeychainAccessibility(
+        settings: any,
+        inQueue: boolean = false
+    ) {
+        // Only iOS uses kSecAttrAccessible; Android backup exclusion is
+        // already handled by allowBackup="false"
+        if (Platform.OS !== 'ios') return settings;
+
+        const done = await this.readFlag(RESTAMP_KEY);
+        if (done === 'true') return settings;
+
+        if (!inQueue) return await settingsStore.updateSettings({});
+
+        console.log('Re-stamping keychain items as this-device-only...');
+
+        const keys: string[] = [
+            CONTACTS_KEY,
+            NOTES_KEY,
+            LAST_CHANNEL_BACKUP_STATUS,
+            LAST_CHANNEL_BACKUP_TIME,
+            ADDRESS_ACTIVATED_STRING,
+            HASHES_STORAGE_STRING,
+            POS_HIDDEN_KEY,
+            POS_STANDALONE_KEY,
+            CATEGORY_KEY,
+            PRODUCT_KEY,
+            UNIT_KEY,
+            HIDDEN_ACCOUNTS_KEY,
+            CURRENCY_CODES_KEY,
+            ACTIVITY_FILTERS_KEY,
+            IS_BACKED_UP_KEY,
+            LSPS_ORDERS_KEY,
+            SWAPS_KEY,
+            REVERSE_SWAPS_KEY,
+            SWAPS_RESCUE_KEY,
+            SWAPS_LAST_USED_KEY,
+            // Literal historical key names: importing these stores here
+            // would pull their module graphs into every suite that mocks
+            // this file, and a one-shot migration should pin the names it
+            // ran against anyway
+            'zeus-nwc-connections',
+            'zeus-nwc-client-keys', // nostr secret keys
+            'zeus-nwc-service-keys', // nostr secret keys
+            'zeus-nwc-cashu-enabled',
+            'zeus-nwc-lud16-enabled',
+            'persistentNWCServicesEnabled',
+            'zeus-favorite-currencies',
+            'successfulPaymentCount',
+            'ratingDismissedPermanently'
+        ];
+
+        // per-note entries are listed in the notes index
+        try {
+            const notesListJson = await Storage.getItem(NOTES_KEY);
+            if (notesListJson) {
+                const noteKeys = JSON.parse(notesListJson);
+                if (Array.isArray(noteKeys)) keys.push(...noteKeys);
+            }
+        } catch (e) {
+            console.warn('[Restamp] Could not read notes index:', e);
+        }
+
+        const nodes = Array.isArray(settings?.nodes) ? settings.nodes : [];
+        for (const node of nodes) {
+            // LNC credentials: write-once local/remote keys + macaroon,
+            // stored under a hash of the pairing phrase
+            if (
+                node?.implementation === 'lightning-node-connect' &&
+                node.pairingPhrase
+            ) {
+                const baseKey = `${LNC_STORAGE_KEY}:${hash(
+                    node.pairingPhrase
+                )}`;
+                keys.push(baseKey, `${baseKey}:host`);
+            }
+
+            // Cashu data (including seed material) is namespaced per node dir
+            if (
+                node?.implementation === 'embedded-lnd' ||
+                node?.implementation === 'ldk-node'
+            ) {
+                const nodeDir =
+                    node.implementation === 'ldk-node'
+                        ? node.ldkNodeDir || 'ldk'
+                        : node.lndDir || 'lnd';
+                keys.push(
+                    `${nodeDir}-cashu-mintUrls`,
+                    `${nodeDir}-cashu-selectedMintUrl`,
+                    `${nodeDir}-cashu-totalBalanceSats`,
+                    `${nodeDir}-cashu-invoices`,
+                    `${nodeDir}-cashu-payments`,
+                    `${nodeDir}-cashu-received-tokens`,
+                    `${nodeDir}-cashu-sent-tokens`,
+                    `${nodeDir}-cashu-seed-version`,
+                    `${nodeDir}-cashu-seed-phrase`,
+                    `${nodeDir}-cashu-seed`
+                );
+
+                // per-mint wallet keys hang off the mintUrls list
+                try {
+                    const mintUrlsJson = await Storage.getItem(
+                        `${nodeDir}-cashu-mintUrls`
+                    );
+                    if (mintUrlsJson) {
+                        const mintUrls = JSON.parse(mintUrlsJson);
+                        if (Array.isArray(mintUrls)) {
+                            for (const mintUrl of mintUrls) {
+                                const walletId = `${nodeDir}==${mintUrl}`;
+                                keys.push(
+                                    `${walletId}-mintInfo`,
+                                    `${walletId}-counter`,
+                                    `${walletId}-proofs`,
+                                    `${walletId}-balance`,
+                                    `${walletId}-pubkey`
+                                );
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn(
+                        `[Restamp] Could not read mintUrls for ${nodeDir}:`,
+                        e
+                    );
+                }
+            }
+        }
+
+        let allSucceeded = true;
+        for (const key of [...new Set(keys)]) {
+            const ok = await this.restampKey(key);
+            if (!ok) allSucceeded = false;
+        }
+
+        // The settings blob itself is rewritten through the store rather
+        // than restampKey; we are inside the queue's critical section, so
+        // this write cannot race a queued settings update
+        if (settings) {
+            const persisted = await settingsStore.setSettings(settings);
+            if (!persisted) allSucceeded = false;
+        }
+
+        if (allSucceeded) {
+            await this.writeFlag(RESTAMP_KEY);
+            console.log('Keychain accessibility re-stamp complete.');
+        } else {
+            console.warn(
+                'Keychain re-stamp incomplete; will retry on next launch.'
+            );
+        }
+        return settings;
     }
 
     public async keychainCloudSyncMigration() {
