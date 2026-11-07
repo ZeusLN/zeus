@@ -1450,14 +1450,17 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
                 startBatch();
                 await flush();
 
+                // chan-c failed its verify, so lnd never committed it
+                expect(getFundingOutpoints).toHaveBeenCalledTimes(1);
                 expect(getFundingOutpoints).toHaveBeenCalledWith(PSBT, [
                     'bc1qchan-a',
-                    'bc1qchan-b',
-                    'bc1qchan-c'
+                    'bc1qchan-b'
                 ]);
+                // pending_funding_shim_only fails for a PSBT channel: lnd
+                // treats only channels with a thaw height as shim funded
                 expect(abandoned()).toEqual([
-                    ['unsigned-txid', '0', true],
-                    ['unsigned-txid', '2', true]
+                    ['unsigned-txid', '0', false, true],
+                    ['unsigned-txid', '2', false, true]
                 ]);
                 // and the leases and shims go back as before
                 expect(released()).toEqual(LOCKED);
@@ -1466,12 +1469,61 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
                 );
             });
 
-            it('abandons them when a later skip_finalize verify fails', async () => {
+            it('abandons only the channels verified before a later skip_finalize verify fails', async () => {
                 failVerifyOf('chan-b');
                 startBatch();
                 await flush();
 
+                expect(getFundingOutpoints).toHaveBeenCalledTimes(1);
+                expect(getFundingOutpoints).toHaveBeenCalledWith(PSBT, [
+                    'bc1qchan-a'
+                ]);
                 expect(abandoned()).toHaveLength(2);
+            });
+
+            it('abandons every channel when the last verify reports a publish error', async () => {
+                fundingStateStep.mockImplementation(async (step: any) =>
+                    step.psbt_verify && !step.psbt_verify.skip_finalize
+                        ? { publish_error: 'peer is not online' }
+                        : {}
+                );
+                const store = startBatch();
+                await flush();
+
+                expect(getFundingOutpoints).toHaveBeenCalledWith(PSBT, [
+                    'bc1qchan-a',
+                    'bc1qchan-b',
+                    'bc1qchan-c'
+                ]);
+                expect(
+                    fundingSteps().filter((step: any) => step.psbt_finalize)
+                ).toEqual([]);
+                expect(store.errorMsgChannel).toBe('peer is not online');
+            });
+
+            it('abandons nothing when the psbt_finalize call throws', async () => {
+                // the call left ZEUS before it failed, so the funding
+                // transaction may have been published
+                fundingStateStep.mockImplementation((step: any) => {
+                    if (step.psbt_finalize) throw new Error('no');
+                    return Promise.resolve({});
+                });
+                const store = startBatch();
+                await flush();
+
+                expect(abandonChannel).not.toHaveBeenCalled();
+                expect(releaseOutput).not.toHaveBeenCalled();
+                expect(cancels()).toEqual([]);
+                expect(store.syncOpensInFlight).toBe(0);
+            });
+
+            it('abandons nothing for a batch whose finalize fails', async () => {
+                failStep('psbt_finalize', new Error('no'));
+                startBatch();
+                await flush();
+
+                expect(abandonChannel).not.toHaveBeenCalled();
+                expect(cancels()).toEqual([]);
             });
 
             it('abandons nothing when the first verify fails', async () => {

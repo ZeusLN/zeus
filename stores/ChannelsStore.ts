@@ -77,11 +77,16 @@ const releaseLeases = (lockedUtxos: Array<any>) =>
 
 // A channel that passed psbt_verify is no longer a funding intent, so
 // shim_cancel does not reach it: lnd keeps it pending, waiting for a
-// funding transaction ZEUS will not publish, and peers that allow one
-// pending channel refuse new ones. AbandonChannel with
-// pending_funding_shim_only removes such a channel from this node only;
-// the peer drops it on its own timeout. Best effort, and only for a PSBT
-// that was never handed to psbt_finalize.
+// funding transaction ZEUS will not publish, and each one adds to the
+// anchor reserve while peers that allow one pending channel refuse new
+// ones. lnd rejects pending_funding_shim_only for these channels ("not
+// externally funded or not pending"), because it counts only channels
+// with a thaw height as shim funded and a PSBT shim sets none. So this
+// sends i_know_what_i_am_doing instead, which removes the channel from
+// this node only; the peer drops it on its own timeout. That is safe
+// only while no funding transaction can exist: callers run it before
+// psbt_finalize, and until then the signed PSBT never leaves ZEUS.
+// Best effort.
 const abandonVerifiedChannels = (
     psbt: string,
     fundingAddresses: Array<string>
@@ -99,6 +104,9 @@ const abandonVerifiedChannels = (
                 BackendUtils.abandonChannel([
                     funding_txid_str,
                     String(output_index),
+                    // pending_funding_shim_only
+                    false,
+                    // i_know_what_i_am_doing
                     true
                 ])
             )
@@ -1106,6 +1114,8 @@ export default class ChannelsStore {
     private handleChannelOpen = (
         request: any,
         outputs: any,
+        // the funding address lnd gave each pending_chan_id
+        fundingAddresses: { [pendingChanId: string]: string },
         pendingChanIds: Array<string>,
         isCurrent: () => boolean,
         finish: () => void
@@ -1136,19 +1146,32 @@ export default class ChannelsStore {
 
         // the inputs fundPsbt leased for the funding transaction
         let lockedUtxos: Array<any> = [];
-        // the PSBT lnd accepted in a psbt_verify, if any
+        // the PSBT lnd accepted in a psbt_verify, if any, and the funding
+        // addresses of the channels whose psbt_verify succeeded
         let verifiedPsbt: string | undefined;
+        let verifiedAddresses: Array<string> = [];
+        const markVerified = (psbt: string, pending_chan_id: string) => {
+            verifiedPsbt = psbt;
+            const address = fundingAddresses[pending_chan_id];
+            if (address) verifiedAddresses.push(address);
+        };
+        // set just before psbt_finalize is called. From then on the
+        // funding transaction may have been published and the PSBT may be
+        // handed to the user, so nothing may be released or abandoned
+        let finalizeSent = false;
         // a flow that ends before psbt_finalize has published nothing:
         // give the inputs back, end lnd's PSBT flow for the channels still
         // waiting for one, and abandon the channels lnd already verified
         const abandon = () => {
+            if (finalizeSent) return;
             releaseLeases(lockedUtxos);
             lockedUtxos = [];
             pendingChanIds.forEach(cancelShim);
-            if (verifiedPsbt) {
-                abandonVerifiedChannels(verifiedPsbt, Object.keys(outputs));
-                verifiedPsbt = undefined;
+            if (verifiedPsbt && verifiedAddresses.length > 0) {
+                abandonVerifiedChannels(verifiedPsbt, verifiedAddresses);
             }
+            verifiedPsbt = undefined;
+            verifiedAddresses = [];
         };
 
         BackendUtils.fundPsbt(fundPsbtRequest)
@@ -1177,18 +1200,19 @@ export default class ChannelsStore {
                             skip_finalize: true
                         }
                     });
-                    verifiedPsbt = funded_psbt;
+                    markVerified(funded_psbt, pending_chan_id);
                 }
 
+                const lastPendingChanId =
+                    pendingChanIds[pendingChanIds.length - 1];
                 BackendUtils.fundingStateStep({
                     psbt_verify: {
                         funded_psbt,
-                        pending_chan_id:
-                            pendingChanIds[pendingChanIds.length - 1]
+                        pending_chan_id: lastPendingChanId
                     }
                 })
                     .then((data: any) => {
-                        verifiedPsbt = funded_psbt;
+                        markVerified(funded_psbt, lastPendingChanId);
                         if (data.publish_error) {
                             const errorMsg = errorToUserFriendly(
                                 data.publish_error
@@ -1210,6 +1234,12 @@ export default class ChannelsStore {
                             const formattedPsbt = new FundedPsbt(
                                 funded_psbt
                             ).getFormatted();
+
+                            // no abandon() past this point, also when the
+                            // call below throws
+                            finalizeSent = true;
+                            verifiedPsbt = undefined;
+                            verifiedAddresses = [];
 
                             // Attempt finalize here
                             BackendUtils.fundingStateStep({
@@ -1350,6 +1380,8 @@ export default class ChannelsStore {
 
         if (request?.account !== 'default' || multipleChans) {
             const outputs: any = {};
+            // the funding address lnd gave each of this open's channels
+            const fundingAddresses: { [pendingChanId: string]: string } = {};
             // resetOpenChannel() replaces the list, so an open it superseded
             // keeps funding its own channels and stays out of the next
             // open's list
@@ -1401,6 +1433,8 @@ export default class ChannelsStore {
                         pendingChanIds.push(pending_chan_id);
                         outputs[psbt_fund.funding_address] =
                             psbt_fund.funding_amount;
+                        fundingAddresses[pending_chan_id] =
+                            psbt_fund.funding_address;
 
                         base_psbt = psbt_fund.psbt;
                         for (
@@ -1441,6 +1475,8 @@ export default class ChannelsStore {
                                     pendingChanIds.push(pending_chan_id);
                                     outputs[psbt_fund.funding_address] =
                                         psbt_fund.funding_amount;
+                                    fundingAddresses[pending_chan_id] =
+                                        psbt_fund.funding_address;
                                     base_psbt = psbt_fund.psbt;
                                 } catch (error: any) {
                                     // stop the batch here
@@ -1472,9 +1508,12 @@ export default class ChannelsStore {
                                         pendingChanIds.push(pending_chan_id);
                                         outputs[psbt_fund.funding_address] =
                                             psbt_fund.funding_amount;
+                                        fundingAddresses[pending_chan_id] =
+                                            psbt_fund.funding_address;
                                         this.handleChannelOpen(
                                             request,
                                             outputs,
+                                            fundingAddresses,
                                             pendingChanIds,
                                             isCurrent,
                                             finish
@@ -1502,10 +1541,13 @@ export default class ChannelsStore {
                         if (psbt_fund?.funding_address) {
                             outputs[psbt_fund.funding_address] =
                                 psbt_fund.funding_amount;
+                            fundingAddresses[pending_chan_id] =
+                                psbt_fund.funding_address;
                         }
                         this.handleChannelOpen(
                             request,
                             outputs,
+                            fundingAddresses,
                             pendingChanIds,
                             isCurrent,
                             finish
