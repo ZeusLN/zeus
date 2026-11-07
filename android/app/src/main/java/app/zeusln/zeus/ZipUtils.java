@@ -8,8 +8,11 @@ import com.facebook.react.bridge.Promise;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -74,8 +77,19 @@ public class ZipUtils extends ReactContextBaseJavaModule {
         }
     }
 
+    // Upper bound on the total bytes unzipFile writes. The archives it reads
+    // are channel backups (lnd's graph directory: channel.db or the SQLite
+    // files). A mobile node's database is usually tens to a few hundred MB,
+    // so this leaves more than ten times that for an uncompacted one, while
+    // a small archive that inflates without end is stopped long before it
+    // can fill the phone's storage. The size each entry declares is not
+    // used, since it is not checked until the entry has been inflated.
+    static final long MAX_UNZIP_BYTES = 4L * 1024 * 1024 * 1024;
+
     @ReactMethod
     public void unzipFile(String zipPath, String destDirPath, Promise promise) {
+        // Files this call has created, deleted again if it fails
+        List<File> written = new ArrayList<>();
         try {
             File zipFile = new File(zipPath);
             if (!zipFile.exists()) {
@@ -88,37 +102,41 @@ public class ZipUtils extends ReactContextBaseJavaModule {
                 destDir.mkdirs();
             }
 
-            FileInputStream fis = new FileInputStream(zipFile);
-            ZipInputStream zis = new ZipInputStream(fis);
-            byte[] buffer = new byte[8192];
+            long total = 0;
+            try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
+                byte[] buffer = new byte[8192];
 
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                if (entry.isDirectory()) continue;
+                ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (entry.isDirectory()) continue;
 
-                String name = entry.getName();
-                // Prevent zip slip
-                File outFile = new File(destDir, name);
-                if (!outFile.getCanonicalPath().startsWith(destDir.getCanonicalPath() + File.separator)) {
-                    zis.close();
-                    fis.close();
-                    promise.reject("ERR_UNZIP", "Zip entry outside target directory: " + name);
-                    return;
+                    String name = entry.getName();
+                    // Prevent zip slip
+                    File outFile = new File(destDir, name);
+                    if (!outFile.getCanonicalPath().startsWith(destDir.getCanonicalPath() + File.separator)) {
+                        throw new IOException("Zip entry outside target directory: " + name);
+                    }
+
+                    written.add(outFile);
+                    try (FileOutputStream fos = new FileOutputStream(outFile)) {
+                        int len;
+                        while ((len = zis.read(buffer)) > 0) {
+                            total += len;
+                            if (total > MAX_UNZIP_BYTES) {
+                                throw new IOException("Zip contents exceed the maximum size of " + MAX_UNZIP_BYTES + " bytes");
+                            }
+                            fos.write(buffer, 0, len);
+                        }
+                    }
+                    zis.closeEntry();
                 }
-
-                FileOutputStream fos = new FileOutputStream(outFile);
-                int len;
-                while ((len = zis.read(buffer)) > 0) {
-                    fos.write(buffer, 0, len);
-                }
-                fos.close();
-                zis.closeEntry();
             }
 
-            zis.close();
-            fis.close();
             promise.resolve(null);
         } catch (Exception e) {
+            for (File file : written) {
+                file.delete();
+            }
             promise.reject("ERR_UNZIP", e.getMessage(), e);
         }
     }

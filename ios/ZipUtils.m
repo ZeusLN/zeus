@@ -9,6 +9,10 @@
 #define ZIP_VERSION_NEEDED 20
 #define ZIP_COMPRESSION_DEFLATE 8
 #define ZIP_COMPRESSION_STORE 0
+// Upper bound on the total bytes unzipFile writes, as in the Android
+// ZipUtils: a channel backup is lnd's graph directory, usually tens to a few
+// hundred MB on a mobile node
+#define ZIP_MAX_UNZIP_BYTES (4ULL * 1024 * 1024 * 1024)
 
 @implementation ZipUtils
 
@@ -206,6 +210,16 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
         const uint8_t *bytes = zipData.bytes;
         NSUInteger length = zipData.length;
         NSUInteger offset = 0;
+        unsigned long long total = 0;
+
+        // Files this call has written, removed again if it fails
+        NSMutableArray<NSString *> *written = [NSMutableArray array];
+        void (^fail)(NSString *) = ^(NSString *message) {
+            for (NSString *path in written) {
+                [fm removeItemAtPath:path error:nil];
+            }
+            reject(@"ERR_UNZIP", message, nil);
+        };
 
         while (offset + 30 <= length) {
             uint32_t sig = *(uint32_t *)(bytes + offset);
@@ -219,7 +233,7 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
             uint16_t extraLen = *(uint16_t *)(bytes + offset + 28);
 
             if (offset + 30 + nameLen + extraLen + compSize > length) {
-                reject(@"ERR_UNZIP", @"Truncated zip file", nil);
+                fail(@"Truncated zip file");
                 return;
             }
 
@@ -234,6 +248,14 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
             NSString *safeName = [entryName lastPathComponent];
             NSString *destFilePath = [destDirPath stringByAppendingPathComponent:safeName];
 
+            // Checked before inflating, which allocates the declared size,
+            // and again below with the size actually inflated
+            uint32_t declaredSize = method == ZIP_COMPRESSION_STORE ? compSize : uncompSize;
+            if (total + declaredSize > ZIP_MAX_UNZIP_BYTES) {
+                fail([NSString stringWithFormat:@"Zip contents exceed the maximum size of %llu bytes", ZIP_MAX_UNZIP_BYTES]);
+                return;
+            }
+
             NSData *fileData;
             if (method == ZIP_COMPRESSION_STORE) {
                 fileData = [NSData dataWithBytes:(bytes + dataOffset) length:compSize];
@@ -241,22 +263,33 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
                 fileData = [self inflateData:[NSData dataWithBytesNoCopy:(void *)(bytes + dataOffset) length:compSize freeWhenDone:NO]
                             expectedSize:uncompSize];
                 if (!fileData) {
-                    reject(@"ERR_UNZIP", [NSString stringWithFormat:@"Failed to decompress: %@", entryName], nil);
+                    fail([NSString stringWithFormat:@"Failed to decompress: %@", entryName]);
                     return;
                 }
             } else {
-                reject(@"ERR_UNZIP", [NSString stringWithFormat:@"Unsupported compression method %d for: %@", method, entryName], nil);
+                fail([NSString stringWithFormat:@"Unsupported compression method %d for: %@", method, entryName]);
                 return;
             }
 
             // Verify CRC
             uint32_t actualCrc = (uint32_t)crc32(0L, fileData.bytes, (uInt)fileData.length);
             if (actualCrc != crc && crc != 0) {
-                reject(@"ERR_UNZIP", [NSString stringWithFormat:@"CRC mismatch for: %@", entryName], nil);
+                fail([NSString stringWithFormat:@"CRC mismatch for: %@", entryName]);
                 return;
             }
 
-            [fileData writeToFile:destFilePath atomically:YES];
+            total += fileData.length;
+            if (total > ZIP_MAX_UNZIP_BYTES) {
+                fail([NSString stringWithFormat:@"Zip contents exceed the maximum size of %llu bytes", ZIP_MAX_UNZIP_BYTES]);
+                return;
+            }
+
+            NSError *writeError = nil;
+            if (![fileData writeToFile:destFilePath options:NSDataWritingAtomic error:&writeError]) {
+                fail(writeError.localizedDescription ?: [NSString stringWithFormat:@"Failed to write: %@", safeName]);
+                return;
+            }
+            [written addObject:destFilePath];
         }
 
         resolve(nil);
