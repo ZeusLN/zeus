@@ -166,10 +166,7 @@ function setup() {
             CHANNEL_MIGRATION_ACTIVE: 'test-migration-flag',
             processSharedQRImageFast: async () => null,
             Platform: { OS: 'ios' },
-            SystemNavigationBar: {
-                setNavigationColor: jest.fn(),
-                setNavigationBarDividerColor: jest.fn()
-            },
+            applySystemNavigationBarTheme: jest.fn(),
             themeColor: () => '#000',
             isLightTheme: () => false,
             autoPurgeLegacyKeychain: jest.fn(),

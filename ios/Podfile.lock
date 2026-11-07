@@ -2687,6 +2687,28 @@ PODS:
   - SocketRocket (0.7.1):
     - ReactNativeDependencies
   - SwiftProtobuf (1.37.0)
+  - SystemNavigationBar (3.0.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - VisionCamera (4.7.3):
     - VisionCamera/Core (= 4.7.3)
     - VisionCamera/React (= 4.7.3)
@@ -2822,6 +2844,7 @@ DEPENDENCIES:
   - RNWorklets (from `../node_modules/react-native-worklets`)
   - SocketRocket (from `build/rndeps-facades/SocketRocket`)
   - SwiftProtobuf (~> 1.0)
+  - SystemNavigationBar (from `../node_modules/react-native-system-navigation-bar`)
   - VisionCamera (from `../node_modules/react-native-vision-camera`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
   - ZeusCashuRestore (from `.`)
@@ -3080,6 +3103,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-worklets"
   SocketRocket:
     :path: build/rndeps-facades/SocketRocket
+  SystemNavigationBar:
+    :path: "../node_modules/react-native-system-navigation-bar"
   VisionCamera:
     :path: "../node_modules/react-native-vision-camera"
   Yoga:
@@ -3214,6 +3239,7 @@ SPEC CHECKSUMS:
   RNWorklets: 8a2c1711bd0246839bbd3e3ff0ec49b699f68899
   SocketRocket: 37aec555668fb852ec12e3c0de59a86ca58f0871
   SwiftProtobuf: 3fafd1b2fb97e6d95ad9c8adb2215da9afec7c83
+  SystemNavigationBar: 2ceeac689eae5d5c1b40e6c97408a353b70bb386
   VisionCamera: 7187b3dac1ff3071234ead959ce311875748e14f
   Yoga: cfbf768b8188dd8031d170316047010a4092581f
   ZeusCashuRestore: 393af11e3fda37ed1948256a2e6d33b7e7267802
