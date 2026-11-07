@@ -1165,6 +1165,53 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     );
 
     it.each([
+        ['paid', 'SUCCEEDED'],
+        ['failed', 'FAILED']
+    ])(
+        'reports a part %s when its quote has a settled entry the melt is still tracked for',
+        async (label, status) => {
+            const store = await regularPlannedStore();
+            cdk.melt.mockRejectedValue(new Error('connection lost'));
+            // A reconcile pass has stored the settled entry and is about to
+            // untrack the melt when the pay path's check fails
+            cdk.checkMeltQuote.mockImplementationOnce(async () => {
+                await (store as any).recordSettledMelt(
+                    store.pendingMelts[0],
+                    PREIMAGE
+                );
+                store.payments![0].status = status;
+                throw new Error('Concurrent update detected');
+            });
+            const onProgress = jest.fn();
+
+            await store.payLnInvoiceFromEcash({
+                paymentRequest: INVOICE,
+                onProgress
+            });
+
+            const paid = label === 'paid';
+            expect(store.paymentSuccess).toBe(paid);
+            expect(store.payments!.map((p) => [p.status, p.mintUrl])).toEqual([
+                [status, A]
+            ]);
+            const final = onProgress.mock.calls.at(-1)[0];
+            if (paid) {
+                expect(store.paymentError).toBe(false);
+                expect(store.paymentPreimage).toBe(PREIMAGE);
+                expect(store.pendingMelts).toEqual([]);
+                expect(final.step).toBe(MultinutPaymentStep.COMPLETE);
+                expect(final.mints[0].status).toBe(MintPaymentStatus.SUCCESS);
+            } else {
+                expect(store.paymentErrorMsg).toBe(
+                    'stores.CashuStore.errorPayingInvoice'
+                );
+                expect(final.step).toBe(MultinutPaymentStep.FAILED);
+                expect(final.mints[0].status).toBe(MintPaymentStatus.FAILED);
+            }
+        }
+    );
+
+    it.each([
         ['the in-flight entry', 'node1-cashu-payments', 0],
         ['the tracked melts after the melt', 'node1-cashu-pending-melts', 1]
     ])(

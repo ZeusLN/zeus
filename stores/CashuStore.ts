@@ -5344,31 +5344,40 @@ export default class CashuStore {
                                 payment.meltResponse?.quote?.quote ===
                                 melt.quote
                         );
-                        // A reconcile pass settled the melt while the quote
-                        // was being checked: paid if it recorded the payment,
-                        // otherwise the mint did not pay it
+                        // A reconcile pass may have settled the melt while
+                        // the quote was being checked. An entry it settled
+                        // says how, even before it untracks the melt.
+                        if (recorded && !recorded.isInTransit) {
+                            if (recorded.isFailed) {
+                                throw new Error(
+                                    localeString(
+                                        'stores.CashuStore.errorPayingInvoice'
+                                    )
+                                );
+                            }
+                            mintProgressInfo[index].status =
+                                MintPaymentStatus.SUCCESS;
+                            mintProgressInfo[index].error = undefined;
+                            mintProgressInfo[index].feePaid =
+                                Number(recorded.fee) || 0;
+                            onProgress?.({
+                                step: MultinutPaymentStep.PROCESSING,
+                                mints: [...mintProgressInfo],
+                                totalSelectedBalance,
+                                isProcessing: true
+                            });
+                            return {
+                                ok: true as const,
+                                payment: recorded
+                            };
+                        }
+                        // Untracked with no settled entry: reconcile found
+                        // the mint did not pay it
                         if (
                             !this.pendingMelts.some(
                                 (pending) => pending.quote === melt.quote
                             )
                         ) {
-                            if (recorded && !recorded.isInTransit) {
-                                mintProgressInfo[index].status =
-                                    MintPaymentStatus.SUCCESS;
-                                mintProgressInfo[index].error = undefined;
-                                mintProgressInfo[index].feePaid =
-                                    Number(recorded.fee) || 0;
-                                onProgress?.({
-                                    step: MultinutPaymentStep.PROCESSING,
-                                    mints: [...mintProgressInfo],
-                                    totalSelectedBalance,
-                                    isProcessing: true
-                                });
-                                return {
-                                    ok: true as const,
-                                    payment: recorded
-                                };
-                            }
                             throw new Error(
                                 localeString(
                                     'stores.CashuStore.errorPayingInvoice'
