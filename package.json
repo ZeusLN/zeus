@@ -57,7 +57,7 @@
     "lint-fix": "eslint . --fix"
   },
   "dependencies": {
-    "@bitcoinerlab/secp256k1": "1.2.0",
+    "@bitcoinerlab/secp256k1": "2.0.0",
     "@getalby/sdk": "9.0.0",
     "@keystonehq/bc-ur-registry": "0.8.1",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",
