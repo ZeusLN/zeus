@@ -51,10 +51,27 @@ jest.mock('./NodeConfigUtils', () => ({
     NODE_CONFIG_EXPORT_EXT: '.zeus-wallet-config-backup'
 }));
 
-jest.mock('./LocaleUtils', () => ({
-    localeString: (key: string, subs?: { [key: string]: any }) =>
-        subs ? `${key} ${JSON.stringify(subs)}` : key
-}));
+// The English strings, so the tests read the text the user sees
+jest.mock('./LocaleUtils', () => {
+    const en = require('../locales/en.json');
+    return {
+        localeString: (key: string, subs?: { [key: string]: any }) =>
+            (en[key] as string).replace(/\{\{(\w+)\}\}/g, (match, name) =>
+                subs && name in subs ? String(subs[name]) : match
+            )
+    };
+});
+
+const en = require('../locales/en.json');
+const SHARE = en['general.share'];
+const DELETE = en['general.delete'];
+const NOT_NOW = en['views.Wallet.legacyExports.notNow'];
+const CONFIG_WARNING = en['views.Wallet.legacyExports.configWarning'];
+
+// Unlocked and outside the POS till
+const unlocked = { loginRequired: () => false, posViewActive: () => false };
+const inPos = { loginRequired: () => false, posViewActive: () => true };
+const locked = { loginRequired: () => true, posViewActive: () => false };
 
 const DOCS = '/mock/document/path';
 const STAGING = '/mock/caches/path/csv-share-staging';
@@ -182,40 +199,102 @@ describe('LegacyExportUtils', () => {
             jest.clearAllMocks();
         });
 
+        const lastMessage = () => {
+            const calls = (Alert.alert as jest.Mock).mock.calls;
+            return calls[calls.length - 1][1] as string;
+        };
+
         it('shows one prompt with the counts and the credentials warning', async () => {
-            await promptLegacyExportCleanup();
+            await promptLegacyExportCleanup(unlocked);
 
             expect(Alert.alert).toHaveBeenCalledTimes(1);
             const [title, message] = (Alert.alert as jest.Mock).mock.calls[0];
-            expect(title).toBe('views.Wallet.legacyExports.title');
+            expect(title).toBe('Old export files');
             expect(message).toContain(
-                'views.Wallet.legacyExports.message {"total":3,"configs":1,"csvs":2}'
+                'Older ZEUS versions left 3 export files (1 wallet config backup, 2 activity CSVs) in the ZEUS folder'
             );
-            expect(message).toContain(
-                'views.Wallet.legacyExports.configWarning'
-            );
-            expect(lastAlertButtons().map((b) => b.text)).toEqual([
-                'views.Wallet.legacyExports.notNow',
-                'general.delete',
-                'general.share'
-            ]);
+            expect(message).toContain(CONFIG_WARNING);
             // nothing is touched until the user picks
             expect(RNFS.unlink).not.toHaveBeenCalled();
         });
 
-        it('omits the credentials warning when only CSVs are left', async () => {
+        it('offers Share first: iOS moves the cancel action to the bottom, so it shows Share, Delete, Not now', async () => {
+            await promptLegacyExportCleanup(unlocked);
+
+            expect(
+                lastAlertButtons().map(({ text, style }) => ({ text, style }))
+            ).toEqual([
+                { text: SHARE, style: undefined },
+                { text: DELETE, style: 'destructive' },
+                { text: NOT_NOW, style: 'cancel' }
+            ]);
+        });
+
+        it('uses the singular for one file and one CSV, and omits the credentials warning without configs', async () => {
             mockDocuments([file('zeus_20250212_140719_ln_payments.csv')]);
 
-            await promptLegacyExportCleanup();
+            await promptLegacyExportCleanup(unlocked);
 
-            const message = (Alert.alert as jest.Mock).mock.calls[0][1];
-            expect(message).toContain('{"total":1,"configs":0,"csvs":1}');
-            expect(message).not.toContain('configWarning');
+            const message = lastMessage();
+            expect(message).toContain(
+                'left 1 export file (0 wallet config backups, 1 activity CSV) in'
+            );
+            expect(message).not.toContain(CONFIG_WARNING);
+        });
+
+        it('uses the singular for one config backup', async () => {
+            mockDocuments([file('20260101-120000.zeus-wallet-config-backup')]);
+
+            await promptLegacyExportCleanup(unlocked);
+
+            expect(lastMessage()).toContain(
+                'left 1 export file (1 wallet config backup, 0 activity CSVs) in'
+            );
+        });
+
+        it('uses the plural for several config backups and CSVs', async () => {
+            mockDocuments([
+                file('20260101-120000.zeus-wallet-config-backup'),
+                file('20260102-120000.zeus-wallet-config-backup'),
+                file('zeus_20250212_140719_ln_invoices.csv'),
+                file('zeus_20250212_140719_ln_payments.csv')
+            ]);
+
+            await promptLegacyExportCleanup(unlocked);
+
+            expect(lastMessage()).toContain(
+                'left 4 export files (2 wallet config backups, 2 activity CSVs) in'
+            );
+        });
+
+        it('stays quiet in the POS till, then prompts once when the user leaves it', async () => {
+            // Wallet startup or a refresh while the till is up
+            await promptLegacyExportCleanup(inPos);
+            expect(Alert.alert).not.toHaveBeenCalled();
+            expect(RNFS.readDir).not.toHaveBeenCalled();
+
+            // unlocked out of POS into the wallet
+            await promptLegacyExportCleanup(unlocked);
+            expect(Alert.alert).toHaveBeenCalledTimes(1);
+
+            // a second exit from POS or a later Wallet refresh this launch
+            await promptLegacyExportCleanup(inPos);
+            await promptLegacyExportCleanup(unlocked);
+            expect(Alert.alert).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not prompt before unlock, and still prompts after it', async () => {
+            await promptLegacyExportCleanup(locked);
+            expect(Alert.alert).not.toHaveBeenCalled();
+            expect(RNFS.readDir).not.toHaveBeenCalled();
+
+            await promptLegacyExportCleanup(unlocked);
+            expect(Alert.alert).toHaveBeenCalledTimes(1);
         });
 
         it('Share: shares every legacy file, then deletes them and sets the flag', async () => {
-            await promptLegacyExportCleanup();
-            await pressButton('general.share');
+            await promptLegacyExportCleanup(unlocked);
+            await pressButton(SHARE);
 
             const dir = shareDir();
             expect(dir.startsWith(`${STAGING}/`)).toBe(true);
@@ -252,8 +331,8 @@ describe('LegacyExportUtils', () => {
             );
             (RNFS.exists as jest.Mock).mockResolvedValue(true);
 
-            await promptLegacyExportCleanup();
-            await pressButton('general.share');
+            await promptLegacyExportCleanup(unlocked);
+            await pressButton(SHARE);
 
             // only this share's staging subdir is removed, never the
             // originals or another share's staging
@@ -262,7 +341,7 @@ describe('LegacyExportUtils', () => {
             expect(mockStore[LEGACY_EXPORT_PROMPT_KEY]).toBeDefined();
 
             resetLegacyExportPromptSession();
-            await promptLegacyExportCleanup();
+            await promptLegacyExportCleanup(unlocked);
             expect(Alert.alert).toHaveBeenCalledTimes(2);
         });
 
@@ -272,8 +351,8 @@ describe('LegacyExportUtils', () => {
                 file('a_b.zeus-wallet-config-backup')
             ]);
 
-            await promptLegacyExportCleanup();
-            await pressButton('general.share');
+            await promptLegacyExportCleanup(unlocked);
+            await pressButton(SHARE);
 
             const dir = shareDir();
             expect((RNFS.copyFile as jest.Mock).mock.calls).toEqual([
@@ -293,8 +372,8 @@ describe('LegacyExportUtils', () => {
                 new Error('ENOSPC')
             );
 
-            await promptLegacyExportCleanup();
-            await pressButton('general.share');
+            await promptLegacyExportCleanup(unlocked);
+            await pressButton(SHARE);
 
             expect(Share.open).not.toHaveBeenCalled();
             expect(unlinkedPaths()).not.toEqual(
@@ -304,8 +383,8 @@ describe('LegacyExportUtils', () => {
         });
 
         it('Delete: deletes exactly the legacy files and sets the flag', async () => {
-            await promptLegacyExportCleanup();
-            await pressButton('general.delete');
+            await promptLegacyExportCleanup(unlocked);
+            await pressButton(DELETE);
 
             expect(Share.open).not.toHaveBeenCalled();
             expect(unlinkedPaths()).toEqual(LEGACY_PATHS);
@@ -318,35 +397,35 @@ describe('LegacyExportUtils', () => {
                 new Error('EPERM')
             );
 
-            await promptLegacyExportCleanup();
-            await pressButton('general.delete');
+            await promptLegacyExportCleanup(unlocked);
+            await pressButton(DELETE);
 
             expect(unlinkedPaths()).toEqual(LEGACY_PATHS);
             expect(mockStore[LEGACY_EXPORT_CLEANUP_KEY]).toBe('true');
         });
 
         it('Not now: deletes nothing, stays quiet this session, prompts again next launch', async () => {
-            await promptLegacyExportCleanup();
-            await pressButton('views.Wallet.legacyExports.notNow');
+            await promptLegacyExportCleanup(unlocked);
+            await pressButton(NOT_NOW);
 
             expect(RNFS.unlink).not.toHaveBeenCalled();
             expect(mockStore[LEGACY_EXPORT_CLEANUP_KEY]).toBeUndefined();
 
             // later Wallet refreshes in the same session
-            await promptLegacyExportCleanup();
+            await promptLegacyExportCleanup(unlocked);
             expect(Alert.alert).toHaveBeenCalledTimes(1);
 
             // next launch
             resetLegacyExportPromptSession();
             await checkLegacyExportFiles();
-            await promptLegacyExportCleanup();
+            await promptLegacyExportCleanup(unlocked);
             expect(Alert.alert).toHaveBeenCalledTimes(2);
         });
 
         it('marks the cleanup done without a prompt when the files are already gone', async () => {
             mockDocuments([]);
 
-            await promptLegacyExportCleanup();
+            await promptLegacyExportCleanup(unlocked);
 
             expect(Alert.alert).not.toHaveBeenCalled();
             expect(mockStore[LEGACY_EXPORT_CLEANUP_KEY]).toBe('true');
@@ -356,7 +435,7 @@ describe('LegacyExportUtils', () => {
         it('does not prompt once the cleanup flag is set', async () => {
             mockStore[LEGACY_EXPORT_CLEANUP_KEY] = 'true';
 
-            await promptLegacyExportCleanup();
+            await promptLegacyExportCleanup(unlocked);
 
             expect(Alert.alert).not.toHaveBeenCalled();
             expect(RNFS.readDir).not.toHaveBeenCalled();
@@ -365,14 +444,14 @@ describe('LegacyExportUtils', () => {
         it('does not prompt on Android', async () => {
             (Platform.OS as any) = 'android';
 
-            await promptLegacyExportCleanup();
+            await promptLegacyExportCleanup(unlocked);
 
             expect(Alert.alert).not.toHaveBeenCalled();
         });
     });
 
     it('does not prompt when nothing was recorded as pending', async () => {
-        await promptLegacyExportCleanup();
+        await promptLegacyExportCleanup(unlocked);
 
         expect(Alert.alert).not.toHaveBeenCalled();
         expect(RNFS.readDir).not.toHaveBeenCalled();

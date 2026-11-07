@@ -32,6 +32,7 @@ import {
     isWipePending,
     markWipePending
 } from '../utils/DataClearUtils';
+import { promptLegacyExportCleanup } from '../utils/LegacyExportUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { restartApp } from '../utils/RestartUtils';
 import {
@@ -194,6 +195,17 @@ export default class Lockscreen extends React.Component<
         }
     };
 
+    // Unlocking out of the POS till (its wallet button opens this screen
+    // with Wallet as the pending screen) pops back to a Wallet screen that
+    // does not rerun its startup path, where the legacy export prompt is
+    // otherwise shown, so it is offered here
+    proceedAfterUnlock = (targetScreen?: string, navigationParams?: any) => {
+        this.proceed(targetScreen, navigationParams);
+        if (targetScreen === 'Wallet') {
+            promptLegacyExportCleanup(this.props.SettingsStore);
+        }
+    };
+
     async componentDidMount() {
         const { SettingsStore, navigation, route } = this.props;
         const { settings } = SettingsStore;
@@ -266,7 +278,7 @@ export default class Lockscreen extends React.Component<
                 SettingsStore.setPosStatus('inactive');
                 await this.resetAuthenticationAttempts();
                 SettingsStore.setLoginStatus(true);
-                this.proceed(
+                this.proceedAfterUnlock(
                     pendingNavigation?.screen,
                     pendingNavigation?.params
                 );
@@ -537,7 +549,7 @@ export default class Lockscreen extends React.Component<
                         }
                         await this.resetAuthenticationAttempts();
                         const { pendingNavigation } = route.params;
-                        this.proceed(
+                        this.proceedAfterUnlock(
                             pendingNavigation.screen,
                             pendingNavigation.params
                         );

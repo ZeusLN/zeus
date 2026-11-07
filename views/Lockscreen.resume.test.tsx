@@ -55,6 +55,9 @@ jest.mock('../utils/DataClearUtils', () => ({
     isWipePending: jest.fn(),
     markWipePending: jest.fn()
 }));
+jest.mock('../utils/LegacyExportUtils', () => ({
+    promptLegacyExportCleanup: jest.fn()
+}));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/LockKdf');
 jest.mock('../utils/RestartUtils', () => ({

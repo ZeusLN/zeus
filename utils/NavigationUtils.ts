@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { settingsStore } from '../stores/Stores';
 import { hasLockCredential } from './LockVerifierUtils';
+import { promptLegacyExportCleanup } from './LegacyExportUtils';
 
 // Screens that an active POS session can open without the PIN. Their own
 // links to other screens go through lockRouteGuard like every other
@@ -131,6 +132,11 @@ const protectedNavigation = async (
     } else {
         if (disactivatePOS) setPosStatus('inactive');
         navigation.navigate(route, routeParams);
+        // Without a login method the till's wallet button leaves POS here
+        // instead of on the Lockscreen (see Lockscreen.proceedAfterUnlock)
+        if (disactivatePOS && route === 'Wallet') {
+            promptLegacyExportCleanup(settingsStore);
+        }
     }
 };
 

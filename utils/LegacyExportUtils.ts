@@ -17,9 +17,10 @@ import { localeString } from './LocaleUtils';
 // the Files app showed as the ZEUS folder. File sharing is now disabled, so
 // those files are invisible to the user but still swept into iCloud/iTunes
 // backups. They are not deleted behind the user's back: the startup
-// migration only records that they exist, and after unlock the user is
-// asked once per launch to share them (then they are deleted) or delete
-// them. The cleanup flag is set only after one of those two choices.
+// migration only records that they exist, and after unlock, outside the POS
+// till, the user is asked once per launch to share them (then they are
+// deleted) or delete them. The cleanup flag is set only after one of those
+// two choices.
 export const LEGACY_EXPORT_CLEANUP_KEY = 'legacy-export-file-cleanup';
 export const LEGACY_EXPORT_PROMPT_KEY = 'legacy-export-file-prompt';
 
@@ -154,6 +155,14 @@ export const shareLegacyExports = async (
     return true;
 };
 
+// The parts of SettingsStore the prompt checks. Typed here instead of
+// imported: this module is in the SettingsStore graph via the startup
+// migration.
+export interface LegacyExportPromptSession {
+    loginRequired: () => unknown;
+    posViewActive: () => unknown;
+}
+
 // One prompt per launch; Not now (or a cancelled share) asks again on the
 // next launch, so no file is lost without an explicit choice.
 let promptedThisSession = false;
@@ -162,8 +171,16 @@ export const resetLegacyExportPromptSession = () => {
     promptedThisSession = false;
 };
 
-export const promptLegacyExportCleanup = async (): Promise<void> => {
+// Called by Wallet at the end of its startup path and by the Lockscreen (or
+// protectedNavigation, without a login method) when the user leaves the POS
+// till for the wallet, which does not rerun that path. Never shown over the
+// Lockscreen or the till: a call made there does not use up this launch's
+// prompt, so a later exit from POS still shows it.
+export const promptLegacyExportCleanup = async (
+    session: LegacyExportPromptSession
+): Promise<void> => {
     if (Platform.OS !== 'ios' || promptedThisSession) return;
+    if (session.loginRequired() || session.posViewActive()) return;
     promptedThisSession = true;
 
     let files: LegacyExportFiles | null;
@@ -176,24 +193,48 @@ export const promptLegacyExportCleanup = async (): Promise<void> => {
     if (!files) return;
 
     const pending = files;
+    const total = totalFiles(pending);
+    const configs = pending.config.length;
+    const csvs = pending.csv.length;
+    // literal keys, so check-locales can find them
     let message = localeString('views.Wallet.legacyExports.message', {
-        total: totalFiles(pending),
-        configs: pending.config.length,
-        csvs: pending.csv.length
+        files: localeString(
+            total === 1
+                ? 'views.Wallet.legacyExports.filesSingular'
+                : 'views.Wallet.legacyExports.files',
+            { count: total }
+        ),
+        configs: localeString(
+            configs === 1
+                ? 'views.Wallet.legacyExports.configsSingular'
+                : 'views.Wallet.legacyExports.configs',
+            { count: configs }
+        ),
+        csvs: localeString(
+            csvs === 1
+                ? 'views.Wallet.legacyExports.csvsSingular'
+                : 'views.Wallet.legacyExports.csvs',
+            { count: csvs }
+        )
     });
-    if (pending.config.length > 0) {
+    if (configs > 0) {
         message += `\n\n${localeString(
             'views.Wallet.legacyExports.configWarning'
         )}`;
     }
 
+    // iOS lists three or more actions top to bottom in this order, except
+    // that the cancel action always goes last, so this shows Share, Delete,
+    // Not now
     Alert.alert(
         localeString('views.Wallet.legacyExports.title'),
         message,
         [
             {
-                text: localeString('views.Wallet.legacyExports.notNow'),
-                style: 'cancel'
+                text: localeString('general.share'),
+                onPress: async () => {
+                    await shareLegacyExports(pending);
+                }
             },
             {
                 text: localeString('general.delete'),
@@ -201,10 +242,8 @@ export const promptLegacyExportCleanup = async (): Promise<void> => {
                 onPress: () => deleteLegacyExports(pending)
             },
             {
-                text: localeString('general.share'),
-                onPress: async () => {
-                    await shareLegacyExports(pending);
-                }
+                text: localeString('views.Wallet.legacyExports.notNow'),
+                style: 'cancel'
             }
         ],
         { cancelable: false }
