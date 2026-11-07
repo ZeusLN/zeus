@@ -1812,6 +1812,7 @@
     "stores.InvoicesStore.errorRedeemingWithdrawalRequest": "Error redeeming withdrawal request",
     "stores.InvoicesStore.lspFeeAboveMaxWithdrawable": "The withdrawal amount doesn't cover the LSP's {fee} sats setup fee. Adding the fee on top would withdraw {total} sats, more than the {max} sats this service allows.",
     "stores.TransactionsStore.sendOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this transaction was sent. Check your on-chain activity before sending again.",
+    "stores.TransactionsStore.preimageMismatch": "The node reported this payment as sent, but the preimage it returned does not match the payment hash. Check the Activity view before paying again.",
     "stores.SettingsStore.btcPayImplementationSupport": "Sorry, we currently only support BTCPay instances using LND",
     "stores.SettingsStore.btcPayFetchConfigError": "Error fetching BTCPay configuration",
     "stores.SettingsStore.btcPayFetchConfirmMessage": "ZEUS will contact {host} to fetch this BTCPay node configuration. Only continue if you trust this QR code.",

@@ -177,6 +177,27 @@ describe('SendingLightning retry', () => {
         expect(navigation.goBack).toHaveBeenCalledTimes(1);
     });
 
+    it('does not offer Try Again when the node reported the payment as sent', async () => {
+        // TransactionsStore after a success whose preimage doesn't hash to
+        // the payment hash
+        const navigation = await renderView({
+            status: 'SUCCEEDED',
+            error: true,
+            error_msg: 'stores.TransactionsStore.preimageMismatch'
+        });
+
+        expect(hosts('PaymentErrorView')).toHaveLength(1);
+        expect(hosts('PaymentSuccessView')).toHaveLength(0);
+        expect(
+            screen.queryByRole('button', { name: TRY_AGAIN })
+        ).not.toBeOnTheScreen();
+
+        await fireEvent.press(
+            screen.getByRole('button', { name: GO_TO_WALLET })
+        );
+        expect(navigation.popTo).toHaveBeenCalledWith('Wallet');
+    });
+
     it('disables Try Again while the node is still being checked for the payment', async () => {
         // a dispatch error is shown, but tracking still holds the send
         // guard, which would silently ignore the retry
@@ -585,6 +606,21 @@ describe('SendingLightning refreshes when the payment resolves', () => {
         expect(
             props.TransactionsStore.sendPaymentSilently
         ).not.toHaveBeenCalled();
+    });
+
+    it('does not donate for a success whose preimage does not match', async () => {
+        const props = await resolveWith({
+            status: 'SUCCEEDED',
+            error: true,
+            error_msg: 'stores.TransactionsStore.preimageMismatch'
+        });
+
+        expect(loadDonationLnurl).not.toHaveBeenCalled();
+        expect(
+            props.TransactionsStore.sendPaymentSilently
+        ).not.toHaveBeenCalled();
+        // the node says the payment went out, so balances are refreshed
+        expect(props.BalanceStore.getCombinedBalance).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes and donates once for a completed payment', async () => {
