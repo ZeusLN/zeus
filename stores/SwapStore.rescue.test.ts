@@ -851,6 +851,51 @@ describe('SwapStore key index after a rescue key restore', () => {
         expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
     });
 
+    it('gives two swaps created at once different indexes', async () => {
+        storageBacking[SWAPS_LAST_USED_KEY] = '7';
+        const store = newStore();
+
+        const [a, b] = await Promise.all([
+            store.generateNewKey(),
+            store.generateNewKey()
+        ]);
+
+        expect([a.index, b.index].sort()).toEqual([7, 8]);
+        expect(storageBacking[SWAPS_LAST_USED_KEY]).toBe('9');
+    });
+
+    it('asks the host once for two swaps created at once after a restore', async () => {
+        hostLists(HOST_SWAPS);
+        const store = newStore();
+
+        const [a, b] = await Promise.all([
+            store.generateNewKey(),
+            store.generateNewKey()
+        ]);
+
+        expect([a.index, b.index].sort()).toEqual([2, 3]);
+        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('allocates the next index after a failed allocation', async () => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        (ReactNativeBlobUtil.fetch as jest.Mock)
+            .mockRejectedValueOnce(new Error('offline'))
+            .mockResolvedValue({ data: JSON.stringify(HOST_SWAPS) });
+        const store = newStore();
+
+        const [failed, next] = await Promise.allSettled([
+            store.generateNewKey(),
+            store.generateNewKey()
+        ]);
+
+        expect(failed.status).toBe('rejected');
+        expect(next).toEqual({
+            status: 'fulfilled',
+            value: expect.objectContaining({ index: 2 })
+        });
+    });
+
     it('starts a newly generated key at 0 without asking the host', async () => {
         delete storageBacking[SWAPS_RESCUE_KEY];
         storageBacking[SWAPS_LAST_USED_KEY] = '7';

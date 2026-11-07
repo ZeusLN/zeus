@@ -268,6 +268,18 @@ export default class SwapStore {
         return run;
     };
 
+    // Every read-modify-write of SWAPS_LAST_USED_KEY runs through
+    // withKeyIndex, one at a time. Two swaps created at once would
+    // otherwise both read the counter before either wrote it back and
+    // take the same key index, and so the same preimage.
+    private keyIndexQueue: Promise<unknown> = Promise.resolve();
+
+    private withKeyIndex = <T>(update: () => Promise<T>): Promise<T> => {
+        const run = this.keyIndexQueue.then(update, update);
+        this.keyIndexQueue = run.catch(() => undefined);
+        return run;
+    };
+
     constructor(nodeInfoStore: NodeInfoStore, settingsStore: SettingsStore) {
         this.nodeInfoStore = nodeInfoStore;
         this.settingsStore = settingsStore;
@@ -2097,12 +2109,13 @@ export default class SwapStore {
     /**
      * Moves the key index counter past the swaps given, never back.
      */
-    private advanceLastUsedKey = async (swaps: any[]): Promise<void> => {
-        const next = keyIndexAfter(swaps);
-        if (next > (await this.getLastUsedKey())) {
-            await this.setLastUsedKey(next);
-        }
-    };
+    private advanceLastUsedKey = (swaps: any[]): Promise<void> =>
+        this.withKeyIndex(async () => {
+            const next = keyIndexAfter(swaps);
+            if (next > (await this.getLastUsedKey())) {
+                await this.setLastUsedKey(next);
+            }
+        });
 
     /**
      * A rescue key without a key index counter was restored on this device
@@ -2152,11 +2165,14 @@ export default class SwapStore {
 
     @action
     public generateNewKey = async () => {
-        if (!(await Storage.getItem(SWAPS_LAST_USED_KEY))) {
-            await this.skipUsedKeyIndexes();
-        }
-        const index = await this.getLastUsedKey();
-        await this.setLastUsedKey(index + 1);
+        const index = await this.withKeyIndex(async () => {
+            if (!(await Storage.getItem(SWAPS_LAST_USED_KEY))) {
+                await this.skipUsedKeyIndexes();
+            }
+            const next = await this.getLastUsedKey();
+            await this.setLastUsedKey(next + 1);
+            return next;
+        });
         const keys = await this.deriveKey(index);
         return { index, keys };
     };
