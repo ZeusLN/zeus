@@ -10,6 +10,10 @@ import NodeInfoStore from './NodeInfoStore';
 import SettingsStore from './SettingsStore';
 
 import BackendUtils from '../utils/BackendUtils';
+import {
+    isValidAuthChallenge,
+    INVALID_AUTH_CHALLENGE_ERROR
+} from '../utils/AuthChallengeUtils';
 import { localeString } from '../utils/LocaleUtils';
 
 import Storage from '../storage';
@@ -115,6 +119,9 @@ export default class LightningAddressStore {
             if (authResponse.info().status !== 200) throw authData.error;
 
             const { verification } = authData;
+            if (!isValidAuthChallenge(verification)) {
+                throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
+            }
             const signData = await BackendUtils.signMessage(verification);
             const signature = signData.zbase || signData.signature;
 
