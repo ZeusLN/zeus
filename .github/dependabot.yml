@@ -32,6 +32,14 @@ updates:
       # fires onSlidingComplete twice.
       - dependency-name: "@react-native-community/slider"
         versions: ["5.2.2"]
+      # @babel/runtime has to match the Babel 7 toolchain that
+      # @react-native/babel-preset uses (@babel/core and
+      # plugin-transform-runtime 7.x). 8.x drops @babel/runtime/regenerator
+      # and 27 helpers Babel 7 can still emit, so a later syntax or config
+      # change would fail the Metro build. Lift this when React Native's
+      # preset moves to Babel 8.
+      - dependency-name: "@babel/runtime"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions used by the CI workflows
   - package-ecosystem: "github-actions"
