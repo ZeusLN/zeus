@@ -1065,6 +1065,9 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
 
         expect(store.paymentInFlight).toBe(false);
         expect(store.status).toBe('IN_FLIGHT');
+        expect(store.error).toBe(false);
+        // the send screen warns to check Activity before sending again
+        expect(store.paymentOutcomeUnverified).toBe(true);
         expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
     });
 
