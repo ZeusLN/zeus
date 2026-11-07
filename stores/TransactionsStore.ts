@@ -1467,6 +1467,10 @@ export default class TransactionsStore {
         this.payment_route = result.payment_route;
         // keys the outcome leaves unset keep their current values
         Object.assign(this, this.getPaymentOutcome(result));
+        // still in flight on a backend that can't be asked how it ended
+        // (no payment lookup, e.g. LDK Node): the guard is released, so
+        // warn before the user sends it again
+        if (status === 'IN_FLIGHT') this.paymentOutcomeUnverified = true;
 
         const isSuccess = status === 'complete' || status === 'SUCCEEDED';
 
