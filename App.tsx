@@ -54,6 +54,7 @@ import StealthModeUtils from './utils/StealthModeUtils';
 import StealthModeWrapper from './components/StealthModeWrapper';
 import { AppContainer } from './components/layout/AppContainer';
 import CopiedToastHost from './components/CopiedToast';
+import ThemeTransitionHost from './components/ThemeTransition';
 import AlertModal from './components/Modals/AlertModal';
 import ExternalLinkModal from './components/Modals/ExternalLinkModal';
 import AndroidNfcModal from './components/Modals/AndroidNfcModal';
@@ -113,6 +114,8 @@ import Currency from './views/Settings/Currency';
 import SelectCurrency from './views/Settings/SelectCurrency';
 import Display from './views/Settings/Display';
 import DateTime from './views/Settings/DateTime';
+import ThemePicker from './views/Settings/ThemePicker';
+import ThemeDetails from './views/Settings/ThemeDetails';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import Support from './views/Settings/Support';
 import Help from './views/Settings/Help';
@@ -765,6 +768,18 @@ export default class App extends React.PureComponent {
                                                                 name="DateTime" // @ts-ignore:next-line
                                                                 component={
                                                                     DateTime
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="ThemePicker" // @ts-ignore:next-line
+                                                                component={
+                                                                    ThemePicker
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="ThemeDetails" // @ts-ignore:next-line
+                                                                component={
+                                                                    ThemeDetails
                                                                 }
                                                             />
                                                             <Stack.Screen
@@ -1838,6 +1853,7 @@ export default class App extends React.PureComponent {
                                 {/* @ts-ignore:next-line */}
                                 <RestoreChannelModal />
                                 <CopiedToastHost />
+                                <ThemeTransitionHost />
                             </GestureHandlerRootView>
                         </PushNotificationManager>
                     </AppContainer>
