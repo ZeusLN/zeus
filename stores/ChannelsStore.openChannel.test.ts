@@ -9,6 +9,7 @@ jest.mock('../utils/BackendUtils', () => ({
     fundPsbt: jest.fn(),
     signPsbt: jest.fn(),
     fundingStateStep: jest.fn(),
+    releaseOutput: jest.fn(),
     connectPeer: jest.fn(),
     getPendingChannels: jest.fn(),
     getChannels: jest.fn(),
@@ -36,6 +37,7 @@ const openChannelStream = BackendUtils.openChannelStream as jest.Mock;
 const fundPsbt = BackendUtils.fundPsbt as jest.Mock;
 const signPsbt = BackendUtils.signPsbt as jest.Mock;
 const fundingStateStep = BackendUtils.fundingStateStep as jest.Mock;
+const releaseOutput = BackendUtils.releaseOutput as jest.Mock;
 const connectPeer = BackendUtils.connectPeer as jest.Mock;
 
 // cln-rest skips the node-info enrichment reaction; the open path only
@@ -438,9 +440,11 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             fundPsbt,
             signPsbt,
             fundingStateStep,
+            releaseOutput,
             connectPeer,
             openChannelSync
         ].forEach((mock) => mock.mockReset());
+        releaseOutput.mockResolvedValue({});
         // a newer open stays pending unless a test answers it
         openChannelStream.mockImplementation(never);
         openChannelSync.mockImplementation(never);
@@ -1239,6 +1243,177 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
                 expect(store.errorOpenChannel).toBe(false);
                 expect(store.syncOpensInFlight).toBe(0);
             });
+        });
+    });
+
+    describe('funds on failure', () => {
+        // the inputs fundPsbt leased for the funding transaction
+        const LOCKED = [
+            { id: 'lock-id', outpoint: { txid_str: 'aa', output_index: 0 } },
+            { id: 'lock-id', outpoint: { txid_str: 'bb', output_index: 1 } }
+        ];
+        const released = () =>
+            releaseOutput.mock.calls.map(([request]: any) => request);
+        const cancels = () =>
+            fundingSteps()
+                .filter((step: any) => step.shim_cancel)
+                .map((step: any) => step.shim_cancel.pending_chan_id);
+        const failStep = (kind: 'psbt_verify' | 'psbt_finalize', result: any) =>
+            fundingStateStep.mockImplementation(async (step: any) => {
+                if (step[kind] && !step[kind].skip_finalize) {
+                    if (result instanceof Error) throw result;
+                    return result;
+                }
+                return {};
+            });
+        const openBatchOf3 = (store: ChannelsStore) =>
+            (store as any).openChannel(
+                new OpenChannelRequest({
+                    node_pubkey_string: '02peer',
+                    local_funding_amount: '100000',
+                    sat_per_vbyte: '2',
+                    account: 'default',
+                    additionalChannels: [
+                        { node_pubkey_string: '02b', satAmount: '50000' },
+                        { node_pubkey_string: '02c', satAmount: '50000' }
+                    ]
+                })
+            );
+
+        beforeEach(() => {
+            fundPsbt.mockResolvedValue({
+                funded_psbt: PSBT,
+                locked_utxos: LOCKED
+            });
+        });
+
+        it('releases the leased inputs and cancels the shim when verifying fails', async () => {
+            openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+            failStep('psbt_verify', new Error('psbt invalid'));
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            await flush();
+
+            expect(released()).toEqual(LOCKED);
+            expect(cancels()).toEqual(['chan-1']);
+            expect(store.errorOpenChannel).toBe(true);
+        });
+
+        it('releases the leased inputs and cancels the shim on a verify publish error', async () => {
+            openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+            failStep('psbt_verify', { publish_error: 'peer is not online' });
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            await flush();
+
+            expect(released()).toEqual(LOCKED);
+            expect(cancels()).toEqual(['chan-1']);
+        });
+
+        it('releases the leased inputs and cancels every shim when a batch channel fails to verify', async () => {
+            openChannelStream
+                .mockResolvedValueOnce(psbtFund('chan-a'))
+                .mockResolvedValueOnce(psbtFund('chan-b'))
+                .mockResolvedValueOnce(psbtFund('chan-c'));
+            fundingStateStep.mockImplementation(async (step: any) => {
+                if (step.psbt_verify?.pending_chan_id === 'chan-b')
+                    throw new Error('psbt invalid');
+                return {};
+            });
+            const store = makeStore();
+            enterScreen(store);
+            openBatchOf3(store);
+            await flush();
+
+            expect(released()).toEqual(LOCKED);
+            expect(new Set(cancels())).toEqual(
+                new Set(['chan-a', 'chan-b', 'chan-c'])
+            );
+            expect(store.syncOpensInFlight).toBe(0);
+        });
+
+        it('releases the inputs of a superseded open that fails to verify', async () => {
+            const first = held();
+            openChannelStream.mockReturnValueOnce(first.promise);
+            failStep('psbt_verify', new Error('psbt invalid'));
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            enterScreen(store);
+
+            first.resolve(psbtFund('chan-1'));
+            await flush();
+            expect(released()).toEqual(LOCKED);
+            expect(cancels()).toEqual(['chan-1']);
+        });
+
+        it('cancels the shim but has nothing to release when funding fails', async () => {
+            openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+            fundPsbt.mockRejectedValueOnce(new Error('no funds'));
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            await flush();
+
+            expect(releaseOutput).not.toHaveBeenCalled();
+            expect(cancels()).toEqual(['chan-1']);
+        });
+
+        it('keeps the leases and the shim of a PSBT handed to the user to sign', async () => {
+            openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+            signPsbt.mockRejectedValue(new Error('no keys'));
+            failStep('psbt_finalize', { publish_error: 'not signed' });
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            await flush();
+
+            expect(store.funded_psbt).toBe(PSBT);
+            expect(releaseOutput).not.toHaveBeenCalled();
+            expect(cancels()).toEqual([]);
+        });
+
+        it('releases the inputs of a superseded open whose finalize fails, but keeps its shim', async () => {
+            const first = held();
+            openChannelStream.mockReturnValueOnce(first.promise);
+            failStep('psbt_finalize', new Error('no'));
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            enterScreen(store);
+
+            first.resolve(psbtFund('chan-1'));
+            await flush();
+            expect(released()).toEqual(LOCKED);
+            // the funding transaction may have been published
+            expect(cancels()).toEqual([]);
+        });
+
+        it('keeps the inputs of an open that went through', async () => {
+            openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            await flush();
+
+            expect(store.channelSuccess).toBe(true);
+            expect(releaseOutput).not.toHaveBeenCalled();
+            expect(cancels()).toEqual([]);
+        });
+
+        it('still ends the open when a release fails', async () => {
+            openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+            failStep('psbt_verify', new Error('psbt invalid'));
+            releaseOutput.mockRejectedValue(new Error('offline'));
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            await flush();
+
+            expect(store.errorMsgChannel).toBe('psbt invalid');
+            expect(store.syncOpensInFlight).toBe(0);
         });
     });
 

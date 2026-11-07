@@ -3,7 +3,7 @@ jest.mock('./utils', () => ({
 }));
 
 import { sendCommand } from './utils';
-import { bumpFee, bumpForceCloseFee, fundPsbt } from './wallet';
+import { bumpFee, bumpForceCloseFee, fundPsbt, releaseOutput } from './wallet';
 
 describe('wallet', () => {
     const sentOptions = () =>
@@ -89,6 +89,17 @@ describe('wallet', () => {
         await bumpForceCloseFee({ chan_point: {} as any, immediate: true });
         expect(sentOptions().starting_feerate).toBeUndefined();
         expect(sentOptions().budget).toBeUndefined();
+    });
+
+    it('releases a leased output with WalletKitReleaseOutput', async () => {
+        const id = new Uint8Array([1, 2, 3]);
+        const outpoint = { txid_str: 'aa', output_index: 1 };
+
+        await releaseOutput({ id, outpoint });
+
+        const { method, options } = (sendCommand as jest.Mock).mock.lastCall[0];
+        expect(method).toBe('WalletKitReleaseOutput');
+        expect(options).toEqual({ id, outpoint });
     });
 
     describe('fundPsbt', () => {

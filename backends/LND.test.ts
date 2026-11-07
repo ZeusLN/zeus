@@ -943,6 +943,26 @@ describe('LND.sendCoins', () => {
     });
 });
 
+describe('LND.releaseOutput', () => {
+    it('releases a leased output through the wallet kit', () => {
+        const lnd = new LND();
+        const postRequest = jest
+            .spyOn(lnd, 'postRequest')
+            .mockResolvedValue({});
+        const request = {
+            id: 'bG9jay1pZA==',
+            outpoint: { txid_str: 'aa', output_index: 1 }
+        };
+
+        lnd.releaseOutput(request);
+
+        expect(postRequest).toHaveBeenCalledWith(
+            '/v2/wallet/utxos/release',
+            request
+        );
+    });
+});
+
 describe('LND.openChannelSync', () => {
     it('passes the channel memo to lnd', () => {
         const lnd = new LND();

@@ -954,6 +954,29 @@ describe('LightningNodeConnect on-chain sends', () => {
     });
 });
 
+describe('LightningNodeConnect.releaseOutput', () => {
+    it('releases a leased output through the wallet kit', async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        (lnc.lnd as any).walletKit = {
+            releaseOutput: jest.fn(async () => ({ status: 'released' }))
+        };
+        const request = {
+            id: 'bG9jay1pZA==',
+            outpoint: { txid_str: 'aa', output_index: 1 }
+        };
+
+        await expect(backend.releaseOutput(request)).resolves.toEqual({
+            status: 'released'
+        });
+        expect((lnc.lnd as any).walletKit.releaseOutput).toHaveBeenCalledWith(
+            request
+        );
+    });
+});
+
 describe('LightningNodeConnect channel opens', () => {
     it('passes the channel memo to lnd', async () => {
         mockSettings.implementation = 'lightning-node-connect';

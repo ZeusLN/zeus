@@ -896,6 +896,10 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .fundPsbt(req)
             .then((data: walletrpc.FundPsbtResponse) => snakeize(data));
+    releaseOutput = async (req: walletrpc.ReleaseOutputRequest) =>
+        await this.lnc.lnd.walletKit
+            .releaseOutput(req)
+            .then((data: walletrpc.ReleaseOutputResponse) => snakeize(data));
     signPsbt = async (req: walletrpc.SignPsbtRequest) =>
         await this.lnc.lnd.walletKit
             .signPsbt(req)

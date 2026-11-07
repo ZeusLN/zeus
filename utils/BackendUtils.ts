@@ -146,6 +146,7 @@ class BackendUtils {
     lnurlAuth = (...args: any[]) => this.call('lnurlAuth', args);
 
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
+    releaseOutput = (...args: any[]) => this.call('releaseOutput', args);
     signPsbt = (...args: any[]) => this.call('signPsbt', args);
     finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);
     publishTransaction = (...args: any[]) =>

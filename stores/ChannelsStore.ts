@@ -59,6 +59,18 @@ const cancelShim = (pending_chan_id: string) =>
             console.log('Could not cancel the funding shim', error)
         );
 
+// Gives inputs fundPsbt leased back to the wallet instead of leaving them
+// locked until the lease expires. Best effort: lnd makes an output
+// spendable again only if it is still unspent.
+const releaseLeases = (lockedUtxos: Array<any>) =>
+    lockedUtxos.forEach(({ id, outpoint }) =>
+        Promise.resolve()
+            .then(() => BackendUtils.releaseOutput({ id, outpoint }))
+            .catch((error: any) =>
+                console.log('Could not release a leased input', error)
+            )
+    );
+
 const openChannelStreamWithTimeout = (request: OpenChannelRequest) => {
     // the request object is reused for every stream of a batch
     const pendingChanId: string | undefined =
@@ -1085,8 +1097,19 @@ export default class ChannelsStore {
             account
         };
 
+        // the inputs fundPsbt leased for the funding transaction
+        let lockedUtxos: Array<any> = [];
+        // a flow that ends before psbt_finalize has published nothing:
+        // give the inputs back and end lnd's PSBT flow for every channel
+        const abandon = () => {
+            releaseLeases(lockedUtxos);
+            lockedUtxos = [];
+            pendingChanIds.forEach(cancelShim);
+        };
+
         BackendUtils.fundPsbt(fundPsbtRequest)
             .then(async (data: any) => {
+                lockedUtxos = data.locked_utxos || [];
                 let funded_psbt: string = new FundedPsbt(
                     data.funded_psbt
                 ).getFormatted();
@@ -1124,6 +1147,7 @@ export default class ChannelsStore {
                             const errorMsg = errorToUserFriendly(
                                 data.publish_error
                             );
+                            abandon();
                             runInAction(() => {
                                 finish();
                                 if (!isCurrent()) return;
@@ -1152,6 +1176,12 @@ export default class ChannelsStore {
                                 }
                             })
                                 .then((data: any) => {
+                                    // a superseded open's PSBT is not
+                                    // handed to the user. Its transaction
+                                    // may have been published, so the shim
+                                    // stays and only the leases go back
+                                    if (data.publish_error && !isCurrent())
+                                        releaseLeases(lockedUtxos);
                                     runInAction(() => {
                                         finish();
                                         if (!isCurrent()) return;
@@ -1174,7 +1204,9 @@ export default class ChannelsStore {
                                         }
                                     });
                                 })
-                                .catch(() =>
+                                .catch(() => {
+                                    if (!isCurrent())
+                                        releaseLeases(lockedUtxos);
                                     runInAction(() => {
                                         finish();
                                         if (!isCurrent()) return;
@@ -1186,12 +1218,13 @@ export default class ChannelsStore {
                                         this.channelRequest = null;
                                         this.peerSuccess = false;
                                         this.channelSuccess = false;
-                                    })
-                                );
+                                    });
+                                });
                         }
                     })
                     .catch((error: any) => {
                         const errorMsg = errorToUserFriendly(error);
+                        abandon();
                         runInAction(() => {
                             finish();
                             if (!isCurrent()) return;
@@ -1207,7 +1240,10 @@ export default class ChannelsStore {
                     });
             })
             .catch((error: any) => {
+                // fundPsbt failed (nothing leased), or a step before the
+                // last psbt_verify did
                 const errorMsg = errorToUserFriendly(error);
+                abandon();
                 runInAction(() => {
                     finish();
                     if (!isCurrent()) return;

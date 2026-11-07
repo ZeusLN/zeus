@@ -60,6 +60,7 @@ const {
     bumpFee,
     bumpForceCloseFee,
     fundPsbt,
+    releaseOutput,
     signPsbt,
     finalizePsbt,
     publishTransaction,
@@ -442,6 +443,7 @@ export default class EmbeddedLND extends LND {
     // getForwardingHistory = () => N/A
     // // Coin Control
     fundPsbt = async (data: any) => await fundPsbt(data);
+    releaseOutput = async (data: any) => await releaseOutput(data);
     signPsbt = async (data: any) => await signPsbt(data);
     finalizePsbt = async (data: any) => await finalizePsbt(data);
     publishTransaction = async (data: any) => {
