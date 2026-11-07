@@ -135,6 +135,26 @@ export const fundPsbt = async ({
 /**
  * @throws
  */
+export const releaseOutput = async ({
+    id,
+    outpoint
+}: walletrpc.IReleaseOutputRequest): Promise<walletrpc.ReleaseOutputResponse> => {
+    const response = await sendCommand<
+        walletrpc.IReleaseOutputRequest,
+        walletrpc.ReleaseOutputRequest,
+        walletrpc.ReleaseOutputResponse
+    >({
+        request: walletrpc.ReleaseOutputRequest,
+        response: walletrpc.ReleaseOutputResponse,
+        method: 'WalletKitReleaseOutput',
+        options: { id, outpoint }
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
 export const signPsbt = async ({
     funded_psbt
 }: {
