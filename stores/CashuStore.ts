@@ -219,6 +219,8 @@ export default class CashuStore {
     // Quotes whose melt call has not returned yet. CDK is still waiting on
     // the mint for these, so reconcilePendingMelts leaves them to the caller.
     private meltsInProgress = new Set<string>();
+    // The reconcilePendingMelts pass in progress, joined by later callers
+    private reconcileRun?: Promise<void>;
     // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
     @observable public cdkInvoices: Array<CashuInvoice> = [];
     @observable public seedVersion?: string;
@@ -3521,10 +3523,17 @@ export default class CashuStore {
         activityStore.getSortedActivity();
     };
 
+    /**
+     * Drops the in-flight record of a melt that will not settle. A record
+     * for the quote that is no longer in flight stays: the payment was
+     * settled and recorded, here or by the pay path.
+     */
     private dropInFlightPayment = async (quote: string): Promise<boolean> => {
         const payments = this.payments || [];
         const remaining = payments.filter(
-            (payment) => payment.meltResponse?.quote?.quote !== quote
+            (payment) =>
+                payment.meltResponse?.quote?.quote !== quote ||
+                !payment.isInTransit
         );
         if (remaining.length === payments.length) return false;
 
@@ -3543,9 +3552,30 @@ export default class CashuStore {
      * wallet's record of it: one the mint has since paid becomes the payment
      * it turned out to be, one the mint settled without paying is dropped,
      * and one still pending is left for the next sweep.
+     *
+     * One pass runs at a time and a caller arriving during it waits for that
+     * pass. Concurrent passes check the same quote at once: CDK fails all
+     * but one with "Concurrent update detected", and a pass that dropped
+     * the quote on that error deleted the payment another pass had just
+     * recorded. A melt tracked after the pass started is left to the next
+     * sweep, as its melt call still holds it.
      */
+    public reconcilePendingMelts = (): Promise<void> => {
+        if (!this.reconcileRun) {
+            const run = this.reconcilePendingMeltsOnce().finally(() => {
+                if (this.reconcileRun === run) this.reconcileRun = undefined;
+            });
+            this.reconcileRun = run;
+        }
+        return this.reconcileRun;
+    };
+
+    private isMeltTracked = (quote: string) =>
+        this.pendingMelts.some((pending) => pending.quote === quote) &&
+        !this.meltsInProgress.has(quote);
+
     @action
-    public reconcilePendingMelts = async () => {
+    private reconcilePendingMeltsOnce = async () => {
         if (!this.cdkInitialized || this.pendingMelts.length === 0) return;
 
         // Same removed-mint gate as checkPendingItems: checking a quote goes
@@ -3558,15 +3588,9 @@ export default class CashuStore {
 
         for (const melt of [...this.pendingMelts]) {
             if (!knownMints.has(this.normalizeMintUrl(melt.mintUrl))) continue;
-            if (this.meltsInProgress.has(melt.quote)) continue;
-            // Settled by its caller while earlier quotes were being checked
-            if (
-                !this.pendingMelts.some(
-                    (pending) => pending.quote === melt.quote
-                )
-            ) {
-                continue;
-            }
+            // Settled by its caller while earlier quotes were being checked,
+            // or its melt call has not returned
+            if (!this.isMeltTracked(melt.quote)) continue;
 
             let quote;
             try {
@@ -3574,17 +3598,28 @@ export default class CashuStore {
                     melt.mintUrl,
                     melt.quote
                 );
-            } catch (e) {
+            } catch (e: any) {
                 console.error(
                     `CashuStore: Error checking melt quote ${melt.quote}:`,
                     e
                 );
+                if (!this.isMeltTracked(melt.quote)) continue;
+                // Another operation was updating the quote in CDK's store
+                // at the same moment. That says nothing about the payment,
+                // so try again on the next sweep.
+                const concurrentUpdate = String(e?.message || e || '')
+                    .toLowerCase()
+                    .includes('concurrent update');
                 // CDK only asks the mint, and so only fails here, once no
                 // melt saga holds the quote. Past its expiry such a quote
                 // cannot settle any more, so stop asking and drop the
                 // in-flight entry with it. An unexpired one is kept: the mint
                 // being unreachable says nothing about the payment.
-                if (melt.expiry && melt.expiry < nowSeconds) {
+                if (
+                    !concurrentUpdate &&
+                    melt.expiry &&
+                    melt.expiry < nowSeconds
+                ) {
                     if (melt.source === 'payment') {
                         activityChanged =
                             (await this.dropInFlightPayment(melt.quote)) ||
@@ -3594,6 +3629,10 @@ export default class CashuStore {
                 }
                 continue;
             }
+
+            // The pay path may have settled the melt while the mint was
+            // being asked
+            if (!this.isMeltTracked(melt.quote)) continue;
 
             const outcome = meltQuoteOutcome(quote);
             if (outcome === 'inFlight') {
