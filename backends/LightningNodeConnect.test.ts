@@ -936,19 +936,25 @@ describe('LightningNodeConnect', () => {
             removed: boolean;
         }>;
 
-        // one native event, delivered to every live JS listener of the name
-        const emit = (name: string, result: string) =>
+        // the streams of a method started on a client, as subscribe() calls
+        const started = (client: any, method: string) =>
+            client.subscribe.mock.calls.filter(
+                ([name]: [string]) => name === method
+            );
+        // the request id of the newest stream of a method on a client
+        const idOf = (client: any, method: string) =>
+            started(client, method).at(-1)[2];
+
+        // one native event, delivered to every live JS listener of the
+        // name and tagged with the request id of the stream it came from
+        const emit = (
+            name: string,
+            result: string,
+            request_id: string = idOf(lnc, name)
+        ) =>
             listeners
                 .filter((l) => l.name === name && !l.removed)
-                .forEach((l) => l.handler({ result }));
-
-        const stubStreams = (lnc: any) => {
-            lnc.lnd.lightning.subscribeTransactions = jest.fn(
-                () => TRANSACTIONS
-            );
-            lnc.lnd.lightning.subscribeInvoices = jest.fn(() => INVOICES);
-            return lnc;
-        };
+                .forEach((l) => l.handler({ result, request_id }));
 
         const tx = (address: string) =>
             JSON.stringify({
@@ -980,7 +986,7 @@ describe('LightningNodeConnect', () => {
                 } as any;
             });
             backend = new LightningNodeConnect();
-            lnc = stubStreams(await openWallet(backend, 'phrase-a'));
+            lnc = await openWallet(backend, 'phrase-a');
         });
 
         afterEach(() => {
@@ -996,12 +1002,8 @@ describe('LightningNodeConnect', () => {
                 backend.watchActivityUpdates(onTransaction, onInvoice)
             );
 
-            expect(
-                lnc.lnd.lightning.subscribeTransactions
-            ).toHaveBeenCalledTimes(1);
-            expect(lnc.lnd.lightning.subscribeInvoices).toHaveBeenCalledTimes(
-                1
-            );
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
+            expect(started(lnc, INVOICES)).toHaveLength(1);
 
             emit(TRANSACTIONS, tx('bc1qa'));
             emit(INVOICES, JSON.stringify({ settled: true }));
@@ -1032,9 +1034,7 @@ describe('LightningNodeConnect', () => {
 
             emit(TRANSACTIONS, tx('bc1qa'));
 
-            expect(
-                lnc.lnd.lightning.subscribeTransactions
-            ).toHaveBeenCalledTimes(1);
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
             expect(onTransaction).toHaveBeenCalledTimes(1);
         });
 
@@ -1052,9 +1052,7 @@ describe('LightningNodeConnect', () => {
                 onReceivedB
             );
 
-            expect(
-                lnc.lnd.lightning.subscribeTransactions
-            ).toHaveBeenCalledTimes(1);
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
 
             emit(TRANSACTIONS, tx('bc1qa'));
             emit(TRANSACTIONS, tx('bc1qa'));
@@ -1076,37 +1074,49 @@ describe('LightningNodeConnect', () => {
             backend.watchActivityUpdates(jest.fn(), jest.fn());
             backend.watchActivityUpdates(jest.fn(), jest.fn());
 
-            expect(
-                lnc.lnd.lightning.subscribeTransactions
-            ).toHaveBeenCalledTimes(2);
-            expect(lnc.lnd.lightning.subscribeInvoices).toHaveBeenCalledTimes(
-                2
-            );
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(2);
+            expect(started(lnc, INVOICES)).toHaveLength(2);
         });
 
         it('starts fresh streams on a new LNC client', async () => {
             const first = jest.fn();
             backend.watchActivityUpdates(first, jest.fn());
 
-            const next = stubStreams(await openWallet(backend, 'phrase-b'));
+            const next = await openWallet(backend, 'phrase-b');
             const second = jest.fn();
             backend.watchActivityUpdates(second, jest.fn());
             backend.watchActivityUpdates(jest.fn(), jest.fn());
 
             expect(next).not.toBe(lnc);
-            expect(
-                lnc.lnd.lightning.subscribeTransactions
-            ).toHaveBeenCalledTimes(1);
-            expect(
-                next.lnd.lightning.subscribeTransactions
-            ).toHaveBeenCalledTimes(1);
-            expect(next.lnd.lightning.subscribeInvoices).toHaveBeenCalledTimes(
-                1
-            );
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
+            expect(started(next, TRANSACTIONS)).toHaveLength(1);
+            expect(started(next, INVOICES)).toHaveLength(1);
 
-            emit(TRANSACTIONS, tx('bc1qa'));
+            emit(TRANSACTIONS, tx('bc1qa'), idOf(next, TRANSACTIONS));
 
             expect(second).toHaveBeenCalledTimes(1);
+        });
+
+        it('ignores a late end from the previous client stream', async () => {
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+            const next = await openWallet(backend, 'phrase-b');
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+
+            // the old client's stream closes after the new one started
+            emit(
+                TRANSACTIONS,
+                'rpc error: code = Canceled desc = grpc: the client connection is closing'
+            );
+            const onTransaction = jest.fn();
+            backend.watchActivityUpdates(onTransaction, jest.fn());
+
+            expect(started(next, TRANSACTIONS)).toHaveLength(1);
+
+            // and its last updates do not reach the new wallet's watchers
+            emit(TRANSACTIONS, tx('bc1qa'));
+            expect(onTransaction).not.toHaveBeenCalled();
+            emit(TRANSACTIONS, tx('bc1qa'), idOf(next, TRANSACTIONS));
+            expect(onTransaction).toHaveBeenCalledTimes(1);
         });
     });
 });
