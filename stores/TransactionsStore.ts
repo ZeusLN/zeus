@@ -155,6 +155,11 @@ export default class TransactionsStore {
     // id of the current on-chain send; reset() and the next send change it,
     // so a late result (e.g. a timeout lookup) for an earlier send is dropped
     private sendCoinsSeq = 0;
+    // id of the latest dispatched payment, whose result this store holds.
+    // A result for any other payment is late (its guard was cleared by the
+    // backstop, the tracking ceiling or reset()) and is dropped. reset()
+    // sets it to 0, which no payment has.
+    private dispatchedPaymentSequence = 0;
     // sequence of the payment that set paymentInFlight (null when none);
     // completion callbacks and the backstop timer only clear the flag on
     // behalf of that payment, so overlapping payments (e.g. one that
@@ -205,6 +210,7 @@ export default class TransactionsStore {
     @action
     public reset = () => {
         this.sendCoinsSeq++;
+        this.dispatchedPaymentSequence = 0;
         this.loading = false;
         this.sendOutcomeUnknown = false;
         this.paymentInFlight = false;
@@ -813,6 +819,7 @@ export default class TransactionsStore {
         }
 
         const seq = ++this.paymentSequence;
+        this.dispatchedPaymentSequence = seq;
         this.pendingSendSeqs.add(seq);
         this.paymentInFlight = true;
         this.inFlightOwnerSeq = seq;
@@ -832,6 +839,7 @@ export default class TransactionsStore {
         this.payment_hash = null;
         this.payment_error = null;
         this.status = null;
+        this.noteKey = '';
 
         // The offer path dispatches via payOffer, which only direct-pay
         // backends implement; anywhere else the dispatcher returns false
@@ -963,6 +971,13 @@ export default class TransactionsStore {
                 this.handlePaymentError(err, seq);
             });
     };
+
+    // true when a result for payment `seq` must not touch the send screen:
+    // the user released its guard, or a newer payment (or reset()) has
+    // replaced it. Unscoped results (no `seq`) always apply.
+    private isStalePayment = (seq?: number) =>
+        seq !== undefined &&
+        (this.releasedSeqs.has(seq) || seq !== this.dispatchedPaymentSequence);
 
     // Clears the in-flight guard on behalf of payment `seq`. Callers that
     // can't identify their payment omit `seq` and clear unconditionally,
@@ -1286,7 +1301,7 @@ export default class TransactionsStore {
     @action
     public handlePayment = (result: any, seq?: number) => {
         if (seq !== undefined) this.pendingSendSeqs.delete(seq);
-        if (seq !== undefined && this.releasedSeqs.has(seq)) return;
+        if (this.isStalePayment(seq)) return;
         this.loading = false;
 
         const status = this.getResultStatus(result);
@@ -1397,7 +1412,7 @@ export default class TransactionsStore {
     @action
     public handlePaymentError = (err: Error, seq?: number) => {
         if (seq !== undefined) this.pendingSendSeqs.delete(seq);
-        if (seq !== undefined && this.releasedSeqs.has(seq)) return;
+        if (this.isStalePayment(seq)) return;
         this.error = true;
         this.loading = false;
         // A rejected dispatch (dropped connection, Tor timeout) doesn't
