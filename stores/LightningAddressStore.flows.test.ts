@@ -824,6 +824,57 @@ describe('LightningAddressStore flows', () => {
             expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(1);
             expect(cashuStore.receiveTokenCDK).not.toHaveBeenCalled();
         });
+
+        it('shows a mint rejection to a second caller even when the first was silent', async () => {
+            const { store } = redeemStore();
+            let markPaid: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaid = resolve))
+            );
+            reply('/api/lnurl/nuts/redeem', ok({ token: 'cashuBtoken' }));
+            cashuStore.decodeTokenCDK.mockResolvedValue({
+                mint_url: 'https://other.mint'
+            });
+
+            // socket event (no alerts), then the user taps the payment
+            const first = store.redeemCashu('q1', MINT, 1000, false, true);
+            const tap = store.redeemCashu('q1', MINT, 1000);
+            markPaid({ isPaid: true });
+            await Promise.all([first, tap]);
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.mintMismatch'
+            );
+        });
+
+        it('starts a new redeem for a quote after reset', async () => {
+            const { store } = redeemStore();
+            let markPaid: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaid = resolve))
+            );
+            reply('/api/lnurl/nuts/redeem', ok(), ok());
+
+            const stale = store.redeemCashu('q1', MINT, 1000);
+            store.reset();
+            // the next connection's redeem of the same quote runs itself
+            let markPaidAgain: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaidAgain = resolve))
+            );
+            const current = store.redeemCashu('q1', MINT, 1000);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(2);
+
+            // the stale redeem ending does not drop the current one
+            markPaid({ isPaid: false });
+            await stale;
+            store.redeemCashu('q1', MINT, 1000);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(2);
+
+            markPaidAgain({ isPaid: true });
+            await current;
+        });
     });
 
     describe('deletePayment', () => {

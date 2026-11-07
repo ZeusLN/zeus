@@ -561,7 +561,17 @@ export default class LightningAddressStore {
         // The socket event and Redeem All can name the same quote; the
         // second caller waits for the redeem in flight and gets its result
         const inFlight = this.redeemingQuotes.get(quote_id);
-        if (inFlight) return inFlight;
+        if (inFlight) {
+            const generation = this.generation;
+            return inFlight.then((redeemed) => {
+                // the redeem in flight may be a socket event's, which shows
+                // no alert, so show its mint rejection to this caller
+                if (redeemed === false && generation === this.generation) {
+                    this.rejectUntrustedMint(localNotification);
+                }
+                return redeemed;
+            });
+        }
         const redeem = this.redeemQuote(
             quote_id,
             mint_url,
@@ -569,7 +579,12 @@ export default class LightningAddressStore {
             skipStatus,
             localNotification,
             skipMintCheck
-        ).finally(() => this.redeemingQuotes.delete(quote_id));
+        ).finally(() => {
+            // after a reset the quote may belong to a newer redeem
+            if (this.redeemingQuotes.get(quote_id) === redeem) {
+                this.redeemingQuotes.delete(quote_id);
+            }
+        });
         this.redeemingQuotes.set(quote_id, redeem);
         return redeem;
     };
@@ -902,6 +917,9 @@ export default class LightningAddressStore {
         this.authDate = undefined;
         this.generation += 1;
         this.socketPending = false;
+        // a redeem still running belongs to the previous connection, so
+        // the next one does not wait for it
+        this.redeemingQuotes.clear();
         this.redeemingAll = false;
         if (this.socket) this.socket.disconnect();
         this.socket = undefined;
