@@ -30,6 +30,7 @@ import TextInput from '../../components/TextInput';
 
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import NostrUtils from '../../utils/NostrUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -1007,6 +1008,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                     style={{ width: '100%', marginBottom: 10 }}
                                 >
                                     <Button
+                                        testID={TEST_IDS.mint.addButton}
                                         title={localeString(
                                             'views.Cashu.AddMint.title'
                                         )}

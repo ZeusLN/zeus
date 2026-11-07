@@ -12,6 +12,7 @@ import UnitsStore from '../stores/UnitsStore';
 import FiatStore from '../stores/FiatStore';
 
 import { localeString } from '../utils/LocaleUtils';
+import { TEST_IDS } from '../utils/TestIds';
 import { placeholderColor, themeColor } from '../utils/ThemeUtils';
 import { numberWithCommas, numberWithDecimals } from '../utils/UnitsUtils';
 
@@ -97,6 +98,7 @@ export default class CurrencyList extends React.Component<
                 {BITCOIN_UNITS.map((item, index) => (
                     <React.Fragment key={item.value}>
                         <ListItem
+                            testID={TEST_IDS.currencyList.option(item.value)}
                             containerStyle={{
                                 borderBottomWidth: 0,
                                 backgroundColor: 'transparent'
@@ -158,6 +160,7 @@ export default class CurrencyList extends React.Component<
 
         return (
             <ListItem
+                testID={TEST_IDS.currencyList.option(item.value)}
                 containerStyle={{
                     borderBottomWidth: 0,
                     backgroundColor: 'transparent'

@@ -8,6 +8,7 @@ import CurrencyList from './CurrencyList';
 import CurrencyConverterContent from './CurrencyConverterContent';
 
 import { localeString } from '../utils/LocaleUtils';
+import { TEST_IDS } from '../utils/TestIds';
 import { themeColor } from '../utils/ThemeUtils';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -130,7 +131,10 @@ export default class CurrencySelectorModal extends React.Component<
                 onClosed={this.handleClose}
                 coverScreen={true}
             >
-                <View style={{ flex: 1, paddingTop: 8 }}>
+                <View
+                    testID={TEST_IDS.currencySelectorModal.content}
+                    style={{ flex: 1, paddingTop: 8 }}
+                >
                     <View
                         style={{
                             width: 40,

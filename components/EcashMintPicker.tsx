@@ -27,6 +27,7 @@ interface EcashMintPickerProps {
     overrideMintUrl?: string;
     isReceiveView?: boolean;
     isMultiMintView?: boolean;
+    testID?: string;
 }
 
 @inject('CashuStore', 'SettingsStore')
@@ -45,7 +46,8 @@ export default class EcashMintPicker extends React.Component<
             navigation,
             overrideMintUrl,
             isReceiveView,
-            isMultiMintView
+            isMultiMintView,
+            testID
         } = this.props;
         const {
             cashuWallets,
@@ -176,6 +178,7 @@ export default class EcashMintPicker extends React.Component<
                 return (
                     <View style={styles.wrapperRow}>
                         <TouchableOpacity
+                            testID={testID}
                             onPress={openMints}
                             style={pickerTouchableStyle}
                         >
@@ -209,6 +212,7 @@ export default class EcashMintPicker extends React.Component<
                 return (
                     <View style={styles.wrapperRow}>
                         <TouchableOpacity
+                            testID={testID}
                             onPress={openMints}
                             style={pickerTouchableStyle}
                         >
@@ -229,6 +233,7 @@ export default class EcashMintPicker extends React.Component<
             return (
                 <View style={styles.wrapperRow}>
                     <TouchableOpacity
+                        testID={testID}
                         onPress={openMints}
                         style={pickerTouchableStyle}
                     >
@@ -274,6 +279,7 @@ export default class EcashMintPicker extends React.Component<
         return (
             <View style={styles.wrapperRow}>
                 <TouchableOpacity
+                    testID={testID}
                     onPress={() => {
                         navigation.navigate('Mints', {
                             disableRandom,

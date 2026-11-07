@@ -183,6 +183,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                 >
                     {selectedNode ? (
                         <TouchableOpacity
+                            testID={TEST_IDS.menu.selectedWalletButton}
                             onPress={() => navigation.navigate('Wallets')}
                         >
                             <View
