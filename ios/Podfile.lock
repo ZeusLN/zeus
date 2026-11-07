@@ -1788,10 +1788,10 @@ PODS:
   - react-native-udp (4.1.7):
     - CocoaAsyncSocket
     - React-Core
-  - react-native-vector-icons-feather (13.1.5)
-  - react-native-vector-icons-fontawesome (13.1.5)
-  - react-native-vector-icons-material-design-icons (13.1.5)
-  - react-native-vector-icons-material-icons (13.1.5)
+  - react-native-vector-icons-feather (14.0.0)
+  - react-native-vector-icons-fontawesome (14.0.0)
+  - react-native-vector-icons-material-design-icons (14.0.0)
+  - react-native-vector-icons-material-icons (14.0.0)
   - react-native-view-shot (6.2.1):
     - hermes-engine
     - RCTRequired
@@ -3155,10 +3155,10 @@ SPEC CHECKSUMS:
   react-native-safe-area-context: bcda756e1a9f94e4da773273a62b7d52473d3dc4
   react-native-slider: b721d071c57cf0540e0914a13cb28370932c868e
   react-native-udp: 806f16ab890dd838bc073afcebd6a221d4965572
-  react-native-vector-icons-feather: 97025b189d9584d77215cec3445cec275e92c4f7
-  react-native-vector-icons-fontawesome: c293d5990f222b3e2bb655aa8ab059481a6282e5
-  react-native-vector-icons-material-design-icons: 8d696a2371e2bd5bb5254370c33b5ffbc503e840
-  react-native-vector-icons-material-icons: eaf368e397065aac2cc5a69aeb948c835e186101
+  react-native-vector-icons-feather: 32f485a696f1ac4c3e17216782e7b26475e9e6d4
+  react-native-vector-icons-fontawesome: d62f292e7256c0047d415a1da58955fae1e32162
+  react-native-vector-icons-material-design-icons: 811f6c4447a60d8a66394644093dcffdc546772f
+  react-native-vector-icons-material-icons: c62c72e4fa041a49e2cab6c760e4cb5c1343acb3
   react-native-view-shot: 0f044cd10a9b1d1e91909a2b251d7f8f2ea59c8b
   React-NativeModulesApple: e15200bd014dc9aa18d0ed618eadfbc2a9208de6
   React-networking: 3f805499a95dec58300bf2068d209c2b9691d062
