@@ -784,24 +784,34 @@ describe('LND.restReq errors', () => {
 describe('LND.getTransactions', () => {
     // Follows lnd 0.19+: a negative height is the top of the range, blocks
     // are read backwards when start > end, unconfirmed transactions come
-    // after the mined ones, the page is sliced, then sorted by confirmations
-    const serve = (confirmedHeights: number[], unconfirmed = 0) => {
+    // after the mined ones, the page is sliced, then sorted by confirmations.
+    // On a SQL database a backwards range above the newest block is empty.
+    const serve = (
+        confirmedHeights: number[],
+        unconfirmed = 0,
+        { sql = false } = {}
+    ) => {
         const tip = 900_000;
         const top = 2 ** 31 - 1;
         const lnd = new LND();
         const urls: string[] = [];
         lnd.getRequest = jest.fn(async (route: string) => {
             urls.push(route);
+            if (route === '/v1/getinfo') return { block_height: tip };
             const params = new URLSearchParams(route.split('?')[1]);
             const startHeight = Number(params.get('start_height') || 0);
             const endHeight = Number(params.get('end_height') || -1);
             const max = Number(params.get('max_transactions'));
             const begin = startHeight < 0 ? top : startHeight;
             const end = endHeight < 0 ? top : endHeight;
+            const seekFails =
+                sql && begin > end && !confirmedHeights.some((h) => h >= begin);
             const heights = confirmedHeights
                 .filter(
                     (h) =>
-                        h >= Math.min(begin, end) && h <= Math.max(begin, end)
+                        !seekFails &&
+                        h >= Math.min(begin, end) &&
+                        h <= Math.max(begin, end)
                 )
                 .sort((a, b) => (begin < end ? a - b : b - a));
             const txs = [
@@ -858,6 +868,24 @@ describe('LND.getTransactions', () => {
         ]);
         expect(urls).toEqual([
             '/v1/transactions?end_height=1&start_height=-1&max_transactions=500'
+        ]);
+    });
+
+    it('reads the recent blocks forwards, then older ones backwards, from lnd on a SQL database', async () => {
+        const { lnd, urls } = serve([800_000, 899_999], 1, { sql: true });
+
+        const { transactions } = await lnd.getTransactions();
+
+        expect(transactions.map((tx: any) => tx.tx_hash)).toEqual([
+            'pending0',
+            'h899999',
+            'h800000'
+        ]);
+        expect(urls).toEqual([
+            '/v1/transactions?end_height=1&start_height=-1&max_transactions=500',
+            '/v1/getinfo',
+            '/v1/transactions?end_height=-1&start_height=895969&max_transactions=0',
+            '/v1/transactions?end_height=1&start_height=895968&max_transactions=198'
         ]);
     });
 
