@@ -30,6 +30,8 @@ const deferred = <T = void>() => {
     return { promise, resolve, reject };
 };
 
+const mockPromptLegacyExportCleanup = jest.fn();
+
 const nodes = [
     { implementation: 'ldk-node', ldkMnemonic: 'm', ldkNodeDir: 'a' },
     { implementation: 'lnd', host: 'b' },
@@ -170,6 +172,7 @@ function setup(
             themeColor: () => '#000',
             isLightTheme: () => false,
             autoPurgeLegacyKeychain: jest.fn(),
+            promptLegacyExportCleanup: mockPromptLegacyExportCleanup,
             PosEnabled: { Disabled: 'disabled', Standalone: 'standalone' },
             repairMissingChannelEdges,
             isWipePending,
@@ -254,6 +257,7 @@ const select = (settings: any, index: number) => {
 
 beforeEach(() => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
+    mockPromptLegacyExportCleanup.mockClear();
 });
 afterEach(() => jest.restoreAllMocks());
 
@@ -265,6 +269,13 @@ it('control: a refresh with no switch connects and clears connecting', async () 
     expect(view.props.NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
     expect(view.props.ChannelsStore.getChannels).toHaveBeenCalledTimes(1);
     expect(settings.connecting).toBe(false);
+    // the legacy export prompt comes after the connect, not during it
+    expect(mockPromptLegacyExportCleanup).toHaveBeenCalledTimes(1);
+    expect(
+        mockPromptLegacyExportCleanup.mock.invocationCallOrder[0]
+    ).toBeGreaterThan(
+        view.props.NodeInfoStore.getNodeInfo.mock.invocationCallOrder[0]
+    );
 });
 
 it('hands a wipe that did not finish to the Lockscreen before connecting', async () => {
@@ -570,6 +581,8 @@ describe('session start', () => {
             'Lockscreen',
             { shareIntentData: undefined }
         );
+        // never shown over the Lockscreen
+        expect(mockPromptLegacyExportCleanup).not.toHaveBeenCalled();
     });
 
     // The shared image is read before the login check, from the app that
