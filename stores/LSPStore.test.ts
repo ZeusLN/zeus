@@ -252,6 +252,153 @@ describe('LSPStore custom-message request timeouts', () => {
         expect(store.error_msg).toBe('');
         expect(store.getExtendableChannelsError).toBe(true);
     });
+
+    describe.each([
+        ['LSPS1', 'lsps1GetOrderCustomMessage', 'getOrderId', 'loadingLSPS1'],
+        [
+            'LSPS7',
+            'lsps7GetOrderCustomMessage',
+            'getExtensionOrderId',
+            'loadingLSPS7'
+        ]
+    ] as const)('%s get_order', (_service, request, idField, loadingField) => {
+        const replyTo = (store: LSPStore, id: string) =>
+            store.handleCustomMessages({
+                peer: Buffer.from('aa', 'hex').toString('base64'),
+                data: Buffer.from(
+                    JSON.stringify({
+                        jsonrpc: '2.0',
+                        id,
+                        result: { order_id: 'order-b' }
+                    })
+                ).toString('base64')
+            });
+
+        it('clears the loading flag and sets an error when the LSP does not answer', async () => {
+            const store = makeStore();
+            store[request]('order-a', 'peer');
+            await jest.advanceTimersByTimeAsync(0);
+            expect(store[loadingField]).toBe(true);
+
+            await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+
+            expect(store[loadingField]).toBe(false);
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('views.LSPS1.timeoutError');
+        });
+
+        it('clears the loading flag when the send fails', async () => {
+            jest.mocked(BackendUtils.sendCustomMessage).mockRejectedValue(
+                'peer not connected'
+            );
+            const store = makeStore();
+
+            await store[request]('order-a', 'peer');
+
+            expect(store[loadingField]).toBe(false);
+            expect(store.error).toBe(true);
+        });
+
+        it('a superseded request timing out leaves the newer one alone', async () => {
+            const store = makeStore();
+            store[request]('order-a', 'peer');
+            await jest.advanceTimersByTimeAsync(3000);
+            const done = jest.fn();
+            store[request]('order-b', 'peer').then(done);
+            await jest.advanceTimersByTimeAsync(0);
+
+            // the first request's timer fires here
+            await jest.advanceTimersByTimeAsync(TIMEOUT_MS - 3000);
+            expect(store.error).toBe(false);
+            expect(store[loadingField]).toBe(true);
+
+            // the newer request's resolver is still armed, so its reply
+            // settles it before its own timeout
+            replyTo(store, store[idField]);
+            await jest.advanceTimersByTimeAsync(0);
+            expect(done).toHaveBeenCalled();
+            expect(store[loadingField]).toBe(false);
+        });
+
+        it('a superseded request failing to send leaves the newer one alone', async () => {
+            let rejectSend: (e: any) => void = () => {};
+            jest.mocked(BackendUtils.sendCustomMessage)
+                .mockReturnValueOnce(
+                    new Promise((_, reject) => {
+                        rejectSend = reject;
+                    }) as any
+                )
+                .mockResolvedValue({});
+            const store = makeStore();
+            store[request]('order-a', 'peer');
+            await jest.advanceTimersByTimeAsync(0);
+            store[request]('order-b', 'peer');
+            await jest.advanceTimersByTimeAsync(0);
+
+            rejectSend('peer not connected');
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(store.error).toBe(false);
+            expect(store[loadingField]).toBe(true);
+        });
+
+        it('ignores a send failure that arrives after the reply', async () => {
+            let rejectSend: (e: any) => void = () => {};
+            jest.mocked(BackendUtils.sendCustomMessage).mockReturnValueOnce(
+                new Promise((_, reject) => {
+                    rejectSend = reject;
+                }) as any
+            );
+            const store = makeStore();
+            const done = jest.fn();
+            store[request]('order-a', 'peer').then(done);
+            await jest.advanceTimersByTimeAsync(0);
+
+            replyTo(store, store[idField]);
+            await jest.advanceTimersByTimeAsync(0);
+            expect(done).toHaveBeenCalled();
+
+            rejectSend('peer not connected');
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+            expect(store[loadingField]).toBe(false);
+        });
+
+        it('keeps the timeout error when the send fails after the timeout', async () => {
+            let rejectSend: (e: any) => void = () => {};
+            jest.mocked(BackendUtils.sendCustomMessage).mockReturnValueOnce(
+                new Promise((_, reject) => {
+                    rejectSend = reject;
+                }) as any
+            );
+            const store = makeStore();
+            store[request]('order-a', 'peer');
+            await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+            expect(store.error_msg).toBe('views.LSPS1.timeoutError');
+
+            rejectSend('peer not connected');
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('views.LSPS1.timeoutError');
+            expect(store[loadingField]).toBe(false);
+        });
+
+        it('a new request clears the previous timeout error', async () => {
+            const store = makeStore();
+            store[request]('order-a', 'peer');
+            await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+            expect(store.error).toBe(true);
+
+            store[request]('order-b', 'peer');
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+        });
+    });
 });
 
 const extendableChannelsReply = (store: LSPStore, reply: any) =>
