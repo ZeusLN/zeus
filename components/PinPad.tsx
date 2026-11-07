@@ -8,6 +8,7 @@ import {
     AppState,
     Platform
 } from 'react-native';
+import { TEST_IDS } from '../utils/TestIds';
 import { themeColor } from '../utils/ThemeUtils';
 import { Row } from './layout/Row';
 import Success from '../assets/images/SVG/Success.svg';
@@ -138,6 +139,9 @@ export default function PinPad({
                     {row.map((num) => (
                         <Touchable
                             key={num}
+                            testID={TEST_IDS.pinPad.key(
+                                String(pinNumbers[num])
+                            )}
                             touch={() =>
                                 handleAppendWithFeedback(pinNumbers[num])
                             }
@@ -165,6 +169,7 @@ export default function PinPad({
                 {/* Left key: decimal point or back button */}
                 {amount ? (
                     <Touchable
+                        testID={TEST_IDS.pinPad.decimal}
                         touch={() => handleAppendWithFeedback('.')}
                         highlight={numberHighlight}
                         style={styles.key}
@@ -215,6 +220,7 @@ export default function PinPad({
 
                 {/* Middle key: 0 */}
                 <Touchable
+                    testID={TEST_IDS.pinPad.key(String(pinNumbers[0]))}
                     touch={() => handleAppendWithFeedback(pinNumbers[0])}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -234,6 +240,7 @@ export default function PinPad({
                 {!hidePinLength &&
                     (amount ? (
                         <Touchable
+                            testID={TEST_IDS.pinPad.delete}
                             touch={() => {
                                 decrementPinValueLength();
                                 deleteValue();
@@ -255,6 +262,7 @@ export default function PinPad({
                         </Touchable>
                     ) : (
                         <Touchable
+                            testID={TEST_IDS.pinPad.clear}
                             touch={() => {
                                 clearPinValueLength();
                                 clearValue();

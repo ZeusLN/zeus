@@ -19,7 +19,8 @@ export const TEST_IDS = {
         option: (locale: string) => `language.option.${locale}`
     },
     menu: {
-        addWalletButton: 'menu.addWalletButton'
+        addWalletButton: 'menu.addWalletButton',
+        selectedWalletButton: 'menu.selectedWalletButton'
     },
     onboarding: {
         recommendedButton: 'onboarding.recommendedButton',
@@ -75,6 +76,48 @@ export const TEST_IDS = {
     selectCurrency: {
         searchInput: 'selectCurrency.searchInput',
         option: (currency: string) => `selectCurrency.option.${currency}`
+    },
+    pinPad: {
+        key: (digit: string) => `pinPad.key.${digit}`,
+        decimal: 'pinPad.decimal',
+        delete: 'pinPad.delete',
+        clear: 'pinPad.clear'
+    },
+    keypad: {
+        amount: 'keypad.amount',
+        ecashToggle: 'keypad.ecashToggle',
+        unitToggle: 'keypad.unitToggle',
+        requestButton: 'keypad.requestButton',
+        editButton: 'keypad.editButton',
+        sendButton: 'keypad.sendButton',
+        amountShortcut: (amount: string) => `keypad.amountShortcut.${amount}`,
+        sendBitcoinOption: 'keypad.sendBitcoinOption',
+        sendEcashOption: 'keypad.sendEcashOption',
+        mintPicker: 'keypad.mintPicker'
+    },
+    currencySelectorModal: {
+        content: 'currencySelectorModal.content'
+    },
+    currencyList: {
+        option: (currency: string) => `currencyList.option.${currency}`
+    },
+    wallet: {
+        tab: (name: string) => `wallet.tab.${name}`,
+        activityButton: 'wallet.activityButton'
+    },
+    walletHeader: {
+        menuButton: 'walletHeader.menuButton',
+        walletsButton: 'walletHeader.walletsButton'
+    },
+    mints: {
+        addButton: 'mints.addButton'
+    },
+    addMint: {
+        urlInput: 'addMint.urlInput',
+        submitButton: 'addMint.submitButton'
+    },
+    mint: {
+        addButton: 'mint.addButton'
     },
     walletConfiguration: {
         interfaceDropdown: 'walletConfiguration.interfaceDropdown',
