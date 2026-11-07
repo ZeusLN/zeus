@@ -519,11 +519,37 @@ describe('EmbeddedLND on-chain sends', () => {
 });
 
 describe('EmbeddedLND.abandonChannel', () => {
-    // as ChannelsStore abandons a channel lnd verified but never funded
-    it('abandons a pending funding shim channel by its outpoint', async () => {
+    beforeEach(() => {
+        mockAbandonChannel.mockReset();
         mockAbandonChannel.mockResolvedValue({ status: 'abandoned' });
+    });
 
-        await new EmbeddedLND().abandonChannel(['ab'.repeat(32), '2', true]);
+    // as ChannelsStore abandons a PSBT channel lnd verified but never
+    // funded: lnd refuses pending_funding_shim_only for it
+    it('abandons a verified PSBT channel with i_know_what_i_am_doing only', async () => {
+        await new EmbeddedLND().abandonChannel([
+            'ab'.repeat(32),
+            '2',
+            false,
+            true
+        ]);
+
+        expect(mockAbandonChannel).toHaveBeenCalledWith(
+            'ab'.repeat(32),
+            2,
+            undefined,
+            true
+        );
+    });
+
+    // as Developer Tools passes the flags the user ticked
+    it('sends pending_funding_shim_only when asked for it', async () => {
+        await new EmbeddedLND().abandonChannel([
+            'ab'.repeat(32),
+            '2',
+            true,
+            undefined
+        ]);
 
         expect(mockAbandonChannel).toHaveBeenCalledWith(
             'ab'.repeat(32),

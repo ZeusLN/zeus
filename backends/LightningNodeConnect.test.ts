@@ -955,17 +955,36 @@ describe('LightningNodeConnect on-chain sends', () => {
 });
 
 describe('LightningNodeConnect.abandonChannel', () => {
-    // as ChannelsStore abandons a channel lnd verified but never funded
-    it('abandons a pending funding shim channel by its outpoint', async () => {
+    const abandonWith = async (params: Array<string | boolean | undefined>) => {
         mockSettings.implementation = 'lightning-node-connect';
         mockSettings.mailboxServer = 'mailbox.example.com:443';
         const backend = new LightningNodeConnect();
         const lnc = await openWallet(backend, 'phrase-a');
         (lnc.lnd.lightning as any).abandonChannel = jest.fn(async () => ({}));
 
-        await backend.abandonChannel(['ab'.repeat(32), '2', true]);
+        await backend.abandonChannel(params);
 
-        expect((lnc.lnd.lightning as any).abandonChannel).toHaveBeenCalledWith({
+        return (lnc.lnd.lightning as any).abandonChannel.mock.calls[0][0];
+    };
+
+    // as ChannelsStore abandons a PSBT channel lnd verified but never
+    // funded: lnd refuses pending_funding_shim_only for it
+    it('abandons a verified PSBT channel with iKnowWhatIAmDoing only', async () => {
+        expect(await abandonWith(['ab'.repeat(32), '2', false, true])).toEqual({
+            channelPoint: {
+                fundingTxidStr: 'ab'.repeat(32),
+                fundingTxidBytes: undefined,
+                outputIndex: 2
+            },
+            iKnowWhatIAmDoing: true
+        });
+    });
+
+    // as Developer Tools passes the flags the user ticked
+    it('sends pendingFundingShimOnly when asked for it', async () => {
+        expect(
+            await abandonWith(['ab'.repeat(32), '2', true, undefined])
+        ).toEqual({
             channelPoint: {
                 fundingTxidStr: 'ab'.repeat(32),
                 fundingTxidBytes: undefined,

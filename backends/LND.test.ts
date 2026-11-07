@@ -944,14 +944,31 @@ describe('LND.sendCoins', () => {
 });
 
 describe('LND.abandonChannel', () => {
-    // as ChannelsStore abandons a channel lnd verified but never funded
-    it('abandons a pending funding shim channel by its outpoint', () => {
+    // as ChannelsStore abandons a PSBT channel lnd verified but never
+    // funded: lnd refuses pending_funding_shim_only for it
+    it('abandons a verified PSBT channel with i_know_what_i_am_doing only', () => {
         const lnd = new LND();
         const deleteRequest = jest
             .spyOn(lnd, 'deleteRequest')
             .mockResolvedValue({});
 
-        lnd.abandonChannel(['ab'.repeat(32), '2', true]);
+        lnd.abandonChannel(['ab'.repeat(32), '2', false, true]);
+
+        expect(deleteRequest).toHaveBeenCalledWith(
+            `/v1/channels/abandon/${'ab'.repeat(
+                32
+            )}/2?i_know_what_i_am_doing=true`
+        );
+    });
+
+    // as Developer Tools passes the flags the user ticked
+    it('sends pending_funding_shim_only when asked for it', () => {
+        const lnd = new LND();
+        const deleteRequest = jest
+            .spyOn(lnd, 'deleteRequest')
+            .mockResolvedValue({});
+
+        lnd.abandonChannel(['ab'.repeat(32), '2', true, undefined]);
 
         expect(deleteRequest).toHaveBeenCalledWith(
             `/v1/channels/abandon/${'ab'.repeat(

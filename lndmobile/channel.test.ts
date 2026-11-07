@@ -461,6 +461,23 @@ describe('abandonChannel', () => {
         expect(result.status).toBe('abandoned');
     });
 
+    // what EmbeddedLND sends when ChannelsStore abandons a verified PSBT
+    // channel
+    it('encodes i_know_what_i_am_doing without pending_funding_shim_only', async () => {
+        respondWith(lnrpc.AbandonChannelResponse, {});
+
+        await abandonChannel(TXID, 1, undefined, true);
+
+        const req = sentRequest(
+            LndMobile.sendCommand,
+            lnrpc.AbandonChannelRequest
+        );
+        expect(req.channel_point?.funding_txid_str).toBe(TXID);
+        expect(req.channel_point?.output_index).toBe(1);
+        expect(req.pending_funding_shim_only).toBe(false);
+        expect(req.i_know_what_i_am_doing).toBe(true);
+    });
+
     it('leaves unset flags at their false defaults', async () => {
         respondWith(lnrpc.AbandonChannelResponse, {});
 
