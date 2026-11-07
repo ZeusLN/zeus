@@ -9,6 +9,10 @@ jest.mock('../stores/Stores', () => ({
     }
 }));
 
+jest.mock('./LegacyExportUtils', () => ({
+    promptLegacyExportCleanup: jest.fn()
+}));
+
 import {
     CommonActions,
     StackActions,
@@ -16,6 +20,7 @@ import {
 } from '@react-navigation/routers';
 
 import { settingsStore } from '../stores/Stores';
+import { promptLegacyExportCleanup } from './LegacyExportUtils';
 import {
     POS_ROUTES,
     lockRouteGuard,
@@ -142,6 +147,45 @@ describe('NavigationUtils', () => {
                 'Wallet',
                 undefined
             );
+        });
+
+        // without a login method the till's wallet button leaves POS here,
+        // not on the Lockscreen
+        it('offers the legacy export prompt when leaving POS for the wallet', async () => {
+            mockSettingsStore.posStatus = 'active';
+            mockSettingsStore.settings = {};
+
+            await protectedNavigation(navigation, 'Wallet', true);
+
+            expect(promptLegacyExportCleanup).toHaveBeenCalledTimes(1);
+            expect(promptLegacyExportCleanup).toHaveBeenCalledWith(
+                mockSettingsStore
+            );
+            expect(
+                (promptLegacyExportCleanup as jest.Mock).mock
+                    .invocationCallOrder[0]
+            ).toBeGreaterThan(
+                mockSettingsStore.setPosStatus.mock.invocationCallOrder[0]
+            );
+        });
+
+        it('leaves the legacy export prompt to the Lockscreen when a PIN is set', async () => {
+            mockSettingsStore.posStatus = 'active';
+            mockSettingsStore.settings = { pin: '1234' };
+
+            await protectedNavigation(navigation, 'Wallet', true);
+
+            expect(navigation.navigate).toHaveBeenCalledWith('Lockscreen', {
+                pendingNavigation: { screen: 'Wallet', params: undefined }
+            });
+            expect(promptLegacyExportCleanup).not.toHaveBeenCalled();
+        });
+
+        it('does not offer the legacy export prompt on other navigation', async () => {
+            await protectedNavigation(navigation, 'Menu');
+            await protectedNavigation(navigation, 'Wallets', true);
+
+            expect(promptLegacyExportCleanup).not.toHaveBeenCalled();
         });
     });
 
