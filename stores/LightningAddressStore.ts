@@ -11,8 +11,10 @@ import SettingsStore from './SettingsStore';
 
 import BackendUtils from '../utils/BackendUtils';
 import {
+    authChallengeRequestBody,
     isValidAuthChallenge,
-    INVALID_AUTH_CHALLENGE_ERROR
+    INVALID_AUTH_CHALLENGE_ERROR,
+    ZEUS_PAY_AUTH_TAG
 } from '../utils/AuthChallengeUtils';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -108,18 +110,18 @@ export default class LightningAddressStore {
         } else {
             const authResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/api/lnurl/auth`,
+                `${LNURL_HOST}/api/lnurl/auth/v2`,
                 { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
+                authChallengeRequestBody(
+                    this.nodeInfoStore.nodeInfo.identity_pubkey
+                )
             );
 
             const authData = authResponse.json();
             if (authResponse.info().status !== 200) throw authData.error;
 
             const { verification } = authData;
-            if (!isValidAuthChallenge(verification)) {
+            if (!isValidAuthChallenge(verification, ZEUS_PAY_AUTH_TAG)) {
                 throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
             }
             const signData = await BackendUtils.signMessage(verification);

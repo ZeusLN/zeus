@@ -14,8 +14,10 @@ import {
 
 import BackendUtils from '../utils/BackendUtils';
 import {
+    authChallengeRequestBody,
     isValidAuthChallenge,
-    INVALID_AUTH_CHALLENGE_ERROR
+    INVALID_AUTH_CHALLENGE_ERROR,
+    OLYMPUS_AUTH_TAG
 } from '../utils/AuthChallengeUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import Base64Utils from '../utils/Base64Utils';
@@ -92,11 +94,11 @@ export default class ChannelBackupStore {
         try {
             const authResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${BACKUPS_HOST}/api/auth`,
+                `${BACKUPS_HOST}/api/auth/v2`,
                 { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
+                authChallengeRequestBody(
+                    this.nodeInfoStore.nodeInfo.identity_pubkey
+                )
             );
 
             if (authResponse.info().status !== 200) {
@@ -105,7 +107,7 @@ export default class ChannelBackupStore {
             }
 
             const { verification } = authResponse.json();
-            if (!isValidAuthChallenge(verification)) {
+            if (!isValidAuthChallenge(verification, OLYMPUS_AUTH_TAG)) {
                 throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
             }
 
@@ -145,17 +147,17 @@ export default class ChannelBackupStore {
     public recoverStaticChannelBackup = async () => {
         const authResponse = await ReactNativeBlobUtil.fetch(
             'POST',
-            `${BACKUPS_HOST}/api/auth`,
+            `${BACKUPS_HOST}/api/auth/v2`,
             { 'Content-Type': 'application/json' },
-            JSON.stringify({
-                pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-            })
+            authChallengeRequestBody(
+                this.nodeInfoStore.nodeInfo.identity_pubkey
+            )
         );
         const { verification } = parseBackupsResponse(authResponse, 'Auth');
         if (!verification) {
             throw new Error('Auth response has no verification');
         }
-        if (!isValidAuthChallenge(verification)) {
+        if (!isValidAuthChallenge(verification, OLYMPUS_AUTH_TAG)) {
             throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
         }
 
@@ -219,17 +221,17 @@ export default class ChannelBackupStore {
         try {
             const authResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${BACKUPS_HOST}/api/auth`,
+                `${BACKUPS_HOST}/api/auth/v2`,
                 { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
+                authChallengeRequestBody(
+                    this.nodeInfoStore.nodeInfo.identity_pubkey
+                )
             );
             const { verification } = parseBackupsResponse(authResponse, 'Auth');
             if (!verification) {
                 throw new Error('Auth response has no verification');
             }
-            if (!isValidAuthChallenge(verification)) {
+            if (!isValidAuthChallenge(verification, OLYMPUS_AUTH_TAG)) {
                 throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
             }
 

@@ -34,12 +34,17 @@ import ChannelBackupStore, {
     LAST_CHANNEL_BACKUP_TIME
 } from './ChannelBackupStore';
 import BackendUtils from '../utils/BackendUtils';
+import {
+    OLYMPUS_AUTH_TAG,
+    ZEUS_PAY_AUTH_TAG
+} from '../utils/AuthChallengeUtils';
 import { exportAllChannelBackups } from '../lndmobile/channel';
 import Storage from '../storage';
 
 const PUBKEY = '02'.padEnd(66, 'a');
-// Olympus issues 64 random bytes as lowercase hex
-const CHALLENGE = 'a1'.repeat(64);
+// Olympus issues its tag followed by 64 random bytes as lowercase hex
+const NONCE = 'a1'.repeat(64);
+const CHALLENGE = `${OLYMPUS_AUTH_TAG}${NONCE}`;
 const CANONICAL_PHRASE =
     'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
 
@@ -56,7 +61,7 @@ const htmlResponse = (status: number) => ({
     }
 });
 
-// The first request is /api/auth, the second is the route under test
+// The first request is /api/auth/v2, the second is the route under test
 const mockServer = (response: any) => {
     (ReactNativeBlobUtil.fetch as jest.Mock)
         .mockResolvedValueOnce(
@@ -364,13 +369,13 @@ describe('ChannelBackupStore', () => {
 const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
 const signMessage = BackendUtils.signMessage as jest.Mock;
 
-// Answers /api/auth with the given challenge and every other path with a
+// Answers /api/auth/v2 with the given challenge and every other path with a
 // successful empty-ish reply.
 const serveChallenge = (verification: any) =>
     fetchMock.mockImplementation(async (_m: string, url: string) => {
         const path = url.replace(BACKUPS_HOST, '');
         const body =
-            path === '/api/auth'
+            path === '/api/auth/v2'
                 ? { success: true, verification }
                 : { success: true, backup: 'b', backups: [] };
         return { info: () => ({ status: 200 }), json: () => body };
@@ -398,19 +403,29 @@ describe('ChannelBackupStore auth challenge', () => {
     });
 
     describe('backupChannels', () => {
-        it('signs a hex challenge and uploads the backup', async () => {
+        it('signs a tagged challenge and uploads the backup', async () => {
             serveChallenge(CHALLENGE);
 
             await expect(createStore().backupChannels()).resolves.toBe(true);
 
             expect(signMessage).toHaveBeenCalledWith(CHALLENGE);
-            expect(paths()).toEqual(['/api/auth', '/api/backup']);
+            expect(paths()).toEqual(['/api/auth/v2', '/api/backup']);
+            expect(JSON.parse(fetchMock.mock.calls[0][3])).toEqual({
+                pubkey: PUBKEY,
+                version: 2
+            });
         });
 
         it.each([
             ['the LNURL-auth canonical phrase', CANONICAL_PHRASE],
-            ['uppercase hex', CHALLENGE.toUpperCase()],
-            ['short hex', 'a1'.repeat(32)],
+            ['a bare hex nonce', NONCE],
+            ['a ZEUS Pay challenge', `${ZEUS_PAY_AUTH_TAG}${NONCE}`],
+            ['uppercase hex', `${OLYMPUS_AUTH_TAG}${NONCE.toUpperCase()}`],
+            ['short hex', `${OLYMPUS_AUTH_TAG}${'a1'.repeat(32)}`],
+            [
+                'the tag without its trailing space',
+                `backups.lnolymp.us auth${NONCE}`
+            ],
             ['a missing challenge', undefined]
         ])('refuses to sign %s', async (_label, verification) => {
             serveChallenge(verification);
@@ -418,7 +433,7 @@ describe('ChannelBackupStore auth challenge', () => {
             await expect(createStore().backupChannels()).rejects.toThrow();
 
             expect(signMessage).not.toHaveBeenCalled();
-            expect(paths()).toEqual(['/api/auth']);
+            expect(paths()).toEqual(['/api/auth/v2']);
         });
     });
 
@@ -431,10 +446,10 @@ describe('ChannelBackupStore auth challenge', () => {
             ).rejects.toThrow('Invalid auth challenge');
 
             expect(signMessage).not.toHaveBeenCalled();
-            expect(paths()).toEqual(['/api/auth']);
+            expect(paths()).toEqual(['/api/auth/v2']);
         });
 
-        it('signs a hex challenge', async () => {
+        it('signs a tagged challenge', async () => {
             serveChallenge(CHALLENGE);
             const store = createStore();
             jest.spyOn(store, 'triggerRecovery').mockResolvedValue();
@@ -442,7 +457,7 @@ describe('ChannelBackupStore auth challenge', () => {
             await store.recoverStaticChannelBackup();
 
             expect(signMessage).toHaveBeenCalledWith(CHALLENGE);
-            expect(paths()).toEqual(['/api/auth', '/api/recover']);
+            expect(paths()).toEqual(['/api/auth/v2', '/api/recover']);
         });
     });
 
@@ -454,18 +469,18 @@ describe('ChannelBackupStore auth challenge', () => {
             await expect(store.advancedRecoveryList()).resolves.toBeUndefined();
 
             expect(signMessage).not.toHaveBeenCalled();
-            expect(paths()).toEqual(['/api/auth']);
+            expect(paths()).toEqual(['/api/auth/v2']);
             expect(store.error).toBe(true);
             expect(store.loading).toBe(false);
         });
 
-        it('signs a hex challenge', async () => {
+        it('signs a tagged challenge', async () => {
             serveChallenge(CHALLENGE);
 
             await createStore().advancedRecoveryList();
 
             expect(signMessage).toHaveBeenCalledWith(CHALLENGE);
-            expect(paths()).toEqual(['/api/auth', '/api/recoverAdvanced']);
+            expect(paths()).toEqual(['/api/auth/v2', '/api/recoverAdvanced']);
         });
     });
 });

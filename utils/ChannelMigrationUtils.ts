@@ -7,7 +7,11 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { localeString } from './LocaleUtils';
 import { stopLnd } from './LndMobileUtils';
 import BackendUtils from './BackendUtils';
-import { isValidAuthChallenge } from './AuthChallengeUtils';
+import {
+    authChallengeRequestBody,
+    isValidAuthChallenge,
+    OLYMPUS_AUTH_TAG
+} from './AuthChallengeUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import Base64Utils from './Base64Utils';
 import { isReservedSigningMessage } from './LnurlAuthUtils';
@@ -165,9 +169,9 @@ export const uploadChannelBackupToOlympus = async (
         console.log('Authenticating for status check...');
         const statusAuthResponse = await ReactNativeBlobUtil.fetch(
             'POST',
-            `${BACKUPS_HOST}/api/auth`,
+            `${BACKUPS_HOST}/api/auth/v2`,
             { 'Content-Type': 'application/json' },
-            JSON.stringify({ pubkey })
+            authChallengeRequestBody(pubkey)
         );
 
         if (statusAuthResponse.info().status !== 200) {
@@ -177,7 +181,7 @@ export const uploadChannelBackupToOlympus = async (
         const statusAuth = statusAuthResponse.json();
         if (
             !statusAuth.success ||
-            !isValidAuthChallenge(statusAuth.verification)
+            !isValidAuthChallenge(statusAuth.verification, OLYMPUS_AUTH_TAG)
         )
             throw new Error('Invalid auth response');
 
@@ -225,9 +229,9 @@ export const uploadChannelBackupToOlympus = async (
                 console.log('Authenticating for uploading backup...');
                 const uploadAuthResponse = await ReactNativeBlobUtil.fetch(
                     'POST',
-                    `${BACKUPS_HOST}/api/auth`,
+                    `${BACKUPS_HOST}/api/auth/v2`,
                     { 'Content-Type': 'application/json' },
-                    JSON.stringify({ pubkey })
+                    authChallengeRequestBody(pubkey)
                 );
 
                 if (uploadAuthResponse.info().status !== 200) {
@@ -237,7 +241,10 @@ export const uploadChannelBackupToOlympus = async (
                 const uploadAuth = uploadAuthResponse.json();
                 if (
                     !uploadAuth.success ||
-                    !isValidAuthChallenge(uploadAuth.verification)
+                    !isValidAuthChallenge(
+                        uploadAuth.verification,
+                        OLYMPUS_AUTH_TAG
+                    )
                 )
                     throw new Error('Invalid auth response');
 
@@ -445,9 +452,9 @@ export const restoreChannelBackupFromOlympus = async (
         console.log('Authenticating for status check...');
         const statusAuthResponse = await ReactNativeBlobUtil.fetch(
             'POST',
-            `${BACKUPS_HOST}/api/auth`,
+            `${BACKUPS_HOST}/api/auth/v2`,
             { 'Content-Type': 'application/json' },
-            JSON.stringify({ pubkey })
+            authChallengeRequestBody(pubkey)
         );
 
         if (statusAuthResponse.info().status !== 200) {
@@ -457,7 +464,7 @@ export const restoreChannelBackupFromOlympus = async (
         const statusAuth = statusAuthResponse.json();
         if (
             !statusAuth.success ||
-            !isValidAuthChallenge(statusAuth.verification)
+            !isValidAuthChallenge(statusAuth.verification, OLYMPUS_AUTH_TAG)
         )
             throw new Error('Invalid auth response');
 
@@ -543,9 +550,9 @@ export const restoreChannelBackupFromOlympus = async (
         console.log('Authenticating for restore...');
         const restoreAuthResponse = await ReactNativeBlobUtil.fetch(
             'POST',
-            `${BACKUPS_HOST}/api/auth`,
+            `${BACKUPS_HOST}/api/auth/v2`,
             { 'Content-Type': 'application/json' },
-            JSON.stringify({ pubkey })
+            authChallengeRequestBody(pubkey)
         );
 
         if (restoreAuthResponse.info().status !== 200) {
@@ -555,7 +562,7 @@ export const restoreChannelBackupFromOlympus = async (
         const restoreAuth = restoreAuthResponse.json();
         if (
             !restoreAuth.success ||
-            !isValidAuthChallenge(restoreAuth.verification)
+            !isValidAuthChallenge(restoreAuth.verification, OLYMPUS_AUTH_TAG)
         )
             throw new Error('Invalid auth response');
 
