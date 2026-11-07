@@ -3,9 +3,11 @@ import RNFS from 'react-native-fs';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import {
-    CSV_SHARE_STAGING_DIR,
     LEGACY_CSV_EXPORT_REGEX,
-    purgeCsvShareStaging
+    createShareStagingDir,
+    dedupeFileNames,
+    removeShareStagingDir,
+    sweepStaleShareStaging
 } from './ActivityCsvUtils';
 import { NODE_CONFIG_EXPORT_EXT } from './NodeConfigUtils';
 import { localeString } from './LocaleUtils';
@@ -112,28 +114,29 @@ export const deleteLegacyExports = async (
 const stagedName = (name: string) =>
     name.replace(/[\u0000-\u001f\u007f#?%*:"<>|/\\]/g, '_');
 
-// Shares copies staged in the app-private share cache (the originals are
-// deleted right after, and a receiver may still be reading), then deletes
-// the originals. Returns false, keeping the originals and the pending
-// prompt, when staging fails or the user closes the sheet without sharing.
+// Shares copies staged in this share's own subdir of the app-private share
+// cache (the originals are deleted right after, and a receiver may still be
+// reading), then deletes the originals. Returns false, keeping the
+// originals and the pending prompt, when staging fails or the user closes
+// the sheet without sharing.
 export const shareLegacyExports = async (
     files: LegacyExportFiles
 ): Promise<boolean> => {
     // Loaded lazily, as in shareCsvFiles: this module is in the
     // SettingsStore graph via the startup migration
     const Share = require('react-native-share').default;
-    const dir = `${RNFS.CachesDirectoryPath}/${CSV_SHARE_STAGING_DIR}`;
+    const sources = [...files.config, ...files.csv];
+    let dir: string | undefined;
     try {
-        await purgeCsvShareStaging();
-        await RNFS.mkdir(dir);
-        const used = new Set<string>();
+        await sweepStaleShareStaging();
+        dir = await createShareStagingDir();
+        const names = dedupeFileNames(
+            sources.map((path) => stagedName(path.split('/').pop() || 'export'))
+        );
         const staged: string[] = [];
-        for (const path of [...files.config, ...files.csv]) {
-            let name = stagedName(path.split('/').pop() || 'export');
-            if (used.has(name)) name = `${used.size}_${name}`;
-            used.add(name);
-            const dest = `${dir}/${name}`;
-            await RNFS.copyFile(path, dest);
+        for (let i = 0; i < sources.length; i++) {
+            const dest = `${dir}/${names[i]}`;
+            await RNFS.copyFile(sources[i], dest);
             staged.push(dest);
         }
         // failOnCancel: a closed sheet must not count as a share
@@ -142,8 +145,8 @@ export const shareLegacyExports = async (
             failOnCancel: true
         });
     } catch (e) {
-        // nothing was handed off, so the staged copies can go now
-        await purgeCsvShareStaging();
+        // nothing was handed off, so this share's copies can go now
+        if (dir) await removeShareStagingDir(dir);
         console.warn('Legacy export files not shared:', e);
         return false;
     }
