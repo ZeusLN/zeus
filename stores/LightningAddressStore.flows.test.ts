@@ -259,6 +259,82 @@ describe('LightningAddressStore flows', () => {
             expect(bodyOf('/api/plus/order').message).toBe(CHALLENGE);
         });
 
+        it('does not cache a signature that finishes after reset', async () => {
+            const store = newStore();
+            let finishSign: (value: any) => void = () => {};
+            signMessage
+                .mockReturnValueOnce(
+                    new Promise((resolve) => (finishSign = resolve))
+                )
+                .mockResolvedValueOnce({ zbase: 'sig-new' });
+            reply(
+                '/api/lnurl/auth',
+                ok({ verification: 'old' }),
+                ok({ verification: 'new' })
+            );
+            reply('/api/plus/order', ok(), ok());
+
+            const stale = store.createZeusPayPlusOrder();
+            await flushPromises();
+            expect(signMessage).toHaveBeenCalledWith('old');
+            store.reset();
+            finishSign({ zbase: 'sig-old' });
+            await stale;
+
+            // the request that started before reset still gets its result
+            expect(bodyOf('/api/plus/order')).toMatchObject({
+                message: 'old',
+                signature: 'sig-old'
+            });
+            expect(store.auth).toBeUndefined();
+            expect(store.authDate).toBeUndefined();
+
+            await store.createZeusPayPlusOrder();
+
+            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(signMessage).toHaveBeenCalledTimes(2);
+            expect(bodyOf('/api/plus/order', 1)).toMatchObject({
+                message: 'new',
+                signature: 'sig-new'
+            });
+        });
+
+        it('keeps the next wallet signature when a request from before reset finishes later', async () => {
+            const store = newStore();
+            let finishSign: (value: any) => void = () => {};
+            signMessage
+                .mockReturnValueOnce(
+                    new Promise((resolve) => (finishSign = resolve))
+                )
+                .mockResolvedValueOnce({ zbase: 'sig-new' });
+            reply(
+                '/api/lnurl/auth',
+                ok({ verification: 'old' }),
+                ok({ verification: 'new' })
+            );
+            reply('/api/plus/order', ok(), ok(), ok());
+
+            const stale = store.createZeusPayPlusOrder();
+            await flushPromises();
+            store.reset();
+            await store.createZeusPayPlusOrder();
+            finishSign({ zbase: 'sig-old' });
+            await stale;
+
+            expect(store.auth).toEqual({
+                verification: 'new',
+                signature: 'sig-new'
+            });
+
+            await store.createZeusPayPlusOrder();
+
+            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(bodyOf('/api/plus/order', 2)).toMatchObject({
+                message: 'new',
+                signature: 'sig-new'
+            });
+        });
+
         it('fails the call without signing when the server refuses the challenge', async () => {
             const store = newStore();
             reply('/api/lnurl/auth', {
