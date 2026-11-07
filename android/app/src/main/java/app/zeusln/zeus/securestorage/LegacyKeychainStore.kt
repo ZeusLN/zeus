@@ -1,6 +1,8 @@
 package app.zeusln.zeus.securestorage
 
 import java.security.GeneralSecurityException
+// java.util.Base64 is in Android from API 26 and minSdkVersion is 28. It is
+// used instead of android.util.Base64, which is a stub in the JVM tests.
 import java.util.Base64
 
 /** Key-value access to react-native-keychain's RN_KEYCHAIN DataStore file. */
