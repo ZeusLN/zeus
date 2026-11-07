@@ -1,7 +1,6 @@
 import { hmac } from '@noble/hashes/hmac.js';
 import { sha1 } from '@noble/hashes/legacy.js';
 import { scryptAsync as nobleScryptAsync } from '@noble/hashes/scrypt.js';
-import type { ScryptOpts } from '@noble/hashes/scrypt.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 
@@ -34,6 +33,13 @@ export function sha1ForIdenticon(stableIdentity: string): string {
     return bytesToHex(
         sha1(utf8ToBytes(`string:${stableIdentity.length}:${stableIdentity}`))
     );
+}
+
+export interface ScryptOpts {
+    N: number;
+    r: number;
+    p: number;
+    dkLen: number;
 }
 
 export async function hashScryptAsync(
