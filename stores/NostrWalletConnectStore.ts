@@ -127,6 +127,8 @@ interface SubscribeAttempt {
     handlerConfig: string;
     // Resolves when the attempt has stored its handle or given up
     done: Promise<void>;
+    // Set when the attempt gave up on an error, not when it was replaced
+    failed?: boolean;
 }
 
 interface ClientKeys {
@@ -1670,7 +1672,8 @@ export default class NostrWalletConnectStore {
     // SUBSCRIPTION MANAGEMENT
 
     private async subscribeToConnection(
-        connection: NWCConnection
+        connection: NWCConnection,
+        retryIfJoinedFails = true
     ): Promise<void> {
         if (!this.isServiceReady()) {
             runInAction(() => {
@@ -1705,7 +1708,22 @@ export default class NostrWalletConnectStore {
                 // The in-flight attempt opens the same subscription, so wait
                 // for it instead of replacing it: a replacement that failed
                 // would leave the connection with no subscription at all.
-                return await pending.done;
+                await pending.done;
+                if (
+                    !pending.failed ||
+                    !retryIfJoinedFails ||
+                    this.activeSubscriptions.has(connection.id)
+                ) {
+                    return;
+                }
+                // It failed, so try once more for this caller. Callers that
+                // waited on the same attempt join this retry, and the stored
+                // connection is used so they all match it.
+                const { connection: stored } = this.getConnection({
+                    connectionId: connection.id
+                });
+                if (!stored || !this.isServiceReady()) return;
+                return await this.subscribeToConnection(stored, false);
             }
             attempt = {
                 connection,
@@ -1833,6 +1851,7 @@ export default class NostrWalletConnectStore {
                 this.activeSubscriptions.set(connection.id, unsubscribe);
             });
         } catch (error: any) {
+            if (attempt) attempt.failed = true;
             console.error(
                 `Failed to subscribe to connection ${connection.name}:`,
                 error?.message || String(error)

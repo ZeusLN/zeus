@@ -118,6 +118,8 @@ const THIRD_RELAY = 'wss://relay.third.example';
 const WALLET_BALANCE_SATS = 1_000_000;
 // Covers the service start delay and the pacing between subscriptions.
 const SERVICE_START_MS = 10_000;
+// MAX_RELAY_ATTEMPTS in the store: tries per relay subscribe
+const MAX_RELAY_ATTEMPTS = 5;
 
 const UNAUTHORIZED = {
     result: undefined,
@@ -1302,6 +1304,41 @@ describe('NostrWalletConnectStore overlapping subscribes', () => {
         // The second subscribe waited for the first instead of opening its own
         expect(relay.subscribe).toHaveBeenCalledTimes(1);
         relay.failSubscribe = false;
+        expect((await clientFor(connection).getBalance()).error).toBe(
+            undefined
+        );
+    });
+
+    it('subscribes once more for the waiting callers when the in-flight subscribe fails', async () => {
+        silence('error');
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const firstSubscribe = relay.holdNextSubscribe();
+        // The first subscribe uses up all its retries on these failures,
+        // then the relay recovers
+        let failuresLeft = MAX_RELAY_ATTEMPTS;
+        Object.defineProperty(relay, 'failSubscribe', {
+            get: () => failuresLeft-- > 0,
+            set: () => {}
+        });
+
+        const first = subscribe(store, connection);
+        await settle(firstSubscribe.entered);
+        const second = subscribe(store, connection);
+        const third = subscribe(store, connection);
+        await flushMicrotasks();
+        firstSubscribe.release();
+        await settle(Promise.all([first, second, third]));
+
+        expect(liveSubscriptions(connection)).toBe(1);
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            true
+        );
+        // One retry for both waiters, not one each
+        expect(relay.subscribe).toHaveBeenCalledTimes(MAX_RELAY_ATTEMPTS + 1);
         expect((await clientFor(connection).getBalance()).error).toBe(
             undefined
         );
