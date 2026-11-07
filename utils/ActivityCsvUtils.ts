@@ -85,12 +85,9 @@ export const sanitizeCsvFileName = (fileName: string): string => {
     return `${stem}.csv`;
 };
 
-// Removes the CSV share staging directory. Staged files cannot be unlinked
-// as soon as Share.open settles: on Android the promise resolves when the
-// user picks a chooser target, while the receiving app streams the
-// FileProvider URI afterwards, so an immediate unlink hands the receiver a
-// dead attachment. Instead each share sweeps the previous attempt's
-// staging, and clearAllData sweeps it on wipe.
+// Removes the whole CSV share staging directory, every share's subdir
+// included. Only for clearAllData; a share must never sweep another share's
+// files (see sweepStaleShareStaging).
 export const purgeCsvShareStaging = async (): Promise<void> => {
     try {
         const dir = csvShareStagingPath();
@@ -98,6 +95,82 @@ export const purgeCsvShareStaging = async (): Promise<void> => {
     } catch (e) {
         console.warn('Error purging CSV share staging:', e);
     }
+};
+
+// Staged files cannot be unlinked as soon as Share.open settles: on Android
+// the promise resolves when the user picks a chooser target, while the
+// receiving app streams the FileProvider URI afterwards, so an immediate
+// unlink hands the receiver a dead attachment. Each share therefore stages
+// into its own subdir named <creation ms>-<seq>, keeps it after a handoff,
+// and later shares sweep only subdirs older than this, long after any
+// receiver has read them. clearAllData sweeps everything on wipe.
+export const SHARE_STAGING_TTL_MS = 60 * 60 * 1000;
+
+let shareStagingSeq = 0;
+
+export const createShareStagingDir = async (): Promise<string> => {
+    const dir = `${csvShareStagingPath()}/${Date.now()}-${++shareStagingSeq}`;
+    await RNFS.mkdir(dir);
+    return dir;
+};
+
+// Removes one share's own subdir, for when nothing was handed off
+export const removeShareStagingDir = async (dir: string): Promise<void> => {
+    try {
+        await RNFS.unlink(dir);
+    } catch (e) {
+        console.warn('Error removing CSV share staging:', e);
+    }
+};
+
+// Removes staging subdirs older than SHARE_STAGING_TTL_MS, plus anything
+// that is not a timestamped subdir (files earlier builds of this flow
+// staged directly in the root). A recent subdir is never touched.
+export const sweepStaleShareStaging = async (
+    now: number = Date.now()
+): Promise<void> => {
+    let entries: Array<{ name: string; path: string; isDirectory(): boolean }>;
+    try {
+        entries = await RNFS.readDir(csvShareStagingPath());
+    } catch (e) {
+        // no staging root yet
+        return;
+    }
+    for (const entry of entries) {
+        const created = /^(\d+)-\d+$/.exec(entry.name);
+        if (
+            entry.isDirectory() &&
+            created &&
+            now - Number(created[1]) < SHARE_STAGING_TTL_MS
+        ) {
+            continue;
+        }
+        try {
+            await RNFS.unlink(entry.path);
+        } catch (e) {
+            console.warn('Error sweeping stale CSV share staging:', e);
+        }
+    }
+};
+
+// Makes every name in one share batch unique (case-insensitively, as on
+// the default iOS filesystem) by inserting " (n)" before the extension, so
+// no staged file overwrites another: sanitizing can map distinct names to
+// the same one (a?b.csv and ab.csv both become ab.csv).
+export const dedupeFileNames = (names: string[]): string[] => {
+    const used = new Set<string>();
+    return names.map((name) => {
+        const dot = name.lastIndexOf('.');
+        const stem = dot > 0 ? name.slice(0, dot) : name;
+        const ext = dot > 0 ? name.slice(dot) : '';
+        let candidate = name;
+        let n = 2;
+        while (used.has(candidate.toLowerCase())) {
+            candidate = `${stem} (${n++})${ext}`;
+        }
+        used.add(candidate.toLowerCase());
+        return candidate;
+    });
 };
 
 // Stages CSV files in app-private cache and hands them to the system share
@@ -109,16 +182,18 @@ export const shareCsvFiles = async (
 ): Promise<void> => {
     // Loaded lazily: react-native-share touches native modules at import
     // time, and this util sits in the SettingsStore module graph via the
-    // legacy-export purge below
+    // legacy-export check
     const Share = require('react-native-share').default;
-    await purgeCsvShareStaging();
-    const dir = csvShareStagingPath();
-    await RNFS.mkdir(dir);
+    await sweepStaleShareStaging();
+    const dir = await createShareStagingDir();
     try {
+        const names = dedupeFileNames(
+            files.map((file) => sanitizeCsvFileName(file.fileName))
+        );
         const stagedPaths: string[] = [];
-        for (const file of files) {
-            const path = `${dir}/${sanitizeCsvFileName(file.fileName)}`;
-            await RNFS.writeFile(path, file.csvData, 'utf8');
+        for (let i = 0; i < files.length; i++) {
+            const path = `${dir}/${names[i]}`;
+            await RNFS.writeFile(path, files[i].csvData, 'utf8');
             stagedPaths.push(path);
         }
 
@@ -129,8 +204,8 @@ export const shareCsvFiles = async (
         });
     } catch (err) {
         // Share.open only rejects before any handoff, so nothing can be
-        // reading the staged files yet; don't leave partials behind
-        await purgeCsvShareStaging();
+        // reading this share's files yet; don't leave partials behind
+        await removeShareStagingDir(dir);
         console.error('Failed to share CSV file(s):', err);
         throw err;
     }

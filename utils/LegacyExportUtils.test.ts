@@ -99,12 +99,20 @@ const pressButton = async (text: string) => {
 const unlinkedPaths = () =>
     (RNFS.unlink as jest.Mock).mock.calls.map((c: any[]) => c[0]);
 
+const shareDir = () => (RNFS.mkdir as jest.Mock).mock.calls[0][0] as string;
+
+// Documents lists the legacy entries; the share staging root is empty
+const mockDocuments = (entries: any[]) =>
+    (RNFS.readDir as jest.Mock).mockImplementation((dir: string) =>
+        Promise.resolve(dir === DOCS ? entries : [])
+    );
+
 describe('LegacyExportUtils', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         for (const key of Object.keys(mockStore)) delete mockStore[key];
         (Platform.OS as any) = 'ios';
-        (RNFS.readDir as jest.Mock).mockResolvedValue(LEGACY_ENTRIES);
+        mockDocuments(LEGACY_ENTRIES);
         (RNFS.exists as jest.Mock).mockResolvedValue(false);
         (RNFS.unlink as jest.Mock).mockResolvedValue(undefined);
         (RNFS.mkdir as jest.Mock).mockResolvedValue(undefined);
@@ -196,9 +204,7 @@ describe('LegacyExportUtils', () => {
         });
 
         it('omits the credentials warning when only CSVs are left', async () => {
-            (RNFS.readDir as jest.Mock).mockResolvedValue([
-                file('zeus_20250212_140719_ln_payments.csv')
-            ]);
+            mockDocuments([file('zeus_20250212_140719_ln_payments.csv')]);
 
             await promptLegacyExportCleanup();
 
@@ -211,10 +217,12 @@ describe('LegacyExportUtils', () => {
             await promptLegacyExportCleanup();
             await pressButton('general.share');
 
+            const dir = shareDir();
+            expect(dir.startsWith(`${STAGING}/`)).toBe(true);
             const staged = [
-                `${STAGING}/20260101-120000.zeus-wallet-config-backup`,
-                `${STAGING}/zeus_20250212_140719_ln_invoices.csv`,
-                `${STAGING}/zeus_20250212_140719_onchain (1).csv`
+                `${dir}/20260101-120000.zeus-wallet-config-backup`,
+                `${dir}/zeus_20250212_140719_ln_invoices.csv`,
+                `${dir}/zeus_20250212_140719_onchain (1).csv`
             ];
             expect(RNFS.copyFile).toHaveBeenCalledTimes(3);
             LEGACY_PATHS.forEach((path, i) =>
@@ -247,15 +255,37 @@ describe('LegacyExportUtils', () => {
             await promptLegacyExportCleanup();
             await pressButton('general.share');
 
-            // only the staging dir is swept, never the originals
-            expect(unlinkedPaths().length).toBeGreaterThan(0);
-            expect(unlinkedPaths().every((p) => p === STAGING)).toBe(true);
+            // only this share's staging subdir is removed, never the
+            // originals or another share's staging
+            expect(unlinkedPaths()).toEqual([shareDir()]);
             expect(mockStore[LEGACY_EXPORT_CLEANUP_KEY]).toBeUndefined();
             expect(mockStore[LEGACY_EXPORT_PROMPT_KEY]).toBeDefined();
 
             resetLegacyExportPromptSession();
             await promptLegacyExportCleanup();
             expect(Alert.alert).toHaveBeenCalledTimes(2);
+        });
+
+        it('Share: gives colliding staged names distinct files', async () => {
+            mockDocuments([
+                file('a:b.zeus-wallet-config-backup'),
+                file('a_b.zeus-wallet-config-backup')
+            ]);
+
+            await promptLegacyExportCleanup();
+            await pressButton('general.share');
+
+            const dir = shareDir();
+            expect((RNFS.copyFile as jest.Mock).mock.calls).toEqual([
+                [
+                    `${DOCS}/a:b.zeus-wallet-config-backup`,
+                    `${dir}/a_b.zeus-wallet-config-backup`
+                ],
+                [
+                    `${DOCS}/a_b.zeus-wallet-config-backup`,
+                    `${dir}/a_b (2).zeus-wallet-config-backup`
+                ]
+            ]);
         });
 
         it('Share: keeps the originals when staging a copy fails', async () => {
@@ -314,7 +344,7 @@ describe('LegacyExportUtils', () => {
         });
 
         it('marks the cleanup done without a prompt when the files are already gone', async () => {
-            (RNFS.readDir as jest.Mock).mockResolvedValue([]);
+            mockDocuments([]);
 
             await promptLegacyExportCleanup();
 
