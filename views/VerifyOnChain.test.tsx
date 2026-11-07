@@ -55,11 +55,21 @@ const newStore = () =>
         {} as any
     );
 
+const focusListeners: Array<() => void> = [];
+const navigation = {
+    navigate: jest.fn(),
+    addListener: jest.fn((event: string, listener: () => void) => {
+        if (event === 'focus') focusListeners.push(listener);
+        return jest.fn();
+    })
+};
+const focus = () => focusListeners.forEach((listener) => listener());
+
 const renderConfirm = (store: TransactionsStore) =>
     render(
         <VerifyOnChain
             {...({
-                navigation: { navigate: jest.fn() },
+                navigation,
                 route: {
                     params: {
                         destination: 'bc1qrecipient',
@@ -87,6 +97,39 @@ const renderConfirm = (store: TransactionsStore) =>
 describe('VerifyOnChain', () => {
     beforeEach(() => {
         sendCoins.mockReset();
+        focusListeners.length = 0;
+    });
+
+    it('sends once when the first send answers before the second press', async () => {
+        // a local node can answer before SendingOnChain covers the screen
+        sendCoins.mockResolvedValue({ txid: 'txid1' });
+        const store = newStore();
+        await renderConfirm(store);
+
+        const button = screen.getByText('views.Send.sendCoins');
+        await fireEvent.press(button);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(store.onchainSendInFlight).toBe(false);
+        await fireEvent.press(button);
+
+        expect(sendCoins).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends again after coming back to the screen (Try Again)', async () => {
+        sendCoins.mockRejectedValueOnce(new Error('insufficient funds'));
+        sendCoins.mockResolvedValueOnce({ txid: 'txid2' });
+        const store = newStore();
+        await renderConfirm(store);
+
+        const button = screen.getByText('views.Send.sendCoins');
+        await fireEvent.press(button);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(store.error).toBe(true);
+
+        focus();
+        await fireEvent.press(button);
+
+        expect(sendCoins).toHaveBeenCalledTimes(2);
     });
 
     it('sends once when Send Coins is pressed twice', async () => {
