@@ -45,6 +45,10 @@ jest.mock('../utils/NodeConfigUtils', () => ({
     purgeLegacyNodeConfigExports: (...args: any[]) =>
         mockPurgeConfigExports(...args)
 }));
+const mockCheckLegacyExports = jest.fn();
+jest.mock('../utils/LegacyExportUtils', () => ({
+    checkLegacyExportFiles: (...args: any[]) => mockCheckLegacyExports(...args)
+}));
 
 jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_FIAT_RATES_SOURCE: 'Zeus',
@@ -2895,40 +2899,29 @@ describe('MigrationUtils', () => {
         });
     });
 
-    describe('purgeLegacyExportFiles', () => {
-        const EncryptedStorage = require('react-native-encrypted-storage');
-
+    describe('checkLegacyExportFiles', () => {
         beforeEach(() => {
             jest.clearAllMocks();
-            (EncryptedStorage.getItem as jest.Mock).mockReset();
-            (EncryptedStorage.setItem as jest.Mock).mockReset();
+            mockCheckLegacyExports.mockResolvedValue(undefined);
         });
 
-        it('runs both purges then sets the one-shot flag', async () => {
-            (EncryptedStorage.getItem as jest.Mock).mockResolvedValue(null);
+        // Startup must not delete legacy exports: the user is asked after
+        // unlock (LegacyExportUtils.promptLegacyExportCleanup) whether to
+        // share or delete them
+        it('records the pending prompt and deletes nothing', async () => {
+            await MigrationUtils.checkLegacyExportFiles();
 
-            await MigrationUtils.purgeLegacyExportFiles();
-
-            expect(mockPurgeCsvExports).toHaveBeenCalledTimes(1);
-            // the migration must not sweep Android Downloads; only a full
-            // wipe passes includeAndroidDownloads
-            expect(mockPurgeCsvExports).toHaveBeenCalledWith();
-            expect(mockPurgeConfigExports).toHaveBeenCalledTimes(1);
-            expect(mockPurgeConfigExports).toHaveBeenCalledWith();
-            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
-                'legacy-export-file-cleanup',
-                'true'
-            );
-        });
-
-        it('skips everything once the flag is set', async () => {
-            (EncryptedStorage.getItem as jest.Mock).mockResolvedValue('true');
-
-            await MigrationUtils.purgeLegacyExportFiles();
-
+            expect(mockCheckLegacyExports).toHaveBeenCalledTimes(1);
             expect(mockPurgeCsvExports).not.toHaveBeenCalled();
             expect(mockPurgeConfigExports).not.toHaveBeenCalled();
-            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('does not block settings load when the check throws', async () => {
+            mockCheckLegacyExports.mockRejectedValue(new Error('EIO'));
+
+            await expect(
+                MigrationUtils.checkLegacyExportFiles()
+            ).resolves.toBeUndefined();
         });
     });
 });

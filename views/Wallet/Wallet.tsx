@@ -92,6 +92,7 @@ import {
 
 import Storage from '../../storage';
 import { autoPurgeLegacyKeychain } from '../../utils/KeychainPurgeUtils';
+import { promptLegacyExportCleanup } from '../../utils/LegacyExportUtils';
 import { isWipePending } from '../../utils/DataClearUtils';
 
 import AlertStore from '../../stores/AlertStore';
@@ -546,6 +547,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 // iCloud-synced keychain copies of wallet data
                 autoPurgeLegacyKeychain();
                 await this.fetchData(transientRetryCount);
+                // After unlock and connect, never on the Lockscreen or POS:
+                // once per launch, ask whether to share or delete export
+                // files older builds left in iOS Documents
+                promptLegacyExportCleanup();
             } else {
                 // Only navigate to IntroSplash if Wallet screen is focused
                 // to prevent interference when user is on other screens
