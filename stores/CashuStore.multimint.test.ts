@@ -1036,18 +1036,48 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it.each([
-        ['settled paid', 'PAID', undefined, [['SUCCEEDED', A]], []],
-        ['settled unpaid', 'UNPAID', undefined, [], []],
+        [
+            'settled paid',
+            'PAID',
+            undefined,
+            [['SUCCEEDED', A]],
+            [],
+            MintPaymentStatus.SUCCESS,
+            MultinutPaymentStep.COMPLETE,
+            undefined
+        ],
+        [
+            'settled unpaid',
+            'UNPAID',
+            undefined,
+            [],
+            [],
+            MintPaymentStatus.FAILED,
+            MultinutPaymentStep.FAILED,
+            'stores.CashuStore.errorPayingInvoice'
+        ],
         [
             'found still in flight',
             'UNPAID',
             'saga-1',
             [['IN_FLIGHT', A]],
-            [`regular-${A}`]
+            [`regular-${A}`],
+            MintPaymentStatus.IN_FLIGHT,
+            MultinutPaymentStep.FAILED,
+            'stores.CashuStore.paymentInFlight'
         ]
     ])(
-        'does not add an in-flight entry for a part reconcile %s while it was being checked',
-        async (_label, state, usedBy, recorded, tracked) => {
+        'reports a part reconcile %s while it was being checked as reconcile found it, with one entry',
+        async (
+            _label,
+            state,
+            usedBy,
+            recorded,
+            tracked,
+            status,
+            step,
+            errorMsg
+        ) => {
             const store = await regularPlannedStore();
             cdk.melt.mockRejectedValue(new Error('connection lost'));
             // A reconcile pass resumes the melt saga at the same moment, so
@@ -1078,11 +1108,52 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             expect(store.payments!.map((p) => [p.status, p.mintUrl])).toEqual(
                 recorded
             );
+            expect(store.paymentSuccess).toBe(state === 'PAID');
+            if (errorMsg) {
+                expect(store.paymentErrorMsg).toBe(errorMsg);
+            } else {
+                expect(store.paymentError).toBe(false);
+                expect(store.paymentPreimage).toBe(PREIMAGE);
+            }
+            const final = onProgress.mock.calls.at(-1)[0];
+            expect(final.step).toBe(step);
+            expect(final.mints[0].status).toBe(status);
+        }
+    );
+
+    it.each([
+        ['the in-flight entry', 'node1-cashu-payments', 0],
+        ['the tracked melts after the melt', 'node1-cashu-pending-melts', 1]
+    ])(
+        'still reports a part in flight when writing %s fails',
+        async (_label, failingKey, callsBeforeFailing) => {
+            const store = await regularPlannedStore();
+            cdk.melt.mockRejectedValue(new Error('connection lost'));
+            cdk.checkMeltQuote.mockResolvedValue(heldQuote(`regular-${A}`));
+            let calls = 0;
+            storage.setItem.mockImplementation(async (key: string) => {
+                if (key === failingKey && calls++ >= callsBeforeFailing) {
+                    throw new Error('keychain write failed');
+                }
+                return true;
+            });
+            const onProgress = jest.fn();
+
+            await store.payLnInvoiceFromEcash({
+                paymentRequest: INVOICE,
+                onProgress
+            });
+
             expect(store.paymentErrorMsg).toBe(
                 'stores.CashuStore.paymentInFlight'
             );
+            expect(pendingQuotes(store)).toEqual([`regular-${A}`]);
             const final = onProgress.mock.calls.at(-1)[0];
-            expect(final.mints[0].status).toBe(MintPaymentStatus.IN_FLIGHT);
+            expect(final.step).toBe(MultinutPaymentStep.FAILED);
+            expect(final.mints[0]).toMatchObject({
+                status: MintPaymentStatus.IN_FLIGHT,
+                error: 'stores.CashuStore.paymentInFlight'
+            });
         }
     );
 

@@ -5332,6 +5332,9 @@ export default class CashuStore {
             isProcessing: true
         });
 
+        // Parts a reconcile pass recorded as paid while they were checked
+        const settledByReconcile = new Set<CashuPayment>();
+
         const meltResults = await Promise.all(
             plannedMeltQuotes.map(
                 async ({ mintUrl, meltQuote, useRegularMelt }, index) => {
@@ -5339,19 +5342,55 @@ export default class CashuStore {
                     // still pay it. Record it as in flight and leave it
                     // tracked, so reconcilePendingMelts settles it either way.
                     const reportInFlight = async (melt: PendingMelt) => {
-                        // A reconcile pass may have settled or recorded the
-                        // melt while the quote was being checked
+                        const recorded = (this.payments || []).find(
+                            (payment) =>
+                                payment.meltResponse?.quote?.quote ===
+                                melt.quote
+                        );
+                        // A reconcile pass settled the melt while the quote
+                        // was being checked: paid if it recorded the payment,
+                        // otherwise the mint did not pay it
                         if (
-                            this.pendingMelts.some(
+                            !this.pendingMelts.some(
                                 (pending) => pending.quote === melt.quote
-                            ) &&
-                            !(this.payments || []).some(
-                                (payment) =>
-                                    payment.meltResponse?.quote?.quote ===
-                                    melt.quote
                             )
                         ) {
-                            await this.recordInFlightPayment(melt, payReq);
+                            if (recorded && !recorded.isInTransit) {
+                                settledByReconcile.add(recorded);
+                                mintProgressInfo[index].status =
+                                    MintPaymentStatus.SUCCESS;
+                                mintProgressInfo[index].error = undefined;
+                                mintProgressInfo[index].feePaid =
+                                    Number(recorded.fee) || 0;
+                                onProgress?.({
+                                    step: MultinutPaymentStep.PROCESSING,
+                                    mints: [...mintProgressInfo],
+                                    totalSelectedBalance,
+                                    isProcessing: true
+                                });
+                                return {
+                                    ok: true as const,
+                                    payment: recorded
+                                };
+                            }
+                            throw new Error(
+                                localeString(
+                                    'stores.CashuStore.errorPayingInvoice'
+                                )
+                            );
+                        }
+                        // A failed write must not turn the part into a
+                        // failure to retry: the melt is tracked and may
+                        // still settle
+                        if (!recorded) {
+                            try {
+                                await this.recordInFlightPayment(melt, payReq);
+                            } catch (recordError) {
+                                console.error(
+                                    'CDK payLnInvoiceFromEcashMultiMint: Failed to record in-flight payment:',
+                                    recordError
+                                );
+                            }
                         }
                         const reason = localeString(
                             'stores.CashuStore.paymentInFlight'
@@ -5611,11 +5650,18 @@ export default class CashuStore {
         // others ran, and those writes can land out of order. Now that all
         // of them are done, store the final state of anything in flight.
         if (inFlightPart) {
-            await this.persistPendingMelts();
-            await Storage.setItem(
-                `${this.getNodeDir()}-cashu-payments`,
-                this.payments
-            );
+            try {
+                await this.persistPendingMelts();
+                await Storage.setItem(
+                    `${this.getNodeDir()}-cashu-payments`,
+                    this.payments
+                );
+            } catch (writeError) {
+                console.error(
+                    'CDK payLnInvoiceFromEcashMultiMint: Failed to store in-flight parts:',
+                    writeError
+                );
+            }
         }
 
         if (segmentPayments.length === 0) {
@@ -5642,7 +5688,9 @@ export default class CashuStore {
             return;
         }
 
-        this.payments?.push(...segmentPayments);
+        this.payments?.push(
+            ...segmentPayments.filter((p) => !settledByReconcile.has(p))
+        );
         await Storage.setItem(
             `${this.getNodeDir()}-cashu-payments`,
             this.payments
