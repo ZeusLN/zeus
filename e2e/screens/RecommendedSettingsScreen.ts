@@ -3,6 +3,9 @@ import { byId, waitForVisible } from '../helpers/elements';
 
 const IDS = TEST_IDS.recommendedSettings;
 
+// Mint recommendations come from Nostr relays.
+const MINTS_TIMEOUT_MS = 60000;
+
 class RecommendedSettingsScreen {
     get walletTypeRow() {
         return byId(IDS.walletTypeRow);
@@ -28,6 +31,10 @@ class RecommendedSettingsScreen {
         return byId(IDS.mintSourceValue);
     }
 
+    get recommendedMints() {
+        return byId(IDS.recommendedMints);
+    }
+
     get clipboardRow() {
         return byId(IDS.clipboardRow);
     }
@@ -50,6 +57,13 @@ class RecommendedSettingsScreen {
 
     async waitUntilDisplayed(): Promise<void> {
         await waitForVisible(this.createWalletButton);
+    }
+
+    // Create wallet stays disabled for an ecash wallet until the recommended
+    // mints have loaded. They come from Nostr relays; if the relays return
+    // none, the wallet would be created without a mint.
+    async waitForMints(): Promise<void> {
+        await waitForVisible(this.recommendedMints, MINTS_TIMEOUT_MS);
     }
 }
 
