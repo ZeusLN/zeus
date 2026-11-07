@@ -3554,6 +3554,9 @@ export default class NostrWalletConnectStore {
             connection.id,
             pending
         );
+        // The connections may have been reloaded during the fetch, and only
+        // the stored connection is saved
+        const stored = this.storedConnection(connection);
 
         for (const activity of pending) {
             const payment = NostrConnectUtils.findPaymentForInvoice(
@@ -3561,8 +3564,15 @@ export default class NostrWalletConnectStore {
                 payments,
                 activity.paymentHash
             );
+            // finalizePayment or a reload may have replaced the row during
+            // the await
+            const findCurrent = () =>
+                stored.findPayInvoiceActivity(
+                    activity.id,
+                    activity.paymentHash
+                ) ?? activity;
             if (!payment) {
-                if (this.abandonStaleUnresolvedPayInvoiceHold(activity)) {
+                if (this.abandonStaleUnresolvedPayInvoiceHold(findCurrent())) {
                     changed = true;
                 }
                 continue;
@@ -3572,16 +3582,9 @@ export default class NostrWalletConnectStore {
             let current = activity;
 
             runInAction(() => {
-                // finalizePayment may have replaced the row during the await
-                current =
-                    connection.findPayInvoiceActivity(
-                        activity.id,
-                        activity.paymentHash
-                    ) ?? activity;
+                current = findCurrent();
                 const statusBefore = current.status;
-                if (
-                    this.applyPayInvoiceReconcile(current, connection, payment)
-                ) {
+                if (this.applyPayInvoiceReconcile(current, stored, payment)) {
                     changed = true;
                 }
                 transitionedToSuccess =
@@ -3589,13 +3592,13 @@ export default class NostrWalletConnectStore {
             });
 
             if (transitionedToSuccess) {
-                void this.notifyConnection(connection, 'payment_sent', current);
+                void this.notifyConnection(stored, 'payment_sent', current);
             }
         }
 
         if (changed) {
             this.scheduleMaxBudgetRefresh();
-            this.findAndUpdateConnection(connection);
+            this.findAndUpdateConnection(stored);
         }
         return changed;
     }

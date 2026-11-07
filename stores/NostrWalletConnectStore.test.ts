@@ -3170,6 +3170,58 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
         expect(connection.canSpend(1)).toBe(false);
     });
 
+    // The connections list reloads the connections on every focus, which
+    // replaces the stored objects
+    it('debits the stored connection when a reload lands while the node payments are fetched', async () => {
+        const invoice = 'lnbc1timeout-reload-during-fetch';
+        const paymentHash = hex64('5');
+        const paymentsStore = {
+            payments: [] as Payment[],
+            getPayments: jest.fn(async () => [])
+        };
+        const {
+            store,
+            connections: [connection]
+        } = await startService(
+            [
+                {
+                    maxAmountSats: 20000,
+                    activity: [timeoutFailedActivity(invoice, { paymentHash })]
+                }
+            ],
+            { paymentsStore }
+        );
+        // Let the next reconcile fetch from the node again
+        (store as any).lastPendingPaymentStatusFetchByConnection.clear();
+        const fetched = holdNextCall<Payment[]>(paymentsStore.getPayments);
+
+        const reconcile = (store as any).reconcilePendingPayInvoiceActivities(
+            connection
+        );
+        await fetched.entered;
+        await store.loadConnections();
+        const [reloaded] = store.connections;
+        expect(reloaded).not.toBe(connection);
+        paymentsStore.payments = [
+            new Payment({
+                payment_request: invoice,
+                payment_hash: paymentHash,
+                status: 'SUCCEEDED',
+                value_sat: 10000,
+                fee_sat: '50',
+                payment_preimage: hex64('9')
+            })
+        ];
+        fetched.release(paymentsStore.payments);
+        expect(await reconcile).toBe(true);
+
+        expect(store.connections[0]).toBe(reloaded);
+        expect(reloaded.activity[0].status).toBe('success');
+        expect(reloaded.totalSpendSats).toBe(10050);
+        await jest.advanceTimersByTimeAsync(1000);
+        expect(persistedConnections()[0].totalSpendSats).toBe(10050);
+    });
+
     it('promotes a timeout-failed pay_invoice to pending when the node still shows in-flight', async () => {
         const invoice = 'lnbc1timeout-still-inflight';
         const paymentHash = hex64('f');
