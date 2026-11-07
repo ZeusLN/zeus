@@ -121,6 +121,16 @@ type PendingConnectionMutation = 'delete' | 'update' | 'rotate';
 
 type Nip47ErrorResponse = ReturnType<typeof NostrConnectUtils.createNip47Error>;
 
+interface SubscribeAttempt {
+    connection: NWCConnection;
+    pubkey: string;
+    secretKey?: string;
+    service?: NWCWalletService;
+    handlerConfig: string;
+    // Resolves when the attempt has stored its handle or given up
+    done: Promise<void>;
+}
+
 interface ClientKeys {
     [pubkey: string]: string;
 }
@@ -240,11 +250,13 @@ export default class NostrWalletConnectStore {
         string,
         ReturnType<typeof setTimeout>
     >();
-    // The latest subscribe started per connection. A later subscribe, an
-    // unsubscribe, or a reset replaces or removes the entry, and an
-    // attempt that is no longer here when the relay answers unsubscribes
-    // at once instead of overwriting (and orphaning) the live subscription.
-    private subscribeAttempts = new Map<string, object>();
+    // The latest subscribe started per connection. A later subscribe for
+    // the same configuration waits for it; one with a different
+    // configuration, an unsubscribe, or a reset replaces or removes the
+    // entry, and an attempt that is no longer here when the relay answers
+    // unsubscribes at once instead of overwriting (and orphaning) the live
+    // subscription.
+    private subscribeAttempts = new Map<string, SubscribeAttempt>();
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -1800,12 +1812,45 @@ export default class NostrWalletConnectStore {
             });
             return;
         }
-        const attempt = {};
+        let attempt: SubscribeAttempt | undefined;
+        let finish = () => {};
         try {
+            const serviceSecretKey = this.walletServiceKeys?.privateKey;
+            const nwcWalletService = this.nwcWalletServices.get(
+                connection.relayUrl
+            );
+            const handlerConfig = [
+                this.isCashuConfigured,
+                BackendUtils.supportsMessageSigning(),
+                ...[...(connection.permissions ?? [])].sort()
+            ].join(',');
+            const pending = this.subscribeAttempts.get(connection.id);
+            if (
+                pending &&
+                pending.connection === connection &&
+                pending.pubkey === connection.pubkey &&
+                pending.secretKey === serviceSecretKey &&
+                pending.service === nwcWalletService &&
+                pending.handlerConfig === handlerConfig
+            ) {
+                // The in-flight attempt opens the same subscription, so wait
+                // for it instead of replacing it: a replacement that failed
+                // would leave the connection with no subscription at all.
+                return await pending.done;
+            }
+            attempt = {
+                connection,
+                pubkey: connection.pubkey,
+                secretKey: serviceSecretKey,
+                service: nwcWalletService,
+                handlerConfig,
+                done: new Promise<void>((resolve) => {
+                    finish = resolve;
+                })
+            };
             this.cancelScheduledRelayRelease(connection.relayUrl);
             this.unsubscribeFromConnection(connection.id);
             this.subscribeAttempts.set(connection.id, attempt);
-            const serviceSecretKey = this.walletServiceKeys?.privateKey;
 
             if (!serviceSecretKey) {
                 throw new Error(
@@ -1913,9 +1958,6 @@ export default class NostrWalletConnectStore {
                     );
             }
 
-            const nwcWalletService = this.nwcWalletServices.get(
-                connection.relayUrl
-            );
             if (!nwcWalletService) {
                 throw new Error(
                     localeString(
@@ -1954,9 +1996,13 @@ export default class NostrWalletConnectStore {
                 error?.message || String(error)
             );
         } finally {
-            if (this.subscribeAttempts.get(connection.id) === attempt) {
+            if (
+                attempt &&
+                this.subscribeAttempts.get(connection.id) === attempt
+            ) {
                 this.subscribeAttempts.delete(connection.id);
             }
+            finish();
         }
     }
 
