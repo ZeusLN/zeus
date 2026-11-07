@@ -18,6 +18,7 @@ import ModalStore from '../../stores/ModalStore';
 
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 
 interface WalletTypeProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -55,7 +56,7 @@ export default class WalletType extends React.Component<WalletTypeProps, {}> {
         const returnTo = route.params?.returnTo;
 
         if (returnTo) {
-            navigation.navigate(returnTo, { enableCashu });
+            navigation.popTo(returnTo, { enableCashu });
         } else {
             navigation.navigate('NodeChoice', { enableCashu });
         }
@@ -94,6 +95,10 @@ export default class WalletType extends React.Component<WalletTypeProps, {}> {
                                     <View style={styles.buttonWithInfo}>
                                         <View style={styles.buttonFlex}>
                                             <Button
+                                                testID={
+                                                    TEST_IDS.walletType
+                                                        .selfCustodyButton
+                                                }
                                                 title={localeString(
                                                     'views.WalletType.control'
                                                 )}
@@ -103,6 +108,10 @@ export default class WalletType extends React.Component<WalletTypeProps, {}> {
                                             />
                                         </View>
                                         <TouchableOpacity
+                                            testID={
+                                                TEST_IDS.walletType
+                                                    .selfCustodyInfoButton
+                                            }
                                             onPress={this.showSelfCustodyInfo}
                                             style={styles.infoButton}
                                         >
@@ -123,6 +132,10 @@ export default class WalletType extends React.Component<WalletTypeProps, {}> {
                                     <View style={styles.buttonWithInfo}>
                                         <View style={styles.buttonFlex}>
                                             <Button
+                                                testID={
+                                                    TEST_IDS.walletType
+                                                        .ecashButton
+                                                }
                                                 title={localeString(
                                                     'views.WalletType.lowFees'
                                                 )}
@@ -133,6 +146,10 @@ export default class WalletType extends React.Component<WalletTypeProps, {}> {
                                             />
                                         </View>
                                         <TouchableOpacity
+                                            testID={
+                                                TEST_IDS.walletType
+                                                    .ecashInfoButton
+                                            }
                                             onPress={this.showCashuInfo}
                                             style={styles.infoButton}
                                         >

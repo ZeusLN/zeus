@@ -7,6 +7,7 @@ interface TouchableProps {
     highlight: boolean;
     children: React.ReactNode;
     style?: any;
+    testID?: string;
 }
 
 export default function Touchable({
@@ -14,7 +15,8 @@ export default function Touchable({
     onLongPress,
     highlight,
     children,
-    style
+    style,
+    testID
 }: TouchableProps) {
     return (
         <>
@@ -23,6 +25,7 @@ export default function Touchable({
                     style={style}
                     onPress={touch}
                     onLongPress={onLongPress}
+                    testID={testID}
                 >
                     {children}
                 </TouchableOpacity>
@@ -32,6 +35,7 @@ export default function Touchable({
                     style={style}
                     onPress={touch}
                     onLongPress={onLongPress}
+                    testID={testID}
                 >
                     {children}
                 </Pressable>

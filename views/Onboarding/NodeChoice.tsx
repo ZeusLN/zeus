@@ -25,6 +25,7 @@ import {
     NEUTRINO_PING_THRESHOLD_MS
 } from '../../utils/LndMobileUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface NodeChoiceProps {
@@ -132,7 +133,7 @@ export default class NodeChoice extends React.Component<
         const returnTo = route.params?.returnTo;
 
         if (returnTo) {
-            navigation.navigate(returnTo, { enableCashu, implementation });
+            navigation.popTo(returnTo, { enableCashu, implementation });
         } else {
             navigation.navigate('RecommendedSettings', {
                 enableCashu,
@@ -176,6 +177,10 @@ export default class NodeChoice extends React.Component<
                                     <View style={styles.buttonWithInfo}>
                                         <View style={styles.buttonFlex}>
                                             <Button
+                                                testID={
+                                                    TEST_IDS.nodeChoice
+                                                        .ldkNodeButton
+                                                }
                                                 title={localeString(
                                                     'views.NodeChoice.speedReliability'
                                                 )}
@@ -187,6 +192,10 @@ export default class NodeChoice extends React.Component<
                                             />
                                         </View>
                                         <TouchableOpacity
+                                            testID={
+                                                TEST_IDS.nodeChoice
+                                                    .ldkNodeInfoButton
+                                            }
                                             onPress={this.showLdkNodeInfo}
                                             style={styles.infoButton}
                                         >
@@ -207,6 +216,10 @@ export default class NodeChoice extends React.Component<
                                     <View style={styles.buttonWithInfo}>
                                         <View style={styles.buttonFlex}>
                                             <Button
+                                                testID={
+                                                    TEST_IDS.nodeChoice
+                                                        .embeddedLndButton
+                                                }
                                                 title={localeString(
                                                     'views.NodeChoice.privacyPower'
                                                 )}
@@ -219,6 +232,10 @@ export default class NodeChoice extends React.Component<
                                             />
                                         </View>
                                         <TouchableOpacity
+                                            testID={
+                                                TEST_IDS.nodeChoice
+                                                    .embeddedLndInfoButton
+                                            }
                                             onPress={this.showEmbeddedLndInfo}
                                             style={styles.infoButton}
                                         >
@@ -236,7 +253,10 @@ export default class NodeChoice extends React.Component<
                                 </View>
 
                                 {checking ? (
-                                    <View style={styles.warningContainer}>
+                                    <View
+                                        testID={TEST_IDS.nodeChoice.deviceCheck}
+                                        style={styles.warningContainer}
+                                    >
                                         <View style={styles.checkingRow}>
                                             <ActivityIndicator
                                                 size="small"
