@@ -896,7 +896,8 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .fundPsbt(req)
             .then((data: walletrpc.FundPsbtResponse) => snakeize(data));
-    releaseOutput = async (req: walletrpc.ReleaseOutputRequest) =>
+    // takes a locked_utxos entry of a snakeized fundPsbt response
+    releaseOutput = async (req: any) =>
         await this.lnc.lnd.walletKit
             .releaseOutput(req)
             .then((data: walletrpc.ReleaseOutputResponse) => snakeize(data));
