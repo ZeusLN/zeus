@@ -2201,8 +2201,9 @@ export default class NostrWalletConnectStore {
     // for its admitted requests to finish, so a payment that was queued
     // when the user deleted the connection or removed its pay permission
     // would still be sent. The stored connection with the same id must
-    // also still have the same client pubkey and the current wallet. It is
-    // compared by these rather than by object, since loadConnections replaces the stored objects on every
+    // also still have the same client pubkey, the current wallet and the
+    // pay_invoice permission. It is compared by these rather than by
+    // object, since loadConnections replaces the stored objects on every
     // focus of the connections list; callers then use the stored one,
     // whose budget is debited and saved.
     private payRequestRejection(
@@ -2234,7 +2235,19 @@ export default class NostrWalletConnectStore {
                 Nip47ErrorCode.INTERNAL_ERROR
             );
         }
-        return this.mutationRejection<Nip47ErrorResponse>(connection.id);
+        const mutationRejection = this.mutationRejection<Nip47ErrorResponse>(
+            connection.id
+        );
+        if (mutationRejection) return mutationRejection;
+        if (!stored.hasPermission('pay_invoice')) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.payInvoiceNotPermitted'
+                ),
+                Nip47ErrorCode.RESTRICTED
+            );
+        }
+        return undefined;
     }
 
     /**
