@@ -104,6 +104,14 @@ jest.requireMock('../storage')._backing['zeus-settings-v2'] = JSON.stringify({
     selectedNode: 0,
     nodes
 });
+const { NativeModules } = require('react-native');
+const nativeEventModule = {
+    addListener: jest.fn(),
+    removeListeners: jest.fn()
+};
+NativeModules.LndMobile = nativeEventModule;
+NativeModules.LndMobileTools = nativeEventModule;
+NativeModules.LdkNodeModule = nativeEventModule;
 // Loaded here rather than in the test: on a cold transform cache, as in
 // CI, loading the store graph takes longer than the test timeout, which
 // does not cover module loading. Stores before SettingsStore, or the
