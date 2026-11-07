@@ -34,6 +34,10 @@ export default class SyncStore {
     @observable public rescanTxnsFound: number = 0;
     @observable public isLogObservationActive: boolean = false;
     private logListener: EmitterSubscription | null = null;
+    // Bumped by reset() and by each start, so a polling loop left over
+    // from an earlier run exits instead of polling alongside the new one
+    private syncRun = 0;
+    private recoveryRun = 0;
 
     nodeInfo: any;
     settingsStore: SettingsStore;
@@ -58,6 +62,8 @@ export default class SyncStore {
 
     @action
     public reset = () => {
+        this.syncRun++;
+        this.recoveryRun++;
         this.isSyncing = false;
         this.isRecovering = false;
         this.isInExpressGraphSync = false;
@@ -170,6 +176,8 @@ export default class SyncStore {
 
     @action
     public startSyncing = async () => {
+        const run = ++this.syncRun;
+        const isCurrent = () => run === this.syncRun && this.isSyncing;
         this.isSyncing = true;
         this.error = false;
         this.bestBlockHeight = 0;
@@ -179,7 +187,7 @@ export default class SyncStore {
         // mempool instance must not wedge the sync UI, since the tip can
         // be estimated from the node's own best header while it is down
         for (let attempt = 0; attempt < TIP_FETCH_MAX_ATTEMPTS; attempt++) {
-            if (!this.isSyncing) return;
+            if (!isCurrent()) return;
             try {
                 await this.getBestBlockHeight();
                 break;
@@ -189,21 +197,30 @@ export default class SyncStore {
         }
 
         // initial fetch
-        while (!this.nodeInfo?.block_height) {
-            if (!this.isSyncing) return;
-            await this.getNodeInfo();
-            if (!this.nodeInfo?.block_height) {
-                await sleep(3000);
+        try {
+            while (!this.nodeInfo?.block_height) {
+                if (!isCurrent()) return;
+                await this.getNodeInfo();
+                if (!this.nodeInfo?.block_height) {
+                    await sleep(3000);
+                }
             }
+        } catch {
+            // Clear the flag so callers and onReconnect can start again
+            if (run === this.syncRun) this.isSyncing = false;
+            return;
         }
+        if (!isCurrent()) return;
 
         await this.setSyncInfo();
 
         let i = 0;
-        while (this.isSyncing) {
-            // Loops until setSyncInfo declares the sync complete or reset()
-            // is called (e.g. LND stopped for wallet creation)
+        while (isCurrent()) {
+            // Loops until setSyncInfo declares the sync complete, reset()
+            // is called (e.g. LND stopped for wallet creation) or a newer
+            // startSyncing() takes over
             await sleep(2000);
+            if (!isCurrent()) return;
             this.getNodeInfo().then(() => this.setSyncInfo());
 
             // only query Mempool instance every 30 seconds
@@ -250,11 +267,23 @@ export default class SyncStore {
     };
 
     private startRecovering = async () => {
+        // checkRecoveryStatus runs on every refresh; keep one loop
+        if (this.isRecovering) return;
+        const run = ++this.recoveryRun;
+        const isCurrent = () => run === this.recoveryRun && this.isRecovering;
         this.isRecovering = true;
 
-        while (this.isRecovering) {
+        while (isCurrent()) {
             await sleep(2000);
-            await this.getRecoveryStatus();
+            if (!isCurrent()) return;
+            try {
+                await this.getRecoveryStatus();
+            } catch {
+                // Clear the flag so the next checkRecoveryStatus can
+                // restart the loop or see that recovery finished
+                if (run === this.recoveryRun) this.isRecovering = false;
+                return;
+            }
         }
     };
 
