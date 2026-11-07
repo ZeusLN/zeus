@@ -1554,6 +1554,45 @@ class CashuDevKitModule: RCTEventEmitter {
         }
     }
 
+    // MARK: - Payment Requests (NUT-18 creqA, NUT-26 creqb)
+
+    @objc(decodePaymentRequest:resolver:rejecter:)
+    func decodePaymentRequest(_ encoded: String,
+                              resolve: @escaping RCTPromiseResolveBlock,
+                              reject: @escaping RCTPromiseRejectBlock) {
+        do {
+            let request = try CashuDevKit.decodePaymentRequest(encoded: encoded)
+            var result: [String: Any] = [
+                "mints": request.mints(),
+                "transports": request.transports().map { transport -> [String: Any] in
+                    let type: String
+                    switch transport.transportType {
+                    case .nostr:
+                        type = "nostr"
+                    case .httpPost:
+                        type = "post"
+                    }
+                    return [
+                        "type": type,
+                        "target": transport.target,
+                        "tags": transport.tags
+                    ]
+                }
+            ]
+            if let paymentId = request.paymentId() { result["payment_id"] = paymentId }
+            if let amount = request.amount() { result["amount"] = amount.value }
+            if let unit = request.unit() { result["unit"] = currencyUnitToString(unit) }
+            if let singleUse = request.singleUse() { result["single_use"] = singleUse }
+            if let description = request.description() { result["description"] = description }
+            resolve(encodeToJson(result))
+        } catch let error as FfiError {
+            let (code, message) = mapFfiError(error)
+            reject(code, message, error)
+        } catch {
+            reject("DECODE_ERROR", error.localizedDescription, error)
+        }
+    }
+
     // MARK: - Restore
 
     @objc(restore:resolver:rejecter:)

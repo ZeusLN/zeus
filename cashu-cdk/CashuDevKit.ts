@@ -10,6 +10,7 @@ import {
     CDKProof,
     CDKProofWithY,
     CDKToken,
+    CDKPaymentRequest,
     CDKMintInfo,
     CDKKeyset,
     CDKMintQuote,
@@ -645,6 +646,24 @@ class CashuDevKit {
             return await CashuDevKitModule.isValidToken(token);
         } catch (_e) {
             return false;
+        }
+    }
+
+    // ========================================================================
+    // Payment Requests
+    // ========================================================================
+
+    /**
+     * Decode a Cashu payment request, either NUT-18 (creqA) or NUT-26
+     * (creqb, any case)
+     * @param encoded - The encoded payment request
+     */
+    async decodePaymentRequest(encoded: string): Promise<CDKPaymentRequest> {
+        try {
+            const json = await CashuDevKitModule.decodePaymentRequest(encoded);
+            return JSON.parse(json);
+        } catch (error) {
+            throw mapCDKError(error);
         }
     }
 

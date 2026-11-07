@@ -30,6 +30,7 @@ import { Linking, Platform } from 'react-native';
 import handleAnything from './handleAnything';
 import { IN_APP_RESTART } from './InAppRestartUtils';
 import LinkingUtils from './LinkingUtils';
+import { noteTagSessionEnded } from './NfcRedeliveryUtils';
 
 const flushPromises = () => new Promise(setImmediate);
 
@@ -222,6 +223,36 @@ describe('LinkingUtils share intents', () => {
         expect(
             NativeModules.MobileTools.clearSharedIntent
         ).not.toHaveBeenCalled();
+    });
+
+    it('drops a tag Android delivers again after an NFC payment session', async () => {
+        Platform.OS = 'android';
+        const tag = 'BITCOIN:?LIGHTNING=LNBC210N1XYZ&CREQ=CREQB1QYQQSE';
+        noteTagSessionEnded([tag]);
+        NativeModules.MobileTools.getIntentNfcData.mockResolvedValue(tag);
+        const navigation = makeNavigation(['Wallet', 'CREQPayment']);
+
+        await LinkingUtils.handleAndroidIntents(navigation as any);
+        await flushPromises();
+
+        expect(handleAnything).not.toHaveBeenCalled();
+        expect(processSharedQRImageFast).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('handles a different tag after an NFC payment session', async () => {
+        Platform.OS = 'android';
+        noteTagSessionEnded(['creqAoWFhZA']);
+        NativeModules.MobileTools.getIntentNfcData.mockResolvedValue(
+            'lightning:lnbc1nfc'
+        );
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleAndroidIntents(navigation as any);
+        await flushPromises();
+
+        expect(handleAnything).toHaveBeenCalledWith('lightning:lnbc1nfc');
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {});
     });
 
     it('hands an iOS share URL to the processing screen without clearing it again', async () => {

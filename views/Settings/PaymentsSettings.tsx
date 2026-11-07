@@ -9,7 +9,10 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
-import SettingsStore, { MEMPOOL_RATES_KEYS } from '../../stores/SettingsStore';
+import SettingsStore, {
+    DEFAULT_TAP_TO_PAY_LIMIT,
+    MEMPOOL_RATES_KEYS
+} from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
@@ -34,6 +37,7 @@ interface PaymentsSettingsState {
     enableMempoolRates: boolean;
     preferredMempoolRate: string;
     slideToPayThreshold: string;
+    tapToPayLimit: string;
     enableDonations: boolean;
     donationPercentage: number;
     mounted?: boolean;
@@ -53,6 +57,7 @@ export default class PaymentsSettings extends React.Component<
         enableMempoolRates: false,
         preferredMempoolRate: 'fastestFee',
         slideToPayThreshold: '10000',
+        tapToPayLimit: DEFAULT_TAP_TO_PAY_LIMIT.toString(),
         enableDonations: false,
         donationPercentage: 5,
         mounted: false
@@ -73,6 +78,9 @@ export default class PaymentsSettings extends React.Component<
                 settings?.payments?.preferredMempoolRate || 'fastestFee',
             slideToPayThreshold:
                 settings?.payments?.slideToPayThreshold?.toString() || '10000',
+            tapToPayLimit: (
+                settings?.payments?.tapToPayLimit ?? DEFAULT_TAP_TO_PAY_LIMIT
+            ).toString(),
             enableDonations: settings?.payments?.enableDonations || false,
             donationPercentage:
                 settings?.payments?.defaultDonationPercentage || 5,
@@ -104,6 +112,7 @@ export default class PaymentsSettings extends React.Component<
             timeoutSeconds,
             preferredMempoolRate,
             slideToPayThreshold,
+            tapToPayLimit,
             enableDonations,
             donationPercentage
         } = this.state;
@@ -245,6 +254,48 @@ export default class PaymentsSettings extends React.Component<
                         hideUnitChangeButton={true}
                         forceUnit="sats"
                     />
+
+                    {BackendUtils.supportsCashuWallet() && (
+                        <>
+                            <AmountInput
+                                amount={tapToPayLimit}
+                                title={
+                                    localeString('general.ecash') +
+                                    ' - ' +
+                                    localeString(
+                                        'views.Settings.Payments.tapToPayLimit'
+                                    )
+                                }
+                                onAmountChange={(amount, _) => {
+                                    this.setState({ tapToPayLimit: amount });
+                                    const amountNumber = Number(amount);
+                                    if (
+                                        this.state.mounted &&
+                                        amount !== '' &&
+                                        !Number.isNaN(amountNumber)
+                                    ) {
+                                        updateSettingsGroupDebounced(
+                                            'payments',
+                                            { tapToPayLimit: amountNumber }
+                                        );
+                                    }
+                                }}
+                                hideConversion={true}
+                                hideUnitChangeButton={true}
+                                forceUnit="sats"
+                            />
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    paddingBottom: 10
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Payments.tapToPayLimitExplainer'
+                                )}
+                            </Text>
+                        </>
+                    )}
 
                     {(BackendUtils.isLNDBased() ||
                         implementation === 'cln-rest' ||
