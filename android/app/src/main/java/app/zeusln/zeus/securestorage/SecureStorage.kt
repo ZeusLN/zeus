@@ -18,7 +18,8 @@ import android.util.Log
  *   readable copy the legacy error is passed on: an unreadable entry is
  *   never reported as missing.
  * - Writes go to the legacy store first and fail if it fails. A failed
- *   new-store copy is logged and repaired by the next read.
+ *   new-store copy is logged, the older copy is deleted so it cannot be
+ *   served later, and the next read repairs it.
  *
  * Once a later release marks the new store authoritative
  * ([SecureFileStore.isAuthoritative]), reads and writes go to it first and
@@ -61,6 +62,7 @@ class SecureStorage(
             store.write(name, value)
         } catch (e: Exception) {
             Log.w(TAG, "New copy not written", e)
+            dropStaleCopy(name)
         }
     }
 
@@ -110,6 +112,18 @@ class SecureStorage(
             store.delete(name)
         } catch (e: Exception) {
             Log.w(TAG, "Could not drop the copy of a deleted entry", e)
+        }
+    }
+
+    // The new copy still holds the value from before this write. Drop it, or
+    // a read that later finds the legacy entry unreadable would fall back to
+    // the outdated value. A failed delete is not an error for the caller:
+    // the legacy write stands and the next read repairs the copy.
+    private fun dropStaleCopy(name: String) {
+        try {
+            store.delete(name)
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not drop the outdated new copy", e)
         }
     }
 
