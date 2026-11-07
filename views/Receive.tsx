@@ -548,7 +548,13 @@ export default class Receive extends React.Component<
         const { route, InvoicesStore } = this.props;
         const { route: prevRoute } = prevProps;
 
-        if (route.params?.amount !== prevRoute.params?.amount) {
+        // a new amount or a new LNURL-withdraw (Receive navigating to itself
+        // after an NFC tap) replaces the invoice flow; the withdraw alone
+        // changes when Receive was opened without an amount param
+        if (
+            route.params?.amount !== prevRoute.params?.amount ||
+            route.params?.lnurlParams !== prevRoute.params?.lnurlParams
+        ) {
             const { reset } = InvoicesStore;
 
             // the invoice on screen is replaced: its watchers, or an
