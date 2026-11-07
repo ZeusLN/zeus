@@ -139,7 +139,7 @@ Background: React class components have deprecated `UNSAFE_componentWillMount`-s
 
 Background terms: **Tor** routes traffic through an anonymity network; a **.onion** address is a Tor hidden service (its TLS certs can't be CA-validated normally); a **TLS cert bypass** disables certificate verification. Bypassing certs for *clearnet* hosts reached over Tor exposes users to exit-node man-in-the-middle attacks.
 
-- 2026-05-27: Tor stack replaced: merge `c512ea687` (PR #3971) migrates from the retired `ZeusLN/react-native-tor` fork to `react-native-nitro-tor` (package.json pinned `0.6.0` then; `0.6.1` on 2026-10-24).
+- 2026-05-27: Tor stack replaced: merge `c512ea687` (PR #3971) migrates from the retired `ZeusLN/react-native-tor` fork to `react-native-nitro-tor` (package.json pinned `0.6.0` then; `0.6.1` on 2026-10-24; `1.1.0`, the 1.x `Tor.daemon`/`Tor.http` API, on 2026-10-29).
 - 2026-05-26: hardening: `d4c8f12e1` "fix(TorUtils): treat HTTP >= 300 responses as errors".
 - 2026-06-19: **the near-miss** — `9de1742f6` "fix(tor): trust invalid certs on LND/CLN REST over Tor" trusted invalid certs *broadly* on the Tor path.
 - 2026-06-20: scoped **one day later** by `8792003ee` "fix(tor): scope TLS bypass to .onion HTTPS endpoints", merge `5a7422a4b` (PR #4186). Standing rule since: cert bypass ONLY for HTTPS .onion; clearnet-over-Tor keeps strict TLS.
@@ -349,7 +349,7 @@ Re-verification one-liners for volatile facts:
 | Hash is on master lineage | `git merge-base --is-ancestor <hash> HEAD && echo ok` |
 | RN version (0.87.1 as of 2026-10-24) | `grep '"react-native"' package.json` |
 | New Architecture still ON | `grep newArchEnabled android/gradle.properties` |
-| nitro-tor version (0.6.1 as of 2026-10-24) | `grep react-native-nitro-tor package.json` |
+| nitro-tor version (1.1.0 as of 2026-10-29) | `grep react-native-nitro-tor package.json` |
 | Keychain deletion still disabled | `grep -n 'Skipping delete' utils/MigrationUtils.ts` |
 | Orphan-retention comment intact | `grep -n 'DISABLED' utils/MigrationUtils.ts` |
 | `zeus:`-prefix + `cloudSync: false` writes | `grep -n 'cloudSync' storage/index.ts` |
