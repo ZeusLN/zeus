@@ -1929,6 +1929,35 @@ describe('MigrationUtils', () => {
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
 
+        it('reads nothing until the first-run check answers', async () => {
+            // KeychainAudit holds the answer while the check waits for
+            // protected data after a locked launch
+            let answer: (reinstalled: boolean) => void = () => {};
+            mockKeychainSurvivedReinstall.mockImplementation(
+                () => new Promise<boolean>((resolve) => (answer = resolve))
+            );
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:zeus-settings-v2'
+            ]);
+
+            const migration = MigrationUtils.keychainDesyncMigration();
+            await new Promise((resolve) => setImmediate(resolve));
+
+            expect(
+                StorageModule.getInternetPasswordServers
+            ).not.toHaveBeenCalled();
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+
+            answer(true);
+            await migration;
+
+            expect(
+                StorageModule.getInternetPasswordServers
+            ).not.toHaveBeenCalled();
+            expect(StorageModule.setRawLocalItem).not.toHaveBeenCalled();
+        });
+
         it('is a no-op off iOS', async () => {
             Platform.OS = 'android';
 

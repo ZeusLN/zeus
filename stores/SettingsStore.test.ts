@@ -1423,6 +1423,45 @@ describe('SettingsStore.getSettings', () => {
         expect(settings.nodes ?? []).toEqual([]);
     });
 
+    it('waits for the first-run check before falling back to the synchronizable blob', async () => {
+        // After a locked launch the check runs at unlock, and only then is it
+        // known whether this install replaced an earlier one
+        let answer: (reinstalled: boolean) => void = () => {};
+        mockKeychainSurvivedReinstall.mockImplementation(
+            () => new Promise<boolean>((resolve) => (answer = resolve))
+        );
+        StorageMock.getRawItem.mockImplementation(
+            async (server: string, cloudSync: boolean) =>
+                cloudSync && server === `zeus:${STORAGE_KEY}`
+                    ? JSON.stringify({
+                          nodes: [
+                              { implementation: 'lnd', host: 'old.example' }
+                          ],
+                          selectedNode: 0
+                      })
+                    : null
+        );
+        const store = new SettingsStore();
+
+        const loading = store.getSettings();
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(StorageMock.getRawItem).not.toHaveBeenCalledWith(
+            `zeus:${STORAGE_KEY}`,
+            true
+        );
+
+        answer(true);
+        const settings = await loading;
+
+        expect(StorageMock.getRawItem).not.toHaveBeenCalledWith(
+            `zeus:${STORAGE_KEY}`,
+            true
+        );
+        expect(settings.nodes ?? []).toEqual([]);
+        mockKeychainSurvivedReinstall.mockImplementation(async () => false);
+    });
+
     it('falls back to the synchronizable blob when the local partition is empty', async () => {
         // Desync migration not yet complete: nothing in local storage, the
         // real blob still lives only in the synchronizable partition. A user

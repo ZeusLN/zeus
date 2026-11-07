@@ -40,6 +40,24 @@ describe('keychainSurvivedReinstall', () => {
         expect(read).toHaveBeenCalledTimes(2);
     });
 
+    it('waits for the native answer, which is held while the first-run check is deferred', async () => {
+        let answer: (value: boolean) => void = () => {};
+        read.mockReturnValue(
+            new Promise<boolean>((resolve) => (answer = resolve))
+        );
+        let settled = false;
+
+        const result = keychainSurvivedReinstall().then((value) => {
+            settled = true;
+            return value;
+        });
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(settled).toBe(false);
+
+        answer(true);
+        await expect(result).resolves.toBe(true);
+    });
+
     it('is false off iOS without reading defaults', async () => {
         Platform.OS = 'android';
         read.mockResolvedValue(true);

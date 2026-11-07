@@ -10,7 +10,9 @@ import { NativeModules, Platform } from 'react-native';
  *
  * Read through KeychainAudit at call time, not RN's Settings module, whose
  * snapshot can predate a first-run check deferred until protected data is
- * available. Resolves false if the native module cannot be read.
+ * available. While that check is deferred, KeychainAudit resolves only once
+ * it has run, so callers wait for unlock. Resolves false if the native module
+ * cannot be read.
  */
 export const keychainSurvivedReinstall = async (): Promise<boolean> => {
     if (Platform.OS !== 'ios') return false;

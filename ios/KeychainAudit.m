@@ -1,5 +1,6 @@
 #import "KeychainAudit.h"
 #import <Security/Security.h>
+#import <UIKit/UIKit.h>
 
 // Enumerates keychain internet-password items so JS can audit and clean up
 // the app's keychain partitions. react-native-keychain only enumerates
@@ -63,11 +64,38 @@ RCT_EXPORT_METHOD(getInternetPasswordServers:(BOOL)synchronizable
 // only learns of later writes through an async event, and the first-run check
 // can run after JS has loaded when launch happened before protected data was
 // available.
+//
+// While that check is still deferred the flag is not known yet, and an unset
+// flag would let JS copy the iCloud partition into a keychain the check is
+// about to clear. So the promise resolves only once the check has run.
 RCT_EXPORT_METHOD(keychainSurvivedReinstall:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
-    resolve(@([[NSUserDefaults standardUserDefaults]
-                  boolForKey:@"KEYCHAIN_SURVIVED_REINSTALL"]));
+    // AppDelegate sets and clears the pending state on the main queue
+    dispatch_async(dispatch_get_main_queue(), ^{
+        id delegate = [UIApplication sharedApplication].delegate;
+        BOOL pending =
+            [delegate respondsToSelector:NSSelectorFromString(@"firstRunKeychainCheckPending")] &&
+            [[delegate valueForKey:@"firstRunKeychainCheckPending"] boolValue];
+
+        if (!pending) {
+            resolve(@([[NSUserDefaults standardUserDefaults]
+                          boolForKey:@"KEYCHAIN_SURVIVED_REINSTALL"]));
+            return;
+        }
+
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        __block id observer = [center
+            addObserverForName:@"ZeusFirstRunKeychainCheckDidRun"
+                        object:nil
+                         queue:[NSOperationQueue mainQueue]
+                    usingBlock:^(NSNotification *note) {
+                        [[NSNotificationCenter defaultCenter] removeObserver:observer];
+                        observer = nil;
+                        resolve(@([[NSUserDefaults standardUserDefaults]
+                                      boolForKey:@"KEYCHAIN_SURVIVED_REINSTALL"]));
+                    }];
+    });
 }
 
 @end
