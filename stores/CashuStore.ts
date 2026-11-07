@@ -2993,15 +2993,20 @@ export default class CashuStore {
     public removeMint = async (mintUrl: string) => {
         this.loading = true;
         try {
-            await CashuDevKit.removeMint(mintUrl);
-            if (__DEV__) {
-                console.log(`CDK: Removed mint ${mintUrl}`);
-            }
-        } catch (e) {
+            return await this.removeMintFromWallet(mintUrl);
+        } finally {
+            // Any step after the native removal can throw, and the mint
+            // screens stay disabled while loading is set
             runInAction(() => {
                 this.loading = false;
             });
-            throw e;
+        }
+    };
+
+    private removeMintFromWallet = async (mintUrl: string) => {
+        await CashuDevKit.removeMint(mintUrl);
+        if (__DEV__) {
+            console.log(`CDK: Removed mint ${mintUrl}`);
         }
 
         delete this.cashuWallets[mintUrl];
@@ -3080,9 +3085,6 @@ export default class CashuStore {
             console.warn('Nostr mint backup failed (background):', e)
         );
 
-        runInAction(() => {
-            this.loading = false;
-        });
         return this.cashuWallets;
     };
 
