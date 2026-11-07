@@ -94,7 +94,10 @@ interface TorHttpRequest {
     trustInvalidCerts?: boolean;
     timeoutMs?: number;
     // When false, 3xx responses come back as-is so the caller can vet
-    // the location header before following it. Defaults to true.
+    // the location header before following it. Defaults to false:
+    // reqwest keeps custom headers (macaroon, rune) on a cross-host
+    // redirect, and the .onion certificate exception would apply to the
+    // new host too, so a caller has to opt in.
     followRedirects?: boolean;
 }
 
@@ -115,7 +118,7 @@ const torHttpRequest = async ({
     headers,
     trustInvalidCerts = false,
     timeoutMs = REQUEST_TIMEOUT_MS,
-    followRedirects = true
+    followRedirects = false
 }: TorHttpRequest): Promise<TorHttpResponse> => {
     const httpMethod = HTTP_METHODS[method];
     if (!httpMethod) {

@@ -549,11 +549,21 @@ describe('torHttpRequest', () => {
         expect(requestMock.mock.calls[0][0].followRedirects).toBe(false);
     });
 
-    it('follows redirects by default', async () => {
+    it('does not follow redirects by default', async () => {
         respond(200, '{}');
         await torHttpRequest({
             url: 'https://service.example/lnurl',
             method: RequestMethod.GET
+        });
+        expect(requestMock.mock.calls[0][0].followRedirects).toBe(false);
+    });
+
+    it('forwards followRedirects: true', async () => {
+        respond(200, '{}');
+        await torHttpRequest({
+            url: 'https://service.example/lnurl',
+            method: RequestMethod.GET,
+            followRedirects: true
         });
         expect(requestMock.mock.calls[0][0].followRedirects).toBe(true);
     });
