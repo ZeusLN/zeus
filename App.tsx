@@ -310,6 +310,7 @@ import WIFSweeper from './views/Tools/WIFSweeper';
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import LinkingUtils from './utils/LinkingUtils';
 import { lockRouteGuard } from './utils/NavigationUtils';
+import { shouldSkipBackgroundLock } from './utils/BackgroundLockUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
@@ -391,7 +392,33 @@ export default class App extends React.PureComponent {
         }
     }
 
+    // The Wallet screen's AppState listener locks the app on background and
+    // shows the Lockscreen on return. Wallet can be off the stack (it
+    // replaces itself with the startup wallet list), so while it is, the
+    // lock is applied here.
+    private walletScreenMounted = (): boolean =>
+        !!this.navigation
+            ?.getRootState?.()
+            ?.routes?.some((route: any) => route.name === 'Wallet');
+
     handleAppStateChange = async (nextAppState: string) => {
+        if (!this.walletScreenMounted()) {
+            if (
+                nextAppState === 'background' &&
+                settingsStore.loginMethodConfigured() &&
+                settingsStore.settings.loginBackground &&
+                !shouldSkipBackgroundLock()
+            ) {
+                settingsStore.setLoginStatus(false);
+            } else if (
+                nextAppState === 'active' &&
+                this.navigation &&
+                settingsStore.loginRequired()
+            ) {
+                this.navigation.navigate('Lockscreen');
+            }
+        }
+
         if (nextAppState === 'active' && this.navigation) {
             LinkingUtils.resetShareIntentFlag();
 
