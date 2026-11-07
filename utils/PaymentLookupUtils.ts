@@ -46,6 +46,20 @@ export const markNodeResponded = (
 export const isNodeResponse = (error: unknown): boolean =>
     (error as any)?.nodeResponded === true;
 
+// Tags an error thrown before a request went out at all (no session to the
+// node, Tor not running), so a caller knows the node never saw it. String
+// rejections are wrapped so they can carry the tag.
+export const markRequestNotSent = (error: unknown): unknown => {
+    const tagged = typeof error === 'string' ? new Error(error) : error;
+    if (tagged && typeof tagged === 'object') {
+        (tagged as any).requestNotSent = true;
+    }
+    return tagged;
+};
+
+export const isRequestNotSent = (error: unknown): boolean =>
+    (error as any)?.requestNotSent === true;
+
 // gRPC status codes other than OK (1 Canceled to 16 Unauthenticated)
 const isGrpcErrorCode = (code: unknown): boolean =>
     Number.isInteger(code) && (code as number) >= 1 && (code as number) <= 16;
@@ -65,18 +79,60 @@ export const grpcErrorCode = (body: unknown): unknown => {
     return isGrpcErrorCode(found) ? found : undefined;
 };
 
+// Records the HTTP status of an error response, so a caller can tell an
+// answer from the server (or a proxy in front of it) from a request that
+// got no response at all.
+export const markHttpStatus = (
+    error: unknown,
+    httpStatus?: unknown
+): unknown => {
+    if (error && typeof error === 'object' && Number.isInteger(httpStatus)) {
+        (error as any).httpStatus = httpStatus;
+    }
+    return error;
+};
+
+// Records the JSON-RPC error code of a Core Lightning error body
+// ({ code, message }), which shows clnrest itself answered rather than a
+// proxy in front of it
+export const markJsonRpcCode = (error: unknown, body: unknown): unknown => {
+    const code =
+        body && typeof body === 'object'
+            ? Number.isInteger((body as any).code)
+                ? (body as any).code
+                : (body as any).error?.code
+            : undefined;
+    if (error && typeof error === 'object' && Number.isInteger(code)) {
+        (error as any).jsonRpcCode = code;
+    }
+    return error;
+};
+
+export const hasJsonRpcCode = (error: unknown): boolean =>
+    Number.isInteger((error as any)?.jsonRpcCode);
+
+export const httpStatusOf = (error: unknown): number | undefined => {
+    const status = (error as any)?.httpStatus;
+    return Number.isInteger(status) ? status : undefined;
+};
+
 // Tags an LND REST error status as the node's answer only when the body
 // carries a gRPC status code. LND's REST gateway puts one in every error it
 // returns. A reverse proxy in front of LND (nginx, envoy, Cloudflare)
 // answers 502/503/504 with its own body and no code, while the request may
 // still be on its way to LND, so that error stays a transport failure.
+// The HTTP status is recorded either way.
 export const markRestErrorResponse = (
     error: Error,
-    grpcCode: unknown
+    grpcCode: unknown,
+    httpStatus?: unknown
 ): unknown =>
-    grpcCode === undefined || grpcCode === null
-        ? error
-        : markNodeResponded(error, grpcCode);
+    markHttpStatus(
+        grpcCode === undefined || grpcCode === null
+            ? error
+            : markNodeResponded(error, grpcCode),
+        httpStatus
+    );
 
 // LND refuses a send with AlreadyExists when it already has a payment for
 // the hash (already paid, still in flight, or being created), before any

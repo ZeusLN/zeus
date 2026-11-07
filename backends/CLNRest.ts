@@ -17,6 +17,7 @@ import {
 } from './CoreLightningRequestHandler';
 import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { markHttpStatus, markJsonRpcCode } from '../utils/PaymentLookupUtils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import {
     doTorRequest,
@@ -142,6 +143,9 @@ export default class CLNRest {
                         }
                         return response.json();
                     } else {
+                        // a response from clnrest, or a proxy in front of
+                        // it; the status tells which kind of failure it is
+                        const status = response.info().status;
                         let errorInfo: any;
                         try {
                             errorInfo = response.json();
@@ -157,17 +161,29 @@ export default class CLNRest {
                                 typeof message === 'string' && message
                         );
                         if (errorMessage) {
-                            throw new Error(errorMessage);
+                            throw markJsonRpcCode(
+                                markHttpStatus(new Error(errorMessage), status),
+                                errorInfo
+                            );
                         } else if (
                             response.data &&
                             typeof response.data === 'string'
                         ) {
-                            throw new Error(response.data);
+                            throw markJsonRpcCode(
+                                markHttpStatus(
+                                    new Error(response.data),
+                                    status
+                                ),
+                                errorInfo
+                            );
                         } else {
-                            throw new Error(
-                                localeString(
-                                    'backends.LND.restReq.connectionError'
-                                )
+                            throw markHttpStatus(
+                                new Error(
+                                    localeString(
+                                        'backends.LND.restReq.connectionError'
+                                    )
+                                ),
+                                status
                             );
                         }
                     }

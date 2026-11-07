@@ -42,6 +42,12 @@ jest.mock('../utils/UrlUtils', () => ({
 import TransactionsStore from './TransactionsStore';
 import BackendUtils from '../utils/BackendUtils';
 import { SEND_LABEL_PREFIX } from '../utils/OnchainSendUtils';
+import {
+    markHttpStatus,
+    markJsonRpcCode,
+    markRequestNotSent,
+    markRestErrorResponse
+} from '../utils/PaymentLookupUtils';
 
 const isLNDBased = BackendUtils.isLNDBased as jest.Mock;
 const sendCoins = BackendUtils.sendCoins as jest.Mock;
@@ -50,9 +56,9 @@ const fundPsbt = BackendUtils.fundPsbt as jest.Mock;
 const finalizePsbt = BackendUtils.finalizePsbt as jest.Mock;
 const publishTransaction = BackendUtils.publishTransaction as jest.Mock;
 
-const newStore = (currentBlockHeight = 800000) =>
+const newStore = (currentBlockHeight = 800000, implementation = 'lnd') =>
     new TransactionsStore(
-        { implementation: 'lnd', settings: {} } as any,
+        { implementation, settings: {} } as any,
         { nodeInfo: { currentBlockHeight } } as any,
         { resetOpenChannel: jest.fn() } as any,
         { getCombinedBalance: jest.fn() } as any,
@@ -64,6 +70,22 @@ const request = () => ({
     amount: '100000',
     sat_per_vbyte: '2'
 });
+
+// lnd's REST gateway answers a refused send with HTTP 500 and a gRPC code
+const lndError = (message: string) =>
+    markRestErrorResponse(new Error(message), 2, 500);
+
+// clnrest answers a refused withdraw with HTTP 500 and a JSON-RPC body
+const clnError = (message: string) =>
+    markJsonRpcCode(markHttpStatus(new Error(message), 500), {
+        code: 301,
+        message
+    });
+
+// LND's REST gateway answers with a gRPC transport code when it can't reach
+// lnd, or the call to lnd broke off
+const gatewayError = (code: number, status: number, message: string) =>
+    markRestErrorResponse(new Error(message), code, status);
 
 // runs the send, then every lookup and the 5s waits between them
 const settle = async () => {
@@ -190,7 +212,7 @@ describe('TransactionsStore.sendCoins', () => {
 
     it('shows a node error as before, without looking it up', async () => {
         sendCoins.mockRejectedValue(
-            new Error('insufficient funds available to construct transaction')
+            lndError('insufficient funds available to construct transaction')
         );
         const store = newStore();
         store.sendCoins(request());
@@ -208,7 +230,7 @@ describe('TransactionsStore.sendCoins', () => {
         // e.g. CLN's withdraw past the 30s REST timeout
         isLNDBased.mockReturnValue(false);
         sendCoins.mockRejectedValue(new Error('Request timeout'));
-        const store = newStore();
+        const store = newStore(800000, 'cln-rest');
         store.sendCoins(request());
         await settle();
 
@@ -223,8 +245,8 @@ describe('TransactionsStore.sendCoins', () => {
 
     it('shows a node error as before on backends that do not label', async () => {
         isLNDBased.mockReturnValue(false);
-        sendCoins.mockRejectedValue(new Error('insufficient funds'));
-        const store = newStore();
+        sendCoins.mockRejectedValue(clnError('insufficient funds'));
+        const store = newStore(800000, 'cln-rest');
         store.sendCoins(request());
         await settle();
 
@@ -392,6 +414,199 @@ describe('TransactionsStore.sendCoins', () => {
         expect(getTransactions).not.toHaveBeenCalled();
         expect(store.sendOutcomeUnknown).toBe(false);
     });
+
+    describe('after a failure other than a timeout', () => {
+        const foundByLabel = () =>
+            getTransactions.mockImplementation(async () => ({
+                transactions: [
+                    {
+                        tx_hash: 'broadcast',
+                        label: sendCoins.mock.calls[0][0].label
+                    }
+                ]
+            }));
+
+        it.each([
+            [
+                'a dropped connection over REST',
+                'lnd',
+                new Error('unexpected end of stream')
+            ],
+            [
+                "a proxy's gateway error over REST",
+                'lnd',
+                markHttpStatus(new Error('Bad Gateway'), 502)
+            ],
+            [
+                'a dropped LNC connection',
+                'lightning-node-connect',
+                new Error(
+                    'rpc error: code = Unavailable desc = transport is closing'
+                )
+            ],
+            [
+                "the REST gateway's Canceled",
+                'lnd',
+                gatewayError(1, 499, 'context canceled')
+            ],
+            [
+                "the REST gateway's DeadlineExceeded",
+                'lnd',
+                gatewayError(4, 504, 'context deadline exceeded')
+            ],
+            [
+                "the REST gateway's Internal",
+                'lnd',
+                gatewayError(13, 500, 'stream terminated by RST_STREAM')
+            ],
+            [
+                "the REST gateway's Unavailable",
+                'lnd',
+                gatewayError(14, 503, 'transport is closing')
+            ],
+            [
+                "Cloudflare's 520 over REST",
+                'lnd',
+                markHttpStatus(new Error('error code: 520'), 520)
+            ]
+        ])(
+            'reports a send found after %s as sent',
+            async (_, implementation, error) => {
+                sendCoins.mockRejectedValue(error);
+                foundByLabel();
+                const store = newStore(800000, implementation as string);
+                store.sendCoins(request());
+                await settle();
+
+                expect(store.publishSuccess).toBe(true);
+                expect(store.txid).toBe('broadcast');
+                expect(store.error).toBe(false);
+            }
+        );
+
+        it("offers no retry when a send after the REST gateway's Unavailable is not found", async () => {
+            sendCoins.mockRejectedValue(
+                gatewayError(14, 503, 'transport is closing')
+            );
+            getTransactions.mockResolvedValue({ transactions: [] });
+            const store = newStore();
+            store.sendCoins(request());
+            await settle();
+
+            expect(getTransactions).toHaveBeenCalledTimes(3);
+            expect(store.sendOutcomeUnknown).toBe(true);
+        });
+
+        it('offers no retry when a send after a dropped connection is not found', async () => {
+            sendCoins.mockRejectedValue(new Error('connection closed'));
+            getTransactions.mockResolvedValue({ transactions: [] });
+            const store = newStore();
+            store.sendCoins(request());
+            await settle();
+
+            expect(getTransactions).toHaveBeenCalledTimes(3);
+            expect(store.sendOutcomeUnknown).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.TransactionsStore.sendOutcomeUnknown'
+            );
+        });
+
+        it.each([
+            [
+                'an LNC node error',
+                'lightning-node-connect',
+                new Error(
+                    'rpc error: code = Unknown desc = insufficient funds available to construct transaction'
+                )
+            ],
+            [
+                'an LNC connection that is not ready',
+                'lightning-node-connect',
+                new Error('RPC connection not ready')
+            ],
+            [
+                "a proxy's refusal over REST",
+                'lnd',
+                markHttpStatus(new Error('Unauthorized'), 401)
+            ],
+            [
+                'an LNC client that is reconnecting',
+                'lightning-node-connect',
+                markRequestNotSent(
+                    new Error(
+                        'Failed to connect the LNC client to the proxy server'
+                    )
+                )
+            ],
+            ['Tor not running', 'lnd', new Error('Tor service not running')],
+            [
+                'a CLN refusal over Tor',
+                'cln-rest',
+                // as doTorRequest tags clnrest's 500 { code, message }
+                markJsonRpcCode(
+                    markRestErrorResponse(
+                        new Error('Could not afford 500000000sat'),
+                        undefined,
+                        500
+                    ),
+                    { code: 301, message: 'Could not afford 500000000sat' }
+                )
+            ],
+            [
+                'a refused connection to an offline node',
+                'lnd',
+                new Error(
+                    'Failed to connect to node.example.com/203.0.113.5:8080'
+                )
+            ],
+            [
+                'an unresolved CLNRest host on iOS',
+                'cln-rest',
+                new Error(
+                    'A server with the specified hostname could not be found.'
+                )
+            ],
+            [
+                'an embedded LND error',
+                'embedded-lnd',
+                new Error(
+                    'insufficient funds available to construct transaction'
+                )
+            ]
+        ])('offers Try Again after %s', async (_, implementation, error) => {
+            sendCoins.mockRejectedValue(error);
+            const store = newStore(800000, implementation as string);
+            store.sendCoins(request());
+            await settle();
+
+            expect(getTransactions).not.toHaveBeenCalled();
+            expect(store.error).toBe(true);
+            expect(store.sendOutcomeUnknown).toBe(false);
+        });
+
+        it("offers no retry after Cloudflare's 520 in front of CLNRest", async () => {
+            isLNDBased.mockReturnValue(false);
+            sendCoins.mockRejectedValue(
+                markHttpStatus(new Error('error code: 520'), 520)
+            );
+            const store = newStore(800000, 'cln-rest');
+            store.sendCoins(request());
+            await settle();
+
+            expect(store.sendOutcomeUnknown).toBe(true);
+        });
+
+        it('offers no retry after a dropped CLNRest connection', async () => {
+            isLNDBased.mockReturnValue(false);
+            sendCoins.mockRejectedValue(new Error('unexpected end of stream'));
+            const store = newStore(800000, 'cln-rest');
+            store.sendCoins(request());
+            await settle();
+
+            expect(getTransactions).not.toHaveBeenCalled();
+            expect(store.sendOutcomeUnknown).toBe(true);
+        });
+    });
 });
 
 describe('TransactionsStore.sendCoins with additional outputs', () => {
@@ -469,6 +684,22 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
             'stores.TransactionsStore.sendOutcomeUnknown'
         );
         expect(store.loading).toBe(false);
+    });
+
+    it('looks up a publish whose connection dropped', async () => {
+        publishTransaction.mockRejectedValue(
+            new Error('unexpected end of stream')
+        );
+        getTransactions.mockResolvedValue({
+            transactions: [{ tx_hash: 'batchtxid', label: '' }]
+        });
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await settle();
+
+        expect(store.publishSuccess).toBe(true);
+        expect(store.txid).toBe('batchtxid');
+        expect(store.sendOutcomeUnknown).toBe(false);
     });
 
     it('shows a publish error as before, without looking it up', async () => {
