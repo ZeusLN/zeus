@@ -1408,7 +1408,20 @@ export default class LdkNode {
 
         let paymentId: string;
 
-        if (data.amt) {
+        // sendBolt11UsingAmount pays the given amount whenever it is at least
+        // the invoice amount, so an explicit amount is only used for an
+        // invoice without one. For a fixed-amount invoice it is dropped and
+        // the invoice amount, which is what the payment screen shows, is paid.
+        let invoiceHasAmount = false;
+        try {
+            const decoded = Bolt11Utils.decode(data.payment_request);
+            invoiceHasAmount =
+                decoded.satoshis != null || decoded.millisatoshis != null;
+        } catch (e) {
+            // undecodable: leave the invoice for ldk-node to validate
+        }
+
+        if (data.amt && !invoiceHasAmount) {
             paymentId = await LdkNodeInjection.bolt11.sendBolt11UsingAmount({
                 invoice: data.payment_request,
                 amountMsat: Number(data.amt) * 1000,
