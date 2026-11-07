@@ -26,7 +26,8 @@ jest.mock('../../components/Text', () => 'Text');
 jest.mock('../../components/TextInput', () => 'TextInput');
 
 import * as React from 'react';
-import { render } from '@testing-library/react-native';
+import { NativeModules } from 'react-native';
+import { act, render } from '@testing-library/react-native';
 import Privacy from './Privacy';
 
 // Mounts the view with these saved privacy settings, lets componentDidMount
@@ -40,7 +41,11 @@ const mountAndLeave = async (privacy: any) => {
         updateSettingsGroupDebounced: jest.fn()
     };
     const { unmount } = await render(
-        <Privacy navigation={{} as any} SettingsStore={SettingsStore as any} />
+        <Privacy
+            navigation={{} as any}
+            ModalStore={{} as any}
+            SettingsStore={SettingsStore as any}
+        />
     );
     expect(SettingsStore.getSettings).toHaveBeenCalled();
     await unmount();
@@ -118,5 +123,90 @@ describe('Privacy unmount', () => {
                 customMempoolInstance: 'https://mempool.example.com'
             })
         ).toEqual({});
+    });
+});
+
+describe('Privacy screen capture protection', () => {
+    const setSecureFlag = jest.fn();
+
+    beforeAll(() => {
+        NativeModules.MobileTools = { setSecureFlag };
+    });
+
+    beforeEach(() => {
+        setSecureFlag.mockReset();
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        (console.error as jest.Mock).mockRestore();
+    });
+
+    // Mounts with protection off and flips its switch on
+    const turnOn = async () => {
+        const SettingsStore = {
+            settings: {},
+            getSettings: jest.fn(async () => ({ privacy: {} })),
+            flushPendingSettings: jest.fn(),
+            updateSettingsGroup: jest.fn(async () => {}),
+            updateSettingsGroupDebounced: jest.fn()
+        };
+        const ModalStore = { toggleInfoModal: jest.fn() };
+        const screen = await render(
+            <Privacy
+                navigation={{} as any}
+                ModalStore={ModalStore as any}
+                SettingsStore={SettingsStore as any}
+            />
+        );
+        // the Switch in the row labelled with the setting's name
+        const toggle = () => {
+            let node: any = screen.getByText(
+                'views.Settings.Privacy.screenCaptureProtection'
+            );
+            while (
+                node &&
+                !node.queryAll((n: any) => n.type === 'Switch').length
+            ) {
+                node = node.parent;
+            }
+            return node.queryAll((n: any) => n.type === 'Switch')[0];
+        };
+        expect(toggle().props.value).toBe(false);
+        await act(async () => {
+            await toggle().props.onValueChange();
+        });
+        return { SettingsStore, ModalStore, toggle };
+    };
+
+    it('keeps protection on when the native call succeeds', async () => {
+        setSecureFlag.mockResolvedValue(true);
+
+        const { SettingsStore, ModalStore, toggle } = await turnOn();
+
+        expect(setSecureFlag).toHaveBeenCalledWith(true);
+        expect(SettingsStore.updateSettingsGroup).toHaveBeenCalledTimes(1);
+        expect(SettingsStore.updateSettingsGroup).toHaveBeenCalledWith(
+            'privacy',
+            { screenCaptureProtection: true }
+        );
+        expect(ModalStore.toggleInfoModal).not.toHaveBeenCalled();
+        expect(toggle().props.value).toBe(true);
+    });
+
+    it('turns protection back off and says so when the native call rejects', async () => {
+        setSecureFlag.mockRejectedValue(new Error('SECURE_FLAG_FAILED'));
+
+        const { SettingsStore, ModalStore, toggle } = await turnOn();
+
+        expect(SettingsStore.updateSettingsGroup).toHaveBeenLastCalledWith(
+            'privacy',
+            { screenCaptureProtection: false }
+        );
+        expect(ModalStore.toggleInfoModal).toHaveBeenCalledWith({
+            title: 'general.error',
+            text: 'views.Settings.Privacy.screenCaptureProtection.unavailable'
+        });
+        expect(toggle().props.value).toBe(false);
     });
 });

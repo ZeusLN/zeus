@@ -1,4 +1,5 @@
 #import <React/RCTBridgeModule.h>
+#import <React/RCTEventEmitter.h>
 
-@interface ShareBridge : NSObject <RCTBridgeModule>
+@interface ShareBridge : RCTEventEmitter <RCTBridgeModule>
 @end
