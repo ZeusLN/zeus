@@ -1155,6 +1155,11 @@ export default class NostrConnectUtils {
         return !payment.isIncomplete && !payment.isFailed;
     }
 
+    /** LND fills payment_preimage with zeros until the payment settles. */
+    static getSettledPreimage(payment?: Payment | null): string {
+        return payment && !payment.isIncomplete ? payment.getPreimage : '';
+    }
+
     static isListedPaymentInTransit(payment: Payment): boolean {
         if (NostrConnectUtils.isSettledPayment(payment)) return false;
         if (payment.isInTransit) return true;
@@ -1601,7 +1606,7 @@ export default class NostrConnectUtils {
 
         const preimage =
             activity.preimage ||
-            activity.payment?.getPreimage ||
+            NostrConnectUtils.getSettledPreimage(activity.payment) ||
             (lightningInvoice?.isPaid ? lightningInvoice.getRPreimage : '') ||
             '';
 
