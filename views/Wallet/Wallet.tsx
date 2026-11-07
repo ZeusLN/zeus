@@ -64,6 +64,7 @@ import {
     DEFAULT_SCORER_URL
 } from '../../utils/LdkNodeUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
 import { fetchLncData } from '../../utils/LncFetchUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
@@ -1702,6 +1703,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 {...this.panResponder.panHandlers}
                             >
                                 <TouchableOpacity
+                                    testID={TEST_IDS.wallet.activityButton}
                                     onPress={() =>
                                         this.props.navigation.navigate(
                                             'Activity',
@@ -1854,6 +1856,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             }
                                         },
                                         headerShown: false,
+                                        // The channels tab is named after its
+                                        // translated title
+                                        tabBarButtonTestID: TEST_IDS.wallet.tab(
+                                            route.name ===
+                                                localeString(
+                                                    'views.Wallet.Wallet.channels'
+                                                )
+                                                ? 'Channels'
+                                                : route.name
+                                        ),
                                         tabBarActiveTintColor: error
                                             ? themeColor('error')
                                             : themeColor('text'),

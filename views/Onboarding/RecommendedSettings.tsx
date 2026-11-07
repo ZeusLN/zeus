@@ -532,6 +532,10 @@ export default class RecommendedSettings extends React.Component<
                                     </View>
                                 ) : displayMintUrls.length > 0 ? (
                                     <View
+                                        testID={
+                                            TEST_IDS.recommendedSettings
+                                                .recommendedMints
+                                        }
                                         style={{
                                             flexDirection: 'row',
                                             marginTop: 10,
