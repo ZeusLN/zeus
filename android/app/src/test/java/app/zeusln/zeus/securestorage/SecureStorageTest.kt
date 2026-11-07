@@ -109,6 +109,39 @@ class SecureStorageTest {
     }
 
     @Test
+    fun dropsTheOlderNewCopyWhenTheNewWriteFails() {
+        storage.set("zeus:a", "old")
+        // a directory where the temporary file goes makes the write fail
+        // and leaves the old copy in place
+        val entry = dir.listFiles()!!.single { it.name.length == 64 }
+        File(dir, entry.name + ".tmp").mkdir()
+
+        storage.set("zeus:a", "new")
+
+        assertEquals("new", legacy.read("zeus:a"))
+        assertNull(store.read("zeus:a"))
+        // with the legacy entry unreadable, the old value must not come back
+        keys.delete("zeus:a")
+        assertThrows(GeneralSecurityException::class.java) { storage.get("zeus:a") }
+    }
+
+    @Test
+    fun keepsTheWriteWhenTheNewCopyCanBeNeitherWrittenNorDropped() {
+        storage.set("zeus:a", "old")
+        dir.setWritable(false)
+        try {
+            storage.set("zeus:a", "new")
+        } finally {
+            dir.setWritable(true)
+        }
+
+        assertEquals("new", legacy.read("zeus:a"))
+        // the next read repairs the copy
+        assertEquals("new", storage.get("zeus:a"))
+        assertEquals("new", store.read("zeus:a"))
+    }
+
+    @Test
     fun repairsAnUnreadableNewCopyFromTheLegacyEntry() {
         storage.set("zeus:a", "value")
         corruptNewEntry()
