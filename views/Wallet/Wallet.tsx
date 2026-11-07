@@ -535,8 +535,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 await this.fetchData(transientRetryCount);
                 // After unlock and connect, never on the Lockscreen or POS:
                 // once per launch, ask whether to share or delete export
-                // files older builds left in iOS Documents
-                promptLegacyExportCleanup();
+                // files older builds left in iOS Documents. Leaving POS for
+                // the wallet does not come back here; the Lockscreen asks then
+                promptLegacyExportCleanup(SettingsStore);
             } else {
                 // Only navigate to IntroSplash if Wallet screen is focused
                 // to prevent interference when user is on other screens
