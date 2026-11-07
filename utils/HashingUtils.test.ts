@@ -58,6 +58,12 @@ describe('HashingUtils', () => {
                 'c7f500ea086f9afb89b15af1b7a3fdc0d6bcbfc09d4622ed4ce670ef96f442fa'
             );
         });
+
+        it('hashes a lone surrogate as U+FFFD', () => {
+            expect(sha256StringToHex('\ud83d')).toBe(
+                '83d544ccc223c057d2bf80d3f2a32982c32c3c0db8e2674820da5064783fb097'
+            );
+        });
     });
 
     describe('hmacSha256', () => {
