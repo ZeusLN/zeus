@@ -462,6 +462,38 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         };
     }
 
+    // The receive amount and service fee for the send amount on screen, with
+    // the quote of the given direction. Route params can change the
+    // direction after an amount was entered (a scanned address flips it to
+    // a reverse swap); the amounts must then follow the new quote. The send
+    // amount is kept, so later fee changes work from it too.
+    amountsForDirection = (reverse: boolean) => {
+        const { SwapStore } = this.props;
+        const info: any = reverse ? SwapStore.reverseInfo : SwapStore.subInfo;
+        const serviceFeePct = info?.fees?.percentage || 0;
+        const networkFee = this.networkFeeSats(reverse);
+
+        const inputSats = new BigNumber(this.state.inputSats || 0);
+        const outputSats = calculateReceiveAmount(
+            inputSats,
+            serviceFeePct,
+            networkFee,
+            reverse
+        );
+
+        return {
+            outputSats,
+            outputDisplay: this.satsDisplay(outputSats),
+            serviceFeeSats: calculateServiceFeeOnSend(
+                inputSats,
+                serviceFeePct,
+                networkFee,
+                reverse
+            ),
+            lastEditedAmount: 'input' as const
+        };
+    };
+
     async componentDidUpdate(
         prevProps: Readonly<SwapProps>,
         prevState: Readonly<SwapState>
@@ -530,12 +562,33 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             const { initialInvoice, initialAmountSats, initialReverse } =
                 route.params;
 
+            // amounts entered before the params change the direction were
+            // worked out with the other direction's quote
+            const {
+                outputSats,
+                outputDisplay,
+                serviceFeeSats,
+                lastEditedAmount
+            } = this.state;
+            const amounts =
+                initialReverse !== undefined &&
+                initialReverse !== this.state.reverse &&
+                new BigNumber(this.state.inputSats || 0).isGreaterThan(0)
+                    ? this.amountsForDirection(initialReverse)
+                    : {
+                          outputSats,
+                          outputDisplay,
+                          serviceFeeSats,
+                          lastEditedAmount
+                      };
+
             if (
                 initialReverse !== undefined &&
                 initialInvoice === undefined &&
                 initialAmountSats === undefined
             ) {
                 this.setState({
+                    ...amounts,
                     paramsProcessed: true,
                     reverse: initialReverse
                 });
@@ -546,6 +599,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 if (initialAmountSats === undefined) {
                     this.setState(
                         {
+                            ...amounts,
                             paramsProcessed: true,
                             invoice: initialInvoice,
                             reverse: initialReverse
@@ -596,7 +650,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                             newOutputSats,
                             serviceFeePct,
                             networkFee,
-                            this.state.reverse
+                            initialReverse
                         );
                         let newInputDisplay = '';
                         if (newInputSats.isGreaterThan(0)) {
@@ -618,7 +672,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                             newInputSats,
                             serviceFeePct,
                             networkFee,
-                            this.state.reverse
+                            initialReverse
                         );
 
                         this.setState(
