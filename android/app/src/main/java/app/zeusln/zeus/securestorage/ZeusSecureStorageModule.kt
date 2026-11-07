@@ -7,7 +7,6 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import java.io.File
-import java.util.concurrent.Executors
 
 /**
  * Encrypted key-value storage for credentials, replacing
@@ -19,23 +18,25 @@ class ZeusSecureStorageModule(context: ReactApplicationContext) :
     ReactContextBaseJavaModule(context) {
 
     // One thread, so reads and writes of an entry never interleave
-    private val executor = Executors.newSingleThreadExecutor()
+    private val runner = SerialRunner()
 
     private val storage: SecureStorage by lazy { open(context) }
 
     override fun getName() = NAME
 
-    private fun run(promise: Promise, block: () -> Any?) {
-        executor.execute {
-            try {
-                promise.resolve(block())
-            } catch (e: Throwable) {
-                // Throwable, not Exception: an Error must still settle the
-                // promise, or the JS caller waits forever
-                promise.reject(ERROR_CODE, e.message ?: e.javaClass.simpleName, e)
-            }
-        }
+    // The React instance is going away (a reload or a rebuilt React host).
+    // Queued calls still finish, then the thread ends instead of leaking.
+    override fun invalidate() {
+        runner.shutdown()
+        super.invalidate()
     }
+
+    private fun run(promise: Promise, block: () -> Any?) =
+        runner.run(
+            block,
+            { promise.resolve(it) },
+            { promise.reject(ERROR_CODE, it.message ?: it.javaClass.simpleName, it) }
+        )
 
     @ReactMethod
     fun get(server: String, cloudSync: Boolean, promise: Promise) =
