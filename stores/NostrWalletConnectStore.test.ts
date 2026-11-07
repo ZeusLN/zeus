@@ -3680,3 +3680,64 @@ describe('NostrWalletConnectStore Android Stop Service', () => {
         expect(isSubscribed(store.connections[0])).toBe(false);
     });
 });
+
+describe('NostrWalletConnectStore wallet switch during publish retries', () => {
+    // Stores one wallet's service keys, connection and client key, the way
+    // initializeService reads them after a wallet switch
+    function seedWallet(id: string, pubkey: string, relayUrl: string) {
+        storedItems.set(
+            NWC_SERVICE_KEYS,
+            JSON.stringify({ privateKey: SERVICE_PRIV, publicKey: SERVICE_PUB })
+        );
+        storedItems.set(
+            NWC_CONNECTIONS_KEY,
+            JSON.stringify([
+                connectionData({
+                    id,
+                    name: id,
+                    pubkey,
+                    relayUrl,
+                    permissions: ['get_info', 'get_balance']
+                })
+            ])
+        );
+        storedItems.set(
+            NWC_CLIENT_KEYS,
+            JSON.stringify({ [pubkey]: hex64('3') })
+        );
+    }
+
+    it('does not let the old run set error after its publish retries run out', async () => {
+        silence('error');
+        // alice's relay is unreachable, so each publish attempt fails
+        relayFor(OLD_RELAY).failPublish = true;
+        seedWallet('alice1', hex64('a'), OLD_RELAY);
+        const { store } = createStore();
+
+        const aliceRun = store.initializeService();
+        // Into the second retry backoff (attempts at 0 ms, 1 s and 3 s)
+        await jest.advanceTimersByTimeAsync(1500);
+        expect(
+            relayFor(OLD_RELAY).publishWalletServiceInfoEvent
+        ).toHaveBeenCalledTimes(2);
+
+        // Switch to bob, whose relay is reachable
+        seedWallet('bob1', hex64('b'), NEW_RELAY);
+        await store.reset(true);
+        const bobRun = store.initializeService();
+
+        // alice's third attempt fails at 3 s, before bob's delayed subscribe
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+        await Promise.all([aliceRun, bobRun]);
+
+        expect(
+            relayFor(OLD_RELAY).publishWalletServiceInfoEvent
+        ).toHaveBeenCalledTimes(3);
+        expect(store.error).toBe(false);
+        expect(store.errorMessage).toBe('');
+        expect(store.isInitialized).toBe(true);
+        expect(store.isServiceReady()).toBe(true);
+        expect(store.connections.map((c) => c.id)).toEqual(['bob1']);
+        expect(isSubscribed(store.connections[0])).toBe(true);
+    });
+});
