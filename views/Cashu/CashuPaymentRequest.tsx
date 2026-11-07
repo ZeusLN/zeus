@@ -45,7 +45,8 @@ import {
     calculateDonationAmount,
     calculateTotalWithDonation,
     findDonationPercentageIndex,
-    getDonationToSend
+    getDonationToSend,
+    prefetchDonationInvoice
 } from '../../utils/DonationUtils';
 
 import { Row } from '../../components/layout/Row';
@@ -74,6 +75,13 @@ interface CashuPaymentRequestState {
     swipeButtonKey: number;
     multiMintEnabled: boolean;
     reviewedPaymentRequest: string;
+    checkingDonation: boolean;
+    // A donation the quote at pay time found the mints may not be able to
+    // pay after the invoice, with the store's melt quote(s) it was checked
+    // against. getPayReq replaces those on every run, so the warning only
+    // stays up until the payment is quoted again. Paying again while it is
+    // up sends the payment and the donation without another quote.
+    donationShortfall?: { amount: number; paymentQuotes: object };
 }
 
 @inject(
@@ -95,7 +103,7 @@ export default class CashuPaymentRequest extends React.Component<
     donationDisposer: any;
     swipeResetDisposer: any;
     donationLockRequest?: string;
-    state = {
+    state: CashuPaymentRequestState = {
         slideToPayThreshold: 10000,
         donationsToggle: false,
         donationPercentage: 0,
@@ -103,7 +111,9 @@ export default class CashuPaymentRequest extends React.Component<
         selectedIndex: null,
         swipeButtonKey: 0,
         multiMintEnabled: false,
-        reviewedPaymentRequest: ''
+        reviewedPaymentRequest: '',
+        checkingDonation: false,
+        donationShortfall: undefined
     };
 
     async componentDidMount() {
@@ -241,6 +251,24 @@ export default class CashuPaymentRequest extends React.Component<
         );
     };
 
+    // Fetches the donation invoice and quotes it against what the payment
+    // leaves on the mints, which counts the donation's own fee reserve.
+    // Resolves undefined when that could not be done.
+    checkDonationCoverage = async (
+        donationToSend: number
+    ): Promise<boolean | undefined> => {
+        const { CashuStore } = this.props;
+        try {
+            const donationInvoice = await prefetchDonationInvoice(
+                donationToSend.toString()
+            );
+            if (!donationInvoice) return undefined;
+            return await CashuStore.canPayDonationAfterPayReq(donationInvoice);
+        } catch {
+            return undefined;
+        }
+    };
+
     sendPayment = ({ payment_request, amount }: SendPaymentReq) => {
         const { navigation } = this.props;
         const donationToSend = this.resolveDonationToSend();
@@ -254,7 +282,7 @@ export default class CashuPaymentRequest extends React.Component<
         });
     };
 
-    triggerPayment = () => {
+    triggerPayment = async () => {
         const { CashuStore, navigation } = this.props;
         const { multiMintEnabled, reviewedPaymentRequest } = this.state;
 
@@ -299,8 +327,56 @@ export default class CashuPaymentRequest extends React.Component<
             Array.isArray(CashuStore?.multiMintSelectedUrls) &&
             CashuStore!.multiMintSelectedUrls.length > 1;
 
+        // The check in render counts the donation but not its fee reserve,
+        // which needs a melt quote for the donation invoice. Quote it here,
+        // once the user has chosen to pay. The quote assumes the invoice
+        // uses its whole fee reserve, which it rarely does, so a shortfall
+        // only warns: the user can pay again as is, or lower the donation.
+        // If it can't be quoted, the payment goes ahead on the check in
+        // render alone.
+        const donationToSend = this.resolveDonationToSend();
+        const paymentQuotes = CashuStore.meltQuote || CashuStore.meltQuotes;
+        const shortfall = this.state.donationShortfall;
+        const warnedAlready =
+            !!shortfall &&
+            shortfall.amount === donationToSend &&
+            shortfall.paymentQuotes === paymentQuotes;
+        if (donationToSend > 0 && !warnedAlready) {
+            if (this.state.checkingDonation) return;
+            this.setState({ checkingDonation: true });
+            const covered = await this.checkDonationCoverage(donationToSend);
+            if (!this.isComponentMounted) return;
+            this.setState({ checkingDonation: false });
+
+            // The invoice, its quote, or the donation can change while the
+            // donation is quoted. Let the user pay again from what is on
+            // screen now.
+            if (
+                CashuStore.paymentRequest !== reviewedPaymentRequest ||
+                CashuStore.payReq?.isExpiredNow() ||
+                (CashuStore.meltQuote || CashuStore.meltQuotes) !==
+                    paymentQuotes ||
+                this.resolveDonationToSend() !== donationToSend
+            ) {
+                this.setState((prevState) => ({
+                    swipeButtonKey: prevState.swipeButtonKey + 1
+                }));
+                return;
+            }
+
+            if (covered === false) {
+                this.setState((prevState) => ({
+                    swipeButtonKey: prevState.swipeButtonKey + 1,
+                    donationShortfall: {
+                        amount: donationToSend,
+                        paymentQuotes
+                    }
+                }));
+                return;
+            }
+        }
+
         if (isMultiMint) {
-            const donationToSend = this.resolveDonationToSend();
             navigation.navigate('MultimintPayment', {
                 paymentAmount,
                 paymentRequest: reviewedPaymentRequest,
@@ -371,7 +447,9 @@ export default class CashuPaymentRequest extends React.Component<
             donationsToggle,
             donationAmount,
             donationPercentage,
-            multiMintEnabled
+            multiMintEnabled,
+            checkingDonation,
+            donationShortfall
         } = this.state;
         const {
             payReq,
@@ -451,6 +529,15 @@ export default class CashuPaymentRequest extends React.Component<
             ? localeString('stores.CashuStore.notEnoughFunds')
             : undefined;
         const hasPayReqError = !!payReqWarning;
+        // The quote at pay time, which also counts the donation's fee
+        // reserve, found the donation may not be payable. It only warns.
+        const donationMayFail =
+            !hasPayReqError &&
+            donationToCover > 0 &&
+            !!donationShortfall &&
+            donationShortfall.amount === donationToCover &&
+            donationShortfall.paymentQuotes ===
+                (CashuStore.meltQuote || CashuStore.meltQuotes);
 
         const QRButton = () => (
             <TouchableOpacity
@@ -619,6 +706,20 @@ export default class CashuPaymentRequest extends React.Component<
                                         >
                                             <WarningMessage
                                                 message={payReqWarning}
+                                            />
+                                        </View>
+                                    )}
+                                    {donationMayFail && (
+                                        <View
+                                            style={{
+                                                paddingTop: 10,
+                                                paddingBottom: 10
+                                            }}
+                                        >
+                                            <WarningMessage
+                                                message={localeString(
+                                                    'views.Cashu.CashuPaymentRequest.donationMayFail'
+                                                )}
                                             />
                                         </View>
                                     )}
@@ -1007,7 +1108,8 @@ export default class CashuPaymentRequest extends React.Component<
                             requestAmount >= slideToPayThreshold &&
                             !SettingsStore.settingsUpdateInProgress &&
                             !hasPayReqError &&
-                            !noBalance ? (
+                            !noBalance &&
+                            !checkingDonation ? (
                                 <SwipeButton
                                     key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
@@ -1047,7 +1149,8 @@ export default class CashuPaymentRequest extends React.Component<
                                         disabled={
                                             SettingsStore.settingsUpdateInProgress ||
                                             hasPayReqError ||
-                                            noBalance
+                                            noBalance ||
+                                            checkingDonation
                                         }
                                     />
                                 </View>

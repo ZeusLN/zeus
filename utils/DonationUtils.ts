@@ -2,9 +2,20 @@
 import BigNumber from 'bignumber.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
+import Bolt11Utils from './Bolt11Utils';
 import { getLnurlpUrl, verifyLnurlPayInvoice } from './LnurlPayUtils';
 
 const DONATION_ADDRESS = 'tips@pay.zeusln.app';
+
+// A prefetched invoice is paid only after the invoice it follows, so leave
+// one this close to expiry to a fresh fetch
+const PREFETCHED_MIN_SECONDS_LEFT = 60;
+
+// The donation invoice the funds check quoted before the payment, kept so
+// the sending view pays that invoice instead of fetching another one
+let prefetchedDonation:
+    | { amount: number; paymentRequest: string; expiresAt: number }
+    | undefined;
 
 /**
  * Calculates donation amount based on a given percentage of a base amount.
@@ -77,7 +88,7 @@ export const findDonationPercentageIndex = (
     return index === -1 ? null : index;
 };
 
-export const loadDonationLnurl = async (
+const fetchDonationInvoice = async (
     donationAmount: string
 ): Promise<string | null> => {
     const { url, origin } = getLnurlpUrl(DONATION_ADDRESS);
@@ -140,4 +151,51 @@ export const loadDonationLnurl = async (
         console.error('loadLnurl error:', err);
         return null;
     }
+};
+
+/**
+ * Fetches a donation invoice ahead of the payment it follows, so the funds
+ * check can quote it. The next loadDonationLnurl call for the same amount
+ * returns this invoice instead of fetching a new one.
+ * @param donationAmount - Donation in sats
+ * @returns The verified donation invoice, or null
+ */
+export const prefetchDonationInvoice = async (
+    donationAmount: string
+): Promise<string | null> => {
+    prefetchedDonation = undefined;
+    const paymentRequest = await fetchDonationInvoice(donationAmount);
+    if (paymentRequest) {
+        const { timestamp, timeExpireDate } =
+            Bolt11Utils.decode(paymentRequest);
+        prefetchedDonation = {
+            amount: Number(donationAmount),
+            paymentRequest,
+            // BOLT11 default expiry is one hour
+            expiresAt: timeExpireDate ?? timestamp + 3600
+        };
+    }
+    return paymentRequest;
+};
+
+/**
+ * Returns a verified donation invoice for the amount: the prefetched one if
+ * it is for this amount and not about to expire, otherwise a new one. A
+ * prefetched invoice is handed out at most once.
+ * @param donationAmount - Donation in sats
+ * @returns The verified donation invoice, or null
+ */
+export const loadDonationLnurl = async (
+    donationAmount: string
+): Promise<string | null> => {
+    const prefetched = prefetchedDonation;
+    prefetchedDonation = undefined;
+    if (
+        prefetched &&
+        prefetched.amount === Number(donationAmount) &&
+        prefetched.expiresAt - Date.now() / 1000 > PREFETCHED_MIN_SECONDS_LEFT
+    ) {
+        return prefetched.paymentRequest;
+    }
+    return fetchDonationInvoice(donationAmount);
 };
