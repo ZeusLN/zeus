@@ -149,6 +149,13 @@ export default class TransactionsStore {
     // else (releasePaymentInFlight): before that, a retry is most likely
     // the same payment sent twice by mistake
     @observable public paymentInFlightConfirmed = false;
+    // true from the dispatch of an on-chain send until its outcome is known,
+    // funding, finalizing, broadcasting and a timeout lookup included.
+    // `loading` is shared with other operations (getTransactions), so it
+    // can't serve as the double-submission guard
+    @observable public onchainSendInFlight = false;
+    // sendCoinsSeq of the send holding onchainSendInFlight (null when none)
+    private onchainSendOwnerSeq: number | null = null;
 
     // monotonic id assigned to each dispatched payment
     private paymentSequence = 0;
@@ -207,6 +214,8 @@ export default class TransactionsStore {
         this.sendCoinsSeq++;
         this.loading = false;
         this.sendOutcomeUnknown = false;
+        this.onchainSendInFlight = false;
+        this.onchainSendOwnerSeq = null;
         this.paymentInFlight = false;
         this.inFlightOwnerSeq = null;
         this.inFlightPaymentHash = null;
@@ -591,8 +600,10 @@ export default class TransactionsStore {
             account
         };
 
-        BackendUtils.fundPsbt(fundPsbtRequest)
-            .then((data: any) => {
+        // returns the whole chain, broadcast included, so sendCoins knows
+        // when the send is over
+        return BackendUtils.fundPsbt(fundPsbtRequest)
+            .then((data: any) =>
                 runInAction(() => {
                     if (!isCurrent()) return;
                     this.crafting = false;
@@ -604,14 +615,14 @@ export default class TransactionsStore {
                         this.funded_psbt = funded_psbt;
                         this.loading = false;
                     } else {
-                        this.finalizePsbtAndBroadcast(
+                        return this.finalizePsbtAndBroadcast(
                             funded_psbt,
                             defaultAccount,
                             seq
                         );
                     }
-                });
-            })
+                })
+            )
             .catch((error: any) => {
                 const errorMsg = errorToUserFriendly(error.message);
                 runInAction(() => {
@@ -626,11 +637,26 @@ export default class TransactionsStore {
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
+        // Guard against double-submission: a second confirmation press while
+        // a send is still out would fund and broadcast a second transaction,
+        // from other inputs when none were selected. The node's input locks
+        // only stop it when the same inputs were selected.
+        if (this.onchainSendInFlight) return;
+
         // also invalidates a lookup still running for an earlier send; the
         // coin control path carries seq through funding, finalizing and
         // broadcasting
         const seq = ++this.sendCoinsSeq;
         const isCurrent = () => seq === this.sendCoinsSeq;
+
+        this.onchainSendInFlight = true;
+        this.onchainSendOwnerSeq = seq;
+        const releaseGuard = () =>
+            runInAction(() => {
+                if (this.onchainSendOwnerSeq !== seq) return;
+                this.onchainSendInFlight = false;
+                this.onchainSendOwnerSeq = null;
+            });
 
         this.funded_psbt = '';
         this.error = false;
@@ -675,7 +701,7 @@ export default class TransactionsStore {
                 transactionRequest,
                 transactionRequest.account === 'default',
                 seq
-            );
+            ).finally(releaseGuard);
         }
 
         this.crafting = false;
@@ -693,7 +719,7 @@ export default class TransactionsStore {
                 this.balanceStore.getCombinedBalance();
             });
 
-        BackendUtils.sendCoins(
+        return BackendUtils.sendCoins(
             label ? { ...transactionRequest, label } : transactionRequest
         )
             .then((data: any) => onSent(data.txid))
@@ -730,7 +756,8 @@ export default class TransactionsStore {
                     this.error = true;
                     this.loading = false;
                 });
-            });
+            })
+            .finally(releaseGuard);
     };
 
     // The send may have been broadcast before its request timed out. Only

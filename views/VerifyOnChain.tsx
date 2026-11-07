@@ -334,7 +334,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
     };
 
     render() {
-        const { navigation, route } = this.props;
+        const { navigation, route, TransactionsStore } = this.props;
         const { destination, fee, satAmount, amount, account, fundMax } =
             route?.params;
         const { slideToPayThreshold } = this.state;
@@ -405,6 +405,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                                     size: 25
                                 }}
                                 onPress={this.onConfirm}
+                                disabled={TransactionsStore.onchainSendInFlight}
                             />
                         </View>
                     )}

@@ -280,8 +280,9 @@ describe('TransactionsStore.sendCoins', () => {
         await jest.advanceTimersByTimeAsync(0);
         expect(getTransactions).toHaveBeenCalledTimes(1);
 
-        // the newer send is still waiting on the node when the earlier
-        // send's lookup finds it
+        // the newer send, started after a reset, is still waiting on the
+        // node when the earlier send's lookup finds it
+        store.reset();
         sendCoins.mockReturnValueOnce(new Promise(() => undefined));
         store.sendCoins(request());
         answerLookup({
@@ -306,6 +307,7 @@ describe('TransactionsStore.sendCoins', () => {
         const store = newStore();
         store.sendCoins(request());
 
+        store.reset();
         sendCoins.mockReturnValueOnce(new Promise(() => undefined));
         store.sendCoins(request());
         rejectFirst(new Error('insufficient funds'));
@@ -366,6 +368,7 @@ describe('TransactionsStore.sendCoins', () => {
         const store = newStore();
         store.sendCoins(request());
 
+        store.reset();
         sendCoins.mockReturnValueOnce(new Promise(() => undefined));
         store.sendCoins(request());
         answer({ txid: 'old' });
@@ -549,6 +552,7 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
             await jest.advanceTimersByTimeAsync(0);
             expect(publishTransaction).toHaveBeenCalledTimes(1);
 
+            store.reset();
             sendCoins.mockReturnValueOnce(new Promise(() => undefined));
             store.sendCoins(request());
             rejectPublish(new Error('Request timeout'));
@@ -570,6 +574,7 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
         store.sendCoins(batchedRequest());
         await jest.advanceTimersByTimeAsync(0);
 
+        store.reset();
         sendCoins.mockReturnValueOnce(new Promise(() => undefined));
         store.sendCoins(request());
         rejectFinalize(new Error('finalize failed'));
@@ -589,6 +594,7 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
         store.sendCoins(batchedRequest());
         await jest.advanceTimersByTimeAsync(0);
 
+        store.reset();
         sendCoins.mockReturnValueOnce(new Promise(() => undefined));
         store.sendCoins(request());
         answerPublish({ publish_error: 'insufficient fee' });
@@ -634,5 +640,146 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
         expect(store.txid).toBe(null);
         expect(store.publishSuccess).toBe(false);
         expect(store.sendOutcomeUnknown).toBe(false);
+    });
+});
+
+describe('TransactionsStore.sendCoins double-submission guard', () => {
+    const batchedRequest = () => ({
+        ...request(),
+        account: 'default',
+        additional_outputs: [
+            { address: 'bc1qsecond', amount: '5000', satAmount: '5000' }
+        ]
+    });
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        isLNDBased.mockReset().mockReturnValue(true);
+        sendCoins.mockReset();
+        getTransactions.mockReset();
+        fundPsbt.mockReset().mockResolvedValue({ funded_psbt: 'cHNidP8B' });
+        finalizePsbt.mockReset().mockResolvedValue({ raw_final_tx: '0200' });
+        publishTransaction.mockReset();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('refuses a second send while the first is waiting on the node', async () => {
+        sendCoins.mockReturnValue(new Promise(() => undefined));
+        const store = newStore();
+        store.sendCoins(request());
+        store.sendCoins(request());
+        await settle();
+
+        expect(sendCoins).toHaveBeenCalledTimes(1);
+        expect(store.onchainSendInFlight).toBe(true);
+    });
+
+    it('refuses a second send while a timed out send is looked up', async () => {
+        sendCoins.mockRejectedValueOnce(new Error('Request timeout'));
+        getTransactions.mockReturnValue(new Promise(() => undefined));
+        const store = newStore();
+        store.sendCoins(request());
+        await jest.advanceTimersByTimeAsync(0);
+        expect(getTransactions).toHaveBeenCalledTimes(1);
+
+        store.sendCoins(request());
+        expect(sendCoins).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows the next send once the first was sent', async () => {
+        sendCoins.mockResolvedValue({ txid: 'abc' });
+        const store = newStore();
+        store.sendCoins(request());
+        await settle();
+        expect(store.onchainSendInFlight).toBe(false);
+
+        store.sendCoins(request());
+        expect(sendCoins).toHaveBeenCalledTimes(2);
+    });
+
+    it('allows Try Again once the first send failed', async () => {
+        sendCoins.mockRejectedValueOnce(new Error('insufficient funds'));
+        const store = newStore();
+        store.sendCoins(request());
+        await settle();
+        expect(store.error).toBe(true);
+        expect(store.onchainSendInFlight).toBe(false);
+
+        sendCoins.mockResolvedValue({ txid: 'abc' });
+        store.sendCoins(request());
+        await settle();
+        expect(sendCoins).toHaveBeenCalledTimes(2);
+        expect(store.txid).toBe('abc');
+    });
+
+    it('releases the guard once an unknown outcome is shown', async () => {
+        sendCoins.mockRejectedValue(new Error('Request timeout'));
+        getTransactions.mockResolvedValue({ transactions: [] });
+        const store = newStore();
+        store.sendCoins(request());
+        await settle();
+
+        expect(store.sendOutcomeUnknown).toBe(true);
+        expect(store.onchainSendInFlight).toBe(false);
+    });
+
+    it('refuses a second batched send while the first is being published', async () => {
+        publishTransaction.mockReturnValue(new Promise(() => undefined));
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await jest.advanceTimersByTimeAsync(0);
+        expect(publishTransaction).toHaveBeenCalledTimes(1);
+
+        store.sendCoins(batchedRequest());
+        await settle();
+        expect(fundPsbt).toHaveBeenCalledTimes(1);
+        expect(store.onchainSendInFlight).toBe(true);
+    });
+
+    it('releases the guard once a batched send is published', async () => {
+        publishTransaction.mockResolvedValue({});
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await settle();
+        expect(store.publishSuccess).toBe(true);
+        expect(store.onchainSendInFlight).toBe(false);
+
+        store.sendCoins(batchedRequest());
+        await settle();
+        expect(fundPsbt).toHaveBeenCalledTimes(2);
+    });
+
+    it('releases the guard when an external account PSBT is funded', async () => {
+        const store = newStore();
+        store.sendCoins({ ...batchedRequest(), account: 'external' });
+        await settle();
+
+        expect(store.funded_psbt).not.toBe('');
+        expect(finalizePsbt).not.toHaveBeenCalled();
+        expect(store.onchainSendInFlight).toBe(false);
+    });
+
+    it('releases the guard on reset', async () => {
+        let answer: (data: any) => void = () => undefined;
+        sendCoins.mockReturnValueOnce(
+            new Promise((resolve) => {
+                answer = resolve;
+            })
+        );
+        const store = newStore();
+        store.sendCoins(request());
+        store.reset();
+        expect(store.onchainSendInFlight).toBe(false);
+
+        // the earlier send answering does not end the newer one's guard
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
+        answer({ txid: 'old' });
+        await settle();
+        expect(sendCoins).toHaveBeenCalledTimes(2);
+        expect(store.onchainSendInFlight).toBe(true);
     });
 });
