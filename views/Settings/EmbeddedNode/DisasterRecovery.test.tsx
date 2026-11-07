@@ -10,7 +10,12 @@ jest.mock('../../../storage', () => ({
     __esModule: true,
     default: { getItem: jest.fn(async () => null) }
 }));
-jest.mock('../../../lndmobile/channel', () => ({}));
+jest.mock('../../../lndmobile/channel', () => ({
+    exportAllChannelBackups: jest.fn()
+}));
+jest.mock('../../../utils/ClipboardUtils', () => ({
+    copySensitive: jest.fn()
+}));
 jest.mock('../../../utils/LocaleUtils');
 jest.mock('../../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
@@ -34,6 +39,8 @@ import { act, render, screen } from '@testing-library/react-native';
 import DisasterRecovery from './DisasterRecovery';
 import { channelBackupStore, settingsStore } from '../../../stores/Stores';
 import { restartNeeded } from '../../../utils/RestartUtils';
+import { copySensitive } from '../../../utils/ClipboardUtils';
+import { exportAllChannelBackups } from '../../../lndmobile/channel';
 
 describe('DisasterRecovery', () => {
     // The error handler clears the message after 5 seconds
@@ -82,6 +89,28 @@ describe('DisasterRecovery', () => {
         expect(titles()).toContain(
             'views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus'
         );
+    });
+
+    it('copies the channel backup with copySensitive', async () => {
+        (exportAllChannelBackups as jest.Mock).mockResolvedValue({
+            multi_chan_backup: {
+                multi_chan_backup: new Uint8Array([1, 2, 3])
+            }
+        });
+
+        await render(<DisasterRecovery navigation={{} as any} />);
+        const copyButton = screen.container
+            .queryAll((n) => n.type === 'Button')
+            .find(
+                (n) =>
+                    n.props.title ===
+                    'views.Settings.EmbeddedNode.clipboardDisasterRecovery'
+            )!;
+        await act(async () => {
+            await copyButton.props.onPress();
+        });
+
+        expect(copySensitive).toHaveBeenCalledWith('AQID');
     });
 
     describe('automatic backups switch', () => {
