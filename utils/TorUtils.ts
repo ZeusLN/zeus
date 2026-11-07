@@ -41,6 +41,67 @@ const isOnionHttpsUrl = (url: string): boolean => {
     }
 };
 
+// Directories Tor state can be in: the current daemon's data directory, and
+// the one react-native-tor (replaced in a58b4cefc) created under the app's
+// cache directory on Android and its temporary directory on iOS
+const torDataDirectories = (): string[] =>
+    Array.from(
+        new Set([
+            TOR_DATA_PATH,
+            `${RNFS.CachesDirectoryPath}/sifir_sdk`,
+            `${RNFS.TemporaryDirectoryPath}/sifir_sdk`
+        ])
+    );
+
+// How long clearTorData waits for a start in progress and for the daemon to
+// stop before it deletes the data directories anyway
+export const TOR_STOP_TIMEOUT_MS = 5000;
+
+// Stops the daemon if this JS context started it, then deletes Tor's data
+// directories (guard and consensus state, which show Tor was used). Each
+// step is best effort, so one failure does not keep the others from running.
+export const clearTorData = async (): Promise<void> => {
+    const pending = startPromise;
+    if (pending) {
+        startPromise = null;
+        // Let a start in progress finish first: a shutdown that runs before
+        // the daemon is up can leave it running, writing new state after
+        // the directories are gone. The wait and the shutdown are bounded so
+        // that a daemon that does not respond cannot keep the directories
+        // from being deleted.
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+            await Promise.race([
+                (async () => {
+                    await pending.catch(() => {});
+                    await RnTor.shutdownService();
+                })(),
+                new Promise<void>((resolve) => {
+                    timer = setTimeout(() => {
+                        console.warn(
+                            '[TorUtils] Tor did not stop in time, deleting its data anyway'
+                        );
+                        resolve();
+                    }, TOR_STOP_TIMEOUT_MS);
+                })
+            ]);
+        } catch (e) {
+            console.warn('[TorUtils] Error stopping Tor:', e);
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+    for (const dir of torDataDirectories()) {
+        try {
+            if (await RNFS.exists(dir)) {
+                await RNFS.unlink(dir);
+            }
+        } catch (e) {
+            console.warn(`[TorUtils] Error deleting ${dir}:`, e);
+        }
+    }
+};
+
 let startPromise: Promise<void> | null = null;
 
 const ensureTorStarted = (): Promise<void> => {
