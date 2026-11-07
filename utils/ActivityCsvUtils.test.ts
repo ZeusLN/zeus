@@ -4,6 +4,9 @@ import {
     sanitizeCsvFileName,
     shareCsvFiles,
     purgeCsvShareStaging,
+    sweepStaleShareStaging,
+    dedupeFileNames,
+    SHARE_STAGING_TTL_MS,
     purgeLegacyActivityCsvExports,
     LEGACY_CSV_EXPORT_REGEX,
     CSV_KEYS
@@ -262,42 +265,59 @@ describe('activityCsvUtils', () => {
     });
 
     describe('shareCsvFiles', () => {
-        const stagingDir = '/mock/caches/path/csv-share-staging';
+        const stagingRoot = '/mock/caches/path/csv-share-staging';
+        const SUBDIR = new RegExp(
+            `^${stagingRoot.replace(/\//g, '\\/')}/\\d+-\\d+$`
+        );
+        const mkdirPaths = () =>
+            (RNFS.mkdir as jest.Mock).mock.calls.map((c: any[]) => c[0]);
+        const unlinkPaths = () =>
+            (RNFS.unlink as jest.Mock).mock.calls.map((c: any[]) => c[0]);
 
         beforeEach(() => {
             jest.clearAllMocks();
             (RNFS.exists as jest.Mock).mockResolvedValue(false);
+            (RNFS.readDir as jest.Mock).mockResolvedValue([]);
             (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
             (RNFS.unlink as jest.Mock).mockResolvedValue(undefined);
             (RNFS.mkdir as jest.Mock).mockResolvedValue(undefined);
             (Share.open as jest.Mock).mockResolvedValue(undefined);
         });
 
-        it('stages files in a cache subdir and hands them to the share sheet', async () => {
+        it('stages files in a per-share cache subdir and hands them to the share sheet', async () => {
             await shareCsvFiles([
                 { fileName: 'a.csv', csvData: 'a,data' },
                 { fileName: 'b.csv', csvData: 'b,data' }
             ]);
 
-            expect(RNFS.mkdir).toHaveBeenCalledWith(stagingDir);
+            expect(mkdirPaths()).toHaveLength(1);
+            const dir = mkdirPaths()[0];
+            expect(dir).toMatch(SUBDIR);
             expect(RNFS.writeFile).toHaveBeenCalledWith(
-                `${stagingDir}/a.csv`,
+                `${dir}/a.csv`,
                 'a,data',
                 'utf8'
             );
             expect(RNFS.writeFile).toHaveBeenCalledWith(
-                `${stagingDir}/b.csv`,
+                `${dir}/b.csv`,
                 'b,data',
                 'utf8'
             );
             expect(Share.open).toHaveBeenCalledWith({
-                urls: [
-                    `file://${stagingDir}/a.csv`,
-                    `file://${stagingDir}/b.csv`
-                ],
+                urls: [`file://${dir}/a.csv`, `file://${dir}/b.csv`],
                 type: 'text/csv',
                 failOnCancel: false
             });
+        });
+
+        it('gives every share its own staging subdir', async () => {
+            await shareCsvFiles([{ fileName: 'a.csv', csvData: '1' }]);
+            await shareCsvFiles([{ fileName: 'a.csv', csvData: '2' }]);
+
+            const [first, second] = mkdirPaths();
+            expect(first).toMatch(SUBDIR);
+            expect(second).toMatch(SUBDIR);
+            expect(second).not.toBe(first);
         });
 
         it('sanitizes user-supplied file names before staging', async () => {
@@ -306,68 +326,186 @@ describe('activityCsvUtils', () => {
             ]);
 
             expect(RNFS.writeFile).toHaveBeenCalledWith(
-                `${stagingDir}/evilname.csv`,
+                `${mkdirPaths()[0]}/evilname.csv`,
                 'a,data',
                 'utf8'
             );
         });
 
-        it('leaves staged files in place after Share.open settles', async () => {
+        it('gives names that sanitize to the same file distinct staged names', async () => {
+            await shareCsvFiles([
+                { fileName: 'a?b.csv', csvData: 'first' },
+                { fileName: 'ab.csv', csvData: 'second' },
+                { fileName: 'AB.csv', csvData: 'third' }
+            ]);
+
+            const dir = mkdirPaths()[0];
+            expect((RNFS.writeFile as jest.Mock).mock.calls).toEqual([
+                [`${dir}/ab.csv`, 'first', 'utf8'],
+                [`${dir}/ab (2).csv`, 'second', 'utf8'],
+                [`${dir}/AB (3).csv`, 'third', 'utf8']
+            ]);
+            expect((Share.open as jest.Mock).mock.calls[0][0].urls).toEqual([
+                `file://${dir}/ab.csv`,
+                `file://${dir}/ab (2).csv`,
+                `file://${dir}/AB (3).csv`
+            ]);
+        });
+
+        it('leaves its staged files in place after Share.open settles', async () => {
             // the receiving app may still be streaming the FileProvider URI
-            // when the promise resolves; cleanup happens on the next share
-            // and in clearAllData
+            // when the promise resolves; a later share sweeps it once stale,
+            // and clearAllData sweeps it on wipe
             await shareCsvFiles([{ fileName: 'a.csv', csvData: 'a,data' }]);
 
             expect(RNFS.unlink).not.toHaveBeenCalled();
         });
 
-        it('sweeps the previous staging dir before sharing', async () => {
+        it('never deletes a recent share that a receiver may still be reading', async () => {
+            const now = Date.now();
+            // the previous code purged the whole staging root when present
             (RNFS.exists as jest.Mock).mockResolvedValue(true);
+            (RNFS.readDir as jest.Mock).mockResolvedValue([
+                {
+                    name: `${now - 1000}-1`,
+                    path: `${stagingRoot}/${now - 1000}-1`,
+                    isDirectory: () => true
+                }
+            ]);
 
             await shareCsvFiles([{ fileName: 'a.csv', csvData: 'a,data' }]);
 
-            expect(RNFS.unlink).toHaveBeenCalledWith(stagingDir);
-            expect(RNFS.unlink).toHaveBeenCalledTimes(1);
+            expect(RNFS.unlink).not.toHaveBeenCalled();
+            expect(Share.open).toHaveBeenCalledTimes(1);
         });
 
-        it('sweeps staging and rethrows when the share fails', async () => {
+        it('sweeps stale shares and loose files from earlier builds before sharing', async () => {
+            const now = Date.now();
+            const stale = `${now - SHARE_STAGING_TTL_MS - 1000}-7`;
+            const recent = `${now - 5000}-8`;
+            (RNFS.readDir as jest.Mock).mockResolvedValue([
+                {
+                    name: stale,
+                    path: `${stagingRoot}/${stale}`,
+                    isDirectory: () => true
+                },
+                {
+                    name: recent,
+                    path: `${stagingRoot}/${recent}`,
+                    isDirectory: () => true
+                },
+                {
+                    name: 'old.csv',
+                    path: `${stagingRoot}/old.csv`,
+                    isDirectory: () => false
+                }
+            ]);
+
+            await shareCsvFiles([{ fileName: 'a.csv', csvData: 'a,data' }]);
+
+            expect(RNFS.readDir).toHaveBeenCalledWith(stagingRoot);
+            expect(unlinkPaths()).toEqual([
+                `${stagingRoot}/${stale}`,
+                `${stagingRoot}/old.csv`
+            ]);
+        });
+
+        it('removes only its own staging subdir and rethrows when the share fails', async () => {
             const consoleErrorSpy = jest
                 .spyOn(console, 'error')
                 .mockImplementation(() => {});
             (Share.open as jest.Mock).mockRejectedValue(
                 new Error('share failed')
             );
-            // pre-share sweep finds nothing, failure sweep sees the dir
-            (RNFS.exists as jest.Mock)
-                .mockResolvedValueOnce(false)
-                .mockResolvedValue(true);
 
             await expect(
                 shareCsvFiles([{ fileName: 'a.csv', csvData: 'a,data' }])
             ).rejects.toThrow('share failed');
 
-            expect(RNFS.unlink).toHaveBeenCalledWith(stagingDir);
+            expect(unlinkPaths()).toEqual([mkdirPaths()[0]]);
+            expect(unlinkPaths()).not.toContain(stagingRoot);
             consoleErrorSpy.mockRestore();
         });
 
-        it('sweeps staging when a write fails mid-flight', async () => {
+        it('removes its own staging subdir when a write fails mid-flight', async () => {
             const consoleErrorSpy = jest
                 .spyOn(console, 'error')
                 .mockImplementation(() => {});
             (RNFS.writeFile as jest.Mock).mockRejectedValue(
                 new Error('disk full')
             );
-            (RNFS.exists as jest.Mock)
-                .mockResolvedValueOnce(false)
-                .mockResolvedValue(true);
 
             await expect(
                 shareCsvFiles([{ fileName: 'a.csv', csvData: 'a,data' }])
             ).rejects.toThrow('disk full');
 
-            expect(RNFS.unlink).toHaveBeenCalledWith(stagingDir);
+            expect(unlinkPaths()).toEqual([mkdirPaths()[0]]);
             expect(Share.open).not.toHaveBeenCalled();
             consoleErrorSpy.mockRestore();
+        });
+    });
+
+    describe('sweepStaleShareStaging', () => {
+        it('swallows a missing staging root', async () => {
+            (RNFS.readDir as jest.Mock).mockRejectedValue(new Error('ENOENT'));
+            await expect(sweepStaleShareStaging()).resolves.toBeUndefined();
+        });
+
+        it('treats a subdir without a timestamp name as stale', async () => {
+            jest.clearAllMocks();
+            (RNFS.unlink as jest.Mock).mockResolvedValue(undefined);
+            (RNFS.readDir as jest.Mock).mockResolvedValue([
+                {
+                    name: 'junk',
+                    path: '/mock/caches/path/csv-share-staging/junk',
+                    isDirectory: () => true
+                }
+            ]);
+
+            await sweepStaleShareStaging();
+
+            expect(RNFS.unlink).toHaveBeenCalledWith(
+                '/mock/caches/path/csv-share-staging/junk'
+            );
+        });
+    });
+
+    describe('dedupeFileNames', () => {
+        it('leaves distinct names alone', () => {
+            expect(dedupeFileNames(['a.csv', 'b.csv'])).toEqual([
+                'a.csv',
+                'b.csv'
+            ]);
+        });
+
+        it('suffixes repeats before the extension, ignoring case', () => {
+            expect(
+                dedupeFileNames([
+                    'x.csv',
+                    'X.csv',
+                    'x (2).csv',
+                    'noext',
+                    'noext'
+                ])
+            ).toEqual([
+                'x.csv',
+                'X (2).csv',
+                'x (2) (2).csv',
+                'noext',
+                'noext (2)'
+            ]);
+        });
+
+        it('keeps the full config backup extension', () => {
+            expect(
+                dedupeFileNames([
+                    'a_b.zeus-wallet-config-backup',
+                    'a_b.zeus-wallet-config-backup'
+                ])
+            ).toEqual([
+                'a_b.zeus-wallet-config-backup',
+                'a_b (2).zeus-wallet-config-backup'
+            ]);
         });
     });
 
