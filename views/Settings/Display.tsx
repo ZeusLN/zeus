@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import {
+    Image,
+    Platform,
+    ScrollView,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -10,6 +16,10 @@ import SettingsStore, {
     DEFAULT_VIEW_KEYS,
     THEME_KEYS
 } from '../../stores/SettingsStore';
+import AppIconUtils, {
+    AppIconVariant,
+    platformDefaultAppIcon
+} from '../../utils/AppIconUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { applySystemNavigationBarTheme } from '../../utils/SystemNavigationBarUtils';
@@ -34,6 +44,7 @@ interface DisplayState {
     removeDecimalSpaces: boolean;
     showMillisatoshiAmounts: boolean;
     selectNodeOnStartup: boolean;
+    appIcon: AppIconVariant;
 }
 
 @inject('SettingsStore')
@@ -42,6 +53,8 @@ export default class Display extends React.Component<
     DisplayProps,
     DisplayState
 > {
+    private focusUnsubscribe: (() => void) | null = null;
+
     state = {
         theme: 'Dark',
         defaultView: 'Keypad',
@@ -50,13 +63,21 @@ export default class Display extends React.Component<
         showAllDecimalPlaces: false,
         removeDecimalSpaces: false,
         showMillisatoshiAmounts: false,
-        selectNodeOnStartup: false
+        selectNodeOnStartup: false,
+        appIcon: platformDefaultAppIcon()
     };
 
-    async componentDidMount() {
+    loadSettings = async () => {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
+
+        const storedAppIcon = settings.display && settings.display.appIcon;
+        const appIcon = AppIconUtils.availableVariants().some(
+            (v) => v.key === storedAppIcon
+        )
+            ? (storedAppIcon as AppIconVariant)
+            : platformDefaultAppIcon();
 
         this.setState({
             theme: (settings.display && settings.display.theme) || 'Dark',
@@ -77,8 +98,25 @@ export default class Display extends React.Component<
                 (settings.display &&
                     settings.display.showMillisatoshiAmounts) ||
                 false,
-            selectNodeOnStartup: settings.selectNodeOnStartup || false
+            selectNodeOnStartup: settings.selectNodeOnStartup || false,
+            appIcon
         });
+    };
+
+    async componentDidMount() {
+        await this.loadSettings();
+
+        // Refresh when returning from the App icon picker
+        this.focusUnsubscribe = this.props.navigation.addListener(
+            'focus',
+            this.loadSettings
+        );
+    }
+
+    componentWillUnmount() {
+        if (this.focusUnsubscribe) {
+            this.focusUnsubscribe();
+        }
     }
 
     renderSeparator = () => (
@@ -100,9 +138,14 @@ export default class Display extends React.Component<
             showAllDecimalPlaces,
             removeDecimalSpaces,
             showMillisatoshiAmounts,
-            selectNodeOnStartup
+            selectNodeOnStartup,
+            appIcon
         } = this.state;
         const { updateSettings, updateSettingsGroup } = SettingsStore;
+
+        const selectedAppIconSpec = AppIconUtils.availableVariants().find(
+            (v) => v.key === appIcon
+        );
 
         return (
             <Screen>
@@ -152,6 +195,42 @@ export default class Display extends React.Component<
                         }}
                         values={DEFAULT_VIEW_KEYS}
                     />
+
+                    <TouchableOpacity
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            marginTop: 20,
+                            minHeight: 31
+                        }}
+                        onPress={() => navigation.navigate('AppIcon')}
+                    >
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString('views.Settings.Display.appIcon')}
+                            </Text>
+                        </View>
+                        {selectedAppIconSpec && (
+                            <Image
+                                source={selectedAppIconSpec.thumbnail}
+                                style={{
+                                    width: 30,
+                                    height: 30,
+                                    borderRadius:
+                                        Platform.OS === 'android' ? 15 : 7,
+                                    marginRight: 10
+                                }}
+                                resizeMode="contain"
+                            />
+                        )}
+                        <ForwardIcon stroke={themeColor('secondaryText')} />
+                    </TouchableOpacity>
 
                     <View style={{ flexDirection: 'row', marginTop: 20 }}>
                         <View style={{ flex: 1 }}>

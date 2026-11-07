@@ -12,6 +12,7 @@ import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { SETTINGS_VERSION } from '../utils/SettingsVersion';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
+import type { AppIconVariant } from '../utils/AppIconUtils';
 import {
     DEFAULT_SCORER_URL,
     DEFAULT_VSS_SERVER,
@@ -103,6 +104,7 @@ interface DisplaySettings {
     dateFormat?: string;
     timeFormat?: string;
     showSeconds?: boolean;
+    appIcon?: AppIconVariant;
 }
 
 export enum PosEnabled {
