@@ -1,5 +1,6 @@
 import {
     decideLncPayEvent,
+    decideLncTrackEvent,
     deriveExpectedPaymentHash,
     normalizePaymentHash
 } from './LncPayUtils';
@@ -169,5 +170,69 @@ describe('decideLncPayEvent', () => {
         expect(decideLncPayEvent('"unavailable"').kind).toBe('error');
         expect(decideLncPayEvent('123').kind).toBe('error');
         expect(decideLncPayEvent('null').kind).toBe('error');
+    });
+});
+
+describe('decideLncTrackEvent', () => {
+    const inFlightEvent = JSON.stringify({
+        status: 'IN_FLIGHT',
+        payment_hash: SPEC_HASH_HEX
+    });
+
+    it('ignores EOF and empty events', () => {
+        expect(decideLncTrackEvent('EOF').kind).toBe('ignore');
+        expect(decideLncTrackEvent('').kind).toBe('ignore');
+        expect(decideLncTrackEvent(undefined).kind).toBe('ignore');
+        expect(decideLncTrackEvent(null).kind).toBe('ignore');
+    });
+
+    it('attributes an update of any status to the hash it carries', () => {
+        // a lookup wants the payment's current state; IN_FLIGHT is an
+        // answer here, unlike for decideLncPayEvent
+        const decision = decideLncTrackEvent(inFlightEvent);
+        expect(decision.kind).toBe('payment');
+        if (decision.kind === 'payment') {
+            expect(decision.hash).toBe(SPEC_HASH_HEX);
+            expect(decision.result.status).toBe('IN_FLIGHT');
+        }
+    });
+
+    it('normalizes a base64 hash to lowercase hex', () => {
+        const decision = decideLncTrackEvent(
+            JSON.stringify({
+                status: 'SUCCEEDED',
+                payment_hash: SPEC_HASH_BASE64
+            })
+        );
+        expect(decision).toMatchObject({
+            kind: 'payment',
+            hash: SPEC_HASH_HEX
+        });
+    });
+
+    it('drops an update without a hash', () => {
+        // no stream to attribute it to; sends tolerate these instead
+        const event = JSON.stringify({ status: 'SUCCEEDED' });
+        expect(decideLncTrackEvent(event).kind).toBe('ignore');
+    });
+
+    it('turns a non-JSON error string, NOT_FOUND included, into an Error', () => {
+        for (const raw of [
+            "rpc error: code = NotFound desc = payment isn't initiated",
+            'rpc error: code = Unavailable desc = connection closed'
+        ]) {
+            const decision = decideLncTrackEvent(raw);
+            expect(decision.kind).toBe('error');
+            if (decision.kind === 'error') {
+                expect(decision.error).toBeInstanceOf(Error);
+                expect(decision.error.message).toBe(raw);
+            }
+        }
+    });
+
+    it('treats JSON that is not an object as an error', () => {
+        expect(decideLncTrackEvent('"unavailable"').kind).toBe('error');
+        expect(decideLncTrackEvent('123').kind).toBe('error');
+        expect(decideLncTrackEvent('null').kind).toBe('error');
     });
 });
