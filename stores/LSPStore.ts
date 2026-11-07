@@ -1452,7 +1452,7 @@ export default class LSPStore {
             this.getOrderResponseResolver = settle;
 
             this.sendCustomMessage({
-                isCurrent: () => this.getOrderId === requestId,
+                isCurrent: () => !settled && this.getOrderId === requestId,
                 peer,
                 type: CUSTOM_MESSAGE_TYPE,
                 data: this.encodeMessage({
@@ -1475,7 +1475,9 @@ export default class LSPStore {
                         `Error sending (${method}) custom message:`,
                         error
                     );
-                    if (this.getOrderId === requestId) {
+                    // a late send failure must not overwrite the reply or
+                    // the timeout error of a request that already settled
+                    if (!settled && this.getOrderId === requestId) {
                         runInAction(() => {
                             this.error = true;
                             this.error_msg = errorToUserFriendly(error);
@@ -1901,7 +1903,8 @@ export default class LSPStore {
             this.getExtensionOrderResponseResolver = settle;
 
             this.sendCustomMessage({
-                isCurrent: () => this.getExtensionOrderId === requestId,
+                isCurrent: () =>
+                    !settled && this.getExtensionOrderId === requestId,
                 peer,
                 type: CUSTOM_MESSAGE_TYPE,
                 data: this.encodeMessage({
@@ -1924,7 +1927,9 @@ export default class LSPStore {
                         `Error sending (${method}) custom message:`,
                         error
                     );
-                    if (this.getExtensionOrderId === requestId) {
+                    // a late send failure must not overwrite the reply or
+                    // the timeout error of a request that already settled
+                    if (!settled && this.getExtensionOrderId === requestId) {
                         runInAction(() => {
                             this.error = true;
                             this.error_msg = errorToUserFriendly(error);

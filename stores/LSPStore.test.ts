@@ -342,6 +342,50 @@ describe('LSPStore custom-message request timeouts', () => {
             expect(store[loadingField]).toBe(true);
         });
 
+        it('ignores a send failure that arrives after the reply', async () => {
+            let rejectSend: (e: any) => void = () => {};
+            jest.mocked(BackendUtils.sendCustomMessage).mockReturnValueOnce(
+                new Promise((_, reject) => {
+                    rejectSend = reject;
+                }) as any
+            );
+            const store = makeStore();
+            const done = jest.fn();
+            store[request]('order-a', 'peer').then(done);
+            await jest.advanceTimersByTimeAsync(0);
+
+            replyTo(store, store[idField]);
+            await jest.advanceTimersByTimeAsync(0);
+            expect(done).toHaveBeenCalled();
+
+            rejectSend('peer not connected');
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+            expect(store[loadingField]).toBe(false);
+        });
+
+        it('keeps the timeout error when the send fails after the timeout', async () => {
+            let rejectSend: (e: any) => void = () => {};
+            jest.mocked(BackendUtils.sendCustomMessage).mockReturnValueOnce(
+                new Promise((_, reject) => {
+                    rejectSend = reject;
+                }) as any
+            );
+            const store = makeStore();
+            store[request]('order-a', 'peer');
+            await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+            expect(store.error_msg).toBe('views.LSPS1.timeoutError');
+
+            rejectSend('peer not connected');
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('views.LSPS1.timeoutError');
+            expect(store[loadingField]).toBe(false);
+        });
+
         it('a new request clears the previous timeout error', async () => {
             const store = makeStore();
             store[request]('order-a', 'peer');
