@@ -185,6 +185,21 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                                         {AlertStore.mempoolError.host}:{' '}
                                         {AlertStore.mempoolError.message}
                                     </Text>
+
+                                    <View style={{ marginTop: 15 }}>
+                                        <Button
+                                            title={localeString(
+                                                'components.AlertModal.mempoolAction'
+                                            )}
+                                            onPress={() => {
+                                                toggleAlertModal(false);
+                                                NavigationService.navigate(
+                                                    'Privacy'
+                                                );
+                                            }}
+                                            secondary
+                                        />
+                                    </View>
                                 </>
                             )}
 

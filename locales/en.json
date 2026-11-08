@@ -2252,6 +2252,7 @@
     "components.AlertModal.esploraExplainer": "Could not sync on-chain wallet data from the Esplora server. Balance information may be outdated. Sync will be retried automatically.",
     "components.AlertModal.mempoolError": "Mempool instance unreachable",
     "components.AlertModal.mempoolExplainer": "ZEUS does not fall back to another mempool instance. Requests will keep failing until the configured instance is reachable.",
+    "components.AlertModal.mempoolAction": "Change Mempool Instance",
     "components.AlertModal.rgsError": "Rapid Gossip Sync failed",
     "components.AlertModal.rgsExplainer": "Could not update the network graph from the RGS server. Payment routing may be less reliable until the next successful sync.",
     "components.AlertModal.rgsEmptyGraph": "Network graph is empty — RGS server may be unreachable",
