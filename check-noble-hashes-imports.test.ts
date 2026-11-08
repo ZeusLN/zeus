@@ -18,7 +18,7 @@ const SOURCE_DIRS = [
 
 const NOBLE_HASHES_SUBPATH = /['"]@noble\/hashes\/([^'"]+)['"]/g;
 const LEGACY_HASH_IMPORT =
-    /(?:from\s+|require\()['"](create-hash|fast-sha256|hash\.js|js-sha256|object-hash|scrypt-js|sha\.js)(?:\/[^'"]*)?['"]/;
+    /(?:from\s+|import\s*\(?\s*|require\(\s*)['"](create-hash|fast-sha256|hash\.js|js-sha256|object-hash|scrypt-js|sha\.js)(?:\/[^'"]*)?['"]/;
 
 const sourceFiles = (entry: string): string[] => {
     if (!fs.existsSync(entry)) return [];
