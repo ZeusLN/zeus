@@ -1472,6 +1472,10 @@ export default class TransactionsStore {
                             url,
                             `HTTP ${status}`
                         );
+                    } else {
+                        // 4xx: reachable, so clear any earlier alert for this
+                        // endpoint. Still don't raise — the tx was rejected.
+                        alertStore.clearMempoolError();
                     }
                     runInAction(() => {
                         this.broadcast_err = data;

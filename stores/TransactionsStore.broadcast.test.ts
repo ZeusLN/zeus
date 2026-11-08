@@ -96,7 +96,33 @@ describe('TransactionsStore.broadcastRawTxToMempoolSpace alert wiring', () => {
         expect(store.broadcast_err).toBe('Invalid tx');
         // key rule: 4xx is a server-side rejection of the tx, not an outage
         expect(mockedAlert.setMempoolErrorFromUrl).not.toHaveBeenCalled();
-        expect(mockedAlert.clearMempoolError).not.toHaveBeenCalled();
+        // 4xx means the server responded, so clear any prior alert
+        expect(mockedAlert.clearMempoolError).toHaveBeenCalled();
+    });
+
+    it('clears a 5xx alert when a later broadcast returns 4xx', async () => {
+        const store = newStore();
+
+        // First: 5xx raises the alert
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 503 }),
+            data: 'Service unavailable'
+        } as any);
+        await store.broadcastRawTxToMempoolSpace('deadbeef');
+        expect(mockedAlert.setMempoolErrorFromUrl).toHaveBeenCalledTimes(1);
+
+        mockedAlert.setMempoolErrorFromUrl.mockClear();
+        mockedAlert.clearMempoolError.mockClear();
+
+        // Then: 4xx means the server is up again — clear the prior alert
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 400 }),
+            data: 'Invalid tx'
+        } as any);
+        await store.broadcastRawTxToMempoolSpace('deadbeef');
+
+        expect(mockedAlert.setMempoolErrorFromUrl).not.toHaveBeenCalled();
+        expect(mockedAlert.clearMempoolError).toHaveBeenCalled();
     });
 
     it('raises the alert on a thrown network error', async () => {

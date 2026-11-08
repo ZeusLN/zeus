@@ -772,6 +772,8 @@ describe('SwapStore.verifyReverseLockup', () => {
         });
         // a 404 is normal (tx not seen yet) — must not raise
         expect(alertStore.setMempoolErrorFromUrl).not.toHaveBeenCalled();
+        // but a 404 means the instance responded — clear any earlier alert
+        expect(alertStore.clearMempoolError).toHaveBeenCalled();
     });
 
     it('waits on a lockup that is not confirmed yet', async () => {
