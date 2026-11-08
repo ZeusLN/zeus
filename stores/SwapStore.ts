@@ -1180,9 +1180,8 @@ export default class SwapStore {
             // have reached this instance, and one that never appears is never
             // claimed. Do not raise an alert for this case.
             if (httpStatus === 404) {
-                // The instance responded — clear any stale alert for this
-                // request. A 404 (tx not seen yet) is a normal state.
-                alertStore.clearMempoolError();
+                // A 404 here is normal (tx not seen yet) and can also mean a
+                // wrong custom base path, so leave the alert state unchanged.
                 return { status: 'unconfirmed', reason: 'lockup-not-found' };
             }
             if (httpStatus !== 200) {

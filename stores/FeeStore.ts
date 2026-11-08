@@ -99,10 +99,11 @@ export default class FeeStore {
             })
             .catch((error: any) => {
                 console.error('Error fetching fees:', error);
-                alertStore.setMempoolErrorFromUrl(
-                    url,
-                    errorToUserFriendly(error)
-                );
+                const msg =
+                    error instanceof SyntaxError
+                        ? 'Invalid response'
+                        : errorToUserFriendly(error);
+                alertStore.setMempoolErrorFromUrl(url, msg);
                 runInAction(() => {
                     this.recommendedFees = {};
                     this.loading = false;

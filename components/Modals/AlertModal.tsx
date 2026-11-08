@@ -186,7 +186,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                                         {AlertStore.mempoolError.message}
                                     </Text>
 
-                                    <View style={{ marginTop: 15 }}>
+                                    <View style={styles.button}>
                                         <Button
                                             title={localeString(
                                                 'components.AlertModal.mempoolAction'
@@ -197,7 +197,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                                                     'Privacy'
                                                 );
                                             }}
-                                            secondary
+                                            tertiary
                                         />
                                     </View>
                                 </>

@@ -1472,9 +1472,9 @@ export default class TransactionsStore {
                             url,
                             `HTTP ${status}`
                         );
-                    } else {
-                        // 4xx: reachable, so clear any earlier alert for this
-                        // endpoint. Still don't raise — the tx was rejected.
+                    } else if (status === 400) {
+                        // 400 means the server rejected the tx, so it is
+                        // reachable. Clear any stale global alert.
                         alertStore.clearMempoolError();
                     }
                     runInAction(() => {

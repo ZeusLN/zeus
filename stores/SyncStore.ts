@@ -157,19 +157,20 @@ export default class SyncStore {
                         resolve(this.bestBlockHeight);
                     } else {
                         this.error = true;
-                        alertStore.setMempoolErrorFromUrl(
-                            url,
-                            `HTTP ${status}`
-                        );
+                        const msg = Number.isFinite(height)
+                            ? `HTTP ${status}`
+                            : 'Invalid response';
+                        alertStore.setMempoolErrorFromUrl(url, msg);
                         reject();
                     }
                 })
                 .catch((error: any) => {
                     this.error = true;
-                    alertStore.setMempoolErrorFromUrl(
-                        url,
-                        errorToUserFriendly(error)
-                    );
+                    const msg =
+                        error instanceof SyntaxError
+                            ? 'Invalid response'
+                            : errorToUserFriendly(error);
+                    alertStore.setMempoolErrorFromUrl(url, msg);
                     reject();
                 });
         });

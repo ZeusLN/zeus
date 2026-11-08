@@ -320,6 +320,28 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
         );
     });
 
+    it.each([[404], [500], [503]])(
+        'raises the alert on %i from the read endpoint',
+        async (status) => {
+            const store = newStore();
+            store.recommendedFees = { fastestFee: 3 }; // seed stale rates
+            mockedFetch.mockResolvedValueOnce({
+                info: () => ({ status }),
+                json: () => ({})
+            } as any);
+
+            await store.getOnchainFeesviaMempool();
+
+            expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+                'https://mempool.space/api/v1/fees/recommended',
+                `HTTP ${status}`
+            );
+
+            expect(store.recommendedFees).toEqual({});
+            expect(store.error).toBe(true);
+        }
+    );
+
     it('resolves undefined and sets error on a thrown network error', async () => {
         const store = newStore();
         store.recommendedFees = { fastestFee: 3 }; // Seed stale rates
@@ -377,8 +399,11 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
         expect(store.error).toBe(true);
         expect(store.recommendedFees).toEqual({});
         expect(store.loading).toBe(false);
-        // Thrown during parse: goes to .catch, which raises
-        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalled();
+        // Thrown during parse: goes to .catch, which raises "Invalid response"
+        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            'https://mempool.space/api/v1/fees/recommended',
+            'Invalid response'
+        );
     });
 
     it('resolves undefined when fastestFee is missing', async () => {

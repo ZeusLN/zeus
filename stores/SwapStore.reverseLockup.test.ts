@@ -770,10 +770,10 @@ describe('SwapStore.verifyReverseLockup', () => {
             status: 'unconfirmed',
             reason: 'lockup-not-found'
         });
-        // a 404 is normal (tx not seen yet) — must not raise
+        // a 404 means the instance responded, but the tx is not seen yet. It
+        // can also mean a wrong custom base path, so leave the alert unchanged.
         expect(alertStore.setMempoolErrorFromUrl).not.toHaveBeenCalled();
-        // but a 404 means the instance responded — clear any earlier alert
-        expect(alertStore.clearMempoolError).toHaveBeenCalled();
+        expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
     });
 
     it('waits on a lockup that is not confirmed yet', async () => {

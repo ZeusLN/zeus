@@ -94,13 +94,26 @@ describe('TransactionsStore.broadcastRawTxToMempoolSpace alert wiring', () => {
         await store.broadcastRawTxToMempoolSpace('deadbeef');
 
         expect(store.broadcast_err).toBe('Invalid tx');
-        // key rule: 4xx is a server-side rejection of the tx, not an outage
         expect(mockedAlert.setMempoolErrorFromUrl).not.toHaveBeenCalled();
-        // 4xx means the server responded, so clear any prior alert
+        // 400 means the server is reachable and rejected the tx, so clear the alert
         expect(mockedAlert.clearMempoolError).toHaveBeenCalled();
     });
 
-    it('clears a 5xx alert when a later broadcast returns 4xx', async () => {
+    it('does not raise or clear on a 404 response', async () => {
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 404 }),
+            data: 'Not found'
+        } as any);
+        const store = newStore();
+
+        await store.broadcastRawTxToMempoolSpace('deadbeef');
+
+        expect(store.broadcast_err).toBe('Not found');
+        expect(mockedAlert.setMempoolErrorFromUrl).not.toHaveBeenCalled();
+        expect(mockedAlert.clearMempoolError).not.toHaveBeenCalled();
+    });
+
+    it('clears a 5xx alert when a later broadcast returns 400', async () => {
         const store = newStore();
 
         // First: 5xx raises the alert

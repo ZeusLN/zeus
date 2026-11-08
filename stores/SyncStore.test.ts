@@ -122,4 +122,57 @@ describe('SyncStore.getBestBlockHeight', () => {
             'HTTP 500'
         );
     });
+
+    it('raises the alert on a 404 response', async () => {
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 404 }),
+            json: () => '0'
+        } as any);
+        const store = makeStore();
+
+        await expect(
+            (store as any).getBestBlockHeight()
+        ).rejects.toBeUndefined();
+
+        expect(mockedAlert.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            'https://mempool.space/api/blocks/tip/height',
+            'HTTP 404'
+        );
+    });
+
+    it('raises the alert with "Invalid response" on a non-numeric body', async () => {
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 200 }),
+            json: () => 'Not a number'
+        } as any);
+        const store = makeStore();
+
+        await expect(
+            (store as any).getBestBlockHeight()
+        ).rejects.toBeUndefined();
+
+        expect(mockedAlert.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            'https://mempool.space/api/blocks/tip/height',
+            'Invalid response'
+        );
+    });
+
+    it('raises "Invalid response" when json() throws', async () => {
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 200 }),
+            json: () => {
+                throw new SyntaxError('Unexpected token <');
+            }
+        } as any);
+        const store = makeStore();
+
+        await expect(
+            (store as any).getBestBlockHeight()
+        ).rejects.toBeUndefined();
+
+        expect(mockedAlert.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            'https://mempool.space/api/blocks/tip/height',
+            'Invalid response'
+        );
+    });
 });
