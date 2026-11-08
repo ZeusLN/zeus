@@ -24,6 +24,11 @@ jest.mock('../../utils/ThemeUtils', () => ({
 jest.mock('../../components/WalletHeader', () => 'WalletHeader');
 jest.mock('../../components/Amount', () => 'Amount');
 jest.mock('../../components/Conversion', () => 'Conversion');
+jest.mock('../../components/LurkerToggle', () => ({
+    __esModule: true,
+    default: 'LurkerToggle',
+    LURKER_TOGGLE_SIZE: 24
+}));
 jest.mock('../../components/SyncingStatus', () => 'SyncingStatus');
 jest.mock('../../components/RecoveryStatus', () => 'RecoveryStatus');
 jest.mock('../../components/RescanStatus', () => 'RescanStatus');
@@ -228,4 +233,47 @@ describe('BalancePane missing LND folder card', () => {
 
         expect(screen.queryByText(FOLDER_MISSING_TITLE)).not.toBeOnTheScreen();
     });
+});
+
+describe('BalancePane lurker toggle', () => {
+    // the toggle and the amount it sits next to share a row
+    const toggleRowAmounts = () => {
+        const toggles = screen.container.queryAll(
+            (n: any) => n.type === 'LurkerToggle'
+        );
+        return toggles.map((toggle: any) =>
+            toggle.parent.children
+                .filter((n: any) => n.type === 'Amount')
+                .map((n: any) => n.props.sats)
+        );
+    };
+
+    it('sits next to the combined balance', async () => {
+        await renderPane({ implementation: 'lnd' });
+
+        expect(toggleRowAmounts()).toEqual([['130000.000']]);
+    });
+
+    it('is not repeated next to pending amounts', async () => {
+        await renderPane({
+            implementation: 'lnd',
+            balances: { pendingOpenBalance: 20_000 }
+        });
+
+        expect(
+            screen.container.queryAll(
+                (n: any) => n.type === 'Amount' && n.props.pending
+            )
+        ).not.toHaveLength(0);
+        expect(toggleRowAmounts()).toEqual([['130000.000']]);
+    });
+
+    it.each(['lndhub', 'nostr-wallet-connect'])(
+        'sits next to the lightning balance on %s',
+        async (implementation) => {
+            await renderPane({ implementation });
+
+            expect(toggleRowAmounts()).toEqual([[50_000]]);
+        }
+    );
 });

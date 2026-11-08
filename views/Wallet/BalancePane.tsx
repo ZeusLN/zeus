@@ -18,6 +18,9 @@ import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
+import LurkerToggle, {
+    LURKER_TOGGLE_SIZE
+} from '../../components/LurkerToggle';
 import SyncingStatus from '../../components/SyncingStatus';
 import RecoveryStatus from '../../components/RecoveryStatus';
 import RescanStatus from '../../components/RescanStatus';
@@ -246,14 +249,18 @@ export default class BalancePane extends React.PureComponent<
             .toNumber()
             .toFixed(3);
 
+        // The spacer mirrors the lurker toggle so the amount stays centered
+        const renderMainBalance = (sats: string | number) => (
+            <View style={styles.mainBalance}>
+                <View style={styles.lurkerToggleSpacer} />
+                <Amount sats={sats} sensitive jumboText toggleable />
+                <LurkerToggle />
+            </View>
+        );
+
         const LightningBalance = () => (
             <View style={styles.balance}>
-                <Amount
-                    sats={lightningBalance}
-                    sensitive
-                    jumboText
-                    toggleable
-                />
+                {renderMainBalance(lightningBalance)}
                 {!hasLightningPending && (
                     <View style={styles.conversion}>
                         <Conversion sats={lightningBalance} sensitive />
@@ -331,12 +338,7 @@ export default class BalancePane extends React.PureComponent<
 
             return (
                 <View style={styles.balance}>
-                    <Amount
-                        sats={combinedBalanceValue}
-                        sensitive
-                        jumboText
-                        toggleable
-                    />
+                    {renderMainBalance(combinedBalanceValue)}
                     {!hasAnyPending && (
                         <View style={styles.conversion}>
                             <Conversion sats={combinedBalanceValue} sensitive />
@@ -1259,6 +1261,14 @@ export default class BalancePane extends React.PureComponent<
 const styles = StyleSheet.create({
     balance: {
         alignItems: 'center'
+    },
+    mainBalance: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        columnGap: 10
+    },
+    lurkerToggleSpacer: {
+        width: LURKER_TOGGLE_SIZE
     },
     conversion: {
         marginTop: 10,

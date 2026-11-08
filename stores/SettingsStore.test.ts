@@ -1416,6 +1416,114 @@ describe('SettingsStore.updateSettings refresh flag', () => {
     });
 });
 
+// Lurker mode is display-only: views read it from the store, so turning
+// it on or off from the Wallet screen must not cost a refetch there.
+describe('SettingsStore.setLurkerMode', () => {
+    const PRIVACY = {
+        defaultBlockExplorer: 'mempool.space',
+        clipboard: true,
+        lurkerMode: false
+    };
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('persists the mode and keeps the other privacy settings', async () => {
+        seedSettings({ privacy: PRIVACY });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        await store.setLurkerMode(true);
+
+        expect(persistedSettings().privacy).toEqual({
+            ...PRIVACY,
+            lurkerMode: true
+        });
+        expect(store.settings.privacy.lurkerMode).toBe(true);
+    });
+
+    it('updates the in-memory setting before the write lands', async () => {
+        seedSettings({ privacy: PRIVACY });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        const write = store.setLurkerMode(true);
+
+        expect(store.settings.privacy.lurkerMode).toBe(true);
+        await write;
+    });
+
+    it('stays off when turned off during a long press reveal', async () => {
+        jest.useFakeTimers();
+        seedSettings({ privacy: { ...PRIVACY, lurkerMode: true } });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        store.toggleLurker();
+        await store.setLurkerMode(false);
+        // the reveal would have restored lurker mode at this point
+        jest.advanceTimersByTime(3000);
+
+        expect(store.lurkerExposed).toBe(false);
+        expect(store.settings.privacy.lurkerMode).toBe(false);
+        expect(persistedSettings().privacy.lurkerMode).toBe(false);
+    });
+
+    it('ends a long press reveal when turned on', async () => {
+        seedSettings({ privacy: { ...PRIVACY, lurkerMode: true } });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        store.toggleLurker();
+        expect(store.settings.privacy.lurkerMode).toBe(false);
+        await store.setLurkerMode(true);
+
+        expect(store.lurkerExposed).toBe(false);
+        expect(store.settings.privacy.lurkerMode).toBe(true);
+        expect(persistedSettings().privacy.lurkerMode).toBe(true);
+    });
+
+    it('creates the privacy group when the settings have none', async () => {
+        seedSettings({});
+        const store = new SettingsStore();
+        await store.getSettings();
+        delete (store.settings as any).privacy;
+
+        await store.setLurkerMode(true);
+
+        expect(store.settings.privacy).toEqual({ lurkerMode: true });
+        expect(persistedSettings().privacy).toEqual({ lurkerMode: true });
+    });
+
+    it.each([true, false])(
+        'leaves the refresh flag unarmed (enabled: %s)',
+        async (enabled) => {
+            seedSettings({ privacy: { ...PRIVACY, lurkerMode: !enabled } });
+            const store = new SettingsStore();
+            await store.getSettings();
+
+            await store.setLurkerMode(enabled);
+
+            expect(store.triggerSettingsRefresh).toEqual(false);
+        }
+    );
+
+    it('still arms the refresh flag for other privacy settings', async () => {
+        // the exemption covers lurkerMode only, not the whole group
+        seedSettings({ privacy: PRIVACY });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        await store.updateSettingsGroup('privacy', {
+            lurkerMode: true,
+            defaultBlockExplorer: 'blockstream.info'
+        });
+
+        expect(store.triggerSettingsRefresh).toEqual(true);
+    });
+});
+
 describe('SettingsStore.getSettings', () => {
     afterEach(() => {
         StorageMock.getRawItem.mockReset();
