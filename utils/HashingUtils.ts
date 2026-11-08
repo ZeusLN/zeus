@@ -47,5 +47,5 @@ export async function hashScryptAsync(
     salt: Uint8Array,
     opts: ScryptOpts
 ): Promise<Uint8Array> {
-    return nobleScryptAsync(password, salt, opts);
+    return nobleScryptAsync(password, salt, { ...opts, asyncTick: 100 });
 }
