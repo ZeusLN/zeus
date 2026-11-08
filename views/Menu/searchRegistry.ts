@@ -1,15 +1,19 @@
 export interface MenuSearchContext {
     hasSelectedNode: boolean;
-    hasEmbeddedSeed: boolean;
+    hasLocalSeed: boolean;
+    isLocalWallet: boolean;
     implementation?: string;
     supportsNodeInfo: boolean;
     supportsNetworkInfo: boolean;
     supportsCashuWallet: boolean;
     cashuEnabled: boolean;
-    supportsCustomPreimages: boolean;
+    supportsLightningAddress: boolean;
     isTestnet: boolean;
     supportsOffers: boolean;
+    supportsListingOffers: boolean;
+    supportsBolt12Address: boolean;
     supportsRouting: boolean;
+    supportsCircularRebalancing: boolean;
     supportsAddressesWithDerivationPaths: boolean;
     supportsFlowLSP: boolean;
     supportsAccounts: boolean;
@@ -43,7 +47,6 @@ export type SettingsIconKey =
     | 'seed'
     | 'embedded-node'
     | 'node-info'
-    | 'network-info'
     | 'mints'
     | 'lightning-address'
     | 'swaps'
@@ -65,6 +68,7 @@ export type SettingsIconKey =
     | 'currency'
     | 'language'
     | 'display'
+    | 'networking'
     | 'pos'
     | 'accounts'
     | 'nwc'
@@ -94,6 +98,7 @@ export interface MenuSearchItemPlacement {
 export interface MenuSearchItemDefinition {
     id: string;
     labelKey: string;
+    labelKeys?: (context: MenuSearchContext) => string[];
     androidLabelKey?: string;
     iconKey: SettingsIconKey;
     routeName?: string;
@@ -101,9 +106,22 @@ export interface MenuSearchItemDefinition {
     aliasKeys?: string[];
     action?: MenuSearchAction;
     excludeFromSearch?: boolean;
+    requiresReAuth?: boolean;
+    survivesChannelMigration?: boolean;
     placements?: MenuSearchItemPlacement[];
     isVisible: (context: MenuSearchContext) => boolean;
 }
+
+const isStandardChannelsSettingsVisible = (context: MenuSearchContext) =>
+    context.hasSelectedNode &&
+    context.supportsChannelManagement &&
+    context.implementation !== 'ldk-node';
+
+const isLegacyChannelsSettingsVisible = (context: MenuSearchContext) =>
+    context.hasSelectedNode &&
+    !context.isLNDBased &&
+    context.implementation !== 'lndhub' &&
+    !isStandardChannelsSettingsVisible(context);
 
 export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
     {
@@ -120,7 +138,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
                 tone: 'highlight'
             }
         ],
-        isVisible: (context) => !context.hasSelectedNode
+        isVisible: (context) => !context.hasSelectedNode,
+        survivesChannelMigration: true
     },
     {
         id: 'wallets',
@@ -128,7 +147,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         iconKey: 'wallets',
         routeName: 'Wallets',
         aliasKeys: ['general.wallets'],
-        isVisible: (context) => context.hasSelectedNode
+        isVisible: (context) => context.hasSelectedNode,
+        survivesChannelMigration: true
     },
     {
         id: 'settings',
@@ -137,19 +157,21 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         routeName: 'Settings',
         aliasKeys: ['general.advancedSettings'],
         placements: [{ surface: 'menu', group: 'settings' }],
-        isVisible: () => true
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'seed',
         labelKey: 'views.Settings.Seed.title',
         iconKey: 'seed',
         routeName: 'Seed',
+        requiresReAuth: true,
         aliasKeys: [
             'views.Wallet.BalancePane.backup.title',
             'views.Wallet.BalancePane.recovery.title'
         ],
         placements: [{ surface: 'menu', group: 'seed' }],
-        isVisible: (context) => context.hasEmbeddedSeed
+        isVisible: (context) => context.hasLocalSeed
     },
     {
         id: 'embedded-node',
@@ -157,30 +179,27 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         iconKey: 'embedded-node',
         routeName: 'EmbeddedNodeSettings',
         aliasKeys: ['general.node', 'general.bitcoin'],
-        placements: [{ surface: 'menu', group: 'seed' }],
-        isVisible: (context) => context.hasEmbeddedSeed
+        placements: [{ surface: 'settings', group: 'embedded-node' }],
+        isVisible: (context) => context.hasSelectedNode && context.isLocalWallet
     },
     {
         id: 'node-info',
         labelKey: 'views.NodeInfo.title',
+        labelKeys: (context) =>
+            context.supportsNetworkInfo
+                ? ['general.node', 'views.NetworkInfo.title']
+                : ['views.NodeInfo.title'],
         iconKey: 'node-info',
         routeName: 'NodeInfo',
-        aliasKeys: ['general.node'],
+        aliasKeys: [
+            'general.node',
+            'general.network',
+            'general.peers',
+            'views.NetworkInfo.title'
+        ],
         placements: [{ surface: 'menu', group: 'node-info' }],
         isVisible: (context) =>
             context.hasSelectedNode && context.supportsNodeInfo
-    },
-    {
-        id: 'network-info',
-        labelKey: 'views.NetworkInfo.title',
-        iconKey: 'network-info',
-        routeName: 'NetworkInfo',
-        aliasKeys: ['general.network', 'general.peers'],
-        placements: [{ surface: 'menu', group: 'node-info' }],
-        isVisible: (context) =>
-            context.hasSelectedNode &&
-            context.supportsNodeInfo &&
-            context.supportsNetworkInfo
     },
     {
         id: 'mints',
@@ -203,7 +222,7 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         placements: [{ surface: 'menu', group: 'lightning-address' }],
         isVisible: (context) =>
             context.hasSelectedNode &&
-            context.supportsCustomPreimages &&
+            context.supportsLightningAddress &&
             !context.isTestnet
     },
     {
@@ -213,7 +232,7 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         routeName: 'Swaps',
         aliasKeys: ['general.swap'],
         placements: [{ surface: 'menu', group: 'swaps' }],
-        isVisible: (context) => context.hasSelectedNode
+        isVisible: (context) => context.hasSelectedNode && !context.isTestnet
     },
     {
         id: 'onchain-addresses',
@@ -231,7 +250,7 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         routeName: 'Bolt12Address',
         placements: [{ surface: 'menu', group: 'bolt12-address' }],
         isVisible: (context) =>
-            context.hasSelectedNode && context.supportsOffers
+            context.hasSelectedNode && context.supportsBolt12Address
     },
     {
         id: 'paycodes',
@@ -241,7 +260,19 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         aliasKeys: ['general.paycode'],
         placements: [{ surface: 'menu', group: 'paycodes' }],
         isVisible: (context) =>
-            context.hasSelectedNode && context.supportsOffers
+            context.hasSelectedNode && context.supportsListingOffers
+    },
+    {
+        id: 'create-paycode',
+        labelKey: 'views.PayCode.createOffer',
+        iconKey: 'paycodes',
+        routeName: 'CreatePayCode',
+        aliasKeys: ['general.paycode'],
+        placements: [{ surface: 'menu', group: 'paycodes' }],
+        isVisible: (context) =>
+            context.hasSelectedNode &&
+            context.supportsOffers &&
+            !context.supportsListingOffers
     },
     {
         id: 'routing',
@@ -269,7 +300,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         routeName: 'Tools',
         aliasKeys: ['general.advanced'],
         placements: [{ surface: 'menu', group: 'tools' }],
-        isVisible: () => true
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'support',
@@ -278,7 +310,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         routeName: 'Support',
         aliasKeys: ['views.PaymentRequest.donate'],
         placements: [{ surface: 'menu', group: 'support' }],
-        isVisible: () => true
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'help',
@@ -287,7 +320,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         routeName: 'Help',
         aliasKeys: ['general.about'],
         placements: [{ surface: 'menu', group: 'help' }],
-        isVisible: () => true
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'lsp',
@@ -324,17 +358,7 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         iconKey: 'invoices',
         routeName: 'InvoicesSettings',
         aliasKeys: ['general.receive'],
-        placements: [
-            { surface: 'settings', group: 'payments' },
-            {
-                surface: 'settings',
-                group: 'legacy-invoices',
-                isVisible: (context) =>
-                    context.hasSelectedNode &&
-                    !context.isLNDBased &&
-                    context.implementation !== 'lndhub'
-            }
-        ],
+        placements: [{ surface: 'settings', group: 'payments' }],
         isVisible: (context) => context.hasSelectedNode
     },
     {
@@ -343,9 +367,30 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         iconKey: 'channels',
         routeName: 'ChannelsSettings',
         aliasKeys: ['general.routing'],
-        placements: [{ surface: 'settings', group: 'channels' }],
+        placements: [
+            {
+                surface: 'settings',
+                group: 'channels',
+                isVisible: isStandardChannelsSettingsVisible
+            },
+            {
+                surface: 'settings',
+                group: 'legacy-channels',
+                isVisible: isLegacyChannelsSettingsVisible
+            }
+        ],
         isVisible: (context) =>
-            context.hasSelectedNode && context.supportsChannelManagement
+            isStandardChannelsSettingsVisible(context) ||
+            isLegacyChannelsSettingsVisible(context)
+    },
+    {
+        id: 'networking',
+        labelKey: 'views.Settings.networking',
+        iconKey: 'networking',
+        routeName: 'Networking',
+        placements: [{ surface: 'settings', group: 'networking-privacy' }],
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'privacy',
@@ -353,8 +398,9 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         iconKey: 'privacy',
         routeName: 'Privacy',
         aliasKeys: ['views.Settings.security'],
-        placements: [{ surface: 'settings', group: 'privacy-security' }],
-        isVisible: () => true
+        placements: [{ surface: 'settings', group: 'networking-privacy' }],
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'security',
@@ -362,8 +408,9 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         iconKey: 'security',
         routeName: 'Security',
         aliasKeys: ['views.Settings.privacy'],
-        placements: [{ surface: 'settings', group: 'privacy-security' }],
-        isVisible: () => true
+        placements: [{ surface: 'settings', group: 'networking-privacy' }],
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'currency',
@@ -372,7 +419,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         routeName: 'Currency',
         aliasKeys: ['general.fiat', 'general.bitcoin'],
         placements: [{ surface: 'settings', group: 'currency-language' }],
-        isVisible: () => true
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'language',
@@ -380,7 +428,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         iconKey: 'language',
         routeName: 'Language',
         placements: [{ surface: 'settings', group: 'currency-language' }],
-        isVisible: () => true
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'display',
@@ -388,7 +437,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         iconKey: 'display',
         routeName: 'Display',
         placements: [{ surface: 'settings', group: 'display' }],
-        isVisible: () => true
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'pos-settings',
@@ -453,7 +503,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         routeName: 'CurrencyConverter',
         aliasKeys: ['general.conversionRate'],
         placements: [{ surface: 'tools', group: 'converter' }],
-        isVisible: () => true
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'rebalance',
@@ -463,7 +514,7 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         aliasKeys: ['general.routing'],
         placements: [{ surface: 'tools', group: 'rebalance' }],
         isVisible: (context) =>
-            context.hasSelectedNode && context.supportsChannelManagement
+            context.hasSelectedNode && context.supportsCircularRebalancing
     },
     {
         id: 'sweep',
@@ -472,7 +523,7 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         routeName: 'Sweep',
         aliasKeys: ['general.onchain'],
         placements: [{ surface: 'tools', group: 'sweep' }],
-        isVisible: (context) => context.supportsSweep
+        isVisible: (context) => context.hasSelectedNode && context.supportsSweep
     },
     {
         id: 'wif-sweeper',
@@ -510,7 +561,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         aliasKeys: ['nostr.nostr'],
         placements: [{ surface: 'tools', group: 'nostr-keys' }],
         isVisible: (context) =>
-            context.supportsCashuWallet && context.cashuEnabled
+            context.supportsCashuWallet && context.cashuEnabled,
+        survivesChannelMigration: true
     },
     {
         id: 'config-export-import',
@@ -522,7 +574,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
             'views.Tools.nodeConfigExportImport.importConfigs'
         ],
         placements: [{ surface: 'tools', group: 'config-export-import' }],
-        isVisible: () => true
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'keychain-cleanup',
@@ -531,7 +584,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         iconKey: 'keychain-cleanup',
         routeName: 'KeychainCleanup',
         placements: [{ surface: 'tools', group: 'keychain-cleanup' }],
-        isVisible: () => true
+        isVisible: () => true,
+        survivesChannelMigration: true
     },
     {
         id: 'channel-export',
@@ -560,7 +614,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
         routeName: 'DeveloperTools',
         aliasKeys: ['general.advanced'],
         placements: [{ surface: 'tools', group: 'developer-tools' }],
-        isVisible: (context) => context.supportsDevTools
+        isVisible: (context) =>
+            context.hasSelectedNode && context.supportsDevTools
     },
     {
         id: 'clear-storage',
@@ -576,7 +631,8 @@ export const MENU_SEARCH_ITEMS: MenuSearchItemDefinition[] = [
                 tone: 'warning'
             }
         ],
-        isVisible: () => true
+        isVisible: () => true,
+        survivesChannelMigration: true
     }
 ];
 

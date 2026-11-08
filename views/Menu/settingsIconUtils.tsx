@@ -76,8 +76,8 @@ export const renderSettingsItemIcon = ({
             return <BlockIcon color={textColor} width={27} height={27} />;
         case 'node-info':
             return <NodeOn color={textColor} />;
-        case 'network-info':
-            return <NetworkIcon fill={textColor} width={24} height={24} />;
+        case 'networking':
+            return <NetworkIcon fill={textColor} width={22} height={22} />;
         case 'mints':
             return <MintIcon fill={textColor} width={24} height={24} />;
         case 'lightning-address':

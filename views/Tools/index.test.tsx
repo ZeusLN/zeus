@@ -1,4 +1,12 @@
 jest.mock('../../utils/LocaleUtils');
+jest.mock('../../stores/Stores', () => ({
+    settingsStore: {
+        loginMethodConfigured: jest.fn(() => false)
+    }
+}));
+jest.mock('../../utils/NavigationUtils', () => ({
+    reAuthNavigation: jest.fn()
+}));
 jest.mock('../../utils/BackendUtils', () => ({
     __esModule: true,
     default: new Proxy({}, { get: () => () => false })
@@ -27,11 +35,12 @@ const toolsContext = ({
 } = {}) =>
     buildMenuSearchContext({
         hasSelectedNode,
-        hasEmbeddedSeed: false,
+        hasLocalSeed: false,
         implementation,
         cashuEnabled: false,
         isTestnet: false,
         supportsOffers: false,
+        supportsListingOffers: false,
         isChannelMigrating,
         canExportChannels
     });

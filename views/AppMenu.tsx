@@ -23,11 +23,15 @@ import ChannelBackupLoadingModal from '../components/Modals/ChannelBackupLoading
 import NodeIdenticon, { NodeTitle } from '../components/NodeIdenticon';
 import Screen from '../components/Screen';
 
+import BackendUtils from '../utils/BackendUtils';
 import {
     graphDataExists,
     handleExportChannels
 } from '../utils/ChannelMigrationUtils';
-import { clearAllData } from '../utils/DataClearUtils';
+import {
+    blockNavigationDuringWipe,
+    clearAllData
+} from '../utils/DataClearUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { getPhoto } from '../utils/PhotoUtils';
 import { restartApp } from '../utils/RestartUtils';
@@ -57,7 +61,7 @@ import {
 import {
     buildMenuSearchContext,
     getMatchingSettingsItems,
-    getMenuSearchItemLabelKey,
+    getMenuSearchItemLabel,
     getVisibleSettingsSurfaceGroups,
     handleMenuSearchItemPress
 } from './Menu/searchUtils';
@@ -80,6 +84,7 @@ interface AppMenuState {
     searchQuery: string;
     isChannelExporting: boolean;
     channelExportMessage: string;
+    isClearingData: boolean;
     graphDataOnDisk: boolean;
 }
 
@@ -106,10 +111,12 @@ export default class AppMenu extends React.Component<
         searchQuery: '',
         isChannelExporting: false,
         channelExportMessage: '',
+        isClearingData: false,
         graphDataOnDisk: false
     };
 
     focusListener: (() => void) | null = null;
+    private releaseWipeGuard: (() => void) | null = null;
 
     getSurface = (): SettingsSurface => {
         const routeName = this.props.route?.name;
@@ -154,6 +161,7 @@ export default class AppMenu extends React.Component<
         if (this.focusListener) {
             this.focusListener();
         }
+        this.releaseWipeGuard?.();
     }
 
     handleFocus = () => {
@@ -205,15 +213,19 @@ export default class AppMenu extends React.Component<
                     text: localeString('views.Tools.clearStorage.confirm'),
                     style: 'destructive',
                     onPress: async () => {
+                        // clearAllData() latches Storage writes as its first
+                        // step and nothing releases the latch, so restart
+                        // unconditionally (matching Lockscreen's duress paths).
+                        this.setState({ isClearingData: true });
+                        this.releaseWipeGuard = blockNavigationDuringWipe(
+                            this.props.navigation
+                        );
                         try {
                             await clearAllData();
-                            restartApp();
                         } catch (error) {
                             console.error('Failed to clear storage:', error);
-                            Alert.alert(
-                                localeString('general.error'),
-                                localeString('views.Tools.clearStorage.error')
-                            );
+                        } finally {
+                            restartApp();
                         }
                     }
                 }
@@ -233,8 +245,13 @@ export default class AppMenu extends React.Component<
         const surface = this.getSurface();
 
         const { searchQuery, graphDataOnDisk } = this.state;
-        const { implementation, settings, seedPhrase, isChannelMigrating } =
-            SettingsStore;
+        const {
+            implementation,
+            settings,
+            seedPhrase,
+            ldkMnemonic,
+            isChannelMigrating
+        } = SettingsStore;
 
         const selectedNode: SettingsNode | null =
             (settings &&
@@ -243,7 +260,7 @@ export default class AppMenu extends React.Component<
             null;
 
         const implementationDisplayValue: ImplementationDisplayValue = {};
-        INTERFACE_KEYS.forEach((item) => {
+        INTERFACE_KEYS.filter((item) => !item.isHeader).forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
 
@@ -259,9 +276,18 @@ export default class AppMenu extends React.Component<
                 if (selectedNode.embeddedLndNetwork) {
                     nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
                 }
-                if (!selectedNode.isSqlite) {
+                if (selectedNode.isSqlite) {
+                    nodeSubtitle += ' [SQLite]';
+                } else {
                     nodeSubtitle += ' [Bolt]';
                 }
+            }
+
+            if (nodeImplementation === 'ldk-node' && selectedNode.ldkNetwork) {
+                nodeSubtitle += ` (${
+                    selectedNode.ldkNetwork.charAt(0).toUpperCase() +
+                    selectedNode.ldkNetwork.slice(1)
+                })`;
             }
         }
 
@@ -279,13 +305,17 @@ export default class AppMenu extends React.Component<
         const nodeConnected = !!NodeInfoStore.nodeInfo?.identity_pubkey;
         const canExportChannels = nodeConnected ? hasChannels : graphDataOnDisk;
 
+        const hasLocalSeed =
+            BackendUtils.isLocalWallet() && (!!seedPhrase || !!ldkMnemonic);
+
         const searchContext = buildMenuSearchContext({
             hasSelectedNode: !!selectedNode,
-            hasEmbeddedSeed: implementation === 'embedded-lnd' && !!seedPhrase,
+            hasLocalSeed,
             implementation,
             cashuEnabled: !!settings?.ecash?.enableCashu,
             isTestnet: !!NodeInfoStore.testnet,
             supportsOffers: !!NodeInfoStore.supportsOffers,
+            supportsListingOffers: !!NodeInfoStore.supportsListingOffers,
             isChannelMigrating: !!isChannelMigrating,
             canExportChannels
         });
@@ -356,8 +386,9 @@ export default class AppMenu extends React.Component<
                                         color: getToneColor(placement.tone)
                                     }}
                                 >
-                                    {localeString(
-                                        getMenuSearchItemLabelKey(item)
+                                    {getMenuSearchItemLabel(
+                                        item,
+                                        searchContext
                                     )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
@@ -581,8 +612,15 @@ export default class AppMenu extends React.Component<
             <Screen>
                 {renderHeader()}
                 <ChannelBackupLoadingModal
-                    isOpen={this.state.isChannelExporting}
-                    message={this.state.channelExportMessage}
+                    isOpen={
+                        this.state.isChannelExporting ||
+                        this.state.isClearingData
+                    }
+                    message={
+                        this.state.isClearingData
+                            ? localeString('views.Tools.clearStorage.clearing')
+                            : this.state.channelExportMessage
+                    }
                 />
                 <ScrollView
                     style={{
@@ -623,10 +661,9 @@ export default class AppMenu extends React.Component<
                                                   )
                                               }}
                                           >
-                                              {localeString(
-                                                  getMenuSearchItemLabelKey(
-                                                      item
-                                                  )
+                                              {getMenuSearchItemLabel(
+                                                  item,
+                                                  searchContext
                                               )}
                                           </Text>
                                           <View style={styles.ForwardArrow}>

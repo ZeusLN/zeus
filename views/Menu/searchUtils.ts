@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { reAuthNavigation } from '../../utils/NavigationUtils';
 import {
     getSettingsItemPlacements,
     MENU_SEARCH_ITEMS,
@@ -13,11 +14,12 @@ import {
 
 interface BuildMenuSearchContextParams {
     hasSelectedNode: boolean;
-    hasEmbeddedSeed: boolean;
+    hasLocalSeed: boolean;
     implementation?: string;
     cashuEnabled: boolean;
     isTestnet: boolean;
     supportsOffers: boolean;
+    supportsListingOffers: boolean;
     isChannelMigrating: boolean;
     canExportChannels: boolean;
 }
@@ -40,24 +42,28 @@ export interface SettingsSurfaceGroup {
 
 export const buildMenuSearchContext = ({
     hasSelectedNode,
-    hasEmbeddedSeed,
+    hasLocalSeed,
     implementation,
     cashuEnabled,
     isTestnet,
     supportsOffers,
+    supportsListingOffers,
     isChannelMigrating,
     canExportChannels
 }: BuildMenuSearchContextParams): MenuSearchContext => ({
     hasSelectedNode,
-    hasEmbeddedSeed,
+    hasLocalSeed,
+    isLocalWallet: BackendUtils.isLocalWallet(),
     implementation,
     supportsNodeInfo: BackendUtils.supportsNodeInfo(),
     supportsNetworkInfo: BackendUtils.supportsNetworkInfo(),
     supportsCashuWallet: BackendUtils.supportsCashuWallet(),
     cashuEnabled,
-    supportsCustomPreimages: BackendUtils.supportsCustomPreimages(),
+    supportsLightningAddress: BackendUtils.supportsLightningAddress(),
     isTestnet,
     supportsOffers,
+    supportsListingOffers,
+    supportsBolt12Address: BackendUtils.supportsBolt12Address(),
     supportsRouting: BackendUtils.supportsRouting(),
     supportsAddressesWithDerivationPaths:
         BackendUtils.supportsAddressesWithDerivationPaths(),
@@ -69,6 +75,7 @@ export const buildMenuSearchContext = ({
     isLNDBased: BackendUtils.isLNDBased(),
     supportsMessageSigning: BackendUtils.supportsMessageSigning(),
     supportsChannelManagement: BackendUtils.supportsChannelManagement(),
+    supportsCircularRebalancing: BackendUtils.supportsCircularRebalancing(),
     supportsSweep: BackendUtils.supportsSweep(),
     supportsOnchainSends: BackendUtils.supportsOnchainSends(),
     supportsWithdrawalRequests: BackendUtils.supportsWithdrawalRequests(),
@@ -77,13 +84,40 @@ export const buildMenuSearchContext = ({
     canExportChannels
 });
 
+export const isRegistryItemVisible = (
+    item: MenuSearchItemDefinition,
+    context: MenuSearchContext
+) => {
+    if (!item.isVisible(context)) {
+        return false;
+    }
+
+    if (context.isChannelMigrating && !item.survivesChannelMigration) {
+        return false;
+    }
+
+    return true;
+};
+
 export const getMenuSearchItemLabelKey = (item: MenuSearchItemDefinition) =>
     Platform.OS === 'android' && item.androidLabelKey
         ? item.androidLabelKey
         : item.labelKey;
 
+export const getMenuSearchItemLabel = (
+    item: MenuSearchItemDefinition,
+    context: MenuSearchContext
+) =>
+    item.labelKeys
+        ? item
+              .labelKeys(context)
+              .map((key) => localeString(key))
+              .join(' & ')
+        : localeString(getMenuSearchItemLabelKey(item));
+
 export const doesMenuSearchItemMatch = (
     item: MenuSearchItemDefinition,
+    context: MenuSearchContext,
     normalizedQuery: string
 ) => {
     if (!normalizedQuery) {
@@ -93,6 +127,7 @@ export const doesMenuSearchItemMatch = (
     const searchTerms = [
         item.labelKey,
         item.androidLabelKey,
+        ...(item.labelKeys?.(context) || []),
         ...(item.aliasKeys || [])
     ]
         .filter((key): key is string => !!key)
@@ -103,14 +138,17 @@ export const doesMenuSearchItemMatch = (
 
 export const getMatchingSettingsItems = (
     context: MenuSearchContext,
-    normalizedQuery: string
-) =>
-    MENU_SEARCH_ITEMS.filter(
+    query: string
+) => {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+
+    return MENU_SEARCH_ITEMS.filter(
         (item) =>
             !item.excludeFromSearch &&
-            item.isVisible(context) &&
-            doesMenuSearchItemMatch(item, normalizedQuery)
+            isRegistryItemVisible(item, context) &&
+            doesMenuSearchItemMatch(item, context, normalizedQuery)
     );
+};
 
 export const getVisibleSettingsSurfaceGroups = (
     context: MenuSearchContext,
@@ -119,7 +157,7 @@ export const getVisibleSettingsSurfaceGroups = (
     const groups = new Map<string, SettingsSurfaceGroup>();
 
     MENU_SEARCH_ITEMS.forEach((item) => {
-        if (!item.isVisible(context)) {
+        if (!isRegistryItemVisible(item, context)) {
             return;
         }
 
@@ -152,7 +190,8 @@ export const handleMenuSearchItemPress = ({
     if (item.action === 'openLspSettings') {
         const supportsLSPS1 =
             BackendUtils.supportsLSPScustomMessage() ||
-            BackendUtils.supportsLSPS1rest();
+            BackendUtils.supportsLSPS1rest() ||
+            BackendUtils.supportsLSPS1native();
 
         if (BackendUtils.supportsFlowLSP() && supportsLSPS1) {
             navigation.navigate('LSPServicesList');
@@ -187,6 +226,11 @@ export const handleMenuSearchItemPress = ({
     }
 
     if (item.routeName) {
+        if (item.requiresReAuth) {
+            reAuthNavigation(navigation, item.routeName, item.routeParams);
+            return;
+        }
+
         navigation.navigate(item.routeName, item.routeParams);
     }
 };
