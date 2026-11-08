@@ -7,11 +7,13 @@ import { LndMobileToolsEventEmitter } from '../utils/EventListenerUtils';
 import { sleep } from '../utils/SleepUtils';
 import SyncUtils from '../utils/SyncUtils';
 import UrlUtils from '../utils/UrlUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 import NodeInfo from '../models/NodeInfo';
 
 import ConnectivityStore from './ConnectivityStore';
 import SettingsStore from './SettingsStore';
+import { alertStore } from './Stores';
 
 const TIP_FETCH_MAX_ATTEMPTS = 3;
 const TIP_FETCH_RETRY_DELAY_MS = 3000;
@@ -131,38 +133,43 @@ export default class SyncStore {
     };
 
     private getBestBlockHeight = async () => {
+        // nodeInfoStore.nodeInfo isn't populated during initial sync, so the
+        // network comes from settings instead. SyncStore only runs for embedded
+        // LND (Mainnet/Testnet). The URL we actually fetch is the only
+        // authoritative source for which host is being contacted — do not
+        // recompute the host from nodeInfoStore.nodeInfo.
+        const url = `${UrlUtils.getMempoolApiUrl({
+            isMutinynet: false,
+            isTestNet: this.settingsStore.embeddedLndNetwork === 'Testnet'
+        })}/blocks/tip/height`;
         await new Promise((resolve, reject) => {
-            ReactNativeBlobUtil.fetch(
-                'get',
-                // nodeInfoStore.nodeInfo isn't populated during initial sync,
-                // so the network comes from settings instead. SyncStore only
-                // runs for embedded LND, which is restricted to
-                // 'Mainnet'/'Testnet' (mutinynet is LDK Node-only, tracked
-                // separately as ldkNetwork), so isMutinynet is always false
-                // here.
-                `${UrlUtils.getMempoolApiUrl({
-                    isMutinynet: false,
-                    isTestNet:
-                        this.settingsStore.embeddedLndNetwork === 'Testnet'
-                })}/blocks/tip/height`
-            )
+            ReactNativeBlobUtil.fetch('get', url)
                 .then(async (response: any) => {
                     const status = response.info().status;
                     const height = Number.parseInt(response.json());
                     if (status == 200 && Number.isFinite(height)) {
                         this.bestBlockHeight = height;
                         this.error = false;
+                        alertStore.clearMempoolError();
                         if (this.currentBlockHeight) {
                             this.updateProgress();
                         }
                         resolve(this.bestBlockHeight);
                     } else {
                         this.error = true;
+                        alertStore.setMempoolErrorFromUrl(
+                            url,
+                            `HTTP ${status}`
+                        );
                         reject();
                     }
                 })
-                .catch(() => {
+                .catch((error: any) => {
                     this.error = true;
+                    alertStore.setMempoolErrorFromUrl(
+                        url,
+                        errorToUserFriendly(error)
+                    );
                     reject();
                 });
         });

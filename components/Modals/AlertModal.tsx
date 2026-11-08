@@ -152,6 +152,42 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                                 </>
                             )}
 
+                            {AlertStore.mempoolError && (
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.header,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'components.AlertModal.mempoolError'
+                                        )}
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'components.AlertModal.mempoolExplainer'
+                                        )}
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {AlertStore.mempoolError.host}:{' '}
+                                        {AlertStore.mempoolError.message}
+                                    </Text>
+                                </>
+                            )}
+
                             {AlertStore.rgsError && (
                                 <>
                                     <Text

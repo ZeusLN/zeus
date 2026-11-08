@@ -143,3 +143,75 @@ describe('AlertStore', () => {
         expect(store.rgsError).toBeNull();
     });
 });
+
+describe('AlertStore mempoolError', () => {
+    it('sets and clears the mempool error', () => {
+        const store = new AlertStore(makeSettingsStore());
+
+        store.setMempoolError('mempool.space', 'HTTP 500');
+        expect(store.mempoolError).toEqual({
+            host: 'mempool.space',
+            message: 'HTTP 500'
+        });
+        expect(store.hasError).toBe(true);
+
+        store.clearMempoolError();
+        expect(store.mempoolError).toBeNull();
+        expect(store.hasError).toBe(false);
+    });
+
+    it('keeps hasError true while another error remains', () => {
+        const store = new AlertStore(makeSettingsStore());
+
+        store.setVssError('vss down');
+        store.setMempoolError('mempool.space', 'HTTP 500');
+        expect(store.hasError).toBe(true);
+
+        store.clearMempoolError();
+        // vssError is still set — hasError must stay true
+        expect(store.hasError).toBe(true);
+    });
+
+    it('reset clears mempoolError', () => {
+        const store = new AlertStore(makeSettingsStore());
+
+        store.setMempoolError('mempool.space', 'HTTP 500');
+        store.reset();
+        expect(store.mempoolError).toBeNull();
+        expect(store.hasError).toBe(false);
+    });
+
+    describe('setMempoolErrorFromUrl host extraction', () => {
+        it.each([
+            ['https://mempool.space/api/v1/fees/recommended', 'mempool.space'],
+            [
+                'https://mempool.space/testnet/api/blocks/tip/height',
+                'mempool.space'
+            ],
+            [
+                'https://custom.example.com:8080/api/v1/fees/recommended',
+                'custom.example.com:8080'
+            ]
+        ])('extracts the host from %s → %s', (url, expectedHost) => {
+            const store = new AlertStore(makeSettingsStore());
+
+            store.setMempoolErrorFromUrl(url, 'HTTP 500');
+
+            expect(store.mempoolError).toEqual({
+                host: expectedHost,
+                message: 'HTTP 500'
+            });
+        });
+
+        it('falls back to the full string on a parse error', () => {
+            const store = new AlertStore(makeSettingsStore());
+
+            store.setMempoolErrorFromUrl('not a url', 'HTTP 500');
+
+            expect(store.mempoolError).toEqual({
+                host: 'not a url',
+                message: 'HTTP 500'
+            });
+        });
+    });
+});

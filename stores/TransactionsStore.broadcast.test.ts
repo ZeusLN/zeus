@@ -1,0 +1,113 @@
+jest.mock('react-native-randombytes', () => ({
+    randomBytes: (size: number) => Buffer.alloc(size, 0)
+}));
+jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
+jest.mock('../utils/UrlUtils', () => ({ getMempoolApiUrl: jest.fn() }));
+jest.mock('../utils/ErrorUtils', () => ({
+    errorToUserFriendly: (e: any) => e?.message ?? String(e)
+}));
+jest.mock('../stores/Stores', () => ({
+    alertStore: {
+        setMempoolErrorFromUrl: jest.fn(),
+        clearMempoolError: jest.fn()
+    }
+}));
+// TransactionsStore imports BackendUtils, which pulls in LND → TorUtils →
+// react-native-nitro-tor (ESM). Mock BackendUtils so Jest never loads it.
+jest.mock('../utils/BackendUtils', () => ({ __esModule: true, default: {} }));
+
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import UrlUtils from '../utils/UrlUtils';
+import { alertStore } from './Stores';
+import TransactionsStore from './TransactionsStore';
+
+const mockedFetch = jest.mocked(ReactNativeBlobUtil.fetch);
+const mockedUrl = jest.mocked(UrlUtils.getMempoolApiUrl);
+const mockedAlert = alertStore as jest.Mocked<typeof alertStore>;
+
+const newStore = () => {
+    const stub = {
+        onReconnect: jest.fn(),
+        nodeInfo: {},
+        settings: {},
+        implementation: 'embedded-lnd'
+    };
+    return new TransactionsStore(
+        { ...stub, onReconnect: jest.fn() } as any,
+        { ...stub, onReconnect: jest.fn() } as any,
+        { ...stub, onReconnect: jest.fn() } as any,
+        { ...stub, onReconnect: jest.fn() } as any,
+        { ...stub, onReconnect: jest.fn() } as any
+    );
+};
+
+describe('TransactionsStore.broadcastRawTxToMempoolSpace alert wiring', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedUrl.mockReturnValue('https://mempool.space/api');
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('clears the alert on a 200 response', async () => {
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 200 }),
+            data: 'txid-abc'
+        } as any);
+        const store = newStore();
+
+        const result = await store.broadcastRawTxToMempoolSpace('deadbeef');
+
+        expect(result).toBe('txid-abc');
+        expect(store.broadcast_txid).toBe('txid-abc');
+        expect(mockedAlert.clearMempoolError).toHaveBeenCalled();
+        expect(mockedAlert.setMempoolErrorFromUrl).not.toHaveBeenCalled();
+    });
+
+    it('raises the alert on a 5xx response', async () => {
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 503 }),
+            data: 'Service unavailable'
+        } as any);
+        const store = newStore();
+
+        await store.broadcastRawTxToMempoolSpace('deadbeef');
+
+        expect(store.broadcast_err).toBe('Service unavailable');
+        expect(mockedAlert.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            'https://mempool.space/api/tx',
+            'HTTP 503'
+        );
+        expect(mockedAlert.clearMempoolError).not.toHaveBeenCalled();
+    });
+
+    it('does not raise the alert on a 4xx response (tx was rejected, server is up)', async () => {
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 400 }),
+            data: 'Invalid tx'
+        } as any);
+        const store = newStore();
+
+        await store.broadcastRawTxToMempoolSpace('deadbeef');
+
+        expect(store.broadcast_err).toBe('Invalid tx');
+        // key rule: 4xx is a server-side rejection of the tx, not an outage
+        expect(mockedAlert.setMempoolErrorFromUrl).not.toHaveBeenCalled();
+        expect(mockedAlert.clearMempoolError).not.toHaveBeenCalled();
+    });
+
+    it('raises the alert on a thrown network error', async () => {
+        mockedFetch.mockRejectedValueOnce(new Error('Network error'));
+        const store = newStore();
+
+        await store.broadcastRawTxToMempoolSpace('deadbeef');
+
+        expect(mockedAlert.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            'https://mempool.space/api/tx',
+            'Network error'
+        );
+    });
+});

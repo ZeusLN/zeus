@@ -37,6 +37,7 @@ import {
 import AddressUtils from '../utils/AddressUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore, {
@@ -45,6 +46,7 @@ import SettingsStore, {
     SWAP_HOST_KEYS_TESTNET,
     SWAP_HOST_KEYS_MAINNET
 } from './SettingsStore';
+import { alertStore } from './Stores';
 
 import Storage from '../storage';
 
@@ -1169,27 +1171,31 @@ export default class SwapStore {
 
         const txid = lockup.getId();
         const apiUrl = UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo);
+        const url = `${apiUrl}/tx/${txid}`;
         let tx: any;
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${apiUrl}/tx/${txid}`
-            );
+            const response = await ReactNativeBlobUtil.fetch('GET', url);
             const httpStatus = response.info().status;
-            // not seen yet is retryable: an honest lockup may not have
-            // reached this instance, and one that never appears is
-            // never claimed
+            // Not seen yet is retryable and normal: an honest lockup may not
+            // have reached this instance, and one that never appears is never
+            // claimed. Do not raise an alert for this case.
             if (httpStatus === 404) {
                 return { status: 'unconfirmed', reason: 'lockup-not-found' };
             }
             if (httpStatus !== 200) {
+                alertStore.setMempoolErrorFromUrl(url, `HTTP ${httpStatus}`);
                 return {
                     status: 'unavailable',
                     reason: `http-${httpStatus}`
                 };
             }
+            alertStore.clearMempoolError();
             tx = response.json();
         } catch (e) {
+            alertStore.setMempoolErrorFromUrl(
+                url,
+                errorToUserFriendly(e as any)
+            );
             return { status: 'unavailable', reason: 'request-failed' };
         }
 

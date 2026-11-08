@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, computed, observable } from 'mobx';
 
 import SettingsStore from './SettingsStore';
 import { localeString } from '../utils/LocaleUtils';
@@ -10,45 +10,85 @@ interface Peer {
     ms: string | number;
 }
 
+export interface MempoolError {
+    host: string;
+    message: string;
+}
+
 export default class AlertStore {
-    @observable public hasError: boolean = false;
     @observable public neutrinoPeerError: boolean = false;
     @observable public problematicNeutrinoPeers: Array<Peer> = [];
     @observable public vssError: string | null = null;
     @observable public esploraError: string | null = null;
     @observable public rgsError: string | null = null;
+    @observable public mempoolError: MempoolError | null = null;
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
     }
 
+    @computed
+    get hasError(): boolean {
+        return Boolean(
+            this.vssError ||
+                this.esploraError ||
+                this.rgsError ||
+                this.neutrinoPeerError ||
+                this.mempoolError
+        );
+    }
+
     @action
     public reset = () => {
-        this.hasError = false;
         this.neutrinoPeerError = false;
         this.problematicNeutrinoPeers = [];
         this.vssError = null;
         this.esploraError = null;
         this.rgsError = null;
+        this.mempoolError = null;
     };
 
     @action
     public setVssError = (error: string) => {
         this.vssError = error;
-        this.hasError = true;
     };
 
     @action
     public setEsploraError = (error: string) => {
         this.esploraError = error;
-        this.hasError = true;
     };
 
     @action
     public setRgsError = (error: string) => {
         this.rgsError = error;
-        this.hasError = true;
+    };
+
+    @action
+    public setMempoolError = (host: string, message: string) => {
+        this.mempoolError = { host, message };
+    };
+
+    /**
+     * Derive the host from the URL that was actually fetched, so SyncStore
+     * (which builds its own URL from settings and can be on Testnet) names
+     * the correct server. Never read nodeInfoStore.nodeInfo here — that
+     * would report the wrong instance during initial sync.
+     */
+    @action
+    public setMempoolErrorFromUrl = (url: string, message: string) => {
+        let host: string;
+        try {
+            host = new URL(url).host;
+        } catch {
+            host = url;
+        }
+        this.setMempoolError(host, message);
+    };
+
+    @action
+    public clearMempoolError = () => {
+        this.mempoolError = null;
     };
 
     @action
@@ -103,8 +143,8 @@ export default class AlertStore {
 
         if (!isCurrent()) return;
         this.problematicNeutrinoPeers = filteredResults;
+        // Field only. hasError is now a computed getter.
         if (this.problematicNeutrinoPeers.length > 0) {
-            this.hasError = true;
             this.neutrinoPeerError = true;
         }
     };

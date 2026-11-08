@@ -1,7 +1,12 @@
 // Reverse swap lockup verification. Uses the real ecpair, bitcoinjs-lib
 // and @scure key material like SwapStore.rescue.test.ts, so the swap tree
 // and lockup address are derived exactly as the app derives them.
-jest.mock('../stores/Stores');
+jest.mock('../stores/Stores', () => ({
+    alertStore: {
+        setMempoolErrorFromUrl: jest.fn(),
+        clearMempoolError: jest.fn()
+    }
+}));
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: (s: string) => s
 }));
@@ -76,6 +81,7 @@ import { mnemonicToSeedSync } from '@scure/bip39';
 import { HDKey } from '@scure/bip32';
 
 import SwapStore from './SwapStore';
+import { alertStore } from './Stores';
 import BackendUtils from '../utils/BackendUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import Storage from '../storage';
@@ -460,6 +466,10 @@ describe('SwapStore.createReverseSwap claim fee', () => {
 });
 
 describe('SwapStore.verifyReverseLockup', () => {
+    beforeEach(() => {
+        (alertStore.setMempoolErrorFromUrl as jest.Mock).mockClear();
+        (alertStore.clearMempoolError as jest.Mock).mockClear();
+    });
     const ONCHAIN_AMOUNT = 99100;
 
     // a stored swap: keys and preimage in their JSON shapes
@@ -527,6 +537,7 @@ describe('SwapStore.verifyReverseLockup', () => {
     it('allows the claim for a confirmed, fully funded lockup', async () => {
         esplora(200);
         await expect(verify()).resolves.toEqual({ status: 'ok' });
+        expect(alertStore.clearMempoolError).toHaveBeenCalled();
     });
 
     it('refuses a swap stored with an on-chain amount that is not a number', async () => {
@@ -759,6 +770,8 @@ describe('SwapStore.verifyReverseLockup', () => {
             status: 'unconfirmed',
             reason: 'lockup-not-found'
         });
+        // a 404 is normal (tx not seen yet) — must not raise
+        expect(alertStore.setMempoolErrorFromUrl).not.toHaveBeenCalled();
     });
 
     it('waits on a lockup that is not confirmed yet', async () => {
@@ -772,6 +785,39 @@ describe('SwapStore.verifyReverseLockup', () => {
             status: { confirmed: false }
         });
         await expect(verify()).resolves.toEqual({ status: 'unconfirmed' });
+        // the fetch itself succeeded — clear any stale alert
+        expect(alertStore.clearMempoolError).toHaveBeenCalled();
+    });
+
+    it('raises the alert on a 500 response', async () => {
+        esplora(500, 'Internal Server Error');
+        await expect(verify()).resolves.toEqual({
+            status: 'unavailable',
+            reason: 'http-500'
+        });
+        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            expect.stringContaining('https://mempool.test/api/tx/'),
+            'HTTP 500'
+        );
+    });
+
+    it('raises the alert on a thrown network error', async () => {
+        esplora(200);
+        const fetch = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (method, url) => {
+            if (url.includes('/tx/') && !url.includes('/outspend/')) {
+                throw new Error('Network error');
+            }
+            return fetch(method, url);
+        });
+        await expect(verify()).resolves.toEqual({
+            status: 'unavailable',
+            reason: 'request-failed'
+        });
+        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            expect.stringContaining('https://mempool.test/api/tx/'),
+            'Network error'
+        );
     });
 
     it('refuses a lockup that pays less than the swap amount', async () => {
