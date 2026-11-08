@@ -1,8 +1,8 @@
 import { hmac } from '@noble/hashes/hmac.js';
 import { sha1 } from '@noble/hashes/legacy.js';
-import { scryptAsync as nobleScryptAsync } from '@noble/hashes/scrypt.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
+import { scrypt } from 'scrypt-js';
 
 // The app's SHA-256, HMAC-SHA256, SHA-1 and scrypt calls go through these
 // helpers so the hashing library can be swapped in one place. Several outputs
@@ -47,5 +47,5 @@ export async function hashScryptAsync(
     salt: Uint8Array,
     opts: ScryptOpts
 ): Promise<Uint8Array> {
-    return nobleScryptAsync(password, salt, { ...opts, asyncTick: 100 });
+    return scrypt(password, salt, opts.N, opts.r, opts.p, opts.dkLen);
 }

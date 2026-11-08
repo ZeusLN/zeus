@@ -153,6 +153,7 @@
     "react-native-vision-camera": "4.7.3",
     "react-native-worklets": "0.13.1",
     "readable-stream": "1.1.14",
+    "scrypt-js": "3.0.1",
     "socket.io-client": "4.8.4",
     "stream-browserify": "3.0.0",
     "text-encoding": "0.7.0",

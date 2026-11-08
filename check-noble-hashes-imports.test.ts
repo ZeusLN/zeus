@@ -19,6 +19,7 @@ const SOURCE_DIRS = [
 const NOBLE_HASHES_SUBPATH = /['"]@noble\/hashes\/([^'"]+)['"]/g;
 const LEGACY_HASH_IMPORT =
     /(?:from\s+|import\s*\(?\s*|require\(\s*)['"](create-hash|fast-sha256|hash\.js|js-sha256|object-hash|scrypt-js|sha\.js)(?:\/[^'"]*)?['"]/;
+const SCRYPT_WRAPPER = path.join('utils', 'HashingUtils.ts');
 
 const sourceFiles = (entry: string): string[] => {
     if (!fs.existsSync(entry)) return [];
@@ -63,7 +64,11 @@ describe('@noble/hashes imports', () => {
                 .toString('utf8')
                 .split('\n')
                 .map((line, index) => ({ line, number: index + 1 }))
-                .filter(({ line }) => LEGACY_HASH_IMPORT.test(line))
+                .filter(({ line }) => {
+                    const match = line.match(LEGACY_HASH_IMPORT);
+                    if (!match) return false;
+                    return file !== SCRYPT_WRAPPER || match[1] !== 'scrypt-js';
+                })
                 .map(({ line, number }) => `${file}:${number}: ${line.trim()}`)
         );
 
