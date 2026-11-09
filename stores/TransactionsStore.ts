@@ -1473,8 +1473,6 @@ export default class TransactionsStore {
                             `HTTP ${status}`
                         );
                     } else if (status === 400) {
-                        // 400 means the server is reachable and rejected the tx.
-                        // Clear any stale global alert.
                         alertStore.clearMempoolError();
                     }
                     runInAction(() => {
