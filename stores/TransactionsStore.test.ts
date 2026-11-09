@@ -1105,6 +1105,7 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         expect(store.payment_error).toBeNull();
         expect(store.status).toBe('IN_FLIGHT');
         expect(store.paymentOutcomeUnverified).toBe(true);
+        expect(store.paymentInFlight).toBe(false);
         expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
     });
 
