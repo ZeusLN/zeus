@@ -726,8 +726,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             // for that wallet: those flows can end on the wallet list, where
             // another wallet can be picked
             const justCreated =
-                !!ldkNodeDir && SettingsStore.walletJustCreated === ldkNodeDir;
-            SettingsStore.walletJustCreated = undefined;
+                !!ldkNodeDir && SettingsStore.justCreatedNodeDir === ldkNodeDir;
+            SettingsStore.justCreatedNodeDir = undefined;
 
             if (!justCreated) {
                 console.log('[LDK startup] stopping previous instance');
@@ -879,8 +879,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 // skip the stop→init→start cycle entirely, but only for the
                 // wallet it was created for
                 const justCreated =
-                    !!lndDir && SettingsStore.walletJustCreated === lndDir;
-                SettingsStore.walletJustCreated = undefined;
+                    !!lndDir && SettingsStore.justCreatedNodeDir === lndDir;
+                SettingsStore.justCreatedNodeDir = undefined;
                 if (!justCreated) {
                     try {
                         AlertStore.checkNeutrinoPeers();
@@ -908,7 +908,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         // Stop even while this wallet's recovery is pending:
                         // a running daemon here belongs to another wallet or an
                         // earlier connect, since a restore that left lnd running
-                        // for this wallet sets walletJustCreated to its lndDir
+                        // for this wallet sets justCreatedNodeDir to its lndDir
                         // and skips this branch
                         if (SettingsStore.embeddedLndStarted) {
                             await stopLnd();

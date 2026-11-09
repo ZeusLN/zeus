@@ -99,7 +99,7 @@ export async function createOnboardingWallet(params: WalletCreationParams) {
                 }));
 
                 // Node is already built — tell Wallet.tsx to skip re-init
-                settingsStore.walletJustCreated = nodeDir;
+                settingsStore.justCreatedNodeDir = nodeDir;
 
                 setConnectingStatus(true);
                 onSuccess();

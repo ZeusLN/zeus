@@ -863,7 +863,7 @@ describe('recovery after a restore from seed', () => {
             2,
             { recovery: true, recoveryWalletDirs: ['c'] },
             undefined,
-            { embeddedLndStarted: true, walletJustCreated: undefined }
+            { embeddedLndStarted: true, justCreatedNodeDir: undefined }
         );
         expect(lnd.stopLnd).toHaveBeenCalledTimes(1);
         expect(lnd.stopLnd.mock.invocationCallOrder[0]).toBeLessThan(
@@ -886,12 +886,12 @@ describe('recovery after a restore from seed', () => {
                 undefined,
                 {
                     embeddedLndStarted: true,
-                    walletJustCreated: 'c'
+                    justCreatedNodeDir: 'c'
                 }
             );
         expect(lnd.stopLnd).not.toHaveBeenCalled();
         expect(lnd.startLnd).not.toHaveBeenCalled();
-        expect(settings.walletJustCreated).toBeUndefined();
+        expect(settings.justCreatedNodeDir).toBeUndefined();
         expect(
             ChannelBackupStore.recoverStaticChannelBackup
         ).toHaveBeenCalledTimes(1);
@@ -959,17 +959,20 @@ describe('recovery after a restore from seed', () => {
 });
 
 describe('a node left running by a wallet creation or restore', () => {
-    const connect = async (selectedNode: number, walletJustCreated: string) => {
+    const connect = async (
+        selectedNode: number,
+        justCreatedNodeDir: string
+    ) => {
         const { settings, view, runner, refresh, ldk, lnd } =
             setup(selectedNode);
         Object.assign(settings, {
             lndDir: 'c',
             embeddedLndStarted: true,
-            walletJustCreated
+            justCreatedNodeDir
         });
         view.props.SyncStore.startSyncing = jest.fn();
         await runner.run(refresh);
-        expect(settings.walletJustCreated).toBeUndefined();
+        expect(settings.justCreatedNodeDir).toBeUndefined();
         expect(settings.connecting).toBe(false);
         return { ldk, lnd };
     };
@@ -984,8 +987,8 @@ describe('a node left running by a wallet creation or restore', () => {
 
     it.each(['created', 'c'])(
         'is replaced for another LDK Node wallet (left by %s)',
-        async (walletJustCreated) => {
-            const { ldk } = await connect(0, walletJustCreated);
+        async (justCreatedNodeDir) => {
+            const { ldk } = await connect(0, justCreatedNodeDir);
             expect(ldk.stopLdkNode).toHaveBeenCalledTimes(1);
             expect(ldk.startLdkNodeWallet).toHaveBeenCalledWith(
                 expect.objectContaining({ nodeDir: 'a', skipInit: false })
@@ -1002,8 +1005,8 @@ describe('a node left running by a wallet creation or restore', () => {
 
     it.each(['created', 'a'])(
         'is replaced for another embedded LND wallet (left by %s)',
-        async (walletJustCreated) => {
-            const { lnd } = await connect(2, walletJustCreated);
+        async (justCreatedNodeDir) => {
+            const { lnd } = await connect(2, justCreatedNodeDir);
             expect(lnd.stopLnd).toHaveBeenCalledTimes(1);
             expect(lnd.initializeLnd).toHaveBeenCalledWith(
                 expect.objectContaining({ lndDir: 'c' })

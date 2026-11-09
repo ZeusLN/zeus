@@ -1818,7 +1818,7 @@ export default class SettingsStore {
     @observable public embeddedLndStarted: boolean = false;
     // Data directory (lndDir / ldkNodeDir) of the wallet whose node is still
     // up from its creation or restore, so Wallet.tsx can skip re-init for it
-    @observable public walletJustCreated?: string;
+    @observable public justCreatedNodeDir?: string;
     @observable public lndFolderMissing: boolean = false;
     // Embedded LDK Node
     @observable public ldkNodeDir?: string;

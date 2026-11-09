@@ -1482,7 +1482,7 @@ export default class WalletConfiguration extends React.Component<
             });
 
             // Node is already built — tell Wallet.tsx to skip re-init
-            SettingsStore.walletJustCreated = ldkNodeDir;
+            SettingsStore.justCreatedNodeDir = ldkNodeDir;
 
             if (response?.vssError) {
                 console.warn(
