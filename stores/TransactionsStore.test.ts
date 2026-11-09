@@ -54,6 +54,7 @@ import {
     markNodeResponded,
     paymentLookupInconclusiveError
 } from '../utils/PaymentLookupUtils';
+import { lnrpc } from '../proto/lightning';
 
 const payOffer = BackendUtils.payOffer as jest.Mock;
 const payLightningInvoice = BackendUtils.payLightningInvoice as jest.Mock;
@@ -1368,6 +1369,32 @@ describe('TransactionsStore.getPaymentOutcome', () => {
 
         expect(outcome.error).toBe(true);
         expect(outcome.status).toBe('failed');
+    });
+
+    it("keeps embedded LND's numeric status on a failed payment", () => {
+        const store = newStore('embedded-lnd');
+
+        const outcome = store.getPaymentOutcome({
+            payment_hash: 'ab'.repeat(32),
+            status: lnrpc.Payment.PaymentStatus.FAILED,
+            failure_reason: lnrpc.PaymentFailureReason.FAILURE_REASON_NO_ROUTE
+        });
+
+        expect(outcome.error).toBe(true);
+        expect(outcome.payment_error).toBeTruthy();
+        expect(outcome.status).toBe(lnrpc.Payment.PaymentStatus.FAILED);
+    });
+
+    it('does not mark an embedded LND payment error without a status as complete', () => {
+        const store = newStore('embedded-lnd');
+
+        const outcome = store.getPaymentOutcome({
+            payment_error: 'views.SendingLightning.paymentTimedOut'
+        });
+
+        expect(outcome.error).toBe(true);
+        expect(outcome.payment_error).toBeTruthy();
+        expect(outcome.status).toBeUndefined();
     });
 
     it('marks a successful payment without a status as complete', () => {
