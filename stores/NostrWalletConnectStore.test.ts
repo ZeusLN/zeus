@@ -104,7 +104,6 @@ import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
 import CashuInvoice from '../models/CashuInvoice';
 import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
-import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
@@ -2112,6 +2111,38 @@ describe('NostrWalletConnectStore payment notifications', () => {
             expect(relay.publishNotification).toHaveBeenCalledTimes(1);
         });
 
+        it('publishes payment_received once when list_transactions settles an invoice', async () => {
+            const { store, connection, relay } = await startWithInvoice();
+            settleOnNode();
+
+            const response = await (store as any).handleListTransactions(
+                connection,
+                {}
+            );
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(response.result.transactions[0].state).toBe('settled');
+            expect(connection.activity[0].status).toBe('success');
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            const [, notification] = relay.publishNotification.mock.calls[0];
+            expect(notification.notification_type).toBe('payment_received');
+        });
+
+        it('publishes payment_received once when list_transactions and the activity screen settle the same invoice together', async () => {
+            const { store, connection, relay } = await startWithInvoice();
+            settleOnNode();
+
+            await Promise.all([
+                (store as any).handleListTransactions(connection, {}),
+                store.getActivities(connection.id),
+                (store as any).handleListTransactions(connection, {})
+            ]);
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(connection.activity[0].status).toBe('success');
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
         it('publishes payment_sent once and debits once when finalizePayment lands during a reconcile', async () => {
             const payment = settledPayment();
             let release: (value: any) => void = () => {};
@@ -2780,24 +2811,24 @@ describe('NostrWalletConnectStore list_transactions pending make_invoice', () =>
         expect(scheduleSave).toHaveBeenCalled();
     });
 
-    it('lists an open make_invoice as pending, unless the app opts out', async () => {
+    it('lists an open make_invoice as pending when the app asks for unpaid invoices', async () => {
         const { store, connection } = setup();
         jest.spyOn(
             NostrConnectUtils,
             'lookupInvoicePaidFromNode'
         ).mockResolvedValue(false);
 
+        const asked = await (store as any).handleListTransactions(connection, {
+            unpaid: true
+        });
+        // NIP-47: unpaid is false unless the app sends it
         const byDefault = await (store as any).handleListTransactions(
             connection,
             {}
         );
-        const optedOut = await (store as any).handleListTransactions(
-            connection,
-            { unpaid: false }
-        );
 
-        expect(byDefault.result.transactions).toHaveLength(1);
-        expect(byDefault.result.transactions[0]).toMatchObject({
+        expect(asked.result.transactions).toHaveLength(1);
+        expect(asked.result.transactions[0]).toMatchObject({
             type: 'incoming',
             state: 'pending',
             payment_hash: HASH
@@ -2805,17 +2836,17 @@ describe('NostrWalletConnectStore list_transactions pending make_invoice', () =>
         // unix seconds, not the milliseconds a Date turns into: a client
         // reads milliseconds as an expiry tens of thousands of years away
         const nowSeconds = Math.floor(Date.now() / 1000);
-        expect(byDefault.result.transactions[0].expires_at).toBeGreaterThan(
+        expect(asked.result.transactions[0].expires_at).toBeGreaterThan(
             nowSeconds
         );
-        expect(byDefault.result.transactions[0].expires_at).toBeLessThan(
+        expect(asked.result.transactions[0].expires_at).toBeLessThan(
             nowSeconds + 3600
         );
-        expect(optedOut.result.transactions).toHaveLength(0);
+        expect(byDefault.result.transactions).toHaveLength(0);
         expect(connection.activity[0].status).toBe('pending');
     });
 
-    it('lists an expired make_invoice, with its expiry, unless the app opts out', async () => {
+    it('lists an expired make_invoice as expired, with its expiry, when the app asks for unpaid invoices', async () => {
         const { store, connection } = setup();
         // "expired" is read from the decoded BOLT11, so this needs a real
         // invoice: the BOLT11 spec example, created in 2017 with a 60 second
@@ -2833,27 +2864,24 @@ describe('NostrWalletConnectStore list_transactions pending make_invoice', () =>
             'lookupInvoicePaidFromNode'
         ).mockResolvedValue(false);
 
+        const asked = await (store as any).handleListTransactions(connection, {
+            unpaid_incoming: true
+        });
         const byDefault = await (store as any).handleListTransactions(
             connection,
             {}
         );
-        const optedOut = await (store as any).handleListTransactions(
-            connection,
-            { unpaid_incoming: false }
-        );
 
         expect(connection.activity[0].status).toBe('expired');
-        expect(byDefault.result.transactions).toHaveLength(1);
-        expect(byDefault.result.transactions[0]).toMatchObject({
+        expect(asked.result.transactions).toHaveLength(1);
+        // NIP-47 lists "expired" for invoices and keeps "failed" for payments
+        expect(asked.result.transactions[0]).toMatchObject({
             type: 'incoming',
-            state: 'failed',
+            state: 'expired',
             payment_hash: HASH
         });
-        // NIP-47 has no expired state, so the client reads expires_at
-        expect(byDefault.result.transactions[0].expires_at).toBe(
-            1496314658 + 60
-        );
-        expect(optedOut.result.transactions).toHaveLength(0);
+        expect(asked.result.transactions[0].expires_at).toBe(1496314658 + 60);
+        expect(byDefault.result.transactions).toHaveLength(0);
     });
 
     it('lists the newest activity first and paginates from the newest', async () => {
@@ -2886,14 +2914,16 @@ describe('NostrWalletConnectStore list_transactions pending make_invoice', () =>
             entry('3', 60)
         ] as any;
 
-        const all = await (store as any).handleListTransactions(connection, {});
+        const all = await (store as any).handleListTransactions(connection, {
+            unpaid: true
+        });
         const firstPage = await (store as any).handleListTransactions(
             connection,
-            { limit: 1 }
+            { unpaid: true, limit: 1 }
         );
         const secondPage = await (store as any).handleListTransactions(
             connection,
-            { limit: 1, offset: 1 }
+            { unpaid: true, limit: 1, offset: 1 }
         );
 
         expect(
@@ -2906,24 +2936,191 @@ describe('NostrWalletConnectStore list_transactions pending make_invoice', () =>
 
     it('still answers when the node cannot be reached to check an invoice', async () => {
         const { store, connection } = setup();
-        jest.spyOn(
-            NostrConnectUtils,
-            'lookupInvoicePaidFromNode'
-        ).mockRejectedValue(new Error('node unreachable'));
-        const consoleError = jest
-            .spyOn(console, 'error')
-            .mockImplementation(() => {});
+        // the node is asked through decodeInvoiceTags; lookupInvoicePaidFromNode
+        // turns any failure into "not paid"
+        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockRejectedValue(
+            new Error('node unreachable')
+        );
 
         const response = await (store as any).handleListTransactions(
             connection,
-            {}
+            { unpaid: true }
         );
 
         expect(response.error).toBeUndefined();
         expect(response.result.transactions).toHaveLength(1);
         expect(response.result.transactions[0].state).toBe('pending');
         expect(connection.activity[0].status).toBe('pending');
-        expect(consoleError).toHaveBeenCalled();
+    });
+
+    it('settles and expires a Lightning make_invoice stored as a plain object', async () => {
+        const { store, connection } = setup();
+        const plain = (invoice: Invoice) => JSON.parse(JSON.stringify(invoice));
+        jest.spyOn(
+            NostrConnectUtils,
+            'lookupInvoicePaidFromNode'
+        ).mockResolvedValue(true);
+        jest.spyOn(
+            NostrWalletConnectStore.prototype as any,
+            'refreshLightningInvoiceFromNode'
+        ).mockResolvedValue(
+            lightningInvoice({
+                settled: true,
+                settle_date: String(Math.floor(Date.now() / 1000)),
+                r_preimage: Base64Utils.hexToBase64(PREIMAGE)
+            })
+        );
+        connection.activity[0].invoice = plain(lightningInvoice());
+
+        const paid = await (store as any).handleListTransactions(
+            connection,
+            {}
+        );
+
+        expect(connection.activity[0].status).toBe('success');
+        expect(paid.result.transactions[0]).toMatchObject({
+            state: 'settled',
+            preimage: PREIMAGE
+        });
+    });
+
+    it('expires a Lightning make_invoice stored as a plain object', async () => {
+        const { store, connection } = setup();
+        jest.spyOn(
+            NostrConnectUtils,
+            'lookupInvoicePaidFromNode'
+        ).mockResolvedValue(false);
+        connection.activity[0].invoice = JSON.parse(
+            JSON.stringify(
+                lightningInvoice({
+                    payment_request:
+                        'lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp',
+                    creation_date: '1496314658',
+                    expiry: '60'
+                })
+            )
+        );
+
+        const response = await (store as any).handleListTransactions(
+            connection,
+            { unpaid: true }
+        );
+
+        expect(connection.activity[0].status).toBe('expired');
+        expect(response.result.transactions[0].state).toBe('expired');
+    });
+
+    describe('Cashu invoices', () => {
+        const MINT = 'https://mint.example';
+        const cashuRequest = 'lnbc1list-cashu';
+        // The expiry is read from the decoded BOLT11: the BOLT11 spec
+        // example, created in 2017 with a 60 second expiry
+        const expiredRequest =
+            'lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp';
+        // as stored: a plain object, without the CashuInvoice getters
+        const storedCashuInvoice = (expired: boolean) => ({
+            quote: 'quote-1',
+            request: expired ? expiredRequest : cashuRequest,
+            state: 'UNPAID',
+            paid: false,
+            mintUrl: MINT
+        });
+
+        function setupCashu({
+            ageMs = 60_000,
+            expired = false,
+            configured = true
+        }: { ageMs?: number; expired?: boolean; configured?: boolean } = {}) {
+            const checkInvoicePaid = jest
+                .fn()
+                .mockResolvedValue({ isPaid: false });
+            const { store } = createStore({
+                cashuStore: {
+                    isProperlyConfigured: () => configured,
+                    checkInvoicePaid,
+                    invoices: []
+                }
+            });
+            store.cashuEnabled = configured;
+            const connection = addConnection(store, {
+                permissions: ['make_invoice', 'list_transactions'],
+                activity: [
+                    {
+                        id: cashuRequest,
+                        type: 'make_invoice',
+                        payment_source: 'cashu',
+                        status: 'pending',
+                        satAmount: 1000,
+                        invoice: storedCashuInvoice(expired),
+                        createdAt: new Date(Date.now() - ageMs)
+                    }
+                ]
+            });
+            return { store, connection, checkInvoicePaid };
+        }
+
+        it('lists an expired Cashu make_invoice stored as a plain object as expired', async () => {
+            const { store, connection } = setupCashu({ expired: true });
+
+            const response = await (store as any).handleListTransactions(
+                connection,
+                { unpaid: true }
+            );
+
+            expect(connection.activity[0].status).toBe('expired');
+            expect(response.result.transactions).toHaveLength(1);
+            expect(response.result.transactions[0].state).toBe('expired');
+        });
+
+        it('asks the mint about a pending invoice once it is old enough', async () => {
+            const { store, connection, checkInvoicePaid } = setupCashu();
+
+            await (store as any).handleListTransactions(connection, {});
+
+            expect(checkInvoicePaid).toHaveBeenCalledTimes(1);
+            expect(checkInvoicePaid.mock.calls[0][0]).toBe('quote-1');
+        });
+
+        it('does not ask the mint about an invoice younger than 5 seconds', async () => {
+            const { store, connection, checkInvoicePaid } = setupCashu({
+                ageMs: 1_000
+            });
+
+            await (store as any).handleListTransactions(connection, {});
+
+            expect(checkInvoicePaid).not.toHaveBeenCalled();
+        });
+
+        it('asks the mint again only after 30 seconds', async () => {
+            const { store, connection, checkInvoicePaid } = setupCashu();
+
+            await (store as any).handleListTransactions(connection, {});
+            await (store as any).handleListTransactions(connection, {});
+            expect(checkInvoicePaid).toHaveBeenCalledTimes(1);
+
+            await jest.advanceTimersByTimeAsync(29_000);
+            await (store as any).handleListTransactions(connection, {});
+            expect(checkInvoicePaid).toHaveBeenCalledTimes(1);
+
+            await jest.advanceTimersByTimeAsync(1_000);
+            await (store as any).handleListTransactions(connection, {});
+            expect(checkInvoicePaid).toHaveBeenCalledTimes(2);
+        });
+
+        it('does not ask the mint when Cashu is not configured', async () => {
+            const { store, connection, checkInvoicePaid } = setupCashu({
+                configured: false
+            });
+
+            const response = await (store as any).handleListTransactions(
+                connection,
+                { unpaid: true }
+            );
+
+            expect(response.error).toBeUndefined();
+            expect(checkInvoicePaid).not.toHaveBeenCalled();
+            expect(response.result.transactions[0].state).toBe('pending');
+        });
     });
 });
 

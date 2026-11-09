@@ -190,7 +190,11 @@ describe('NostrWalletConnect.getInvoices', () => {
 
         const { invoices } = await backend.getInvoices({ limit: 10 });
 
-        expect(client.listTransactions).toHaveBeenCalledWith({ limit: 10 });
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'incoming',
+            unpaid: true,
+            limit: 10
+        });
         expect(invoices).toHaveLength(2);
         expect(invoices[0]).toEqual({
             ...nip47Tx(),
@@ -213,7 +217,10 @@ describe('NostrWalletConnect.getInvoices', () => {
         await expect(backend.getInvoices(data)).resolves.toEqual({
             invoices: []
         });
-        expect(client.listTransactions).toHaveBeenCalledWith({});
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'incoming',
+            unpaid: true
+        });
     });
 
     it('rejects with the wallet service error', async () => {
@@ -244,7 +251,10 @@ describe('NostrWalletConnect.getPayments', () => {
 
         const { payments } = await backend.getPayments({ maxPayments: 25 });
 
-        expect(client.listTransactions).toHaveBeenCalledWith({ limit: 25 });
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'outgoing',
+            limit: 25
+        });
         expect(payments).toEqual([
             {
                 ...nip47Tx({ type: 'outgoing' }),
@@ -260,7 +270,10 @@ describe('NostrWalletConnect.getPayments', () => {
 
         await backend.getPayments();
 
-        expect(client.listTransactions).toHaveBeenCalledWith({ limit: 500 });
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'outgoing',
+            limit: 500
+        });
     });
 
     it.each([
@@ -273,7 +286,9 @@ describe('NostrWalletConnect.getPayments', () => {
 
         await backend.getPayments(params);
 
-        expect(client.listTransactions).toHaveBeenCalledWith({});
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'outgoing'
+        });
     });
 
     it('rejects with a reply timeout', async () => {

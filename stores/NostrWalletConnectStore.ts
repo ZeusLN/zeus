@@ -2916,7 +2916,7 @@ export default class NostrWalletConnectStore {
 
         const results = await Promise.allSettled(
             lightning.map((activity) =>
-                this.reconcilePendingLightningMakeInvoice(activity)
+                this.reconcilePendingLightningMakeInvoice(connection, activity)
             )
         );
 
@@ -2928,7 +2928,10 @@ export default class NostrWalletConnectStore {
             results.push(
                 ...(await Promise.allSettled(
                     cashu.map((activity) =>
-                        this.reconcilePendingCashuMakeInvoice(activity)
+                        this.reconcilePendingCashuMakeInvoice(
+                            connection,
+                            activity
+                        )
                     )
                 ))
             );
@@ -2966,7 +2969,8 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         activity: ConnectionActivity
     ): Promise<void> {
-        const cashuInv = activity.invoice as CashuInvoice | undefined;
+        // Stored activities are plain objects until they are loaded for the app
+        const cashuInv = NostrConnectUtils.coerceCashuInvoice(activity.invoice);
         const quote = cashuInv?.quote;
         if (!quote || !cashuInv || !this.isCashuConfigured) return;
 

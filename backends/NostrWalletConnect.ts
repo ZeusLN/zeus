@@ -20,7 +20,11 @@ export default class NostrWalletConnect {
     connect = async () => await this.nwc.enable();
     getLightningBalance = async () => await this.nwc.getBalance();
     getInvoices = async (data: any) => {
+        // unpaid is off by default in NIP-47: ask for the open and expired
+        // invoices the wallet created too
         const { transactions } = await this.nwc.listTransactions({
+            type: 'incoming',
+            unpaid: true,
             ...(data?.limit && {
                 limit: data.limit
             })
@@ -69,6 +73,7 @@ export default class NostrWalletConnect {
         }
     ) => {
         const { transactions } = await this.nwc.listTransactions({
+            type: 'outgoing',
             ...(params?.maxPayments && {
                 limit: params.maxPayments
             })

@@ -1402,7 +1402,7 @@ describe('NostrConnectUtils', () => {
     describe('list_transactions unpaid filter', () => {
         // NIP-47: "unpaid: include unpaid invoices, optional, default false"
         const transaction = (
-            state: 'settled' | 'pending' | 'failed',
+            state: 'settled' | 'pending' | 'failed' | 'expired',
             type: 'incoming' | 'outgoing',
             createdAt: number
         ) =>
@@ -1432,27 +1432,21 @@ describe('NostrConnectUtils', () => {
                 request as never
             );
 
-        // Zeus lists incoming invoices in every state by default (NIP-47's
-        // default hides them); outgoing payments that did not settle stay
-        // hidden unless asked for.
-        it('lists incoming invoices in every state, and only settled payments, by default', () => {
+        // NIP-47's default: only settled transactions
+        it('lists only settled transactions by default', () => {
             const { transactions, totalCount } = filter({});
 
-            expect(transactions).toEqual([
-                settledInvoice,
-                pendingInvoice,
-                settledPayment
-            ]);
-            expect(totalCount).toBe(3);
+            expect(transactions).toEqual([settledInvoice, settledPayment]);
+            expect(totalCount).toBe(2);
         });
 
-        it('lists an expired incoming invoice by default', () => {
-            const expiredInvoice = transaction('failed', 'incoming', 250);
+        it('lists open and expired invoices, and no unsettled payments, for unpaid_incoming', () => {
+            const expiredInvoice = transaction('expired', 'incoming', 250);
 
             const { transactions } =
                 NostrConnectUtils.filterAndPaginateTransactions(
                     [settledInvoice, expiredInvoice, failedPayment],
-                    {} as never
+                    { unpaid_incoming: true } as never
                 );
 
             expect(transactions).toEqual([settledInvoice, expiredInvoice]);
@@ -1482,8 +1476,12 @@ describe('NostrConnectUtils', () => {
                 unpaid_outgoing: true
             });
 
-            expect(transactions).toHaveLength(4);
-            expect(totalCount).toBe(4);
+            expect(transactions).toEqual([
+                settledInvoice,
+                settledPayment,
+                failedPayment
+            ]);
+            expect(totalCount).toBe(3);
         });
 
         it('lets the direction flags override unpaid', () => {
