@@ -101,11 +101,15 @@ const UPGRADE_TITLES: { [key: number]: string } = {
 // the pool past 40 relays and starving the JS thread for minutes.
 const NDK_CONNECT_TIMEOUT_MS = 2000;
 
-// How long reconcilePendingMelts waits for a mint to answer one melt quote
-// check. CDK sets no timeout of its own, and one pass runs at a time, so a
-// mint that accepts the connection and never answers would hold every later
-// reconcile until restart. Same bound as the mint info fetch.
+// How long a melt quote check waits for the mint to answer. CDK sets no
+// timeout of its own. One reconcilePendingMelts pass runs at a time, and the
+// pay path keeps its quote from reconcile until it has checked it, so a mint
+// that accepts the connection and never answers would hold either until
+// restart. Same bound as the mint info fetch.
 const MELT_QUOTE_CHECK_TIMEOUT_MS = 10000;
+const MELT_QUOTE_CHECK_TIMEOUT = 'MeltQuoteCheckTimeout';
+const isMeltQuoteCheckTimeout = (error: any) =>
+    error?.name === MELT_QUOTE_CHECK_TIMEOUT;
 
 // ZEUS official npub for trusted mint recommendations
 const ZEUS_NPUB =
@@ -3412,14 +3416,44 @@ export default class CashuStore {
      * it is tracked: a reconcile pass that saw it tracked but not yet in
      * progress would find a quote no melt saga holds yet, read it as settled
      * unpaid and untrack it just before the melt starts.
+     *
+     * With keepHeld the quote stays marked after the melt returns or throws,
+     * and the caller removes it from meltsInProgress once it has recorded
+     * the outcome. A reconcile pass in between would check the quote while
+     * the caller does and record the same payment a second time.
      */
-    private trackAndMelt = async (melt: PendingMelt) => {
+    private trackAndMelt = async (melt: PendingMelt, keepHeld = false) => {
         this.meltsInProgress.add(melt.quote);
         try {
             await this.trackPendingMelt(melt);
             return await CashuDevKit.melt(melt.mintUrl, melt.quote);
         } finally {
-            this.meltsInProgress.delete(melt.quote);
+            if (!keepHeld) this.meltsInProgress.delete(melt.quote);
+        }
+    };
+
+    /**
+     * Asks CDK for a melt quote's state and gives up after
+     * MELT_QUOTE_CHECK_TIMEOUT_MS. A check that times out is abandoned: its
+     * answer, if it ever comes, is not read.
+     */
+    private checkMeltQuoteInTime = async (mintUrl: string, quote: string) => {
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+            return await Promise.race([
+                CashuDevKit.checkMeltQuote(mintUrl, quote),
+                new Promise<never>((_, reject) => {
+                    timer = setTimeout(() => {
+                        const timedOut = new Error(
+                            'Timed out waiting for the mint to answer the melt quote check'
+                        );
+                        timedOut.name = MELT_QUOTE_CHECK_TIMEOUT;
+                        reject(timedOut);
+                    }, MELT_QUOTE_CHECK_TIMEOUT_MS);
+                })
+            ]);
+        } finally {
+            clearTimeout(timer);
         }
     };
 
@@ -3602,22 +3636,11 @@ export default class CashuStore {
             if (!this.isMeltTracked(melt.quote)) continue;
 
             let quote;
-            let timer: ReturnType<typeof setTimeout> | undefined;
-            const timedOut = new Error(
-                'Timed out waiting for the mint to answer the melt quote check'
-            );
             try {
-                // A check that times out is abandoned: its answer, if it
-                // ever comes, is not read
-                quote = await Promise.race([
-                    CashuDevKit.checkMeltQuote(melt.mintUrl, melt.quote),
-                    new Promise<never>((_, reject) => {
-                        timer = setTimeout(
-                            () => reject(timedOut),
-                            MELT_QUOTE_CHECK_TIMEOUT_MS
-                        );
-                    })
-                ]);
+                quote = await this.checkMeltQuoteInTime(
+                    melt.mintUrl,
+                    melt.quote
+                );
             } catch (e: any) {
                 console.error(
                     `CashuStore: Error checking melt quote ${melt.quote}:`,
@@ -3629,7 +3652,7 @@ export default class CashuStore {
                 // Neither says anything about the payment, so try again on
                 // the next sweep.
                 const transient =
-                    e === timedOut ||
+                    isMeltQuoteCheckTimeout(e) ||
                     String(e?.message || e || '')
                         .toLowerCase()
                         .includes('concurrent update');
@@ -3647,8 +3670,6 @@ export default class CashuStore {
                     await this.untrackPendingMelt(melt.quote);
                 }
                 continue;
-            } finally {
-                clearTimeout(timer);
             }
 
             // The pay path may have settled the melt while the mint was
@@ -5038,6 +5059,9 @@ export default class CashuStore {
         // what is checked here is what gets melted and recorded.
         const { payReq, meltQuote, feeEstimate } = this;
         const bolt11 = this.paymentRequest;
+        // The quote being melted, kept from reconcile until its outcome is
+        // recorded
+        let heldQuote: string | undefined;
 
         try {
             if (!paymentRequest || paymentRequest !== bolt11) {
@@ -5143,8 +5167,9 @@ export default class CashuStore {
             let meltResult: Omit<CDKMelted, 'fee_paid'> & {
                 fee_paid?: number;
             };
+            heldQuote = pendingMelt.quote;
             try {
-                meltResult = await this.trackAndMelt(pendingMelt);
+                meltResult = await this.trackAndMelt(pendingMelt, true);
             } catch (meltError) {
                 // CDK waits while the mint reports the melt Pending, and
                 // when it stops waiting (connection lost, mint unreachable)
@@ -5153,7 +5178,7 @@ export default class CashuStore {
                 let quote: CDKMeltQuote | undefined;
                 let outcome;
                 try {
-                    quote = await CashuDevKit.checkMeltQuote(
+                    quote = await this.checkMeltQuoteInTime(
                         mintUrl,
                         meltQuote.quote
                     );
@@ -5163,6 +5188,12 @@ export default class CashuStore {
                         'CDK payLnInvoiceFromEcash: Failed to check melt quote after error:',
                         checkError
                     );
+                    // A mint that does not answer may still be paying. One
+                    // backed by LND does not answer while the payee holds
+                    // the invoice.
+                    if (isMeltQuoteCheckTimeout(checkError)) {
+                        outcome = 'inFlight';
+                    }
                 }
 
                 if (quote && outcome === 'paid') {
@@ -5293,6 +5324,8 @@ export default class CashuStore {
                 });
             }
             return;
+        } finally {
+            if (heldQuote) this.meltsInProgress.delete(heldQuote);
         }
     };
 

@@ -1341,6 +1341,125 @@ describe('CashuStore single-mint melt state', () => {
         expect(store.paymentSuccess).toBe(true);
         expect(store.pendingMelts).toEqual([]);
     });
+
+    // After a melt throws, the pay path checks the quote itself. A reconcile
+    // pass checking it at the same time recorded the payment, and the pay
+    // path then stored it again, or got CDK's "Concurrent update detected"
+    // and reported a paid invoice as failed.
+    describe('while the pay path checks a melt that threw', () => {
+        const reconcilablePayingStore = () => {
+            const store = payingStore();
+            store.cdkInitialized = true;
+            store.mintUrls = ['https://mint.example.com'];
+            store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
+            return store;
+        };
+
+        const settle = async () => {
+            for (let i = 0; i < 50; i++) await Promise.resolve();
+        };
+
+        const startPaying = async (store: any, check: Promise<any>) => {
+            (CashuDevKit.melt as jest.Mock).mockRejectedValue(
+                new Error('Subscription closed')
+            );
+            (CashuDevKit.checkMeltQuote as jest.Mock)
+                .mockReset()
+                .mockReturnValueOnce(check);
+            const paying = store.payLnInvoiceFromEcash({
+                amount: '1000',
+                paymentRequest: 'lnbc10n1ptestinvoice'
+            });
+            await settle();
+            expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(1);
+            // wrapped: an async function returning the promise would wait
+            // for the payment to finish
+            return { paying };
+        };
+
+        it('leaves a quote that turns out paid to the pay path', async () => {
+            const store = reconcilablePayingStore();
+            let answer: (quote: any) => void = () => {};
+            const { paying } = await startPaying(
+                store,
+                new Promise((resolve) => (answer = resolve))
+            );
+            (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+                id: 'quote-1',
+                state: 'Paid',
+                payment_preimage: 'c'.repeat(64)
+            });
+
+            await store.reconcilePendingMelts();
+            answer({
+                id: 'quote-1',
+                state: 'Paid',
+                payment_preimage: 'c'.repeat(64)
+            });
+            await paying;
+
+            expect(store.paymentSuccess).toBe(true);
+            expect(store.payments).toHaveLength(1);
+            expect(store.payments[0].isInTransit).toBe(false);
+            expect(store.pendingMelts).toEqual([]);
+            expect(store.meltsInProgress.size).toBe(0);
+            // reconcile never asked
+            expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(1);
+        });
+
+        it('records a melt still in flight once, then leaves it to reconcile', async () => {
+            const store = reconcilablePayingStore();
+            let answer: (quote: any) => void = () => {};
+            const { paying } = await startPaying(
+                store,
+                new Promise((resolve) => (answer = resolve))
+            );
+            const inFlight = {
+                id: 'quote-1',
+                state: 'Unpaid',
+                used_by_operation: 'op-1'
+            };
+            (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue(
+                inFlight
+            );
+
+            await store.reconcilePendingMelts();
+            answer(inFlight);
+            await paying;
+
+            expect(store.paymentErrorMsg).toBe(
+                'stores.CashuStore.paymentInFlight'
+            );
+            expect(store.payments).toHaveLength(1);
+            expect(store.payments[0].isInTransit).toBe(true);
+            expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(1);
+
+            // released once the pay path is done with it
+            await store.reconcilePendingMelts();
+            expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(2);
+            expect(store.payments).toHaveLength(1);
+            expect(store.pendingMelts).toHaveLength(1);
+        });
+
+        // A mint that never answers would otherwise keep the payment screen
+        // waiting, and the quote from reconcile, until restart
+        it('reports the payment in flight when the mint does not answer the check', async () => {
+            const store = reconcilablePayingStore();
+            const { paying } = await startPaying(store, new Promise(() => {}));
+
+            await jest.advanceTimersByTimeAsync(10_000);
+            await paying;
+
+            expect(store.paymentSuccess).toBe(false);
+            expect(store.paymentErrorMsg).toBe(
+                'stores.CashuStore.paymentInFlight'
+            );
+            expect(store.payments).toHaveLength(1);
+            expect(store.payments[0].isInTransit).toBe(true);
+            expect(store.pendingMelts).toHaveLength(1);
+            expect(store.meltsInProgress.size).toBe(0);
+        });
+    });
 });
 
 describe('CashuStore meltCDK and sweepMint melt state', () => {
