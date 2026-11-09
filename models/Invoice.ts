@@ -87,6 +87,7 @@ export default class Invoice extends BaseModel {
     // LNC
     public paymentRequest?: string;
     public amount?: number;
+    // NWC (NIP-47)
     public state?: string;
     public created_at?: number;
     public settled_at?: number;
@@ -154,6 +155,7 @@ export default class Invoice extends BaseModel {
             this.creation_date ||
             this.timestamp ||
             this.settled_at ||
+            this.created_at ||
             this.settle_date ||
             0
         );
