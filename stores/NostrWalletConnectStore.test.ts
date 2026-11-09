@@ -3681,7 +3681,7 @@ describe('NostrWalletConnectStore Android Stop Service', () => {
     });
 });
 
-describe('NostrWalletConnectStore wallet switch during publish retries', () => {
+describe('NostrWalletConnectStore wallet switch during initializeService', () => {
     // Stores one wallet's service keys, connection and client key, the way
     // initializeService reads them after a wallet switch
     function seedWallet(id: string, pubkey: string, relayUrl: string) {
@@ -3733,6 +3733,36 @@ describe('NostrWalletConnectStore wallet switch during publish retries', () => {
         expect(
             relayFor(OLD_RELAY).publishWalletServiceInfoEvent
         ).toHaveBeenCalledTimes(3);
+        expect(store.error).toBe(false);
+        expect(store.errorMessage).toBe('');
+        expect(store.isInitialized).toBe(true);
+        expect(store.isServiceReady()).toBe(true);
+        expect(store.connections.map((c) => c.id)).toEqual(['bob1']);
+        expect(isSubscribed(store.connections[0])).toBe(true);
+    });
+
+    it('does not let the old run set error when it fails after the switch', async () => {
+        silence('error');
+        seedWallet('alice1', hex64('a'), OLD_RELAY);
+        const { store } = createStore();
+        const loadMaxBudget = store.loadMaxBudget.bind(store);
+        jest.spyOn(store, 'loadMaxBudget').mockImplementationOnce(async () => {
+            // Switch to bob while alice's run loads the balance, and let
+            // bob's run finish first
+            seedWallet('bob1', hex64('b'), NEW_RELAY);
+            await store.reset(true);
+            await store.initializeService();
+            // alice's budget check then throws
+            jest.spyOn(
+                store as any,
+                'checkAndResetAllBudgets'
+            ).mockRejectedValueOnce(new Error('budget check failed'));
+            await loadMaxBudget();
+        });
+
+        await store.initializeService();
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
         expect(store.error).toBe(false);
         expect(store.errorMessage).toBe('');
         expect(store.isInitialized).toBe(true);
