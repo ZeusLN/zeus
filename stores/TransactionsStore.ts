@@ -214,6 +214,11 @@ export default class TransactionsStore {
     public reset = () => {
         this.sendCoinsSeq++;
         this.dispatchedPaymentSequence = 0;
+        // every earlier payment is now stale, and a stale result doesn't
+        // touch `loading`, so an earlier send left in here would keep a
+        // later release from clearing it
+        this.pendingSendSeqs.clear();
+        this.releasedSeqs.clear();
         this.loading = false;
         this.sendOutcomeUnknown = false;
         this.paymentInFlight = false;

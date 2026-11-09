@@ -1572,6 +1572,38 @@ describe('TransactionsStore late results for an earlier payment', () => {
         });
     });
 
+    it('clears loading when the next payment is released while one from before reset() is still open', async () => {
+        const store = newStore('lnd');
+        const first = await startFirst(store, clearPaths[2][1]);
+
+        // the next payment's send request never answers either, and the
+        // node reports it in flight, so the user can release it
+        const Bolt11Utils = require('../utils/Bolt11Utils').default;
+        (Bolt11Utils.decode as jest.Mock).mockReturnValueOnce({
+            payment_hash: HASH2
+        });
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            new Promise(() => {})
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            status: 'IN_FLIGHT',
+            payment_hash: HASH2
+        });
+        store.sendPayment({ payment_request: 'lnbc1other' });
+        await jest.advanceTimersByTimeAsync((60 + 60) * 1000);
+        expect(store.paymentInFlightConfirmed).toBe(true);
+
+        expect(store.releasePaymentInFlight()).toBe(true);
+        expect(store.loading).toBe(false);
+        const status = store.status;
+
+        first.resolve(lateOutcomes[0][1]);
+        await flush();
+        expect(store.loading).toBe(false);
+        expect(store.status).toBe(status);
+        expect(store.payment_preimage).toBeNull();
+    });
+
     it('still applies a late result when no newer payment was sent', async () => {
         const store = newStore('lnd');
         const first = await startFirst(store, clearPaths[0][1]);
