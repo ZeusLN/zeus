@@ -84,7 +84,7 @@ describe('TransactionsStore.broadcastRawTxToMempoolSpace alert wiring', () => {
         expect(mockedAlert.clearMempoolError).not.toHaveBeenCalled();
     });
 
-    it('does not raise the alert on a 4xx response (tx was rejected, server is up)', async () => {
+    it('does not raise the alert on a 400 response (tx was rejected, server is up)', async () => {
         mockedFetch.mockResolvedValueOnce({
             info: () => ({ status: 400 }),
             data: 'Invalid tx'

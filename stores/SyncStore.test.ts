@@ -123,10 +123,12 @@ describe('SyncStore.getBestBlockHeight', () => {
         );
     });
 
-    it('raises the alert on a 404 response', async () => {
+    it('raises the alert on a 404 response with an HTML body', async () => {
         mockedFetch.mockResolvedValueOnce({
             info: () => ({ status: 404 }),
-            json: () => '0'
+            json: () => {
+                throw new SyntaxError('Unexpected token <');
+            }
         } as any);
         const store = makeStore();
 
@@ -137,6 +139,23 @@ describe('SyncStore.getBestBlockHeight', () => {
         expect(mockedAlert.setMempoolErrorFromUrl).toHaveBeenCalledWith(
             'https://mempool.space/api/blocks/tip/height',
             'HTTP 404'
+        );
+    });
+
+    it('raises the alert on a 500 response with a JSON body', async () => {
+        mockedFetch.mockResolvedValueOnce({
+            info: () => ({ status: 500 }),
+            json: () => ({ error: 'internal' })
+        } as any);
+        const store = makeStore();
+
+        await expect(
+            (store as any).getBestBlockHeight()
+        ).rejects.toBeUndefined();
+
+        expect(mockedAlert.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            'https://mempool.space/api/blocks/tip/height',
+            'HTTP 500'
         );
     });
 

@@ -822,6 +822,32 @@ describe('SwapStore.verifyReverseLockup', () => {
         );
     });
 
+    it('raises "Invalid response" when json() throws', async () => {
+        esplora(200);
+        const fetch = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (method, url) => {
+            if (url.includes('/tx/') && !url.includes('/outspend/')) {
+                return {
+                    info: () => ({ status: 200 }),
+                    json: () => {
+                        throw new SyntaxError('Unexpected token <');
+                    }
+                };
+            }
+            return fetch(method, url);
+        });
+
+        await expect(verify()).resolves.toEqual({
+            status: 'unavailable',
+            reason: 'request-failed'
+        });
+
+        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            expect.stringContaining('https://mempool.test/api/tx/'),
+            'Invalid response'
+        );
+    });
+
     it('refuses a lockup that pays less than the swap amount', async () => {
         esplora(200, {
             vout: [

@@ -1465,16 +1465,16 @@ export default class TransactionsStore {
                     });
                     return data;
                 } else {
-                    // A 4xx means the server is reachable and rejected the tx.
-                    // Only 5xx indicates the instance itself is down.
+                    // A 400 means the server is reachable and rejected the tx.
+                    // Other 4xx (like 404) leave the alert unchanged.
                     if (status >= 500) {
                         alertStore.setMempoolErrorFromUrl(
                             url,
                             `HTTP ${status}`
                         );
                     } else if (status === 400) {
-                        // 400 means the server rejected the tx, so it is
-                        // reachable. Clear any stale global alert.
+                        // 400 means the server is reachable and rejected the tx.
+                        // Clear any stale global alert.
                         alertStore.clearMempoolError();
                     }
                     runInAction(() => {

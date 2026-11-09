@@ -146,31 +146,48 @@ export default class SyncStore {
             ReactNativeBlobUtil.fetch('get', url)
                 .then(async (response: any) => {
                     const status = response.info().status;
-                    const height = Number.parseInt(response.json());
-                    if (status == 200 && Number.isFinite(height)) {
-                        this.bestBlockHeight = height;
-                        this.error = false;
-                        alertStore.clearMempoolError();
-                        if (this.currentBlockHeight) {
-                            this.updateProgress();
-                        }
-                        resolve(this.bestBlockHeight);
-                    } else {
+
+                    if (status !== 200) {
                         this.error = true;
-                        const msg = Number.isFinite(height)
-                            ? `HTTP ${status}`
-                            : 'Invalid response';
-                        alertStore.setMempoolErrorFromUrl(url, msg);
+                        alertStore.setMempoolErrorFromUrl(
+                            url,
+                            `HTTP ${status}`
+                        );
                         reject();
+                        return;
                     }
+
+                    let height: number;
+                    try {
+                        height = Number.parseInt(response.json());
+                    } catch {
+                        height = NaN;
+                    }
+
+                    if (!Number.isFinite(height)) {
+                        this.error = true;
+                        alertStore.setMempoolErrorFromUrl(
+                            url,
+                            'Invalid response'
+                        );
+                        reject();
+                        return;
+                    }
+
+                    this.bestBlockHeight = height;
+                    this.error = false;
+                    alertStore.clearMempoolError();
+                    if (this.currentBlockHeight) {
+                        this.updateProgress();
+                    }
+                    resolve(this.bestBlockHeight);
                 })
                 .catch((error: any) => {
                     this.error = true;
-                    const msg =
-                        error instanceof SyntaxError
-                            ? 'Invalid response'
-                            : errorToUserFriendly(error);
-                    alertStore.setMempoolErrorFromUrl(url, msg);
+                    alertStore.setMempoolErrorFromUrl(
+                        url,
+                        errorToUserFriendly(error)
+                    );
                     reject();
                 });
         });

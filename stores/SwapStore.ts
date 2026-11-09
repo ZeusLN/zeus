@@ -1176,9 +1176,6 @@ export default class SwapStore {
         try {
             const response = await ReactNativeBlobUtil.fetch('GET', url);
             const httpStatus = response.info().status;
-            // Not seen yet is retryable and normal: an honest lockup may not
-            // have reached this instance, and one that never appears is never
-            // claimed. Do not raise an alert for this case.
             if (httpStatus === 404) {
                 // A 404 here is normal (tx not seen yet) and can also mean a
                 // wrong custom base path, so leave the alert state unchanged.
@@ -1193,10 +1190,12 @@ export default class SwapStore {
             }
             alertStore.clearMempoolError();
             tx = response.json();
-        } catch (e) {
+        } catch (e: any) {
             alertStore.setMempoolErrorFromUrl(
                 url,
-                errorToUserFriendly(e as any)
+                e instanceof SyntaxError
+                    ? 'Invalid response'
+                    : errorToUserFriendly(e)
             );
             return { status: 'unavailable', reason: 'request-failed' };
         }
