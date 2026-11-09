@@ -2029,8 +2029,14 @@ export default class CashuStore {
 
     @action
     public reset = () => {
+        // Native CDK keeps the previous wallet's handles until the next
+        // wallet's initializeCDK succeeds, so gated methods must not run
+        // against it in between, or at all if that init fails
+        this.cdkInitialized = false;
         this.cashuWallets = {};
         this.totalBalanceSats = 0;
+        this.mintBalances = {};
+        this.cdkInvoices = [];
         this.mintUrls = [];
         this.selectedMintUrl = '';
         this.selectedMintUrls = [];
