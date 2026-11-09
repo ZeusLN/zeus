@@ -31,9 +31,13 @@ export type LspNodeConfig = {
 
 // The dedicated LSPS2 LSP registered in the running node, if any. Settings
 // only take effect when the node is built, so receives check this instead.
-let activeLsps2NodeId: string | undefined;
+let activeLsps2Config: LspNodeConfig | undefined;
 
-export const getActiveLsps2NodeId = (): string | undefined => activeLsps2NodeId;
+export const getActiveLsps2Config = (): LspNodeConfig | undefined =>
+    activeLsps2Config;
+
+export const getActiveLsps2NodeId = (): string | undefined =>
+    activeLsps2Config?.nodeId;
 
 // Default Esplora servers
 export const ESPLORA_SERVERS_MAINNET: EsploraServer[] = [
@@ -278,7 +282,7 @@ async function initNode({
     const vssKey = deriveVssSigningKeyFromSeed(Buffer.from(seedHex, 'hex'));
     const vssStoreId = Buffer.from(vssKey.publicKey).toString('hex');
 
-    activeLsps2NodeId = undefined;
+    activeLsps2Config = undefined;
     const result = await LdkNode.utils.initializeNode({
         network: networkType,
         storagePath,
@@ -298,7 +302,7 @@ async function initNode({
         vssKey,
         failOnVssError
     });
-    activeLsps2NodeId = result.lsps2NodeId;
+    activeLsps2Config = result.lsps2NodeId ? lsps2Config : undefined;
     return result;
 }
 

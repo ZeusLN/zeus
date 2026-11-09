@@ -1436,6 +1436,8 @@ export function getLspConfigForNetwork(
     defaultLsps1Host: string;
     lsps2Pubkey: string;
     lsps2Host: string;
+    defaultLsps2Pubkey: string;
+    defaultLsps2Host: string;
 } {
     const isMutinynet =
         typeof network === 'string'
@@ -1459,6 +1461,8 @@ export function getLspConfigForNetwork(
             defaultFlowHost: DEFAULT_LSP_MUTINYNET,
             defaultLsps1Rest: DEFAULT_LSPS1_REST_MUTINYNET,
             defaultLsps1Host: DEFAULT_LSPS1_HOST_MUTINYNET,
+            defaultLsps2Pubkey: DEFAULT_LSPS2_PUBKEY_MUTINYNET,
+            defaultLsps2Host: DEFAULT_LSPS2_HOST_MUTINYNET,
             lsps2Pubkey:
                 settings.lsps2PubkeyMutinynet || DEFAULT_LSPS2_PUBKEY_MUTINYNET,
             lsps2Host:
@@ -1476,6 +1480,8 @@ export function getLspConfigForNetwork(
             defaultFlowHost: DEFAULT_LSP_TESTNET,
             defaultLsps1Rest: DEFAULT_LSPS1_REST_TESTNET,
             defaultLsps1Host: DEFAULT_LSPS1_HOST_TESTNET,
+            defaultLsps2Pubkey: DEFAULT_LSPS2_PUBKEY_TESTNET,
+            defaultLsps2Host: DEFAULT_LSPS2_HOST_TESTNET,
             lsps2Pubkey:
                 settings.lsps2PubkeyTestnet || DEFAULT_LSPS2_PUBKEY_TESTNET,
             lsps2Host: settings.lsps2HostTestnet || DEFAULT_LSPS2_HOST_TESTNET
@@ -1491,6 +1497,8 @@ export function getLspConfigForNetwork(
         defaultFlowHost: DEFAULT_LSP_MAINNET,
         defaultLsps1Rest: DEFAULT_LSPS1_REST_MAINNET,
         defaultLsps1Host: DEFAULT_LSPS1_HOST_MAINNET,
+        defaultLsps2Pubkey: DEFAULT_LSPS2_PUBKEY_MAINNET,
+        defaultLsps2Host: DEFAULT_LSPS2_HOST_MAINNET,
         lsps2Pubkey:
             settings.lsps2PubkeyMainnet || DEFAULT_LSPS2_PUBKEY_MAINNET,
         lsps2Host: settings.lsps2HostMainnet || DEFAULT_LSPS2_HOST_MAINNET
@@ -1526,7 +1534,7 @@ export interface LdkNodeLspConfig {
 
 export function getLdkNodeLspConfig(
     settings: Settings,
-    network: string
+    network: string | { isMutinynet: boolean; isTestNet: boolean }
 ): LdkNodeLspConfig {
     const lspConfig = getLspConfigForNetwork(settings, network);
 

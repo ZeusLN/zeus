@@ -5,7 +5,6 @@ import { Icon, ListItem } from '@rneui/themed';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 
-import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -33,17 +32,7 @@ function LSPServicesList(props: LSPServicesListProps) {
         {
             label: localeString('view.Settings.LSPServicesList.lsps1'),
             nav: 'LSPS1Settings'
-        },
-        ...(BackendUtils.supportsLSPS2()
-            ? [
-                  {
-                      label: localeString(
-                          'view.Settings.LSPServicesList.lsps2'
-                      ),
-                      nav: 'LSPS2Settings'
-                  }
-              ]
-            : [])
+        }
     ];
 
     return (
