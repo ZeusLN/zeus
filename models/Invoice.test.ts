@@ -241,3 +241,84 @@ describe('Invoice.getRequestAmount', () => {
         expect(new Invoice({}).getRequestAmount).toBe(0);
     });
 });
+
+describe('Invoice.getTimestamp', () => {
+    it('uses created_at for an unpaid NWC (NIP-47) transaction', () => {
+        const invoice = new Invoice({
+            state: 'pending',
+            created_at: 1793874662,
+            expires_at: 1793878262,
+            settled_at: 0
+        });
+
+        expect(invoice.getTimestamp).toBe(1793874662);
+    });
+
+    it('uses created_at for an expired NWC transaction, which has no settled_at', () => {
+        // an expired invoice is listed as expired by the wallet
+        const invoice = new Invoice({
+            state: 'expired',
+            created_at: 1793869622,
+            expires_at: 1793873222,
+            settled_at: 0
+        });
+
+        expect(invoice.getTimestamp).toBe(1793869622);
+    });
+
+    it('uses the settle time for a settled NWC transaction', () => {
+        const invoice = new Invoice({
+            state: 'settled',
+            created_at: 100,
+            settled_at: 200
+        });
+
+        expect(invoice.getTimestamp).toBe(200);
+    });
+
+    it('orders a settled NWC invoice by when it was paid, not created', () => {
+        // created at 500 but paid at 900, after the pending one was created
+        const settled = new Invoice({
+            state: 'settled',
+            created_at: 500,
+            settled_at: 900
+        });
+        const pending = new Invoice({
+            state: 'pending',
+            created_at: 800,
+            settled_at: 0
+        });
+        const older = new Invoice({
+            state: 'settled',
+            created_at: 100,
+            settled_at: 300
+        });
+
+        expect(Number(settled.getTimestamp)).toBeGreaterThan(
+            Number(pending.getTimestamp)
+        );
+        expect(Number(pending.getTimestamp)).toBeGreaterThan(
+            Number(older.getTimestamp)
+        );
+    });
+
+    it('keeps the earlier fields first, so other backends are unchanged', () => {
+        expect(
+            new Invoice({ creation_date: '1700000000', created_at: 5 })
+                .getTimestamp
+        ).toBe('1700000000');
+        expect(
+            new Invoice({ paid_at: 1700000900, created_at: 5 }).getTimestamp
+        ).toBe(1700000900);
+        expect(
+            new Invoice({ timestamp: 1700000100, created_at: 5 }).getTimestamp
+        ).toBe(1700000100);
+    });
+
+    it('still falls back to the settle time, and to 0 with nothing to go on', () => {
+        expect(new Invoice({ settle_date: '1700000500' }).getTimestamp).toBe(
+            '1700000500'
+        );
+        expect(new Invoice({}).getTimestamp).toBe(0);
+    });
+});
