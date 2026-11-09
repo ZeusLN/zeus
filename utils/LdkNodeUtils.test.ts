@@ -40,6 +40,7 @@ import { Platform } from 'react-native';
 import {
     createLdkNodeDirectory,
     createLdkNodeWallet,
+    getActiveLsps2Config,
     getActiveLsps2NodeId,
     ensureLdkNodeBackupExclusion,
     getLdkNodeBaseDirectory,
@@ -203,6 +204,7 @@ describe('getActiveLsps2NodeId', () => {
             expect.objectContaining({ lsps2Config })
         );
         expect(getActiveLsps2NodeId()).toEqual(lsps2Config.nodeId);
+        expect(getActiveLsps2Config()).toEqual(lsps2Config);
     });
 
     it('clears it when the next build registers none', async () => {
@@ -215,6 +217,7 @@ describe('getActiveLsps2NodeId', () => {
         await create();
 
         expect(getActiveLsps2NodeId()).toBeUndefined();
+        expect(getActiveLsps2Config()).toBeUndefined();
     });
 
     it('clears it when the build fails', async () => {
