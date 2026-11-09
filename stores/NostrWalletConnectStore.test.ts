@@ -2477,6 +2477,14 @@ describe('NostrWalletConnectStore payment notifications', () => {
 });
 
 describe('NostrWalletConnectStore request event replay guard', () => {
+    // A 64-hex event id; the first 16 characters are the part kept
+    const eventId = (n: number | string) =>
+        `${(typeof n === 'number' ? n.toString(16) : n).padStart(
+            16,
+            '0'
+        )}${'a'.repeat(48)}`;
+    const keyOf = (id: string) => id.slice(0, 16);
+
     const storedEventIds = (id = 'conn-1'): string[] =>
         JSON.parse(storedItems.get(NWC_CONNECTIONS_KEY)!).find(
             (c: { id: string }) => c.id === id
@@ -2488,34 +2496,34 @@ describe('NostrWalletConnectStore request event replay guard', () => {
         } = await startService();
         const client = clientFor(connection);
 
-        expect(await client.recordEvent('event-1')).toBeUndefined();
-        expect(await client.recordEvent('event-1')).toBe('ALREADY_PROCESSED');
-        expect(await client.recordEvent('event-2')).toBeUndefined();
-        expect(connection.processedEventIds).toEqual(['event-1', 'event-2']);
+        expect(await client.recordEvent(eventId(1))).toBeUndefined();
+        expect(await client.recordEvent(eventId(1))).toBe('ALREADY_PROCESSED');
+        expect(await client.recordEvent(eventId(2))).toBeUndefined();
+        expect(connection.processedEventIds).toEqual([
+            keyOf(eventId(1)),
+            keyOf(eventId(2))
+        ]);
     });
 
-    it('saves the id before the request can run', async () => {
+    it('saves only the first 16 characters of the id, before the request can run', async () => {
         const {
             connections: [connection]
         } = await startService();
 
-        await clientFor(connection).recordEvent('event-1');
+        await clientFor(connection).recordEvent(eventId(1));
 
-        expect(storedEventIds()).toEqual(['event-1']);
+        expect(storedEventIds()).toEqual([keyOf(eventId(1))]);
+        expect(storedEventIds()[0]).toHaveLength(16);
     });
 
     it('skips ids processed before a restart', async () => {
         const {
             connections: [connection]
-        } = await startService([
-            { processedEventIds: ['seen-before-restart'] }
-        ]);
+        } = await startService([{ processedEventIds: [keyOf(eventId(7))] }]);
         const client = clientFor(connection);
 
-        expect(await client.recordEvent('seen-before-restart')).toBe(
-            'ALREADY_PROCESSED'
-        );
-        expect(await client.recordEvent('new-event')).toBeUndefined();
+        expect(await client.recordEvent(eventId(7))).toBe('ALREADY_PROCESSED');
+        expect(await client.recordEvent(eventId(8))).toBeUndefined();
     });
 
     it('keeps one list per connection', async () => {
@@ -2523,39 +2531,46 @@ describe('NostrWalletConnectStore request event replay guard', () => {
             connections: [first, second]
         } = await startService([{}, {}]);
 
-        await clientFor(first).recordEvent('event-1');
+        await clientFor(first).recordEvent(eventId(1));
 
-        expect(await clientFor(second).recordEvent('event-1')).toBeUndefined();
+        expect(await clientFor(second).recordEvent(eventId(1))).toBeUndefined();
     });
 
     it('drops the oldest ids once the list is full', async () => {
-        const ids = Array.from({ length: 2000 }, (_, i) => `event-${i}`);
+        const ids = Array.from({ length: 2000 }, (_, i) => keyOf(eventId(i)));
         const {
             connections: [connection]
         } = await startService([{ processedEventIds: ids }]);
         const client = clientFor(connection);
 
-        await client.recordEvent('newest');
+        await client.recordEvent(eventId(5000));
 
         expect(connection.processedEventIds).toHaveLength(2000);
-        expect(connection.processedEventIds[0]).toBe('event-1');
-        expect(connection.processedEventIds[1999]).toBe('newest');
-        expect(await client.recordEvent('event-0')).toBeUndefined();
+        expect(connection.processedEventIds[0]).toBe(keyOf(eventId(1)));
+        expect(connection.processedEventIds[1999]).toBe(keyOf(eventId(5000)));
+        expect(await client.recordEvent(eventId(0))).toBeUndefined();
     });
 
-    it('skips the request when the id cannot be saved', async () => {
+    it('skips the request when the id cannot be saved, then lets a later delivery run', async () => {
         const {
             store,
             connections: [connection]
-        } = await startService();
-        jest.spyOn(store, 'saveConnections').mockRejectedValue(
-            new Error('disk full')
-        );
+        } = await startService([{ processedEventIds: [keyOf(eventId(9))] }]);
+        const client = clientFor(connection);
+        const save = jest
+            .spyOn(store, 'saveConnections')
+            .mockRejectedValueOnce(new Error('disk full'));
         jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
-        expect(await clientFor(connection).recordEvent('event-1')).toBe(
-            'ALREADY_PROCESSED'
-        );
+        expect(await client.recordEvent(eventId(1))).toBe('ALREADY_PROCESSED');
+        expect(connection.processedEventIds).toEqual([keyOf(eventId(9))]);
+
+        save.mockResolvedValue(undefined);
+        expect(await client.recordEvent(eventId(1))).toBeUndefined();
+        expect(connection.processedEventIds).toEqual([
+            keyOf(eventId(9)),
+            keyOf(eventId(1))
+        ]);
     });
 
     describe('pay_invoice retried with a new event', () => {

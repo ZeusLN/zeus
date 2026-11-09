@@ -105,6 +105,8 @@ const MAX_PENDING_MAKE_INVOICES_PER_CONNECTION = 10;
 const MAX_CONNECTION_ACTIVITY_ENTRIES = 100;
 /** Cap persisted NWC request event ids per connection (replay protection). */
 const MAX_PROCESSED_NWC_EVENT_IDS = 2000;
+/** Characters of each event id kept (64 bits of the sha256 hex). */
+const PROCESSED_NWC_EVENT_ID_LENGTH = 16;
 /** Grace before closing an unused relay after delete awaited in-flight handlers. */
 export const RELAY_RELEASE_GRACE_MS = 5000;
 
@@ -1833,19 +1835,25 @@ export default class NostrWalletConnectStore {
      * anyone holding the captured ciphertext) cannot re-run a request after a
      * restart or re-subscription. The SDK calls this one event at a time and
      * before the method handler. The id is saved before the handler runs: if
-     * the save fails the request is skipped rather than risk running twice.
+     * the save fails the request is skipped rather than risk running twice,
+     * and the id is released so a later delivery of the event can still run.
+     * Only the first 16 hex characters (64 bits) of each id are kept to keep
+     * the stored connections small; ids come from signed events, so an
+     * attacker cannot choose one to collide with.
      */
     private async recordNwcRequestEvent(
         connection: NWCConnection,
         eventId: string
     ): Promise<NWCWalletServiceRecordEventResult> {
         const stored = this.storedConnection(connection);
-        if (!eventId || stored.processedEventIds.includes(eventId)) {
+        const key = eventId?.slice(0, PROCESSED_NWC_EVENT_ID_LENGTH);
+        if (!key || stored.processedEventIds.includes(key)) {
             return 'ALREADY_PROCESSED';
         }
 
+        const previous = stored.processedEventIds;
         runInAction(() => {
-            const next = [...stored.processedEventIds, eventId];
+            const next = [...previous, key];
             stored.processedEventIds =
                 next.length > MAX_PROCESSED_NWC_EVENT_IDS
                     ? next.slice(next.length - MAX_PROCESSED_NWC_EVENT_IDS)
@@ -1855,6 +1863,9 @@ export default class NostrWalletConnectStore {
             await this.saveConnections();
         } catch (error) {
             console.error('NWC: failed to persist request event id:', error);
+            runInAction(() => {
+                stored.processedEventIds = previous;
+            });
             return 'ALREADY_PROCESSED';
         }
         return undefined;
