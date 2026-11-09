@@ -2476,6 +2476,210 @@ describe('NostrWalletConnectStore payment notifications', () => {
     });
 });
 
+describe('NostrWalletConnectStore request event replay guard', () => {
+    const storedEventIds = (id = 'conn-1'): string[] =>
+        JSON.parse(storedItems.get(NWC_CONNECTIONS_KEY)!).find(
+            (c: { id: string }) => c.id === id
+        ).processedEventIds;
+
+    it('claims an unseen event id and skips it when it is delivered again', async () => {
+        const {
+            connections: [connection]
+        } = await startService();
+        const client = clientFor(connection);
+
+        expect(await client.recordEvent('event-1')).toBeUndefined();
+        expect(await client.recordEvent('event-1')).toBe('ALREADY_PROCESSED');
+        expect(await client.recordEvent('event-2')).toBeUndefined();
+        expect(connection.processedEventIds).toEqual(['event-1', 'event-2']);
+    });
+
+    it('saves the id before the request can run', async () => {
+        const {
+            connections: [connection]
+        } = await startService();
+
+        await clientFor(connection).recordEvent('event-1');
+
+        expect(storedEventIds()).toEqual(['event-1']);
+    });
+
+    it('skips ids processed before a restart', async () => {
+        const {
+            connections: [connection]
+        } = await startService([
+            { processedEventIds: ['seen-before-restart'] }
+        ]);
+        const client = clientFor(connection);
+
+        expect(await client.recordEvent('seen-before-restart')).toBe(
+            'ALREADY_PROCESSED'
+        );
+        expect(await client.recordEvent('new-event')).toBeUndefined();
+    });
+
+    it('keeps one list per connection', async () => {
+        const {
+            connections: [first, second]
+        } = await startService([{}, {}]);
+
+        await clientFor(first).recordEvent('event-1');
+
+        expect(await clientFor(second).recordEvent('event-1')).toBeUndefined();
+    });
+
+    it('drops the oldest ids once the list is full', async () => {
+        const ids = Array.from({ length: 2000 }, (_, i) => `event-${i}`);
+        const {
+            connections: [connection]
+        } = await startService([{ processedEventIds: ids }]);
+        const client = clientFor(connection);
+
+        await client.recordEvent('newest');
+
+        expect(connection.processedEventIds).toHaveLength(2000);
+        expect(connection.processedEventIds[0]).toBe('event-1');
+        expect(connection.processedEventIds[1999]).toBe('newest');
+        expect(await client.recordEvent('event-0')).toBeUndefined();
+    });
+
+    it('skips the request when the id cannot be saved', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        jest.spyOn(store, 'saveConnections').mockRejectedValue(
+            new Error('disk full')
+        );
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        expect(await clientFor(connection).recordEvent('event-1')).toBe(
+            'ALREADY_PROCESSED'
+        );
+    });
+
+    describe('pay_invoice retried with a new event', () => {
+        const invoice = 'lnbc1already-paid';
+        const paymentHash = hex64('c');
+
+        beforeEach(() => {
+            (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
+                timestamp: String(Math.floor(Date.now() / 1000) - 60),
+                expiry: '3600'
+            });
+            jest.spyOn(
+                NostrConnectUtils,
+                'decodeInvoiceTags'
+            ).mockResolvedValue({
+                paymentRequest: invoice,
+                paymentHash,
+                descriptionHash: '',
+                description: '',
+                amount: 5000,
+                expiryTime: 0,
+                createdAt: 0,
+                isExpired: false,
+                network: 'bitcoin'
+            });
+            jest.spyOn(
+                NostrConnectUtils,
+                'resolvePayInvoiceAmount'
+            ).mockResolvedValue({ amountSats: 5000, zeroAmountInvoice: false });
+        });
+
+        const payCollaborators = () => ({
+            transactionsStore: {
+                reset: jest.fn(),
+                sendPaymentSilently: jest.fn().mockResolvedValue({}),
+                getPaymentOutcome: jest.fn().mockReturnValue({}),
+                loading: false
+            },
+            paymentsStore: {
+                payments: [],
+                getPayments: jest.fn().mockResolvedValue([])
+            }
+        });
+
+        const activity = (status: string) => ({
+            id: invoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status,
+            satAmount: 5000,
+            fees_paid: 3,
+            preimage: 'stored-preimage',
+            paymentHash
+        });
+
+        it('returns the stored result for an invoice already paid', async () => {
+            const {
+                transactionsStore,
+                connections: [connection]
+            } = await startService(
+                [
+                    {
+                        permissions: ['pay_invoice'],
+                        maxAmountSats: 100000,
+                        activity: [activity('success')]
+                    }
+                ],
+                payCollaborators()
+            );
+
+            const response = await clientFor(connection).payInvoice({
+                invoice
+            });
+
+            expect(response).toEqual({
+                result: { preimage: 'stored-preimage', fees_paid: 3000 },
+                error: undefined
+            });
+            expect(
+                transactionsStore.sendPaymentSilently
+            ).not.toHaveBeenCalled();
+        });
+
+        it('pays again when the earlier attempt failed', async () => {
+            const {
+                transactionsStore,
+                connections: [connection]
+            } = await startService(
+                [
+                    {
+                        permissions: ['pay_invoice'],
+                        maxAmountSats: 100000,
+                        activity: [activity('failed')]
+                    }
+                ],
+                payCollaborators()
+            );
+
+            await clientFor(connection).payInvoice({ invoice });
+
+            expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                1
+            );
+        });
+
+        it('leaves an undecodable invoice to the pay handler', async () => {
+            jest.spyOn(
+                NostrConnectUtils,
+                'decodeInvoiceTags'
+            ).mockRejectedValue(new Error('bad invoice'));
+            const { store, connections } = await startService([
+                { permissions: ['pay_invoice'] }
+            ]);
+
+            expect(
+                await (store as any).getSettledPayInvoiceResponse(
+                    connections[0],
+                    'not-an-invoice'
+                )
+            ).toBeUndefined();
+        });
+    });
+});
+
 describe('NostrWalletConnectStore connection data scoping', () => {
     const WALLET_ONLY_HASH = hex64('f');
     const CONNECTION_HASH = hex64('e');

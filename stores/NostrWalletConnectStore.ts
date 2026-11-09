@@ -15,6 +15,7 @@ import {
     Nip47SignMessageRequest,
     Nip47Method,
     Nip47NotificationType,
+    NWCWalletServiceRecordEventResult,
     NWCWalletServiceRequestHandler,
     NWCWalletServiceResponsePromise
 } from '@getalby/sdk';
@@ -102,6 +103,8 @@ const MAKE_INVOICE_RATE_WINDOW_MS = 60_000;
 const MAX_MAKE_INVOICE_PER_WINDOW = 5;
 const MAX_PENDING_MAKE_INVOICES_PER_CONNECTION = 10;
 const MAX_CONNECTION_ACTIVITY_ENTRIES = 100;
+/** Cap persisted NWC request event ids per connection (replay protection). */
+const MAX_PROCESSED_NWC_EVENT_IDS = 2000;
 /** Grace before closing an unused relay after delete awaited in-flight handlers. */
 export const RELAY_RELEASE_GRACE_MS = 5000;
 
@@ -1684,7 +1687,12 @@ export default class NostrWalletConnectStore {
                 serviceSecretKey,
                 connection.pubkey
             );
-            const handler: NWCWalletServiceRequestHandler = {};
+            const handler: NWCWalletServiceRequestHandler = {
+                // Called by the SDK with the request event id before any
+                // method handler runs; see recordNwcRequestEvent
+                recordEvent: (eventId: string) =>
+                    this.recordNwcRequestEvent(connection, eventId)
+            };
 
             if (connection.hasPermission('get_info')) {
                 handler.getInfo = () =>
@@ -1723,8 +1731,16 @@ export default class NostrWalletConnectStore {
                           );
                 };
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.enqueuePayment(
+                    this.withGlobalHandler(connection.id, async () => {
+                        const cached = await this.getSettledPayInvoiceResponse(
+                            this.storedConnection(connection),
+                            request.invoice
+                        );
+                        if (cached) {
+                            return cached;
+                        }
+
+                        return this.enqueuePayment(
                             () => pay(request),
                             () =>
                                 NostrConnectUtils.createNip47Error(
@@ -1733,8 +1749,8 @@ export default class NostrWalletConnectStore {
                                     ),
                                     Nip47ErrorCode.RATE_LIMITED
                                 )
-                        )
-                    );
+                        );
+                    });
             }
 
             if (connection.hasPermission('make_invoice')) {
@@ -1809,6 +1825,39 @@ export default class NostrWalletConnectStore {
                 error?.message || String(error)
             );
         }
+    }
+
+    /**
+     * Claims a request event id for the SDK's recordEvent hook. Returns
+     * ALREADY_PROCESSED for an id this connection has seen, so a relay (or
+     * anyone holding the captured ciphertext) cannot re-run a request after a
+     * restart or re-subscription. The SDK calls this one event at a time and
+     * before the method handler. The id is saved before the handler runs: if
+     * the save fails the request is skipped rather than risk running twice.
+     */
+    private async recordNwcRequestEvent(
+        connection: NWCConnection,
+        eventId: string
+    ): Promise<NWCWalletServiceRecordEventResult> {
+        const stored = this.storedConnection(connection);
+        if (!eventId || stored.processedEventIds.includes(eventId)) {
+            return 'ALREADY_PROCESSED';
+        }
+
+        runInAction(() => {
+            const next = [...stored.processedEventIds, eventId];
+            stored.processedEventIds =
+                next.length > MAX_PROCESSED_NWC_EVENT_IDS
+                    ? next.slice(next.length - MAX_PROCESSED_NWC_EVENT_IDS)
+                    : next;
+        });
+        try {
+            await this.saveConnections();
+        } catch (error) {
+            console.error('NWC: failed to persist request event id:', error);
+            return 'ALREADY_PROCESSED';
+        }
+        return undefined;
     }
 
     private async subscribeToAllConnections(): Promise<void> {
@@ -2960,6 +3009,44 @@ export default class NostrWalletConnectStore {
     }
 
     // PAYMENT PROCESSING METHODS
+
+    /**
+     * A new request event (a client retry after a lost response) for an
+     * invoice this connection already paid gets the stored result back
+     * instead of another sendPayment. Pending and unresolved pays are
+     * handled in the pay handlers, and a failed pay may be retried.
+     */
+    private async getSettledPayInvoiceResponse(
+        connection: NWCConnection,
+        rawInvoice: string
+    ): Promise<{ result: Nip47PayResponse; error: undefined } | undefined> {
+        let decoded;
+        try {
+            decoded = await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
+        } catch {
+            // Not decodable: the pay handler returns the invoice error
+            return undefined;
+        }
+        const { paymentRequest, paymentHash } = decoded;
+        const existing = connection.findPayInvoiceActivity(
+            paymentRequest || rawInvoice,
+            paymentHash
+        );
+        if (existing?.status !== 'success') {
+            return undefined;
+        }
+
+        return {
+            result: {
+                preimage:
+                    existing.preimage || existing.payment?.getPreimage || '',
+                fees_paid: satsToMillisats(
+                    Number(existing.fees_paid || existing.payment?.getFee) || 0
+                )
+            },
+            error: undefined
+        };
+    }
 
     private async handleLightningPayInvoice(
         connection: NWCConnection,
