@@ -129,7 +129,8 @@ interface SubscribeAttempt {
     handlerConfig: string;
     // Resolves when the attempt has stored its handle or given up
     done: Promise<void>;
-    // Set when the attempt gave up on an error, not when it was replaced
+    // Set when the attempt gave up on an error, even after a newer attempt or
+    // reset replaced it. Waiters then retry once with the stored connection.
     failed?: boolean;
 }
 

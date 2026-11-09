@@ -1513,6 +1513,32 @@ describe('NostrWalletConnectStore overlapping subscribes', () => {
         );
     });
 
+    it('stops after one shared retry when the relay does not recover', async () => {
+        silence('error');
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const firstSubscribe = relay.holdNextSubscribe();
+        relay.failSubscribe = true;
+
+        const first = subscribe(store, connection);
+        await settle(firstSubscribe.entered);
+        const second = subscribe(store, connection);
+        const third = subscribe(store, connection);
+        await flushMicrotasks();
+        firstSubscribe.release();
+        await settle(Promise.all([first, second, third]));
+
+        // The first attempt and one retry shared by both waiters
+        expect(relay.subscribe).toHaveBeenCalledTimes(2 * MAX_RELAY_ATTEMPTS);
+        expect(liveSubscriptions(connection)).toBe(0);
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            false
+        );
+    });
+
     it('drops an older in-flight subscribe once an update resubscribes with new permissions', async () => {
         const {
             store,
@@ -1565,6 +1591,26 @@ describe('NostrWalletConnectStore overlapping subscribes', () => {
 
         expect(store.connections).toHaveLength(0);
         expect(liveSubscriptions(connection)).toBe(0);
+    });
+
+    it('drops a subscribe that resolves while a delete is pending', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const pendingSubscribe = relayFor(OLD_RELAY).holdNextSubscribe();
+        (store as any).pushPendingMutation(connection.id, 'delete');
+
+        const pending = subscribe(store, connection);
+        await settle(pendingSubscribe.entered);
+        pendingSubscribe.release();
+        await settle(pending);
+
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            false
+        );
+        expect(liveSubscriptions(connection)).toBe(0);
+        (store as any).popPendingMutation(connection.id, 'delete');
     });
 
     it('replaces the live subscription on a later resubscribe', async () => {
