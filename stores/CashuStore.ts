@@ -2064,6 +2064,9 @@ export default class CashuStore {
         this.offlineSpentTokens = [];
         this.showOfflineSpentAlert = false;
         this.isSweeping = false;
+        // A pass still waiting on the previous wallet's mint would otherwise
+        // be joined by this wallet's first sweep, which then skips its melts
+        this.reconcileRun = undefined;
         this.stopConnectivityMonitoring();
     };
 
