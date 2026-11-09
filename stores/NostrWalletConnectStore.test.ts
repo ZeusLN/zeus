@@ -1325,6 +1325,56 @@ describe('NostrWalletConnectStore overlapping initializeService calls', () => {
         publish.release();
         await settle(first);
     });
+
+    it('starts a new run after a run that found no connections', async () => {
+        const { store } = createStore();
+        await store.initializeService();
+        seedStoredService();
+        await settle(store.initializeService());
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+        expect(NWCWalletService).toHaveBeenCalledTimes(1);
+        expect(store.isInitialized).toBe(true);
+    });
+
+    it('waits on the new run when the run a reset interrupted fails first', async () => {
+        silence('error');
+        seedStoredService();
+        const { store } = createStore();
+        const firstRelay = relayFor(OLD_RELAY);
+        const firstPublish = holdNextCall<void>(
+            firstRelay.publishWalletServiceInfoEvent
+        );
+        const first = store.initializeService();
+        await firstPublish.entered;
+        await store.reset(true);
+
+        const secondRelay = relayFor(OLD_RELAY);
+        const secondPublish = holdNextCall<void>(
+            secondRelay.publishWalletServiceInfoEvent
+        );
+        const second = store.initializeService();
+        await secondPublish.entered;
+        // The interrupted run ends without starting the service
+        firstRelay.failPublish = true;
+        firstPublish.fail(new Error('publish failed'));
+        await settle(first);
+        firstRelay.failPublish = false;
+        expect(store.isInitialized).toBe(false);
+
+        const connectionReads = () =>
+            (Storage.getItem as jest.Mock).mock.calls.filter(
+                ([key]) => key === NWC_CONNECTIONS_KEY
+            ).length;
+        const readsBefore = connectionReads();
+        const third = store.initializeService();
+        await flushMicrotasks();
+        // The third call waits on the second run instead of starting one
+        expect(connectionReads()).toBe(readsBefore);
+
+        secondPublish.release();
+        await settle(Promise.all([second, third]));
+        expect(store.isInitialized).toBe(true);
+    });
 });
 
 // The edit screen always sends budgetRenewal, and maxAmountSats as the new
