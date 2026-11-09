@@ -3,7 +3,11 @@ jest.mock('mobx-react', () => ({
     observer: (component: any) => component
 }));
 // UrlUtils imports the store graph; it is only used here for validation
-jest.mock('../../stores/Stores');
+jest.mock('../../stores/Stores', () => ({
+    alertStore: {
+        clearMempoolError: jest.fn()
+    }
+}));
 jest.mock('../../stores/SettingsStore', () => ({
     BLOCK_EXPLORER_KEYS: [],
     DEFAULT_MEMPOOL_INSTANCE: 'https://mempool.space',
@@ -26,8 +30,9 @@ jest.mock('../../components/Text', () => 'Text');
 jest.mock('../../components/TextInput', () => 'TextInput');
 
 import * as React from 'react';
-import { render } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
 import Privacy from './Privacy';
+import { alertStore } from '../../stores/Stores';
 
 // Mounts the view with these saved privacy settings, lets componentDidMount
 // load them, then leaves the screen
@@ -118,5 +123,78 @@ describe('Privacy unmount', () => {
                 customMempoolInstance: 'https://mempool.example.com'
             })
         ).toEqual({});
+    });
+});
+
+describe('Privacy mempool instance change', () => {
+    const makeView = (privacy: any) => {
+        const SettingsStore = {
+            settings: {},
+            getSettings: jest.fn(async () => ({ privacy })),
+            flushPendingSettings: jest.fn(),
+            updateSettingsGroup: jest.fn(async () => {}),
+            updateSettingsGroupDebounced: jest.fn()
+        };
+        const view: any = new (Privacy as any)({
+            navigation: {} as any,
+            SettingsStore
+        });
+        view.setState = jest.fn(); // <-- ADD THIS LINE
+        view.state = {
+            ...view.state,
+            mempoolInstance: privacy.mempoolInstance,
+            customMempoolInstance: privacy.customMempoolInstance
+        };
+        return { view, SettingsStore };
+    };
+
+    beforeEach(() => {
+        (alertStore.clearMempoolError as jest.Mock).mockClear();
+    });
+
+    it('clears the alert when the mempool instance changes', async () => {
+        const { view } = makeView({
+            mempoolInstance: 'https://mempool.space'
+        });
+
+        await act(async () => {
+            await view.handleMempoolInstanceChange('https://example.com');
+        });
+
+        expect(alertStore.clearMempoolError).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not clear the alert when the mempool instance is unchanged', async () => {
+        const { view } = makeView({
+            mempoolInstance: 'https://mempool.space'
+        });
+
+        await act(async () => {
+            await view.handleMempoolInstanceChange('https://mempool.space');
+        });
+
+        expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
+    });
+
+    it('clears the alert when a valid custom URL is entered', () => {
+        const { view } = makeView({
+            mempoolInstance: 'Custom',
+            customMempoolInstance: 'https://mempool.space'
+        });
+
+        view.handleCustomMempoolUrlChange('https://mempool.example.com');
+
+        expect(alertStore.clearMempoolError).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not clear the alert for an invalid custom URL', () => {
+        const { view } = makeView({
+            mempoolInstance: 'Custom',
+            customMempoolInstance: 'https://mempool.space'
+        });
+
+        view.handleCustomMempoolUrlChange('not a url');
+
+        expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
     });
 });

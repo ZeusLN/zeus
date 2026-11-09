@@ -11,6 +11,7 @@ import SettingsStore, {
     DEFAULT_MEMPOOL_INSTANCE,
     MEMPOOL_INSTANCE_KEYS
 } from '../../stores/SettingsStore';
+import { alertStore } from '../../stores/Stores';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -151,6 +152,24 @@ export default class Privacy extends React.Component<
     isValidCustomUrl = (text: string): boolean => {
         const trimmed = text.trim();
         return trimmed === '' || UrlUtils.isValidUrl(trimmed);
+    };
+
+    handleMempoolInstanceChange = async (value: string) => {
+        const changed = value !== this.state.mempoolInstance;
+        this.setState({ mempoolInstance: value });
+        await this.props.SettingsStore.updateSettingsGroup('privacy', {
+            mempoolInstance: value
+        });
+        if (changed) alertStore.clearMempoolError();
+    };
+
+    handleCustomMempoolUrlChange = (text: string) => {
+        this.setState({ customMempoolInstance: text });
+        if (!this.isValidCustomUrl(text)) return;
+        this.props.SettingsStore.updateSettingsGroupDebounced('privacy', {
+            customMempoolInstance: text
+        });
+        alertStore.clearMempoolError();
     };
 
     renderSeparator = () => (
@@ -387,14 +406,7 @@ export default class Privacy extends React.Component<
                                 )
                             ]}
                             selectedValue={mempoolInstance}
-                            onValueChange={async (value: string) => {
-                                this.setState({
-                                    mempoolInstance: value
-                                });
-                                await updateSettingsGroup('privacy', {
-                                    mempoolInstance: value
-                                });
-                            }}
+                            onValueChange={this.handleMempoolInstanceChange}
                             values={MEMPOOL_INSTANCE_KEYS}
                         />
 
@@ -415,19 +427,9 @@ export default class Privacy extends React.Component<
                                     autoCapitalize="none"
                                     autoCorrect={false}
                                     keyboardType="url"
-                                    onChangeText={(text: string) => {
-                                        this.setState({
-                                            customMempoolInstance: text
-                                        });
-
-                                        if (!this.isValidCustomUrl(text))
-                                            return;
-
-                                        updateSettingsGroupDebounced(
-                                            'privacy',
-                                            { customMempoolInstance: text }
-                                        );
-                                    }}
+                                    onChangeText={
+                                        this.handleCustomMempoolUrlChange
+                                    }
                                 />
                                 {customMempoolInstanceError && (
                                     <Text
