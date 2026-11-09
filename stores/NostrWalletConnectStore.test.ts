@@ -2817,6 +2817,68 @@ describe('NostrWalletConnectStore payment notifications', () => {
             expect(relay.publishNotification).not.toHaveBeenCalled();
         });
 
+        describe('when the connections are reloaded during the node lookup', () => {
+            // Settles the pending invoice on the node, holding the node
+            // lookup so the connections can be reloaded during it, as the
+            // connections list and edit screens do on focus
+            const settleDuringReload = async (
+                run: (store: any, connection: NWCConnection) => Promise<unknown>
+            ) => {
+                const started = await startWithInvoice();
+                const { store, connection } = started;
+                await store.saveConnections();
+                settleOnNode();
+                const lookup = holdNextCall<boolean>(
+                    NostrConnectUtils.lookupInvoicePaidFromNode as jest.Mock
+                );
+                const running = run(store, connection);
+                await lookup.entered;
+                await store.loadConnections();
+                const [reloaded] = store.connections;
+                lookup.release(true);
+                const result = await running;
+                await jest.advanceTimersByTimeAsync(0);
+                return { ...started, reloaded, result };
+            };
+
+            it('keeps the settlement from getActivities and publishes payment_received once', async () => {
+                const { store, connection, reloaded, relay } =
+                    await settleDuringReload((store, connection) =>
+                        store.getActivities(connection.id)
+                    );
+
+                expect(reloaded).toBe(connection);
+                expect(reloaded.activity[0].status).toBe('success');
+
+                await store.getActivities(connection.id);
+                await jest.advanceTimersByTimeAsync(1000);
+
+                expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+                expect(persistedConnections()[0].activity[0].status).toBe(
+                    'success'
+                );
+            });
+
+            it('keeps the settlement from lookup_invoice and publishes payment_received once', async () => {
+                const { store, connection, reloaded, relay, result } =
+                    await settleDuringReload((store, connection) =>
+                        store.handleLookupInvoice(connection, {
+                            invoice: incomingInvoice
+                        })
+                    );
+
+                expect((result as any).result.state).toBe('settled');
+                expect(reloaded.activity[0].status).toBe('success');
+
+                await (store as any).handleLookupInvoice(connection, {
+                    invoice: incomingInvoice
+                });
+                await jest.advanceTimersByTimeAsync(1000);
+
+                expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            });
+        });
+
         it('publishes payment_received when opening an invoice that was paid', async () => {
             const { store, activity, relay } = await startWithInvoice();
             settleOnNode();
@@ -5200,6 +5262,50 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
         expect(reloaded.totalSpendSats).toBe(10050);
         await jest.advanceTimersByTimeAsync(1000);
         expect(persistedConnections()[0].totalSpendSats).toBe(10050);
+    });
+
+    it('lists a payment settled while the connections were reloaded with list_transactions', async () => {
+        const invoice = 'lnbc1timeout-list-during-reload';
+        const paymentHash = hex64('5');
+        const paymentsStore = {
+            payments: [] as Payment[],
+            getPayments: jest.fn(async () => [])
+        };
+        const {
+            store,
+            connections: [connection]
+        } = await startService(
+            [
+                {
+                    maxAmountSats: 20000,
+                    activity: [timeoutFailedActivity(invoice, { paymentHash })]
+                }
+            ],
+            { paymentsStore }
+        );
+        (store as any).lastPendingPaymentStatusFetchByConnection.clear();
+        const fetched = holdNextCall<Payment[]>(paymentsStore.getPayments);
+
+        const listing = (store as any).handleListTransactions(connection, {});
+        await fetched.entered;
+        await store.loadConnections();
+        paymentsStore.payments = [
+            new Payment({
+                payment_request: invoice,
+                payment_hash: paymentHash,
+                status: 'SUCCEEDED',
+                value_sat: 10000,
+                fee_sat: '50',
+                payment_preimage: hex64('9')
+            })
+        ];
+        fetched.release(paymentsStore.payments);
+        const listed = await listing;
+
+        expect(store.connections[0].activity[0].status).toBe('success');
+        expect(listed.result.transactions.map((tx: any) => tx.state)).toEqual([
+            'settled'
+        ]);
     });
 
     it('promotes a timeout-failed pay_invoice to pending when the node still shows in-flight', async () => {
