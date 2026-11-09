@@ -157,10 +157,10 @@ export default class Privacy extends React.Component<
     handleMempoolInstanceChange = async (value: string) => {
         const changed = value !== this.state.mempoolInstance;
         this.setState({ mempoolInstance: value });
+        if (changed) alertStore.clearMempoolError();
         await this.props.SettingsStore.updateSettingsGroup('privacy', {
             mempoolInstance: value
         });
-        if (changed) alertStore.clearMempoolError();
     };
 
     handleCustomMempoolUrlChange = (text: string) => {
@@ -169,7 +169,7 @@ export default class Privacy extends React.Component<
         this.props.SettingsStore.updateSettingsGroupDebounced('privacy', {
             customMempoolInstance: text
         });
-        alertStore.clearMempoolError();
+        if (text.trim()) alertStore.clearMempoolError();
     };
 
     renderSeparator = () => (

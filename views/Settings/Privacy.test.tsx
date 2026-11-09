@@ -197,4 +197,52 @@ describe('Privacy mempool instance change', () => {
 
         expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
     });
+
+    it('clears the alert before the settings write resolves', async () => {
+        const { view, SettingsStore } = makeView({
+            mempoolInstance: 'https://mempool.space'
+        });
+
+        let resolveWrite: () => void = () => {};
+        SettingsStore.updateSettingsGroup.mockImplementation(
+            () =>
+                new Promise<void>((resolve) => {
+                    resolveWrite = resolve;
+                })
+        );
+
+        const promise = view.handleMempoolInstanceChange('https://example.com');
+
+        // The clear must have fired before the await resolves.
+        expect(alertStore.clearMempoolError).toHaveBeenCalledTimes(1);
+
+        resolveWrite();
+        await promise;
+    });
+
+    it('does not clear the alert for an empty custom URL', () => {
+        const { view } = makeView({
+            mempoolInstance: 'Custom',
+            customMempoolInstance: 'https://mempool.space'
+        });
+
+        view.handleCustomMempoolUrlChange('');
+
+        expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
+    });
+
+    it('still saves an empty custom URL', () => {
+        const { view, SettingsStore } = makeView({
+            mempoolInstance: 'Custom',
+            customMempoolInstance: 'https://mempool.space'
+        });
+
+        view.handleCustomMempoolUrlChange('');
+
+        expect(SettingsStore.updateSettingsGroupDebounced).toHaveBeenCalledWith(
+            'privacy',
+            { customMempoolInstance: '' }
+        );
+        expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
+    });
 });
