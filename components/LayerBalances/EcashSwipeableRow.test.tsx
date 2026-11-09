@@ -2,7 +2,11 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-jest.mock('react-native-blob-util', () => ({}));
+// the request fetchLnurlUrl sends for each hop
+const mockFetch = jest.fn();
+jest.mock('react-native-blob-util', () => ({
+    config: () => ({ fetch: (...args: any[]) => mockFetch(...args) })
+}));
 // the lnurl resolve behind getLnurlParams
 const mockFetchLnurlParams = jest.fn();
 jest.mock('../../utils/LnurlFetchUtils', () => ({
@@ -34,12 +38,14 @@ const asLnurl = (target: string) =>
     );
 
 // A locked row pays its destination when tapped
-const tapRow = async (lightning: string) => {
+const tapRow = (lightning: string) => tapRowWith({ lightning });
+
+const tapRowWith = async (destination: any) => {
     const navigation = { navigate: jest.fn() };
     await render(
         <EcashSwipeableRow
             {...({
-                lightning,
+                ...destination,
                 locked: true,
                 navigation,
                 SyncStore: { isSyncing: false }
@@ -121,5 +127,82 @@ describe('EcashSwipeableRow lnurl resolve', () => {
 
         expectAlert('utils.handleAnything.invalidLnurlParams');
         expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+});
+
+describe('EcashSwipeableRow LNURL errors', () => {
+    let alertSpy: jest.SpyInstance;
+
+    const alertedMessage = () => alertSpy.mock.calls[0]?.[1];
+
+    beforeEach(() => {
+        mockFetch.mockReset();
+        // resolve for real, over the mocked request
+        mockFetchLnurlParams.mockImplementation(
+            jest.requireActual('../../utils/LnurlFetchUtils').fetchLnurlParams
+        );
+        alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+
+    afterEach(() => alertSpy.mockRestore());
+
+    // #5060: this error used to end up as an unhandled rejection
+    it('alerts on an .onion LNURL error response', async () => {
+        // the row is only tappable with a lightning value
+        const navigation = await tapRowWith({
+            lightning: asLnurl('http://example.onion/lnurl'),
+            lnurlParams: {
+                status: 'ERROR',
+                domain: 'example.onion',
+                reason: 'unreachable'
+            }
+        });
+
+        expect(alertedMessage()).toBe('example.onion says: unreachable');
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    // decode-uri-component's `$\`` / `$'` blowup (#4553). The resolve
+    // refuses the query before any request; the row shows the same message
+    // handleAnything does, not the raw URIError.
+    it('alerts that a LNURL with an undecodable query is invalid', async () => {
+        const query = '%24%60x%24%27y'.repeat(100) + '%';
+
+        const navigation = await tapRow(
+            `lnurlw://example.com/withdraw?x=${query}`
+        );
+
+        expect(alertedMessage()).toBe(
+            'utils.handleAnything.invalidLnurlParams'
+        );
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('keeps the host policy message for a refused LNURL', async () => {
+        const navigation = await tapRow('lnurlw://192.168.1.1/withdraw');
+
+        expect(alertedMessage()).toBe('utils.lnurl.unsafeEndpoint');
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('opens ReceiveEcash for a valid withdraw LNURL', async () => {
+        const params = {
+            tag: 'withdrawRequest',
+            callback: 'https://example.com/callback',
+            k1: 'k1'
+        };
+        mockFetch.mockResolvedValue({
+            info: () => ({ status: 200 }),
+            json: () => params
+        });
+
+        const navigation = await tapRow('lnurlw://example.com/withdraw');
+
+        expect(navigation.navigate).toHaveBeenCalledWith('ReceiveEcash', {
+            lnurlParams: { ...params, domain: 'example.com' }
+        });
+        expect(alertSpy).not.toHaveBeenCalled();
     });
 });
