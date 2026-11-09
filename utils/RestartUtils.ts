@@ -2,8 +2,11 @@ import { Alert, NativeModules, Platform } from 'react-native';
 import RNRestart from 'react-native-restart';
 import { IN_APP_RESTART } from './InAppRestartUtils';
 import { localeString } from './LocaleUtils';
+import { stopLnd } from './LndMobileUtils';
 import { settingsStore } from '../stores/Stores';
 import LdkNode from '../ldknode/LdkNodeInjection';
+
+const STOP_NODE_TIMEOUT_MS = 10000;
 
 interface Button {
     style: 'cancel' | 'default' | 'destructive' | undefined;
@@ -16,8 +19,7 @@ const stopNode = async () => {
 
     if (implementation === 'embedded-lnd') {
         try {
-            await NativeModules.LndMobile.stopLnd();
-            await NativeModules.LndMobileTools.killLnd();
+            await stopLnd();
         } catch (e) {
             console.log('Error stopping LND:', e);
         }
@@ -51,6 +53,16 @@ const restartApp = () => {
     }
 };
 
+const stopNodeAndRestart = async () => {
+    await Promise.race([
+        stopNode(),
+        new Promise<void>((resolve) =>
+            setTimeout(resolve, STOP_NODE_TIMEOUT_MS)
+        )
+    ]);
+    restartApp();
+};
+
 const restartNeeded = (force?: boolean) => {
     const title = localeString('restart.title');
     const message = localeString('restart.msg');
@@ -67,9 +79,8 @@ const restartNeeded = (force?: boolean) => {
             text: force
                 ? localeString('views.Wallet.restart')
                 : localeString('general.yes'),
-            onPress: async () => {
-                await stopNode();
-                restartApp();
+            onPress: () => {
+                stopNodeAndRestart();
             }
         });
         Alert.alert(
@@ -82,4 +93,4 @@ const restartNeeded = (force?: boolean) => {
     }
 };
 
-export { restartApp, restartNeeded };
+export { restartApp, restartNeeded, stopNodeAndRestart };

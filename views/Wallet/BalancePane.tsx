@@ -12,7 +12,6 @@ import {
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import RNRestart from 'react-native-restart';
 
 import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
@@ -22,8 +21,8 @@ import SyncingStatus from '../../components/SyncingStatus';
 import RecoveryStatus from '../../components/RecoveryStatus';
 import RescanStatus from '../../components/RescanStatus';
 
-import { IN_APP_RESTART } from '../../utils/InAppRestartUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { restartApp } from '../../utils/RestartUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -176,7 +175,7 @@ export default class BalancePane extends React.PureComponent<
                     onPress: async () => {
                         await Storage.removeItem(CHANNEL_MIGRATION_ACTIVE);
                         this.props.onUnlock();
-                        RNRestart.Restart(IN_APP_RESTART);
+                        restartApp();
                     }
                 }
             ]
