@@ -80,7 +80,6 @@ export interface NWCConnectionData {
     implementation: string;
     walletConfigId?: string;
     activity?: ConnectionActivity[];
-    processedEventIds?: string[];
     metadata?: any;
 }
 export interface ConnectionWarning {
@@ -138,7 +137,6 @@ export default class NWCConnection extends BaseModel {
     walletConfigId?: string;
     @observable metadata?: any;
     @observable activity: ConnectionActivity[] = [];
-    @observable processedEventIds: string[] = [];
     @observable private _warningTypes: ConnectionWarningType[] = [];
 
     constructor(data?: NWCConnectionData) {
@@ -195,10 +193,6 @@ export default class NWCConnection extends BaseModel {
             });
         } else if (!this.activity) {
             this.activity = [];
-        }
-
-        if (!this.processedEventIds) {
-            this.processedEventIds = [];
         }
     }
     @computed public get isExpired(): boolean {
