@@ -352,6 +352,9 @@ export default class CashuStore {
     // The reconnect callback outlives reset(), so it is registered once
     // per store rather than on every initializeWallets()
     private reconnectCallbackRegistered: boolean = false;
+    // Bumped by reset() so background work started for one wallet session
+    // can tell that the wallet changed while it ran
+    private walletSession = 0;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -2053,6 +2056,7 @@ export default class CashuStore {
         // wallet's initializeCDK succeeds, so gated methods must not run
         // against it in between, or at all if that init fails
         this.cdkInitialized = false;
+        this.walletSession++;
         this.cashuWallets = {};
         this.totalBalanceSats = 0;
         this.mintBalances = {};
@@ -3586,6 +3590,9 @@ export default class CashuStore {
     public recoverIncompleteSagas = async () => {
         if (!this.cdkInitialized || this.isOffline) return;
 
+        // reset() clears the bookkeeping below for the next wallet, which
+        // can use the same mint, so a run that outlives it records nothing
+        const session = this.walletSession;
         const now = Date.now();
         const mints = this.mintUrls.filter((url) => {
             const key = this.normalizeMintUrl(url);
@@ -3615,6 +3622,7 @@ export default class CashuStore {
                     const report = await CashuDevKit.recoverIncompleteSagas(
                         mintUrl
                     );
+                    if (session !== this.walletSession) return null;
                     // An operation was in flight on the mint: try again on
                     // the next check, without using up an attempt
                     if (!report) return null;
@@ -3627,11 +3635,12 @@ export default class CashuStore {
                     }
                     return report;
                 } catch (e) {
-                    countAttempt(key);
                     console.error(
                         `CashuStore: Saga recovery failed for ${mintUrl}:`,
                         e
                     );
+                    if (session !== this.walletSession) return null;
+                    countAttempt(key);
                     return null;
                 }
             })

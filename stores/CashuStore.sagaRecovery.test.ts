@@ -193,6 +193,72 @@ describe('CashuStore.recoverIncompleteSagas', () => {
         expect(recover).toHaveBeenCalledTimes(2);
     });
 
+    describe('when the wallet changes while recovery runs', () => {
+        // A recovery started for one wallet, held until the next wallet,
+        // which uses the same mint, has been set up
+        const switchWallets = (store: CashuStore) => {
+            let settle!: {
+                resolve: (value: unknown) => void;
+                reject: (e: Error) => void;
+            };
+            recover.mockReturnValueOnce(
+                new Promise((resolve, reject) => {
+                    settle = { resolve, reject };
+                })
+            );
+            const run = store.recoverIncompleteSagas();
+            store.reset();
+            store.cdkInitialized = true;
+            store.mintUrls = [A];
+            return { run, settle };
+        };
+
+        it('does not mark the mint done for the next wallet', async () => {
+            const { store } = newStore([A]);
+            const { run, settle } = switchWallets(store);
+
+            settle.resolve(report());
+            await run;
+
+            await store.recoverIncompleteSagas();
+            expect(recover).toHaveBeenCalledTimes(2);
+        });
+
+        it('does not use up an attempt or hold off the next wallet', async () => {
+            const { store } = newStore([A]);
+            const { run, settle } = switchWallets(store);
+
+            settle.reject(
+                new Error(
+                    'WalletSqliteDatabase object has already been destroyed'
+                )
+            );
+            await run;
+
+            recover.mockResolvedValue(report({ failed: 1 }));
+            // Straight away, not a minute later
+            await store.recoverIncompleteSagas();
+            expect(recover).toHaveBeenCalledTimes(2);
+            for (let i = 0; i < 4; i++) {
+                await recoverLater(store);
+            }
+            // All three of the next wallet's attempts
+            expect(recover).toHaveBeenCalledTimes(4);
+        });
+
+        it('does not reload the next wallet', async () => {
+            const { store, sync, reconcile } = newStore([A]);
+            const { run, settle } = switchWallets(store);
+
+            settle.resolve(report({ recovered: 1 }));
+            await run;
+
+            expect(sync).not.toHaveBeenCalled();
+            expect(reconcile).not.toHaveBeenCalled();
+            expect(mockActivityStore.getSortedActivity).not.toHaveBeenCalled();
+        });
+    });
+
     it('does nothing offline or before CDK is initialized', async () => {
         const { store } = newStore();
         mockConnectivity.isOffline = true;
