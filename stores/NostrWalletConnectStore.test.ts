@@ -115,6 +115,7 @@ import NostrWalletConnectStore, {
     NWC_LUD16_ENABLED,
     NWC_PERSISTENT_SERVICE_ENABLED,
     NWC_SERVICE_KEYS,
+    MAX_IN_FLIGHT_HANDLER_MS,
     RELAY_RELEASE_GRACE_MS
 } from './NostrWalletConnectStore';
 
@@ -1577,12 +1578,104 @@ describe('NostrWalletConnectStore relay release', () => {
 
         await store.reset(true);
 
-        expect(oldRelay.close).toHaveBeenCalledTimes(1);
-        expect(newRelay.close).toHaveBeenCalledTimes(1);
-        expect(subscribedAtClose).toEqual([0, 0]);
         expect((store as any).nwcWalletServices.size).toBe(0);
         expect(isSubscribed(first)).toBe(false);
         expect(isSubscribed(second)).toBe(false);
+        await jest.advanceTimersByTimeAsync(RELAY_RELEASE_GRACE_MS - 1);
+        expect(oldRelay.close).not.toHaveBeenCalled();
+        expect(newRelay.close).not.toHaveBeenCalled();
+        await jest.advanceTimersByTimeAsync(1);
+        expect(oldRelay.close).toHaveBeenCalledTimes(1);
+        expect(newRelay.close).toHaveBeenCalledTimes(1);
+        expect(subscribedAtClose).toEqual([0, 0]);
+    });
+
+    it('keeps a relay open after a reset until a request in flight has replied', async () => {
+        const {
+            store,
+            balanceStore,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const balanceCall = holdNextCall<{ lightningBalance: number }>(
+            balanceStore.getLightningBalance
+        );
+        const inFlight = clientFor(connection).getBalance();
+        await settle(balanceCall.entered);
+
+        await store.reset(true);
+        await jest.advanceTimersByTimeAsync(RELAY_RELEASE_GRACE_MS * 2);
+
+        expect(relay.close).not.toHaveBeenCalled();
+        balanceCall.release({ lightningBalance: 5000 });
+        expect((await inFlight).error).toBeUndefined();
+        await jest.advanceTimersByTimeAsync(RELAY_RELEASE_GRACE_MS - 1);
+        expect(relay.close).not.toHaveBeenCalled();
+        await jest.advanceTimersByTimeAsync(1);
+        expect(relay.close).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the relays after a reset once a request in flight has run for the longest a request can take', async () => {
+        const {
+            store,
+            balanceStore,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const balanceCall = holdNextCall<{ lightningBalance: number }>(
+            balanceStore.getLightningBalance
+        );
+        const inFlight = clientFor(connection).getBalance();
+        await settle(balanceCall.entered);
+
+        await store.reset(true);
+        await jest.advanceTimersByTimeAsync(
+            MAX_IN_FLIGHT_HANDLER_MS + RELAY_RELEASE_GRACE_MS - 1
+        );
+        expect(relay.close).not.toHaveBeenCalled();
+        await jest.advanceTimersByTimeAsync(1);
+        expect(relay.close).toHaveBeenCalledTimes(1);
+
+        balanceCall.release({ lightningBalance: 5000 });
+        await inFlight;
+    });
+
+    it('leaves the relays a restart opens alone when it closes the ones a reset dropped', async () => {
+        // The SDK builds a new service, with its own pool, on every start
+        (NWCWalletService as unknown as jest.Mock).mockImplementation(
+            ({ relayUrls }: { relayUrls: string[] }) => {
+                const relay = createFakeRelay(relayUrls[0]);
+                relays.set(relayUrls[0], relay);
+                return relay;
+            }
+        );
+        const {
+            store,
+            balanceStore,
+            connections: [connection]
+        } = await startService();
+        const droppedRelay = relayFor(OLD_RELAY);
+        const balanceCall = holdNextCall<{ lightningBalance: number }>(
+            balanceStore.getLightningBalance
+        );
+        const inFlight = clientFor(connection).getBalance();
+        await settle(balanceCall.entered);
+
+        await store.reset(true);
+        await store.initializeService();
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+        const restartedRelay = relays.get(OLD_RELAY)!;
+        balanceCall.release({ lightningBalance: 5000 });
+        await inFlight;
+        await jest.advanceTimersByTimeAsync(RELAY_RELEASE_GRACE_MS);
+
+        expect(restartedRelay).not.toBe(droppedRelay);
+        expect(droppedRelay.close).toHaveBeenCalledTimes(1);
+        expect(restartedRelay.close).not.toHaveBeenCalled();
+        expect(isSubscribed(connection)).toBe(true);
+        expect(
+            (await clientFor(connection).getBalance()).error
+        ).toBeUndefined();
     });
 
     it('closes the remaining relays when one fails to close on reset', async () => {
@@ -1595,6 +1688,7 @@ describe('NostrWalletConnectStore relay release', () => {
         });
 
         await store.reset(true);
+        await jest.advanceTimersByTimeAsync(RELAY_RELEASE_GRACE_MS);
 
         expect(oldRelay.close).toHaveBeenCalled();
         expect(newRelay.close).toHaveBeenCalled();
@@ -1616,6 +1710,7 @@ describe('NostrWalletConnectStore relay release', () => {
         });
 
         await expect(store.reset(true)).rejects.toThrow('unsubscribe failed');
+        await jest.advanceTimersByTimeAsync(RELAY_RELEASE_GRACE_MS);
 
         expect(oldRelay.close).toHaveBeenCalledTimes(1);
         expect(newRelay.close).toHaveBeenCalledTimes(1);
@@ -1634,6 +1729,7 @@ describe('NostrWalletConnectStore relay release', () => {
 
         // AppState 'inactive' on iOS with active connections
         await store.reset();
+        await jest.advanceTimersByTimeAsync(RELAY_RELEASE_GRACE_MS);
 
         expect(oldRelay.close).not.toHaveBeenCalled();
         expect(newRelay.close).not.toHaveBeenCalled();
