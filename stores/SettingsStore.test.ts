@@ -284,6 +284,20 @@ describe('SettingsStore.connect (LNC)', () => {
         }
     );
 
+    it('ignores a selection change when asked to, but not a reconnect', () => {
+        const store = new SettingsStore();
+        store.settings.selectedNode = 2;
+        const isCurrent = store.getConnectionGuard({
+            ignoreSelectedNode: true
+        });
+
+        store.settings.selectedNode = 1;
+        expect(isCurrent()).toBe(true);
+
+        store.setConnectingStatus(true);
+        expect(isCurrent()).toBe(false);
+    });
+
     it('does not connect a new backend after selection changes during initialization', async () => {
         const store = new SettingsStore();
         BackendUtilsMock.initLNC.mockImplementation(async () => {
