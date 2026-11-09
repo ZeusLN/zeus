@@ -929,6 +929,31 @@ describe('LightningNodeConnect', () => {
             expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledTimes(2);
         });
 
+        it('ends a stream on its EOF, so the next lookup reopens', async () => {
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            const firstId = trackRequestId();
+            emit(paymentEvent('IN_FLIGHT'), firstId);
+            await first;
+
+            // closed without a terminal update: its in-flight state is stale
+            emit('EOF', firstId);
+            const next = backend.lookupPayment({ payment_hash: HASH });
+            expect(trackCalls()).toHaveLength(2);
+            emit(paymentEvent('SUCCEEDED'), trackRequestId());
+            await expect(next).resolves.toMatchObject({
+                status: 'SUCCEEDED'
+            });
+            expect(lnc.lnd.lightning.listPayments).not.toHaveBeenCalled();
+        });
+
+        it('settles a lookup waiting on a stream that sends EOF by the scan', async () => {
+            lnc.lnd.lightning.listPayments.mockResolvedValue({ payments: [] });
+            const lookup = backend.lookupPayment({ payment_hash: HASH });
+            emit('EOF', trackRequestId());
+            await expect(lookup).resolves.toBeNull();
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledTimes(1);
+        });
+
         it('opens a new stream after disconnecting', async () => {
             const first = backend.lookupPayment({ payment_hash: HASH });
             emit(paymentEvent('IN_FLIGHT'));

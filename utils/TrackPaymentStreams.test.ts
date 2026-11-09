@@ -178,6 +178,29 @@ describe('TrackPaymentStreams', () => {
         expect(open).toHaveBeenCalledTimes(2);
     });
 
+    it('ends a taken-back stream on its own error', async () => {
+        const open = jest.fn();
+        const first = streams.lookup(HASH, 10000, open);
+        streams.update(HASH, { status: 'IN_FLIGHT' }, false);
+        await first;
+        const firstId = open.mock.calls[0][0];
+
+        jest.advanceTimersByTime(MAX_AGE_MS);
+        const fresh = streams.lookup(HASH, 10000, open);
+        streams.fail(new Error('transport dropped'), open.mock.calls[1][0]);
+        await expect(fresh).rejects.toThrow('transport dropped');
+
+        // the first stream answers again and is taken back under its id,
+        // so its EOF ends it and the next lookup reopens
+        streams.update(HASH, { status: 'IN_FLIGHT' }, false, firstId);
+        expect(streams.size).toBe(1);
+        streams.fail(new Error('EOF'), firstId);
+        expect(streams.size).toBe(0);
+        streams.lookup(HASH, 10000, open).catch(() => {});
+        await flush();
+        expect(open).toHaveBeenCalledTimes(3);
+    });
+
     it('ignores a terminal update for a hash with no stream', () => {
         streams.update(HASH, { status: 'SUCCEEDED' }, true);
         expect(streams.size).toBe(0);

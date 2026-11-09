@@ -530,7 +530,8 @@ export default class LightningNodeConnect {
             this.trackPaymentStreams.update(
                 decision.hash,
                 decision.result,
-                isTerminalPaymentStatus(decision.result.status)
+                isTerminalPaymentStatus(decision.result.status),
+                event?.request_id
             );
         } else if (decision.kind === 'error') {
             this.trackPaymentStreams.fail(decision.error, event?.request_id);

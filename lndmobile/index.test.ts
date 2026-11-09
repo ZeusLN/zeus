@@ -163,7 +163,7 @@ describe('trackPaymentV2', () => {
         });
     });
 
-    it('ignores EOF, transient errors, and payload-less events', async () => {
+    it('ignores untagged EOF, transient errors, and payload-less events', async () => {
         const promise = trackPaymentV2(HASH_HEX);
         emit({ error_code: 1, error_desc: 'EOF' });
         emit({ error_code: 1, error_desc: 'transient' });
@@ -171,6 +171,49 @@ describe('trackPaymentV2', () => {
         emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.FAILED));
         await expect(promise).resolves.toMatchObject({
             status: lnrpc.Payment.PaymentStatus.FAILED
+        });
+    });
+
+    it('ends a stream on its EOF, so the next lookup reopens', async () => {
+        const first = trackPaymentV2(HASH_HEX);
+        const firstId = trackRequestId();
+        emit({
+            ...paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT),
+            request_id: firstId
+        });
+        await first;
+
+        // closed without a terminal update: its in-flight state is stale
+        emit({ error_code: 'Error', error_desc: 'EOF', request_id: firstId });
+        const next = trackPaymentV2(HASH_HEX);
+        expect(sendStreamCommand).toHaveBeenCalledTimes(2);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(next).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
+    });
+
+    it('rejects a waiting lookup when its stream sends EOF', async () => {
+        const promise = trackPaymentV2(HASH_HEX);
+        emit({
+            error_code: 'Error',
+            error_desc: 'EOF',
+            request_id: trackRequestId()
+        });
+        await expect(promise).rejects.toThrow('EOF');
+    });
+
+    it('ignores the EOF that follows a terminal update', async () => {
+        const first = trackPaymentV2(HASH_HEX);
+        const firstId = trackRequestId();
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await first;
+
+        const next = trackPaymentV2(HASH_HEX);
+        emit({ error_code: 'Error', error_desc: 'EOF', request_id: firstId });
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(next).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
         });
     });
 

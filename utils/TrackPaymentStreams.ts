@@ -38,8 +38,8 @@ type Stream<P> = {
  *
  * Both transports emit every track stream's events under one name. Each
  * stream is started with its own request id, which the native modules
- * echo on all of its events, so an error (which carries no hash) ends
- * only the stream it names. Updates are attributed by the hash they
+ * echo on all of its events, so an error or EOF (which carry no hash)
+ * ends only the stream it names. Updates are attributed by the hash they
  * carry, so one from a stream replaced after the max age still counts
  * for its hash.
  */
@@ -108,18 +108,27 @@ export default class TrackPaymentStreams<P> {
         return promise;
     };
 
-    // An update for `hash` arrived. A terminal update ends the stream, so
-    // the next lookup opens a new one (which answers and closes at once).
-    // An in-flight update for a hash with no stream comes from one that is
-    // still open but no longer tracked, e.g. a stream replaced after the
-    // max age whose replacement then failed: serve from it again instead
-    // of opening another on the next lookup.
-    update = (hash: string, payment: P, terminal: boolean) => {
+    // An update for `hash` arrived on the stream started with `requestId`.
+    // A terminal update ends the stream, so the next lookup opens a new one
+    // (which answers and closes at once). An in-flight update for a hash
+    // with no stream comes from one that is still open but no longer
+    // tracked, e.g. a stream replaced after the max age whose replacement
+    // then failed: serve from it again instead of opening another on the
+    // next lookup, under its own request id so its error or EOF can end it.
+    update = (
+        hash: string,
+        payment: P,
+        terminal: boolean,
+        requestId?: unknown
+    ) => {
         const key = hash.toLowerCase();
         let stream = this.streams.get(key);
         if (!stream) {
             if (terminal) return;
             stream = { openedAt: Date.now(), waiters: new Set() };
+            if (typeof requestId === 'string' && requestId !== '') {
+                stream.requestId = requestId;
+            }
             this.streams.set(key, stream);
         }
         stream.latest = payment;
@@ -129,10 +138,13 @@ export default class TrackPaymentStreams<P> {
         waiters.forEach((waiter) => waiter.resolve(payment));
     };
 
-    // An error event arrived. It ends the stream started with
+    // An error or EOF event arrived. It ends the stream started with
     // `requestId`: that stream's waiting lookups fail and the next lookup
-    // opens a new one. Errors without the id of a tracked stream belong to
-    // streams already replaced or forgotten and are dropped.
+    // opens a new one. Events without the id of a tracked stream belong to
+    // streams already replaced or forgotten and are dropped. lnd sends EOF
+    // only after a stream's terminal update, which has already forgotten
+    // it, so an EOF that ends a stream here is one that closed without a
+    // terminal update.
     fail = (error: any, requestId: unknown) => {
         if (typeof requestId !== 'string' || requestId === '') return;
         for (const [key, stream] of this.streams) {

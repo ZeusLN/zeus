@@ -179,8 +179,7 @@ describe('decideLncTrackEvent', () => {
         payment_hash: SPEC_HASH_HEX
     });
 
-    it('ignores EOF and empty events', () => {
-        expect(decideLncTrackEvent('EOF').kind).toBe('ignore');
+    it('ignores empty events', () => {
         expect(decideLncTrackEvent('').kind).toBe('ignore');
         expect(decideLncTrackEvent(undefined).kind).toBe('ignore');
         expect(decideLncTrackEvent(null).kind).toBe('ignore');
@@ -227,6 +226,14 @@ describe('decideLncTrackEvent', () => {
                 expect(decision.error).toBeInstanceOf(Error);
                 expect(decision.error.message).toBe(raw);
             }
+        }
+    });
+
+    it('turns EOF into an error, so the stream it closes can end', () => {
+        const decision = decideLncTrackEvent('EOF');
+        expect(decision.kind).toBe('error');
+        if (decision.kind === 'error') {
+            expect(decision.error.message).toBe('EOF');
         }
     });
 

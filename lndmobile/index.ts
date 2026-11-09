@@ -478,8 +478,12 @@ const trackPaymentStreams = new TrackPaymentStreams<lnrpc.Payment>({
 const onTrackPaymentEvent = (e: any) => {
     try {
         const error = checkLndStreamErrorResponse('RouterTrackPaymentV2', e);
-        if (error === 'EOF') return;
-        if (error) return trackPaymentStreams.fail(error, e?.request_id);
+        if (error) {
+            return trackPaymentStreams.fail(
+                error === 'EOF' ? new Error('EOF') : error,
+                e?.request_id
+            );
+        }
         // a transient (null) error report carries no payload
         if (!e?.data) return;
 
@@ -488,7 +492,8 @@ const onTrackPaymentEvent = (e: any) => {
         trackPaymentStreams.update(
             response.payment_hash,
             response,
-            isTerminalPaymentStatus(response.status)
+            isTerminalPaymentStatus(response.status),
+            e?.request_id
         );
     } catch (error: any) {
         trackPaymentStreams.fail(
