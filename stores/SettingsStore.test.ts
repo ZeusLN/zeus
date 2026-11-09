@@ -1828,6 +1828,57 @@ describe('SettingsStore write guards', () => {
         expect(store.settingsLoadFailed).toEqual(false);
     });
 
+    it('writes onto the loaded settings when a re-read fails after a successful load', async () => {
+        // Mid-session `settings` is the last loaded copy, not the
+        // defaults. Refusing here would resolve with the unchanged
+        // settings, which callers such as the wallet deletion cannot
+        // tell apart from a write that landed.
+        seedSettings({ nodes: [nodeA, nodeB], selectedNode: 0, fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+        StorageMock.getItem.mockRejectedValueOnce(
+            new Error('errSecInteractionNotAllowed')
+        );
+
+        const result = await store.updateSettings((current: any) => ({
+            nodes: current.nodes.filter((_: any, i: number) => i !== 0)
+        }));
+
+        expect(result.nodes).toEqual([nodeB]);
+        expect(persistedSettings().nodes).toEqual([nodeB]);
+        expect(persistedSettings().fiat).toEqual('USD');
+        expect(store.settingsLoadFailed).toEqual(false);
+    });
+
+    it('replaces a blob that turns corrupt after a successful load with the loaded copy', async () => {
+        seedSettings({ nodes: [nodeA, nodeB], fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+        StorageMock._backing[STORAGE_KEY] = '{"nodes":[{"host":"a.exa';
+
+        await store.updateSettings({ fiat: 'EUR' });
+
+        expect(persistedSettings().nodes).toHaveLength(2);
+        expect(persistedSettings().fiat).toEqual('EUR');
+        expect(store.settingsLoadFailed).toEqual(false);
+    });
+
+    it('writes onto the loaded settings when the synchronizable fallback read fails after a successful load', async () => {
+        seedSettings({ nodes: [nodeA], fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+        delete StorageMock._backing[STORAGE_KEY];
+        StorageMock.getRawItem.mockRejectedValueOnce(
+            new Error('errSecInteractionNotAllowed')
+        );
+
+        await store.updateSettings({ fiat: 'EUR' });
+
+        expect(persistedSettings().nodes).toHaveLength(1);
+        expect(persistedSettings().fiat).toEqual('EUR');
+        expect(store.settingsLoadFailed).toEqual(false);
+    });
+
     it('refuses to persist an empty wallet list over an existing one', async () => {
         seedSettings({ nodes: [nodeA, nodeB], selectedNode: 0 });
         const store = new SettingsStore();

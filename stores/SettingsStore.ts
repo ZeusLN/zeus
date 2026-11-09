@@ -1759,9 +1759,12 @@ export default class SettingsStore {
     @observable public loading = false;
     @observable public isMigrating = false;
     // Set when the persisted settings blob could not be read or parsed,
-    // as opposed to genuinely not existing. `this.settings` then still
-    // holds the defaults, which carry no `nodes`, so writes are refused
-    // until a later load succeeds. See setSettings.
+    // as opposed to genuinely not existing, before any load this session
+    // succeeded. `this.settings` then still holds the defaults, which
+    // carry no `nodes`, so writes are refused until a later load
+    // succeeds. See setSettings. A failed read after a successful load
+    // does not set it: `this.settings` is then the last loaded copy,
+    // and writes merge onto that.
     @observable public settingsLoadFailed = false;
     // The serialized blob last read from or written to the device-local
     // settings item, or null when unknown. See applySettingsUpdate.
@@ -2170,11 +2173,16 @@ export default class SettingsStore {
                 // A read that FAILED is not a user with no wallets. The
                 // keychain rejects for anything other than "not found"
                 // (locked item, missing entitlement, Android decryption
-                // failure), and `this.settings` is still the default
-                // object, which has no `nodes`. Latch writes off so the
-                // caller that follows cannot merge onto those defaults
-                // and persist a wallet-less blob over the real one.
-                this.settingsLoadFailed = true;
+                // failure). Before the first successful load
+                // `this.settings` is still the default object, which has
+                // no `nodes`, so latch writes off: the caller that
+                // follows must not merge onto those defaults and persist
+                // a wallet-less blob over the real one. After a
+                // successful load it is the last loaded copy, which is a
+                // safe base, and refusing would leave callers such as
+                // the wallet deletion and the PIN attempt counter
+                // unable to tell that their write did not land.
+                this.settingsLoadFailed = !this.settingsLoaded;
                 this.persistedBlob = null;
                 console.error('Could not read settings', error);
                 return this.settings;
@@ -2208,7 +2216,9 @@ export default class SettingsStore {
                     // clear and the next write would put the defaults in
                     // the local partition, which every later read
                     // prefers, shadowing the synchronizable copy for good.
-                    this.settingsLoadFailed = true;
+                    // Latched only before the first successful load, as
+                    // for a failed device-local read.
+                    this.settingsLoadFailed = !this.settingsLoaded;
                     console.error(
                         'Could not read synchronizable settings fallback',
                         error
@@ -2226,8 +2236,10 @@ export default class SettingsStore {
                     // Same reasoning as a failed read: a truncated or
                     // corrupt blob is not an empty wallet list, and
                     // overwriting it destroys the only copy of the
-                    // user's wallet configurations.
-                    this.settingsLoadFailed = true;
+                    // user's wallet configurations. After a successful
+                    // load, the last loaded copy is the better data and
+                    // writing it repairs the blob.
+                    this.settingsLoadFailed = !this.settingsLoaded;
                     this.persistedBlob = null;
                     console.error('Could not parse settings', error);
                     return this.settings;
@@ -2316,8 +2328,9 @@ export default class SettingsStore {
     // Two further refusals protect the persisted wallet list from being
     // replaced by state the app never actually read:
     //
-    // 1. `settingsLoadFailed` - the last load threw, so the in-memory
-    //    settings are the defaults rather than the user's. Writing them
+    // 1. `settingsLoadFailed` - no load has succeeded yet and the last
+    //    one threw, so the in-memory settings are the defaults rather
+    //    than the user's. Writing them
     //    would persist a wallet-less blob over the real one. The latch
     //    clears on the next successful load, and every updateSettings
     //    re-reads first, so this self-heals as soon as the keychain
@@ -2354,10 +2367,7 @@ export default class SettingsStore {
             (await Storage.setItem(STORAGE_KEY, settings)) !== false;
         if (persisted) {
             this.settings = settings;
-            this.persistedBlob =
-                typeof settings === 'string'
-                    ? settings
-                    : JSON.stringify(settings);
+            this.persistedBlob = JSON.stringify(settings);
         }
         return persisted;
     }
