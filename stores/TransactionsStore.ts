@@ -35,6 +35,7 @@ import NodeInfoStore from './NodeInfoStore';
 import ChannelsStore from './ChannelsStore';
 import BalanceStore from './BalanceStore';
 import ModalStore from './ModalStore';
+import { alertStore } from './Stores';
 
 const keySendPreimageType = '5482373484';
 const keySendMessageType = '34349334';
@@ -1449,22 +1450,31 @@ export default class TransactionsStore {
             'Access-Control-Allow-Origin': '*',
             'Content-Type': 'text/plain'
         };
-        return ReactNativeBlobUtil.fetch(
-            'POST',
-            `${UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo)}/tx`,
-            headers,
-            raw_tx_hex
-        )
+        const url = `${UrlUtils.getMempoolApiUrl(
+            this.nodeInfoStore.nodeInfo
+        )}/tx`;
+        return ReactNativeBlobUtil.fetch('POST', url, headers, raw_tx_hex)
             .then((response: any) => {
                 const status = response.info().status;
                 const data = response.data;
                 if (status == 200) {
+                    alertStore.clearMempoolError();
                     runInAction(() => {
                         this.loading = false;
                         this.broadcast_txid = data;
                     });
                     return data;
                 } else {
+                    // A 400 means the server is reachable and rejected the tx.
+                    // Other 4xx (like 404) leave the alert unchanged.
+                    if (status >= 500) {
+                        alertStore.setMempoolErrorFromUrl(
+                            url,
+                            `HTTP ${status}`
+                        );
+                    } else if (status === 400) {
+                        alertStore.clearMempoolError();
+                    }
                     runInAction(() => {
                         this.broadcast_err = data;
                         this.loading = false;
@@ -1472,7 +1482,12 @@ export default class TransactionsStore {
                     });
                 }
             })
-            .catch((err) => {
+            .catch((err: any) => {
+                // Thrown / timeout — the instance is unreachable
+                alertStore.setMempoolErrorFromUrl(
+                    url,
+                    errorToUserFriendly(err) || err.error || err.toString()
+                );
                 runInAction(() => {
                     this.broadcast_err = err.error || err.toString();
                     this.loading = false;

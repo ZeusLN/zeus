@@ -1,4 +1,9 @@
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores', () => ({
+    alertStore: {
+        setMempoolErrorFromUrl: jest.fn(),
+        clearMempoolError: jest.fn()
+    }
+}));
 jest.mock('react-native-blob-util', () => ({
     fetch: jest.fn()
 }));
@@ -20,6 +25,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import FeeStore from './FeeStore';
 import BackendUtils from '../utils/BackendUtils';
 import UrlUtils from '../utils/UrlUtils';
+import { alertStore } from './Stores';
 
 const newStore = () => new FeeStore({} as any, {} as any);
 
@@ -283,6 +289,8 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
         jest.mocked(UrlUtils.getMempoolApiUrl).mockReturnValue(
             'https://mempool.space/api'
         );
+        jest.mocked(alertStore.setMempoolErrorFromUrl).mockClear();
+        jest.mocked(alertStore.clearMempoolError).mockClear();
         // Keep test output clean
         jest.spyOn(console, 'error').mockImplementation(() => {});
         jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -306,7 +314,33 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
         expect(store.error).toBe(true);
         expect(store.recommendedFees).toEqual({}); // no stale rates left behind
         expect(store.loading).toBe(false);
+        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            'https://mempool.space/api/v1/fees/recommended',
+            'HTTP 500'
+        );
     });
+
+    it.each([[404], [500], [503]])(
+        'raises the alert on %i from the read endpoint',
+        async (status) => {
+            const store = newStore();
+            store.recommendedFees = { fastestFee: 3 }; // seed stale rates
+            mockedFetch.mockResolvedValueOnce({
+                info: () => ({ status }),
+                json: () => ({})
+            } as any);
+
+            await store.getOnchainFeesviaMempool();
+
+            expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+                'https://mempool.space/api/v1/fees/recommended',
+                `HTTP ${status}`
+            );
+
+            expect(store.recommendedFees).toEqual({});
+            expect(store.error).toBe(true);
+        }
+    );
 
     it('resolves undefined and sets error on a thrown network error', async () => {
         const store = newStore();
@@ -319,6 +353,10 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
         expect(store.error).toBe(true);
         expect(store.recommendedFees).toEqual({});
         expect(store.loading).toBe(false);
+        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            'https://mempool.space/api/v1/fees/recommended',
+            'Network error'
+        );
     });
 
     it.each([
@@ -340,6 +378,8 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
             expect(store.error).toBe(true);
             expect(store.recommendedFees).toEqual({}); // no stale rates left behind
             expect(store.loading).toBe(false);
+            // Server reachable, payload rejected: alert cleared
+            expect(alertStore.clearMempoolError).toHaveBeenCalled();
         }
     );
 
@@ -359,6 +399,11 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
         expect(store.error).toBe(true);
         expect(store.recommendedFees).toEqual({});
         expect(store.loading).toBe(false);
+        // Thrown during parse: goes to .catch, which raises "Invalid response"
+        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            'https://mempool.space/api/v1/fees/recommended',
+            'Invalid response'
+        );
     });
 
     it('resolves undefined when fastestFee is missing', async () => {
@@ -374,6 +419,7 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
         expect(result).toBeUndefined();
         expect(store.error).toBe(true);
         expect(store.recommendedFees).toEqual({});
+        expect(alertStore.clearMempoolError).toHaveBeenCalled();
     });
 
     it.each([[null], [[]]])(
@@ -391,6 +437,7 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
             expect(result).toBeUndefined();
             expect(store.error).toBe(true);
             expect(store.recommendedFees).toEqual({});
+            expect(alertStore.clearMempoolError).toHaveBeenCalled();
         }
     );
 
@@ -410,6 +457,7 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
             halfHourFee: 8,
             hourFee: 5
         });
+        expect(alertStore.clearMempoolError).toHaveBeenCalled();
     });
 
     it('sets loading, resets error, and stores rates on success', async () => {
@@ -439,5 +487,6 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
             'get',
             'https://mempool.space/api/v1/fees/recommended'
         );
+        expect(alertStore.clearMempoolError).toHaveBeenCalled();
     });
 });

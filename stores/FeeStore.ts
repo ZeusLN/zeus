@@ -4,6 +4,7 @@ import BigNumber from 'bignumber.js';
 
 import SettingsStore from './SettingsStore';
 import NodeInfoStore from './NodeInfoStore';
+import { alertStore } from './Stores';
 
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
@@ -54,12 +55,10 @@ export default class FeeStore {
         this.loading = true;
         this.error = false;
         this.recommendedFees = {};
-        return ReactNativeBlobUtil.fetch(
-            'get',
-            `${UrlUtils.getMempoolApiUrl(
-                this.nodeInfoStore.nodeInfo
-            )}/v1/fees/recommended`
-        )
+        const url = `${UrlUtils.getMempoolApiUrl(
+            this.nodeInfoStore.nodeInfo
+        )}/v1/fees/recommended`;
+        return ReactNativeBlobUtil.fetch('get', url)
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
@@ -73,6 +72,8 @@ export default class FeeStore {
                         console.error(
                             'Rejected implausible recommended fees response'
                         );
+                        // Server is reachable, payload is not: clear the alert
+                        alertStore.clearMempoolError();
                         runInAction(() => {
                             this.recommendedFees = {};
                             this.loading = false;
@@ -80,12 +81,15 @@ export default class FeeStore {
                         });
                         return;
                     }
+                    alertStore.clearMempoolError();
                     runInAction(() => {
                         this.loading = false;
                         this.recommendedFees = sanitized;
                     });
                     return this.recommendedFees;
                 } else {
+                    // Read endpoint: any non-2xx (incl. 404 for wrong custom URL)
+                    alertStore.setMempoolErrorFromUrl(url, `HTTP ${status}`);
                     runInAction(() => {
                         this.recommendedFees = {};
                         this.loading = false;
@@ -95,6 +99,11 @@ export default class FeeStore {
             })
             .catch((error: any) => {
                 console.error('Error fetching fees:', error);
+                const msg =
+                    error instanceof SyntaxError
+                        ? 'Invalid response'
+                        : errorToUserFriendly(error);
+                alertStore.setMempoolErrorFromUrl(url, msg);
                 runInAction(() => {
                     this.recommendedFees = {};
                     this.loading = false;
