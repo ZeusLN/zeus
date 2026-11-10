@@ -3509,10 +3509,10 @@ bip32@5.0.1:
     valibot "^1.2.0"
     wif "^5.0.0"
 
-bitcoinjs-lib@6.1.5:
-  version "6.1.5"
-  resolved "https://registry.yarnpkg.com/bitcoinjs-lib/-/bitcoinjs-lib-6.1.5.tgz#3b03509ae7ddd80a440f10fc38c4a97f0a028d8c"
-  integrity sha512-yuf6xs9QX/E8LWE2aMJPNd0IxGofwfuVOiYdNUESkc+2bHHVKjhJd8qewqapeoolh9fihzHGoDCB5Vkr57RZCQ==
+bitcoinjs-lib@6.1.10:
+  version "6.1.10"
+  resolved "https://registry.yarnpkg.com/bitcoinjs-lib/-/bitcoinjs-lib-6.1.10.tgz#d6650fc70f5849d374a2c39c156faf00349ad56e"
+  integrity sha512-9KpnS5JKVP0j0yfTsBNFIsNA6+JdBDb7VtL35F20I/pJYobosi3TmZFGtu6qxhJCfb0vubJixr5Zv61/lUYETw==
   dependencies:
     "@noble/hashes" "^1.2.0"
     bech32 "^2.0.0"
