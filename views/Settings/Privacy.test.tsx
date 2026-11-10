@@ -2,7 +2,7 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-// AlertStore comes through here now too; UrlUtils is used by the view's
+// AlertStore is mocked here too; UrlUtils is used by the view's
 // isValidCustomUrl, and the mock prevents the real store graph from loading.
 jest.mock('../../stores/Stores', () => ({
     alertStore: {
