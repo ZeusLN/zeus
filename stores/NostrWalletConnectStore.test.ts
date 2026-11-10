@@ -1478,6 +1478,37 @@ describe('NostrWalletConnectStore overlapping subscribes', () => {
         );
     });
 
+    it('joins the in-flight subscription after a reload replaced the connection object', async () => {
+        silence('error');
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const firstSubscribe = relay.holdNextSubscribe();
+
+        const first = subscribe(store, connection);
+        await settle(firstSubscribe.entered);
+        // The connections list reloads on focus, which builds new objects
+        await settle(store.loadConnections());
+        const reloaded = store.connections[0];
+        expect(reloaded).not.toBe(connection);
+        relay.failSubscribe = true;
+        const second = subscribe(store, reloaded);
+        await flushMicrotasks();
+        relay.failSubscribe = false;
+        firstSubscribe.release();
+        await flushMicrotasks();
+        relay.failSubscribe = true;
+        await settle(Promise.all([first, second]));
+
+        expect(liveSubscriptions(connection)).toBe(1);
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            true
+        );
+        expect(relay.subscribe).toHaveBeenCalledTimes(1);
+    });
+
     it('subscribes once more for the waiting callers when the in-flight subscribe fails', async () => {
         silence('error');
         const {
@@ -1611,6 +1642,27 @@ describe('NostrWalletConnectStore overlapping subscribes', () => {
         );
         expect(liveSubscriptions(connection)).toBe(0);
         (store as any).popPendingMutation(connection.id, 'delete');
+    });
+
+    it('keeps a subscribe that resolves while wallet identity is unknown', async () => {
+        const {
+            store,
+            nodeInfoStore,
+            connections: [connection]
+        } = await startService();
+        const pendingSubscribe = relayFor(OLD_RELAY).holdNextSubscribe();
+
+        const pending = subscribe(store, connection);
+        await settle(pendingSubscribe.entered);
+        // A failed getNodeInfo leaves nodeInfo empty
+        nodeInfoStore.nodeInfo = {};
+        pendingSubscribe.release();
+        await settle(pending);
+
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            true
+        );
+        expect(liveSubscriptions(connection)).toBe(1);
     });
 
     it('replaces the live subscription on a later resubscribe', async () => {

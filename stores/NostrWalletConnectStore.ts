@@ -122,12 +122,12 @@ type PendingConnectionMutation = 'delete' | 'update' | 'rotate';
 type Nip47ErrorResponse = ReturnType<typeof NostrConnectUtils.createNip47Error>;
 
 interface SubscribeAttempt {
-    connection: NWCConnection;
     pubkey: string;
     secretKey?: string;
     service?: NWCWalletService;
     handlerConfig: string;
-    // Resolves when the attempt has stored its handle or given up
+    // Resolves when the attempt stored its handle, dropped it as stale, or
+    // gave up
     done: Promise<void>;
     // Set when the attempt gave up on an error, even after a newer attempt or
     // reset replaced it. Waiters then retry once with the stored connection.
@@ -1831,7 +1831,6 @@ export default class NostrWalletConnectStore {
             const pending = this.subscribeAttempts.get(connection.id);
             if (
                 pending &&
-                pending.connection === connection &&
                 pending.pubkey === connection.pubkey &&
                 pending.secretKey === serviceSecretKey &&
                 pending.service === nwcWalletService &&
@@ -1858,7 +1857,6 @@ export default class NostrWalletConnectStore {
                 return await this.subscribeToConnection(stored, false);
             }
             attempt = {
-                connection,
                 pubkey: connection.pubkey,
                 secretKey: serviceSecretKey,
                 service: nwcWalletService,
@@ -1997,8 +1995,11 @@ export default class NostrWalletConnectStore {
 
             if (
                 this.subscribeAttempts.get(connection.id) !== attempt ||
-                !this.getConnection({ connectionId: connection.id })
-                    .connection ||
+                // While wallet identity is unknown getConnection finds
+                // nothing, so keep the subscription, as withGlobalHandler does
+                (this.hasWalletContext() &&
+                    !this.getConnection({ connectionId: connection.id })
+                        .connection) ||
                 this.pendingConnectionMutations
                     .get(connection.id)
                     ?.includes('delete')
