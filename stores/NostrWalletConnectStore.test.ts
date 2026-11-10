@@ -84,6 +84,7 @@ jest.mock('../storage', () => ({
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { autorun } from 'mobx';
+import { DeviceEventEmitter, NativeModules, Platform } from 'react-native';
 import {
     NWCWalletService,
     NWCWalletServiceKeyPair,
@@ -104,6 +105,7 @@ import NostrWalletConnectStore, {
     NWC_CLIENT_KEYS,
     NWC_CONNECTIONS_KEY,
     NWC_LUD16_ENABLED,
+    NWC_PERSISTENT_SERVICE_ENABLED,
     NWC_SERVICE_KEYS,
     RELAY_RELEASE_GRACE_MS
 } from './NostrWalletConnectStore';
@@ -466,14 +468,9 @@ function addConnection(
     return connection;
 }
 
-// Starts the service the way the app does: wallet service keys,
-// connections and client keys are read from storage, initializeService
-// publishes to each relay, and every active connection is subscribed.
-// Mock call records are cleared afterwards so tests count only their own.
-async function startService(
-    connections: Record<string, unknown>[] = [{}],
-    overrides: Record<string, any> = {}
-) {
+// Stores the wallet service keys, connections and client keys that
+// initializeService reads
+function seedStoredService(connections: Record<string, unknown>[] = [{}]) {
     const data = connections.map((connection, i) =>
         connectionData({
             id: `conn-${i + 1}`,
@@ -499,7 +496,17 @@ async function startService(
             )
         )
     );
+}
 
+// Starts the service the way the app does: wallet service keys,
+// connections and client keys are read from storage, initializeService
+// publishes to each relay, and every active connection is subscribed.
+// Mock call records are cleared afterwards so tests count only their own.
+async function startService(
+    connections: Record<string, unknown>[] = [{}],
+    overrides: Record<string, any> = {}
+) {
+    seedStoredService(connections);
     const harness = createStore(overrides);
     await harness.store.initializeService();
     await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
@@ -6253,5 +6260,309 @@ describe('NostrWalletConnectStore wallet deletion', () => {
         expect(storedItems.has(NWC_CONNECTIONS_KEY)).toBe(false);
         expect(storedItems.has(NWC_CLIENT_KEYS)).toBe(false);
         expect(storedItems.has(NWC_SERVICE_KEYS)).toBe(false);
+    });
+});
+
+describe('NostrWalletConnectStore Android Stop Service', () => {
+    const RELAY = 'wss://relay.example';
+    // Payloads NostrConnectService sends for the notification action and
+    // for stopService() (Persistent Mode switched off)
+    const STOP_PRESSED = { fromNotification: true };
+    const PERSISTENT_MODE_OFF = { fromNotification: false };
+    const originalOS = Platform.OS;
+    let unsubscribe: jest.Mock;
+
+    beforeEach(() => {
+        Platform.OS = 'android';
+        unsubscribe = jest.fn();
+        NativeModules.NostrConnectModule = {
+            initialize: jest.fn().mockResolvedValue(0),
+            updateTranslationCache: jest.fn(),
+            stopNostrConnectService: jest.fn().mockResolvedValue(true),
+            unbindNostrConnectService: jest.fn().mockResolvedValue(true)
+        };
+    });
+
+    afterEach(() => {
+        Platform.OS = originalOS;
+        delete NativeModules.NostrConnectModule;
+        DeviceEventEmitter.removeAllListeners('NostrConnectServiceStopped');
+    });
+
+    // A store serving one connection with Persistent Mode on
+    async function buildRunningStore(initialize = true) {
+        const store = new NostrWalletConnectStore(
+            { connecting: false } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        store.persistentNWCServiceEnabled = true;
+        (store as any).isInitialized = true;
+        (store as any).walletServiceKeys = {
+            privateKey: SERVICE_PRIV,
+            publicKey: SERVICE_PUB
+        };
+        (store as any).nwcWalletServices.set(RELAY, { connected: true });
+        (store as any).publishedRelays.add(RELAY);
+        (store as any).activeSubscriptions.set('conn-1', unsubscribe);
+        if (initialize) {
+            await (store as any).initializeAndroidPersistentService();
+        }
+        return store;
+    }
+
+    it('stops answering requests and unbinds when Stop Service is pressed', async () => {
+        const store = await buildRunningStore();
+
+        DeviceEventEmitter.emit('NostrConnectServiceStopped', STOP_PRESSED);
+        await flushMicrotasks();
+
+        expect(unsubscribe).toHaveBeenCalledTimes(1);
+        expect((store as any).activeSubscriptions.size).toBe(0);
+        expect(store.isServiceReady()).toBe(false);
+        expect((store as any).isInitialized).toBe(false);
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles Stop Service pressed before initialize resolves', async () => {
+        const store = await buildRunningStore(false);
+        NativeModules.NostrConnectModule.initialize.mockImplementation(
+            async () => {
+                DeviceEventEmitter.emit(
+                    'NostrConnectServiceStopped',
+                    STOP_PRESSED
+                );
+                return 0;
+            }
+        );
+
+        await (store as any).initializeAndroidPersistentService();
+        await flushMicrotasks();
+
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+        expect((store as any).activeSubscriptions.size).toBe(0);
+    });
+
+    it('still unbinds when the reset fails', async () => {
+        const store = await buildRunningStore();
+        jest.spyOn(store, 'reset').mockRejectedValue(new Error('x'));
+
+        DeviceEventEmitter.emit('NostrConnectServiceStopped', STOP_PRESSED);
+        await flushMicrotasks();
+
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+    });
+
+    it('still handles Stop Service after a node switch reset', async () => {
+        const store = await buildRunningStore();
+        await store.reset(true);
+
+        DeviceEventEmitter.emit('NostrConnectServiceStopped', STOP_PRESSED);
+        await flushMicrotasks();
+
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+    });
+
+    it('only unbinds when Persistent Mode is switched off', async () => {
+        const store = await buildRunningStore();
+        NativeModules.NostrConnectModule.stopNostrConnectService.mockImplementation(
+            async () => {
+                DeviceEventEmitter.emit(
+                    'NostrConnectServiceStopped',
+                    PERSISTENT_MODE_OFF
+                );
+                return true;
+            }
+        );
+
+        await store.setPersistentNWCServiceEnabled(false);
+        await flushMicrotasks();
+
+        expect(unsubscribe).not.toHaveBeenCalled();
+        expect(store.isServiceReady()).toBe(true);
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not reset when Persistent Mode is back on by the time the stop arrives', async () => {
+        const store = await buildRunningStore();
+        expect(store.persistentNWCServiceEnabled).toBe(true);
+
+        DeviceEventEmitter.emit(
+            'NostrConnectServiceStopped',
+            PERSISTENT_MODE_OFF
+        );
+        await flushMicrotasks();
+
+        expect(unsubscribe).not.toHaveBeenCalled();
+        expect(store.isServiceReady()).toBe(true);
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays stopped, and starts on the next open, when Stop Service is pressed during initializeService', async () => {
+        (AsyncStorage.getItem as jest.Mock).mockImplementation(
+            async (key: string) =>
+                key === NWC_PERSISTENT_SERVICE_ENABLED ? 'true' : null
+        );
+        seedStoredService([{ permissions: ['get_info'] }]);
+        const { store } = createStore();
+        const loadMaxBudget = store.loadMaxBudget.bind(store);
+        // The notification is up once startService() has run
+        const budgetSpy = jest
+            .spyOn(store, 'loadMaxBudget')
+            .mockImplementationOnce(async () => {
+                DeviceEventEmitter.emit(
+                    'NostrConnectServiceStopped',
+                    STOP_PRESSED
+                );
+                await flushMicrotasks();
+                await loadMaxBudget();
+            });
+
+        await store.initializeService();
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
+        expect(budgetSpy).toHaveBeenCalledTimes(1);
+        expect(store.isInitialized).toBe(false);
+        expect(store.isServiceReady()).toBe(false);
+        expect(store.error).toBe(false);
+        expect(isSubscribed(store.connections[0])).toBe(false);
+
+        await store.initializeService();
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
+        expect(store.isInitialized).toBe(true);
+        expect(isSubscribed(store.connections[0])).toBe(true);
+    });
+
+    it('shows no error when Stop Service is pressed while startService checks the node', async () => {
+        (AsyncStorage.getItem as jest.Mock).mockImplementation(
+            async (key: string) =>
+                key === NWC_PERSISTENT_SERVICE_ENABLED ? 'true' : null
+        );
+        seedStoredService([{ permissions: ['get_info'] }]);
+        const { store, balanceStore } = createStore();
+        balanceStore.getLightningBalance.mockImplementationOnce(async () => {
+            DeviceEventEmitter.emit('NostrConnectServiceStopped', STOP_PRESSED);
+            await flushMicrotasks();
+            return { lightningBalance: WALLET_BALANCE_SATS };
+        });
+
+        await store.initializeService();
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
+        expect(store.isInitialized).toBe(false);
+        expect(store.error).toBe(false);
+        expect(store.errorMessage).toBe('');
+        expect(isSubscribed(store.connections[0])).toBe(false);
+    });
+});
+
+describe('NostrWalletConnectStore wallet switch during initializeService', () => {
+    // Stores one wallet's service keys, connection and client key, the way
+    // initializeService reads them after a wallet switch
+    function seedWallet(id: string, pubkey: string, relayUrl: string) {
+        storedItems.set(
+            NWC_SERVICE_KEYS,
+            JSON.stringify({ privateKey: SERVICE_PRIV, publicKey: SERVICE_PUB })
+        );
+        storedItems.set(
+            NWC_CONNECTIONS_KEY,
+            JSON.stringify([
+                connectionData({
+                    id,
+                    name: id,
+                    pubkey,
+                    relayUrl,
+                    permissions: ['get_info', 'get_balance']
+                })
+            ])
+        );
+        storedItems.set(
+            NWC_CLIENT_KEYS,
+            JSON.stringify({ [pubkey]: hex64('3') })
+        );
+    }
+
+    it('does not let the old run set error after its publish retries run out', async () => {
+        silence('error');
+        // alice's relay is unreachable, so each publish attempt fails
+        relayFor(OLD_RELAY).failPublish = true;
+        seedWallet('alice1', hex64('a'), OLD_RELAY);
+        const { store } = createStore();
+
+        const aliceRun = store.initializeService();
+        // Into the second retry backoff (attempts at 0 ms, 1 s and 3 s)
+        await jest.advanceTimersByTimeAsync(1500);
+        expect(
+            relayFor(OLD_RELAY).publishWalletServiceInfoEvent
+        ).toHaveBeenCalledTimes(2);
+
+        // Switch to bob, whose relay is reachable
+        seedWallet('bob1', hex64('b'), NEW_RELAY);
+        await store.reset(true);
+        const bobRun = store.initializeService();
+
+        // alice's third attempt fails at 3 s, before bob's delayed subscribe
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+        await Promise.all([aliceRun, bobRun]);
+
+        expect(
+            relayFor(OLD_RELAY).publishWalletServiceInfoEvent
+        ).toHaveBeenCalledTimes(3);
+        expect(store.error).toBe(false);
+        expect(store.errorMessage).toBe('');
+        expect(store.isInitialized).toBe(true);
+        expect(store.isServiceReady()).toBe(true);
+        expect(store.connections.map((c) => c.id)).toEqual(['bob1']);
+        expect(isSubscribed(store.connections[0])).toBe(true);
+    });
+
+    it('does not let the old run set error when it fails after the switch', async () => {
+        silence('error');
+        seedWallet('alice1', hex64('a'), OLD_RELAY);
+        const { store } = createStore();
+        const loadMaxBudget = store.loadMaxBudget.bind(store);
+        jest.spyOn(store, 'loadMaxBudget').mockImplementationOnce(async () => {
+            // Switch to bob while alice's run loads the balance, and let
+            // bob's run finish first
+            seedWallet('bob1', hex64('b'), NEW_RELAY);
+            await store.reset(true);
+            await store.initializeService();
+            // alice's budget check then throws
+            jest.spyOn(
+                store as any,
+                'checkAndResetAllBudgets'
+            ).mockRejectedValueOnce(new Error('budget check failed'));
+            await loadMaxBudget();
+        });
+
+        await store.initializeService();
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
+        expect(store.error).toBe(false);
+        expect(store.errorMessage).toBe('');
+        expect(store.isInitialized).toBe(true);
+        expect(store.isServiceReady()).toBe(true);
+        expect(store.connections.map((c) => c.id)).toEqual(['bob1']);
+        expect(isSubscribed(store.connections[0])).toBe(true);
     });
 });
