@@ -769,6 +769,35 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.payments!.map((p) => p.fee)).toEqual([0, 2]);
     });
 
+    it('leaves the fee out when the fee of a paid part is not known', async () => {
+        const store = await plannedStore();
+        cdk.melt.mockImplementation(async (mintUrl: string) => {
+            if (mintUrl === A) return paid(546, 1);
+            throw new Error('connection lost');
+        });
+        cdk.checkMeltQuote.mockImplementation(
+            async (_m: string, id: string) => ({
+                id,
+                amount: 454,
+                fee_reserve: 2,
+                state: 'PAID',
+                expiry: 9999999999,
+                payment_preimage: PREIMAGE
+            })
+        );
+
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+
+        expect(store.paymentSuccess).toBe(true);
+        expect(store.paymentFee).toBeUndefined();
+        expect(
+            store.payments!.map((p) => [p.mintUrl, p.fee, !!p.fee_unknown])
+        ).toEqual([
+            [A, 1, false],
+            [B, 0, true]
+        ]);
+    });
+
     it.each([
         ['the payments', 'node1-cashu-payments', 0],
         // the first two writes track the parts before they melt
