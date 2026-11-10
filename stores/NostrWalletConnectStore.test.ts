@@ -86,6 +86,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { autorun } from 'mobx';
 import { DeviceEventEmitter, NativeModules, Platform } from 'react-native';
 import {
+    finalizeEvent,
+    generateSecretKey,
+    getPublicKey,
+    nip04,
+    nip44
+} from 'nostr-tools';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import {
     NWCWalletService,
     NWCWalletServiceKeyPair,
     NWCWalletServiceRequestHandler
@@ -6565,4 +6573,317 @@ describe('NostrWalletConnectStore wallet switch during initializeService', () =>
         expect(store.connections.map((c) => c.id)).toEqual(['bob1']);
         expect(isSubscribed(store.connections[0])).toBe(true);
     });
+});
+
+describe('NostrWalletConnectStore request event age and expiration', () => {
+    const NOW = 1_800_000_000;
+
+    // SDK-shaped service: subscribe opens a pool subscription whose
+    // onevent decrypts the request and dispatches it to the handler
+    function createSdkLikeService() {
+        const service: any = {
+            delivered: [] as ((event: any) => Promise<void>)[],
+            pool: {
+                subscribe: jest.fn(
+                    (_relays: string[], _filter: any, params: any) => {
+                        service.delivered.push(params.onevent);
+                        return { close: jest.fn() };
+                    }
+                )
+            },
+            decrypt: jest.fn(async (_keypair: any, content: string) => content),
+            publishWalletServiceInfoEvent: jest.fn(),
+            close: jest.fn(),
+            subscribe: jest.fn(
+                async (
+                    _keypair: any,
+                    handler: NWCWalletServiceRequestHandler
+                ) => {
+                    service.pool.subscribe(
+                        [OLD_RELAY],
+                        { kinds: [23194] },
+                        {
+                            onevent: async (event: any) => {
+                                const request = JSON.parse(
+                                    await service.decrypt(
+                                        _keypair,
+                                        event.content
+                                    )
+                                );
+                                if (request.method === 'pay_invoice') {
+                                    await handler.payInvoice?.(request.params);
+                                } else if (request.method === 'get_info') {
+                                    await handler.getInfo?.();
+                                }
+                            }
+                        }
+                    );
+                    return () => {};
+                }
+            )
+        };
+        return service;
+    }
+
+    async function subscribe() {
+        const sdkService = createSdkLikeService();
+        (NWCWalletService as unknown as jest.Mock).mockImplementation(
+            () => sdkService
+        );
+        const { store } = createStore();
+        addConnection(store, { permissions: ['pay_invoice', 'get_info'] });
+        (store as any).walletServiceKeys = { privateKey: hex64('f') };
+        await (store as any).initializeNWCWalletServices();
+        const service = (store as any).nwcWalletServices.get(OLD_RELAY);
+        const handler = {
+            payInvoice: jest.fn().mockResolvedValue({}),
+            getInfo: jest.fn().mockResolvedValue({})
+        };
+        await service.subscribe({ clientPubkey: hex64('a') }, handler);
+        const deliver = (event: any) =>
+            sdkService.delivered[0]({
+                id: hex64('e'),
+                pubkey: hex64('a'),
+                tags: [],
+                ...event
+            });
+        return { handler, deliver };
+    }
+
+    const payInvoice = JSON.stringify({
+        method: 'pay_invoice',
+        params: { invoice: 'lnbc1late' }
+    });
+    const getInfo = JSON.stringify({ method: 'get_info', params: {} });
+
+    beforeEach(() => {
+        jest.spyOn(Date, 'now').mockReturnValue(NOW * 1000);
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('pays a pay_invoice request signed a minute ago', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({ created_at: NOW - 60, content: payInvoice });
+
+        expect(handler.payInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores a pay_invoice request delivered two hours after it was signed', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({ created_at: NOW - 2 * 60 * 60, content: payInvoice });
+
+        expect(handler.payInvoice).not.toHaveBeenCalled();
+    });
+
+    it('ignores a pay_invoice request dated far in the future', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({ created_at: NOW + 60 * 60, content: payInvoice });
+
+        expect(handler.payInvoice).not.toHaveBeenCalled();
+    });
+
+    it('ignores a request whose expiration tag has passed', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({
+            created_at: NOW - 30,
+            tags: [['expiration', String(NOW - 1)]],
+            content: payInvoice
+        });
+        await deliver({
+            created_at: NOW - 30,
+            tags: [['expiration', String(NOW - 1)]],
+            content: getInfo
+        });
+
+        expect(handler.payInvoice).not.toHaveBeenCalled();
+        expect(handler.getInfo).not.toHaveBeenCalled();
+    });
+
+    it('pays a request whose expiration tag has not passed', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({
+            created_at: NOW - 30,
+            tags: [['expiration', String(NOW + 30)]],
+            content: payInvoice
+        });
+
+        expect(handler.payInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('still answers an old request that does not pay', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({ created_at: NOW - 2 * 60 * 60, content: getInfo });
+
+        expect(handler.getInfo).toHaveBeenCalledTimes(1);
+    });
+
+    it('warns when the service has no pool to check events on', async () => {
+        (NWCWalletService as unknown as jest.Mock).mockImplementation(() => ({
+            publishWalletServiceInfoEvent: jest.fn(),
+            close: jest.fn()
+        }));
+        const { store } = createStore();
+        addConnection(store);
+
+        await (store as any).initializeNWCWalletServices();
+
+        expect((store as any).nwcWalletServices.has(OLD_RELAY)).toBe(true);
+        expect(console.warn).toHaveBeenCalledWith(
+            expect.stringContaining('no pool.subscribe')
+        );
+    });
+});
+
+// Runs the store's check inside the real @getalby/sdk NWCWalletService, so
+// an SDK update that stops routing request events through pool.subscribe,
+// or changes decrypt, fails here instead of turning the check off. Only the
+// pool's network calls are stubbed.
+describe('NostrWalletConnectStore request event checks with the real SDK', () => {
+    const sdk = jest.requireActual('@getalby/sdk');
+    const walletSecret = generateSecretKey();
+    const clientSecret = generateSecretKey();
+    const walletPubkey = getPublicKey(walletSecret);
+    const clientPubkey = getPublicKey(clientSecret);
+
+    async function subscribe() {
+        const subscriptions: any[] = [];
+        // the store wraps pool.subscribe, so keep the stub it wraps
+        const poolSubscribe = jest.fn(
+            (_relays: string[], _filter: any, params: any) => {
+                subscriptions.push(params);
+                return { close: jest.fn() };
+            }
+        );
+        (NWCWalletService as unknown as jest.Mock).mockImplementation(
+            (options: any) => {
+                const service = new sdk.NWCWalletService(options);
+                expect(typeof service.pool?.subscribe).toBe('function');
+                service.pool.ensureRelay = jest.fn().mockResolvedValue({});
+                service.pool.publish = jest.fn(() => [Promise.resolve('ok')]);
+                service.pool.subscribe = poolSubscribe;
+                return service;
+            }
+        );
+        (NWCWalletServiceKeyPair as unknown as jest.Mock).mockImplementation(
+            (secret: string, pubkey: string) =>
+                new sdk.NWCWalletServiceKeyPair(secret, pubkey)
+        );
+        const { store } = createStore();
+        addConnection(store, { pubkey: clientPubkey });
+        (store as any).walletServiceKeys = {
+            privateKey: bytesToHex(walletSecret),
+            publicKey: walletPubkey
+        };
+        await (store as any).initializeNWCWalletServices();
+        const service = (store as any).nwcWalletServices.get(OLD_RELAY);
+        const handler = {
+            payInvoice: jest.fn().mockResolvedValue({
+                result: { preimage: hex64('b') },
+                error: undefined
+            }),
+            getInfo: jest.fn().mockResolvedValue({
+                result: { methods: ['get_info'] },
+                error: undefined
+            })
+        };
+        await service.subscribe(
+            new sdk.NWCWalletServiceKeyPair(
+                bytesToHex(walletSecret),
+                clientPubkey
+            ),
+            handler
+        );
+        expect(service.pool.subscribe).not.toBe(poolSubscribe);
+        expect(poolSubscribe).toHaveBeenCalledWith(
+            [OLD_RELAY],
+            expect.objectContaining({ kinds: [23194] }),
+            expect.anything()
+        );
+        expect(subscriptions).toHaveLength(1);
+        return { handler, onevent: subscriptions[0].onevent };
+    }
+
+    function requestEvent(
+        method: string,
+        params: Record<string, unknown>,
+        ageSeconds: number,
+        encryption: 'nip04' | 'nip44_v2' = 'nip04'
+    ) {
+        const plaintext = JSON.stringify({ method, params });
+        const content =
+            encryption === 'nip04'
+                ? nip04.encrypt(clientSecret, walletPubkey, plaintext)
+                : nip44.encrypt(
+                      plaintext,
+                      nip44.getConversationKey(clientSecret, walletPubkey)
+                  );
+        return finalizeEvent(
+            {
+                kind: 23194,
+                created_at: Math.floor(Date.now() / 1000) - ageSeconds,
+                tags: [
+                    ['p', walletPubkey],
+                    ['encryption', encryption]
+                ],
+                content
+            },
+            clientSecret
+        );
+    }
+
+    beforeEach(() => {
+        jest.useRealTimers();
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    it('pays a pay_invoice request signed a minute ago', async () => {
+        const { handler, onevent } = await subscribe();
+
+        await onevent(
+            requestEvent('pay_invoice', { invoice: 'lnbc1recent' }, 60)
+        );
+
+        expect(handler.payInvoice).toHaveBeenCalledWith({
+            invoice: 'lnbc1recent'
+        });
+    });
+
+    it.each(['nip04', 'nip44_v2'] as const)(
+        'ignores a %s pay_invoice request signed two hours ago',
+        async (encryption) => {
+            const { handler, onevent } = await subscribe();
+
+            await onevent(
+                requestEvent(
+                    'pay_invoice',
+                    { invoice: 'lnbc1late' },
+                    2 * 60 * 60,
+                    encryption
+                )
+            );
+
+            expect(handler.payInvoice).not.toHaveBeenCalled();
+        }
+    );
+
+    it.each(['nip04', 'nip44_v2'] as const)(
+        'answers a %s get_info request signed two hours ago',
+        async (encryption) => {
+            const { handler, onevent } = await subscribe();
+
+            await onevent(
+                requestEvent('get_info', {}, 2 * 60 * 60, encryption)
+            );
+
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+        }
+    );
 });
