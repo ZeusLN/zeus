@@ -1987,8 +1987,12 @@ export default class CashuStore {
      * use. Concurrent callers wait on the same connect. A failed connect, or
      * one that ends with no relay connected, is dropped so the next call
      * starts over.
+     *
+     * With countUser, the call is counted against the instance it gets, in
+     * the same synchronous step that picks the instance, and released again
+     * if the connect fails (see acquireNdk()).
      */
-    private getNdk = async (): Promise<NDK> => {
+    private getNdk = async (countUser = false): Promise<NDK> => {
         if (!this.ndk || !this.ndkConnect) {
             const ndk = new NDK({
                 explicitRelayUrls: DEFAULT_NOSTR_RELAYS,
@@ -2004,8 +2008,19 @@ export default class CashuStore {
                 });
         }
         const ndk = this.ndk;
-        await this.ndkConnect;
-        return ndk;
+        const connecting = this.ndkConnect;
+        if (!countUser) {
+            await connecting;
+            return ndk;
+        }
+        this.ndkUsers.set(ndk, (this.ndkUsers.get(ndk) ?? 0) + 1);
+        try {
+            await connecting;
+            return ndk;
+        } catch (e) {
+            this.releaseNdk(ndk);
+            throw e;
+        }
     };
 
     /**
@@ -2034,19 +2049,7 @@ export default class CashuStore {
      * call against that instance. Each successful call must be paired with
      * releaseNdk().
      */
-    private acquireNdk = async (): Promise<NDK> => {
-        // getNdk() sets this.ndk synchronously, before its first await.
-        const connecting = this.getNdk();
-        const ndk = this.ndk as NDK;
-        this.ndkUsers.set(ndk, (this.ndkUsers.get(ndk) ?? 0) + 1);
-        try {
-            await connecting;
-            return ndk;
-        } catch (e) {
-            this.releaseNdk(ndk);
-            throw e;
-        }
-    };
+    private acquireNdk = (): Promise<NDK> => this.getNdk(true);
 
     /**
      * Ends one discovery call. Once no call uses an instance anymore, its
