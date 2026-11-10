@@ -1169,12 +1169,12 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@bitcoinerlab/secp256k1@1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@bitcoinerlab/secp256k1/-/secp256k1-1.2.0.tgz#429d043ef4218b9c71915b50172e9aa4a2a8fea4"
-  integrity sha512-jeujZSzb3JOZfmJYI0ph1PVpCRV5oaexCgy+RvCXV8XlY+XFB/2n3WOcvBsKLsOw78KYgnQrQWb2HrKE4be88Q==
+"@bitcoinerlab/secp256k1@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@bitcoinerlab/secp256k1/-/secp256k1-2.0.0.tgz#c062aad7a341d960ef086cb6a27797ee2bc4e296"
+  integrity sha512-l8wO4Hx7fovtcDVU5xYEa7yfP9DokC8QxYlJoaP1zi2/iX+c6NNSvMzq+oCZ8ikqvrXTuhSQ6iP1IRx08kWZgw==
   dependencies:
-    "@noble/curves" "^1.7.0"
+    "@noble/curves" "^2.3.0"
 
 "@codesandbox/nodebox@0.1.8":
   version "0.1.8"
@@ -1729,14 +1729,14 @@
   dependencies:
     "@noble/hashes" "2.0.1"
 
-"@noble/curves@2.4.0":
+"@noble/curves@2.4.0", "@noble/curves@^2.3.0":
   version "2.4.0"
   resolved "https://registry.yarnpkg.com/@noble/curves/-/curves-2.4.0.tgz#367c869bfd790c3a2248152562f255b5f8898b74"
   integrity sha512-P4/62zrgfH33CneE3Dn4WhJVA22YUU0eR51wKIan4NVRvwsA0YnPTwWGpNbpuacSujmSFLvyzpyuR30+fbq2Ew==
   dependencies:
     "@noble/hashes" "2.4.0"
 
-"@noble/curves@^1.6.0", "@noble/curves@^1.7.0":
+"@noble/curves@^1.6.0":
   version "1.9.7"
   resolved "https://registry.yarnpkg.com/@noble/curves/-/curves-1.9.7.tgz#79d04b4758a43e4bca2cbdc62e7771352fa6b951"
   integrity sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw==
