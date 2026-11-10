@@ -2,7 +2,8 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-// UrlUtils imports the store graph; it is only used here for validation
+// AlertStore comes through here now too; UrlUtils is used by the view's
+// isValidCustomUrl, and the mock prevents the real store graph from loading.
 jest.mock('../../stores/Stores', () => ({
     alertStore: {
         clearMempoolError: jest.fn()
@@ -30,7 +31,7 @@ jest.mock('../../components/Text', () => 'Text');
 jest.mock('../../components/TextInput', () => 'TextInput');
 
 import * as React from 'react';
-import { act, render } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import Privacy from './Privacy';
 import { alertStore } from '../../stores/Stores';
 
@@ -127,7 +128,12 @@ describe('Privacy unmount', () => {
 });
 
 describe('Privacy mempool instance change', () => {
-    const makeView = (privacy: any) => {
+    const walk = (n: any): any[] =>
+        !n || typeof n !== 'object'
+            ? []
+            : [n, ...(n.children || []).flatMap(walk)];
+
+    const renderPrivacy = async (privacy: any) => {
         const SettingsStore = {
             settings: {},
             getSettings: jest.fn(async () => ({ privacy })),
@@ -135,114 +141,185 @@ describe('Privacy mempool instance change', () => {
             updateSettingsGroup: jest.fn(async () => {}),
             updateSettingsGroupDebounced: jest.fn()
         };
-        const view: any = new (Privacy as any)({
-            navigation: {} as any,
-            SettingsStore
-        });
-        view.setState = jest.fn(); // <-- ADD THIS LINE
-        view.state = {
-            ...view.state,
-            mempoolInstance: privacy.mempoolInstance,
-            customMempoolInstance: privacy.customMempoolInstance
-        };
-        return { view, SettingsStore };
+        // This repo's RNTL version returns a thenable; awaiting it flushes
+        // componentDidMount's getSettings promise and the resulting setState.
+        const { unmount } = await render(
+            <Privacy
+                navigation={{} as any}
+                SettingsStore={SettingsStore as any}
+            />
+        );
+        return { SettingsStore, unmount };
     };
+
+    const findDropdown = (selectedValue: string) =>
+        walk(screen.container).find(
+            (n: any) =>
+                n.type === 'DropdownSetting' &&
+                n.props?.selectedValue === selectedValue
+        );
+
+    const findCustomInput = () =>
+        screen.getByPlaceholderText('https://mempool.mynode.local');
 
     beforeEach(() => {
         (alertStore.clearMempoolError as jest.Mock).mockClear();
     });
 
-    it('clears the alert when the mempool instance changes', async () => {
-        const { view } = makeView({
+    it('clears and writes the new instance when the dropdown changes', async () => {
+        const { SettingsStore } = await renderPrivacy({
+            defaultBlockExplorer: 'bitcoinexplorer.org',
             mempoolInstance: 'https://mempool.space'
         });
 
+        const dropdown = findDropdown('https://mempool.space');
         await act(async () => {
-            await view.handleMempoolInstanceChange('https://example.com');
+            await dropdown.props.onValueChange('https://example.com');
         });
 
         expect(alertStore.clearMempoolError).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not clear the alert when the mempool instance is unchanged', async () => {
-        const { view } = makeView({
-            mempoolInstance: 'https://mempool.space'
-        });
-
-        await act(async () => {
-            await view.handleMempoolInstanceChange('https://mempool.space');
-        });
-
-        expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
-    });
-
-    it('clears the alert when a valid custom URL is entered', () => {
-        const { view } = makeView({
-            mempoolInstance: 'Custom',
-            customMempoolInstance: 'https://mempool.space'
-        });
-
-        view.handleCustomMempoolUrlChange('https://mempool.example.com');
-
-        expect(alertStore.clearMempoolError).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not clear the alert for an invalid custom URL', () => {
-        const { view } = makeView({
-            mempoolInstance: 'Custom',
-            customMempoolInstance: 'https://mempool.space'
-        });
-
-        view.handleCustomMempoolUrlChange('not a url');
-
-        expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
-    });
-
-    it('clears the alert before the settings write resolves', async () => {
-        const { view, SettingsStore } = makeView({
-            mempoolInstance: 'https://mempool.space'
-        });
-
-        let resolveWrite: () => void = () => {};
-        SettingsStore.updateSettingsGroup.mockImplementation(
-            () =>
-                new Promise<void>((resolve) => {
-                    resolveWrite = resolve;
-                })
+        expect(SettingsStore.updateSettingsGroup).toHaveBeenCalledWith(
+            'privacy',
+            { mempoolInstance: 'https://example.com' }
         );
-
-        const promise = view.handleMempoolInstanceChange('https://example.com');
-
-        // The clear must have fired before the await resolves.
-        expect(alertStore.clearMempoolError).toHaveBeenCalledTimes(1);
-
-        resolveWrite();
-        await promise;
     });
 
-    it('does not clear the alert for an empty custom URL', () => {
-        const { view } = makeView({
-            mempoolInstance: 'Custom',
-            customMempoolInstance: 'https://mempool.space'
+    it('does not clear when the dropdown is set to the same value', async () => {
+        const { SettingsStore } = await renderPrivacy({
+            defaultBlockExplorer: 'bitcoinexplorer.org',
+            mempoolInstance: 'https://mempool.space'
         });
 
-        view.handleCustomMempoolUrlChange('');
+        const dropdown = findDropdown('https://mempool.space');
+        await act(async () => {
+            await dropdown.props.onValueChange('https://mempool.space');
+        });
 
+        // The write still happens, but the redundant clear is skipped.
+        expect(SettingsStore.updateSettingsGroup).toHaveBeenCalledWith(
+            'privacy',
+            { mempoolInstance: 'https://mempool.space' }
+        );
         expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
     });
 
-    it('still saves an empty custom URL', () => {
-        const { view, SettingsStore } = makeView({
+    it('clears the alert and writes the unmount fallback for an empty Custom URL', async () => {
+        const { SettingsStore, unmount } = await renderPrivacy({
+            defaultBlockExplorer: 'mempool.space',
             mempoolInstance: 'Custom',
-            customMempoolInstance: 'https://mempool.space'
+            customMempoolInstance: 'https://broken.example'
         });
 
-        view.handleCustomMempoolUrlChange('');
+        const input = findCustomInput();
+        await act(async () => {
+            input.props.onChangeText('');
+        });
 
+        // Empty resolves to the default instance, so the alert must clear.
+        expect(alertStore.clearMempoolError).toHaveBeenCalledTimes(1);
         expect(SettingsStore.updateSettingsGroupDebounced).toHaveBeenCalledWith(
             'privacy',
             { customMempoolInstance: '' }
         );
+
+        // On unmount, customFallbacks reverts the dropdown to the default
+        // instance via the callback form of updateSettingsGroup. Mirrors the
+        // existing Privacy unmount tests.
+        await act(async () => {
+            await unmount();
+        });
+
+        const fallbackCall = (
+            SettingsStore.updateSettingsGroup.mock.calls as any[]
+        ).find(
+            ([group, arg]) => group === 'privacy' && typeof arg === 'function'
+        );
+        expect(fallbackCall).toBeDefined();
+
+        const [, update] = fallbackCall!;
+        expect(
+            update({ mempoolInstance: 'Custom', customMempoolInstance: '' })
+        ).toEqual({ mempoolInstance: 'https://mempool.space' });
+    });
+
+    it('clears the alert for a valid Custom URL', async () => {
+        const { SettingsStore } = await renderPrivacy({
+            defaultBlockExplorer: 'bitcoinexplorer.org',
+            mempoolInstance: 'Custom',
+            customMempoolInstance: 'https://broken.example'
+        });
+
+        const input = findCustomInput();
+        await act(async () => {
+            input.props.onChangeText('https://mempool.example.com');
+        });
+
+        expect(alertStore.clearMempoolError).toHaveBeenCalledTimes(1);
+        expect(SettingsStore.updateSettingsGroupDebounced).toHaveBeenCalledWith(
+            'privacy',
+            {
+                customMempoolInstance: 'https://mempool.example.com'
+            }
+        );
+    });
+
+    it('neither clears nor saves for an invalid Custom URL, then clears for a valid one', async () => {
+        const { SettingsStore } = await renderPrivacy({
+            defaultBlockExplorer: 'bitcoinexplorer.org',
+            mempoolInstance: 'Custom',
+            customMempoolInstance: 'https://broken.example'
+        });
+
+        const input = findCustomInput();
+
+        await act(async () => {
+            input.props.onChangeText('not a url');
+        });
         expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
+        expect(
+            SettingsStore.updateSettingsGroupDebounced
+        ).not.toHaveBeenCalled();
+
+        await act(async () => {
+            input.props.onChangeText('https://mempool.example.com');
+        });
+        expect(alertStore.clearMempoolError).toHaveBeenCalledTimes(1);
+        expect(SettingsStore.updateSettingsGroupDebounced).toHaveBeenCalledWith(
+            'privacy',
+            {
+                customMempoolInstance: 'https://mempool.example.com'
+            }
+        );
+    });
+
+    it('clears the alert before the settings write resolves', async () => {
+        const { SettingsStore } = await renderPrivacy({
+            defaultBlockExplorer: 'bitcoinexplorer.org',
+            mempoolInstance: 'https://mempool.space'
+        });
+
+        let resolveWrite: () => void = () => {};
+        SettingsStore.updateSettingsGroup.mockReturnValue(
+            new Promise<void>((resolve) => {
+                resolveWrite = resolve;
+            })
+        );
+
+        const dropdown = findDropdown('https://mempool.space');
+        let handlerPromise: Promise<void> = Promise.resolve();
+        await act(async () => {
+            handlerPromise = dropdown.props.onValueChange(
+                'https://example.com'
+            );
+            // Let the synchronous part of the handler run.
+            await Promise.resolve();
+        });
+
+        expect(alertStore.clearMempoolError).toHaveBeenCalledTimes(1);
+
+        resolveWrite();
+        await act(async () => {
+            await handlerPromise;
+        });
     });
 });

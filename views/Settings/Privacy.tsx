@@ -169,7 +169,7 @@ export default class Privacy extends React.Component<
         this.props.SettingsStore.updateSettingsGroupDebounced('privacy', {
             customMempoolInstance: text
         });
-        if (text.trim()) alertStore.clearMempoolError();
+        alertStore.clearMempoolError();
     };
 
     renderSeparator = () => (
