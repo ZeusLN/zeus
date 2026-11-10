@@ -725,7 +725,7 @@ describe('LightningNodeConnect', () => {
                     }
                 } as any;
             });
-            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            jest.spyOn(console, 'warn').mockImplementation(() => undefined);
         });
 
         afterEach(() => {
@@ -775,6 +775,7 @@ describe('LightningNodeConnect', () => {
         });
 
         it('keeps watching when the stream of an earlier invoice ends', async () => {
+            const errorSpy = jest.spyOn(console, 'error');
             const { onPaid } = await watch();
 
             emit({ result: 'EOF' });
@@ -784,6 +785,12 @@ describe('LightningNodeConnect', () => {
             emit(update(WATCHED, { settled: true, amt_paid_sat: '300000' }));
 
             expect(onPaid).toHaveBeenCalledTimes(1);
+            // expected and handled, so no LogBox error in dev builds
+            expect(errorSpy).not.toHaveBeenCalled();
+            expect(console.warn).toHaveBeenCalledWith(
+                'SubscribeSingleInvoice:',
+                'rpc error: code = Unknown desc = there are no existing invoices'
+            );
         });
 
         it('stops when the session is closed or the caller unsubscribes', async () => {

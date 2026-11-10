@@ -1043,7 +1043,7 @@ export default class LightningNodeConnect {
                     }
                 } catch (error) {
                     // likely an error string of another stream: keep watching
-                    console.error(error);
+                    console.warn('SubscribeSingleInvoice:', event.result);
                 }
             }
         });
