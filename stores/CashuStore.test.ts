@@ -1726,10 +1726,10 @@ describe('CashuStore reconcilePendingMelts', () => {
         createdAt: 1_700_000_000_000
     });
 
-    const inFlightPayment = () =>
+    const inFlightPayment = (quote = 'quote-1') =>
         new CashuPayment({
             bolt11: 'lnbc10n1ptestinvoice',
-            meltResponse: { quote: { quote: 'quote-1', amount: 1000 } },
+            meltResponse: { quote: { quote, amount: 1000 } },
             amount: 1000,
             fee: 0,
             status: 'IN_FLIGHT',
@@ -1986,6 +1986,374 @@ describe('CashuStore reconcilePendingMelts', () => {
 
         expect(CashuDevKit.checkMeltQuote).not.toHaveBeenCalled();
         expect(store.pendingMelts).toHaveLength(1);
+    });
+
+    const deferred = <T>() => {
+        let resolve!: (value: T) => void;
+        let reject!: (reason: any) => void;
+        const promise = new Promise<T>((res, rej) => {
+            resolve = res;
+            reject = rej;
+        });
+        return { promise, resolve, reject };
+    };
+
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+    // Device test of #5640: opening Wallet and Activity while a melt was in
+    // flight started three reconciles. One got Paid and recorded the
+    // payment; the other two got CDK's "Concurrent update detected", saw the
+    // quote past its expiry and dropped the record the first had just
+    // settled.
+    it('keeps the settled payment when three reconciles race on an expired quote', async () => {
+        const store = reconcilingStore({ ...pendingMelt(), expiry: 1 }, [
+            inFlightPayment()
+        ]);
+        const paid = deferred<any>();
+        const raced = [deferred<any>(), deferred<any>()];
+        // with one pass the raced checks are never asked for
+        raced.forEach((run) => run.promise.catch(() => {}));
+        const checks = [paid, ...raced];
+        let call = 0;
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockImplementation(
+            () => checks[call++].promise
+        );
+
+        const runs = [
+            store.reconcilePendingMelts(),
+            store.reconcilePendingMelts(),
+            store.reconcilePendingMelts()
+        ];
+        await flush();
+        paid.resolve({
+            id: 'quote-1',
+            state: 'Paid',
+            payment_preimage: 'b'.repeat(64)
+        });
+        await flush();
+        raced.forEach((run) =>
+            run.reject({
+                type: 'Generic',
+                message: 'Concurrent update detected'
+            })
+        );
+        await Promise.all(runs);
+
+        expect(store.payments).toHaveLength(1);
+        expect(store.payments[0].status).toBe('SUCCEEDED');
+        expect(store.payments[0].payment_preimage).toBe('b'.repeat(64));
+        expect(store.pendingMelts).toEqual([]);
+        expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(1);
+    });
+
+    it('joins a reconcile already running instead of checking the quote again', async () => {
+        const store = reconcilingStore(pendingMelt(), [inFlightPayment()]);
+        const check = deferred<any>();
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockImplementation(
+            () => check.promise
+        );
+
+        const first = store.reconcilePendingMelts();
+        const second = store.reconcilePendingMelts();
+        await flush();
+        expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(1);
+
+        check.resolve({ id: 'quote-1', state: 'Pending' });
+        await Promise.all([first, second]);
+        expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(1);
+
+        // once it has finished, the next call checks again
+        await store.reconcilePendingMelts();
+        expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(2);
+    });
+
+    it('starts a new reconcile after one that threw', async () => {
+        const store = reconcilingStore(pendingMelt(), [inFlightPayment()]);
+        store.syncCDKBalances = jest
+            .fn()
+            .mockRejectedValueOnce(new Error('sync failed'))
+            .mockResolvedValue(undefined);
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            state: 'Paid',
+            payment_preimage: 'b'.repeat(64)
+        });
+
+        await expect(store.reconcilePendingMelts()).rejects.toThrow(
+            'sync failed'
+        );
+        store.pendingMelts = [pendingMelt()];
+        await store.reconcilePendingMelts();
+
+        expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(2);
+    });
+
+    // CDK reports this when two operations update the same quote at once.
+    // It says nothing about the payment, even past the quote's expiry.
+    it('keeps tracking an expired melt when CDK reports a concurrent update', async () => {
+        const store = reconcilingStore({ ...pendingMelt(), expiry: 1 }, [
+            inFlightPayment()
+        ]);
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockRejectedValue({
+            type: 'Generic',
+            message: 'Concurrent update detected'
+        });
+
+        await store.reconcilePendingMelts();
+
+        expect(store.pendingMelts).toHaveLength(1);
+        expect(store.payments).toHaveLength(1);
+        expect(store.payments[0].isInTransit).toBe(true);
+    });
+
+    it('still drops an expired melt the mint settled unpaid', async () => {
+        const store = reconcilingStore({ ...pendingMelt(), expiry: 1 }, [
+            inFlightPayment()
+        ]);
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            state: 'Unpaid'
+        });
+
+        await store.reconcilePendingMelts();
+
+        expect(store.payments).toEqual([]);
+        expect(store.pendingMelts).toEqual([]);
+    });
+
+    // The pay path settles its own melt and untracks it while the check is
+    // still waiting on the mint
+    it('leaves a melt alone once its caller untracked it during the check', async () => {
+        const store = reconcilingStore(pendingMelt());
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockImplementation(
+            async () => {
+                store.pendingMelts = [];
+                return { id: 'quote-1', state: 'Pending' };
+            }
+        );
+
+        await store.reconcilePendingMelts();
+
+        // no in-flight entry for a melt nothing tracks any more
+        expect(store.payments).toHaveLength(0);
+        expect(store.syncCDKBalances).not.toHaveBeenCalled();
+    });
+
+    // A pass for the previous wallet can still be waiting on its mint when
+    // the user switches wallets
+    describe('after a wallet switch', () => {
+        const nextMelt = () => ({ ...pendingMelt(), quote: 'quote-2' });
+
+        const switchWallet = (store: any) => {
+            store.reset();
+            store.cdkInitialized = true;
+            store.mintUrls = [mintUrl];
+            store.pendingMelts = [nextMelt()];
+            store.payments = [inFlightPayment('quote-2')];
+        };
+
+        // clearAllMocks keeps queued mockReturnValueOnce answers, which a
+        // failed test here would leave for the next
+        beforeEach(() => (CashuDevKit.checkMeltQuote as jest.Mock).mockReset());
+
+        it("starts a new pass for the next wallet's melts", async () => {
+            const store = reconcilingStore(pendingMelt(), [inFlightPayment()]);
+            const previous = deferred<any>();
+            (CashuDevKit.checkMeltQuote as jest.Mock)
+                .mockReturnValueOnce(previous.promise)
+                .mockResolvedValueOnce({ id: 'quote-2', state: 'Pending' });
+
+            const first = store.reconcilePendingMelts();
+            await flush();
+            switchWallet(store);
+            const second = store.reconcilePendingMelts();
+
+            expect(second).not.toBe(first);
+            await second;
+            expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(2);
+            expect(CashuDevKit.checkMeltQuote).toHaveBeenLastCalledWith(
+                mintUrl,
+                'quote-2'
+            );
+
+            previous.resolve({ id: 'quote-1', state: 'Pending' });
+            await first;
+        });
+
+        it("records nothing from the previous wallet's late answer", async () => {
+            const store = reconcilingStore(pendingMelt(), [inFlightPayment()]);
+            const previous = deferred<any>();
+            (CashuDevKit.checkMeltQuote as jest.Mock)
+                .mockReturnValueOnce(previous.promise)
+                .mockResolvedValueOnce({ id: 'quote-2', state: 'Pending' });
+
+            const first = store.reconcilePendingMelts();
+            await flush();
+            switchWallet(store);
+            const second = store.reconcilePendingMelts();
+            await flush();
+            (Storage.setItem as jest.Mock).mockClear();
+
+            previous.resolve({
+                id: 'quote-1',
+                state: 'Paid',
+                payment_preimage: 'b'.repeat(64)
+            });
+            await Promise.all([first, second]);
+
+            expect(store.payments).toHaveLength(1);
+            expect(store.payments[0].meltResponse.quote.quote).toBe('quote-2');
+            expect(store.payments[0].isInTransit).toBe(true);
+            expect(store.pendingMelts).toEqual([nextMelt()]);
+            expect(Storage.setItem).not.toHaveBeenCalled();
+            expect(store.syncCDKBalances).not.toHaveBeenCalled();
+        });
+
+        // The previous pass settling must not clear the slot the next
+        // wallet's pass now holds
+        it("keeps the next wallet's pass when the previous one settles", async () => {
+            const store = reconcilingStore(pendingMelt(), [inFlightPayment()]);
+            const previous = deferred<any>();
+            const next = deferred<any>();
+            (CashuDevKit.checkMeltQuote as jest.Mock)
+                .mockReturnValueOnce(previous.promise)
+                .mockReturnValueOnce(next.promise);
+
+            const first = store.reconcilePendingMelts();
+            await flush();
+            switchWallet(store);
+            const second = store.reconcilePendingMelts();
+            await flush();
+            previous.resolve({ id: 'quote-1', state: 'Pending' });
+            await first;
+
+            expect(store.reconcilePendingMelts()).toBe(second);
+            expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(2);
+
+            next.resolve({ id: 'quote-2', state: 'Pending' });
+            await second;
+        });
+    });
+
+    // A mint that accepts the connection and never answers must not hold
+    // the shared pass, and with it every later reconcile, until restart
+    describe('a mint that never answers the check', () => {
+        beforeEach(() => jest.useFakeTimers());
+        afterEach(() => jest.useRealTimers());
+
+        // A timeout says nothing about the payment, so even an expired
+        // quote is kept for the next sweep
+        it.each([
+            ['unexpired', 9999999999],
+            ['expired', 1]
+        ])(
+            'ends the pass after the timeout and leaves the melt tracked (%s)',
+            async (_, expiry) => {
+                const store = reconcilingStore({ ...pendingMelt(), expiry }, [
+                    inFlightPayment()
+                ]);
+                (CashuDevKit.checkMeltQuote as jest.Mock).mockReturnValue(
+                    new Promise(() => {})
+                );
+
+                let settled = false;
+                store.reconcilePendingMelts().then(() => (settled = true));
+                await jest.advanceTimersByTimeAsync(10_000);
+
+                expect(settled).toBe(true);
+                expect(store.pendingMelts).toHaveLength(1);
+                expect(store.payments).toHaveLength(1);
+                expect(store.payments[0].isInTransit).toBe(true);
+            }
+        );
+
+        it('starts a fresh pass on the next call, which reconciles the melt', async () => {
+            const store = reconcilingStore(pendingMelt(), [inFlightPayment()]);
+            (CashuDevKit.checkMeltQuote as jest.Mock)
+                .mockReturnValueOnce(new Promise(() => {}))
+                .mockResolvedValueOnce({
+                    id: 'quote-1',
+                    state: 'Paid',
+                    payment_preimage: 'b'.repeat(64)
+                });
+
+            store.reconcilePendingMelts();
+            await jest.advanceTimersByTimeAsync(10_000);
+            let settled = false;
+            store.reconcilePendingMelts().then(() => (settled = true));
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(settled).toBe(true);
+            expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(2);
+            expect(store.payments).toHaveLength(1);
+            expect(store.payments[0].status).toBe('SUCCEEDED');
+            expect(store.pendingMelts).toEqual([]);
+        });
+
+        it('ignores the answer of a check that timed out', async () => {
+            const store = reconcilingStore(pendingMelt(), [inFlightPayment()]);
+            const late = deferred<any>();
+            (CashuDevKit.checkMeltQuote as jest.Mock).mockReturnValue(
+                late.promise
+            );
+
+            store.reconcilePendingMelts();
+            await jest.advanceTimersByTimeAsync(10_000);
+            (Storage.setItem as jest.Mock).mockClear();
+            late.resolve({
+                id: 'quote-1',
+                state: 'Paid',
+                payment_preimage: 'b'.repeat(64)
+            });
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(store.payments).toHaveLength(1);
+            expect(store.payments[0].isInTransit).toBe(true);
+            expect(store.pendingMelts).toHaveLength(1);
+            expect(Storage.setItem).not.toHaveBeenCalled();
+            expect(store.syncCDKBalances).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('dropInFlightPayment', () => {
+        const settledPayment = (status?: string) =>
+            new CashuPayment({
+                bolt11: 'lnbc10n1ptestinvoice',
+                meltResponse: { quote: { quote: 'quote-1', amount: 1000 } },
+                amount: 1000,
+                fee: 2,
+                ...(status ? { status } : {}),
+                payment_preimage: 'b'.repeat(64),
+                mintUrl
+            });
+
+        // The pay path stores a paid melt without a status
+        it.each([['SUCCEEDED'], [undefined]])(
+            'leaves a settled payment in place (status %s)',
+            async (status) => {
+                const payment = settledPayment(status);
+                const store = reconcilingStore(pendingMelt(), [payment]);
+
+                expect(await store.dropInFlightPayment('quote-1')).toBe(false);
+
+                expect(store.payments).toHaveLength(1);
+                expect(store.payments[0]).toBe(payment);
+                expect(Storage.setItem).not.toHaveBeenCalled();
+            }
+        );
+
+        it('drops only the in-flight record for the quote', async () => {
+            const settled = settledPayment('SUCCEEDED');
+            const store = reconcilingStore(pendingMelt(), [
+                settled,
+                inFlightPayment()
+            ]);
+
+            expect(await store.dropInFlightPayment('quote-1')).toBe(true);
+
+            expect(store.payments).toHaveLength(1);
+            expect(store.payments[0]).toBe(settled);
+        });
     });
 });
 
