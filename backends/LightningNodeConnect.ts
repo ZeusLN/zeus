@@ -1082,23 +1082,30 @@ export default class LightningNodeConnect {
         onReceived: (payload: { amountSat: number; txid: string }) => void
     ): (() => void) => {
         const { LncModule } = NativeModules;
-        const eventName = this.subscribeTransactions();
+        // Every SubscribeTransactions stream of the session (Activity's live
+        // updates, an earlier watcher) reports on the same event name, so
+        // this stream gets its own request id and skips the others' events,
+        // including the EOF or error that ends them
+        const requestId = newStreamRequestId();
+        const eventName = this.lnc.subscribe(
+            'lnrpc.Lightning.SubscribeTransactions',
+            {},
+            requestId
+        );
         const eventEmitter = new NativeEventEmitter(LncModule);
         const listener = eventEmitter.addListener(eventName, (event: any) => {
+            if (!isEventForRequest(event, requestId)) return;
             if (event.result) {
                 if (
-                    typeof event.result === 'string' &&
-                    event.result.includes('rpc error: code = Canceled')
+                    event.result === 'EOF' ||
+                    (typeof event.result === 'string' &&
+                        event.result.includes('rpc error: code = Canceled'))
                 ) {
                     listener.remove();
                     return;
                 }
                 try {
                     const result = JSON.parse(event.result);
-                    if (result === 'EOF') {
-                        listener.remove();
-                        return;
-                    }
                     if (
                         result.dest_addresses.includes(address) &&
                         result.num_confirmations >= numConfPreference &&

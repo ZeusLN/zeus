@@ -640,6 +640,133 @@ describe('LightningNodeConnect', () => {
         });
     });
 
+    describe('watchOnchainReceived', () => {
+        const EVENT = 'lnrpc.Lightning.SubscribeTransactions';
+        const ADDRESS = 'bcrt1qwatched';
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+        let backend: LightningNodeConnect;
+        let lnc: any;
+
+        const requestIdOf = (n = -1) => lnc.subscribe.mock.calls.at(n)[2];
+        // request_id undefined: a stream started without an id (Activity)
+        const emit = (result: string, request_id?: string) =>
+            listeners
+                .filter((l) => l.name === EVENT && !l.removed)
+                .forEach((l) => l.handler({ result, request_id }));
+        const tx = (fields: any = {}) =>
+            JSON.stringify({
+                tx_hash: 'txid',
+                amount: '50000',
+                num_confirmations: 1,
+                dest_addresses: [ADDRESS],
+                ...fields
+            });
+        const listenerCount = () =>
+            listeners.filter((l) => l.name === EVENT && !l.removed).length;
+        const watch = (expectedAmountSat?: number) => {
+            const onReceived = jest.fn();
+            const stop = backend.watchOnchainReceived(
+                { address: ADDRESS, expectedAmountSat, numConfPreference: 1 },
+                onReceived
+            );
+            return { onReceived, stop, requestId: requestIdOf() };
+        };
+
+        beforeEach(async () => {
+            listeners = [];
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
+            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('reports a receive to the address on its own stream', () => {
+            const { onReceived, requestId } = watch(50000);
+            expect(lnc.subscribe).toHaveBeenLastCalledWith(
+                EVENT,
+                {},
+                requestId
+            );
+            expect(requestId).not.toEqual('');
+
+            emit(tx({ num_confirmations: 0 }), requestId);
+            emit(tx({ amount: '49999' }), requestId);
+            emit(tx({ dest_addresses: ['bcrt1qother'] }), requestId);
+            expect(onReceived).not.toHaveBeenCalled();
+
+            emit(tx(), requestId);
+            expect(onReceived).toHaveBeenCalledTimes(1);
+            expect(onReceived).toHaveBeenCalledWith({
+                amountSat: 50000,
+                txid: 'txid'
+            });
+            expect(listenerCount()).toBe(0);
+        });
+
+        it('keeps watching when another stream of the method ends', () => {
+            const earlier = watch();
+            earlier.stop();
+            const { onReceived, requestId } = watch();
+
+            emit('EOF');
+            emit('rpc error: code = Unknown desc = gbn exited');
+            emit('EOF', earlier.requestId);
+            expect(listenerCount()).toBe(1);
+
+            emit(tx(), requestId);
+            expect(onReceived).toHaveBeenCalledTimes(1);
+        });
+
+        it('skips transactions from another stream', () => {
+            const { onReceived } = watch();
+
+            emit(tx());
+            emit(tx(), 'other-request');
+
+            expect(onReceived).not.toHaveBeenCalled();
+            expect(listenerCount()).toBe(1);
+        });
+
+        it.each([
+            ['EOF', 'EOF'],
+            ['Canceled', 'rpc error: code = Canceled desc = context canceled'],
+            ['an error', 'rpc error: code = Unknown desc = gbn exited']
+        ])('stops when its own stream reports %s', (_, result) => {
+            const { requestId } = watch();
+            emit(result, requestId);
+            expect(listenerCount()).toBe(0);
+        });
+
+        it('stops when the caller unsubscribes', () => {
+            const { stop } = watch();
+            stop();
+            expect(listenerCount()).toBe(0);
+        });
+    });
+
     describe('payLightningInvoice', () => {
         const EVENT = 'routerrpc.Router.SendPaymentV2';
         const HASH_A = 'aa'.repeat(32);
