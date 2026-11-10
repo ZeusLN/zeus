@@ -1614,6 +1614,37 @@ describe('TransactionsStore late results for an earlier payment', () => {
         expect(store.payment_preimage).toBe('deadbeef');
     });
 
+    // reset() replaces the latest payment with none, so its result is
+    // dropped even if no newer payment was sent
+    it.each(lateOutcomes)(
+        'drops a late %s for a payment sent before reset() when no payment followed',
+        async (_status, late) => {
+            const store = newStore('lnd');
+            const first = await startFirst(store, clearPaths[2][1]);
+
+            first.resolve(late);
+            await flush();
+            expect(store.status).toBeNull();
+            expect(store.payment_route).toBeNull();
+            expect(store.payment_preimage).toBeNull();
+            expect(store.payment_hash).toBeNull();
+            expect(store.error).toBe(false);
+            expect(store.payment_error).toBeNull();
+            expect(store.loading).toBe(false);
+        }
+    );
+
+    it('drops a late rejection for a payment sent before reset() when no payment followed', async () => {
+        const store = newStore('lnd');
+        const first = await startFirst(store, clearPaths[2][1]);
+
+        first.reject(new Error('stream closed'));
+        await flush();
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBeNull();
+        expect(store.loading).toBe(false);
+    });
+
     it("doesn't show the previous payment's note while a payment is in transit", async () => {
         (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValueOnce({
             status: 'SUCCEEDED',
