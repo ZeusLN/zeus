@@ -1317,9 +1317,9 @@ describe('NostrWalletConnectStore overlapping initializeService calls', () => {
         await settle(store.initializeService());
 
         expect(NWCWalletService).toHaveBeenCalledTimes(2);
-        expect(
-            relayFor(OLD_RELAY).publishWalletServiceInfoEvent
-        ).toHaveBeenCalled();
+        // reset() leaves the relay connected, so both runs publish through
+        // the same fake
+        expect(relay.publishWalletServiceInfoEvent).toHaveBeenCalledTimes(2);
         expect(store.isInitialized).toBe(true);
 
         publish.release();
@@ -1336,29 +1336,27 @@ describe('NostrWalletConnectStore overlapping initializeService calls', () => {
         expect(store.isInitialized).toBe(true);
     });
 
-    it('waits on the new run when the run a reset interrupted fails first', async () => {
-        silence('error');
+    it('waits on the new run when the run a reset interrupted finishes first', async () => {
         seedStoredService();
         const { store } = createStore();
-        const firstRelay = relayFor(OLD_RELAY);
+        // reset() leaves the relay connected, so both runs publish through
+        // the same fake
+        const relay = relayFor(OLD_RELAY);
         const firstPublish = holdNextCall<void>(
-            firstRelay.publishWalletServiceInfoEvent
+            relay.publishWalletServiceInfoEvent
         );
         const first = store.initializeService();
         await firstPublish.entered;
         await store.reset(true);
 
-        const secondRelay = relayFor(OLD_RELAY);
         const secondPublish = holdNextCall<void>(
-            secondRelay.publishWalletServiceInfoEvent
+            relay.publishWalletServiceInfoEvent
         );
         const second = store.initializeService();
         await secondPublish.entered;
-        // The interrupted run ends without starting the service
-        firstRelay.failPublish = true;
-        firstPublish.fail(new Error('publish failed'));
+        firstPublish.release();
         await settle(first);
-        firstRelay.failPublish = false;
+        // The interrupted run ends without starting the service
         expect(store.isInitialized).toBe(false);
 
         const connectionReads = () =>
