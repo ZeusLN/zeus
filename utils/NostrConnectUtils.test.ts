@@ -25,7 +25,8 @@ jest.mock('./LocaleUtils', () => ({
 jest.mock('./BackendUtils', () => ({
     __esModule: true,
     default: {
-        supportsMessageSigning: jest.fn(() => true)
+        supportsMessageSigning: jest.fn(() => true),
+        lookupInvoice: jest.fn()
     }
 }));
 
@@ -1546,8 +1547,52 @@ describe('NostrConnectUtils', () => {
                 ])
             ).toBe(PermissionType.ReadOnly);
             expect(
+                NostrConnectUtils.determinePermissionType(
+                    NostrConnectUtils.getInvoiceOnlyPermissions()
+                )
+            ).toBe(PermissionType.InvoiceOnly);
+            expect(
                 NostrConnectUtils.determinePermissionType(['sign_message'])
             ).toBe(PermissionType.Custom);
+        });
+
+        it('classifies Invoice Only with sign_message, but not with get_balance', () => {
+            expect(
+                NostrConnectUtils.determinePermissionType([
+                    ...NostrConnectUtils.getInvoiceOnlyPermissions(),
+                    'sign_message'
+                ])
+            ).toBe(PermissionType.InvoiceOnly);
+            expect(
+                NostrConnectUtils.determinePermissionType([
+                    ...NostrConnectUtils.getInvoiceOnlyPermissions(),
+                    'get_balance'
+                ])
+            ).toBe(PermissionType.Custom);
+            expect(
+                NostrConnectUtils.determinePermissionType([
+                    'make_invoice',
+                    'lookup_invoice'
+                ])
+            ).toBe(PermissionType.Custom);
+        });
+
+        it('keeps make_invoice out of Read Only and get_balance out of Invoice Only', () => {
+            expect(NostrConnectUtils.getReadOnlyPermissions()).not.toContain(
+                'make_invoice'
+            );
+            expect(NostrConnectUtils.getInvoiceOnlyPermissions()).not.toContain(
+                'get_balance'
+            );
+            expect(NostrConnectUtils.getInvoiceOnlyPermissions()).not.toContain(
+                'pay_invoice'
+            );
+            expect(
+                NostrConnectUtils.getPermissionsForType(
+                    PermissionType.InvoiceOnly,
+                    []
+                ).permissions
+            ).toEqual(NostrConnectUtils.getInvoiceOnlyPermissions());
         });
 
         it('preserves sign_message when clearing a wallet-access preset', () => {
@@ -1854,5 +1899,49 @@ describe('NostrConnectUtils pay_invoice amount resolution', () => {
                 requestedAmountMsat: 7_000_000
             })
         ).resolves.toBe(0);
+    });
+});
+
+describe('NostrConnectUtils.lookupInvoicePaidFromNode', () => {
+    const rHash = hex64('a');
+
+    beforeEach(() => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockReset();
+    });
+
+    it('returns true when the node reports the invoice settled', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue({
+            state: 'SETTLED',
+            settled: true
+        });
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+        ).resolves.toBe(true);
+    });
+
+    it('returns false when the node reports the invoice open', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue({
+            state: 'OPEN',
+            settled: false
+        });
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+        ).resolves.toBe(false);
+    });
+
+    it('returns undefined when the lookup fails', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+            new Error('Tor down')
+        );
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+        ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when there is no hash to look up', async () => {
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({})
+        ).resolves.toBeUndefined();
+        expect(BackendUtils.lookupInvoice).not.toHaveBeenCalled();
     });
 });
