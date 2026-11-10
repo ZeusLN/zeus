@@ -1850,6 +1850,28 @@ describe('TransactionsStore.sendPayment held back by the graph sync prompt', () 
         expect(payLightningInvoice).toHaveBeenCalledTimes(1);
     });
 
+    it("doesn't show the previous payment's tracking-stopped warning when the prompt is dismissed", async () => {
+        const store = await storeWithHeldPayment();
+        store.hideGraphSyncPrompt();
+        // the warning belongs to the previous payment; set it the way
+        // markTrackingStopped leaves it, then hold back the next payment
+        store.paymentOutcomeUnverified = true;
+        checkGraphSync.mockImplementationOnce(
+            (_settings, _implementation, paymentData, transactionsStore) => {
+                transactionsStore.pendingPaymentData = paymentData;
+                transactionsStore.showGraphSyncPrompt = true;
+                return false;
+            }
+        );
+        store.sendPayment({ payment_request: 'lnbc1third' });
+        expect(store.paymentOutcomeUnverified).toBe(false);
+
+        store.hideGraphSyncPrompt();
+        expect(payLightningInvoice).toHaveBeenCalledTimes(1);
+        expect(store.error_msg).toBe('views.GraphSyncPrompt.paymentNotSent');
+        expect(store.paymentOutcomeUnverified).toBe(false);
+    });
+
     it('dispatches the payment when the prompt is answered', async () => {
         const store = await storeWithHeldPayment();
         payLightningInvoice.mockReturnValue(deferred().promise);

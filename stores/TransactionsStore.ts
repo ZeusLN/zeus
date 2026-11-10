@@ -807,21 +807,27 @@ export default class TransactionsStore {
             // Nothing is dispatched until the prompt is answered, but callers
             // navigate to the sending screen regardless: don't let it show
             // the previous payment's outcome as the result of this one
-            if (!this.paymentInFlight) {
-                this.loading = true;
-                this.error_msg = null;
-                this.error = false;
-                this.payment_route = null;
-                this.payment_preimage = null;
-                this.isIncomplete = null;
-                this.payment_hash = null;
-                this.payment_error = null;
-                this.status = null;
-            }
+            if (!this.paymentInFlight) this.resetPaymentOutcome();
             return;
         }
 
         return this.sendPaymentInternal(paymentData);
+    };
+
+    // Clears what the sending screen shows about the last payment and puts
+    // it in the loading state for the next one
+    @action
+    private resetPaymentOutcome = () => {
+        this.paymentOutcomeUnverified = false;
+        this.loading = true;
+        this.error_msg = null;
+        this.error = false;
+        this.payment_route = null;
+        this.payment_preimage = null;
+        this.isIncomplete = null;
+        this.payment_hash = null;
+        this.payment_error = null;
+        this.status = null;
     };
 
     @action
@@ -862,16 +868,7 @@ export default class TransactionsStore {
         this.paymentInFlightConfirmed = false;
         this.paymentStartTime = Date.now();
         this.paymentDuration = null;
-        this.paymentOutcomeUnverified = false;
-        this.loading = true;
-        this.error_msg = null;
-        this.error = false;
-        this.payment_route = null;
-        this.payment_preimage = null;
-        this.isIncomplete = null;
-        this.payment_hash = null;
-        this.payment_error = null;
-        this.status = null;
+        this.resetPaymentOutcome();
         this.noteKey = '';
 
         // The offer path dispatches via payOffer, which only direct-pay
