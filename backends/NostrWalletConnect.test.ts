@@ -7,6 +7,7 @@ import {
     Nip47WalletError,
     NostrWebLNProvider
 } from '@getalby/sdk';
+import Invoice from '../models/Invoice';
 
 const mockSettingsStore: any = {};
 // getter: the factory runs when the backend is imported, which is hoisted
@@ -232,6 +233,29 @@ describe('NostrWalletConnect.getInvoices', () => {
         client.listTransactions.mockRejectedValue(error);
 
         await expect(backend.getInvoices({ limit: 10 })).rejects.toBe(error);
+    });
+
+    // Older ZEUS wallet services send expires_at in milliseconds
+    it('reads a millisecond expires_at as seconds', async () => {
+        const { backend, client } = await setup();
+        const expiredSeconds = 1_500_000_000; // 2017
+        client.listTransactions.mockResolvedValue({
+            transactions: [
+                nip47Tx({
+                    settled_at: undefined,
+                    expires_at: expiredSeconds * 1000
+                }),
+                nip47Tx({ settled_at: undefined, expires_at: expiredSeconds })
+            ]
+        });
+
+        const { invoices } = await backend.getInvoices({ limit: 10 });
+
+        expect(invoices.map((i: any) => i.expires_at)).toEqual([
+            expiredSeconds,
+            expiredSeconds
+        ]);
+        expect(invoices.every((i: any) => new Invoice(i).isExpired)).toBe(true);
     });
 });
 

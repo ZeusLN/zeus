@@ -1153,6 +1153,34 @@ describe('NostrConnectUtils', () => {
         });
 
         describe('connection activity conversion', () => {
+            // NIP-47 keeps "failed" for payments and "expired" for invoices
+            it.each([
+                ['pay_invoice', 'failed', 'outgoing', 'failed'],
+                ['make_invoice', 'expired', 'incoming', 'expired']
+            ] as const)(
+                'lists a %s with status %s as %s %s',
+                (type, status, direction, state) => {
+                    const activity: ConnectionActivity = {
+                        id: INVOICE_A,
+                        type,
+                        payment_source: 'lightning',
+                        status,
+                        satAmount: 1000,
+                        ...(type === 'make_invoice'
+                            ? { invoice: new Invoice(lndInvoice()) }
+                            : {})
+                    };
+
+                    const tx =
+                        NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                            activity
+                        );
+
+                    expect(tx.type).toBe(direction);
+                    expect(tx.state).toBe(state);
+                }
+            );
+
             it('never reports the payment request as a payment hash', () => {
                 const activity: ConnectionActivity = {
                     id: INVOICE_A,

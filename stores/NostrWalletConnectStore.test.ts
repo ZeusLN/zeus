@@ -1996,6 +1996,90 @@ describe('NostrWalletConnectStore payment notifications', () => {
             });
         });
 
+        // loadConnections runs on every focus of the connections list
+        it('settles the stored row once when the connections reload during list_transactions', async () => {
+            const { store, connection, relay } = await startWithInvoice();
+            settleOnNode();
+            const lookup = holdNextCall<boolean>(
+                NostrConnectUtils.lookupInvoicePaidFromNode as jest.Mock
+            );
+            await store.saveConnections();
+
+            const listing = (store as any).handleListTransactions(
+                connection,
+                {}
+            );
+            await lookup.entered;
+            await store.loadConnections();
+            const [reloaded] = store.connections;
+            expect(reloaded).not.toBe(connection);
+            lookup.release(true);
+            const first = await listing;
+
+            expect(first.result.transactions[0].state).toBe('settled');
+            expect(reloaded.activity[0].status).toBe('success');
+            await jest.advanceTimersByTimeAsync(1000);
+            expect(persistedConnections()[0].activity[0].status).toBe(
+                'success'
+            );
+
+            const second = await (store as any).handleListTransactions(
+                reloaded,
+                {}
+            );
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(second.result.transactions[0].state).toBe('settled');
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
+        it('answers lookup_invoice from the stored row when the connections reload during the check', async () => {
+            const { store, connection, activity, relay } =
+                await startWithInvoice();
+            settleOnNode();
+            const lookup = holdNextCall<boolean>(
+                NostrConnectUtils.lookupInvoicePaidFromNode as jest.Mock
+            );
+            await store.saveConnections();
+
+            const response = (store as any).handleLookupInvoice(connection, {
+                invoice: activity.id
+            });
+            await lookup.entered;
+            await store.loadConnections();
+            const [reloaded] = store.connections;
+            lookup.release(true);
+
+            expect((await response).result.state).toBe('settled');
+            expect(reloaded.activity[0].status).toBe('success');
+            await jest.advanceTimersByTimeAsync(0);
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
+        it('settles the stored row once when the connections reload during getActivities', async () => {
+            const { store, connection, relay } = await startWithInvoice();
+            settleOnNode();
+            const lookup = holdNextCall<boolean>(
+                NostrConnectUtils.lookupInvoicePaidFromNode as jest.Mock
+            );
+            await store.saveConnections();
+
+            const activities = store.getActivities(connection.id);
+            await lookup.entered;
+            await store.loadConnections();
+            const [reloaded] = store.connections;
+            expect(reloaded).not.toBe(connection);
+            lookup.release(true);
+            await activities;
+            await jest.advanceTimersByTimeAsync(1000);
+
+            expect(reloaded.activity[0].status).toBe('success');
+            expect(persistedConnections()[0].activity[0].status).toBe(
+                'success'
+            );
+            expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+        });
+
         it('publishes payment_received when a pending invoice settles', async () => {
             const { store, connection, activity, relay } =
                 await startWithInvoice();
@@ -2143,6 +2227,37 @@ describe('NostrWalletConnectStore payment notifications', () => {
             expect(relay.publishNotification).toHaveBeenCalledTimes(1);
         });
 
+        it('answers lookup_invoice on a pending pay_invoice from the stored row when the connections reload during the check', async () => {
+            const payment = settledPayment();
+            let release: (value: any) => void = () => {};
+            const gate = new Promise((resolve) => (release = resolve));
+            const started = await startService([{ maxAmountSats: 100000 }], {
+                paymentsStore: {
+                    payments: [payment],
+                    getPayments: jest.fn(() => gate)
+                }
+            });
+            const { store } = started;
+            const connection = started.connections[0];
+            connection.activity = [pendingPayInvoice()] as any;
+            await store.saveConnections();
+
+            const response = (store as any).handleLookupInvoice(connection, {
+                payment_hash: paymentHash
+            });
+            await jest.advanceTimersByTimeAsync(0);
+            await store.loadConnections();
+            const [reloaded] = store.connections;
+            expect(reloaded).not.toBe(connection);
+            release([payment]);
+
+            const answer = await response;
+            expect(answer.error).toBeUndefined();
+            expect(answer.result.state).toBe('settled');
+            expect(answer.result.preimage).toBe(hex64('9'));
+            expect(reloaded.activity[0].status).toBe('success');
+        });
+
         it('publishes payment_sent once and debits once when finalizePayment lands during a reconcile', async () => {
             const payment = settledPayment();
             let release: (value: any) => void = () => {};
@@ -2263,6 +2378,47 @@ describe('NostrWalletConnectStore payment notifications', () => {
                     relay: relays.get(connection.relayUrl)!
                 };
             }
+
+            // loadConnections runs on every focus of the connections list
+            it('settles the stored row once when the connections reload during list_transactions', async () => {
+                const { store, cashuStore, connection, relay } =
+                    await startWithCashuInvoice();
+                const check = jest.spyOn(cashuStore, 'checkInvoicePaid');
+                const mint = holdNextCall<any>(check as unknown as jest.Mock);
+                await store.saveConnections();
+
+                const listing = (store as any).handleListTransactions(
+                    connection,
+                    {}
+                );
+                await mint.entered;
+                await store.loadConnections();
+                const [reloaded] = store.connections;
+                expect(reloaded).not.toBe(connection);
+                mint.release({
+                    isPaid: true,
+                    amtSat: '1000',
+                    updatedInvoice: cashuInvoice(true)
+                });
+                const first = await listing;
+
+                expect(first.result.transactions[0].state).toBe('settled');
+                expect(reloaded.activity[0].status).toBe('success');
+                await jest.advanceTimersByTimeAsync(1000);
+                expect(persistedConnections()[0].activity[0].status).toBe(
+                    'success'
+                );
+
+                const second = await (store as any).handleListTransactions(
+                    reloaded,
+                    {}
+                );
+                await jest.advanceTimersByTimeAsync(0);
+
+                expect(second.result.transactions[0].state).toBe('settled');
+                expect(check).toHaveBeenCalledTimes(1);
+                expect(relay.publishNotification).toHaveBeenCalledTimes(1);
+            });
 
             it('publishes payment_received once when a pending Cashu invoice settles', async () => {
                 const { store, cashuStore, connection, activity, relay } =
@@ -2953,7 +3109,7 @@ describe('NostrWalletConnectStore list_transactions pending make_invoice', () =>
         expect(connection.activity[0].status).toBe('pending');
     });
 
-    it('settles and expires a Lightning make_invoice stored as a plain object', async () => {
+    it('settles a Lightning make_invoice stored as a plain object', async () => {
         const { store, connection } = setup();
         const plain = (invoice: Invoice) => JSON.parse(JSON.stringify(invoice));
         jest.spyOn(
@@ -3070,6 +3226,19 @@ describe('NostrWalletConnectStore list_transactions pending make_invoice', () =>
             expect(connection.activity[0].status).toBe('expired');
             expect(response.result.transactions).toHaveLength(1);
             expect(response.result.transactions[0].state).toBe('expired');
+        });
+
+        it('looks up an expired Cashu make_invoice stored as a plain object as expired', async () => {
+            const { store, connection } = setupCashu({ expired: true });
+
+            const response = await (store as any).handleLookupInvoice(
+                connection,
+                { invoice: cashuRequest }
+            );
+
+            expect(response.error).toBeUndefined();
+            expect(response.result.state).toBe('expired');
+            expect(connection.activity[0].status).toBe('expired');
         });
 
         it('asks the mint about a pending invoice once it is old enough', async () => {
