@@ -62,6 +62,10 @@ const settingsStore = {
     }
 };
 
+const modalStore = {
+    closeVisibleModalDialog: () => false
+};
+
 const loadApp = () => {
     const Passthrough = ({ children }: { children?: React.ReactNode }) =>
         children ?? null;
@@ -76,7 +80,7 @@ const loadApp = () => {
     }
 
     const overrides: { [specifier: string]: () => any } = {
-        './stores/Stores': () => ({ settingsStore }),
+        './stores/Stores': () => ({ settingsStore, modalStore }),
         // mobx-react 6 requires react-dom, which is not installed
         'mobx-react': () => ({
             Provider: Passthrough,
@@ -182,5 +186,53 @@ describe('App', () => {
         expect(settingsStore.loggedIn).toBe(false);
 
         await unmount();
+    });
+
+    describe('hardware back', () => {
+        const backPress = async (routeNames: string[]) => {
+            // no PIN, so back is not routed to exitApp
+            settingsStore.settings = {};
+            const app = React.createRef<any>();
+            const { unmount } = await render(
+                React.createElement(App, { ref: app })
+            );
+            const navigation = {
+                getState: () => ({
+                    routes: routeNames.map((name) => ({ name }))
+                }),
+                pop: jest.fn()
+            };
+            const handled = app.current.handleBackPress(navigation);
+            await unmount();
+            return { handled, pop: navigation.pop };
+        };
+
+        it('pops a screen without its own back handler', async () => {
+            const { handled, pop } = await backPress([
+                'Wallet',
+                'PaymentRequest'
+            ]);
+
+            expect(handled).toBe(true);
+            expect(pop).toHaveBeenCalledTimes(1);
+        });
+
+        // MultimintPayment keeps itself open while a payment is in flight;
+        // popping it here would return to the review of the same invoice
+        it.each([
+            'SendingLightning',
+            'SendingOnChain',
+            'CashuSendingLightning',
+            'MultimintPayment'
+        ])('leaves back on %s to the screen', async (screen) => {
+            const { handled, pop } = await backPress([
+                'Wallet',
+                'PaymentRequest',
+                screen
+            ]);
+
+            expect(handled).toBe(false);
+            expect(pop).not.toHaveBeenCalled();
+        });
     });
 });
