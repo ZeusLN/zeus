@@ -1245,10 +1245,15 @@ describe('WalletConfiguration', () => {
         it('keeps wallet A pending when wallet B is restored from an aezeed', async () => {
             const updates = await restore('aezeed words');
 
-            expect(updates).toContainEqual({
+            // One write: a kill after the node is saved cannot leave
+            // wallet B without its recovery
+            expect(updates).toHaveLength(1);
+            expect(updates[0]).toMatchObject({
+                selectedNode: 1,
                 recovery: true,
                 recoveryWalletDirs: ['walletA', 'walletB']
             });
+            expect(updates[0].nodes[1]).toMatchObject({ lndDir: 'walletB' });
         });
 
         it('leaves the recovery settings alone without a cipher seed', async () => {

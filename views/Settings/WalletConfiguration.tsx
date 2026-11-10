@@ -771,6 +771,11 @@ export default class WalletConfiguration extends React.Component<
                 return {
                     nodes,
                     selectedNode: nodes.length - 1,
+                    // Pending next to any earlier restore that has not run
+                    // yet, written with the node so a kill cannot split them
+                    ...(recoveryCipherSeed
+                        ? addRecoveryWallet(current, lndDir || 'lnd')
+                        : {}),
                     // Force Wallet view to restart connection for new wallet
                     justDeletedWallet: false,
                     // Ensure Express Graph Sync runs for new wallet
@@ -796,12 +801,6 @@ export default class WalletConfiguration extends React.Component<
                         console.error('Error updating NWC connections:', error);
                     }
                 }
-                if (recoveryCipherSeed) {
-                    await updateSettings((current: Settings) =>
-                        addRecoveryWallet(current, lndDir || 'lnd')
-                    );
-                }
-
                 this.setState({
                     saved: true
                 });
