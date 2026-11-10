@@ -2632,6 +2632,40 @@ describe('NostrWalletConnectStore request event replay guard', () => {
         expect(await client.recordEvent(eventId(1))).toBeUndefined();
     });
 
+    it('queues one write for the claims made while another is running', async () => {
+        const {
+            connections: [connection]
+        } = await startService();
+        const client = clientFor(connection);
+        const write = holdNextWrite(NWC_PROCESSED_EVENTS_KEY);
+        (Storage.setItem as jest.Mock).mockClear();
+
+        const first = client.recordEvent(eventId(1));
+        await write.entered;
+        const burst = [2, 3, 4, 5, 6].map((i) =>
+            Promise.resolve(client.recordEvent(eventId(i)))
+        );
+        await jest.advanceTimersByTimeAsync(0);
+        write.release(undefined);
+
+        expect(await first).toBeUndefined();
+        expect(await Promise.all(burst)).toEqual([
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined
+        ]);
+        // the running write and one for the five claims behind it
+        const writes = (Storage.setItem as jest.Mock).mock.calls.filter(
+            ([key]) => key === NWC_PROCESSED_EVENTS_KEY
+        );
+        expect(writes).toHaveLength(2);
+        expect(storedEventIds()).toEqual(
+            [1, 2, 3, 4, 5, 6].map((i) => keyOf(eventId(i)))
+        );
+    });
+
     it('keeps an id when the connections are loaded while it is being saved', async () => {
         const {
             store,
@@ -2815,34 +2849,45 @@ describe('NostrWalletConnectStore request event replay guard', () => {
                 fee_sat: '3',
                 payment_preimage: preimage
             } as any);
+            const payLnInvoiceFromEcash = jest.fn();
             const {
                 store,
                 connections: [connection]
-            } = await startService([
+            } = await startService(
+                [
+                    {
+                        permissions: ['pay_invoice'],
+                        maxAmountSats: 100000,
+                        activity: [
+                            activity('success', {
+                                payment_source: 'cashu',
+                                payment: cashuPayment
+                            })
+                        ]
+                    }
+                ],
                 {
-                    permissions: ['pay_invoice'],
-                    activity: [
-                        activity('success', {
-                            payment_source: 'cashu',
-                            payment: cashuPayment
-                        })
-                    ]
+                    cashuStore: {
+                        selectedMintUrl: 'https://mint.example',
+                        isProperlyConfigured: () => true,
+                        getPayReq: jest.fn(),
+                        payLnInvoiceFromEcash
+                    }
                 }
-            ]);
+            );
+            store.cashuEnabled = true;
+            const client = clientFor(connection);
 
+            // what a restart does: the row comes back from storage
             await store.saveConnections();
             await store.loadConnections();
+            const retry = await client.payInvoice({ invoice });
 
-            expect(
-                await (store as any).getSettledPayInvoiceResponse(
-                    store.connections[0],
-                    invoice
-                )
-            ).toEqual({
+            expect(retry).toEqual({
                 result: { preimage, fees_paid: 3000 },
                 error: undefined
             });
-            expect(connection.id).toBe(store.connections[0].id);
+            expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
         });
 
         it('leaves a paid invoice whose preimage is unknown to the pay handler', async () => {

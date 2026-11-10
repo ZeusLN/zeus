@@ -221,6 +221,8 @@ export default class NostrWalletConnectStore {
     private processedEventIds = new Map<string, string[]>();
     private processedEventIdsLoad: Promise<void> | undefined;
     private _processedEventsWrite: Promise<void> = Promise.resolve();
+    // The write queued behind the running one, if it has not started yet
+    private queuedProcessedEventsWrite: Promise<void> | undefined;
     private resetInFlight: Promise<void> | null = null;
     private lastPendingPaymentStatusFetchByConnection = new Map<
         string,
@@ -1908,13 +1910,12 @@ export default class NostrWalletConnectStore {
                 const stored = data ? JSON.parse(data) : {};
                 for (const [connectionId, ids] of Object.entries(stored)) {
                     if (!Array.isArray(ids)) continue;
-                    const claimed = this.processedEventIds.get(connectionId);
-                    this.processedEventIds.set(connectionId, [
-                        ...(ids as unknown[]).filter(
+                    this.processedEventIds.set(
+                        connectionId,
+                        (ids as unknown[]).filter(
                             (id): id is string => typeof id === 'string'
-                        ),
-                        ...(claimed ?? [])
-                    ]);
+                        )
+                    );
                 }
             })().catch((error) => {
                 // Try again on the next request
@@ -1925,13 +1926,24 @@ export default class NostrWalletConnectStore {
         return this.processedEventIdsLoad;
     }
 
+    /**
+     * Saves every claimed id. A claim made before the queued write starts
+     * is in that write, so a burst of requests queues one write behind the
+     * running one instead of one full-size write each.
+     */
     private saveProcessedEventIds(): Promise<void> {
+        if (this.queuedProcessedEventsWrite) {
+            return this.queuedProcessedEventsWrite;
+        }
         const run = this._processedEventsWrite.then(async () => {
+            // Later claims need a write of their own
+            this.queuedProcessedEventsWrite = undefined;
             await Storage.setItem(
                 NWC_PROCESSED_EVENTS_KEY,
                 JSON.stringify(Object.fromEntries(this.processedEventIds))
             );
         });
+        this.queuedProcessedEventsWrite = run;
         this._processedEventsWrite = run.then(
             () => undefined,
             () => undefined
