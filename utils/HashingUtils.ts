@@ -1,10 +1,8 @@
-import { hash as fastSha256, hmac as fastHmacSha256 } from 'fast-sha256';
-import hashjs from 'hash.js';
+import { hmac } from '@noble/hashes/hmac.js';
+import { sha1 } from '@noble/hashes/legacy.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import { scrypt } from 'scrypt-js';
-
-import Base64Utils from './Base64Utils';
-
-const objectHash = require('object-hash');
 
 // The app's SHA-256, HMAC-SHA256, SHA-1 and scrypt calls go through these
 // helpers so the hashing library can be swapped in one place. Several outputs
@@ -13,26 +11,28 @@ const objectHash = require('object-hash');
 // the call sites' tests pin them to vectors computed with Node's crypto.
 
 export function sha256Bytes(input: Uint8Array): Uint8Array {
-    return fastSha256(input);
+    return sha256(input);
 }
 
 export function sha256Hex(input: Uint8Array): string {
-    return Base64Utils.bytesToHex(Array.from(sha256Bytes(input)));
+    return bytesToHex(sha256Bytes(input));
 }
 
 // Hashes the string's UTF-8 bytes
 export function sha256StringToHex(input: string): string {
-    return hashjs.sha256().update(input).digest('hex');
+    return bytesToHex(sha256(utf8ToBytes(input)));
 }
 
 export function hmacSha256(key: Uint8Array, message: Uint8Array): Uint8Array {
-    return fastHmacSha256(key, message);
+    return hmac(sha256, key, message);
 }
 
 // object-hash's SHA-1 of a string: sha1("string:<length>:<value>"), where
 // length counts UTF-16 code units
 export function sha1ForIdenticon(stableIdentity: string): string {
-    return objectHash.sha1(stableIdentity);
+    return bytesToHex(
+        sha1(utf8ToBytes(`string:${stableIdentity.length}:${stableIdentity}`))
+    );
 }
 
 export interface ScryptOpts {
