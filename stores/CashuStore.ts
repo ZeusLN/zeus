@@ -357,6 +357,10 @@ export default class CashuStore {
     // Bumped by reset() so background work started for one wallet session
     // can tell that the wallet changed while it ran
     private walletSession = 0;
+    // The node dir initializeWallets() loaded the offline queues from. A
+    // wallet switch points getNodeDir() at the next wallet before reset()
+    // runs, and the store holds this wallet's queues until then
+    private walletNodeDir: string | undefined;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -2101,6 +2105,7 @@ export default class CashuStore {
         // A pass still waiting on the previous wallet's mint would otherwise
         // be joined by this wallet's first sweep, which then skips its melts
         this.reconcileRun = undefined;
+        this.walletNodeDir = undefined;
         this.stopConnectivityMonitoring();
     };
 
@@ -3948,6 +3953,7 @@ export default class CashuStore {
         this.startConnectivityMonitoring();
 
         const lndDir = this.getNodeDir();
+        this.walletNodeDir = lndDir;
 
         // Load app-specific data from local storage (activity, preferences, seed)
         const [
@@ -6179,14 +6185,20 @@ export default class CashuStore {
             this.offlinePendingTokens.length === 0 ||
             !this.cdkInitialized ||
             this.isOffline ||
-            this.isSweeping
+            this.isSweeping ||
+            // A wallet switch has started: leave the queue for this
+            // wallet's next sweep rather than write it under the next
+            // wallet's node dir
+            this.walletNodeDir !== this.getNodeDir()
         ) {
             if (__DEV__) {
                 console.log('sweepOfflinePendingTokens: skipping', {
                     count: this.offlinePendingTokens.length,
                     cdkInitialized: this.cdkInitialized,
                     isOffline: this.isOffline,
-                    isSweeping: this.isSweeping
+                    isSweeping: this.isSweeping,
+                    walletNodeDir: this.walletNodeDir,
+                    nodeDir: this.getNodeDir()
                 });
             }
             return;

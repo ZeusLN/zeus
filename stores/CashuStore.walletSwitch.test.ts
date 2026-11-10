@@ -116,6 +116,7 @@ jest.mock('../storage', () => ({
 
 import Storage from '../storage';
 import CashuStore from './CashuStore';
+import { connectivityStore } from './Stores';
 import CashuToken from '../models/CashuToken';
 
 // BIP-39 test vectors, never real wallets
@@ -463,5 +464,33 @@ describe('CashuStore offline-token sweep across a wallet switch with a second mi
         expect(storedTokens('walletA-cashu-offline-pending-tokens')).toEqual([
             'token-from-mint-C'
         ]);
+    });
+});
+
+describe('CashuStore offline-token sweep started during a wallet switch', () => {
+    beforeEach(async () => {
+        // Wallet A opens offline, so its sweep waits for a reconnect
+        connectivityStore.isOffline = true;
+        await startOnWalletA(['token-1-for-wallet-A', 'token-2-for-wallet-A']);
+        connectivityStore.isOffline = false;
+        // Claims are answered at once in these tests
+        mockCdk.answerFirstClaim = () => {};
+    });
+
+    it("leaves both wallets' stored queues alone", async () => {
+        // SettingsStore has loaded wallet B's node, and the reconnect
+        // timer fires before Wallet.fetchDataCore() resets the store
+        settingsStore.lndDir = 'walletB';
+        await store.sweepOfflinePendingTokens();
+
+        expect(storedTokens('walletB-cashu-offline-pending-tokens')).toEqual([
+            'token-for-wallet-B'
+        ]);
+        // A's tokens wait for A's next sweep
+        expect(storedTokens('walletA-cashu-offline-pending-tokens')).toEqual([
+            'token-1-for-wallet-A',
+            'token-2-for-wallet-A'
+        ]);
+        expect(mockCdk.databases[SEED_A].received).toEqual([]);
     });
 });
