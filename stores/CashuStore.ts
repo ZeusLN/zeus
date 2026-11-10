@@ -5710,15 +5710,25 @@ export default class CashuStore {
             }
             this.payments = payments;
         });
-        await Storage.setItem(
-            `${this.getNodeDir()}-cashu-payments`,
-            this.payments
-        );
-        // Untracked only once stored, as in the single-mint path. Parts
-        // still in flight stay tracked.
-        for (const payment of segmentPayments) {
-            const paidQuote = payment.meltResponse?.quote?.quote;
-            if (paidQuote) await this.untrackPendingMelt(paidQuote);
+        // The invoice is paid: a failed write must not report it as a failure
+        // to retry. A part left tracked is settled in place by
+        // reconcilePendingMelts, which keeps the fee recorded here.
+        try {
+            await Storage.setItem(
+                `${this.getNodeDir()}-cashu-payments`,
+                this.payments
+            );
+            // Untracked only once stored, as in the single-mint path. Parts
+            // still in flight stay tracked.
+            for (const payment of segmentPayments) {
+                const paidQuote = payment.meltResponse?.quote?.quote;
+                if (paidQuote) await this.untrackPendingMelt(paidQuote);
+            }
+        } catch (writeError) {
+            console.error(
+                'CDK payLnInvoiceFromEcashMultiMint: Failed to store paid parts:',
+                writeError
+            );
         }
 
         const totalFeePaid = segmentPayments.reduce(

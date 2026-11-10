@@ -769,6 +769,66 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.payments!.map((p) => p.fee)).toEqual([0, 2]);
     });
 
+    it.each([
+        ['the payments', 'node1-cashu-payments', 0],
+        // the first two writes track the parts before they melt
+        ['the untracked melts', 'node1-cashu-pending-melts', 2]
+    ])(
+        'reports a paid invoice as paid when writing %s after the parts fails',
+        async (_label, failingKey, callsBeforeFailing) => {
+            const store = await plannedStore();
+            cdk.melt.mockImplementation(async (mintUrl: string) =>
+                mintUrl === A ? paid(546, 1) : paid(454, 2, '')
+            );
+            let calls = 0;
+            storage.setItem.mockImplementation(async (key: string) => {
+                if (key === failingKey && calls++ === callsBeforeFailing) {
+                    throw new Error('keychain write failed');
+                }
+                return true;
+            });
+            const onProgress = jest.fn();
+
+            await store.payLnInvoiceFromEcash({
+                paymentRequest: INVOICE,
+                onProgress
+            });
+
+            expect(store.paymentSuccess).toBe(true);
+            expect(store.paymentError).toBe(false);
+            expect(store.paymentFee).toBe(3);
+            expect(onProgress.mock.calls.at(-1)[0].step).toBe(
+                MultinutPaymentStep.COMPLETE
+            );
+            // A part left tracked is settled in place, with the fee its melt
+            // reported
+            expect(store.pendingMelts.length).toBeGreaterThan(0);
+            cdk.checkMeltQuote.mockImplementation(
+                async (_m: string, id: string) => ({
+                    id,
+                    amount: 0,
+                    fee_reserve: 0,
+                    state: 'PAID',
+                    expiry: 9999999999,
+                    payment_preimage: PREIMAGE
+                })
+            );
+            await store.reconcilePendingMelts();
+            expect(
+                store.payments!.map((p) => [
+                    p.mintUrl,
+                    p.fee,
+                    !!p.fee_unknown,
+                    p.isInTransit
+                ])
+            ).toEqual([
+                [A, 1, false, false],
+                [B, 2, false, false]
+            ]);
+            expect(store.pendingMelts).toEqual([]);
+        }
+    );
+
     it('melts a regular-quote plan with its quote id without quoting it again', async () => {
         const store = await regularPlannedStore();
         cdk.createMeltQuote.mockClear();
