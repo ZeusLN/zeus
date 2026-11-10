@@ -18,7 +18,8 @@ export function sourceMethods(
         fs.readFileSync(filename, 'utf8'),
         ts.ScriptTarget.Latest,
         true,
-        ts.ScriptKind.TSX
+        // a .ts file parsed as TSX reads a generic arrow (<T>(x) => ...) as JSX
+        filename.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
     );
     const declaration = source.statements.find(
         (node): node is ts.ClassDeclaration =>
