@@ -218,7 +218,6 @@ export default class TransactionsStore {
         // touch `loading`, so an earlier send left in here would keep a
         // later release from clearing it
         this.pendingSendSeqs.clear();
-        this.releasedSeqs.clear();
         this.loading = false;
         this.sendOutcomeUnknown = false;
         this.paymentInFlight = false;
