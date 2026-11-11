@@ -2020,3 +2020,82 @@ describe('TransactionsStore payment sequence', () => {
         );
     });
 });
+
+describe('TransactionsStore result of an earlier payment', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        payLightningInvoice.mockReset();
+        // CLN has no lookupPayment, so the backstop frees the guard
+        // without tracking the payment
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockReturnValue(
+            false
+        );
+    });
+
+    afterEach(() => {
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockReturnValue(true);
+        jest.useRealTimers();
+    });
+
+    // sends a payment whose request stays open past its backstop (e.g. a
+    // hold invoice), then the next payment once the backstop frees the guard
+    const sendNextPastBackstop = (store: TransactionsStore) => {
+        const first = deferred();
+        const second = deferred();
+        payLightningInvoice
+            .mockReturnValueOnce(first.promise)
+            .mockReturnValueOnce(second.promise);
+
+        const firstSeq = store.sendPayment({ payment_request: 'lnbc1' });
+        // the 60 second payment timeout plus the grace period
+        jest.advanceTimersByTime(120_000);
+        expect(store.paymentInFlight).toBe(false);
+
+        const secondSeq = store.sendPayment({ payment_request: 'lnbc2' });
+        expect(secondSeq).not.toBe(firstSeq);
+        expect(store.lastPaymentSequence).toBe(secondSeq);
+        return { first, second, secondSeq };
+    };
+
+    it("ignores the earlier payment's success when it lands after the next one is sent", async () => {
+        const store = newStore('cln-rest');
+        const { first, second, secondSeq } = sendNextPastBackstop(store);
+
+        first.resolve({ status: 'complete' });
+        await flushPromises();
+
+        // the screen for the second payment must not see a success
+        expect(store.status).toBeNull();
+        expect(store.error).toBe(false);
+        expect(store.loading).toBe(true);
+        expect(store.paymentInFlight).toBe(true);
+        expect(store.lastPaymentSequence).toBe(secondSeq);
+
+        second.resolve({ status: 'complete' });
+        await flushPromises();
+
+        expect(store.status).toBe('complete');
+        expect(store.loading).toBe(false);
+        expect(store.paymentInFlight).toBe(false);
+    });
+
+    it("ignores the earlier payment's error when it lands after the next one is sent", async () => {
+        const store = newStore('cln-rest');
+        const { first, second } = sendNextPastBackstop(store);
+
+        first.reject(new Error('payment timed out'));
+        await flushPromises();
+
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBeNull();
+        expect(store.loading).toBe(true);
+        expect(store.paymentInFlight).toBe(true);
+
+        second.reject(new Error('no route'));
+        await flushPromises();
+
+        expect(store.error).toBe(true);
+        expect(store.loading).toBe(false);
+        expect(store.paymentInFlight).toBe(false);
+    });
+});
