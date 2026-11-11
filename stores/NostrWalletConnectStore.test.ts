@@ -3043,6 +3043,40 @@ describe('NostrWalletConnectStore request event replay guard', () => {
             );
         });
 
+        it('pays again when the stored preimage is all zeros, also after the connections are loaded again', async () => {
+            const zeros = '0'.repeat(64);
+            const collaborators = payCollaborators();
+            collaborators.transactionsStore.getPaymentOutcome.mockReturnValue({
+                payment_preimage: zeros,
+                error: true,
+                status: 'FAILED',
+                isIncomplete: true
+            });
+            const {
+                store,
+                transactionsStore,
+                connections: [connection]
+            } = await startService(
+                [{ permissions: ['pay_invoice'], maxAmountSats: 100000 }],
+                collaborators
+            );
+            const client = clientFor(connection);
+
+            await client.payInvoice({ invoice });
+            expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                1
+            );
+
+            // what a restart does: the row comes back from storage
+            await store.saveConnections();
+            await store.loadConnections();
+            await client.payInvoice({ invoice });
+
+            expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                2
+            );
+        });
+
         it('pays again when the earlier attempt failed', async () => {
             const {
                 transactionsStore,

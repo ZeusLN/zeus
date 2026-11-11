@@ -3159,7 +3159,10 @@ export default class NostrWalletConnectStore {
                 ? new CashuPayment(stored)
                 : new Payment(stored);
         const preimage = existing.preimage || payment?.getPreimage;
-        if (!preimage) {
+        // LND reports a failed payment with a preimage of 64 zeros, which
+        // does not hash to the payment hash: leave it to the pay handler,
+        // as Payment.isIncomplete does
+        if (!preimage || /^0+$/.test(preimage)) {
             return undefined;
         }
 
