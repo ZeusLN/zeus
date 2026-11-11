@@ -122,8 +122,8 @@ const stagedName = (name: string) =>
 // Shares copies staged in this share's own subdir of the app-private share
 // cache (the originals are deleted right after, and a receiver may still be
 // reading), then deletes the originals. Returns false, keeping the
-// originals and the pending prompt, when staging fails or the user closes
-// the sheet without sharing.
+// originals and the pending prompt, when staging fails, the share fails
+// (both show an error) or the user closes the sheet without sharing.
 export const shareLegacyExports = async (
     files: LegacyExportFiles
 ): Promise<boolean> => {
@@ -132,6 +132,7 @@ export const shareLegacyExports = async (
     const Share = require('react-native-share').default;
     const sources = [...files.config, ...files.csv];
     let dir: string | undefined;
+    let shared = false;
     try {
         await sweepStaleShareStaging();
         dir = await createShareStagingDir();
@@ -144,15 +145,23 @@ export const shareLegacyExports = async (
             await RNFS.copyFile(sources[i], dest);
             staged.push(dest);
         }
-        // failOnCancel: a closed sheet must not count as a share
-        await Share.open({
+        // Without failOnCancel a closed sheet resolves with success false,
+        // so only a real failure rejects
+        const result = await Share.open({
             urls: staged.map((path) => `file://${path}`),
-            failOnCancel: true
+            failOnCancel: false
         });
+        shared = !!result?.success;
     } catch (e) {
+        console.warn('Legacy export files not shared:', e);
+        Alert.alert(
+            localeString('general.error'),
+            localeString('views.Wallet.legacyExports.shareFailed')
+        );
+    }
+    if (!shared) {
         // nothing was handed off, so this share's copies can go now
         if (dir) await removeShareStagingDir(dir);
-        console.warn('Legacy export files not shared:', e);
         return false;
     }
     await deleteLegacyExports(files);
