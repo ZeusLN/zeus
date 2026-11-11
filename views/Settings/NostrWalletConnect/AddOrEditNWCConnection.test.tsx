@@ -147,3 +147,30 @@ describe('AddOrEditNWCConnection budget info', () => {
         });
     });
 });
+
+describe('AddOrEditNWCConnection zero-balance wallet with budget', () => {
+    it('blocks zero budget when payment permissions are set', async () => {
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getFullAccessPermissions()
+        );
+        expect(ref.current!.state.connectionName).toBe('Test');
+        expect(ref.current!.state.maxBudgetLimit).toBe(0);
+        expect(ref.current!.state.budgetValue).toBe(0);
+        expect(ref.current!.isFormValid()).toBe(false);
+    });
+
+    it('allows a nonzero budget with a zero-balance wallet', async () => {
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getFullAccessPermissions()
+        );
+        await act(async () => {
+            ref.current!.handleCustomBudgetValueChange('10000');
+        });
+        expect(ref.current!.state.maxBudgetLimit).toBe(0);
+        expect(ref.current!.state.budgetValue).toBe(10000);
+        expect(ref.current!.isFormValid()).toBe(true);
+        await expect(
+            ref.current!.buildConnectionParams(false)
+        ).resolves.toMatchObject({ budgetAmount: 10000 });
+    });
+});
