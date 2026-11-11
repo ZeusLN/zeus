@@ -212,6 +212,7 @@ export default class NostrWalletConnectStore {
     // Bumped by every teardown, so an initializeService() that a reset ran
     // during (node switch, Android Stop Service) does not finish over it
     private resetGeneration = 0;
+    private initializeInFlight: Promise<void> | null = null;
     private lastPendingPaymentStatusFetchByConnection = new Map<
         string,
         number
@@ -296,6 +297,24 @@ export default class NostrWalletConnectStore {
             console.log('NWC: skipping initialization - already initialized');
             return;
         }
+        // A second caller (AppState 'active' while the call made after
+        // connecting still runs) waits for that run: a second run would arm
+        // a second subscribe pass and orphan subscriptions
+        if (this.initializeInFlight) {
+            return this.initializeInFlight;
+        }
+        const run = this.runInitializeService();
+        this.initializeInFlight = run;
+        try {
+            await run;
+        } finally {
+            if (this.initializeInFlight === run) {
+                this.initializeInFlight = null;
+            }
+        }
+    };
+
+    private runInitializeService = async () => {
         const generation = this.resetGeneration;
         await this.loadInitialSettings();
         const hasActiveConnections = this.activeConnections.length > 0;
@@ -552,6 +571,9 @@ export default class NostrWalletConnectStore {
         if (!skipTeardown) {
             this.isInitialized = false;
             this.resetGeneration++;
+            // The next initializeService starts over instead of waiting on
+            // the run this reset interrupted
+            this.initializeInFlight = null;
             const previousReset = this.resetInFlight;
             const teardown = (async () => {
                 if (previousReset) {

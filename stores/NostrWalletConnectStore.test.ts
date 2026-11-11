@@ -1256,6 +1256,133 @@ describe('NostrWalletConnectStore concurrent connection changes', () => {
     });
 });
 
+// The wallet screen calls initializeService after connecting and again on
+// every AppState 'active', so a second call can land while the first runs.
+describe('NostrWalletConnectStore overlapping initializeService calls', () => {
+    it('runs once and subscribes once when a second call starts while the first is running', async () => {
+        seedStoredService();
+        const { store } = createStore();
+        const relay = relayFor(OLD_RELAY);
+        const publish = holdNextCall<void>(relay.publishWalletServiceInfoEvent);
+
+        const first = store.initializeService();
+        await publish.entered;
+        let secondDone = false;
+        const second = store.initializeService().then(() => {
+            secondDone = true;
+        });
+        await flushMicrotasks();
+        // The second call waits for the run in flight
+        expect(secondDone).toBe(false);
+
+        publish.release();
+        await settle(Promise.all([first, second]));
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
+        expect(store.isInitialized).toBe(true);
+        expect(NWCWalletService).toHaveBeenCalledTimes(1);
+        expect(relay.publishWalletServiceInfoEvent).toHaveBeenCalledTimes(1);
+        expect(relay.subscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('does nothing when called after the service has started', async () => {
+        const { store } = await startService();
+        const relay = relayFor(OLD_RELAY);
+
+        await store.initializeService();
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
+        expect(store.isInitialized).toBe(true);
+        expect(NWCWalletService).not.toHaveBeenCalled();
+        expect(relay.publishWalletServiceInfoEvent).not.toHaveBeenCalled();
+        expect(relay.subscribe).not.toHaveBeenCalled();
+    });
+
+    it('starts again when called after a reset', async () => {
+        const { store, connections } = await startService();
+
+        await store.reset(true);
+        expect(isSubscribed(connections[0])).toBe(false);
+        await store.initializeService();
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
+        expect(store.isInitialized).toBe(true);
+        expect(NWCWalletService).toHaveBeenCalledTimes(1);
+        expect(isSubscribed(connections[0])).toBe(true);
+    });
+
+    it('starts a new run when called after a reset during the first run', async () => {
+        seedStoredService();
+        const { store } = createStore();
+        const relay = relayFor(OLD_RELAY);
+        const publish = holdNextCall<void>(relay.publishWalletServiceInfoEvent);
+
+        const first = store.initializeService();
+        await publish.entered;
+        await store.reset(true);
+        // Waiting on the run the reset interrupted would skip loading the
+        // service keys and relays again
+        await settle(store.initializeService());
+
+        expect(NWCWalletService).toHaveBeenCalledTimes(2);
+        // reset() leaves the relay connected, so both runs publish through
+        // the same fake
+        expect(relay.publishWalletServiceInfoEvent).toHaveBeenCalledTimes(2);
+        expect(store.isInitialized).toBe(true);
+
+        publish.release();
+        await settle(first);
+    });
+
+    it('starts a new run after a run that found no connections', async () => {
+        const { store } = createStore();
+        await store.initializeService();
+        seedStoredService();
+        await settle(store.initializeService());
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+        expect(NWCWalletService).toHaveBeenCalledTimes(1);
+        expect(store.isInitialized).toBe(true);
+    });
+
+    it('waits on the new run when the run a reset interrupted finishes first', async () => {
+        seedStoredService();
+        const { store } = createStore();
+        // reset() leaves the relay connected, so both runs publish through
+        // the same fake
+        const relay = relayFor(OLD_RELAY);
+        const firstPublish = holdNextCall<void>(
+            relay.publishWalletServiceInfoEvent
+        );
+        const first = store.initializeService();
+        await firstPublish.entered;
+        await store.reset(true);
+
+        const secondPublish = holdNextCall<void>(
+            relay.publishWalletServiceInfoEvent
+        );
+        const second = store.initializeService();
+        await secondPublish.entered;
+        firstPublish.release();
+        await settle(first);
+        // The interrupted run ends without starting the service
+        expect(store.isInitialized).toBe(false);
+
+        const connectionReads = () =>
+            (Storage.getItem as jest.Mock).mock.calls.filter(
+                ([key]) => key === NWC_CONNECTIONS_KEY
+            ).length;
+        const readsBefore = connectionReads();
+        const third = store.initializeService();
+        await flushMicrotasks();
+        // The third call waits on the second run instead of starting one
+        expect(connectionReads()).toBe(readsBefore);
+
+        secondPublish.release();
+        await settle(Promise.all([second, third]));
+        expect(store.isInitialized).toBe(true);
+    });
+});
+
 // The edit screen always sends budgetRenewal, and maxAmountSats as the new
 // budget or as undefined when the budget is removed.
 describe('NostrWalletConnectStore updateConnection budget transitions', () => {
