@@ -152,7 +152,7 @@ describe('LegacyExportUtils', () => {
         });
 
         it('sets the cleanup flag without a prompt when no legacy files exist', async () => {
-            (RNFS.readDir as jest.Mock).mockResolvedValue([
+            mockDocuments([
                 file('notes.txt'),
                 file('zeus_20250212_140719_personal-tax.csv')
             ]);
@@ -169,7 +169,7 @@ describe('LegacyExportUtils', () => {
 
             await checkLegacyExportFiles();
 
-            expect(RNFS.readDir).not.toHaveBeenCalled();
+            expect(RNFS.readDir).not.toHaveBeenCalledWith(DOCS);
             expect(mockStore[LEGACY_EXPORT_PROMPT_KEY]).toBeUndefined();
         });
 
@@ -178,10 +178,45 @@ describe('LegacyExportUtils', () => {
 
             await checkLegacyExportFiles();
 
-            expect(RNFS.readDir).not.toHaveBeenCalled();
+            expect(RNFS.readDir).not.toHaveBeenCalledWith(DOCS);
             expect(RNFS.unlink).not.toHaveBeenCalled();
             expect(mockStore[LEGACY_EXPORT_CLEANUP_KEY]).toBe('true');
         });
+
+        it.each([
+            ['on iOS before the cleanup', 'ios', false],
+            ['on iOS after the cleanup', 'ios', true],
+            ['on Android', 'android', true]
+        ])(
+            'sweeps stale share staging %s, keeping recent shares',
+            async (_label, os, flagSet) => {
+                (Platform.OS as any) = os;
+                if (flagSet) mockStore[LEGACY_EXPORT_CLEANUP_KEY] = 'true';
+                const stale = {
+                    name: `${Date.now() - 2 * 60 * 60 * 1000}-1`,
+                    path: `${STAGING}/stale`,
+                    isDirectory: () => true
+                };
+                const recent = {
+                    name: `${Date.now()}-2`,
+                    path: `${STAGING}/recent`,
+                    isDirectory: () => true
+                };
+                (RNFS.readDir as jest.Mock).mockImplementation((dir: string) =>
+                    Promise.resolve(
+                        dir === STAGING
+                            ? [stale, recent]
+                            : dir === DOCS
+                            ? LEGACY_ENTRIES
+                            : []
+                    )
+                );
+
+                await checkLegacyExportFiles();
+
+                expect(unlinkedPaths()).toEqual([stale.path]);
+            }
+        );
 
         it('retries next launch when Documents cannot be listed', async () => {
             (RNFS.readDir as jest.Mock).mockRejectedValue(new Error('EIO'));

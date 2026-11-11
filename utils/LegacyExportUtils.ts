@@ -61,8 +61,12 @@ const markLegacyExportCleanupDone = async () => {
     await EncryptedStorage.removeItem(LEGACY_EXPORT_PROMPT_KEY);
 };
 
-// Startup migration step. Never deletes anything.
+// Startup migration step. Never deletes anything outside the share cache.
 export const checkLegacyExportFiles = async (): Promise<void> => {
+    // A completed share keeps its staged copies (see SHARE_STAGING_TTL_MS)
+    // and the next share may never come, so every launch sweeps the stale
+    // ones. Runs before the flag check: the legacy share sets the flag.
+    await sweepStaleShareStaging();
     if (await EncryptedStorage.getItem(LEGACY_EXPORT_CLEANUP_KEY)) return;
     if (Platform.OS !== 'ios') {
         // Android Downloads stays user-visible; only clearAllData sweeps it
