@@ -489,4 +489,117 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
         );
         expect(alertStore.clearMempoolError).toHaveBeenCalled();
     });
+
+    it('ignores a stale success that lands after a newer success', async () => {
+        const store = newStore();
+        let resolveOld: (v: any) => void = () => {};
+        let resolveNew: (v: any) => void = () => {};
+        mockedFetch
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveOld = res;
+                }) as any
+            )
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveNew = res;
+                }) as any
+            );
+
+        const oldCall = store.getOnchainFeesviaMempool();
+        const newCall = store.getOnchainFeesviaMempool();
+
+        // The newer call resolves first.
+        resolveNew({
+            info: () => ({ status: 200 }),
+            json: () => ({ fastestFee: 20 })
+        } as any);
+        await newCall;
+
+        // The older call resolves later with different rates.
+        resolveOld({
+            info: () => ({ status: 200 }),
+            json: () => ({ fastestFee: 10 })
+        } as any);
+        await oldCall;
+
+        // The newer rates must win; the stale ones must be ignored.
+        expect(store.recommendedFees).toEqual({ fastestFee: 20 });
+        expect(store.error).toBe(false);
+    });
+
+    it('ignores a stale failure that lands after a newer success', async () => {
+        const store = newStore();
+        let rejectOld: (e: any) => void = () => {};
+        let resolveNew: (v: any) => void = () => {};
+        mockedFetch
+            .mockReturnValueOnce(
+                new Promise((_res, rej) => {
+                    rejectOld = rej;
+                }) as any
+            )
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveNew = res;
+                }) as any
+            );
+
+        const oldCall = store.getOnchainFeesviaMempool();
+        const newCall = store.getOnchainFeesviaMempool();
+
+        // The newer call succeeds first.
+        resolveNew({
+            info: () => ({ status: 200 }),
+            json: () => ({ fastestFee: 20 })
+        } as any);
+        await newCall;
+
+        // The older call fails later.
+        rejectOld(new Error('network down'));
+        await oldCall;
+
+        // The newer rates survive; the stale failure must not wipe them
+        // or raise the alert.
+        expect(store.recommendedFees).toEqual({ fastestFee: 20 });
+        expect(store.error).toBe(false);
+        expect(alertStore.setMempoolErrorFromUrl).not.toHaveBeenCalled();
+    });
+
+    it('ignores a stale success that lands after a newer failure', async () => {
+        const store = newStore();
+        let resolveOld: (v: any) => void = () => {};
+        let resolveNew: (v: any) => void = () => {};
+        mockedFetch
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveOld = res;
+                }) as any
+            )
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveNew = res;
+                }) as any
+            );
+
+        const oldCall = store.getOnchainFeesviaMempool();
+        const newCall = store.getOnchainFeesviaMempool();
+
+        // The newer call fails first.
+        resolveNew({
+            info: () => ({ status: 500 }),
+            json: () => ({})
+        } as any);
+        await newCall;
+
+        // The older call succeeds later.
+        resolveOld({
+            info: () => ({ status: 200 }),
+            json: () => ({ fastestFee: 20 })
+        } as any);
+        await oldCall;
+
+        // The newer failure state survives; the stale success is ignored.
+        expect(store.recommendedFees).toEqual({});
+        expect(store.error).toBe(true);
+    });
 });
