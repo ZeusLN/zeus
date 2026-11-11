@@ -106,6 +106,33 @@ describe('MintOperationGate', () => {
         await expect(operation).resolves.toBe('melted');
     });
 
+    it.each([0, 1, 2, 3])(
+        'does not start recovery while an operation waiting on recovery wakes (tick %i)',
+        async (ticks) => {
+            const gate = new MintOperationGate();
+            const recovery = deferred<string>();
+            const melt = deferred<string>();
+            const second = jest.fn(async () => 'second');
+
+            const recovering = gate.tryRunRecovery(
+                MINT,
+                () => recovery.promise
+            );
+            const operation = gate.runOperation(MINT, () => melt.promise);
+
+            recovery.resolve('report');
+            for (let i = 0; i < ticks; i++) await Promise.resolve();
+            await expect(gate.tryRunRecovery(MINT, second)).resolves.toEqual({
+                ran: false
+            });
+            expect(second).not.toHaveBeenCalled();
+
+            await recovering;
+            melt.resolve('melted');
+            await expect(operation).resolves.toBe('melted');
+        }
+    );
+
     it('releases waiting operations when recovery throws', async () => {
         const gate = new MintOperationGate();
         const recovery = deferred<string>();

@@ -54,19 +54,21 @@ export default class MintOperationGate {
      */
     async runOperation<T>(mintUrl: string, operation: () => Promise<T>) {
         const state = this.state(mintUrl);
-        if (state.recovery) {
-            let timer: ReturnType<typeof setTimeout> | undefined;
-            await Promise.race([
-                state.recovery,
-                new Promise<void>((resolve) => {
-                    timer = setTimeout(resolve, this.recoveryWaitMs);
-                })
-            ]);
-            clearTimeout(timer);
-        }
-
+        // Counted while it waits: recovery clears state.recovery a few
+        // ticks before the wait wakes, and a recovery that starts in that
+        // gap would run alongside this operation
         state.operations += 1;
         try {
+            if (state.recovery) {
+                let timer: ReturnType<typeof setTimeout> | undefined;
+                await Promise.race([
+                    state.recovery,
+                    new Promise<void>((resolve) => {
+                        timer = setTimeout(resolve, this.recoveryWaitMs);
+                    })
+                ]);
+                clearTimeout(timer);
+            }
             return await operation();
         } finally {
             state.operations -= 1;
