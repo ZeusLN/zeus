@@ -1519,3 +1519,267 @@ describe('TransactionsStore.sendPaymentSilently', () => {
         );
     });
 });
+
+describe('TransactionsStore late results for an earlier payment', () => {
+    const HASH2 = 'cd'.repeat(32);
+    const route2 = { total_amt: 2000, hops: [] };
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockReturnValue(true);
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    // the first payment's send request never answers (e.g. embedded LND
+    // paying a hold invoice), and something clears the guard without
+    // the user releasing it
+    const clearPaths: Array<
+        [string, (store: TransactionsStore) => Promise<void>]
+    > = [
+        [
+            'the backstop clears the guard',
+            async () => {
+                (
+                    BackendUtils.supportsPaymentLookup as jest.Mock
+                ).mockReturnValue(false);
+                await jest.advanceTimersByTimeAsync((60 + 60) * 1000);
+            }
+        ],
+        [
+            'tracking stops at the ceiling',
+            async () => {
+                (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+                    status: 'IN_FLIGHT',
+                    payment_hash: HASH
+                });
+                await jest.advanceTimersByTimeAsync(
+                    (60 + 60) * 1000 +
+                        PAYMENT_TRACK_MAX_MS +
+                        PAYMENT_TRACK_POLL_MS
+                );
+            }
+        ],
+        [
+            'reset() runs',
+            async (store) => {
+                store.reset();
+            }
+        ]
+    ];
+
+    const lateOutcomes: Array<[string, any]> = [
+        [
+            'SUCCEEDED',
+            {
+                status: 'SUCCEEDED',
+                payment_hash: HASH,
+                payment_preimage: 'deadbeef',
+                payment_route: { total_amt: 1000, hops: [] }
+            }
+        ],
+        [
+            'FAILED',
+            {
+                status: 'FAILED',
+                payment_hash: HASH,
+                failure_reason: 'FAILURE_REASON_TIMEOUT'
+            }
+        ]
+    ];
+
+    const startFirst = async (
+        store: TransactionsStore,
+        clear: (store: TransactionsStore) => Promise<void>
+    ) => {
+        const first = deferred();
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            first.promise
+        );
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        expect(store.paymentInFlight).toBe(true);
+        await clear(store);
+        expect(store.paymentInFlight).toBe(false);
+        return first;
+    };
+
+    const startSecond = (store: TransactionsStore) => {
+        const Bolt11Utils = require('../utils/Bolt11Utils').default;
+        (Bolt11Utils.decode as jest.Mock).mockReturnValueOnce({
+            payment_hash: HASH2
+        });
+        const second = deferred();
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            second.promise
+        );
+        store.sendPayment({ payment_request: 'lnbc1other' });
+        expect(BackendUtils.payLightningInvoice).toHaveBeenCalledTimes(2);
+        return second;
+    };
+
+    describe.each(clearPaths)('after %s', (_, clear) => {
+        it.each(lateOutcomes)(
+            "doesn't let a late %s overwrite the next payment's success",
+            async (_status, late) => {
+                const store = newStore('lnd');
+                const first = await startFirst(store, clear);
+
+                const second = startSecond(store);
+                second.resolve({
+                    status: 'SUCCEEDED',
+                    payment_hash: HASH2,
+                    payment_preimage: 'beefdead',
+                    payment_route: route2
+                });
+                await flush();
+                expect(store.status).toBe('SUCCEEDED');
+
+                first.resolve(late);
+                await flush();
+                expect(store.status).toBe('SUCCEEDED');
+                expect(store.payment_route).toEqual(route2);
+                expect(store.payment_preimage).toBe('beefdead');
+                expect(store.payment_hash).toBe(HASH2);
+                expect(store.error).toBe(false);
+                expect(store.payment_error).toBeNull();
+                expect(store.loading).toBe(false);
+            }
+        );
+
+        it.each(lateOutcomes)(
+            "doesn't let a late %s settle the next payment while it is pending",
+            async (_status, late) => {
+                const store = newStore('lnd');
+                const first = await startFirst(store, clear);
+
+                startSecond(store);
+                await flush();
+                expect(store.loading).toBe(true);
+
+                first.resolve(late);
+                await flush();
+                expect(store.status).toBeNull();
+                expect(store.payment_route).toBeNull();
+                expect(store.payment_preimage).toBeNull();
+                expect(store.error).toBe(false);
+                expect(store.loading).toBe(true);
+                expect(store.paymentInFlight).toBe(true);
+            }
+        );
+
+        it("doesn't let a late rejection overwrite the next payment's success", async () => {
+            const store = newStore('lnd');
+            const first = await startFirst(store, clear);
+
+            const second = startSecond(store);
+            second.resolve({
+                status: 'SUCCEEDED',
+                payment_hash: HASH2,
+                payment_preimage: 'beefdead',
+                payment_route: route2
+            });
+            await flush();
+
+            first.reject(new Error('stream closed'));
+            await flush();
+            expect(store.status).toBe('SUCCEEDED');
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBeNull();
+            expect(store.loading).toBe(false);
+        });
+    });
+
+    it('clears loading when the next payment is released while one from before reset() is still open', async () => {
+        const store = newStore('lnd');
+        const first = await startFirst(store, clearPaths[2][1]);
+
+        // the next payment's send request never answers either, and the
+        // node reports it in flight, so the user can release it
+        const Bolt11Utils = require('../utils/Bolt11Utils').default;
+        (Bolt11Utils.decode as jest.Mock).mockReturnValueOnce({
+            payment_hash: HASH2
+        });
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            new Promise(() => {})
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            status: 'IN_FLIGHT',
+            payment_hash: HASH2
+        });
+        store.sendPayment({ payment_request: 'lnbc1other' });
+        await jest.advanceTimersByTimeAsync((60 + 60) * 1000);
+        expect(store.paymentInFlightConfirmed).toBe(true);
+
+        expect(store.releasePaymentInFlight()).toBe(true);
+        expect(store.loading).toBe(false);
+        const status = store.status;
+
+        first.resolve(lateOutcomes[0][1]);
+        await flush();
+        expect(store.loading).toBe(false);
+        expect(store.status).toBe(status);
+        expect(store.payment_preimage).toBeNull();
+    });
+
+    it('still applies a late result when no newer payment was sent', async () => {
+        const store = newStore('lnd');
+        const first = await startFirst(store, clearPaths[0][1]);
+
+        first.resolve(lateOutcomes[0][1]);
+        await flush();
+        expect(store.status).toBe('SUCCEEDED');
+        expect(store.payment_preimage).toBe('deadbeef');
+    });
+
+    // reset() replaces the latest payment with none, so its result is
+    // dropped even if no newer payment was sent
+    it.each(lateOutcomes)(
+        'drops a late %s for a payment sent before reset() when no payment followed',
+        async (_status, late) => {
+            const store = newStore('lnd');
+            const first = await startFirst(store, clearPaths[2][1]);
+
+            first.resolve(late);
+            await flush();
+            expect(store.status).toBeNull();
+            expect(store.payment_route).toBeNull();
+            expect(store.payment_preimage).toBeNull();
+            expect(store.payment_hash).toBeNull();
+            expect(store.error).toBe(false);
+            expect(store.payment_error).toBeNull();
+            expect(store.loading).toBe(false);
+        }
+    );
+
+    it('drops a late rejection for a payment sent before reset() when no payment followed', async () => {
+        const store = newStore('lnd');
+        const first = await startFirst(store, clearPaths[2][1]);
+
+        first.reject(new Error('stream closed'));
+        await flush();
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBeNull();
+        expect(store.loading).toBe(false);
+    });
+
+    it("doesn't show the previous payment's note while a payment is in transit", async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValueOnce({
+            status: 'SUCCEEDED',
+            payment_hash: HASH,
+            payment_preimage: 'deadbeef'
+        });
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        expect(store.noteKey).toBeTruthy();
+
+        startSecond(store);
+        await flush();
+        expect(store.noteKey).toBeFalsy();
+    });
+});
