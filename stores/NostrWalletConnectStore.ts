@@ -15,6 +15,7 @@ import {
     Nip47SignMessageRequest,
     Nip47Method,
     Nip47NotificationType,
+    NWCWalletServiceRecordEventResult,
     NWCWalletServiceRequestHandler,
     NWCWalletServiceResponsePromise
 } from '@getalby/sdk';
@@ -75,6 +76,10 @@ import ModalStore from './ModalStore';
 export const NWC_CONNECTIONS_KEY = 'zeus-nwc-connections';
 export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
 export const NWC_SERVICE_KEYS = 'zeus-nwc-service-keys';
+// Request event ids already claimed, by connection id. Kept apart from the
+// connections so a request does not rewrite them and a reload cannot drop a
+// claim.
+export const NWC_PROCESSED_EVENTS_KEY = 'zeus-nwc-processed-events';
 export const NWC_CASHU_ENABLED = 'zeus-nwc-cashu-enabled';
 export const NWC_LUD16_ENABLED = 'zeus-nwc-lud16-enabled';
 
@@ -102,6 +107,10 @@ const MAKE_INVOICE_RATE_WINDOW_MS = 60_000;
 const MAX_MAKE_INVOICE_PER_WINDOW = 5;
 const MAX_PENDING_MAKE_INVOICES_PER_CONNECTION = 10;
 const MAX_CONNECTION_ACTIVITY_ENTRIES = 100;
+/** Cap persisted NWC request event ids per connection (replay protection). */
+const MAX_PROCESSED_NWC_EVENT_IDS = 2000;
+/** Characters of each event id kept (64 bits of the sha256 hex). */
+const PROCESSED_NWC_EVENT_ID_LENGTH = 16;
 /** Grace before closing an unused relay after delete awaited in-flight handlers. */
 export const RELAY_RELEASE_GRACE_MS = 5000;
 
@@ -208,6 +217,13 @@ export default class NostrWalletConnectStore {
     // Tail of the queue that serializes read-modify-write cycles on the
     // stored connections (see withConnectionsWrite)
     private _connectionsWrite: Promise<void> = Promise.resolve();
+    // Request event ids already claimed, by connection id (see
+    // recordNwcRequestEvent). Loaded from NWC_PROCESSED_EVENTS_KEY on first use.
+    private processedEventIds = new Map<string, string[]>();
+    private processedEventIdsLoad: Promise<void> | undefined;
+    private _processedEventsWrite: Promise<void> = Promise.resolve();
+    // The write queued behind the running one, if it has not started yet
+    private queuedProcessedEventsWrite: Promise<void> | undefined;
     private resetInFlight: Promise<void> | null = null;
     // Bumped by every teardown, so an initializeService() that a reset ran
     // during (node switch, Android Stop Service) does not finish over it
@@ -1024,6 +1040,9 @@ export default class NostrWalletConnectStore {
         );
         await Storage.removeItem(NWC_CLIENT_KEYS);
         await Storage.removeItem(NWC_SERVICE_KEYS);
+        this.processedEventIds.clear();
+        await this._processedEventsWrite;
+        await Storage.removeItem(NWC_PROCESSED_EVENTS_KEY);
     };
 
     /**
@@ -1275,6 +1294,14 @@ export default class NostrWalletConnectStore {
             const connectionsData = await Storage.getItem(NWC_CONNECTIONS_KEY);
             if (connectionsData) {
                 const connections = JSON.parse(connectionsData);
+                void this.pruneProcessedEventIds(
+                    new Set(connections.map((c: NWCConnectionData) => c.id))
+                ).catch((error) =>
+                    console.error(
+                        'NWC: failed to prune processed event ids:',
+                        error
+                    )
+                );
                 // Stamp the current wallet config on its connections, so
                 // they can be deleted with that config while another
                 // wallet is current (deleteWalletConfigConnections)
@@ -1811,7 +1838,12 @@ export default class NostrWalletConnectStore {
                 serviceSecretKey,
                 connection.pubkey
             );
-            const handler: NWCWalletServiceRequestHandler = {};
+            const handler: NWCWalletServiceRequestHandler = {
+                // Called by the SDK with the request event id before any
+                // method handler runs; see recordNwcRequestEvent
+                recordEvent: (eventId: string) =>
+                    this.recordNwcRequestEvent(connection, eventId)
+            };
 
             if (connection.hasPermission('get_info')) {
                 handler.getInfo = () =>
@@ -1850,8 +1882,16 @@ export default class NostrWalletConnectStore {
                           );
                 };
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.enqueuePayment(
+                    this.withGlobalHandler(connection.id, async () => {
+                        const cached = await this.getSettledPayInvoiceResponse(
+                            this.storedConnection(connection),
+                            request.invoice
+                        );
+                        if (cached) {
+                            return cached;
+                        }
+
+                        return this.enqueuePayment(
                             () => pay(request),
                             () =>
                                 NostrConnectUtils.createNip47Error(
@@ -1860,8 +1900,8 @@ export default class NostrWalletConnectStore {
                                     ),
                                     Nip47ErrorCode.RATE_LIMITED
                                 )
-                        )
-                    );
+                        );
+                    });
             }
 
             if (connection.hasPermission('make_invoice')) {
@@ -1936,6 +1976,124 @@ export default class NostrWalletConnectStore {
                 error?.message || String(error)
             );
         }
+    }
+
+    /**
+     * Claims a request event id for the SDK's recordEvent hook. Returns
+     * ALREADY_PROCESSED for an id this connection has seen, so a relay (or
+     * anyone holding the captured ciphertext) cannot re-run a request after a
+     * restart or re-subscription. The SDK calls this one event at a time per
+     * subscription, before the method handler. The id is saved before the
+     * handler runs: if the save fails the request is skipped rather than risk
+     * running twice, and only that id is released so a later delivery of the
+     * event can still run. Only the first 16 hex characters (64 bits) of each
+     * id are kept; ids come from signed events, so nobody can choose one to
+     * collide with.
+     */
+    private async recordNwcRequestEvent(
+        connection: NWCConnection,
+        eventId: string
+    ): Promise<NWCWalletServiceRecordEventResult> {
+        const key = eventId?.slice(0, PROCESSED_NWC_EVENT_ID_LENGTH);
+        if (!key) return 'ALREADY_PROCESSED';
+
+        try {
+            await this.loadProcessedEventIds();
+        } catch (error) {
+            console.error('NWC: failed to load processed event ids:', error);
+            return 'ALREADY_PROCESSED';
+        }
+
+        const seen = this.processedEventIds.get(connection.id) ?? [];
+        if (seen.includes(key)) return 'ALREADY_PROCESSED';
+
+        const next = [...seen, key];
+        this.processedEventIds.set(
+            connection.id,
+            next.length > MAX_PROCESSED_NWC_EVENT_IDS
+                ? next.slice(next.length - MAX_PROCESSED_NWC_EVENT_IDS)
+                : next
+        );
+        try {
+            await this.saveProcessedEventIds();
+        } catch (error) {
+            console.error('NWC: failed to persist request event id:', error);
+            // Not the whole list as it was: a claim made meanwhile stays
+            this.processedEventIds.set(
+                connection.id,
+                (this.processedEventIds.get(connection.id) ?? []).filter(
+                    (id) => id !== key
+                )
+            );
+            return 'ALREADY_PROCESSED';
+        }
+        return undefined;
+    }
+
+    private loadProcessedEventIds(): Promise<void> {
+        if (!this.processedEventIdsLoad) {
+            this.processedEventIdsLoad = (async () => {
+                const data = await Storage.getItem(NWC_PROCESSED_EVENTS_KEY);
+                const stored = data ? JSON.parse(data) : {};
+                for (const [connectionId, ids] of Object.entries(stored)) {
+                    if (!Array.isArray(ids)) continue;
+                    this.processedEventIds.set(
+                        connectionId,
+                        (ids as unknown[]).filter(
+                            (id): id is string => typeof id === 'string'
+                        )
+                    );
+                }
+            })().catch((error) => {
+                // Try again on the next request
+                this.processedEventIdsLoad = undefined;
+                throw error;
+            });
+        }
+        return this.processedEventIdsLoad;
+    }
+
+    /**
+     * Saves every claimed id. A claim made before the queued write starts
+     * is in that write, so a burst of requests queues one write behind the
+     * running one instead of one full-size write each.
+     */
+    private saveProcessedEventIds(): Promise<void> {
+        if (this.queuedProcessedEventsWrite) {
+            return this.queuedProcessedEventsWrite;
+        }
+        const run = this._processedEventsWrite.then(async () => {
+            // Later claims need a write of their own
+            this.queuedProcessedEventsWrite = undefined;
+            await Storage.setItem(
+                NWC_PROCESSED_EVENTS_KEY,
+                JSON.stringify(Object.fromEntries(this.processedEventIds))
+            );
+        });
+        this.queuedProcessedEventsWrite = run;
+        this._processedEventsWrite = run.then(
+            () => undefined,
+            () => undefined
+        );
+        return run;
+    }
+
+    /**
+     * Forgets the ids of connections that no longer exist. Called with the
+     * connections of every wallet when they are loaded.
+     */
+    private async pruneProcessedEventIds(
+        connectionIds: Set<string>
+    ): Promise<void> {
+        await this.loadProcessedEventIds();
+        let pruned = false;
+        for (const id of [...this.processedEventIds.keys()]) {
+            if (!connectionIds.has(id)) {
+                this.processedEventIds.delete(id);
+                pruned = true;
+            }
+        }
+        if (pruned) await this.saveProcessedEventIds();
     }
 
     private async subscribeToAllConnections(): Promise<void> {
@@ -3197,6 +3355,64 @@ export default class NostrWalletConnectStore {
     }
 
     // PAYMENT PROCESSING METHODS
+
+    /**
+     * A new request event (a client retry after a lost response) for an
+     * invoice this connection already paid gets the stored result back
+     * instead of another sendPayment. Pending and unresolved pays are
+     * handled in the pay handlers, and a failed pay may be retried. A paid
+     * row whose preimage cannot be recovered is left to the pay handler too,
+     * since an empty preimage means "in flight" to the client.
+     */
+    private async getSettledPayInvoiceResponse(
+        connection: NWCConnection,
+        rawInvoice: string
+    ): Promise<{ result: Nip47PayResponse; error: undefined } | undefined> {
+        let decoded;
+        try {
+            decoded = await NostrConnectUtils.decodeInvoiceTags(rawInvoice);
+        } catch {
+            // Not decodable: the pay handler returns the invoice error
+            return undefined;
+        }
+        const { paymentRequest, paymentHash } = decoded;
+        const existing = connection.findPayInvoiceActivity(
+            paymentRequest || rawInvoice,
+            paymentHash
+        );
+        if (existing?.status !== 'success') {
+            return undefined;
+        }
+
+        // A saved activity holds the payment as a plain object, without
+        // the getters of the model
+        const stored = existing.payment;
+        const payment =
+            stored == null
+                ? undefined
+                : stored instanceof Payment
+                ? stored
+                : existing.payment_source === 'cashu'
+                ? new CashuPayment(stored)
+                : new Payment(stored);
+        const preimage = existing.preimage || payment?.getPreimage;
+        // LND reports a failed payment with a preimage of 64 zeros, which
+        // does not hash to the payment hash: leave it to the pay handler,
+        // as Payment.isIncomplete does
+        if (!preimage || /^0+$/.test(preimage)) {
+            return undefined;
+        }
+
+        return {
+            result: {
+                preimage,
+                fees_paid: satsToMillisats(
+                    Number(existing.fees_paid || payment?.getFee) || 0
+                )
+            },
+            error: undefined
+        };
+    }
 
     private async handleLightningPayInvoice(
         connection: NWCConnection,

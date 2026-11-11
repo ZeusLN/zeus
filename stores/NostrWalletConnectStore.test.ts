@@ -112,6 +112,7 @@ import CashuStore from './CashuStore';
 import NostrWalletConnectStore, {
     NWC_CLIENT_KEYS,
     NWC_CONNECTIONS_KEY,
+    NWC_PROCESSED_EVENTS_KEY,
     NWC_LUD16_ENABLED,
     NWC_PERSISTENT_SERVICE_ENABLED,
     NWC_SERVICE_KEYS,
@@ -2803,6 +2804,647 @@ describe('NostrWalletConnectStore payment notifications', () => {
         expect(relay.publishNotification).toHaveBeenCalledTimes(1);
         // logged once, by notifyConnection
         expect(consoleError).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('NostrWalletConnectStore request event replay guard', () => {
+    // A 64-hex event id; the first 16 characters are the part kept
+    const eventId = (n: number | string) =>
+        `${(typeof n === 'number' ? n.toString(16) : n).padStart(
+            16,
+            '0'
+        )}${'a'.repeat(48)}`;
+    const keyOf = (id: string) => id.slice(0, 16);
+
+    const storedEventIds = (id = 'conn-1'): string[] | undefined =>
+        JSON.parse(storedItems.get(NWC_PROCESSED_EVENTS_KEY) ?? '{}')[id];
+    const seedEventIds = (ids: Record<string, string[]>) =>
+        storedItems.set(NWC_PROCESSED_EVENTS_KEY, JSON.stringify(ids));
+
+    it('claims an unseen event id and skips it when it is delivered again', async () => {
+        const {
+            connections: [connection]
+        } = await startService();
+        const client = clientFor(connection);
+
+        expect(await client.recordEvent(eventId(1))).toBeUndefined();
+        expect(await client.recordEvent(eventId(1))).toBe('ALREADY_PROCESSED');
+        expect(await client.recordEvent(eventId(2))).toBeUndefined();
+        expect(storedEventIds()).toEqual([
+            keyOf(eventId(1)),
+            keyOf(eventId(2))
+        ]);
+    });
+
+    it('saves only the first 16 characters of the id, before the request can run', async () => {
+        const {
+            connections: [connection]
+        } = await startService();
+
+        await clientFor(connection).recordEvent(eventId(1));
+
+        expect(storedEventIds()).toEqual([keyOf(eventId(1))]);
+        expect(storedEventIds()![0]).toHaveLength(16);
+    });
+
+    it('does not put the ids in the stored connections', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+
+        await clientFor(connection).recordEvent(eventId(1));
+        await store.saveConnections();
+
+        expect(storedItems.get(NWC_CONNECTIONS_KEY)).not.toContain(
+            keyOf(eventId(1))
+        );
+    });
+
+    it('skips ids processed before a restart', async () => {
+        seedEventIds({ 'conn-1': [keyOf(eventId(7))] });
+        const {
+            connections: [connection]
+        } = await startService();
+        const client = clientFor(connection);
+
+        expect(await client.recordEvent(eventId(7))).toBe('ALREADY_PROCESSED');
+        expect(await client.recordEvent(eventId(8))).toBeUndefined();
+    });
+
+    it('keeps one list per connection', async () => {
+        const {
+            connections: [first, second]
+        } = await startService([{}, {}]);
+
+        await clientFor(first).recordEvent(eventId(1));
+
+        expect(await clientFor(second).recordEvent(eventId(1))).toBeUndefined();
+        expect(storedEventIds('conn-1')).toEqual([keyOf(eventId(1))]);
+        expect(storedEventIds('conn-2')).toEqual([keyOf(eventId(1))]);
+    });
+
+    it('drops the oldest ids once the list is full', async () => {
+        seedEventIds({
+            'conn-1': Array.from({ length: 2000 }, (_, i) => keyOf(eventId(i)))
+        });
+        const {
+            connections: [connection]
+        } = await startService();
+        const client = clientFor(connection);
+
+        await client.recordEvent(eventId(5000));
+
+        expect(storedEventIds()).toHaveLength(2000);
+        expect(storedEventIds()![0]).toBe(keyOf(eventId(1)));
+        expect(storedEventIds()![1999]).toBe(keyOf(eventId(5000)));
+        expect(await client.recordEvent(eventId(0))).toBeUndefined();
+    });
+
+    it('forgets the ids of a connection that no longer exists', async () => {
+        seedEventIds({
+            'conn-1': [keyOf(eventId(1))],
+            deleted: [keyOf(eventId(2))]
+        });
+
+        await startService();
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(storedEventIds('deleted')).toBeUndefined();
+        expect(storedEventIds('conn-1')).toEqual([keyOf(eventId(1))]);
+    });
+
+    it("keeps another wallet's ids when the connections are loaded", async () => {
+        seedEventIds({
+            'conn-1': [keyOf(eventId(1))],
+            'conn-2': [keyOf(eventId(2))]
+        });
+
+        // conn-2 belongs to another wallet, so it is not loaded into the
+        // store, but its ids must outlive every load of the current wallet
+        const {
+            store,
+            connections: [connection]
+        } = await startService([{}, { nodePubkey: 'another-node-pubkey' }]);
+        await store.loadConnections();
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(store.connections.map((c) => c.id)).toEqual(['conn-1']);
+        expect(storedEventIds('conn-2')).toEqual([keyOf(eventId(2))]);
+        expect(storedEventIds('conn-1')).toEqual([keyOf(eventId(1))]);
+        expect(await clientFor(connection).recordEvent(eventId(1))).toBe(
+            'ALREADY_PROCESSED'
+        );
+        // the other wallet's list is still there once the wallet is current
+        await store.saveConnections();
+        expect(storedEventIds('conn-2')).toEqual([keyOf(eventId(2))]);
+    });
+
+    it('loads the ids again after a failed read', async () => {
+        const read = (Storage.getItem as jest.Mock).getMockImplementation()!;
+        let failing = true;
+        (Storage.getItem as jest.Mock).mockImplementation(
+            async (key: string) => {
+                if (failing && key === NWC_PROCESSED_EVENTS_KEY) {
+                    throw new Error('keychain read failed');
+                }
+                return read(key);
+            }
+        );
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        seedEventIds({ 'conn-1': [keyOf(eventId(7))] });
+        const {
+            connections: [connection]
+        } = await startService();
+        const client = clientFor(connection);
+
+        // the ids cannot be read, so the request is skipped
+        expect(await client.recordEvent(eventId(1))).toBe('ALREADY_PROCESSED');
+
+        // the read works again: the stored ids load and the request runs
+        failing = false;
+        expect(await client.recordEvent(eventId(1))).toBeUndefined();
+        expect(await client.recordEvent(eventId(7))).toBe('ALREADY_PROCESSED');
+        expect(storedEventIds()).toEqual([
+            keyOf(eventId(7)),
+            keyOf(eventId(1))
+        ]);
+    });
+
+    it('removes the ids with the rest of the connection data', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        await clientFor(connection).recordEvent(eventId(1));
+
+        await store.deleteAllConnectionData();
+
+        expect(storedItems.has(NWC_PROCESSED_EVENTS_KEY)).toBe(false);
+    });
+
+    it('does not write the ids of deleted connections back after a data wipe', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        await clientFor(connection).recordEvent(eventId(1));
+
+        await store.deleteAllConnectionData();
+        const next = addConnection(store, {
+            id: 'conn-2',
+            pubkey: hex64('b')
+        });
+        await (store as any).recordNwcRequestEvent(next, eventId(2));
+
+        expect(storedEventIds('conn-1')).toBeUndefined();
+        expect(storedEventIds('conn-2')).toEqual([keyOf(eventId(2))]);
+        expect(
+            Object.keys(
+                JSON.parse(storedItems.get(NWC_PROCESSED_EVENTS_KEY) ?? '{}')
+            )
+        ).toEqual(['conn-2']);
+    });
+
+    it('skips the request when the id cannot be saved, then lets a later delivery run', async () => {
+        const {
+            connections: [connection]
+        } = await startService();
+        const client = clientFor(connection);
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        failWrites(NWC_PROCESSED_EVENTS_KEY, { once: true });
+
+        expect(await client.recordEvent(eventId(1))).toBe('ALREADY_PROCESSED');
+        expect(await client.recordEvent(eventId(1))).toBeUndefined();
+        expect(storedEventIds()).toEqual([keyOf(eventId(1))]);
+    });
+
+    it('keeps an id claimed meanwhile when another id cannot be saved', async () => {
+        const {
+            connections: [connection]
+        } = await startService();
+        const client = clientFor(connection);
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        const write = holdNextWrite(NWC_PROCESSED_EVENTS_KEY);
+        failWrites(NWC_PROCESSED_EVENTS_KEY, { once: true });
+
+        const first = client.recordEvent(eventId(1));
+        await write.entered;
+        // claimed on another subscription while the first is being saved
+        const second = client.recordEvent(eventId(2));
+        await jest.advanceTimersByTimeAsync(0);
+        write.release(undefined);
+
+        expect(await first).toBe('ALREADY_PROCESSED');
+        expect(await second).toBeUndefined();
+        expect(storedEventIds()).toEqual([keyOf(eventId(2))]);
+        expect(await client.recordEvent(eventId(2))).toBe('ALREADY_PROCESSED');
+        expect(await client.recordEvent(eventId(1))).toBeUndefined();
+    });
+
+    it('queues one write for the claims made while another is running', async () => {
+        const {
+            connections: [connection]
+        } = await startService();
+        const client = clientFor(connection);
+        const write = holdNextWrite(NWC_PROCESSED_EVENTS_KEY);
+        (Storage.setItem as jest.Mock).mockClear();
+
+        const first = client.recordEvent(eventId(1));
+        await write.entered;
+        const burst = [2, 3, 4, 5, 6].map((i) =>
+            Promise.resolve(client.recordEvent(eventId(i)))
+        );
+        await jest.advanceTimersByTimeAsync(0);
+        write.release(undefined);
+
+        expect(await first).toBeUndefined();
+        expect(await Promise.all(burst)).toEqual([
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined
+        ]);
+        // the running write and one for the five claims behind it
+        const writes = (Storage.setItem as jest.Mock).mock.calls.filter(
+            ([key]) => key === NWC_PROCESSED_EVENTS_KEY
+        );
+        expect(writes).toHaveLength(2);
+        expect(storedEventIds()).toEqual(
+            [1, 2, 3, 4, 5, 6].map((i) => keyOf(eventId(i)))
+        );
+    });
+
+    it('keeps an id when the connections are loaded while it is being saved', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const client = clientFor(connection);
+        const write = holdNextWrite(NWC_PROCESSED_EVENTS_KEY);
+
+        const first = client.recordEvent(eventId(1));
+        await write.entered;
+        await store.loadConnections();
+        write.release(undefined);
+
+        expect(await first).toBeUndefined();
+        expect(await client.recordEvent(eventId(1))).toBe('ALREADY_PROCESSED');
+        await client.recordEvent(eventId(2));
+        expect(storedEventIds()).toEqual([
+            keyOf(eventId(1)),
+            keyOf(eventId(2))
+        ]);
+    });
+
+    // The tests above call recordEvent directly. This one lets the real SDK
+    // call it, to show it does so before the handler and for every
+    // subscribe() call, which has its own queue.
+    it('runs a request once when the SDK delivers the same signed event on two subscriptions', async () => {
+        const sdk = jest.requireActual('@getalby/sdk');
+        const nostrTools = jest.requireActual('nostr-tools');
+        const { hexToBytes } = jest.requireActual('@noble/hashes/utils.js');
+        const clientSecret = hex64('4');
+        const clientPubkey = nostrTools.getPublicKey(hexToBytes(clientSecret));
+        const {
+            connections: [connection]
+        } = await startService([{ pubkey: clientPubkey }]);
+        const getBalance = jest.fn().mockResolvedValue({
+            result: { balance: 1000 },
+            error: undefined
+        });
+        const handler = {
+            recordEvent: clientFor(connection).recordEvent,
+            getBalance
+        };
+
+        const service = new sdk.NWCWalletService({ relayUrls: [OLD_RELAY] });
+        const onevents: ((event: unknown) => Promise<void>)[] = [];
+        service.pool = {
+            subscribe: jest.fn((_relays, _filter, params) => {
+                onevents.push(params.onevent);
+                return { close: jest.fn() };
+            })
+        };
+        service._checkConnected = jest.fn().mockResolvedValue(undefined);
+        service._publishWithRetry = jest.fn().mockResolvedValue(true);
+        const keypair = new sdk.NWCWalletServiceKeyPair(
+            hex64('3'),
+            clientPubkey
+        );
+        const event = nostrTools.finalizeEvent(
+            {
+                kind: 23194,
+                created_at: Math.floor(Date.now() / 1000),
+                tags: [['p', keypair.walletPubkey]],
+                content: await service.encrypt(
+                    keypair,
+                    JSON.stringify({ method: 'get_balance', params: {} }),
+                    'nip04'
+                )
+            },
+            hexToBytes(clientSecret)
+        );
+
+        await service.subscribe(keypair, handler);
+        await service.subscribe(keypair, handler);
+        await onevents[0](event);
+        await onevents[1](event);
+        await onevents[0](event);
+
+        expect(getBalance).toHaveBeenCalledTimes(1);
+        expect(storedEventIds()).toEqual([keyOf(event.id)]);
+    });
+
+    describe('pay_invoice retried with a new event', () => {
+        const invoice = 'lnbc1already-paid';
+        const paymentHash = hex64('c');
+        const preimage = hex64('9');
+        const invoiceTags = {
+            paymentRequest: invoice,
+            paymentHash,
+            descriptionHash: '',
+            description: '',
+            amount: 5000,
+            expiryTime: 0,
+            createdAt: 0,
+            isExpired: false,
+            network: 'bitcoin'
+        };
+
+        beforeEach(() => {
+            (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
+                timestamp: String(Math.floor(Date.now() / 1000) - 60),
+                expiry: '3600'
+            });
+            jest.spyOn(
+                NostrConnectUtils,
+                'decodeInvoiceTags'
+            ).mockResolvedValue(invoiceTags);
+            jest.spyOn(
+                NostrConnectUtils,
+                'resolvePayInvoiceAmount'
+            ).mockResolvedValue({ amountSats: 5000, zeroAmountInvoice: false });
+        });
+
+        const payment = () =>
+            new Payment({
+                payment_request: invoice,
+                payment_hash: paymentHash,
+                status: 'SUCCEEDED',
+                value_sat: 5000,
+                fee_sat: '3',
+                payment_preimage: preimage
+            });
+
+        const payCollaborators = (payments: Payment[] = []) => ({
+            transactionsStore: {
+                reset: jest.fn(),
+                sendPaymentSilently: jest.fn().mockResolvedValue({}),
+                getPaymentOutcome: jest.fn().mockReturnValue({}),
+                loading: false
+            },
+            paymentsStore: {
+                payments,
+                getPayments: jest.fn().mockResolvedValue(payments)
+            }
+        });
+
+        const activity = (status: string, overrides: object = {}) => ({
+            id: invoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status,
+            satAmount: 5000,
+            fees_paid: 3,
+            paymentHash,
+            ...overrides
+        });
+
+        it('returns the preimage of an invoice it paid, also after the connections are loaded again', async () => {
+            const {
+                store,
+                transactionsStore,
+                connections: [connection]
+            } = await startService(
+                [{ permissions: ['pay_invoice'], maxAmountSats: 100000 }],
+                payCollaborators([payment()])
+            );
+            const client = clientFor(connection);
+
+            const first = await client.payInvoice({ invoice });
+            expect(first.result?.preimage).toBe(preimage);
+
+            // what a restart does: the row comes back from storage
+            await store.saveConnections();
+            await store.loadConnections();
+            const retry = await client.payInvoice({ invoice });
+
+            expect(retry).toEqual({
+                result: { preimage, fees_paid: 3000 },
+                error: undefined
+            });
+            expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                1
+            );
+        });
+
+        it('returns the preimage of a paid Cashu invoice after the connections are loaded again', async () => {
+            const cashuPayment = new CashuPayment({
+                payment_request: invoice,
+                payment_hash: paymentHash,
+                status: 'SUCCEEDED',
+                value_sat: 5000,
+                fee_sat: '3',
+                payment_preimage: preimage
+            } as any);
+            const payLnInvoiceFromEcash = jest.fn();
+            const {
+                store,
+                connections: [connection]
+            } = await startService(
+                [
+                    {
+                        permissions: ['pay_invoice'],
+                        maxAmountSats: 100000,
+                        activity: [
+                            activity('success', {
+                                payment_source: 'cashu',
+                                payment: cashuPayment
+                            })
+                        ]
+                    }
+                ],
+                {
+                    cashuStore: {
+                        selectedMintUrl: 'https://mint.example',
+                        isProperlyConfigured: () => true,
+                        getPayReq: jest.fn(),
+                        payLnInvoiceFromEcash
+                    }
+                }
+            );
+            store.cashuEnabled = true;
+            const client = clientFor(connection);
+
+            // what a restart does: the row comes back from storage
+            await store.saveConnections();
+            await store.loadConnections();
+            const retry = await client.payInvoice({ invoice });
+
+            expect(retry).toEqual({
+                result: { preimage, fees_paid: 3000 },
+                error: undefined
+            });
+            expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        });
+
+        it('reports no fee for a paid Cashu invoice whose fee the mint did not say, after the connections are loaded again', async () => {
+            const cashuPayment = new CashuPayment({
+                payment_request: invoice,
+                payment_hash: paymentHash,
+                status: 'SUCCEEDED',
+                value_sat: 5000,
+                fee_msat: 4000,
+                fee_unknown: true,
+                payment_preimage: preimage
+            } as any);
+            const payLnInvoiceFromEcash = jest.fn();
+            const {
+                store,
+                connections: [connection]
+            } = await startService(
+                [
+                    {
+                        permissions: ['pay_invoice'],
+                        maxAmountSats: 100000,
+                        activity: [
+                            activity('success', {
+                                payment_source: 'cashu',
+                                payment: cashuPayment,
+                                fees_paid: 0
+                            })
+                        ]
+                    }
+                ],
+                {
+                    cashuStore: {
+                        selectedMintUrl: 'https://mint.example',
+                        isProperlyConfigured: () => true,
+                        getPayReq: jest.fn(),
+                        payLnInvoiceFromEcash
+                    }
+                }
+            );
+            store.cashuEnabled = true;
+            const client = clientFor(connection);
+
+            await store.saveConnections();
+            await store.loadConnections();
+            const retry = await client.payInvoice({ invoice });
+
+            expect(retry).toEqual({
+                result: { preimage, fees_paid: 0 },
+                error: undefined
+            });
+            expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        });
+
+        it('leaves a paid invoice whose preimage is unknown to the pay handler', async () => {
+            const {
+                transactionsStore,
+                connections: [connection]
+            } = await startService(
+                [
+                    {
+                        permissions: ['pay_invoice'],
+                        maxAmountSats: 100000,
+                        activity: [activity('success')]
+                    }
+                ],
+                payCollaborators()
+            );
+
+            await clientFor(connection).payInvoice({ invoice });
+
+            expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                1
+            );
+        });
+
+        it('pays again when the stored preimage is all zeros, also after the connections are loaded again', async () => {
+            const zeros = '0'.repeat(64);
+            const collaborators = payCollaborators();
+            collaborators.transactionsStore.getPaymentOutcome.mockReturnValue({
+                payment_preimage: zeros,
+                error: true,
+                status: 'FAILED',
+                isIncomplete: true
+            });
+            const {
+                store,
+                transactionsStore,
+                connections: [connection]
+            } = await startService(
+                [{ permissions: ['pay_invoice'], maxAmountSats: 100000 }],
+                collaborators
+            );
+            const client = clientFor(connection);
+
+            await client.payInvoice({ invoice });
+            expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                1
+            );
+
+            // what a restart does: the row comes back from storage
+            await store.saveConnections();
+            await store.loadConnections();
+            await client.payInvoice({ invoice });
+
+            expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                2
+            );
+        });
+
+        it('pays again when the earlier attempt failed', async () => {
+            const {
+                transactionsStore,
+                connections: [connection]
+            } = await startService(
+                [
+                    {
+                        permissions: ['pay_invoice'],
+                        maxAmountSats: 100000,
+                        activity: [activity('failed')]
+                    }
+                ],
+                payCollaborators()
+            );
+
+            await clientFor(connection).payInvoice({ invoice });
+
+            expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                1
+            );
+        });
+
+        it('leaves an undecodable invoice to the pay handler', async () => {
+            jest.spyOn(
+                NostrConnectUtils,
+                'decodeInvoiceTags'
+            ).mockRejectedValue(new Error('bad invoice'));
+            const { store, connections } = await startService([
+                { permissions: ['pay_invoice'] }
+            ]);
+
+            expect(
+                await (store as any).getSettledPayInvoiceResponse(
+                    connections[0],
+                    'not-an-invoice'
+                )
+            ).toBeUndefined();
+        });
     });
 });
 
