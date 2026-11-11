@@ -222,24 +222,17 @@ export const shareCsvFiles = async (
 export const LEGACY_CSV_EXPORT_REGEX =
     /^zeus_\d{8}_\d{6}_(ln_invoices|ln_payments|onchain|invoice|payment|invoice_payment|transaction)( \(\d+\))?\.csv$/i;
 
-// Best-effort removal of CSVs that older builds wrote to shared storage.
-// The migration covers only the Files-visible iOS Documents directory:
-// invisible to the user once file sharing is disabled, yet still swept into
-// iCloud/iTunes backups. Android Downloads CSVs are intentionally left in
-// place there (no credentials, still user-accessible), but a full wipe
-// passes includeAndroidDownloads so a panic/duress wipe does not leave a
-// transaction history behind in public storage.
-export const purgeLegacyActivityCsvExports = async (
-    includeAndroidDownloads = false
-): Promise<void> => {
-    let dir: string;
-    if (Platform.OS === 'ios') {
-        dir = RNFS.DocumentDirectoryPath;
-    } else if (includeAndroidDownloads) {
-        dir = RNFS.DownloadDirectoryPath;
-    } else {
-        return;
-    }
+// Best-effort removal of CSVs that older builds wrote to shared storage:
+// the Files-visible iOS Documents directory (invisible to the user once
+// file sharing is disabled, yet still swept into iCloud/iTunes backups) and
+// Android Downloads. Only clearAllData calls this, so a panic/duress wipe
+// does not leave a transaction history behind in public storage; at
+// startup the user is asked instead (LegacyExportUtils).
+export const purgeLegacyActivityCsvExports = async (): Promise<void> => {
+    const dir =
+        Platform.OS === 'ios'
+            ? RNFS.DocumentDirectoryPath
+            : RNFS.DownloadDirectoryPath;
     try {
         const entries = await RNFS.readDir(dir);
         for (const entry of entries) {
