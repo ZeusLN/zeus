@@ -2584,6 +2584,63 @@ describe('NostrWalletConnectStore request event replay guard', () => {
         expect(storedEventIds('conn-1')).toEqual([keyOf(eventId(1))]);
     });
 
+    it("keeps another wallet's ids when the connections are loaded", async () => {
+        seedEventIds({
+            'conn-1': [keyOf(eventId(1))],
+            'conn-2': [keyOf(eventId(2))]
+        });
+
+        // conn-2 belongs to another wallet, so it is not loaded into the
+        // store, but its ids must outlive every load of the current wallet
+        const {
+            store,
+            connections: [connection]
+        } = await startService([{}, { nodePubkey: 'another-node-pubkey' }]);
+        await store.loadConnections();
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(store.connections.map((c) => c.id)).toEqual(['conn-1']);
+        expect(storedEventIds('conn-2')).toEqual([keyOf(eventId(2))]);
+        expect(storedEventIds('conn-1')).toEqual([keyOf(eventId(1))]);
+        expect(await clientFor(connection).recordEvent(eventId(1))).toBe(
+            'ALREADY_PROCESSED'
+        );
+        // the other wallet's list is still there once the wallet is current
+        await store.saveConnections();
+        expect(storedEventIds('conn-2')).toEqual([keyOf(eventId(2))]);
+    });
+
+    it('loads the ids again after a failed read', async () => {
+        const read = (Storage.getItem as jest.Mock).getMockImplementation()!;
+        let failing = true;
+        (Storage.getItem as jest.Mock).mockImplementation(
+            async (key: string) => {
+                if (failing && key === NWC_PROCESSED_EVENTS_KEY) {
+                    throw new Error('keychain read failed');
+                }
+                return read(key);
+            }
+        );
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        seedEventIds({ 'conn-1': [keyOf(eventId(7))] });
+        const {
+            connections: [connection]
+        } = await startService();
+        const client = clientFor(connection);
+
+        // the ids cannot be read, so the request is skipped
+        expect(await client.recordEvent(eventId(1))).toBe('ALREADY_PROCESSED');
+
+        // the read works again: the stored ids load and the request runs
+        failing = false;
+        expect(await client.recordEvent(eventId(1))).toBeUndefined();
+        expect(await client.recordEvent(eventId(7))).toBe('ALREADY_PROCESSED');
+        expect(storedEventIds()).toEqual([
+            keyOf(eventId(7)),
+            keyOf(eventId(1))
+        ]);
+    });
+
     it('removes the ids with the rest of the connection data', async () => {
         const {
             store,
