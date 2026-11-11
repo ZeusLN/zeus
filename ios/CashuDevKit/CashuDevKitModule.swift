@@ -1443,36 +1443,6 @@ class CashuDevKitModule: RCTEventEmitter {
         }
     }
 
-    @objc(cancelSend:resolver:rejecter:)
-    func cancelSend(_ preparedSendId: String,
-                    resolve: @escaping RCTPromiseResolveBlock,
-                    reject: @escaping RCTPromiseRejectBlock) {
-        let prepared: PreparedSend? = walletQueue.sync { preparedSends[preparedSendId] }
-        guard let prepared else {
-            resolve(nil)
-            return
-        }
-
-        Task {
-            defer {
-                // Always clean up prepared send, whether success or failure
-                _ = walletQueue.sync {
-                    self.preparedSends.removeValue(forKey: preparedSendId)
-                }
-            }
-
-            do {
-                try await prepared.cancel()
-                resolve(nil)
-            } catch let error as FfiError {
-                let (code, message) = mapFfiError(error)
-                reject(code, message, error)
-            } catch {
-                reject("CANCEL_SEND_ERROR", error.localizedDescription, error)
-            }
-        }
-    }
-
     @objc(receive:optionsJson:resolver:rejecter:)
     func receive(_ encodedToken: String, optionsJson: String?,
                  resolve: @escaping RCTPromiseResolveBlock,

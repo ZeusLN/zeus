@@ -132,10 +132,6 @@ RCT_EXTERN_METHOD(confirmSend:(NSString *)preparedSendId
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(cancelSend:(NSString *)preparedSendId
-                  resolver:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
-
 RCT_EXTERN_METHOD(receive:(NSString *)encodedToken
                   optionsJson:(NSString * _Nullable)optionsJson
                   resolver:(RCTPromiseResolveBlock)resolve

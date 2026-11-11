@@ -322,7 +322,6 @@ export interface CashuDevKitNativeModule {
         optionsJson?: string
     ): Promise<string>;
     confirmSend(preparedSendId: string, memo?: string): Promise<string>;
-    cancelSend(preparedSendId: string): Promise<void>;
     receive(encodedToken: string, optionsJson?: string): Promise<number>;
 
     // Token Utility
