@@ -758,7 +758,10 @@ describe('recovery after a restore from seed', () => {
         selectedNode: number,
         recoverySettings: Record<string, any>,
         recoverError?: Error,
-        storeState: Record<string, any> = {}
+        storeState: Record<string, any> = {},
+        // Settings another write puts in place just before the first
+        // update of this connect runs
+        landsFirst?: Record<string, any>
     ) => {
         const ctx = setup(selectedNode);
         Object.assign(ctx.settings, {
@@ -775,6 +778,13 @@ describe('recovery after a restore from seed', () => {
             ...recoverySettings
         };
         ctx.settings.updateSettings = jest.fn(async (patch: any) => {
+            if (landsFirst) {
+                ctx.settings.settings = {
+                    ...ctx.settings.settings,
+                    ...landsFirst
+                };
+                landsFirst = undefined;
+            }
             const update =
                 typeof patch === 'function'
                     ? patch(ctx.settings.settings)
@@ -909,6 +919,33 @@ describe('recovery after a restore from seed', () => {
             });
             expect(recovery).toBe(false);
             expect(recoveryWalletDirs).toBeUndefined();
+        });
+
+        it("is not taken when another wallet's binding lands first", async () => {
+            const {
+                lnd,
+                ChannelBackupStore,
+                settings,
+                recovery,
+                recoveryWalletDirs
+            } = await run(
+                2,
+                { recovery: true },
+                undefined,
+                {},
+                {
+                    recoveryWalletDirs: ['other']
+                }
+            );
+            expect(lnd.startLnd).toHaveBeenCalledWith(
+                expect.objectContaining({ lndDir: 'c', isRecovery: false })
+            );
+            expect(
+                ChannelBackupStore.recoverStaticChannelBackup
+            ).not.toHaveBeenCalled();
+            expect(settings.updateSettings).toHaveBeenCalledTimes(1);
+            expect(recovery).toBe(true);
+            expect(recoveryWalletDirs).toEqual(['other']);
         });
 
         it('is left alone by a remote wallet', async () => {
