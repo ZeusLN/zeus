@@ -323,6 +323,29 @@ describe('getNewestTransactions', () => {
             ]);
         });
 
+        it('reads an idle wallet once on lnd < 0.19, which ignores the cap', async () => {
+            const confirmed = at(range(800_000, 300));
+            const { fetchPage, calls } = fakeLnd(confirmed, pending, {
+                sql: true,
+                ignoresMax: true
+            });
+
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight
+            });
+
+            expect(txs).toEqual([
+                ...pending,
+                ...confirmed.slice(102).reverse()
+            ]);
+            expect(calls).toEqual([
+                NEWEST_CONFIRMED_CALL,
+                RECENT_CALL,
+                OLDEST_CALL
+            ]);
+        });
+
         it('skips the recent blocks when the tip height is unavailable', async () => {
             const confirmed = mined(10);
             const { fetchPage, calls } = fakeLnd(confirmed, pending, {

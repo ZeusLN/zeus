@@ -110,12 +110,13 @@ const getNewestFromSql = async <T extends OnchainTransaction>({
     }
 
     // No mined transaction in the recent blocks. A short page holds the
-    // whole wallet; a full one is the oldest, so read everything.
+    // whole wallet, as does a longer one from lnd < 0.19, which ignores
+    // the cap. A full one is the oldest, so read everything.
     const oldest = await fetchPage({
         ...ALL_FORWARD,
         max_transactions: cap
     });
-    if (oldest.length < cap) return newest([oldest], cap);
+    if (oldest.length !== cap) return newest([oldest], cap);
     return newest([await fetchPage(ALL_FORWARD)], cap);
 };
 
