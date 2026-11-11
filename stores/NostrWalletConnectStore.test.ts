@@ -2653,6 +2653,29 @@ describe('NostrWalletConnectStore request event replay guard', () => {
         expect(storedItems.has(NWC_PROCESSED_EVENTS_KEY)).toBe(false);
     });
 
+    it('does not write the ids of deleted connections back after a data wipe', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        await clientFor(connection).recordEvent(eventId(1));
+
+        await store.deleteAllConnectionData();
+        const next = addConnection(store, {
+            id: 'conn-2',
+            pubkey: hex64('b')
+        });
+        await (store as any).recordNwcRequestEvent(next, eventId(2));
+
+        expect(storedEventIds('conn-1')).toBeUndefined();
+        expect(storedEventIds('conn-2')).toEqual([keyOf(eventId(2))]);
+        expect(
+            Object.keys(
+                JSON.parse(storedItems.get(NWC_PROCESSED_EVENTS_KEY) ?? '{}')
+            )
+        ).toEqual(['conn-2']);
+    });
+
     it('skips the request when the id cannot be saved, then lets a later delivery run', async () => {
         const {
             connections: [connection]
@@ -2942,6 +2965,57 @@ describe('NostrWalletConnectStore request event replay guard', () => {
 
             expect(retry).toEqual({
                 result: { preimage, fees_paid: 3000 },
+                error: undefined
+            });
+            expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        });
+
+        it('reports no fee for a paid Cashu invoice whose fee the mint did not say, after the connections are loaded again', async () => {
+            const cashuPayment = new CashuPayment({
+                payment_request: invoice,
+                payment_hash: paymentHash,
+                status: 'SUCCEEDED',
+                value_sat: 5000,
+                fee_msat: 4000,
+                fee_unknown: true,
+                payment_preimage: preimage
+            } as any);
+            const payLnInvoiceFromEcash = jest.fn();
+            const {
+                store,
+                connections: [connection]
+            } = await startService(
+                [
+                    {
+                        permissions: ['pay_invoice'],
+                        maxAmountSats: 100000,
+                        activity: [
+                            activity('success', {
+                                payment_source: 'cashu',
+                                payment: cashuPayment,
+                                fees_paid: 0
+                            })
+                        ]
+                    }
+                ],
+                {
+                    cashuStore: {
+                        selectedMintUrl: 'https://mint.example',
+                        isProperlyConfigured: () => true,
+                        getPayReq: jest.fn(),
+                        payLnInvoiceFromEcash
+                    }
+                }
+            );
+            store.cashuEnabled = true;
+            const client = clientFor(connection);
+
+            await store.saveConnections();
+            await store.loadConnections();
+            const retry = await client.payInvoice({ invoice });
+
+            expect(retry).toEqual({
+                result: { preimage, fees_paid: 0 },
                 error: undefined
             });
             expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
