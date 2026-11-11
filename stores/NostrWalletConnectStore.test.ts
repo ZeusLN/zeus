@@ -117,6 +117,7 @@ import NostrWalletConnectStore, {
     NWC_PERSISTENT_SERVICE_ENABLED,
     NWC_SERVICE_KEYS,
     MAX_IN_FLIGHT_HANDLER_MS,
+    NWC_REQUEST_MARKS_KEY,
     RELAY_RELEASE_GRACE_MS
 } from './NostrWalletConnectStore';
 
@@ -286,6 +287,8 @@ interface FakeRelay {
     connected: boolean;
     handlers: Map<string, NWCWalletServiceRequestHandler>;
     live: Map<string, NWCWalletServiceRequestHandler[]>;
+    // the filter each connection subscribed with
+    filters: Map<string, unknown>;
     subscribeHolds: Hold[];
     failSubscribe: boolean;
     failPublish: boolean;
@@ -304,6 +307,7 @@ function createFakeRelay(relayUrl: string): FakeRelay {
         connected: true,
         handlers: new Map(),
         live: new Map(),
+        filters: new Map(),
         subscribeHolds: [],
         failSubscribe: false,
         failPublish: false,
@@ -317,8 +321,10 @@ function createFakeRelay(relayUrl: string): FakeRelay {
         subscribe: jest.fn(
             async (
                 keypair: { clientPubkey: string },
-                handler: NWCWalletServiceRequestHandler
+                handler: NWCWalletServiceRequestHandler,
+                filter?: unknown
             ) => {
+                relay.filters.set(keypair.clientPubkey, filter);
                 const hold = relay.subscribeHolds.shift();
                 if (hold) await hold.wait();
                 if (relay.failSubscribe) throw new Error('subscribe failed');
@@ -8812,4 +8818,342 @@ describe('NostrWalletConnectStore request event checks with the real SDK', () =>
             expect(handler.getInfo).toHaveBeenCalledTimes(1);
         }
     );
+
+    describe('request mark', () => {
+        const nowSeconds = () => Math.floor(Date.now() / 1000);
+        const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+        const seedMark = (mark: number) =>
+            storedItems.set(
+                NWC_REQUEST_MARKS_KEY,
+                JSON.stringify({ 'conn-1': mark })
+            );
+        const markWrites = () =>
+            (Storage.setItem as jest.Mock).mock.calls.filter(
+                ([key]) => key === NWC_REQUEST_MARKS_KEY
+            );
+
+        it('ignores a request older than the window behind the newest one accepted', async () => {
+            const { handler, onevent } = await subscribe();
+
+            await onevent(requestEvent('get_info', {}, 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+
+            // an old event delivered again, e.g. once its id is forgotten
+            await onevent(requestEvent('get_info', {}, 30 * 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+
+            // within the window it still runs
+            await onevent(requestEvent('get_info', {}, 5 * 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(2);
+        });
+
+        it('takes any age while there is no mark, then holds later requests to it', async () => {
+            const { handler, onevent } = await subscribe();
+
+            await onevent(requestEvent('get_info', {}, 2 * 60 * 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+
+            await onevent(requestEvent('get_info', {}, 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(2);
+
+            await onevent(requestEvent('get_info', {}, 2 * 60 * 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(2);
+        });
+
+        it('keeps the mark across a restart', async () => {
+            seedMark(nowSeconds() - 60);
+            const { handler, onevent } = await subscribe();
+
+            await onevent(requestEvent('get_info', {}, 30 * 60));
+            expect(handler.getInfo).not.toHaveBeenCalled();
+
+            await onevent(requestEvent('get_info', {}, 30));
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not move the mark past now for a request dated in the future', async () => {
+            const { handler, onevent } = await subscribe();
+
+            await onevent(requestEvent('get_info', {}, -60 * 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+            await flush();
+            expect(
+                JSON.parse(markWrites()[0][1])['conn-1']
+            ).toBeLessThanOrEqual(nowSeconds());
+
+            await onevent(requestEvent('get_info', {}, 5 * 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(2);
+
+            await onevent(requestEvent('get_info', {}, 15 * 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(2);
+        });
+
+        it('does not lock requests out when the saved mark is ahead of the clock', async () => {
+            seedMark(nowSeconds() + 24 * 60 * 60);
+            const { handler, onevent } = await subscribe();
+
+            await onevent(requestEvent('get_info', {}, 60));
+
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+        });
+
+        it('holds a pay request to the window as before, without a mark', async () => {
+            const { handler, onevent } = await subscribe();
+
+            await onevent(
+                requestEvent('pay_invoice', { invoice: 'lnbc1late' }, 30 * 60)
+            );
+            await onevent(requestEvent('get_info', {}, 60));
+            await onevent(
+                requestEvent('pay_invoice', { invoice: 'lnbc1late' }, 30 * 60)
+            );
+
+            expect(handler.payInvoice).not.toHaveBeenCalled();
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+        });
+
+        it('saves the mark once it is a minute ahead of the saved one', async () => {
+            const { onevent } = await subscribe();
+
+            await onevent(requestEvent('get_info', {}, 120));
+            await flush();
+            expect(markWrites()).toHaveLength(1);
+
+            await onevent(requestEvent('get_info', {}, 100));
+            await flush();
+            expect(markWrites()).toHaveLength(1);
+
+            await onevent(requestEvent('get_info', {}, 0));
+            await flush();
+            expect(markWrites()).toHaveLength(2);
+            expect(
+                JSON.parse(markWrites()[1][1])['conn-1']
+            ).toBeGreaterThanOrEqual(nowSeconds() - 1);
+        });
+
+        it('answers when the marks cannot be read, and reads them on the next request', async () => {
+            const read = (
+                Storage.getItem as jest.Mock
+            ).getMockImplementation()!;
+            let failing = true;
+            (Storage.getItem as jest.Mock).mockImplementation(
+                async (key: string) => {
+                    if (failing && key === NWC_REQUEST_MARKS_KEY) {
+                        throw new Error('keychain read failed');
+                    }
+                    return read(key);
+                }
+            );
+            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            const { handler, onevent } = await subscribe();
+
+            // the marks cannot be read, so this request sets the first mark
+            await onevent(requestEvent('get_info', {}, 2 * 60 * 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+
+            // only the stored mark, read now, holds this one back
+            failing = false;
+            seedMark(nowSeconds() - 30);
+            await onevent(requestEvent('get_info', {}, 30 * 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps a newer mark in memory when an older one is read later', async () => {
+            const read = (
+                Storage.getItem as jest.Mock
+            ).getMockImplementation()!;
+            let failing = true;
+            (Storage.getItem as jest.Mock).mockImplementation(
+                async (key: string) => {
+                    if (failing && key === NWC_REQUEST_MARKS_KEY) {
+                        throw new Error('keychain read failed');
+                    }
+                    return read(key);
+                }
+            );
+            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            const { handler, onevent } = await subscribe();
+
+            await onevent(requestEvent('get_info', {}, 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+
+            // an older mark than the one just accepted
+            failing = false;
+            seedMark(nowSeconds() - 60 * 60);
+            await onevent(requestEvent('get_info', {}, 30 * 60));
+
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not drop the stored marks of other connections when a read failed before the save', async () => {
+            const read = (
+                Storage.getItem as jest.Mock
+            ).getMockImplementation()!;
+            let failing = true;
+            (Storage.getItem as jest.Mock).mockImplementation(
+                async (key: string) => {
+                    if (failing && key === NWC_REQUEST_MARKS_KEY) {
+                        throw new Error('keychain read failed');
+                    }
+                    return read(key);
+                }
+            );
+            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            const other = nowSeconds() - 10;
+            storedItems.set(
+                NWC_REQUEST_MARKS_KEY,
+                JSON.stringify({ 'conn-1': nowSeconds() - 60, other })
+            );
+            const { onevent } = await subscribe();
+
+            // the marks cannot be read, so nothing may be written over them
+            await onevent(requestEvent('get_info', {}, 30));
+            await flush();
+            expect(markWrites()).toHaveLength(0);
+            expect(JSON.parse(storedItems.get(NWC_REQUEST_MARKS_KEY)!)).toEqual(
+                expect.objectContaining({ other })
+            );
+
+            // once they are read, the save keeps them
+            failing = false;
+            await onevent(requestEvent('get_info', {}, 0));
+            await flush();
+            const saved = JSON.parse(storedItems.get(NWC_REQUEST_MARKS_KEY)!);
+            expect(saved.other).toBe(other);
+            expect(saved['conn-1']).toBeGreaterThanOrEqual(nowSeconds() - 1);
+        });
+
+        it('answers when the mark cannot be saved', async () => {
+            const write = (
+                Storage.setItem as jest.Mock
+            ).getMockImplementation()!;
+            (Storage.setItem as jest.Mock).mockImplementation(
+                async (key: string, value: string) => {
+                    if (key === NWC_REQUEST_MARKS_KEY) {
+                        throw new Error('keychain write failed');
+                    }
+                    return write(key, value);
+                }
+            );
+            const error = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => undefined);
+            const { handler, onevent } = await subscribe();
+
+            await onevent(requestEvent('get_info', {}, 60));
+            await flush();
+
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+            expect(error).toHaveBeenCalledWith(
+                'NWC: failed to save request marks:',
+                expect.any(Error)
+            );
+        });
+    });
+});
+
+describe('NostrWalletConnectStore request mark and subscriptions', () => {
+    const window = NostrConnectUtils.REQUEST_REPLAY_WINDOW_SECONDS;
+    const nowSeconds = () => Math.floor(Date.now() / 1000);
+    const seedMark = (mark: number) =>
+        storedItems.set(
+            NWC_REQUEST_MARKS_KEY,
+            JSON.stringify({ 'conn-1': mark })
+        );
+
+    it('subscribes without a filter when the connection has no mark', async () => {
+        const {
+            connections: [connection]
+        } = await startService();
+
+        expect(
+            relays.get(connection.relayUrl)!.filters.get(connection.pubkey)
+        ).toBeUndefined();
+    });
+
+    it('asks the relay only for requests newer than the window behind the mark', async () => {
+        const mark = nowSeconds() - 100;
+        seedMark(mark);
+
+        const {
+            connections: [connection]
+        } = await startService();
+
+        expect(
+            relays.get(connection.relayUrl)!.filters.get(connection.pubkey)
+        ).toEqual({ since: mark - window });
+    });
+
+    it('does not ask for requests after now when the mark is ahead of the clock', async () => {
+        const started = nowSeconds();
+        seedMark(started + 24 * 60 * 60);
+
+        const {
+            connections: [connection]
+        } = await startService();
+
+        const filter = relays
+            .get(connection.relayUrl)!
+            .filters.get(connection.pubkey) as { since: number };
+        expect(filter.since).toBeGreaterThanOrEqual(started - window);
+        expect(filter.since).toBeLessThanOrEqual(nowSeconds() - window);
+    });
+
+    it('forgets the marks of a connection that no longer exists', async () => {
+        const mark = nowSeconds() - 100;
+        storedItems.set(
+            NWC_REQUEST_MARKS_KEY,
+            JSON.stringify({ 'conn-1': mark, deleted: mark })
+        );
+
+        await startService();
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(JSON.parse(storedItems.get(NWC_REQUEST_MARKS_KEY)!)).toEqual({
+            'conn-1': mark
+        });
+    });
+
+    it("keeps another wallet's marks when the connections are loaded", async () => {
+        const mark = nowSeconds() - 100;
+        storedItems.set(
+            NWC_REQUEST_MARKS_KEY,
+            JSON.stringify({ 'conn-1': mark, 'conn-2': mark })
+        );
+
+        const { store } = await startService([
+            {},
+            { nodePubkey: 'another-node-pubkey' }
+        ]);
+        await store.loadConnections();
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(store.connections.map((c) => c.id)).toEqual(['conn-1']);
+        expect((store as any).requestMarks.get('conn-2')).toBe(mark);
+    });
+
+    it('drops the mark of a deleted connection from memory', async () => {
+        seedMark(nowSeconds() - 100);
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        await (store as any).loadRequestMarks();
+        expect((store as any).requestMarks.has(connection.id)).toBe(true);
+
+        const deletion = store.deleteConnection(connection.id);
+        await jest.advanceTimersByTimeAsync(RELAY_RELEASE_GRACE_MS);
+        await deletion;
+
+        expect((store as any).requestMarks.has(connection.id)).toBe(false);
+    });
+
+    it('removes the marks with the rest of the connection data', async () => {
+        seedMark(nowSeconds() - 100);
+        const { store } = await startService();
+
+        await store.deleteAllConnectionData();
+
+        expect(storedItems.has(NWC_REQUEST_MARKS_KEY)).toBe(false);
+    });
 });
