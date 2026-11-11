@@ -6335,6 +6335,9 @@ export default class CashuStore {
             }
 
             await this.syncCDKBalances(true);
+            // After a reset() during these awaits the next wallet is open,
+            // and this wallet's claim summary does not belong there
+            if (session !== this.walletSession) return;
 
             // Show summary alert (spent tokens handled by UI modal)
             const parts: string[] = [];

@@ -45,7 +45,9 @@ const mockCdk = {
     heldClaims: {} as Record<string, () => void>,
     // addMint() of this mint waits until the test releases it
     holdMint: '',
-    answerAddMint: undefined as (() => void) | undefined
+    answerAddMint: undefined as (() => void) | undefined,
+    // Runs once when the next getBalances() call arrives
+    onGetBalances: undefined as (() => void) | undefined
 };
 const mockOpenDatabase = () => mockCdk.databases[mockCdk.openMnemonic];
 jest.mock('../cashu-cdk', () => ({
@@ -90,7 +92,12 @@ jest.mock('../cashu-cdk', () => ({
         return 100;
     },
     restore: async () => 0,
-    getBalances: async () => ({}),
+    getBalances: async () => {
+        const onGetBalances = mockCdk.onGetBalances;
+        mockCdk.onGetBalances = undefined;
+        onGetBalances?.();
+        return {};
+    },
     getTotalBalance: async () => 0,
     listTransactions: async () => []
 }));
@@ -113,6 +120,8 @@ jest.mock('../storage', () => ({
     removeRawItem: jest.fn(),
     KEY_PREFIX: 'zeus:'
 }));
+
+import { Alert } from 'react-native';
 
 import Storage from '../storage';
 import CashuStore from './CashuStore';
@@ -193,6 +202,7 @@ const startOnWalletA = async (
     mockCdk.heldClaims = {};
     mockCdk.holdMint = newMint ?? '';
     mockCdk.answerAddMint = undefined;
+    mockCdk.onGetBalances = undefined;
 
     storeWallet(
         'walletA',
@@ -364,6 +374,62 @@ describe('CashuStore offline-token sweep across a wallet switch', () => {
             'token-0-for-wallet-A',
             'token-1-for-wallet-A'
         ]);
+    });
+
+    it("shows wallet A's claim summary when no switch comes", async () => {
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+        mockCdk.answerFirstClaim!();
+        await sweeps.mock.results[0].value;
+
+        expect(alert).toHaveBeenCalledWith(
+            'cashu.offlinePending.claimedTitle',
+            '2 cashu.offlinePending.claimedMessage'
+        );
+    });
+
+    it("does not show wallet A's claim summary in wallet B when the switch comes during the final write", async () => {
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const setItem = jest.mocked(Storage.setItem);
+        const write = setItem.getMockImplementation()!;
+        setItem.mockImplementation(async (key: string, value: any) => {
+            if (key === 'walletA-cashu-offline-pending-tokens') {
+                setItem.mockImplementation(write);
+                switchToWalletB();
+            }
+            return write(key, value);
+        });
+
+        mockCdk.answerFirstClaim!();
+        await sweeps.mock.results[0].value;
+
+        expect(storedTokens('walletA-cashu-offline-pending-tokens')).toEqual(
+            []
+        );
+        expect(alert).not.toHaveBeenCalled();
+    });
+
+    it("does not show wallet A's claim summary in wallet B when the switch comes during the balance sync", async () => {
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        // B is selected during the balance sync that follows the final
+        // write of A's pending queue
+        const setItem = jest.mocked(Storage.setItem);
+        const write = setItem.getMockImplementation()!;
+        setItem.mockImplementation(async (key: string, value: any) => {
+            if (key === 'walletA-cashu-offline-pending-tokens') {
+                setItem.mockImplementation(write);
+                mockCdk.onGetBalances = switchToWalletB;
+            }
+            return write(key, value);
+        });
+
+        mockCdk.answerFirstClaim!();
+        await sweeps.mock.results[0].value;
+
+        expect(storedTokens('walletA-cashu-offline-pending-tokens')).toEqual(
+            []
+        );
+        expect(alert).not.toHaveBeenCalled();
     });
 
     it("keeps wallet B's sweep the only one running after wallet A's stopped sweep ends", async () => {
