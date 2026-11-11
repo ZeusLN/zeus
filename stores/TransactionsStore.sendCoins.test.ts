@@ -606,6 +606,25 @@ describe('TransactionsStore.sendCoins', () => {
             expect(getTransactions).not.toHaveBeenCalled();
             expect(store.sendOutcomeUnknown).toBe(true);
         });
+
+        it('judges the failure by the backend the send went to', async () => {
+            let rejectSend: (error: Error) => void = () => undefined;
+            sendCoins.mockReturnValue(
+                new Promise((_, reject) => {
+                    rejectSend = reject;
+                })
+            );
+            getTransactions.mockResolvedValue({ transactions: [] });
+            const store = newStore();
+            store.sendCoins(request());
+            // the wallet switches to embedded LND while the send is in flight
+            store.settingsStore.implementation = 'embedded-lnd';
+            rejectSend(new Error('unexpected end of stream'));
+            await settle();
+
+            expect(getTransactions).toHaveBeenCalledTimes(3);
+            expect(store.sendOutcomeUnknown).toBe(true);
+        });
     });
 });
 
@@ -700,6 +719,30 @@ describe('TransactionsStore.sendCoins with additional outputs', () => {
         expect(store.publishSuccess).toBe(true);
         expect(store.txid).toBe('batchtxid');
         expect(store.sendOutcomeUnknown).toBe(false);
+    });
+
+    it('judges a failed publish by the backend it went to', async () => {
+        let rejectPublish: (error: Error) => void = () => undefined;
+        publishTransaction.mockReturnValue(
+            new Promise((_, reject) => {
+                rejectPublish = reject;
+            })
+        );
+        getTransactions.mockResolvedValue({
+            transactions: [{ tx_hash: 'batchtxid', label: '' }]
+        });
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        await jest.advanceTimersByTimeAsync(0);
+        expect(publishTransaction).toHaveBeenCalledTimes(1);
+
+        // the wallet switches to embedded LND while the publish is in flight
+        store.settingsStore.implementation = 'embedded-lnd';
+        rejectPublish(new Error('unexpected end of stream'));
+        await settle();
+
+        expect(store.publishSuccess).toBe(true);
+        expect(store.txid).toBe('batchtxid');
     });
 
     it('shows a publish error as before, without looking it up', async () => {
