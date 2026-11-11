@@ -170,4 +170,35 @@ describe('AddOrEditNWCConnection zero-balance wallet with budget', () => {
             ref.current!.buildConnectionParams(false)
         ).resolves.toMatchObject({ budgetAmount: 10000 });
     });
+
+    it('ignores input above the MAX_BUDGET cap', async () => {
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getFullAccessPermissions()
+        );
+
+        // First set a valid budget
+        await act(async () => {
+            ref.current!.handleCustomBudgetValueChange('10000');
+        });
+        expect(ref.current!.state.budgetValue).toBe(10000);
+
+        // Now try to type a number over the cap (2_100_000_000_000_001)
+        await act(async () => {
+            ref.current!.handleCustomBudgetValueChange('2100000000000001');
+        });
+
+        // The value should remain unchanged (10000), not the huge number
+        expect(ref.current!.state.budgetValue).toBe(10000);
+    });
+
+    it('throws budgetRequired when building params with a zero budget', async () => {
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getFullAccessPermissions()
+        );
+
+        // Budget is 0 by default. Calling buildConnectionParams should throw.
+        await expect(ref.current!.buildConnectionParams(false)).rejects.toThrow(
+            'views.Settings.NostrWalletConnect.validation.budgetRequired'
+        );
+    });
 });
