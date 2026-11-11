@@ -3628,10 +3628,14 @@ export default class NostrWalletConnectStore {
 
         // The node's payment list covers the whole wallet. If it already
         // lists this invoice as settled or in flight and this connection has
-        // no successful record of paying it, the payment was made by the
-        // user or by another connection. Refuse, as the Cashu handler does,
-        // instead of adopting that payment and returning its preimage.
-        if (existing?.status !== 'success') {
+        // no record of paying it, the payment was made by the user or by
+        // another connection. Refuse, as the Cashu handler does, instead of
+        // adopting that payment and returning its preimage. An own attempt
+        // recorded failed is not refused: a dispatch rejected by a transport
+        // error after reaching the node is recorded failed, is not
+        // reconciled, and can settle, so refusing it would leave the spend
+        // outside the budget.
+        if (!existing) {
             const listed = NostrConnectUtils.findPaymentForInvoice(
                 request.invoice,
                 await this.paymentsStore.getPayments(),
@@ -3743,13 +3747,12 @@ export default class NostrWalletConnectStore {
         );
 
         // The node refused this send because it already has a payment for
-        // the hash, so this send sent nothing. Made after the lookup
-        // above, by the wallet or by another connection, that payment is not
-        // this connection's: refuse rather than adopt it below. An own
-        // pending or timed-out attempt returned early above. An own attempt
-        // recorded failed can still be in flight when its dispatch was
-        // rejected after reaching the node, so in-transition is only refused
-        // with no record at all.
+        // the hash, so this send sent nothing. With no record for the
+        // invoice, that payment was made after the lookup above by the
+        // wallet or by another connection: refuse rather than adopt it
+        // below. An own pending or timed-out attempt returned early above,
+        // and an own attempt recorded failed may be the payment the node
+        // has, as in the check above.
         const refusals = [paymentState.payment_error, paymentState.error_msg];
         const paidOrStartedElsewhere = refusals.some(
             (message) =>
@@ -3761,8 +3764,8 @@ export default class NostrWalletConnectStore {
         );
         if (
             !paymentState.payment_preimage &&
-            ((paidOrStartedElsewhere && existing?.status !== 'success') ||
-                (inFlightElsewhere && !existing))
+            (paidOrStartedElsewhere || inFlightElsewhere) &&
+            !existing
         ) {
             return NostrConnectUtils.createNip47Error(
                 localeString(
