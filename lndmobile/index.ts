@@ -11,6 +11,7 @@ import Base64Utils from '../utils/Base64Utils';
 import { matchesExpectedPayment } from '../utils/EmbeddedLndPayUtils';
 import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { LndInvoiceListParams, LndPaymentListParams } from '../utils/LndUtils';
 import {
     checkLndStreamErrorResponse,
     LndMobileEventEmitter
@@ -653,11 +654,9 @@ export const listPeers = async (): Promise<lnrpc.ListPeersResponse> => {
 /**
  * @throws
  */
-export const listPayments = async (params?: {
-    maxPayments?: number;
-    reversed?: boolean;
-    creationDateStart?: number;
-}): Promise<lnrpc.ListPaymentsResponse> => {
+export const listPayments = async (
+    params?: LndPaymentListParams
+): Promise<lnrpc.ListPaymentsResponse> => {
     const response = await sendCommand<
         lnrpc.IListPaymentsRequest,
         lnrpc.ListPaymentsRequest,
@@ -672,8 +671,11 @@ export const listPayments = async (params?: {
             // without reversed, lnd pages forward from the oldest payment
             // and never returns those made after the first max_payments
             reversed: params?.reversed ?? true,
-            ...(params?.creationDateStart && {
+            ...(params?.creationDateStart !== undefined && {
                 creation_date_start: Long.fromValue(params.creationDateStart)
+            }),
+            ...(params?.creationDateEnd !== undefined && {
+                creation_date_end: Long.fromValue(params.creationDateEnd)
             })
         }
     });
@@ -820,7 +822,9 @@ export const getNetworkInfo = async (): Promise<lnrpc.NetworkInfo> => {
 /**
  * @throws
  */
-export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
+export const listInvoices = async (
+    params?: LndInvoiceListParams
+): Promise<lnrpc.ListInvoiceResponse> => {
     const response = await sendCommand<
         lnrpc.IListInvoiceRequest,
         lnrpc.ListInvoiceRequest,
@@ -830,8 +834,14 @@ export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
         response: lnrpc.ListInvoiceResponse,
         method: 'ListInvoices',
         options: {
-            reversed: true,
-            num_max_invoices: Long.fromValue(1000)
+            reversed: params?.reversed ?? true,
+            num_max_invoices: Long.fromValue(params?.limit ?? 1000),
+            ...(params?.creationDateStart !== undefined && {
+                creation_date_start: Long.fromValue(params.creationDateStart)
+            }),
+            ...(params?.creationDateEnd !== undefined && {
+                creation_date_end: Long.fromValue(params.creationDateEnd)
+            })
         }
     });
     return response;
