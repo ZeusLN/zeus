@@ -1092,7 +1092,8 @@ class MigrationsUtils {
     // legacy files exist (flag 'legacy-export-file-cleanup' unset, pending
     // prompt key set), and the Wallet view asks the user after unlock to
     // share or delete them (LegacyExportUtils.promptLegacyExportCleanup).
-    // Android Downloads is left to clearAllData. Runs before the settings
+    // Android Downloads is left to clearAllData. It also sweeps stale share
+    // staging on every launch, on both platforms. Runs before the settings
     // blob is read, so it covers both the legacy and zeus-settings-v2 paths;
     // a failure never blocks settings load.
     public async checkLegacyExportFiles() {
