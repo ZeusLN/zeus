@@ -526,6 +526,7 @@
     "views.Wallet.legacyExports.csvsSingular": "{{count}} activity CSV",
     "views.Wallet.legacyExports.configWarning": "Wallet config backups contain wallet credentials and can include seed phrases. Backups made by older versions may not be encrypted, so only share them to a place you trust.",
     "views.Wallet.legacyExports.notNow": "Not now",
+    "views.Wallet.legacyExports.shareFailed": "The old export files could not be shared. They were kept, and ZEUS will ask again the next time it starts.",
     "views.Wallet.lndFolderMissing.title": "Wallet Data Not Found",
     "views.Wallet.lndFolderMissing.message": "The wallet data folder is missing but wallet configuration exists. This can happen after reinstalling the app. You can either delete the wallet configuration and set up a new wallet, or clear all storage to start fresh.",
     "views.Wallet.lndFolderMissing.deleteWallet": "Manage Wallets",

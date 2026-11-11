@@ -67,6 +67,7 @@ const SHARE = en['general.share'];
 const DELETE = en['general.delete'];
 const NOT_NOW = en['views.Wallet.legacyExports.notNow'];
 const CONFIG_WARNING = en['views.Wallet.legacyExports.configWarning'];
+const SHARE_FAILED = en['views.Wallet.legacyExports.shareFailed'];
 
 // Unlocked and outside the POS till
 const unlocked = { loginRequired: () => false, posViewActive: () => false };
@@ -346,8 +347,10 @@ describe('LegacyExportUtils', () => {
             );
             expect(Share.open).toHaveBeenCalledWith({
                 urls: staged.map((p) => `file://${p}`),
-                failOnCancel: true
+                failOnCancel: false
             });
+            // the prompt itself is the only alert
+            expect(Alert.alert).toHaveBeenCalledTimes(1);
 
             // originals deleted only after the share sheet reported success
             const shareOrder = (Share.open as jest.Mock).mock
@@ -362,10 +365,13 @@ describe('LegacyExportUtils', () => {
             expect(mockStore[LEGACY_EXPORT_PROMPT_KEY]).toBeUndefined();
         });
 
-        it('Share cancelled: keeps the files and prompts again next launch', async () => {
-            (Share.open as jest.Mock).mockRejectedValue(
-                new Error('User did not share')
-            );
+        it('Share cancelled: keeps the files, shows no error and prompts again next launch', async () => {
+            // what react-native-share resolves when the sheet is closed
+            (Share.open as jest.Mock).mockResolvedValue({
+                dismissedAction: true,
+                success: false,
+                message: ''
+            });
             (RNFS.exists as jest.Mock).mockResolvedValue(true);
 
             await promptLegacyExportCleanup(unlocked);
@@ -376,10 +382,28 @@ describe('LegacyExportUtils', () => {
             expect(unlinkedPaths()).toEqual([shareDir()]);
             expect(mockStore[LEGACY_EXPORT_CLEANUP_KEY]).toBeUndefined();
             expect(mockStore[LEGACY_EXPORT_PROMPT_KEY]).toBeDefined();
+            expect(Alert.alert).toHaveBeenCalledTimes(1);
 
             resetLegacyExportPromptSession();
             await promptLegacyExportCleanup(unlocked);
             expect(Alert.alert).toHaveBeenCalledTimes(2);
+        });
+
+        it('Share failed: keeps the files and shows an error', async () => {
+            (Share.open as jest.Mock).mockRejectedValue(
+                new Error('activityError')
+            );
+
+            await promptLegacyExportCleanup(unlocked);
+            await pressButton(SHARE);
+
+            expect(unlinkedPaths()).toEqual([shareDir()]);
+            expect(mockStore[LEGACY_EXPORT_CLEANUP_KEY]).toBeUndefined();
+            expect(mockStore[LEGACY_EXPORT_PROMPT_KEY]).toBeDefined();
+            expect(Alert.alert).toHaveBeenLastCalledWith(
+                en['general.error'],
+                SHARE_FAILED
+            );
         });
 
         it('Share: gives colliding staged names distinct files', async () => {
@@ -413,10 +437,12 @@ describe('LegacyExportUtils', () => {
             await pressButton(SHARE);
 
             expect(Share.open).not.toHaveBeenCalled();
-            expect(unlinkedPaths()).not.toEqual(
-                expect.arrayContaining([LEGACY_PATHS[0]])
-            );
+            expect(unlinkedPaths()).toEqual([shareDir()]);
             expect(mockStore[LEGACY_EXPORT_CLEANUP_KEY]).toBeUndefined();
+            expect(Alert.alert).toHaveBeenLastCalledWith(
+                en['general.error'],
+                SHARE_FAILED
+            );
         });
 
         it('Delete: deletes exactly the legacy files and sets the flag', async () => {
