@@ -226,8 +226,9 @@ export default class CashuStore {
     // Melts the mint has taken ecash for but has not settled, re-checked by
     // reconcilePendingMelts
     @observable public pendingMelts: Array<PendingMelt> = [];
-    // Quotes whose melt call has not returned yet. CDK is still waiting on
-    // the mint for these, so reconcilePendingMelts leaves them to the caller.
+    // Quotes whose melt call has not returned yet, plus the single-mint pay
+    // path's quote until it has recorded the outcome (trackAndMelt
+    // keepHeld). reconcilePendingMelts leaves these to the caller.
     private meltsInProgress = new Set<string>();
     // The reconcilePendingMelts pass in progress, joined by later callers
     private reconcileRun?: Promise<void>;

@@ -2428,6 +2428,38 @@ describe('CashuStore reconcilePendingMelts', () => {
         });
     });
 
+    // Reconcile and the pay path both check through checkMeltQuoteInTime.
+    // A timer left running after the mint answers fires 10 s later for
+    // nothing.
+    describe('a check the mint answers in time', () => {
+        beforeEach(() => jest.useFakeTimers());
+        afterEach(() => jest.useRealTimers());
+
+        it.each([
+            [
+                'answers',
+                () =>
+                    Promise.resolve({
+                        id: 'quote-1',
+                        state: 'Paid',
+                        payment_preimage: 'b'.repeat(64)
+                    })
+            ],
+            ['fails', () => Promise.reject(new Error('Mint unreachable'))]
+        ])('clears its timer when the mint %s', async (_, answer) => {
+            const store = reconcilingStore(pendingMelt());
+            (CashuDevKit.checkMeltQuote as jest.Mock).mockImplementation(
+                answer
+            );
+
+            await store
+                .checkMeltQuoteInTime(mintUrl, 'quote-1')
+                .catch(() => {});
+
+            expect(jest.getTimerCount()).toBe(0);
+        });
+    });
+
     describe('dropInFlightPayment', () => {
         const settledPayment = (status?: string) =>
             new CashuPayment({
