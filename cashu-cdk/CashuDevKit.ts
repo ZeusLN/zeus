@@ -571,18 +571,6 @@ class CashuDevKit {
     }
 
     /**
-     * Cancel a prepared send (returns proofs to wallet)
-     * @param preparedSendId - ID from prepareSend
-     */
-    async cancelSend(preparedSendId: string): Promise<void> {
-        try {
-            await CashuDevKitModule.cancelSend(preparedSendId);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
-    }
-
-    /**
      * Convenience method: send tokens in one step
      * @param mintUrl - The mint's URL
      * @param amount - Amount in sats
