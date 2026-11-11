@@ -102,8 +102,9 @@ export const purgeCsvShareStaging = async (): Promise<void> => {
 // receiving app streams the FileProvider URI afterwards, so an immediate
 // unlink hands the receiver a dead attachment. Each share therefore stages
 // into its own subdir named <creation ms>-<seq>, keeps it after a handoff,
-// and later shares sweep only subdirs older than this, long after any
-// receiver has read them. clearAllData sweeps everything on wipe.
+// and later shares and every launch (checkLegacyExportFiles) sweep only
+// subdirs older than this, long after any receiver has read them.
+// clearAllData sweeps everything on wipe.
 export const SHARE_STAGING_TTL_MS = 60 * 60 * 1000;
 
 let shareStagingSeq = 0;
