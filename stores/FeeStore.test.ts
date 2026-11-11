@@ -490,7 +490,7 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
         expect(alertStore.clearMempoolError).toHaveBeenCalled();
     });
 
-    it('ignores a stale success that lands after a newer success', async () => {
+    it('ignores a stale success that lands after a newer success, but resolves its own rates', async () => {
         const store = newStore();
         let resolveOld: (v: any) => void = () => {};
         let resolveNew: (v: any) => void = () => {};
@@ -521,14 +521,16 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
             info: () => ({ status: 200 }),
             json: () => ({ fastestFee: 10 })
         } as any);
-        await oldCall;
+
+        // The caller of the old call still gets its own rates.
+        await expect(oldCall).resolves.toEqual({ fastestFee: 10 });
 
         // The newer rates must win; the stale ones must be ignored.
         expect(store.recommendedFees).toEqual({ fastestFee: 20 });
         expect(store.error).toBe(false);
     });
 
-    it('ignores a stale failure that lands after a newer success', async () => {
+    it('ignores a stale failure that lands after a newer success, and resolves undefined', async () => {
         const store = newStore();
         let rejectOld: (e: any) => void = () => {};
         let resolveNew: (v: any) => void = () => {};
@@ -556,10 +558,11 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
 
         // The older call fails later.
         rejectOld(new Error('network down'));
-        await oldCall;
 
-        // The newer rates survive; the stale failure must not wipe them
-        // or raise the alert.
+        // The caller of the old call gets undefined (failure contract).
+        await expect(oldCall).resolves.toBeUndefined();
+
+        // The newer rates survive; the stale failure must not wipe them.
         expect(store.recommendedFees).toEqual({ fastestFee: 20 });
         expect(store.error).toBe(false);
         expect(alertStore.setMempoolErrorFromUrl).not.toHaveBeenCalled();
@@ -596,10 +599,107 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
             info: () => ({ status: 200 }),
             json: () => ({ fastestFee: 20 })
         } as any);
-        await oldCall;
+
+        // The caller of the old call gets its own rates.
+        await expect(oldCall).resolves.toEqual({ fastestFee: 20 });
 
         // The newer failure state survives; the stale success is ignored.
         expect(store.recommendedFees).toEqual({});
         expect(store.error).toBe(true);
+        // The 500 from the newer call raised the alert once.
+        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledTimes(1);
+        // The stale 200 must NOT clear the alert.
+        expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
+    });
+
+    it('keeps loading true when the older call settles first while the newer is pending', async () => {
+        const store = newStore();
+        let resolveOld: (v: any) => void = () => {};
+        let resolveNew: (v: any) => void = () => {};
+        mockedFetch
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveOld = res;
+                }) as any
+            )
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveNew = res;
+                }) as any
+            );
+
+        const oldCall = store.getOnchainFeesviaMempool();
+        const newCall = store.getOnchainFeesviaMempool();
+
+        // The older call settles first.
+        resolveOld({
+            info: () => ({ status: 200 }),
+            json: () => ({ fastestFee: 10 })
+        } as any);
+        await expect(oldCall).resolves.toEqual({ fastestFee: 10 });
+
+        // The store must still be waiting on the newer call.
+        expect(store.loading).toBe(true);
+        expect(store.recommendedFees).toEqual({});
+        expect(store.error).toBe(false);
+        expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
+
+        // Then the newer call lands.
+        resolveNew({
+            info: () => ({ status: 200 }),
+            json: () => ({ fastestFee: 20 })
+        } as any);
+        await newCall;
+
+        expect(store.loading).toBe(false);
+        expect(store.recommendedFees).toEqual({ fastestFee: 20 });
+        expect(store.error).toBe(false);
+    });
+
+    it('does not raise the alert on a stale HTTP 500 after a newer success', async () => {
+        const store = newStore();
+        let resolveOld: (v: any) => void = () => {};
+        let resolveNew: (v: any) => void = () => {};
+        mockedFetch
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveOld = res;
+                }) as any
+            )
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveNew = res;
+                }) as any
+            );
+
+        const oldCall = store.getOnchainFeesviaMempool();
+        const newCall = store.getOnchainFeesviaMempool();
+
+        // The newer call succeeds first.
+        resolveNew({
+            info: () => ({ status: 200 }),
+            json: () => ({ fastestFee: 20 })
+        } as any);
+        await newCall;
+
+        // The newer call legitimately cleared the alert on success.
+        // Reset the mocks so the assertion only sees what the stale call does.
+        (alertStore.setMempoolErrorFromUrl as jest.Mock).mockClear();
+        (alertStore.clearMempoolError as jest.Mock).mockClear();
+
+        // The older call returns a 500 later.
+        resolveOld({
+            info: () => ({ status: 500 }),
+            json: () => ({})
+        } as any);
+
+        // The stale 500 resolves to undefined (failure contract).
+        await expect(oldCall).resolves.toBeUndefined();
+
+        // The stale 500 must not raise or clear an alert.
+        expect(alertStore.setMempoolErrorFromUrl).not.toHaveBeenCalled();
+        expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
+        expect(store.recommendedFees).toEqual({ fastestFee: 20 });
+        expect(store.error).toBe(false);
     });
 });

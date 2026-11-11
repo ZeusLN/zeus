@@ -63,10 +63,16 @@ export default class FeeStore {
 
         return ReactNativeBlobUtil.fetch('get', url)
             .then((response: any) => {
-                // Ignore stale success — a newer call has superseded this one.
-                if (token !== this.getOnchainFeesToken) return;
-
                 const status = response.info().status;
+
+                // A newer call owns the store and the alert. Callers read
+                // the resolved value, so still return this call's own rates.
+                if (token !== this.getOnchainFeesToken) {
+                    return status == 200
+                        ? sanitizeRecommendedFees(response.json()) ?? undefined
+                        : undefined;
+                }
+
                 if (status == 200) {
                     // These rates become defaults the user does not have
                     // to look at (Sweep sends at one without a confirm
