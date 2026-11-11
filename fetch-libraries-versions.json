@@ -5,9 +5,9 @@
         "iosSha256": "2acc8eb31106e15f5fc27caccc30c9667a541e505922c312abef1f27b258674b"
     },
     "ldk-node": {
-        "version": "v0.7.1-zeus",
-        "androidSha256": "2ad796f2cd2afe10eee0562691fe0e5a09ab5081e7f618f67d5e255513da24b6",
-        "iosSha256": "4ba267c53a7c67fed9eef2683426e8d35004e292f73cb348efd17b4550d111ba"
+        "version": "v0.7.1-zeus-rl-0.2.8",
+        "androidSha256": "1945448f7ad4be2458dd4b31792689e23ec4b474c2503849f2ea8fc53f7ff870",
+        "iosSha256": "fd1435801cce73731f6e824e4f6fdbfaeac86429be5d9eb3f4c52c58454f6fb5"
     },
     "cdk": {
         "version": "0.18.2",
