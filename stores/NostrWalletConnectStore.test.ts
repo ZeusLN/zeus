@@ -1710,6 +1710,9 @@ describe('NostrWalletConnectStore relay release', () => {
         });
 
         await expect(store.reset(true)).rejects.toThrow('unsubscribe failed');
+        // Check before the timers run: a release that fires also removes
+        // itself from the map
+        expect((store as any).scheduledRelayReleases.size).toBe(0);
         await jest.advanceTimersByTimeAsync(RELAY_RELEASE_GRACE_MS);
 
         expect(oldRelay.close).toHaveBeenCalledTimes(1);
