@@ -1768,6 +1768,27 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             }
         );
 
+        it("rejects a failed silent connect with its own error, not the form's", async () => {
+            connectPeer.mockRejectedValueOnce(new Error('connection refused'));
+            const store = makeStore();
+            enterScreen(store);
+            await userConnect(store, true).catch(() => undefined);
+            expect(store.errorMsgPeer).toBe('connection refused');
+
+            connectPeer.mockRejectedValueOnce(new Error('peer is not online'));
+            await expect(lspConnect(store)).rejects.toBe('peer is not online');
+            expect(store.errorMsgPeer).toBe('connection refused');
+        });
+
+        it('rejects a failed silent connect with its error on a fresh form', async () => {
+            const store = makeStore();
+            enterScreen(store);
+
+            connectPeer.mockRejectedValueOnce(new Error('peer is not online'));
+            await expect(lspConnect(store)).rejects.toBe('peer is not online');
+            expect(store.errorMsgPeer).toBeNull();
+        });
+
         it("still resets an opened channel's state for the user's own connect", async () => {
             openChannelSync.mockResolvedValueOnce({
                 funding_txid_str: 'abc',

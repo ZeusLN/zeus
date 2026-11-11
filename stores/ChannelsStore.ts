@@ -1029,11 +1029,12 @@ export default class ChannelsStore {
                             }
                             resolve(true);
                         } else {
+                            const errorMsg = errorToUserFriendly(error);
                             if (!silent) {
-                                this.errorMsgPeer = errorToUserFriendly(error);
+                                this.errorMsgPeer = errorMsg;
                                 this.errorPeerConnect = true;
                             }
-                            reject(this.errorMsgPeer);
+                            reject(errorMsg);
                         }
                     });
                 });
