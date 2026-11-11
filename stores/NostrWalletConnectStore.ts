@@ -113,6 +113,9 @@ const MAX_PROCESSED_NWC_EVENT_IDS = 2000;
 const PROCESSED_NWC_EVENT_ID_LENGTH = 16;
 /** Grace before closing an unused relay after delete awaited in-flight handlers. */
 export const RELAY_RELEASE_GRACE_MS = 5000;
+/** Longest a request can stay in flight: the payment queue wait plus the payment wait. */
+export const MAX_IN_FLIGHT_HANDLER_MS =
+    MAX_PAYMENT_QUEUE_WAIT_MS + (PAYMENT_TIMEOUT_SECONDS + 5) * 1000;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
@@ -624,10 +627,17 @@ export default class NostrWalletConnectStore {
                 this.connectionJustSucceeded = false;
                 this.lastConnectionAttempt = 0;
                 this.cashuEnabled = false;
-                this.cancelAllScheduledRelayReleases();
-                this.nwcWalletServices.clear();
-                this.publishedRelays.clear();
-                await this.unsubscribeFromAllConnections();
+                try {
+                    await this.unsubscribeFromAllConnections();
+                } finally {
+                    // Cancel after the await so a release scheduled while it
+                    // ran cannot fire on a relay the next start reopens
+                    this.cancelAllScheduledRelayReleases();
+                    const retiredServices = Array.from(this.nwcWalletServices);
+                    this.nwcWalletServices.clear();
+                    this.publishedRelays.clear();
+                    this.closeRetiredRelayServices(retiredServices);
+                }
             })();
             this.resetInFlight = teardown;
             try {
@@ -2183,6 +2193,43 @@ export default class NostrWalletConnectStore {
         runInAction(() => {
             this.nwcWalletServices.delete(relayUrl);
             this.publishedRelays.delete(relayUrl);
+        });
+    }
+
+    /**
+     * Close the relay services a reset dropped. Without this their websockets
+     * stay open and the next start opens new ones. The SDK publishes nothing
+     * on a closed pool, and a request still in flight replies through the
+     * pool that received it, so wait for the requests in flight now to finish
+     * (at most MAX_IN_FLIGHT_HANDLER_MS) and then RELAY_RELEASE_GRACE_MS for
+     * the SDK to publish their replies. The services are already out of
+     * nwcWalletServices, so the next start does not reuse them.
+     */
+    private closeRetiredRelayServices(
+        services: Array<[string, NWCWalletService]>
+    ): void {
+        if (services.length === 0) return;
+        const inFlight = Array.from(
+            this.inFlightHandlersByConnection.values()
+        ).flatMap((handlers) => Array.from(handlers));
+        let capTimeoutId: ReturnType<typeof setTimeout> | undefined;
+        const cap = new Promise<void>((resolve) => {
+            capTimeoutId = setTimeout(resolve, MAX_IN_FLIGHT_HANDLER_MS);
+        });
+        void Promise.race([Promise.allSettled(inFlight), cap]).then(() => {
+            clearTimeout(capTimeoutId);
+            setTimeout(() => {
+                for (const [relayUrl, service] of services) {
+                    try {
+                        service.close();
+                    } catch (error) {
+                        console.warn(
+                            `NWC: Failed to close relay service ${relayUrl}:`,
+                            error
+                        );
+                    }
+                }
+            }, RELAY_RELEASE_GRACE_MS);
         });
     }
 
