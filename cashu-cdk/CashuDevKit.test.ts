@@ -5,6 +5,7 @@ jest.mock('react-native', () => {
         'melt',
         'meltPartial',
         'checkMeltQuote',
+        'checkMintQuote',
         'mint',
         'mintExternal',
         'prepareSend',
@@ -85,6 +86,11 @@ describe('CashuDevKit saga recovery', () => {
             'checkMeltQuote',
             'checkMeltQuote',
             () => cdk.checkMeltQuote(MINT, 'q1')
+        ],
+        [
+            'checkMintQuote',
+            'checkMintQuote',
+            () => cdk.checkMintQuote(MINT, 'q1')
         ],
         ['mint', 'mint', () => cdk.mint(MINT, 'q1')],
         ['mintExternal', 'mintExternal', () => cdk.mintExternal(MINT, 'q1', 5)],

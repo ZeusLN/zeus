@@ -14,12 +14,19 @@
  * therefore only needs to cover that read, which is why the wait is capped
  * instead of lasting until recovery has checked every saga with the mint.
  *
- * checkMeltQuote resumes a saga recovery already read, so after the cap the
- * two can drive the same melt saga. CDK handles that: resume_melt_saga
- * reloads the saga before acting, compensation first claims it with an
- * optimistic version check, and finalizing a paid melt writes the same
- * proofs and transaction either way. The gate is there so recovery does not
- * fail or undo an operation this process is still running.
+ * checkMeltQuote and checkMintQuote resume a saga recovery already read, so
+ * after the cap a check and recovery can drive the same melt or mint saga.
+ * CDK handles that. resume_melt_saga reloads the saga before acting,
+ * compensation first claims it with an optimistic version check, and
+ * finalizing a paid melt writes the same proofs and transaction either way.
+ * resume_issue_saga neither reloads nor claims the saga, but both runs
+ * restore the same outputs: proofs are stored by Y, the transaction id comes
+ * from the saga id, and deleting the saga twice is harmless. The gate is
+ * there so recovery does not fail or undo an operation this process is still
+ * running.
+ *
+ * Checked against the CDK 0.18.1 to 0.18.3 sources, whose recovery and saga
+ * code is identical. Recheck on a CDK bump: the cap relies on it.
  */
 
 export const RECOVERY_WAIT_MS = 10000;

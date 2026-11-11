@@ -288,7 +288,8 @@ class CashuDevKit {
     }
 
     /**
-     * Check status of a mint quote
+     * Check status of a mint quote. For a quote a mint saga holds, CDK
+     * resumes that saga, so this goes through the gate like a mint.
      * @param mintUrl - The mint's URL
      * @param quoteId - The quote ID
      */
@@ -296,15 +297,17 @@ class CashuDevKit {
         mintUrl: string,
         quoteId: string
     ): Promise<CDKMintQuote> {
-        try {
-            const json = await CashuDevKitModule.checkMintQuote(
-                mintUrl,
-                quoteId
-            );
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.checkMintQuote(
+                    mintUrl,
+                    quoteId
+                );
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     /**
