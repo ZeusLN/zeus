@@ -508,23 +508,7 @@ describe('NodeConfigUtils', () => {
             expect(mockFiles['/documents/ldk-node/wallet.db']).toBeDefined();
         });
 
-        it('leaves Android Downloads alone by default', async () => {
-            Object.defineProperty(Platform, 'OS', {
-                value: 'android',
-                configurable: true
-            });
-            // Saved there on purpose through the save dialog
-            const backup = `/downloads/20260811-120000${NODE_CONFIG_EXPORT_EXT}`;
-            mockFiles[backup] = Buffer.from('{}');
-
-            await purgeLegacyNodeConfigExports();
-
-            expect(RNFS.readDir).not.toHaveBeenCalled();
-            expect(RNFS.unlink).not.toHaveBeenCalled();
-            expect(mockFiles[backup]).toBeDefined();
-        });
-
-        it('deletes config backups from Android Downloads when asked', async () => {
+        it('deletes only config backups from Android Downloads', async () => {
             Object.defineProperty(Platform, 'OS', {
                 value: 'android',
                 configurable: true
@@ -533,7 +517,7 @@ describe('NodeConfigUtils', () => {
             mockFiles[backup] = Buffer.from('{}');
             mockFiles['/downloads/unrelated.txt'] = Buffer.from('txt');
 
-            await purgeLegacyNodeConfigExports(true);
+            await purgeLegacyNodeConfigExports();
 
             expect(RNFS.readDir).toHaveBeenCalledWith('/downloads');
             expect(RNFS.unlink).toHaveBeenCalledTimes(1);

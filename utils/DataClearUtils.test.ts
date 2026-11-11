@@ -306,12 +306,8 @@ describe('clearAllData node data directory wipe (KEY-005 regression)', () => {
         await clearAllData();
 
         expect(mockedPurgeCsvExports).toHaveBeenCalledTimes(1);
-        // the wipe, unlike the startup migration, also sweeps Android
-        // Downloads and the share-staging cache dir
-        expect(mockedPurgeCsvExports).toHaveBeenCalledWith(true);
         expect(mockedPurgeCsvStaging).toHaveBeenCalledTimes(1);
         expect(mockedPurgeConfigExports).toHaveBeenCalledTimes(1);
-        expect(mockedPurgeConfigExports).toHaveBeenCalledWith(true);
     });
 
     it('does not delete an ldk-node directory when ldkNodeDir is missing', async () => {

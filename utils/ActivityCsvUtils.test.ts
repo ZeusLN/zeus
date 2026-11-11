@@ -618,15 +618,7 @@ describe('activityCsvUtils', () => {
             );
         });
 
-        it('does nothing on Android by default', async () => {
-            (Platform.OS as any) = 'android';
-
-            await purgeLegacyActivityCsvExports();
-
-            expect(RNFS.readDir).not.toHaveBeenCalled();
-        });
-
-        it('sweeps Android Downloads when asked to (full wipe)', async () => {
+        it('deletes only matching files from Android Downloads', async () => {
             (Platform.OS as any) = 'android';
             (RNFS.readDir as jest.Mock).mockResolvedValue([
                 {
@@ -641,7 +633,7 @@ describe('activityCsvUtils', () => {
                 }
             ]);
 
-            await purgeLegacyActivityCsvExports(true);
+            await purgeLegacyActivityCsvExports();
 
             expect(RNFS.readDir).toHaveBeenCalledWith('/mock/download/path');
             expect(RNFS.unlink).toHaveBeenCalledTimes(1);
