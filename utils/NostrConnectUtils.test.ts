@@ -1153,6 +1153,34 @@ describe('NostrConnectUtils', () => {
         });
 
         describe('connection activity conversion', () => {
+            // NIP-47 keeps "failed" for payments and "expired" for invoices
+            it.each([
+                ['pay_invoice', 'failed', 'outgoing', 'failed'],
+                ['make_invoice', 'expired', 'incoming', 'expired']
+            ] as const)(
+                'lists a %s with status %s as %s %s',
+                (type, status, direction, state) => {
+                    const activity: ConnectionActivity = {
+                        id: INVOICE_A,
+                        type,
+                        payment_source: 'lightning',
+                        status,
+                        satAmount: 1000,
+                        ...(type === 'make_invoice'
+                            ? { invoice: new Invoice(lndInvoice()) }
+                            : {})
+                    };
+
+                    const tx =
+                        NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                            activity
+                        );
+
+                    expect(tx.type).toBe(direction);
+                    expect(tx.state).toBe(state);
+                }
+            );
+
             it('never reports the payment request as a payment hash', () => {
                 const activity: ConnectionActivity = {
                     id: INVOICE_A,
@@ -1185,6 +1213,48 @@ describe('NostrConnectUtils', () => {
                     );
 
                 expect(tx.expires_at).toBe(CREATION_DATE + EXPIRY_SECONDS);
+            });
+
+            it('reports expires_at in seconds when the activity records expiresAt as a Date', () => {
+                const expiresAtSeconds = CREATION_DATE + EXPIRY_SECONDS;
+                const activity: ConnectionActivity = {
+                    id: INVOICE_A,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    invoice: new Invoice(lndInvoice()),
+                    expiresAt: new Date(expiresAtSeconds * 1000)
+                };
+
+                const tx =
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    );
+
+                // NIP-47 timestamps are unix seconds; a Date turned into a
+                // number is milliseconds, which a client reads as a date
+                // tens of thousands of years away
+                expect(tx.expires_at).toBe(expiresAtSeconds);
+                expect(tx.expires_at).toBeLessThan(CREATION_DATE * 2);
+            });
+
+            it('reports expires_at in seconds when expiresAt is an ISO string from storage', () => {
+                const expiresAtSeconds = CREATION_DATE + EXPIRY_SECONDS;
+                const activity = {
+                    id: INVOICE_A,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    invoice: new Invoice(lndInvoice()),
+                    expiresAt: new Date(expiresAtSeconds * 1000).toISOString()
+                } as unknown as ConnectionActivity;
+
+                const tx =
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    );
+
+                expect(tx.expires_at).toBe(expiresAtSeconds);
             });
 
             it('returns preimage and description_hash for a settled make_invoice activity', () => {
@@ -1360,7 +1430,7 @@ describe('NostrConnectUtils', () => {
     describe('list_transactions unpaid filter', () => {
         // NIP-47: "unpaid: include unpaid invoices, optional, default false"
         const transaction = (
-            state: 'settled' | 'pending' | 'failed',
+            state: 'settled' | 'pending' | 'failed' | 'expired',
             type: 'incoming' | 'outgoing',
             createdAt: number
         ) =>
@@ -1390,11 +1460,24 @@ describe('NostrConnectUtils', () => {
                 request as never
             );
 
-        it('returns only settled transactions when unpaid is not requested', () => {
+        // NIP-47's default: only settled transactions
+        it('lists only settled transactions by default', () => {
             const { transactions, totalCount } = filter({});
 
             expect(transactions).toEqual([settledInvoice, settledPayment]);
             expect(totalCount).toBe(2);
+        });
+
+        it('lists open and expired invoices, and no unsettled payments, for unpaid_incoming', () => {
+            const expiredInvoice = transaction('expired', 'incoming', 250);
+
+            const { transactions } =
+                NostrConnectUtils.filterAndPaginateTransactions(
+                    [settledInvoice, expiredInvoice, failedPayment],
+                    { unpaid_incoming: true } as never
+                );
+
+            expect(transactions).toEqual([settledInvoice, expiredInvoice]);
         });
 
         it('returns only settled transactions when unpaid is false', () => {
@@ -1408,6 +1491,43 @@ describe('NostrConnectUtils', () => {
 
             expect(transactions).toHaveLength(4);
             expect(totalCount).toBe(4);
+        });
+
+        it('hides unsettled incoming invoices when unpaid_incoming is false', () => {
+            const { transactions } = filter({ unpaid_incoming: false });
+
+            expect(transactions).toEqual([settledInvoice, settledPayment]);
+        });
+
+        it('adds unsettled outgoing payments for unpaid_outgoing', () => {
+            const { transactions, totalCount } = filter({
+                unpaid_outgoing: true
+            });
+
+            expect(transactions).toEqual([
+                settledInvoice,
+                settledPayment,
+                failedPayment
+            ]);
+            expect(totalCount).toBe(3);
+        });
+
+        it('lets the direction flags override unpaid', () => {
+            expect(
+                filter({ unpaid: false, unpaid_incoming: true }).transactions
+            ).toEqual([settledInvoice, pendingInvoice, settledPayment]);
+            expect(
+                filter({ unpaid: true, unpaid_incoming: false }).transactions
+            ).toEqual([settledInvoice, settledPayment, failedPayment]);
+        });
+
+        it('treats both direction flags as the settled-only listing when false', () => {
+            const { transactions } = filter({
+                unpaid_incoming: false,
+                unpaid_outgoing: false
+            });
+
+            expect(transactions).toEqual([settledInvoice, settledPayment]);
         });
 
         it('does not drop settled transactions when unpaid is true', () => {

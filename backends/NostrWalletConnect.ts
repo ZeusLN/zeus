@@ -20,14 +20,29 @@ export default class NostrWalletConnect {
     connect = async () => await this.nwc.enable();
     getLightningBalance = async () => await this.nwc.getBalance();
     getInvoices = async (data: any) => {
+        // unpaid is off by default in NIP-47: ask for the open and expired
+        // invoices the wallet created too
         const { transactions } = await this.nwc.listTransactions({
+            type: 'incoming',
+            unpaid: true,
             ...(data?.limit && {
                 limit: data.limit
             })
         });
-        const invoices = transactions.filter(
-            (payment: any) => payment.type === 'incoming'
-        );
+        const invoices = transactions
+            .filter((payment: any) => payment.type === 'incoming')
+            .map((invoice: any) =>
+                // Older ZEUS wallet services send expires_at in
+                // milliseconds; NIP-47 uses seconds. 1e11 s is in the year
+                // 5138, while 1e11 ms is in 1973.
+                typeof invoice.expires_at === 'number' &&
+                invoice.expires_at > 1e11
+                    ? {
+                          ...invoice,
+                          expires_at: Math.floor(invoice.expires_at / 1000)
+                      }
+                    : invoice
+            );
         return { invoices };
     };
     createInvoice = async (data: any) => {
@@ -69,6 +84,7 @@ export default class NostrWalletConnect {
         }
     ) => {
         const { transactions } = await this.nwc.listTransactions({
+            type: 'outgoing',
             ...(params?.maxPayments && {
                 limit: params.maxPayments
             })

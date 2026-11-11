@@ -785,6 +785,16 @@ export default class NostrConnectUtils {
         return new Invoice(invoice as any);
     }
 
+    /** Wrap a persisted plain-object invoice as a CashuInvoice when needed. */
+    static coerceCashuInvoice(
+        invoice: Invoice | CashuInvoice | null | undefined
+    ): CashuInvoice | undefined {
+        if (!invoice) return undefined;
+        if (invoice instanceof CashuInvoice) return invoice;
+        if (invoice instanceof Invoice) return undefined;
+        return new CashuInvoice(invoice as any);
+    }
+
     /** Resolve a lookup hash from payment_hash and/or invoice on the request. */
     static async resolveLookupPaymentHash(
         request: Nip47LookupInvoiceRequest,
@@ -998,7 +1008,7 @@ export default class NostrConnectUtils {
      * Creates a NIP-47 transaction object with sensible defaults
      * @param params - Transaction parameters
      * @param params.type - Transaction type: 'incoming' or 'outgoing'
-     * @param params.state - Transaction state: 'pending', 'settled', or 'failed'
+     * @param params.state - Transaction state: 'pending', 'settled', 'failed' or 'expired'
      * @param params.invoice - Payment request/invoice string
      * @param params.payment_hash - Payment hash
      * @param params.amount - Amount in millisatoshis
@@ -1014,7 +1024,7 @@ export default class NostrConnectUtils {
      */
     static createNip47Transaction(params: {
         type: 'incoming' | 'outgoing';
-        state: 'pending' | 'settled' | 'failed';
+        state: 'pending' | 'settled' | 'failed' | 'expired';
         invoice: string;
         payment_hash: string;
         amount: number;
@@ -1032,7 +1042,8 @@ export default class NostrConnectUtils {
 
         return {
             type: params.type,
-            state: params.state,
+            // NIP-47 lists "expired" for invoices; the SDK's type lacks it
+            state: params.state as Nip47Transaction['state'],
             invoice: params.invoice || '',
             description: params.description || '',
             description_hash: params.description_hash || '',
@@ -1531,9 +1542,15 @@ export default class NostrConnectUtils {
     private static extractExpiresAtFromActivity(
         activity: ConnectionActivity
     ): number {
-        const explicitExpiresAt = Number(activity?.expiresAt);
-        if (explicitExpiresAt > 0) {
-            return explicitExpiresAt;
+        // activity.expiresAt is a Date (an ISO string once it has been
+        // stored). Number() on a Date gives milliseconds, but NIP-47
+        // timestamps are unix seconds, and a client that reads milliseconds
+        // as seconds shows an expiry tens of thousands of years away.
+        const explicitExpiresAtMs = activity?.expiresAt
+            ? new Date(activity.expiresAt).getTime()
+            : NaN;
+        if (explicitExpiresAtMs > 0) {
+            return Math.floor(explicitExpiresAtMs / 1000);
         }
 
         if (activity.invoice) {
@@ -1617,10 +1634,14 @@ export default class NostrConnectUtils {
         const type: 'incoming' | 'outgoing' =
             activity.type === 'make_invoice' ? 'incoming' : 'outgoing';
 
-        const state: 'settled' | 'pending' | 'failed' =
+        // NIP-47 reserves "failed" for payments and lists "expired" for
+        // invoices
+        const state: 'settled' | 'pending' | 'failed' | 'expired' =
             activity.status === 'success'
                 ? 'settled'
-                : activity.status === 'failed' || activity.status === 'expired'
+                : activity.status === 'expired'
+                ? 'expired'
+                : activity.status === 'failed'
                 ? 'failed'
                 : 'pending';
 
@@ -1707,11 +1728,20 @@ export default class NostrConnectUtils {
             filtered = filtered.filter((tx) => tx.created_at <= request.until!);
         }
 
-        // NIP-47 defines unpaid as "include unpaid invoices, default false", so
-        // it widens the result rather than selecting only unpaid ones
-        if (!request.unpaid) {
-            filtered = filtered.filter((tx) => tx.state === 'settled');
-        }
+        // NIP-47 defines unpaid as "include unpaid invoices, default false",
+        // so only settled transactions are listed unless the app asks for
+        // more. unpaid_incoming / unpaid_outgoing are not in the spec (the
+        // SDK sends them) and take precedence over unpaid for their
+        // direction.
+        const unpaidIncoming =
+            request.unpaid_incoming ?? request.unpaid ?? false;
+        const unpaidOutgoing =
+            request.unpaid_outgoing ?? request.unpaid ?? false;
+        filtered = filtered.filter(
+            (tx) =>
+                tx.state === 'settled' ||
+                (tx.type === 'incoming' ? unpaidIncoming : unpaidOutgoing)
+        );
 
         // Calculate pagination
         const totalCount = filtered.length;

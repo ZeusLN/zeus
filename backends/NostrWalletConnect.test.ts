@@ -7,6 +7,7 @@ import {
     Nip47WalletError,
     NostrWebLNProvider
 } from '@getalby/sdk';
+import Invoice from '../models/Invoice';
 
 const mockSettingsStore: any = {};
 // getter: the factory runs when the backend is imported, which is hoisted
@@ -190,7 +191,11 @@ describe('NostrWalletConnect.getInvoices', () => {
 
         const { invoices } = await backend.getInvoices({ limit: 10 });
 
-        expect(client.listTransactions).toHaveBeenCalledWith({ limit: 10 });
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'incoming',
+            unpaid: true,
+            limit: 10
+        });
         expect(invoices).toHaveLength(2);
         expect(invoices[0]).toEqual({
             ...nip47Tx(),
@@ -213,7 +218,10 @@ describe('NostrWalletConnect.getInvoices', () => {
         await expect(backend.getInvoices(data)).resolves.toEqual({
             invoices: []
         });
-        expect(client.listTransactions).toHaveBeenCalledWith({});
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'incoming',
+            unpaid: true
+        });
     });
 
     it('rejects with the wallet service error', async () => {
@@ -225,6 +233,29 @@ describe('NostrWalletConnect.getInvoices', () => {
         client.listTransactions.mockRejectedValue(error);
 
         await expect(backend.getInvoices({ limit: 10 })).rejects.toBe(error);
+    });
+
+    // Older ZEUS wallet services send expires_at in milliseconds
+    it('reads a millisecond expires_at as seconds', async () => {
+        const { backend, client } = await setup();
+        const expiredSeconds = 1_500_000_000; // 2017
+        client.listTransactions.mockResolvedValue({
+            transactions: [
+                nip47Tx({
+                    settled_at: undefined,
+                    expires_at: expiredSeconds * 1000
+                }),
+                nip47Tx({ settled_at: undefined, expires_at: expiredSeconds })
+            ]
+        });
+
+        const { invoices } = await backend.getInvoices({ limit: 10 });
+
+        expect(invoices.map((i: any) => i.expires_at)).toEqual([
+            expiredSeconds,
+            expiredSeconds
+        ]);
+        expect(invoices.every((i: any) => new Invoice(i).isExpired)).toBe(true);
     });
 });
 
@@ -244,7 +275,10 @@ describe('NostrWalletConnect.getPayments', () => {
 
         const { payments } = await backend.getPayments({ maxPayments: 25 });
 
-        expect(client.listTransactions).toHaveBeenCalledWith({ limit: 25 });
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'outgoing',
+            limit: 25
+        });
         expect(payments).toEqual([
             {
                 ...nip47Tx({ type: 'outgoing' }),
@@ -260,7 +294,10 @@ describe('NostrWalletConnect.getPayments', () => {
 
         await backend.getPayments();
 
-        expect(client.listTransactions).toHaveBeenCalledWith({ limit: 500 });
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'outgoing',
+            limit: 500
+        });
     });
 
     it.each([
@@ -273,7 +310,9 @@ describe('NostrWalletConnect.getPayments', () => {
 
         await backend.getPayments(params);
 
-        expect(client.listTransactions).toHaveBeenCalledWith({});
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'outgoing'
+        });
     });
 
     it('rejects with a reply timeout', async () => {
