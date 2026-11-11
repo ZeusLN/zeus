@@ -246,8 +246,11 @@ export default class SendingLightning extends React.Component<
             });
             const payment = payments?.[0];
 
+            // getFee reads LNbits' negative fee_msat as positive. Only a
+            // payment with fee_msat is used: on CLN payments[0] is not the
+            // donation, so its fee comes from the result above
             if (payment?.fee_msat) {
-                donationFee = (Number(payment.fee_msat) / 1000).toString();
+                donationFee = payment.getFee;
             }
 
             const donationFeePercentage = getFeePercentage(

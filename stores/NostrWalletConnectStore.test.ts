@@ -6741,6 +6741,41 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
         expect(connection.pendingSpendSats).toBe(0);
     });
 
+    // LNbits' LndHub extension reports an outgoing fee as negative msat
+    // (#5254); the fee still comes out of the budget
+    it('debits the fee of an LNbits payment that reports it as negative', async () => {
+        (BackendUtils.supportsCustomFeeLimit as jest.Mock).mockReturnValue(
+            false
+        );
+        const { store, transactionsStore } = buildHandlerStore();
+        const lnbitsPayInvoice = new Payment({
+            payment_error: '',
+            payment_preimage: 'ab'.repeat(32),
+            payment_route: {},
+            fee_msat: -5000,
+            fee: -5
+        });
+        transactionsStore.getPaymentOutcome.mockReturnValue({
+            payment_preimage: lnbitsPayInvoice.getPreimage,
+            payment_fee: lnbitsPayInvoice.getFee,
+            isIncomplete: false
+        });
+        const connection = addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 5050
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' },
+            () => true
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(connection.totalSpendSats).toBe(5005);
+        expect(connection.pendingSpendSats).toBe(0);
+    });
+
     it('requires no fee reserve when the backend enforces the fee limit', async () => {
         const { store, transactionsStore } = buildHandlerStore();
         const connection = addConnection(store, {

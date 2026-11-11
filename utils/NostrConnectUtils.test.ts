@@ -1325,6 +1325,47 @@ describe('NostrConnectUtils', () => {
 
                 expect(tx.preimage).toBe(STORED_PREIMAGE);
             });
+
+            describe('fees_paid', () => {
+                const payActivity = (
+                    overrides: Partial<ConnectionActivity> = {}
+                ): ConnectionActivity => ({
+                    id: INVOICE_A,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 1000,
+                    ...overrides
+                });
+                const feesPaid = (activity: ConnectionActivity) =>
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    ).fees_paid;
+
+                it('converts the stored sat fee to msat', () => {
+                    expect(feesPaid(payActivity({ fees_paid: 5 }))).toBe(5000);
+                });
+
+                // LNbits pays recorded before its fees were read as
+                // positive were stored with a negative fees_paid
+                it('reports a stored negative LNbits fee as positive', () => {
+                    expect(feesPaid(payActivity({ fees_paid: -5 }))).toBe(5000);
+                });
+
+                it('falls back to the payment fee when none is stored', () => {
+                    expect(
+                        feesPaid(
+                            payActivity({
+                                payment: new Payment({ fee_sat: '3' })
+                            })
+                        )
+                    ).toBe(3000);
+                });
+
+                it('reports 0 with no stored fee and no payment', () => {
+                    expect(feesPaid(payActivity())).toBe(0);
+                });
+            });
         });
     });
 

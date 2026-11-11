@@ -1654,8 +1654,10 @@ export default class NostrConnectUtils {
         const expires_at =
             NostrConnectUtils.extractExpiresAtFromActivity(activity);
 
+        // LNbits pays recorded before Payment.getFee read its fees as
+        // positive were stored with a negative fees_paid
         const feesPaid = activity.fees_paid
-            ? satsToMillisats(activity.fees_paid)
+            ? satsToMillisats(Math.abs(activity.fees_paid))
             : activity.payment
             ? satsToMillisats(Number(activity.payment.getFee) || 0)
             : 0;
