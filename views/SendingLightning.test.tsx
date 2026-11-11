@@ -57,6 +57,7 @@ jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));
 jest.mock('../storage', () => ({}));
+jest.mock('../stores/Stores');
 jest.mock('../assets/images/SVG/Clock.svg', () => 'Clock');
 jest.mock('../assets/images/SVG/wordmark-black.svg', () => 'Wordmark');
 jest.mock('../utils/AmountUtils', () => ({ getFeePercentage: jest.fn() }));
@@ -72,6 +73,8 @@ import {
 } from '@testing-library/react-native';
 import BackendUtils from '../utils/BackendUtils';
 import { loadDonationLnurl } from '../utils/DonationUtils';
+import { getFeePercentage } from '../utils/AmountUtils';
+import Payment from '../models/Payment';
 import SendingLightning from './SendingLightning';
 
 const TRY_AGAIN = 'views.SendingLightning.tryAgain';
@@ -305,7 +308,7 @@ describe('SendingLightning donation', () => {
 
     const params = { enableDonations: true, donationAmount: '25' };
 
-    const donationView = (TransactionsStore: any) => (
+    const donationView = (TransactionsStore: any, payments: any[] = []) => (
         <SendingLightning
             {...({
                 navigation: {
@@ -321,7 +324,9 @@ describe('SendingLightning donation', () => {
                 TransactionsStore,
                 BalanceStore: { getCombinedBalance: jest.fn() },
                 ChannelsStore: { getChannels: jest.fn() },
-                PaymentsStore: { getPayments: jest.fn().mockResolvedValue([]) },
+                PaymentsStore: {
+                    getPayments: jest.fn().mockResolvedValue(payments)
+                },
                 ContactStore: { contacts: [] },
                 LnurlPayStore: {},
                 NodeInfoStore: { nodeInfo: { isMainNet: true } }
@@ -426,16 +431,21 @@ describe('SendingLightning donation', () => {
 
     // Lets the payment succeed, which starts the donation, then gives a
     // retry loop a few turns to show up as extra calls
-    const donate = async (sendPaymentSilently: jest.Mock) => {
+    const donate = async (
+        sendPaymentSilently: jest.Mock,
+        payments: any[] = []
+    ) => {
         const TransactionsStore: any = {
             loading: false,
             error: false,
             status: null,
             sendPaymentSilently
         };
-        const { rerender } = await render(donationView(TransactionsStore));
+        const { rerender } = await render(
+            donationView(TransactionsStore, payments)
+        );
         TransactionsStore.status = 'SUCCEEDED';
-        await rerender(donationView(TransactionsStore));
+        await rerender(donationView(TransactionsStore, payments));
         await waitFor(() => expect(loadDonationLnurl).toHaveBeenCalled());
         for (let i = 0; i < 5; i++) {
             await new Promise((r) => setImmediate(r));
@@ -457,6 +467,53 @@ describe('SendingLightning donation', () => {
         expect(sendPaymentSilently).toHaveBeenCalledTimes(1);
         expect(hostProps('DonationGiftIcon').donationHandled).toBe(true);
         expect(hostProps('DonationInfoModal').amountDonated).toBe(25);
+    });
+
+    describe('donation fee', () => {
+        const paid = (result: Record<string, any> = {}) =>
+            jest.fn().mockResolvedValue({
+                status: 'SUCCEEDED',
+                num_satoshis: 25,
+                ...result
+            });
+
+        it('reads the fee_msat of the latest payment', async () => {
+            (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+
+            await donate(paid(), [new Payment({ fee_msat: '1500' })]);
+
+            expect(hostProps('DonationInfoModal').donationFee).toBe('1.5');
+        });
+
+        // LNbits' LndHub extension reports an outgoing fee as negative
+        it('reads an LNbits negative fee_msat as positive', async () => {
+            (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+
+            await donate(paid(), [
+                new Payment({ fee_msat: -5000, fee: -5, value: 25 })
+            ]);
+
+            expect(hostProps('DonationInfoModal').donationFee).toBe('5');
+            expect(getFeePercentage).toHaveBeenCalledWith('5', 25);
+        });
+
+        // CLN lists payments newest first and PaymentsStore reverses them,
+        // so payments[0] is an older payment
+        it('keeps the fee from a CLN result over an older payment', async () => {
+            (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+
+            await donate(
+                paid({ amount_msat: 25000, amount_sent_msat: 25010 }),
+                [
+                    new Payment({
+                        amount_msat: 1000000,
+                        amount_sent_msat: 1003000
+                    })
+                ]
+            );
+
+            expect(hostProps('DonationInfoModal').donationFee).toBe('0.01');
+        });
     });
 
     it('tries once when the donation LNURL returns no invoice', async () => {
