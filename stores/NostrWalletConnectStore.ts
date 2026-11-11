@@ -3708,7 +3708,7 @@ export default class NostrWalletConnectStore {
             activity.status = 'success';
             activity.error = undefined;
             const amountSats =
-                Math.floor(Number(activity.satAmount)) ||
+                Math.ceil(Number(activity.satAmount)) ||
                 Math.ceil(Number(raw.getAmount) || 0);
             const feeSats = Number(raw.getFee) || 0;
             activity.fees_paid = feeSats;

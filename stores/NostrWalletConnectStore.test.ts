@@ -3237,6 +3237,37 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
         expect(persistedConnections()[0].totalSpendSats).toBe(10050);
     });
 
+    it('debits a fractional listed amount and fee rounded up when the activity has no amount', async () => {
+        const invoice = 'lnbc1timeout-fractional-amount';
+        const paymentHash = hex64('d');
+        // CLN lists the exact amount: 2999 msat paid with a 1500 msat fee
+        const { store } = storeWithNodePayments([
+            new Payment({
+                bolt11: invoice,
+                payment_hash: paymentHash,
+                status: 'complete',
+                amount_msat: '2999msat',
+                amount_sent_msat: '4499msat',
+                payment_preimage: hex64('9')
+            })
+        ]);
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [
+                timeoutFailedActivity(invoice, {
+                    paymentHash,
+                    satAmount: undefined
+                })
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.activity[0].isBudgetDebited).toBe(true);
+        expect(connection.totalSpendSats).toBe(5);
+    });
+
     it('promotes a timeout-failed pay_invoice to pending when the node still shows in-flight', async () => {
         const invoice = 'lnbc1timeout-still-inflight';
         const paymentHash = hex64('f');
@@ -5648,6 +5679,45 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
 
         expect(connection.activity[0].satAmount).toBe(3000);
         expect(connection.totalSpendSats).toBe(3002);
+    });
+
+    it('debits a fractional amount the wallet already paid rounded up', async () => {
+        mockInvoiceAmount(0);
+        // CLN lists the exact amount: 2999 msat paid with a 2000 msat fee
+        const alreadyPaid = new Payment({
+            bolt11: invoice,
+            payment_hash: paymentHash,
+            status: 'complete',
+            amount_msat: '2999msat',
+            amount_sent_msat: '4999msat',
+            payment_preimage: hex64('f')
+        });
+        const { store, transactionsStore } = buildHandlerStore([alreadyPaid]);
+        transactionsStore.getPaymentOutcome.mockReturnValue({
+            payment_hash: paymentHash,
+            payment_preimage: null,
+            payment_fee: 0,
+            error: true,
+            payment_error: 'invoice is already paid',
+            status: 'FAILED',
+            isIncomplete: true
+        });
+        const connection = addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 100000
+        });
+
+        await (store as any).handleLightningPayInvoice(
+            connection,
+            {
+                invoice,
+                amount: 7_000_000
+            },
+            () => true
+        );
+
+        expect(connection.activity[0].satAmount).toBe(3);
+        expect(connection.totalSpendSats).toBe(5);
     });
 });
 
