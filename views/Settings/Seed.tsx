@@ -42,6 +42,7 @@ import {
 } from '../../utils/SwapUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import {
     graphDataExists,
@@ -116,6 +117,7 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
                 </Text>
             </View>
             <Text
+                testID={TEST_IDS.seed.word(index + 1)}
                 style={{
                     flex: 1,
                     fontFamily: 'PPNeueMontreal-Medium',
@@ -629,6 +631,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                             }}
                         >
                             <Button
+                                testID={TEST_IDS.seed.understandButton}
                                 onPress={() =>
                                     this.setState({ understood: true })
                                 }
@@ -693,6 +696,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                             }}
                         >
                             <Button
+                                testID={TEST_IDS.seed.backupCompleteButton}
                                 onPress={async () => {
                                     if (isRefundRescueKey) {
                                         navigation.goBack();

@@ -20,6 +20,7 @@ import { ContactAvatar } from '../../components/ContactAvatar';
 
 import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 
 import Storage from '../../storage';
@@ -322,6 +323,7 @@ export default class Contacts extends React.Component<
 
         const AddButton = () => (
             <TouchableOpacity
+                testID={TEST_IDS.contacts.addButton}
                 onPress={() => navigation.navigate('AddContact')}
                 accessibilityLabel={localeString('general.add')}
             >

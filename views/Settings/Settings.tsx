@@ -29,6 +29,7 @@ import Screen from '../../components/Screen';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
@@ -453,6 +454,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
 
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.securityButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Security')}
                         >
