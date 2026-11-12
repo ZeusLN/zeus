@@ -1,6 +1,5 @@
-import { device } from 'detox';
-
 import { E2EElement, waitForVisible } from '../helpers/elements';
+import { withoutSynchronization } from '../helpers/synchronization';
 import AddMintScreen from '../screens/AddMintScreen';
 import Header from '../screens/Header';
 import KeypadScreen from '../screens/KeypadScreen';
@@ -17,24 +16,19 @@ import {
 
 // Creating a wallet builds and starts a real LDK Node on mainnet, which syncs
 // in the background.
-const WALLET_START_TIMEOUT_MS = 180000;
+export const WALLET_START_TIMEOUT_MS = 180000;
 
 // A public Cashu mint, added by URL so ecash tests don't depend on Nostr
 // relays returning recommended mints. E2E_MINT_URL overrides it.
 const TEST_MINT_URL =
     process.env.E2E_MINT_URL || 'https://mint.minibits.cash/Bitcoin';
 
-// The node keeps the app busy while it starts and first syncs, so Detox stops
-// waiting for idle until the wallet is up.
 const createWallet = async (ready: E2EElement): Promise<void> => {
     await RecommendedSettingsScreen.createWalletButton.tap();
 
-    await device.disableSynchronization();
-    try {
-        await waitForVisible(ready, WALLET_START_TIMEOUT_MS);
-    } finally {
-        await device.enableSynchronization();
-    }
+    await withoutSynchronization(() =>
+        waitForVisible(ready, WALLET_START_TIMEOUT_MS)
+    );
 };
 
 // Skips the mint recommendations, which come from Nostr relays, so the
