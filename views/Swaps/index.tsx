@@ -513,8 +513,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 const feesObj: { [key: string]: number } | undefined =
                     await FeeStore.getOnchainFeesviaMempool();
 
-                // A newer lookup has already started; drop this result but
-                // continue with the rest of componentDidUpdate.
+                // Only the latest lookup applies its rate; a stale one falls
+                // through to the rest of componentDidUpdate.
                 if (token === this.feeLookupToken) {
                     const preferredMempoolRate =
                         settings?.payments?.preferredMempoolRate ||

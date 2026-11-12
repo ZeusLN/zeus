@@ -412,6 +412,9 @@ describe('Swaps: reverse fee lookup', () => {
         resolveFirst({ fastestFee: 15 });
         await update1;
 
+        // The rest of componentDidUpdate still ran for the stale lookup.
+        expect(view.checkIsValid).toHaveBeenCalledTimes(1);
+
         // It must NOT apply 15; a newer lookup is still pending.
         expect(view.state.fee).toBe('2');
         expect(view.state.feeRateLookupDone).toBe(false);
@@ -423,6 +426,7 @@ describe('Swaps: reverse fee lookup', () => {
         // The newer rate wins.
         expect(view.state.fee).toBe('20');
         expect(view.state.feeRateLookupDone).toBe(true);
+        expect(view.checkIsValid).toHaveBeenCalledTimes(2);
     });
 
     it('sets feeRateLookupDone true when the lookup rejects', async () => {
