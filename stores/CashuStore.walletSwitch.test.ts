@@ -43,9 +43,10 @@ const mockCdk = {
     // it through heldClaims
     holdTokens: [] as string[],
     heldClaims: {} as Record<string, () => void>,
-    // addMint() of this mint waits until the test releases it
+    // addMint() of this mint waits until the test answers or fails it
     holdMint: '',
     answerAddMint: undefined as (() => void) | undefined,
+    failAddMint: undefined as ((error: Error) => void) | undefined,
     // Runs once when the next getBalances() call arrives
     onGetBalances: undefined as (() => void) | undefined
 };
@@ -59,8 +60,9 @@ jest.mock('../cashu-cdk', () => ({
     addMint: async (mintUrl: string) => {
         const { mints } = mockOpenDatabase();
         if (mintUrl === mockCdk.holdMint && !mockCdk.answerAddMint) {
-            await new Promise<void>((resolve) => {
+            await new Promise<void>((resolve, reject) => {
                 mockCdk.answerAddMint = resolve;
+                mockCdk.failAddMint = reject;
             });
         }
         if (!mints.includes(mintUrl)) mints.push(mintUrl);
@@ -202,6 +204,7 @@ const startOnWalletA = async (
     mockCdk.heldClaims = {};
     mockCdk.holdMint = newMint ?? '';
     mockCdk.answerAddMint = undefined;
+    mockCdk.failAddMint = undefined;
     mockCdk.onGetBalances = undefined;
 
     storeWallet(
@@ -498,6 +501,25 @@ describe('CashuStore offline-token sweep across a wallet switch during addMint',
             MINT_C
         );
         expect(mockCdk.databases[SEED_B].mints).toContain(MINT_C);
+    });
+
+    it("does not mark wallet B's mint unreachable when wallet A's addMint fails", async () => {
+        // Wallet B has added the mint wallet A's sweep is adding
+        mockKeychain['walletB-cashu-mintUrls'] = JSON.stringify([
+            'https://mint-b.example',
+            MINT_C
+        ]);
+        switchToWalletB();
+        await store.initializeWallets();
+        await sweeps.mock.results[1].value;
+        expect(store.cashuWallets[MINT_C].errorConnecting).toBe(false);
+
+        mockCdk.failAddMint!(
+            new Error('WalletSqliteDatabase object has already been destroyed')
+        );
+        await sweeps.mock.results[0].value;
+
+        expect(store.cashuWallets[MINT_C].errorConnecting).toBe(false);
     });
 });
 
