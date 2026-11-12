@@ -17,6 +17,7 @@ jest.mock('./CoreLightningRequestHandler', () => ({
     getBalance: jest.fn(),
     getChainTransactions: jest.fn(),
     getOffchainBalance: jest.fn(),
+    getSpliceHistory: jest.fn(),
     listPeers: jest.fn(),
     listClosedChannels: jest.fn(),
     listPeerChannels: jest.fn()
@@ -331,5 +332,139 @@ describe('CLNRest.lnurlAuth', () => {
         expect(Buffer.from(signature).toString('hex')).toBe(
             '974844ab2f50a8fc85ca54a9fc686854e902ad46f1b72219d05e0f371f29bb8c'
         );
+    });
+});
+
+describe('CLNRest splicing', () => {
+    const { nodeInfoStore } = require('../stores/Stores');
+    let cln: CLNRest;
+    let postRequest: jest.SpyInstance;
+
+    const answer = (splice: Promise<any> | any) =>
+        postRequest.mockImplementation((route: string) => {
+            if (route === '/v1/listpeerchannels') {
+                return Promise.resolve({
+                    channels: [
+                        { funding_txid: 'other-txid', channel_id: 'other-id' },
+                        { funding_txid: 'funding-txid', channel_id: 'chan-id' }
+                    ]
+                });
+            }
+            return Promise.resolve(splice);
+        });
+    const spliceCall = () =>
+        postRequest.mock.calls.find(
+            ([route]) => route !== '/v1/listpeerchannels'
+        );
+
+    beforeEach(() => {
+        cln = new CLNRest();
+        postRequest = jest.spyOn(cln, 'postRequest');
+        answer({ psbt: 'psbt', txid: 'splice-txid' });
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+        nodeInfoStore.nodeInfo = {};
+    });
+
+    it("splices in to the channel's id with the amount in sats", async () => {
+        const result = await cln.spliceIn({
+            fundingTxid: 'funding-txid',
+            amountSats: 50000
+        });
+
+        expect(spliceCall()).toEqual([
+            '/v1/splicein',
+            { channel: 'chan-id', amount: '50000sat' },
+            125000
+        ]);
+        expect(result).toEqual({
+            success: true,
+            funding_txid_str: 'splice-txid'
+        });
+    });
+
+    it('splices out to the given address', async () => {
+        await cln.spliceOut({
+            fundingTxid: 'funding-txid',
+            amountSats: 30000,
+            address: 'bcrt1qdest'
+        });
+
+        expect(spliceCall()).toEqual([
+            '/v1/spliceout',
+            {
+                channel: 'chan-id',
+                amount: '30000sat',
+                destination: 'bcrt1qdest'
+            },
+            125000
+        ]);
+    });
+
+    it("leaves the destination to the node's own wallet when none is given", async () => {
+        await cln.spliceOut({ fundingTxid: 'funding-txid', amountSats: 30000 });
+
+        expect(spliceCall()?.[1]).toEqual({
+            channel: 'chan-id',
+            amount: '30000sat'
+        });
+    });
+
+    it('does not splice a channel the node does not list', async () => {
+        await expect(
+            cln.spliceIn({ fundingTxid: 'unknown-txid', amountSats: 50000 })
+        ).rejects.toThrow();
+
+        expect(spliceCall()).toBeUndefined();
+    });
+
+    it("passes on the node's refusal", async () => {
+        answer(Promise.reject(new Error('Peer does not support splicing')));
+
+        await expect(
+            cln.spliceIn({ fundingTxid: 'funding-txid', amountSats: 50000 })
+        ).rejects.toThrow('Peer does not support splicing');
+    });
+
+    it('unwraps the error of the splice step that failed', async () => {
+        answer(
+            Promise.reject(
+                new Error(
+                    'addpsbtinput: {"code":301,"message":"Could not afford 3469690sat using all 3 available UTXOs: 258sat short"}'
+                )
+            )
+        );
+
+        await expect(
+            cln.spliceIn({ fundingTxid: 'funding-txid', amountSats: 50000 })
+        ).rejects.toThrow(
+            /^addpsbtinput: Could not afford 3469690sat using all 3 available UTXOs: 258sat short$/
+        );
+    });
+
+    it('reports a splice still in negotiation as requested when the wait runs out', async () => {
+        jest.useFakeTimers();
+        answer(new Promise(() => {}));
+
+        const result = cln.spliceIn({
+            fundingTxid: 'funding-txid',
+            amountSats: 50000
+        });
+        await jest.advanceTimersByTimeAsync(120000);
+
+        await expect(result).resolves.toEqual({ success: true });
+    });
+
+    it.each([
+        ['v26.04', true],
+        ['v26.06.1', true],
+        ['v25.12', false],
+        [undefined, false]
+    ])('supports splicing on %s: %s', (version, supported) => {
+        nodeInfoStore.nodeInfo = { version };
+
+        expect(cln.supportsSplicing()).toBe(supported);
     });
 });

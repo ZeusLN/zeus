@@ -16,6 +16,13 @@ import {
     feeLimitSatsToMaxRoutingFeeMsat
 } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { getActiveLsps2NodeId } from '../utils/LdkNodeUtils';
+import {
+    getJitQuoteMsat,
+    getLsps2ErrorMessage,
+    getReceivableMsat
+} from '../utils/Lsps2Utils';
+import type { SpliceEvent } from '../utils/SpliceUtils';
 import type {
     Network,
     NodeStatus,
@@ -152,6 +159,30 @@ export default class LdkNode {
         });
         return unsubscribe;
     };
+
+    watchSpliceEvents = (onEvent: (event: SpliceEvent) => void): (() => void) =>
+        this.subscribeToEvents((event) => {
+            switch (event.type) {
+                case 'splicePending':
+                    onEvent({
+                        type: event.type,
+                        userChannelId: event.userChannelId,
+                        channelId: event.channelId,
+                        txid: event.newFundingTxo_txid,
+                        vout: event.newFundingTxo_vout
+                    });
+                    break;
+                case 'spliceFailed':
+                case 'channelReady':
+                case 'channelClosed':
+                    onEvent({
+                        type: event.type,
+                        userChannelId: event.userChannelId,
+                        channelId: event.channelId
+                    });
+                    break;
+            }
+        });
 
     /**
      * Start the event loop
@@ -325,7 +356,8 @@ export default class LdkNode {
         return {
             total_balance: balances.totalOnchainBalanceSats.toString(),
             confirmed_balance: confirmed.toString(),
-            unconfirmed_balance: total.minus(confirmed).toString()
+            unconfirmed_balance: total.minus(confirmed).toString(),
+            reserved_balance_anchor_chan: anchorReserve.toString()
         };
     };
 
@@ -1075,6 +1107,27 @@ export default class LdkNode {
     }
 
     /**
+     * Find an open channel by its funding txid
+     *
+     * The splice and close APIs address channels by userChannelId, which
+     * formatChannel does not expose, so callers pass the funding txid.
+     */
+    private findChannelByFundingTxid = async (
+        fundingTxid: string
+    ): Promise<ChannelDetails> => {
+        const channels = await LdkNodeInjection.channel.listChannels();
+        const channel = channels.find((c) => c.fundingTxo_txid === fundingTxid);
+
+        if (!channel) {
+            throw new Error(
+                localeString('error.channelNotFound', { fundingTxid })
+            );
+        }
+
+        return channel;
+    };
+
+    /**
      * Close a channel
      *
      * urlParams come from ChannelsStore in LND format:
@@ -1091,14 +1144,7 @@ export default class LdkNode {
         const fundingTxid = (urlParams && urlParams[0]) || '';
         const forceClose = urlParams && urlParams[2] ? true : false;
 
-        const channels = await LdkNodeInjection.channel.listChannels();
-        const channel = channels.find((c) => c.fundingTxo_txid === fundingTxid);
-
-        if (!channel) {
-            throw new Error(
-                localeString('error.channelNotFound', { fundingTxid })
-            );
-        }
+        const channel = await this.findChannelByFundingTxid(fundingTxid);
 
         const CHANNEL_CLOSE_TIMEOUT_MS = 60000;
         let stopWaiting = () => {};
@@ -1146,6 +1192,145 @@ export default class LdkNode {
         await closed;
 
         return { success: true };
+    };
+
+    /**
+     * Request a splice and wait for its outcome
+     *
+     * splicePending means the splice transaction was negotiated and
+     * broadcast; the channel keeps operating until it confirms, at which
+     * point a fresh channelReady event carries the new funding output.
+     *
+     * The request is only sent once the event subscription is in place:
+     * negotiation with a responsive peer can complete in well under a
+     * second, and the event would otherwise be missed.
+     */
+    private spliceAndWait = async (
+        userChannelId: string,
+        request: () => Promise<void>
+    ): Promise<any> => {
+        const SPLICE_TIMEOUT_MS = 60000;
+
+        return await new Promise<any>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                unsubscribe();
+                // Timeout — resolve optimistically since the request
+                // was accepted by the local node
+                resolve({ success: true });
+            }, SPLICE_TIMEOUT_MS);
+
+            const unsubscribe = this.subscribeToEvents(
+                (event: LdkNodeEvent) => {
+                    if (
+                        event.type === 'splicePending' &&
+                        event.userChannelId === userChannelId
+                    ) {
+                        clearTimeout(timeout);
+                        unsubscribe();
+                        resolve({
+                            success: true,
+                            funding_txid_str: event.newFundingTxo_txid,
+                            output_index: event.newFundingTxo_vout
+                        });
+                    } else if (
+                        event.type === 'spliceFailed' &&
+                        event.userChannelId === userChannelId
+                    ) {
+                        clearTimeout(timeout);
+                        unsubscribe();
+                        reject(new Error(localeString('error.spliceFailed')));
+                    }
+                }
+            );
+
+            request().catch((error) => {
+                clearTimeout(timeout);
+                unsubscribe();
+                reject(error);
+            });
+        });
+    };
+
+    /**
+     * Splice funds from the on-chain wallet into an existing channel
+     */
+    spliceIn = async ({
+        fundingTxid,
+        amountSats
+    }: {
+        fundingTxid: string;
+        amountSats: number;
+    }): Promise<any> => {
+        const channel = await this.findChannelByFundingTxid(fundingTxid);
+
+        return await this.spliceAndWait(channel.userChannelId, () =>
+            LdkNodeInjection.channel.spliceIn({
+                userChannelId: channel.userChannelId,
+                counterpartyNodeId: channel.counterpartyNodeId,
+                spliceAmountSats: Number(amountSats)
+            })
+        );
+    };
+
+    /**
+     * Splice funds out of an existing channel to an on-chain address
+     *
+     * The splice fee is taken from the channel balance, so the channel
+     * loses slightly more than the amount paid out. Without an address it
+     * pays a fresh address of our own wallet, taken only now so an
+     * abandoned splice doesn't use one up.
+     */
+    spliceOut = async ({
+        fundingTxid,
+        amountSats,
+        address
+    }: {
+        fundingTxid: string;
+        amountSats: number;
+        address?: string;
+    }): Promise<any> => {
+        const channel = await this.findChannelByFundingTxid(fundingTxid);
+        const destination =
+            address || (await LdkNodeInjection.onchain.newOnchainAddress());
+
+        return await this.spliceAndWait(channel.userChannelId, () =>
+            LdkNodeInjection.channel.spliceOut({
+                userChannelId: channel.userChannelId,
+                counterpartyNodeId: channel.counterpartyNodeId,
+                address: destination,
+                spliceAmountSats: Number(amountSats)
+            })
+        );
+    };
+
+    /**
+     * A splice transaction as the node's own Esplora server sees it: the
+     * block it confirmed in, and the value of the channel's new funding
+     * output. The node already watches this channel's funding there, and it
+     * covers splices that don't touch our wallet
+     */
+    getSpliceTransactionStatus = async (
+        txid: string,
+        vout?: number
+    ): Promise<{ confirmationHeight?: number; fundingSats?: number }> => {
+        const server = (settingsStore.ldkEsploraServer || '').replace(
+            /\/+$/,
+            ''
+        );
+        if (!server) throw new Error('No Esplora server set');
+        const response = await fetch(`${server}/tx/${txid}`);
+        if (!response.ok) {
+            throw new Error(`Esplora answered ${response.status}`);
+        }
+        const tx = await response.json();
+        const fundingSats = vout != null ? tx.vout?.[vout]?.value : undefined;
+        return {
+            confirmationHeight: tx.status?.confirmed
+                ? tx.status.block_height
+                : undefined,
+            fundingSats:
+                typeof fundingSats === 'number' ? fundingSats : undefined
+        };
     };
 
     // ========================================================================
@@ -1315,7 +1500,27 @@ export default class LdkNode {
             throw new Error(localeString('error.invalidInvoiceAmountOrExpiry'));
         }
 
-        if (amountMsat > 0) {
+        // Callers set lsps2_jit when an LSPS2 JIT channel may be bought.
+        // Below 1 sat the fee limit would be 0, which means no limit
+        const jit =
+            !!data.lsps2_jit &&
+            amountMsat > 1000 &&
+            getReceivableMsat(await LdkNodeInjection.channel.listChannels()) <
+                amountMsat;
+
+        if (jit) {
+            try {
+                invoice = await LdkNodeInjection.bolt11.receiveViaJitChannel({
+                    amountMsat,
+                    description: data.memo || '',
+                    expirySecs,
+                    // the LSP's fee has to leave something to receive
+                    maxLspFeeLimitMsat: amountMsat - 1
+                });
+            } catch (e: any) {
+                throw new Error(getLsps2ErrorMessage(e?.message || String(e)));
+            }
+        } else if (amountMsat > 0) {
             invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
                 description: data.memo || '',
@@ -1341,10 +1546,18 @@ export default class LdkNode {
             console.error('[LDK] Error decoding invoice for payment hash:', e);
         }
 
+        const lspFeeMsat = jit
+            ? getJitQuoteMsat(
+                  await LdkNodeInjection.payments.listPayments(),
+                  paymentHash
+              )
+            : undefined;
+
         return {
             payment_request: invoice,
             r_hash: paymentHash,
-            add_index: ''
+            add_index: '',
+            ...(jit && { lsps2_jit: true, lsp_fee_msat: lspFeeMsat })
         };
     };
 
@@ -2200,6 +2413,9 @@ export default class LdkNode {
                 ? new BigNumber(payment.amountMsat).dividedBy(1000).toString()
                 : '0',
             amt_paid_msat: payment.amountMsat?.toString() || '0',
+            // What the LSP kept when it opened a JIT channel for this
+            // payment; the amounts above are what reached us
+            lsp_fee_msat: payment.kind.counterpartySkimmedFeeMsat?.toString(),
             state: isSettled
                 ? 'SETTLED'
                 : payment.status === 'pending'
@@ -2283,6 +2499,11 @@ export default class LdkNode {
     supportsChannelManagement = () => true;
     supportsCircularRebalancing = () => false;
     supportsForceClose = () => true;
+    supportsSplicing = () => true;
+    supportsSpliceOutToAddress = () => true;
+    supportsLSPS2 = () => true;
+    // A dedicated LSPS2 LSP is registered in the running node
+    isLsps2Active = () => !!getActiveLsps2NodeId();
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => true;
     supportsMPP = () => true;

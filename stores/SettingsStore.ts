@@ -13,6 +13,7 @@ import { VerifierRecord, hasVerifier } from '../utils/LockVerifierUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { SETTINGS_VERSION } from '../utils/SettingsVersion';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
+import ValidationUtils from '../utils/ValidationUtils';
 import {
     DEFAULT_SCORER_URL,
     DEFAULT_VSS_SERVER,
@@ -274,6 +275,16 @@ export interface Settings {
     lsps1HostMutinynet: string;
     lsps1Token: string;
     lsps1ShowPurchaseButton?: boolean; // deprecated
+    // LSPS2 (JIT channels on LDK Node)
+    lsps2PubkeyMainnet?: string;
+    lsps2PubkeyTestnet?: string;
+    lsps2PubkeyMutinynet?: string;
+    lsps2HostMainnet?: string;
+    lsps2HostTestnet?: string;
+    lsps2HostMutinynet?: string;
+    lsps2Token?: string;
+    // Who opens JIT channels on LDK Node; unset follows the default
+    jitChannelProvider?: JitChannelProvider;
     // Swaps
     swaps: SwapsSettings;
     // Lightning Address
@@ -1387,6 +1398,25 @@ export const DEFAULT_LSPS1_PUBKEY_MUTINYNET =
     '032ae843e4d7d177f151d021ac8044b0636ec72b1ce3ffcde5c04748db2517ab03';
 export const DEFAULT_LSPS1_HOST_MUTINYNET = '45.79.201.241:9735';
 
+// LSPS2 LSPs for LDK Node JIT channels. Empty until ZEUS runs an LDK-based
+// LSP: LDK wallets keep using Flow unless the user sets one. Kept out of
+// DEFAULT_SETTINGS so a later default reaches existing users.
+export const DEFAULT_LSPS2_PUBKEY_MAINNET = '';
+export const DEFAULT_LSPS2_HOST_MAINNET = '';
+export const DEFAULT_LSPS2_PUBKEY_TESTNET = '';
+export const DEFAULT_LSPS2_HOST_TESTNET = '';
+export const DEFAULT_LSPS2_PUBKEY_MUTINYNET = '';
+export const DEFAULT_LSPS2_HOST_MUTINYNET = '';
+
+export type JitChannelProvider = 'flow' | 'lsps2';
+
+// Kept out of DEFAULT_SETTINGS like DEFAULT_LSPS2_*, so changing it reaches
+// every user who never picked a provider
+export const DEFAULT_JIT_CHANNEL_PROVIDER: JitChannelProvider = 'lsps2';
+
+export const getJitChannelProvider = (settings: Settings): JitChannelProvider =>
+    settings.jitChannelProvider ?? DEFAULT_JIT_CHANNEL_PROVIDER;
+
 /**
  * Select LSP config values for a given network.
  * Accepts either a network string ('mainnet'|'testnet'|'signet'|'mutinynet')
@@ -1404,6 +1434,10 @@ export function getLspConfigForNetwork(
     defaultFlowHost: string;
     defaultLsps1Rest: string;
     defaultLsps1Host: string;
+    lsps2Pubkey: string;
+    lsps2Host: string;
+    defaultLsps2Pubkey: string;
+    defaultLsps2Host: string;
 } {
     const isMutinynet =
         typeof network === 'string'
@@ -1426,7 +1460,13 @@ export function getLspConfigForNetwork(
             defaultPubkey: DEFAULT_LSPS1_PUBKEY_MUTINYNET,
             defaultFlowHost: DEFAULT_LSP_MUTINYNET,
             defaultLsps1Rest: DEFAULT_LSPS1_REST_MUTINYNET,
-            defaultLsps1Host: DEFAULT_LSPS1_HOST_MUTINYNET
+            defaultLsps1Host: DEFAULT_LSPS1_HOST_MUTINYNET,
+            defaultLsps2Pubkey: DEFAULT_LSPS2_PUBKEY_MUTINYNET,
+            defaultLsps2Host: DEFAULT_LSPS2_HOST_MUTINYNET,
+            lsps2Pubkey:
+                settings.lsps2PubkeyMutinynet || DEFAULT_LSPS2_PUBKEY_MUTINYNET,
+            lsps2Host:
+                settings.lsps2HostMutinynet || DEFAULT_LSPS2_HOST_MUTINYNET
         };
     }
     if (isTestnet) {
@@ -1439,7 +1479,12 @@ export function getLspConfigForNetwork(
             defaultPubkey: DEFAULT_LSPS1_PUBKEY_TESTNET,
             defaultFlowHost: DEFAULT_LSP_TESTNET,
             defaultLsps1Rest: DEFAULT_LSPS1_REST_TESTNET,
-            defaultLsps1Host: DEFAULT_LSPS1_HOST_TESTNET
+            defaultLsps1Host: DEFAULT_LSPS1_HOST_TESTNET,
+            defaultLsps2Pubkey: DEFAULT_LSPS2_PUBKEY_TESTNET,
+            defaultLsps2Host: DEFAULT_LSPS2_HOST_TESTNET,
+            lsps2Pubkey:
+                settings.lsps2PubkeyTestnet || DEFAULT_LSPS2_PUBKEY_TESTNET,
+            lsps2Host: settings.lsps2HostTestnet || DEFAULT_LSPS2_HOST_TESTNET
         };
     }
     return {
@@ -1451,7 +1496,12 @@ export function getLspConfigForNetwork(
         defaultPubkey: DEFAULT_LSPS1_PUBKEY_MAINNET,
         defaultFlowHost: DEFAULT_LSP_MAINNET,
         defaultLsps1Rest: DEFAULT_LSPS1_REST_MAINNET,
-        defaultLsps1Host: DEFAULT_LSPS1_HOST_MAINNET
+        defaultLsps1Host: DEFAULT_LSPS1_HOST_MAINNET,
+        defaultLsps2Pubkey: DEFAULT_LSPS2_PUBKEY_MAINNET,
+        defaultLsps2Host: DEFAULT_LSPS2_HOST_MAINNET,
+        lsps2Pubkey:
+            settings.lsps2PubkeyMainnet || DEFAULT_LSPS2_PUBKEY_MAINNET,
+        lsps2Host: settings.lsps2HostMainnet || DEFAULT_LSPS2_HOST_MAINNET
     };
 }
 
@@ -1468,6 +1518,63 @@ export function isOlympusPeer(
 ): boolean {
     const config = getLspConfigForNetwork(settings, network);
     return config.lsps1Pubkey === config.defaultPubkey;
+}
+
+interface LdkNodeLsp {
+    nodeId: string;
+    address: string;
+    token: string | null;
+}
+
+export interface LdkNodeLspConfig {
+    lsps1Config?: LdkNodeLsp;
+    lsps2Config?: LdkNodeLsp;
+    trustedPeers0conf: string[];
+}
+
+export function getLdkNodeLspConfig(
+    settings: Settings,
+    network: string | { isMutinynet: boolean; isTestNet: boolean }
+): LdkNodeLspConfig {
+    const lspConfig = getLspConfigForNetwork(settings, network);
+
+    const lsps1Config =
+        lspConfig.lsps1Pubkey && lspConfig.lsps1Host
+            ? {
+                  nodeId: lspConfig.lsps1Pubkey,
+                  address: lspConfig.lsps1Host,
+                  token: settings.lsps1Token || null
+              }
+            : undefined;
+
+    const trustedPeers0conf = [lspConfig.defaultPubkey];
+    if (lsps1Config?.nodeId && lsps1Config.nodeId !== lspConfig.defaultPubkey) {
+        trustedPeers0conf.push(lsps1Config.nodeId);
+    }
+
+    // With Flow chosen the LSPS2 LSP is left out, so the LSPS1 node stays the
+    // LSPS2 source: ldk-node lets only that source's channels carry a full
+    // HTLC in flight, and Flow sends most of a new channel in one HTLC.
+    // ldk-node aborts the app on iOS if it can't parse a peer, and the
+    // settings screen saves as the user types, so only valid values pass
+    const lsps2Pubkey = lspConfig.lsps2Pubkey.trim().toLowerCase();
+    const lsps2Host = lspConfig.lsps2Host.trim();
+    const lsps2Config =
+        getJitChannelProvider(settings) === 'lsps2' &&
+        ValidationUtils.isValidPeerPubkey(lsps2Pubkey) &&
+        ValidationUtils.isValidPeerAddress(lsps2Host)
+            ? {
+                  nodeId: lsps2Pubkey,
+                  address: lsps2Host,
+                  token: settings.lsps2Token || null
+              }
+            : undefined;
+
+    if (lsps2Config && !trustedPeers0conf.includes(lsps2Config.nodeId)) {
+        trustedPeers0conf.push(lsps2Config.nodeId);
+    }
+
+    return { lsps1Config, lsps2Config, trustedPeers0conf };
 }
 
 // Swaps

@@ -1,4 +1,4 @@
-import { action, observable, runInAction } from 'mobx';
+import { action, observable, reaction, runInAction } from 'mobx';
 
 // LN
 import Payment from './../models/Payment';
@@ -8,6 +8,7 @@ import Swap, { SwapState } from './../models/Swap';
 
 //on-chain
 import Transaction from './../models/Transaction';
+import Splice from './../models/Splice';
 
 // ecash
 import CashuInvoice from './../models/CashuInvoice';
@@ -22,6 +23,7 @@ import InvoicesStore from './InvoicesStore';
 import TransactionsStore from './TransactionsStore';
 import CashuStore from './CashuStore';
 import SwapStore from './SwapStore';
+import SpliceStore from './SpliceStore';
 import NodeInfoStore from './NodeInfoStore';
 
 import BackendUtils from './../utils/BackendUtils';
@@ -58,6 +60,7 @@ type ActivityItem =
     | CashuPayment
     | CashuToken
     | Swap
+    | Splice
     | LSPActivity;
 
 export interface Filter {
@@ -65,6 +68,7 @@ export interface Filter {
     lightning: boolean;
     onChain: boolean;
     cashu: boolean;
+    splices: boolean;
     sent: boolean;
     swaps: boolean;
     submarine: boolean;
@@ -96,6 +100,7 @@ export const DEFAULT_FILTERS = {
     lightning: true,
     onChain: true,
     cashu: true,
+    splices: true,
     sent: true,
     swaps: true,
     submarine: true,
@@ -144,7 +149,12 @@ export default class ActivityStore {
     transactionsStore: TransactionsStore;
     cashuStore: CashuStore;
     swapStore: SwapStore;
+    spliceStore: SpliceStore;
     nodeInfoStore: NodeInfoStore;
+
+    private loadsInFlight = 0;
+    private spliceRebuildSeq = 0;
+    private spliceRebuildSkipped = false;
 
     constructor(
         settingsStore: SettingsStore,
@@ -153,6 +163,7 @@ export default class ActivityStore {
         transactionsStore: TransactionsStore,
         cashuStore: CashuStore,
         swapStore: SwapStore,
+        spliceStore: SpliceStore,
         nodeInfoStore: NodeInfoStore
     ) {
         this.settingsStore = settingsStore;
@@ -161,8 +172,34 @@ export default class ActivityStore {
         this.invoicesStore = invoicesStore;
         this.cashuStore = cashuStore;
         this.swapStore = swapStore;
+        this.spliceStore = spliceStore;
         this.nodeInfoStore = nodeInfoStore;
+
+        // A splice the peer starts, and every lock, change the list while
+        // Activity may be open
+        reaction(
+            () => this.spliceStore.splices,
+            () => this.rebuildForSplices()
+        );
     }
+
+    private rebuildForSplices = async () => {
+        // a load in flight lists the splices as they are when it finishes
+        if (this.loadsInFlight > 0) {
+            this.spliceRebuildSkipped = true;
+            return;
+        }
+        const seq = ++this.spliceRebuildSeq;
+        const activity = await this.getSortedActivity();
+        if (seq !== this.spliceRebuildSeq || this.loadsInFlight > 0) return;
+        runInAction(() => {
+            this.activity = activity;
+        });
+        await this.setFilters(
+            this.filters,
+            this.settingsStore.settings?.locale
+        );
+    };
 
     public resetFilters = async () => {
         this.filters = DEFAULT_FILTERS;
@@ -175,6 +212,7 @@ export default class ActivityStore {
             lightning: true,
             onChain: true,
             cashu: true,
+            splices: true,
             swaps: true,
             submarine: true,
             reverse: true,
@@ -316,14 +354,24 @@ export default class ActivityStore {
         const invoices = this.invoicesStore.invoices;
         const swaps = this.swapStore.swaps;
         const lspOrders = await this.getLSPOrders();
+        const splices = this.spliceStore.splices.map(
+            (splice) => new Splice(splice)
+        );
 
         let additions = payments.concat(invoices);
 
         additions = additions.concat(swaps);
         additions = additions.concat(lspOrders);
+        additions = additions.concat(splices);
 
         if (BackendUtils.supportsOnchainSends()) {
-            additions = additions.concat(transactions);
+            // a splice's own row stands in for its on-chain transaction
+            const spliceTxids = new Set(splices.map((splice) => splice.txid));
+            additions = additions.concat(
+                transactions.filter(
+                    (transaction) => !spliceTxids.has(transaction.tx)
+                )
+            );
         }
 
         if (
@@ -372,19 +420,30 @@ export default class ActivityStore {
     };
 
     private getActivity = async () => {
-        this.activity = [];
-        await this.paymentsStore.getPayments();
-        if (BackendUtils.supportsOnchainSends())
-            await this.transactionsStore.getTransactions();
-        await this.invoicesStore.getInvoices();
+        this.loadsInFlight++;
+        // a splice rebuild still running would land older data over this load
+        this.spliceRebuildSeq++;
+        try {
+            this.activity = [];
+            await this.paymentsStore.getPayments();
+            if (BackendUtils.supportsOnchainSends())
+                await this.transactionsStore.getTransactions();
+            await this.invoicesStore.getInvoices();
 
-        await this.swapStore.fetchAndUpdateSwaps();
-        const sortedActivity = await this.getSortedActivity();
+            await this.swapStore.fetchAndUpdateSwaps();
+            const sortedActivity = await this.getSortedActivity();
 
-        runInAction(() => {
-            this.activity = sortedActivity;
-            this.filteredActivity = this.activity;
-        });
+            runInAction(() => {
+                this.activity = sortedActivity;
+                this.filteredActivity = this.activity;
+            });
+        } finally {
+            this.loadsInFlight--;
+        }
+        if (this.loadsInFlight === 0 && this.spliceRebuildSkipped) {
+            this.spliceRebuildSkipped = false;
+            this.rebuildForSplices();
+        }
     };
 
     public updateInvoices = async (locale: string | undefined) => {

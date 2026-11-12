@@ -46,7 +46,8 @@ import {
     unitsStore,
     utxosStore,
     sweepStore,
-    nostrWalletConnectStore
+    nostrWalletConnectStore,
+    spliceStore
 } from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
@@ -291,6 +292,10 @@ import CurrencyConverter from './views/Tools/CurrencyConverter';
 import DeveloperTools from './views/Tools/DeveloperTools';
 import Rebalance from './views/Tools/Rebalance';
 import RebalancingChannels from './views/Tools/RebalancingChannels';
+import Splice from './views/Tools/Splice/Splice';
+import SpliceQRScanner from './views/Tools/Splice/SpliceQRScanner';
+import SpliceReview from './views/Tools/Splice/SpliceReview';
+import Splicing from './views/Tools/Splice/Splicing';
 import SignVerifyMessage from './views/Tools/SignVerifyMessage';
 import Sweep from './views/Tools/Sweep';
 import Accounts from './views/Tools/Accounts/Accounts';
@@ -325,6 +330,7 @@ export default class App extends React.PureComponent {
         'SendingLightning',
         'SendingOnChain',
         'CashuSendingLightning',
+        'Splicing',
         'IntroSplash',
         'NostrContacts'
     ];
@@ -462,6 +468,7 @@ export default class App extends React.PureComponent {
                 UTXOsStore={utxosStore}
                 SweepStore={sweepStore}
                 NostrWalletConnectStore={nostrWalletConnectStore}
+                SpliceStore={spliceStore}
             >
                 <SafeAreaProvider initialMetrics={initialWindowMetrics}>
                     <AppContainer>
@@ -963,6 +970,42 @@ export default class App extends React.PureComponent {
                                                                 component={
                                                                     RebalancingChannels
                                                                 }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="Splice"
+                                                                // @ts-ignore:next-line
+                                                                component={
+                                                                    Splice
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="SpliceQRScanner"
+                                                                // @ts-ignore:next-line
+                                                                component={
+                                                                    SpliceQRScanner
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="SpliceReview"
+                                                                // @ts-ignore:next-line
+                                                                component={
+                                                                    SpliceReview
+                                                                }
+                                                                options={{
+                                                                    gestureEnabled:
+                                                                        false // disables swipe back
+                                                                }}
+                                                            />
+                                                            <Stack.Screen
+                                                                name="Splicing"
+                                                                // @ts-ignore:next-line
+                                                                component={
+                                                                    Splicing
+                                                                }
+                                                                options={{
+                                                                    gestureEnabled:
+                                                                        false // disables swipe back
+                                                                }}
                                                             />
                                                             <Stack.Screen
                                                                 name="Activity" // @ts-ignore:next-line

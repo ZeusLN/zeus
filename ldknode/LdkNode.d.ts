@@ -530,6 +530,17 @@ export interface ILdkNodeModule {
         counterpartyNodeId: string,
         reason: string
     ): Promise<void>;
+    spliceIn(
+        userChannelId: string,
+        counterpartyNodeId: string,
+        spliceAmountSats: number
+    ): Promise<void>;
+    spliceOut(
+        userChannelId: string,
+        counterpartyNodeId: string,
+        address: string,
+        spliceAmountSats: number
+    ): Promise<void>;
 
     // On-chain Methods
     newOnchainAddress(): Promise<string>;
@@ -559,6 +570,17 @@ export interface ILdkNodeModule {
     receiveVariableAmountBolt11(
         description: string,
         expirySecs: number
+    ): Promise<{ invoice: string }>;
+    receiveViaJitChannel(
+        amountMsat: number,
+        description: string,
+        expirySecs: number,
+        maxLspFeeLimitMsat: number
+    ): Promise<{ invoice: string }>;
+    receiveVariableAmountViaJitChannel(
+        description: string,
+        expirySecs: number,
+        maxProportionalLspFeeLimitPpmMsat: number
     ): Promise<{ invoice: string }>;
     sendBolt11(
         invoice: string,

@@ -11,9 +11,11 @@ jest.mock('../../utils/AddressUtils', () => ({
     isValidBitcoinAddressForNode: (value: string) => value.startsWith('bc1'),
     isValidLightningPaymentRequest: (value: string) => value.startsWith('lnbc')
 }));
+const mockIsLsps2Active = jest.fn(() => false);
 jest.mock('../../utils/BackendUtils', () => ({
     supportsFlowLSP: () => true,
-    supportsOnchainSends: () => true
+    supportsOnchainSends: () => true,
+    isLsps2Active: () => mockIsLsps2Active()
 }));
 jest.mock('../../utils/FontUtils', () => ({ font: () => 'font' }));
 jest.mock('../../utils/LocaleUtils', () => ({
@@ -114,6 +116,8 @@ const generate = async (state: any, title: string) => {
 describe('Swaps: Generate invoice LSP decision', () => {
     const lsp = (lspIsActive: boolean) => ({ useLsp: lspIsActive });
 
+    afterEach(() => mockIsLsps2Active.mockReturnValue(false));
+
     it('uses the Flow LSP when the LSP switch is shown and on', async () => {
         expect(
             await generate(
@@ -136,6 +140,17 @@ describe('Swaps: Generate invoice LSP decision', () => {
         expect(
             await generate(
                 { enableLSP: true, flowLspNotConfigured: true },
+                'views.Swaps.generateInvoice'
+            )
+        ).toMatchObject(lsp(false));
+    });
+
+    it('skips the LSP when the node gets JIT channels over LSPS2', async () => {
+        // no LSPS2 fee can be shown before the swap
+        mockIsLsps2Active.mockReturnValue(true);
+        expect(
+            await generate(
+                { enableLSP: true, flowLspNotConfigured: false },
                 'views.Swaps.generateInvoice'
             )
         ).toMatchObject(lsp(false));

@@ -106,13 +106,14 @@ import PosStore from '../../stores/PosStore';
 import SettingsStore, {
     PosEnabled,
     INTERFACE_KEYS,
-    getLspConfigForNetwork
+    getLdkNodeLspConfig
 } from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 import ContactStore from '../../stores/ContactStore';
 import NotesStore from '../../stores/NotesStore';
+import SpliceStore from '../../stores/SpliceStore';
 import SwapStore from '../../stores/SwapStore';
 import NostrWalletConnectStore from '../../stores/NostrWalletConnectStore';
 
@@ -149,6 +150,7 @@ interface WalletProps {
     SyncStore: SyncStore;
     LSPStore: LSPStore;
     NotesStore: NotesStore;
+    SpliceStore: SpliceStore;
     SwapStore: SwapStore;
     ChannelBackupStore: ChannelBackupStore;
     LightningAddressStore: LightningAddressStore;
@@ -185,6 +187,7 @@ interface WalletState {
     'ChannelBackupStore',
     'LightningAddressStore',
     'NotesStore',
+    'SpliceStore',
     'SwapStore',
     'NostrWalletConnectStore'
 )
@@ -617,6 +620,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LightningAddressStore,
             LnurlPayStore,
             NotesStore,
+            SpliceStore,
             SwapStore,
             NostrWalletConnectStore,
             UnitsStore
@@ -673,6 +677,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.reset();
             ChannelBackupStore.reset();
             UTXOsStore.reset();
+            SpliceStore.stopTracking();
             ContactStore.loadContacts();
             NotesStore.loadNoteKeys();
             // Units are first read at store construction, which on iOS can
@@ -713,34 +718,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
 
             if (ldkMnemonic && ldkNodeDir) {
-                // Get LSPS1 config from settings based on network
-                const lspConfig = getLspConfigForNetwork(
-                    settings,
-                    ldkNetwork || 'mainnet'
-                );
-                const lsps1Token = settings.lsps1Token;
-
-                const lsps1Config =
-                    lspConfig.lsps1Pubkey && lspConfig.lsps1Host
-                        ? {
-                              nodeId: lspConfig.lsps1Pubkey,
-                              address: lspConfig.lsps1Host,
-                              token: lsps1Token || null
-                          }
-                        : undefined;
-
-                // Always include Flow LSP pubkey as trusted 0-conf peer
-                const flowLspPubkey = lspConfig.defaultPubkey;
-
-                // Include both the default Flow LSP and user-configured
-                // LSP as trusted 0-conf peers (dedup if they're the same)
-                const trustedPeers = [flowLspPubkey];
-                if (
-                    lsps1Config?.nodeId &&
-                    lsps1Config.nodeId !== flowLspPubkey
-                ) {
-                    trustedPeers.push(lsps1Config.nodeId);
-                }
+                const { lsps1Config, lsps2Config, trustedPeers0conf } =
+                    getLdkNodeLspConfig(settings, ldkNetwork || 'mainnet');
 
                 console.log('[LDK startup] calling startLdkNodeWallet');
                 let ldkResult;
@@ -761,7 +740,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 ? DEFAULT_SCORER_URL
                                 : ldkScorerUrl,
                         lsps1Config,
-                        trustedPeers0conf: trustedPeers,
+                        lsps2Config,
+                        trustedPeers0conf,
                         vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
                         skipInit: justCreated,
                         onSyncStart: () => {
@@ -1373,6 +1353,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 return;
             }
         }
+
+        if (BackendUtils.supportsSplicing()) SpliceStore.trackSplices();
 
         if (
             lightningAddress.enabled &&

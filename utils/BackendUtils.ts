@@ -114,6 +114,11 @@ class BackendUtils {
         this.call('payLightningInvoiceStreaming', args);
     sendKeysend = (...args: any[]) => this.call('sendKeysend', args);
     closeChannel = (...args: any[]) => this.call('closeChannel', args);
+    spliceIn = (...args: any[]) => this.call('spliceIn', args);
+    spliceOut = (...args: any[]) => this.call('spliceOut', args);
+    getSpliceTransactionStatus = (...args: any[]) =>
+        this.call('getSpliceTransactionStatus', args);
+    getSpliceHistory = (...args: any[]) => this.call('getSpliceHistory', args);
     getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
     getFees = (...args: any[]) => this.call('getFees', args);
     setFees = (...args: any[]) => this.call('setFees', args);
@@ -160,6 +165,10 @@ class BackendUtils {
     watchInvoicePaid = (...args: any[]) => this.call('watchInvoicePaid', args);
     watchOnchainReceived = (...args: any[]) =>
         this.call('watchOnchainReceived', args);
+    // return an unsubscribe function, or false on backends that report
+    // splices in their channel data instead of as events
+    watchSpliceEvents = (...args: any[]) =>
+        this.call('watchSpliceEvents', args);
     subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
     subscribeInvoices = (...args: any[]) =>
         this.call('subscribeInvoices', args);
@@ -246,6 +255,10 @@ class BackendUtils {
     supportsCircularRebalancing = () =>
         this.call('supportsCircularRebalancing');
     supportsForceClose = () => this.call('supportsForceClose');
+    supportsSplicing = () => this.call('supportsSplicing');
+    supportsSpliceOutToAddress = () => this.call('supportsSpliceOutToAddress');
+    supportsLSPS2 = () => this.call('supportsLSPS2');
+    isLsps2Active = () => this.call('isLsps2Active');
     supportsPendingChannels = () => this.call('supportsPendingChannels');
     supportsClosedChannels = () => this.call('supportsClosedChannels');
     supportsMPP = () => this.call('supportsMPP');

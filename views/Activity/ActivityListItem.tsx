@@ -12,13 +12,16 @@ import {
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
+import { formatSpliceConfirmations } from '../../utils/SpliceUtils';
 
+import SpliceStore from '../../stores/SpliceStore';
 import SwapStore from '../../stores/SwapStore';
 
 import Invoice from '../../models/Invoice';
 import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
 import CashuToken from '../../models/CashuToken';
+import Splice from '../../models/Splice';
 
 import { SwapType } from '../../models/Swap';
 
@@ -39,6 +42,7 @@ export interface ActivityListItemProps {
     onItemPress: (item: any) => void;
     order?: Order;
     swapStore: SwapStore;
+    spliceStore?: SpliceStore;
 }
 
 const ActivityListItem = observer(
@@ -47,7 +51,8 @@ const ActivityListItem = observer(
         selectedPaymentForOrder,
         onItemPress,
         order,
-        swapStore
+        swapStore,
+        spliceStore
     }: ActivityListItemProps) => {
         const note = item.getNote;
         let displayName = item.model;
@@ -213,6 +218,38 @@ const ActivityListItem = observer(
                     )}
                 </Text>
             );
+        } else if (item instanceof Splice) {
+            const direction = item.getDirection;
+            const confirmations = item.isPending
+                ? spliceStore?.getSpliceConfirmations(item)
+                : null;
+            displayName =
+                item.initiator === 'remote'
+                    ? localeString('views.Splice.activityPeer')
+                    : direction === 'out'
+                    ? localeString('views.Splice.activityOut')
+                    : localeString('views.Splice.activityIn');
+            subTitle = (
+                <Text>
+                    {direction === 'out'
+                        ? `${localeString(
+                              'general.lightning'
+                          )} → ${localeString('general.onchain')}  ⚡ → 🔗`
+                        : direction === 'in'
+                        ? `${localeString('general.onchain')} → ${localeString(
+                              'general.lightning'
+                          )}  🔗 → ⚡`
+                        : localeString('general.lightning')}
+                    {'\n'}
+                    {`${localeString('general.status')}: ${
+                        !item.isPending
+                            ? localeString('views.Splice.completed')
+                            : confirmations
+                            ? formatSpliceConfirmations(confirmations)
+                            : localeString('views.Splice.waitingToConfirm')
+                    }`}
+                </Text>
+            );
         } else if (item.model === 'LSPS1Order') {
             displayName = localeString('views.LSPS1.type');
             subTitle = `${localeString('general.state')}: ${item.state
@@ -259,18 +296,21 @@ const ActivityListItem = observer(
                                 justifyContent: 'flex-end'
                             }}
                         >
-                            <Amount
-                                sats={
-                                    item.isReverseSwap
-                                        ? swapStore?.getReverseSwapReceiveAmount(
-                                              item.getAmount,
-                                              item.claimMinerFee
-                                          )
-                                        : item.getAmount
-                                }
-                                sensitive
-                                color={getRightTitleTheme(item)}
-                            />
+                            {/* a peer's splice has no amount until its transaction is read */}
+                            {!(item instanceof Splice && !item.getAmount) && (
+                                <Amount
+                                    sats={
+                                        item.isReverseSwap
+                                            ? swapStore?.getReverseSwapReceiveAmount(
+                                                  item.getAmount,
+                                                  item.claimMinerFee
+                                              )
+                                            : item.getAmount
+                                    }
+                                    sensitive
+                                    color={getRightTitleTheme(item)}
+                                />
+                            )}
                             {!!item.getFee && item.getFee != 0 && (
                                 <>
                                     <Text
