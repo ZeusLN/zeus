@@ -1390,12 +1390,12 @@ export async function createLndWallet({
 
         LndMobileEventEmitter.removeAllListeners('SubscribeState');
         settingsStore.embeddedLndStarted = false;
-        settingsStore.walletJustCreated = false;
+        settingsStore.justCreatedNodeDir = undefined;
     } else {
         // Mark that LND is already running from wallet creation,
         // so Wallet.tsx skips the stop→init→start cycle
         settingsStore.embeddedLndStarted = true;
-        settingsStore.walletJustCreated = true;
+        settingsStore.justCreatedNodeDir = lndDir;
     }
 
     return { wallet, seed, randomBase64 };

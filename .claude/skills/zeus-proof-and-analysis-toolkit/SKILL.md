@@ -52,12 +52,12 @@ This skill owns the **methods**; siblings own the facts those methods operate on
 1. **Enumerate the trigger events.** In Zeus the recurring set is:
    - *Wallet screen focus* — `handleFocus` in `views/Wallet/Wallet.tsx` runs `getSettingsAndNavigate()` → `fetchData()` on Wallet-screen focus when `initialLoad` or `triggerSettingsRefresh` is set (guarded by the in-flight `WalletRefreshRunner`, which runs at most one follow-up refresh if `triggerSettingsRefresh` is re-armed while a refresh runs).
    - *App foreground* — `handleAppStateChange('active')` in the same file, again calling `getSettingsAndNavigate()`.
-   - *Wallet creation* — `createOnboardingWallet` in `utils/WalletCreationUtils.ts` (may build the node itself, then sets `settingsStore.walletJustCreated = true` so Wallet.tsx skips re-init).
+   - *Wallet creation* — `createOnboardingWallet` in `utils/WalletCreationUtils.ts` (may build the node itself, then sets `settingsStore.justCreatedNodeDir = nodeDir` so Wallet.tsx skips re-init for that wallet only).
    - *Wallet deletion / switch* — `views/Settings/WalletConfiguration.tsx` (stop node, delete on-disk dirs, update `settings.nodes`).
    - *Reconnect* — `SettingsStore.setConnectingStatus(true)` (wallet switch, error-screen Retry, transient retry) clears `fetchLock` even while an older `fetchData` still runs; the sequence-numbered `acquireFetchLock`/`releaseFetchLock` keeps the older run from freeing the newer one's lock, and the bumped `connectionSeq` makes the older run's `getConnectionGuard()` snapshot stale, so it stops at its next await (see `stores/SettingsStore.ts`).
-2. **Enumerate the shared mutable state** each event touches: the native node reference (Kotlin/Swift module field), `SettingsStore.connecting` (initialized `true`), `SettingsStore.fetchLock`, `SettingsStore.walletJustCreated`, on-disk node directories, and the ~12 stores `fetchData` resets. Grep the guards:
+2. **Enumerate the shared mutable state** each event touches: the native node reference (Kotlin/Swift module field), `SettingsStore.connecting` (initialized `true`), `SettingsStore.fetchLock`, `SettingsStore.justCreatedNodeDir`, on-disk node directories, and the ~12 stores `fetchData` resets. Grep the guards:
    ```bash
-   grep -n "FetchLock\|walletJustCreated\|connecting" views/Wallet/Wallet.tsx | head -30
+   grep -n "FetchLock\|justCreatedNodeDir\|connecting" views/Wallet/Wallet.tsx | head -30
    ```
 3. **Build the interleaving table.** Rows = ordered steps of operation A (e.g. delete: `stop node → release ref → delete dirs → clear settings`); columns = every other event that can fire between two rows (focus, foreground, create, second delete). For each cell ask: *what state does the interloper observe, and is that state valid?*
 4. **Classify each unsafe cell**: needs serialization (lock/flag/blocking await), or can be **tolerated** (retry on a known transient error), or is unreachable (prove why — e.g. `fetchLock` early-return at the top of `fetchData`).
