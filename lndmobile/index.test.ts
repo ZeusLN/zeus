@@ -27,7 +27,12 @@ jest.mock('../utils/LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
 
-import { listPayments, sendKeysendPaymentV2, sendPaymentV2Sync } from './index';
+import {
+    listInvoices,
+    listPayments,
+    sendKeysendPaymentV2,
+    sendPaymentV2Sync
+} from './index';
 import { sendCommand, sendStreamCommand } from './utils';
 
 // the request id the nth stream since the last mockClear was started with
@@ -342,5 +347,23 @@ describe('listPayments', () => {
         await listPayments({ reversed: false });
 
         expect(options().reversed).toBe(false);
+    });
+});
+
+describe('lndmobile.listInvoices', () => {
+    it('honors invoice limit and ordering options', async () => {
+        await listInvoices({ limit: 10, reversed: false });
+
+        expect(sendCommand).toHaveBeenCalledWith(
+            expect.objectContaining({
+                method: 'ListInvoices',
+                options: expect.objectContaining({
+                    reversed: false,
+                    num_max_invoices: expect.objectContaining({
+                        low: 10
+                    })
+                })
+            })
+        );
     });
 });

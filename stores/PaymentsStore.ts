@@ -4,6 +4,7 @@ import Payment from './../models/Payment';
 import SettingsStore from './SettingsStore';
 import ChannelsStore from './ChannelsStore';
 import BackendUtils from './../utils/BackendUtils';
+import { LndPaymentListParams } from '../utils/LndUtils';
 
 export default class PaymentsStore {
     @observable loading = false;
@@ -24,22 +25,12 @@ export default class PaymentsStore {
         this.loading = false;
     };
 
-    public getPayments = async (params?: {
-        maxPayments?: number;
-        reversed?: boolean;
-    }) => {
+    public getPayments = async (params?: LndPaymentListParams) => {
         this.loading = true;
         try {
-            const data = await BackendUtils.getPayments(params);
-            const payments = data.payments;
+            const payments = await this.fetchPayments(params);
             runInAction(() => {
-                this.payments = payments
-                    .slice()
-                    .reverse()
-                    .map(
-                        (payment: any) =>
-                            new Payment(payment, this.channelsStore.nodes)
-                    );
+                this.payments = payments;
                 this.loading = false;
             });
             return this.payments;
@@ -47,5 +38,15 @@ export default class PaymentsStore {
             this.resetPayments();
             throw error;
         }
+    };
+
+    public fetchPayments = async (params?: LndPaymentListParams) => {
+        const data = await BackendUtils.getPayments(params);
+        return data.payments
+            .slice()
+            .reverse()
+            .map(
+                (payment: any) => new Payment(payment, this.channelsStore.nodes)
+            );
     };
 }

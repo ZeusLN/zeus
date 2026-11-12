@@ -16,7 +16,7 @@ jest.mock('../utils/TorUtils', () => ({
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import LND from './LND';
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
-import { settingsStore } from '../stores/Stores';
+import { settingsStore, nodeInfoStore } from '../stores/Stores';
 import { localeString } from '../utils/LocaleUtils';
 import {
     isNodeResponse,
@@ -1041,6 +1041,120 @@ describe('LND.lnurlAuth', () => {
         );
         expect(Buffer.from(signature).toString('hex')).toBe(
             '974844ab2f50a8fc85ca54a9fc686854e902ad46f1b72219d05e0f371f29bb8c'
+        );
+    });
+});
+
+describe('LND activity date filtering', () => {
+    let lnd: LND;
+    let getRequest: jest.SpyInstance;
+
+    beforeEach(() => {
+        nodeInfoStore.nodeInfo = { version: '' };
+        lnd = new LND();
+        getRequest = jest
+            .spyOn(lnd, 'getRequest')
+            .mockResolvedValue({ invoices: [], payments: [] });
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('passes invoice date bounds and keeps the default limit', async () => {
+        await lnd.getInvoices({
+            creationDateStart: 1_700_000_000,
+            creationDateEnd: 1_700_086_399
+        });
+
+        expect(getRequest).toHaveBeenCalledWith(
+            '/v1/invoices?reversed=true&num_max_invoices=500' +
+                '&creation_date_start=1700000000' +
+                '&creation_date_end=1700086399'
+        );
+    });
+
+    it('preserves an explicit zero invoice limit in the request', async () => {
+        await lnd.getInvoices({ limit: 0 });
+
+        expect(getRequest).toHaveBeenCalledWith(
+            '/v1/invoices?reversed=true&num_max_invoices=0'
+        );
+    });
+
+    it('preserves an explicit zero payment limit in the request', async () => {
+        await lnd.getPayments({ maxPayments: 0 });
+
+        expect(getRequest).toHaveBeenCalledWith(
+            '/v1/payments?include_incomplete=true&max_payments=0&reversed=true'
+        );
+    });
+
+    it('passes payment date bounds', async () => {
+        await lnd.getPayments({
+            creationDateStart: 1_700_000_000,
+            creationDateEnd: 1_700_086_399
+        });
+
+        expect(getRequest).toHaveBeenCalledWith(
+            '/v1/payments?include_incomplete=true&max_payments=500' +
+                '&reversed=true&creation_date_start=1700000000' +
+                '&creation_date_end=1700086399'
+        );
+    });
+
+    // pre-0.16 nodes ignore these fields rather than erroring on them: the
+    // REST gateway drops unknown query parameters and lnd drops unknown
+    // protobuf fields, so the bounds are always sent
+    it('still sends the bounds to a pre-0.16 node', async () => {
+        nodeInfoStore.nodeInfo = { version: '0.15.5-beta' };
+
+        await lnd.getInvoices({ creationDateStart: 1_700_000_000 });
+        await lnd.getPayments({ creationDateEnd: 1_700_086_399 });
+
+        expect(getRequest).toHaveBeenNthCalledWith(
+            1,
+            '/v1/invoices?reversed=true&num_max_invoices=500' +
+                '&creation_date_start=1700000000'
+        );
+        expect(getRequest).toHaveBeenNthCalledWith(
+            2,
+            '/v1/payments?include_incomplete=true&max_payments=500' +
+                '&reversed=true&creation_date_end=1700086399'
+        );
+    });
+
+    // NodeInfoStore.handleGetNodeInfoError resets nodeInfo to {}, so an
+    // unreachable node leaves the version empty. The bounds must survive
+    // that: lookupPayment's scan depends on them.
+    it('still sends the bounds when the node version is unavailable', async () => {
+        nodeInfoStore.nodeInfo = {};
+
+        await lnd.getInvoices({ creationDateEnd: 1_700_086_399 });
+        await lnd.getPayments({ creationDateStart: 1_700_000_000 });
+
+        expect(getRequest).toHaveBeenNthCalledWith(
+            1,
+            '/v1/invoices?reversed=true&num_max_invoices=500' +
+                '&creation_date_end=1700086399'
+        );
+        expect(getRequest).toHaveBeenNthCalledWith(
+            2,
+            '/v1/payments?include_incomplete=true&max_payments=500' +
+                '&reversed=true&creation_date_start=1700000000'
+        );
+    });
+
+    it('keeps the lookupPayment scan bounded without a node version', async () => {
+        nodeInfoStore.nodeInfo = {};
+
+        await lnd.lookupPayment({
+            payment_hash: 'ab'.repeat(32),
+            creation_date_start: 1_700_000_000
+        });
+
+        expect(getRequest).toHaveBeenNthCalledWith(
+            1,
+            '/v1/payments?include_incomplete=true&max_payments=50' +
+                '&reversed=false&creation_date_start=1700000000'
         );
     });
 });

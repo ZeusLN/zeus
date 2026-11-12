@@ -21,6 +21,8 @@ import {
 import { localeString } from '../utils/LocaleUtils';
 import { findPaymentByHash } from '../utils/PaymentLookupUtils';
 import {
+    LndInvoiceListParams,
+    LndPaymentListParams,
     toLnrpcAddressType,
     toWalletrpcAddressTypeName
 } from '../utils/LndUtils';
@@ -389,21 +391,24 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .getNetworkInfo({})
             .then((data: lnrpc.NetworkInfo) => snakeize(data));
-    getInvoices = async (
-        params: { limit?: number; reversed?: boolean } = {
-            limit: 500,
-            reversed: true
-        }
-    ) =>
-        await this.lnc.lnd.lightning
+    getInvoices = async (params: LndInvoiceListParams = {}) => {
+        const limit = params.limit ?? 500;
+
+        return await this.lnc.lnd.lightning
             .listInvoices({
-                reversed:
-                    params?.reversed !== undefined ? params.reversed : true,
-                ...(params?.limit && {
-                    num_max_invoices: params.limit
+                reversed: params.reversed ?? true,
+                ...(limit && {
+                    num_max_invoices: limit
+                }),
+                ...(params.creationDateStart !== undefined && {
+                    creation_date_start: params.creationDateStart
+                }),
+                ...(params.creationDateEnd !== undefined && {
+                    creation_date_end: params.creationDateEnd
                 })
             })
             .then((data: lnrpc.ListInvoiceResponse) => snakeize(data));
+    };
     createInvoice = async (data: any) =>
         await this.lnc.lnd.lightning
             .addInvoice({
@@ -419,29 +424,25 @@ export default class LightningNodeConnect {
                 route_hints: data.route_hints
             })
             .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
-    getPayments = async (
-        params: {
-            maxPayments?: number;
-            reversed?: boolean;
-            creationDateStart?: number;
-        } = {
-            maxPayments: 500,
-            reversed: true
-        }
-    ) =>
-        await this.lnc.lnd.lightning
+    getPayments = async (params: LndPaymentListParams = {}) => {
+        const maxPayments = params.maxPayments ?? 500;
+
+        return await this.lnc.lnd.lightning
             .listPayments({
                 include_incomplete: true,
-                ...(params?.maxPayments && {
-                    max_payments: params.maxPayments
+                ...(maxPayments && {
+                    max_payments: maxPayments
                 }),
-                reversed:
-                    params?.reversed !== undefined ? params.reversed : true,
-                ...(params?.creationDateStart && {
+                reversed: params.reversed ?? true,
+                ...(params.creationDateStart !== undefined && {
                     creation_date_start: params.creationDateStart
+                }),
+                ...(params.creationDateEnd !== undefined && {
+                    creation_date_end: params.creationDateEnd
                 })
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
+    };
     // scans payments pages; trackPaymentV2 over LNC is a stream and would
     // need view-level event plumbing
     lookupPayment = async (data: {

@@ -823,6 +823,29 @@ describe('LightningNodeConnect', () => {
                 reversed: true
             });
         });
+
+        // the mocked Stores leave nodeInfo as {}, i.e. no version, which is
+        // what NodeInfoStore holds after a failed getNodeInfo. lnd drops
+        // unknown protobuf fields, so the bound is sent regardless.
+        it('keeps the lookupPayment scan bounded without a node version', async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.lightning.listPayments = jest.fn(async () => ({
+                payments: []
+            }));
+
+            await backend.lookupPayment({
+                payment_hash: 'ab'.repeat(32),
+                creation_date_start: 1700000000
+            });
+
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenNthCalledWith(1, {
+                include_incomplete: true,
+                max_payments: 50,
+                reversed: false,
+                creation_date_start: 1700000000
+            });
+        });
     });
 
     describe('getTransactions', () => {
