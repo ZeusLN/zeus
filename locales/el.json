@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Ενεργοποίηση & επανεκκίνηση ",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Επανάληψη σάρωσης πορτοφολιού.",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Επανεξετάστε την αλυσίδα block για τις συναλλαγές σας εντός της αλυσίδας. Επανεκκινήστε την εφαρμογή για να τεθεί σε ισχύ. Θα διαγραφεί μετά την ολοκλήρωση.",
     "views.Settings.EmbeddedNode.compactDb": "Συμπαγείς βάσεις δεδομένων",
