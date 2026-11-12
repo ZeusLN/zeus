@@ -15,7 +15,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
     init {
         // Every LDK Node call goes through this module
-        JnaStructWarmup.await()
+        JnaStructWarmup.await("LdkNodeModule")
     }
 
     private val moduleScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

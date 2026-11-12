@@ -6,8 +6,6 @@ import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.Structure
 import java.lang.reflect.Modifier
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 /**
  * JNA builds one libffi type descriptor per by-value Structure class with
@@ -21,7 +19,9 @@ import java.util.concurrent.TimeUnit
  * Initializing each descriptor once, on one thread, before any binding
  * call, means libffi never takes that path. start() runs this off the main
  * thread at app launch, and the native modules that use the bindings call
- * await() when they are constructed.
+ * await() when they are constructed. React Native builds those modules on
+ * its background thread while it creates the ReactInstance, not on the
+ * main thread.
  */
 object JnaStructWarmup {
     private const val TAG = "JnaStructWarmup"
@@ -33,16 +33,37 @@ object JnaStructWarmup {
         "uniffi.zeus_cashu_restore"
     )
 
-    private val done = CountDownLatch(1)
+    private val lock = Any()
 
     @Volatile
-    private var started = false
+    private var done = false
 
-    @Synchronized
+    /** Starts the warm-up on a background thread. */
     fun start() {
-        if (started) return
-        started = true
-        Thread({
+        if (done) return
+        Thread({ ensureWarm() }, TAG).start()
+    }
+
+    /**
+     * Returns once the warm-up has finished. If it is still running, this
+     * waits for it; if it never started, this runs it on the calling
+     * thread. There is no timeout: continuing while the warm-up runs would
+     * be the concurrent first use it exists to prevent.
+     */
+    fun await(caller: String) {
+        val begin = System.nanoTime()
+        ensureWarm()
+        Log.i(
+            TAG,
+            "$caller waited ${(System.nanoTime() - begin) / 1_000_000}ms " +
+                "on ${Thread.currentThread().name}"
+        )
+    }
+
+    private fun ensureWarm() {
+        if (done) return
+        synchronized(lock) {
+            if (done) return
             try {
                 val begin = System.nanoTime()
                 val count = warm(PACKAGES)
@@ -54,20 +75,8 @@ object JnaStructWarmup {
             } catch (t: Throwable) {
                 Log.w(TAG, "warm-up failed", t)
             } finally {
-                done.countDown()
+                done = true
             }
-        }, TAG).start()
-    }
-
-    /**
-     * Blocks until the warm-up has finished. Starts it first if the app
-     * never did, so a module constructed without MainApplication still
-     * gets it.
-     */
-    fun await() {
-        start()
-        if (!done.await(30, TimeUnit.SECONDS)) {
-            Log.w(TAG, "warm-up still running after 30s, continuing")
         }
     }
 
