@@ -162,6 +162,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     private _unsubscribe?: () => void;
     // the network fee the current amounts were worked out with
     private amountsNetworkFee?: number;
+    private feeLookupToken = 0;
 
     // The claim fee createReverseSwap will store at the rate set below.
     // Without a usable rate the swap cannot start, and the quote is shown.
@@ -502,15 +503,18 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         // Existing fee fetching logic
         if (!prevState.reverse && this.state.reverse) {
-            // Capture the fee at request time so a user-typed fee (or a fee
-            // set by OnchainFeeInput's own fetch) isn't clobbered when this
-            // lookup resolves. Also reset feeRateLookupDone so a second
-            // toggle off/on runs a fresh lookup instead of showing "done".
+            // Capture a token so a stale lookup can't overwrite a newer one.
+            // Also capture the fee at request time so a user-typed fee (or a
+            // fee set by OnchainFeeInput's own fetch) isn't clobbered.
+            const token = ++this.feeLookupToken;
             const feeAtFetchStart = this.state.fee;
             this.setState({ feeRateLookupDone: false });
             try {
                 const feesObj: { [key: string]: number } | undefined =
                     await FeeStore.getOnchainFeesviaMempool();
+
+                // A newer lookup has already started; drop this result.
+                if (token !== this.feeLookupToken) return;
 
                 const preferredMempoolRate =
                     settings?.payments?.preferredMempoolRate || 'fastestFee';
@@ -527,7 +531,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             } catch (error) {
                 console.error('Failed to fetch mempool fees:', error);
             } finally {
-                this.setState({ feeRateLookupDone: true });
+                // Only the latest lookup owns the "done" flag.
+                if (token === this.feeLookupToken) {
+                    this.setState({ feeRateLookupDone: true });
+                }
             }
         }
 

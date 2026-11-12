@@ -371,4 +371,57 @@ describe('Swaps: reverse fee lookup', () => {
         // Set to true again on completion.
         expect(view.state.feeRateLookupDone).toBe(true);
     });
+
+    it('does not let an older overlapping lookup block a newer lookup result', async () => {
+        let resolveFirst: (v: any) => void = () => {};
+        let resolveSecond: (v: any) => void = () => {};
+        const getOnchainFeesviaMempool = jest
+            .fn()
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveFirst = res;
+                })
+            )
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveSecond = res;
+                })
+            );
+
+        const { view, prevProps } = makeView(
+            getOnchainFeesviaMempool,
+            undefined,
+            { fee: '2', feeRateLookupDone: false }
+        );
+
+        // Lookup 1 starts (prevState.reverse=false, this.state.reverse=true).
+        const update1 = view.componentDidUpdate(
+            prevProps as any,
+            { ...view.state, reverse: false } as any
+        );
+
+        // Toggle reverse off, then on again — lookup 2 starts.
+        view.setState({ reverse: false });
+        view.setState({ reverse: true });
+        const update2 = view.componentDidUpdate(
+            prevProps as any,
+            { ...view.state, reverse: false } as any
+        );
+
+        // The older lookup finishes first with rate 15.
+        resolveFirst({ fastestFee: 15 });
+        await update1;
+
+        // It must NOT apply 15; a newer lookup is still pending.
+        expect(view.state.fee).toBe('2');
+        expect(view.state.feeRateLookupDone).toBe(false);
+
+        // The newer lookup finishes with rate 20.
+        resolveSecond({ fastestFee: 20 });
+        await update2;
+
+        // The newer rate wins.
+        expect(view.state.fee).toBe('20');
+        expect(view.state.feeRateLookupDone).toBe(true);
+    });
 });
