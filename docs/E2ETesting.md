@@ -100,7 +100,8 @@ Android runs a debug build against Metro. The emulator defaults to the
 | `onboarding/walletSettings` | Clipboard switch and its explainer, fiat switch, rates source, currency search and selection, security settings, changes carried to the summary |
 | `onboarding/walletCreation` | Creating the wallet starts and shows its progress screen |
 | `wallet/keypad` | Adding a mint by URL, entering, grouping, deleting and clearing an amount, singular sat, ecash and self-custody modes, switching units through the currency picker, requesting ecash, the send options |
-| `wallet/walletHome` | Wallet tabs, the balance of each layer, the activity list, the header menu and wallet list |
+| `wallet/walletHome` | Wallet tabs, the balance of each layer, the activity list, the header menu and wallet list, adding a contact |
+| `wallet/security` | Revealing the recovery phrase behind its warning, setting a PIN and a mismatched confirmation, the lock after a restart, a wrong PIN, unlocking, and the PIN before the backup |
 | `walletConfiguration` | Picking a backend for a remote wallet connection |
 
 The `wallet/` specs create a real wallet first, with a flow from
