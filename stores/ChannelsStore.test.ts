@@ -17,6 +17,11 @@ jest.mock('../utils/BackendUtils', () => ({
     isLNDBased: () => false
 }));
 jest.mock('../utils/LocaleUtils');
+// the stub PSBT of the batch tests does not parse
+jest.mock('../utils/ChannelOpenUtils', () => ({
+    ...jest.requireActual('../utils/ChannelOpenUtils'),
+    signingKeepsTxid: () => true
+}));
 
 import { autorun } from 'mobx';
 
