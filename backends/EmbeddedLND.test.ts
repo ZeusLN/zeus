@@ -630,8 +630,8 @@ describe('EmbeddedLND.openChannelStream', () => {
         emit(psbtFund('first-psbt'), firstId);
         await flush();
 
-        expect(first.value).toEqual({
-            result: { psbt_fund: { psbt: 'first-psbt' } }
+        expect(first.value.result).toEqual({
+            psbt_fund: { psbt: 'first-psbt' }
         });
         expect(second.settled).toBe(false);
 
@@ -645,6 +645,55 @@ describe('EmbeddedLND.openChannelStream', () => {
         await flush();
 
         expect(second.error?.message).toEqual('peer offline');
+    });
+
+    // a batch publishes only once every earlier channel is pending (#5240)
+    describe('chanPending', () => {
+        const fundedOpen = async () => {
+            const open = track(lnd.openChannelStream(request(PUBKEY)));
+            await flush();
+            const requestId = requestIdOf(0);
+            emit(psbtFund('psbt'), requestId);
+            await flush();
+            return { pending: track(open.value.chanPending), requestId };
+        };
+        const chanPending = (output_index: number) => ({
+            data: JSON.stringify({ chan_pending: { output_index } })
+        });
+
+        it("resolves with this open's chan_pending update", async () => {
+            const { pending, requestId } = await fundedOpen();
+
+            emit(chanPending(0), 'other-request');
+            emit(chanPending(0), null);
+            await flush();
+            expect(pending.settled).toBe(false);
+
+            emit(chanPending(1), requestId);
+            await flush();
+            expect(pending.value).toEqual({
+                result: { chan_pending: { output_index: 1 } }
+            });
+        });
+
+        it('rejects with the stream error when the peer fails before signing', async () => {
+            const { pending, requestId } = await fundedOpen();
+
+            emit(
+                { error_code: 'Error', error_desc: 'remote canceled funding' },
+                requestId
+            );
+            await flush();
+            expect(pending.error?.message).toEqual('remote canceled funding');
+        });
+
+        it('rejects when the stream ends before chan_pending', async () => {
+            const { pending, requestId } = await fundedOpen();
+
+            emit({ error_code: 'Error', error_desc: 'EOF' }, requestId);
+            await flush();
+            expect(pending.error).toBeInstanceOf(Error);
+        });
     });
 });
 

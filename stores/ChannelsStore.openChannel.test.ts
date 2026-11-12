@@ -405,6 +405,7 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
         return { promise, resolve, reject };
     };
 
+    // the peer signs at once: chanPending has resolved
     const psbtFund = (pending_chan_id: string) => ({
         result: {
             pending_chan_id,
@@ -413,7 +414,8 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
                 funding_amount: 1,
                 psbt: PSBT
             }
-        }
+        },
+        chanPending: Promise.resolve({}) as Promise<any> | undefined
     });
 
     // an account other than the default one funds the channel through a
@@ -1673,6 +1675,226 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
 
             expect(store.errorMsgChannel).toBe('psbt invalid');
             expect(store.syncOpensInFlight).toBe(0);
+        });
+    });
+
+    // lnd publishes a batch once the final channel's peer signs, so every
+    // earlier channel must report chan_pending before psbt_finalize (#5240)
+    describe('a batch waiting for its earlier channels to be pending', () => {
+        const PENDING_TIMEOUT_MS = 60000;
+        const LOCKED = [
+            { id: 'lock-id', outpoint: { txid_str: 'aa', output_index: 0 } }
+        ];
+        const released = () =>
+            releaseOutput.mock.calls.map(([request]: any) => request);
+        const cancels = () =>
+            fundingSteps()
+                .filter((step: any) => step.shim_cancel)
+                .map((step: any) => step.shim_cancel.pending_chan_id);
+        const psbtSteps = () =>
+            fundingSteps().filter((step: any) => !step.shim_cancel);
+        const finalizes = () =>
+            fundingSteps().filter((step: any) => step.psbt_finalize);
+        const withPending = (
+            pending_chan_id: string,
+            chanPending: Promise<any> | undefined
+        ) => ({ ...psbtFund(pending_chan_id), chanPending });
+        const abandonedFor = () =>
+            (getFundingOutpoints as jest.Mock).mock.calls.map(
+                ([, addresses]: any) => addresses
+            );
+        const startBatch = (
+            pendingA: Promise<any> | undefined,
+            pendingB: Promise<any> | undefined
+        ) => {
+            openChannelStream
+                .mockResolvedValueOnce(withPending('chan-a', pendingA))
+                .mockResolvedValueOnce(withPending('chan-b', pendingB))
+                .mockResolvedValueOnce(psbtFund('chan-c'));
+            const store = makeStore();
+            enterScreen(store);
+            openBatchOf3(store);
+            return store;
+        };
+
+        beforeEach(() => {
+            fundPsbt.mockResolvedValue({
+                funded_psbt: PSBT,
+                locked_utxos: LOCKED
+            });
+            (getFundingOutpoints as jest.Mock).mockReturnValue([
+                { funding_txid_str: 'unsigned-txid', output_index: 0 }
+            ]);
+        });
+
+        it('finalizes the final channel only after every earlier one is pending', async () => {
+            const pendingB = held();
+            const store = startBatch(Promise.resolve({}), pendingB.promise);
+            await flush();
+
+            // A and B are verified, but B's peer has not signed yet
+            expect(psbtSteps()).toEqual([
+                {
+                    psbt_verify: {
+                        funded_psbt: PSBT,
+                        pending_chan_id: 'chan-a',
+                        skip_finalize: true
+                    }
+                },
+                {
+                    psbt_verify: {
+                        funded_psbt: PSBT,
+                        pending_chan_id: 'chan-b',
+                        skip_finalize: true
+                    }
+                }
+            ]);
+            expect(store.openingChannel).toBe(true);
+            expect(store.syncOpensInFlight).toBe(1);
+
+            pendingB.resolve({});
+            await flush();
+            expect(finalizes()).toEqual([
+                {
+                    psbt_finalize: {
+                        signed_psbt: PSBT,
+                        pending_chan_id: 'chan-c'
+                    }
+                }
+            ]);
+            expect(cancels()).toEqual([]);
+            expect(releaseOutput).not.toHaveBeenCalled();
+            expect(abandonChannel).not.toHaveBeenCalled();
+            expect(store.channelSuccess).toBe(true);
+            expect(store.syncOpensInFlight).toBe(0);
+        });
+
+        it('publishes nothing when an earlier peer fails after its psbt_verify', async () => {
+            const pendingB = held();
+            const store = startBatch(Promise.resolve({}), pendingB.promise);
+            await flush();
+
+            pendingB.reject(new Error('remote canceled funding'));
+            await flush();
+            expect(finalizes()).toEqual([]);
+            // the final channel is not verified either
+            expect(psbtSteps()).toHaveLength(2);
+            // the leases go back, the shims are cancelled and the
+            // verified channels are abandoned
+            expect(released()).toEqual(LOCKED);
+            expect(new Set(cancels())).toEqual(
+                new Set(['chan-a', 'chan-b', 'chan-c'])
+            );
+            expect(abandonedFor()).toEqual([['bc1qchan-a', 'bc1qchan-b']]);
+            expect(store.errorOpenChannel).toBe(true);
+            expect(store.errorMsgChannel).toBe('remote canceled funding');
+            expect(store.channelSuccess).toBe(false);
+            expect(store.syncOpensInFlight).toBe(0);
+        });
+
+        it('waits for the other earlier channels to settle before abandoning', async () => {
+            const pendingB = held();
+            const store = startBatch(
+                Promise.reject(new Error('peer a went away')),
+                pendingB.promise
+            );
+            await flush();
+
+            // B's peer may still sign, and lnd can only abandon a channel
+            // it has recorded
+            expect(abandonChannel).not.toHaveBeenCalled();
+            expect(releaseOutput).not.toHaveBeenCalled();
+            expect(store.syncOpensInFlight).toBe(1);
+
+            pendingB.resolve({});
+            await flush();
+            expect(finalizes()).toEqual([]);
+            expect(abandonedFor()).toEqual([['bc1qchan-a', 'bc1qchan-b']]);
+            expect(store.errorMsgChannel).toBe('peer a went away');
+            expect(store.syncOpensInFlight).toBe(0);
+        });
+
+        it('gives up after the timeout and abandons a channel that turns pending later', async () => {
+            const pendingB = held();
+            const store = startBatch(Promise.resolve({}), pendingB.promise);
+            await flush();
+
+            await jest.advanceTimersByTimeAsync(PENDING_TIMEOUT_MS);
+            await flush();
+            expect(finalizes()).toEqual([]);
+            expect(released()).toEqual(LOCKED);
+            expect(abandonedFor()).toEqual([['bc1qchan-a', 'bc1qchan-b']]);
+            expect(store.errorMsgChannel).toBe(
+                'stores.ChannelsStore.batchNotPending'
+            );
+            expect(store.syncOpensInFlight).toBe(0);
+
+            pendingB.resolve({});
+            await flush();
+            expect(finalizes()).toEqual([]);
+            expect(abandonedFor()).toEqual([
+                ['bc1qchan-a', 'bc1qchan-b'],
+                ['bc1qchan-b']
+            ]);
+        });
+
+        it('publishes nothing when the backend cannot report chan_pending', async () => {
+            const store = startBatch(Promise.resolve({}), undefined);
+            await flush();
+
+            expect(finalizes()).toEqual([]);
+            expect(released()).toEqual(LOCKED);
+            expect(store.errorMsgChannel).toBe(
+                'stores.ChannelsStore.batchNotPending'
+            );
+            expect(store.syncOpensInFlight).toBe(0);
+        });
+
+        it('waits for the first channel of a two-channel batch', async () => {
+            const pendingA = held();
+            openChannelStream
+                .mockResolvedValueOnce(withPending('chan-a', pendingA.promise))
+                .mockResolvedValueOnce(psbtFund('chan-b'));
+            const store = makeStore();
+            enterScreen(store);
+            (store as any).openChannel(
+                new OpenChannelRequest({
+                    node_pubkey_string: '02peer',
+                    local_funding_amount: '100000',
+                    sat_per_vbyte: '2',
+                    account: 'default',
+                    additionalChannels: [
+                        { node_pubkey_string: '02b', satAmount: '50000' }
+                    ]
+                })
+            );
+            await flush();
+            expect(finalizes()).toEqual([]);
+
+            pendingA.resolve({});
+            await flush();
+            expect(finalizes()).toEqual([
+                {
+                    psbt_finalize: {
+                        signed_psbt: PSBT,
+                        pending_chan_id: 'chan-b'
+                    }
+                }
+            ]);
+            expect(store.channelSuccess).toBe(true);
+        });
+
+        it('does not wait on a single PSBT-funded open', async () => {
+            openChannelStream.mockResolvedValueOnce(
+                withPending('chan-1', new Promise<any>(() => undefined))
+            );
+            const store = makeStore();
+            enterScreen(store);
+            openStreamed(store);
+            await flush();
+
+            expect(finalizes()).toHaveLength(1);
+            expect(store.channelSuccess).toBe(true);
         });
     });
 

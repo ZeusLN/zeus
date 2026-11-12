@@ -634,9 +634,64 @@ describe('LightningNodeConnect', () => {
             expect(second.result?.result.psbt_fund.funding_address).toBe(
                 'second-address'
             );
-            expect(listeners.some((l) => l.name === EVENT && !l.removed)).toBe(
-                false
-            );
+        });
+
+        // a batch publishes only once every earlier channel is pending
+        // (#5240), so the listener outlives psbt_fund
+        describe('chanPending', () => {
+            const fundedOpen = async () => {
+                const open = track(
+                    backend.openChannelStream(
+                        openRequest('02' + 'aa'.repeat(32))
+                    )
+                );
+                const requestId = requestIdOf();
+                emit(psbtFund('address'), requestId);
+                await flush();
+                return {
+                    pending: track(open.result.chanPending),
+                    requestId
+                };
+            };
+            const listening = () =>
+                listeners.some((l) => l.name === EVENT && !l.removed);
+            const chanPending = JSON.stringify({
+                chan_pending: { txid: 'dHhpZA==', output_index: 1 }
+            });
+
+            it("resolves with this open's chan_pending and stops listening", async () => {
+                const { pending, requestId } = await fundedOpen();
+                expect(listening()).toBe(true);
+
+                emit(chanPending, 'other-request');
+                await flush();
+                expect(pending.settled).toBe(false);
+
+                emit(chanPending, requestId);
+                await flush();
+                expect(pending.result).toEqual({
+                    result: JSON.parse(chanPending)
+                });
+                expect(listening()).toBe(false);
+            });
+
+            it('rejects with the error when the peer fails before signing', async () => {
+                const { pending, requestId } = await fundedOpen();
+
+                emit('remote canceled funding', requestId);
+                await flush();
+                expect(pending.error).toBe('remote canceled funding');
+                expect(listening()).toBe(false);
+            });
+
+            it('rejects when the stream ends before chan_pending', async () => {
+                const { pending, requestId } = await fundedOpen();
+
+                emit('EOF', requestId);
+                await flush();
+                expect(pending.error).toBeInstanceOf(Error);
+                expect(listening()).toBe(false);
+            });
         });
     });
 

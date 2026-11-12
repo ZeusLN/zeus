@@ -49,6 +49,10 @@ interface PendingHTLC {
 // its shim cancelled.
 const OPEN_CHANNEL_STREAM_TIMEOUT_MS = 60000;
 
+// How long a batch waits for its earlier channels to turn pending before
+// it gives up without publishing anything.
+const CHAN_PENDING_TIMEOUT_MS = 60000;
+
 // Ends lnd's PSBT funding flow for a shim ZEUS will not fund, so the node
 // and the peer drop the pending channel instead of waiting for lnd's own
 // PSBT timeout. Best effort: lnd refuses it when it holds no funding
@@ -115,6 +119,54 @@ const abandonVerifiedChannels = (
             )
     );
 };
+
+// lnd publishes a batch's funding transaction once the final channel's
+// peer has signed, without checking the other channels. A channel whose
+// peer has not signed its commitment transaction (chan_pending) would get
+// a funding output that only the peer can help recover. So this resolves
+// once the stream of every channel in chanPending has reported
+// chan_pending. It rejects once they have all settled if any failed, at
+// once if a backend gave no way to tell, and after
+// CHAN_PENDING_TIMEOUT_MS. onLatePending gets each channel that turns
+// pending after the timeout.
+const waitForChanPending = (
+    chanPending: { [pendingChanId: string]: Promise<any> | undefined },
+    onLatePending: (pendingChanId: string) => void
+) =>
+    new Promise<void>((resolve, reject) => {
+        const notPending = () =>
+            new Error(localeString('stores.ChannelsStore.batchNotPending'));
+        const ids = Object.keys(chanPending);
+        if (ids.some((id) => typeof chanPending[id]?.then !== 'function')) {
+            reject(notPending());
+            return;
+        }
+        let timedOut = false;
+        const timeoutId = setTimeout(() => {
+            timedOut = true;
+            reject(notPending());
+        }, CHAN_PENDING_TIMEOUT_MS);
+        let failed = false;
+        let failure: any;
+        Promise.all(
+            ids.map((id) =>
+                (chanPending[id] as Promise<any>).then(
+                    () => {
+                        if (timedOut) onLatePending(id);
+                    },
+                    (error: any) => {
+                        if (failed) return;
+                        failed = true;
+                        failure = error || notPending();
+                    }
+                )
+            )
+        ).then(() => {
+            clearTimeout(timeoutId);
+            if (failed) reject(failure);
+            else resolve();
+        });
+    });
 
 const openChannelStreamWithTimeout = (request: OpenChannelRequest) => {
     // the request object is reused for every stream of a batch
@@ -1119,7 +1171,10 @@ export default class ChannelsStore {
         fundingAddresses: { [pendingChanId: string]: string },
         pendingChanIds: Array<string>,
         isCurrent: () => boolean,
-        finish: () => void
+        finish: () => void,
+        // the chan_pending promise of each batch channel before the final
+        // one
+        chanPending: { [pendingChanId: string]: Promise<any> | undefined } = {}
     ) => {
         const { account, sat_per_vbyte, utxos } = request;
 
@@ -1203,6 +1258,17 @@ export default class ChannelsStore {
                     });
                     markVerified(funded_psbt, pending_chan_id);
                 }
+
+                // every earlier channel must be pending before the final
+                // channel's psbt_finalize lets lnd publish. A failure
+                // here ends in abandon(); a channel that turns pending
+                // after the timeout is abandoned then
+                await waitForChanPending(chanPending, (pending_chan_id) => {
+                    const address = fundingAddresses[pending_chan_id];
+                    if (address) {
+                        abandonVerifiedChannels(funded_psbt, [address]);
+                    }
+                });
 
                 const lastPendingChanId =
                     pendingChanIds[pendingChanIds.length - 1];
@@ -1418,6 +1484,11 @@ export default class ChannelsStore {
                     shimIds.forEach(cancelShim);
                     this.handleChannelOpenError(error, isCurrent, finish);
                 };
+                // settles when the stream of each channel opened with
+                // no_publish reports chan_pending or fails
+                const chanPending: {
+                    [pendingChanId: string]: Promise<any> | undefined;
+                } = {};
 
                 let base_psbt = '';
                 request.funding_shim = {
@@ -1436,6 +1507,7 @@ export default class ChannelsStore {
                             psbt_fund.funding_amount;
                         fundingAddresses[pending_chan_id] =
                             psbt_fund.funding_address;
+                        chanPending[pending_chan_id] = data.chanPending;
 
                         base_psbt = psbt_fund.psbt;
                         for (
@@ -1478,6 +1550,8 @@ export default class ChannelsStore {
                                         psbt_fund.funding_amount;
                                     fundingAddresses[pending_chan_id] =
                                         psbt_fund.funding_address;
+                                    chanPending[pending_chan_id] =
+                                        data.chanPending;
                                     base_psbt = psbt_fund.psbt;
                                 } catch (error: any) {
                                     // stop the batch here
@@ -1517,7 +1591,8 @@ export default class ChannelsStore {
                                             fundingAddresses,
                                             pendingChanIds,
                                             isCurrent,
-                                            finish
+                                            finish,
+                                            chanPending
                                         );
                                     })
                                     // the stream failed, or
