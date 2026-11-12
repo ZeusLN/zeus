@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Enable & Restart",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Skannaa lompakko uudelleen",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Skannaa lohkoketju uudelleen pääketjutapahtumiesi osalta. Käynnistä sovellus, jotta muutokset tulevat voimaan. Palautetaan nollaamisen jälkeen.",
     "views.Settings.EmbeddedNode.compactDb": "Tiivistä tietokannat",
