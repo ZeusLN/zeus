@@ -306,6 +306,33 @@ describe('signingKeepsTxid', () => {
         );
     });
 
+    it('parses a taproot input that carries the fields lnd adds', () => {
+        const xOnlyKey = key.subarray(1);
+        const psbt = new bitcoin.Psbt({ network: regtest });
+        psbt.addInput({
+            hash: Buffer.alloc(32, 1),
+            index: 0,
+            witnessUtxo: {
+                script: bitcoin.script.compile([
+                    bitcoin.opcodes.OP_1,
+                    xOnlyKey
+                ]),
+                value: 100000
+            },
+            tapInternalKey: xOnlyKey,
+            tapBip32Derivation: [
+                {
+                    masterFingerprint: Buffer.from('deadbeef', 'hex'),
+                    pubkey: xOnlyKey,
+                    path: "m/86'/1'/0'/0/0",
+                    leafHashes: []
+                }
+            ]
+        });
+        psbt.addOutput({ script: p2wsh.output as Buffer, value: 90000 });
+        expect(signingKeepsTxid(psbt.toBase64())).toBe(true);
+    });
+
     it('changes the txid for a nested SegWit input', () => {
         expect(
             signingKeepsTxid(
