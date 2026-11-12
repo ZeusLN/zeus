@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Abilita e riavvia",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Rescan Portafoglio",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Rescan Blockchain per le tue transazioni in catena. Riavvia l'app per avere effetto. Sarà inserito al completamento.",
     "views.Settings.EmbeddedNode.compactDb": "Compatti Database",
