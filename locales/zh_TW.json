@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Enable & Restart",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "重新掃描錢包",
     "views.Settings.EmbeddedNode.rescan.subtitle": "重新掃描區塊鏈以尋找鏈上的交易資料。請重啟應用程式開始作業，在完成後這個選項會自動關閉。",
     "views.Settings.EmbeddedNode.compactDb": "壓縮資料庫",
