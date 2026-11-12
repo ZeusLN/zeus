@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Enable & Restart",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Quét lại ví",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Quét lại blockchain cho các giao dịch trên chuỗi của bạn. Khởi động lại ứng dụng để có hiệu lực. Sẽ được tắt khi hoàn thành.",
     "views.Settings.EmbeddedNode.compactDb": "Cơ sở dữ liệu nhỏ gọn",
