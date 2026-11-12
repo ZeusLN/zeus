@@ -943,6 +943,61 @@ describe('LND.sendCoins', () => {
     });
 });
 
+describe('LND.abandonChannel', () => {
+    // as ChannelsStore abandons a PSBT channel lnd verified but never
+    // funded: lnd refuses pending_funding_shim_only for it
+    it('abandons a verified PSBT channel with i_know_what_i_am_doing only', () => {
+        const lnd = new LND();
+        const deleteRequest = jest
+            .spyOn(lnd, 'deleteRequest')
+            .mockResolvedValue({});
+
+        lnd.abandonChannel(['ab'.repeat(32), '2', false, true]);
+
+        expect(deleteRequest).toHaveBeenCalledWith(
+            `/v1/channels/abandon/${'ab'.repeat(
+                32
+            )}/2?i_know_what_i_am_doing=true`
+        );
+    });
+
+    // as Developer Tools passes the flags the user ticked
+    it('sends pending_funding_shim_only when asked for it', () => {
+        const lnd = new LND();
+        const deleteRequest = jest
+            .spyOn(lnd, 'deleteRequest')
+            .mockResolvedValue({});
+
+        lnd.abandonChannel(['ab'.repeat(32), '2', true, undefined]);
+
+        expect(deleteRequest).toHaveBeenCalledWith(
+            `/v1/channels/abandon/${'ab'.repeat(
+                32
+            )}/2?pending_funding_shim_only=true`
+        );
+    });
+});
+
+describe('LND.releaseOutput', () => {
+    it('releases a leased output through the wallet kit', () => {
+        const lnd = new LND();
+        const postRequest = jest
+            .spyOn(lnd, 'postRequest')
+            .mockResolvedValue({});
+        const request = {
+            id: 'bG9jay1pZA==',
+            outpoint: { txid_str: 'aa', output_index: 1 }
+        };
+
+        lnd.releaseOutput(request);
+
+        expect(postRequest).toHaveBeenCalledWith(
+            '/v2/wallet/utxos/release',
+            request
+        );
+    });
+});
+
 describe('LND.openChannelSync', () => {
     it('passes the channel memo to lnd', () => {
         const lnd = new LND();

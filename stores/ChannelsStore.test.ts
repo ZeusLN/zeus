@@ -735,15 +735,23 @@ describe('ChannelsStore batch channel open', () => {
 
         // finalizing B would have LND publish a transaction that also pays
         // A's funding output, for which no channel was negotiated
-        expect(fundingSteps()).toEqual([
-            {
-                psbt_verify: {
-                    funded_psbt: PSBT,
-                    pending_chan_id: 'chan-a',
-                    skip_finalize: true
+        expect(fundingSteps().filter((step: any) => !step.shim_cancel)).toEqual(
+            [
+                {
+                    psbt_verify: {
+                        funded_psbt: PSBT,
+                        pending_chan_id: 'chan-a',
+                        skip_finalize: true
+                    }
                 }
-            }
-        ]);
+            ]
+        );
+        // and both pending channels are cancelled on the node
+        expect(
+            fundingSteps()
+                .filter((step: any) => step.shim_cancel)
+                .map((step: any) => step.shim_cancel.pending_chan_id)
+        ).toEqual(['chan-a', 'chan-b']);
         expect(store.channelSuccess).toBe(false);
         expect(store.errorOpenChannel).toBe(true);
         expect(store.errorMsgChannel).toBe('Request timeout');
@@ -891,7 +899,12 @@ describe('ChannelsStore batch channel open', () => {
                 { node: 'def', no_publish: true }
             ]);
             expect(BackendUtils.fundPsbt).not.toHaveBeenCalled();
-            expect(BackendUtils.fundingStateStep).not.toHaveBeenCalled();
+            // the only funding steps cancel the shims of A and B
+            expect(
+                jest
+                    .mocked(BackendUtils.fundingStateStep)
+                    .mock.calls.map(([step]: any) => Object.keys(step))
+            ).toEqual([['shim_cancel'], ['shim_cancel']]);
             expect(store.channelSuccess).toBe(false);
             expect(store.errorOpenChannel).toBe(true);
             expect(store.errorMsgChannel).toBe('peer b rejected the channel');

@@ -806,6 +806,8 @@ export default class LND {
     };
     // Coin Control
     fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
+    releaseOutput = (data: any) =>
+        this.postRequest('/v2/wallet/utxos/release', data);
     signPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/sign', data);
     finalizePsbt = (data: any) =>
         this.postRequest('/v2/wallet/psbt/finalize', data);

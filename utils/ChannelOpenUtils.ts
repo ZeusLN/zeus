@@ -1,3 +1,4 @@
+import * as bitcoin from 'bitcoinjs-lib';
 import { randomBytes } from 'react-native-randombytes';
 
 import { LookupOptions, lookUpWithRetries } from './RequestTimeoutUtils';
@@ -50,3 +51,46 @@ export const findChannelByMemo = (
             ? fromChannelPoint(openMatch.channel_point)
             : undefined;
     }, options);
+
+const toPsbtBuffer = (psbt: string | Uint8Array): Buffer =>
+    typeof psbt === 'string'
+        ? Buffer.from(psbt, /^[0-9a-f]+$/i.test(psbt) ? 'hex' : 'base64')
+        : Buffer.from(psbt);
+
+// the output script of a SegWit address on any network: funding outputs
+// are P2WSH, or P2TR for taproot channels
+const segwitOutputScript = (address: string): Buffer => {
+    const { version, data } = bitcoin.address.fromBech32(address);
+    return bitcoin.script.compile([
+        version === 0
+            ? bitcoin.opcodes.OP_0
+            : bitcoin.opcodes.OP_1 + version - 1,
+        data
+    ]);
+};
+
+// The funding outpoints of the given channel addresses in a funded PSBT.
+// lnd keys a channel that passed psbt_verify by the txid of the PSBT's
+// unsigned transaction, which differs from the signed one for a nested
+// SegWit input, so that txid is used. Addresses the transaction does not
+// pay are skipped.
+export const getFundingOutpoints = (
+    psbt: string | Uint8Array,
+    fundingAddresses: Array<string>
+): Array<OpenedChannel> => {
+    const tx = bitcoin.Transaction.fromBuffer(
+        bitcoin.Psbt.fromBuffer(toPsbtBuffer(psbt)).data.getTransaction()
+    );
+    const funding_txid_str = tx.getId();
+    const outpoints: Array<OpenedChannel> = [];
+    fundingAddresses.forEach((address) => {
+        const script = segwitOutputScript(address);
+        const output_index = tx.outs.findIndex((out) =>
+            out.script.equals(script)
+        );
+        if (output_index !== -1) {
+            outpoints.push({ funding_txid_str, output_index });
+        }
+    });
+    return outpoints;
+};

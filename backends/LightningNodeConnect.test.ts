@@ -954,6 +954,123 @@ describe('LightningNodeConnect on-chain sends', () => {
     });
 });
 
+describe('LightningNodeConnect.abandonChannel', () => {
+    const abandonWith = async (params: Array<string | boolean | undefined>) => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        (lnc.lnd.lightning as any).abandonChannel = jest.fn(async () => ({}));
+
+        await backend.abandonChannel(params);
+
+        return (lnc.lnd.lightning as any).abandonChannel.mock.calls[0][0];
+    };
+
+    // as ChannelsStore abandons a PSBT channel lnd verified but never
+    // funded: lnd refuses pending_funding_shim_only for it
+    it('abandons a verified PSBT channel with iKnowWhatIAmDoing only', async () => {
+        expect(await abandonWith(['ab'.repeat(32), '2', false, true])).toEqual({
+            channelPoint: {
+                fundingTxidStr: 'ab'.repeat(32),
+                fundingTxidBytes: undefined,
+                outputIndex: 2
+            },
+            iKnowWhatIAmDoing: true
+        });
+    });
+
+    // as Developer Tools passes the flags the user ticked
+    it('sends pendingFundingShimOnly when asked for it', async () => {
+        expect(
+            await abandonWith(['ab'.repeat(32), '2', true, undefined])
+        ).toEqual({
+            channelPoint: {
+                fundingTxidStr: 'ab'.repeat(32),
+                fundingTxidBytes: undefined,
+                outputIndex: 2
+            },
+            pendingFundingShimOnly: true
+        });
+    });
+});
+
+describe('LightningNodeConnect.releaseOutput', () => {
+    it('releases a leased output through the wallet kit', async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        (lnc.lnd as any).walletKit = {
+            releaseOutput: jest.fn(async () => ({ status: 'released' }))
+        };
+        const request = {
+            id: 'bG9jay1pZA==',
+            outpoint: { txid_str: 'aa', output_index: 1 }
+        };
+
+        await expect(backend.releaseOutput(request)).resolves.toEqual({
+            status: 'released'
+        });
+        expect((lnc.lnd as any).walletKit.releaseOutput).toHaveBeenCalledWith(
+            request
+        );
+    });
+});
+
+describe('LightningNodeConnect.releaseOutput with a fundPsbt lease', () => {
+    // lnc-rn resolves a response with camelCase keys, as lnd's JSON names
+    const TXID =
+        '9693dd6cb6d04f538647e26d54e722bc097ec2952f3ab871939e630da95bcd50';
+    const TXID_BYTES = Buffer.from(TXID, 'hex').reverse().toString('base64');
+    const LOCK_ID = Buffer.alloc(32, 7).toString('base64');
+
+    it('sends the lease back with proto field names lnd reads', async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        (lnc.lnd as any).walletKit = {
+            fundPsbt: jest.fn(async () => ({
+                fundedPsbt: 'cHNidP8BAFICAAAAAQ==',
+                changeOutputIndex: 1,
+                lockedUtxos: [
+                    {
+                        id: LOCK_ID,
+                        outpoint: {
+                            txidBytes: TXID_BYTES,
+                            txidStr: TXID,
+                            outputIndex: 3
+                        },
+                        expiration: '1700000600'
+                    }
+                ]
+            })),
+            releaseOutput: jest.fn(async () => ({
+                status: `output ${TXID}:3 released`
+            }))
+        };
+
+        const funded: any = await backend.fundPsbt({} as any);
+        // as ChannelsStore releases each entry of locked_utxos
+        const { id, outpoint } = funded.locked_utxos[0];
+        await backend.releaseOutput({ id, outpoint });
+
+        // lnc-rn sends the request as JSON without renaming keys, and lnd's
+        // JSON parser takes the proto field names
+        const [request] = (lnc.lnd as any).walletKit.releaseOutput.mock
+            .calls[0];
+        expect(JSON.parse(JSON.stringify(request))).toEqual({
+            id: LOCK_ID,
+            outpoint: {
+                txid_bytes: TXID_BYTES,
+                txid_str: TXID,
+                output_index: 3
+            }
+        });
+    });
+});
+
 describe('LightningNodeConnect channel opens', () => {
     it('passes the channel memo to lnd', async () => {
         mockSettings.implementation = 'lightning-node-connect';

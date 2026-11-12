@@ -44,8 +44,8 @@ jest.mock('../../components/layout/Row', () => {
 jest.mock('./OrderResponse', () => 'LSPS1OrderResponse');
 jest.mock('../../utils/BackendUtils', () => ({
     supportsLSPS1native: () => false,
-    supportsLSPS1rest: () => true,
-    supportsLSPScustomMessage: () => false,
+    supportsLSPS1rest: jest.fn(() => true),
+    supportsLSPScustomMessage: jest.fn(() => false),
     supportsFlowLSP: () => false
 }));
 jest.mock('../../utils/ThemeUtils', () => ({
@@ -57,6 +57,7 @@ jest.mock('../../utils/UnitsUtils', () => ({
 jest.mock('../../utils/LocaleUtils');
 
 import LSPS1 from './index';
+import BackendUtils from '../../utils/BackendUtils';
 
 // lsps1.get_info example from the LSPS1 spec (bLIP-51)
 const SPEC_GET_INFO = {
@@ -260,5 +261,68 @@ describe('LSPS1 get_info that arrives after the screen mounts', () => {
         expect(
             screen.getByPlaceholderText(REQUIRED_CONFIRMATIONS)
         ).toHaveDisplayValue('3');
+    });
+});
+
+describe('LSPS1 over custom messages', () => {
+    afterEach(() => {
+        jest.mocked(BackendUtils.supportsLSPS1rest).mockReturnValue(true);
+        jest.mocked(BackendUtils.supportsLSPScustomMessage).mockReturnValue(
+            false
+        );
+    });
+
+    it('connects to the LSP without touching the open channel form', async () => {
+        jest.mocked(BackendUtils.supportsLSPS1rest).mockReturnValue(false);
+        jest.mocked(BackendUtils.supportsLSPScustomMessage).mockReturnValue(
+            true
+        );
+        const connectPeer = jest.fn(() => Promise.resolve(true));
+
+        await render(
+            <LSPS1
+                LSPStore={
+                    {
+                        getInfoData: {},
+                        createOrderResponse: {},
+                        loadingLSPS1: false,
+                        error: false,
+                        error_msg: '',
+                        resetLSPS1Data: jest.fn(),
+                        subscribeCustomMessages: jest.fn(() =>
+                            Promise.resolve({})
+                        ),
+                        lsps1GetInfoCustomMessage: jest.fn(),
+                        isOlympus: () => false,
+                        getLSPS1Rest: () => '',
+                        getLSPSPubkey: () => '03lsp',
+                        getLSPSHost: () => 'lsp.example.com:9735'
+                    } as any
+                }
+                ChannelsStore={{ connectPeer } as any}
+                SettingsStore={{ settings: { lsps1Token: '' } } as any}
+                NodeInfoStore={
+                    {
+                        flowLspNotConfigured: () => ({
+                            flowLspNotConfigured: true
+                        })
+                    } as any
+                }
+                navigation={
+                    { addListener: jest.fn(), navigate: jest.fn() } as any
+                }
+            />
+        );
+
+        expect(connectPeer).toHaveBeenCalledWith(
+            {
+                node_pubkey_string: '03lsp',
+                host: 'lsp.example.com:9735',
+                local_funding_amount: ''
+            },
+            true,
+            true,
+            true
+        );
     });
 });

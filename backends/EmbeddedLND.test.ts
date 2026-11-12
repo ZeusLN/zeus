@@ -21,6 +21,7 @@ const mockListPayments = jest.fn();
 const mockGetTransactions = jest.fn();
 const mockSendCoins = jest.fn();
 const mockOpenChannel = jest.fn();
+const mockAbandonChannel = jest.fn();
 const mockSignMessageNodePubkey = jest.fn();
 const mockVerifyMessageNodePubkey = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
@@ -37,6 +38,7 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
         channel: {
             closeChannel: (...args: any[]) => mockCloseChannel(...args),
             openChannel: (...args: any[]) => mockOpenChannel(...args),
+            abandonChannel: (...args: any[]) => mockAbandonChannel(...args),
             // test events carry the decoded update as JSON
             decodeCloseStatusUpdate: (data: string) => JSON.parse(data),
             decodeOpenStatusUpdate: (data: string) => JSON.parse(data)
@@ -512,6 +514,48 @@ describe('EmbeddedLND on-chain sends', () => {
             undefined,
             undefined,
             'ZEUS send 0123456789abcdef'
+        );
+    });
+});
+
+describe('EmbeddedLND.abandonChannel', () => {
+    beforeEach(() => {
+        mockAbandonChannel.mockReset();
+        mockAbandonChannel.mockResolvedValue({ status: 'abandoned' });
+    });
+
+    // as ChannelsStore abandons a PSBT channel lnd verified but never
+    // funded: lnd refuses pending_funding_shim_only for it
+    it('abandons a verified PSBT channel with i_know_what_i_am_doing only', async () => {
+        await new EmbeddedLND().abandonChannel([
+            'ab'.repeat(32),
+            '2',
+            false,
+            true
+        ]);
+
+        expect(mockAbandonChannel).toHaveBeenCalledWith(
+            'ab'.repeat(32),
+            2,
+            undefined,
+            true
+        );
+    });
+
+    // as Developer Tools passes the flags the user ticked
+    it('sends pending_funding_shim_only when asked for it', async () => {
+        await new EmbeddedLND().abandonChannel([
+            'ab'.repeat(32),
+            '2',
+            true,
+            undefined
+        ]);
+
+        expect(mockAbandonChannel).toHaveBeenCalledWith(
+            'ab'.repeat(32),
+            2,
+            true,
+            undefined
         );
     });
 });

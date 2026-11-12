@@ -87,6 +87,7 @@ import {
     bumpFee,
     bumpForceCloseFee,
     fundPsbt,
+    releaseOutput,
     signPsbt,
     finalizePsbt,
     publishTransaction,
@@ -477,6 +478,9 @@ export interface ILndMobileInjections {
             spend_unconfirmed?: boolean;
             sat_per_vbyte?: Long;
         }) => Promise<walletrpc.FundPsbtResponse>;
+        releaseOutput: (
+            request: walletrpc.IReleaseOutputRequest
+        ) => Promise<walletrpc.ReleaseOutputResponse>;
         signPsbt: ({
             funded_psbt
         }: {
@@ -715,6 +719,7 @@ export default {
         bumpFee,
         bumpForceCloseFee,
         fundPsbt,
+        releaseOutput,
         signPsbt,
         finalizePsbt,
         publishTransaction,
