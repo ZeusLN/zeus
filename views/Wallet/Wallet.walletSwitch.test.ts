@@ -671,10 +671,15 @@ describe('Cashu work on focus', () => {
             sentTokens: [],
             addedMintsCache: new Map(),
             mintInfoCache: new Map(),
+            sagaRecoveryDone: new Set(),
+            sagaRecoveryAttempts: new Map(),
+            sagaRecoveryLastAttempt: new Map(),
+            walletSession: 0,
             // each of these reaches native CDK
             checkInvoicePaid: jest.fn(async () => {}),
             checkTokenSpent: jest.fn(async () => false),
             reconcilePendingMelts: jest.fn(async () => {}),
+            recoverIncompleteSagas: jest.fn(async () => {}),
             clearInvoice: jest.fn(),
             clearPayReq: jest.fn(),
             stopConnectivityMonitoring: jest.fn(),
@@ -713,6 +718,7 @@ describe('Cashu work on focus', () => {
         expect(cashu.checkInvoicePaid).not.toHaveBeenCalled();
         expect(cashu.checkTokenSpent).not.toHaveBeenCalled();
         expect(cashu.reconcilePendingMelts).not.toHaveBeenCalled();
+        expect(cashu.recoverIncompleteSagas).not.toHaveBeenCalled();
         // the connect reset CashuStore and initialized the selected wallet
         expect(cashu.reset).toHaveBeenCalledTimes(1);
         expect(cashu.initializeWallets).toHaveBeenCalledTimes(1);
@@ -733,6 +739,7 @@ describe('Cashu work on focus', () => {
         expect(cashu.mintBalances).toEqual({ [MINT_A]: 500 });
         expect(cashu.checkInvoicePaid).toHaveBeenCalledWith('quote-a', MINT_A);
         expect(cashu.reconcilePendingMelts).toHaveBeenCalledTimes(1);
+        expect(cashu.recoverIncompleteSagas).toHaveBeenCalledTimes(1);
         expect(cashu.reset).not.toHaveBeenCalled();
     });
 

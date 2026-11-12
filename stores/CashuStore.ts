@@ -106,6 +106,13 @@ const NDK_CONNECT_TIMEOUT_MS = 2000;
 // reconcile until restart. Same bound as the mint info fetch.
 const MELT_QUOTE_CHECK_TIMEOUT_MS = 10000;
 
+// Saga recovery runs per mint once each time the wallet loads; a mint where
+// it throws or leaves failed or skipped sagas is tried this many times in all,
+// at least this far apart (Activity checks pending items more than once on
+// opening)
+const SAGA_RECOVERY_MAX_ATTEMPTS = 3;
+const SAGA_RECOVERY_RETRY_MS = 60 * 1000;
+
 // ZEUS official npub for trusted mint recommendations
 const ZEUS_NPUB =
     'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5';
@@ -226,6 +233,11 @@ export default class CashuStore {
     private meltsInProgress = new Set<string>();
     // The reconcilePendingMelts pass in progress, joined by later callers
     private reconcileRun?: Promise<void>;
+    // Mints (normalized) whose interrupted CDK operations have been
+    // recovered since the wallet loaded, and recovery attempts per mint
+    private sagaRecoveryDone = new Set<string>();
+    private sagaRecoveryAttempts = new Map<string, number>();
+    private sagaRecoveryLastAttempt = new Map<string, number>();
     // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
     @observable public cdkInvoices: Array<CashuInvoice> = [];
     @observable public seedVersion?: string;
@@ -339,6 +351,9 @@ export default class CashuStore {
     // The reconnect callback outlives reset(), so it is registered once
     // per store rather than on every initializeWallets()
     private reconnectCallbackRegistered: boolean = false;
+    // Bumped by reset() so background work started for one wallet session
+    // can tell that the wallet changed while it ran
+    private walletSession = 0;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -2040,6 +2055,7 @@ export default class CashuStore {
         // wallet's initializeCDK succeeds, so gated methods must not run
         // against it in between, or at all if that init fails
         this.cdkInitialized = false;
+        this.walletSession++;
         this.cashuWallets = {};
         this.totalBalanceSats = 0;
         this.mintBalances = {};
@@ -2053,6 +2069,9 @@ export default class CashuStore {
         this.receivedTokens = undefined;
         this.sentTokens = undefined;
         this.pendingMelts = [];
+        this.sagaRecoveryDone.clear();
+        this.sagaRecoveryAttempts.clear();
+        this.sagaRecoveryLastAttempt.clear();
         this.seedVersion = undefined;
         this.seedPhrase = undefined;
         this.seed = undefined;
@@ -3562,6 +3581,85 @@ export default class CashuStore {
     };
 
     /**
+     * Resume or roll back CDK operations (swap, send, receive, mint, melt)
+     * that an app kill or crash left unfinished, once per mint each time the
+     * wallet loads. Until this runs, their proofs stay reserved and their
+     * transactions stay pending.
+     */
+    public recoverIncompleteSagas = async () => {
+        if (!this.cdkInitialized || this.isOffline) return;
+
+        // reset() clears the bookkeeping below for the next wallet, which
+        // can use the same mint, so a run that outlives it records nothing
+        const session = this.walletSession;
+        const now = Date.now();
+        const mints = this.mintUrls.filter((url) => {
+            const key = this.normalizeMintUrl(url);
+            const lastAttempt = this.sagaRecoveryLastAttempt.get(key);
+            return (
+                !this.sagaRecoveryDone.has(key) &&
+                (this.sagaRecoveryAttempts.get(key) ?? 0) <
+                    SAGA_RECOVERY_MAX_ATTEMPTS &&
+                (lastAttempt === undefined ||
+                    now - lastAttempt >= SAGA_RECOVERY_RETRY_MS)
+            );
+        });
+        if (mints.length === 0) return;
+
+        const countAttempt = (key: string) => {
+            this.sagaRecoveryAttempts.set(
+                key,
+                (this.sagaRecoveryAttempts.get(key) ?? 0) + 1
+            );
+            this.sagaRecoveryLastAttempt.set(key, Date.now());
+        };
+
+        const reports = await Promise.all(
+            mints.map(async (mintUrl) => {
+                const key = this.normalizeMintUrl(mintUrl);
+                try {
+                    const report = await CashuDevKit.recoverIncompleteSagas(
+                        mintUrl
+                    );
+                    if (session !== this.walletSession) return null;
+                    // An operation was in flight on the mint: try again on
+                    // the next check, without using up an attempt
+                    if (!report) return null;
+
+                    countAttempt(key);
+                    // CDK skips a saga it could not settle, which includes
+                    // every saga when the mint is unreachable
+                    if (report.failed === 0 && report.skipped === 0) {
+                        this.sagaRecoveryDone.add(key);
+                    }
+                    return report;
+                } catch (e) {
+                    console.error(
+                        `CashuStore: Saga recovery failed for ${mintUrl}:`,
+                        e
+                    );
+                    if (session !== this.walletSession) return null;
+                    countAttempt(key);
+                    return null;
+                }
+            })
+        );
+
+        if (
+            reports.some(
+                (report) =>
+                    report && (report.recovered > 0 || report.compensated > 0)
+            )
+        ) {
+            // Finished melts and released or restored proofs only reach the
+            // balance, activity and in-flight payments through CDK
+            await this.syncCDKBalances(true);
+            await this.reconcilePendingMelts();
+            activityStore.getSortedActivity();
+        }
+    };
+
+    /**
      * Re-checks every melt still in flight with its mint and settles the
      * wallet's record of it: one the mint has since paid becomes the payment
      * it turned out to be, one the mint settled without paying is dropped,
@@ -3710,6 +3808,12 @@ export default class CashuStore {
     @action
     public checkPendingItems = async () => {
         runWhenIdle(async () => {
+            // Not awaited: recovery asks the mint about every interrupted
+            // operation, and the checks below must not wait for that
+            this.recoverIncompleteSagas().catch((e) =>
+                console.error('CashuStore: Saga recovery failed:', e)
+            );
+
             // Skip items for mints that are no longer configured: polling
             // them goes through ensureMintAdded, which would re-add a
             // removed mint on the next boot

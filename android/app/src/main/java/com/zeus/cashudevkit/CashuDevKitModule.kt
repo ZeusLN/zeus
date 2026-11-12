@@ -1659,43 +1659,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
-    fun cancelSend(preparedSendId: String, promise: Promise) {
-        val prepared = preparedSends[preparedSendId]
-        if (prepared == null) {
-            promise.resolve(null)
-            return
-        }
-
-        scope.launch {
-            try {
-                prepared.cancel()
-                withContext(Dispatchers.Main) {
-                    promise.resolve(null)
-                }
-            } catch (e: FfiException) {
-                val (code, message) = mapFfiException(e)
-                Log.e(TAG, "cancelSend error: $message", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject(code, message, e)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "cancelSend error", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject("CANCEL_SEND_ERROR", e.message, e)
-                }
-            } finally {
-                // Always clean up prepared send, whether success or failure.
-                // Destroy it rather than only dropping the reference: the
-                // handle holds the wallet's database open until the Cleaner
-                // runs (see disposeHandles)
-                preparedSends.remove(preparedSendId)?.let {
-                    destroyHandles(listOf(it))
-                }
-            }
-        }
-    }
-
-    @ReactMethod
     fun receive(encodedToken: String, optionsJson: String?, promise: Promise) {
         getInitializedRepo(promise) ?: return
 
@@ -1879,6 +1842,43 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 Log.e(TAG, "restoreFromSeed error", e)
                 withContext(Dispatchers.Main) {
                     promise.reject("RESTORE_FROM_SEED_ERROR", e.message, e)
+                }
+            }
+        }
+    }
+
+    // ========================================================================
+    // Saga Recovery
+    // ========================================================================
+
+    @ReactMethod
+    fun recoverIncompleteSagas(mintUrl: String, promise: Promise) {
+        getInitializedRepo(promise) ?: return
+
+        scope.launch {
+            try {
+                val wallet = getWallet(mintUrl)
+                val report = wallet.recoverIncompleteSagas()
+                val json = JSONObject().apply {
+                    put("recovered", report.recovered.toLong())
+                    put("compensated", report.compensated.toLong())
+                    put("skipped", report.skipped.toLong())
+                    put("failed", report.failed.toLong())
+                }
+
+                withContext(Dispatchers.Main) {
+                    promise.resolve(json.toString())
+                }
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "recoverIncompleteSagas error: $message", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "recoverIncompleteSagas error", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("RECOVER_SAGAS_ERROR", e.message, e)
                 }
             }
         }

@@ -1443,36 +1443,6 @@ class CashuDevKitModule: RCTEventEmitter {
         }
     }
 
-    @objc(cancelSend:resolver:rejecter:)
-    func cancelSend(_ preparedSendId: String,
-                    resolve: @escaping RCTPromiseResolveBlock,
-                    reject: @escaping RCTPromiseRejectBlock) {
-        let prepared: PreparedSend? = walletQueue.sync { preparedSends[preparedSendId] }
-        guard let prepared else {
-            resolve(nil)
-            return
-        }
-
-        Task {
-            defer {
-                // Always clean up prepared send, whether success or failure
-                _ = walletQueue.sync {
-                    self.preparedSends.removeValue(forKey: preparedSendId)
-                }
-            }
-
-            do {
-                try await prepared.cancel()
-                resolve(nil)
-            } catch let error as FfiError {
-                let (code, message) = mapFfiError(error)
-                reject(code, message, error)
-            } catch {
-                reject("CANCEL_SEND_ERROR", error.localizedDescription, error)
-            }
-        }
-    }
-
     @objc(receive:optionsJson:resolver:rejecter:)
     func receive(_ encodedToken: String, optionsJson: String?,
                  resolve: @escaping RCTPromiseResolveBlock,
@@ -1615,6 +1585,31 @@ class CashuDevKitModule: RCTEventEmitter {
                 reject(code, message, error)
             } catch {
                 reject("RESTORE_FROM_SEED_ERROR", error.localizedDescription, error)
+            }
+        }
+    }
+
+    @objc(recoverIncompleteSagas:resolver:rejecter:)
+    func recoverIncompleteSagas(_ mintUrl: String,
+                                resolve: @escaping RCTPromiseResolveBlock,
+                                reject: @escaping RCTPromiseRejectBlock) {
+        guard getInitializedRepo(reject: reject) != nil else { return }
+
+        Task {
+            do {
+                let wallet = try await getWallet(mintUrl)
+                let report = try await wallet.recoverIncompleteSagas()
+                resolve(encodeToJson([
+                    "recovered": NSNumber(value: report.recovered),
+                    "compensated": NSNumber(value: report.compensated),
+                    "skipped": NSNumber(value: report.skipped),
+                    "failed": NSNumber(value: report.failed)
+                ]))
+            } catch let error as FfiError {
+                let (code, message) = mapFfiError(error)
+                reject(code, message, error)
+            } catch {
+                reject("RECOVER_SAGAS_ERROR", error.localizedDescription, error)
             }
         }
     }
