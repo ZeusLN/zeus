@@ -668,6 +668,77 @@ describe('LdkNode.getPayments', () => {
     });
 });
 
+describe('LdkNode.lookupPayment', () => {
+    const HASH = 'ab'.repeat(32);
+    const entry = (
+        direction: string,
+        type: string,
+        amountMsat: number,
+        hash = HASH
+    ) => ({
+        id: `${direction}-${type}`,
+        direction,
+        status: 'pending',
+        amountMsat,
+        latestUpdateTimestamp: 0,
+        kind: { type, hash }
+    });
+
+    beforeEach(() => mockListPayments.mockReset());
+
+    it('returns the outbound lightning payment, not an inbound or on-chain entry with the same hash', async () => {
+        // listed first, so a lookup without either filter would pick them
+        mockListPayments.mockResolvedValue([
+            entry('inbound', 'bolt11', 1_000_000),
+            entry('outbound', 'onchain', 2_000_000),
+            entry('outbound', 'bolt11', 3_000_000)
+        ]);
+
+        const payment = await new LdkNode().lookupPayment({
+            payment_hash: HASH
+        });
+
+        expect(payment).toMatchObject({
+            payment_hash: HASH,
+            value_sat: '3000',
+            status: 'IN_FLIGHT'
+        });
+    });
+
+    it('matches the hash case-insensitively', async () => {
+        mockListPayments.mockResolvedValue([
+            entry('outbound', 'bolt11', 3_000_000)
+        ]);
+
+        const payment = await new LdkNode().lookupPayment({
+            payment_hash: HASH.toUpperCase()
+        });
+
+        expect(payment).toMatchObject({ value_sat: '3000' });
+    });
+
+    it('answers null for an unknown hash', async () => {
+        mockListPayments.mockResolvedValue([
+            entry('outbound', 'bolt11', 3_000_000, 'cd'.repeat(32))
+        ]);
+
+        await expect(
+            new LdkNode().lookupPayment({ payment_hash: HASH })
+        ).resolves.toBeNull();
+    });
+
+    it('answers null when only inbound or on-chain entries carry the hash', async () => {
+        mockListPayments.mockResolvedValue([
+            entry('inbound', 'bolt11', 1_000_000),
+            entry('outbound', 'onchain', 2_000_000)
+        ]);
+
+        await expect(
+            new LdkNode().lookupPayment({ payment_hash: HASH })
+        ).resolves.toBeNull();
+    });
+});
+
 // LNURL-auth hashing key: sha256 of the node's signature string, one byte
 // per code point (Base64Utils.stringToUint8Array). Expected value computed
 // with Node's crypto; a changed value would change every LNURL-auth identity.

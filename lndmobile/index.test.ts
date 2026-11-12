@@ -39,6 +39,14 @@ jest.mock('./utils', () => ({
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
+// stopLnd calls the native module, which index.ts reads at import time
+jest.mock('react-native', () => {
+    const reactNative = jest.requireActual('react-native');
+    reactNative.NativeModules.LndMobile = {
+        stopLnd: jest.fn(async () => ({ data: '' }))
+    };
+    return reactNative;
+});
 jest.mock('../stores/Stores', () => ({
     settingsStore: { settings: {} },
     nodeInfoStore: { nodeInfo: {} }
@@ -50,6 +58,7 @@ import {
     listPayments,
     sendKeysendPaymentV2,
     sendPaymentV2Sync,
+    stopLnd,
     trackPaymentV2
 } from './index';
 import { sendCommand, sendStreamCommand } from './utils';
@@ -263,6 +272,73 @@ describe('trackPaymentV2', () => {
         emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
         await promise;
         expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(0);
+    });
+
+    it('forgets its streams when lnd stops, so the next lookup reopens', async () => {
+        const first = trackPaymentV2(HASH_HEX);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT));
+        await first;
+
+        // the stream ended with lnd, so its in-flight update is stale
+        await stopLnd();
+        expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(0);
+
+        const next = trackPaymentV2(HASH_HEX);
+        expect(sendStreamCommand).toHaveBeenCalledTimes(2);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(next).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
+    });
+
+    it('ends a stream taken back by an update on its own EOF', async () => {
+        jest.useFakeTimers();
+        // another held payment keeps the shared listener attached, so
+        // events still arrive once this hash's streams are all forgotten
+        const other = trackPaymentV2(OTHER_HASH_HEX);
+        emit(
+            paymentEvent(OTHER_HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT)
+        );
+        await other;
+
+        const first = trackPaymentV2(HASH_HEX);
+        const firstId = trackRequestId();
+        emit({
+            ...paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT),
+            request_id: firstId
+        });
+        await first;
+
+        // past the max age a lookup replaces the stream, and the
+        // replacement fails, so the registry forgets the hash
+        jest.advanceTimersByTime(60000);
+        const replacement = trackPaymentV2(HASH_HEX);
+        expect(sendStreamCommand).toHaveBeenCalledTimes(3);
+        emit({
+            error_code: 2,
+            error_desc: 'stream reset',
+            request_id: trackRequestId()
+        });
+        await expect(replacement).rejects.toThrow('stream reset');
+
+        // the first stream is still open: its update takes it back
+        emit({
+            ...paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT),
+            request_id: firstId
+        });
+        await expect(trackPaymentV2(HASH_HEX)).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.IN_FLIGHT
+        });
+        expect(sendStreamCommand).toHaveBeenCalledTimes(3);
+
+        // its EOF names it, so it ends and the next lookup reopens
+        emit({ error_code: 'Error', error_desc: 'EOF', request_id: firstId });
+        const next = trackPaymentV2(HASH_HEX);
+        expect(sendStreamCommand).toHaveBeenCalledTimes(4);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(next).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
     });
 
     it('rejects when the stream command fails', async () => {

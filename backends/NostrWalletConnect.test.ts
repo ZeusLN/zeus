@@ -648,6 +648,126 @@ describe('NostrWalletConnect.lookupInvoice', () => {
     });
 });
 
+describe('NostrWalletConnect.lookupPayment', () => {
+    const outgoing = (overrides: any = {}) =>
+        nip47Tx({ type: 'outgoing', ...overrides });
+
+    it('sends the payment hash to lookup_invoice on the raw client', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(outgoing());
+
+        await backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH });
+
+        expect(client.lookupInvoice).toHaveBeenCalledTimes(1);
+        expect(client.lookupInvoice).toHaveBeenCalledWith({
+            payment_hash: SPEC_PAYMENT_HASH
+        });
+    });
+
+    it('maps a settled payment to an LND-shaped payment in sats', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(
+            outgoing({ amount: 5000, fees_paid: 2500 })
+        );
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toEqual({
+            payment_hash: SPEC_PAYMENT_HASH,
+            payment_preimage: PREIMAGE,
+            invoice: SPEC_INVOICE,
+            creation_date: '1700000000',
+            amount: 5,
+            fees_paid: 2,
+            status: 'SUCCEEDED'
+        });
+    });
+
+    it.each([
+        ['settled', 'SUCCEEDED'],
+        ['failed', 'FAILED'],
+        ['pending', 'IN_FLIGHT']
+    ])('maps state %s to %s', async (state, status) => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(outgoing({ state }));
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toMatchObject({ status });
+    });
+
+    it('falls back to settled_at when the wallet sends no state', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(outgoing({ state: undefined }));
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toMatchObject({ status: 'SUCCEEDED' });
+    });
+
+    it('reports no state and no settled_at as in flight', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(
+            outgoing({ state: undefined, settled_at: undefined })
+        );
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toMatchObject({ status: 'IN_FLIGHT' });
+    });
+
+    it('reports a missing amount and fee as 0 sats', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(
+            outgoing({ amount: undefined, fees_paid: undefined })
+        );
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toMatchObject({ amount: 0, fees_paid: 0 });
+    });
+
+    it('answers null when the wallet has no record (NOT_FOUND)', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockRejectedValue(
+            new Nip47WalletError('not found', 'NOT_FOUND')
+        );
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toBeNull();
+    });
+
+    it('answers null for an empty reply', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(undefined);
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toBeNull();
+    });
+
+    it('rethrows any other wallet error', async () => {
+        const { backend, client } = await setup();
+        const error = new Nip47WalletError('wallet busy', 'INTERNAL');
+        client.lookupInvoice.mockRejectedValue(error);
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).rejects.toBe(error);
+    });
+
+    it('rethrows a reply timeout instead of answering null', async () => {
+        const { backend, client } = await setup();
+        const error = new Nip47ReplyTimeoutError('timed out', 'INTERNAL');
+        client.lookupInvoice.mockRejectedValue(error);
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).rejects.toBe(error);
+    });
+});
+
 describe('NostrWalletConnect capability flags', () => {
     // Every supports*/requires*/is*/single* flag with its expected value.
     // Flags missing here fall through to false in BackendUtils.call.

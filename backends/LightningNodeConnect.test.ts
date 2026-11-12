@@ -841,6 +841,7 @@ describe('LightningNodeConnect', () => {
 
         afterEach(() => {
             jest.restoreAllMocks();
+            jest.useRealTimers();
         });
 
         it('shares one stream between lookups of a held payment', async () => {
@@ -952,6 +953,55 @@ describe('LightningNodeConnect', () => {
             emit('EOF', trackRequestId());
             await expect(lookup).resolves.toBeNull();
             expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledTimes(1);
+        });
+
+        it('ends a stream taken back by an update on its own EOF', async () => {
+            jest.useFakeTimers();
+            const OTHER_HASH = 'cd'.repeat(32);
+            lnc.lnd.lightning.listPayments.mockResolvedValue({ payments: [] });
+            // another held payment keeps the shared listener attached, so
+            // events still arrive once this hash's streams are all forgotten
+            const other = backend.lookupPayment({ payment_hash: OTHER_HASH });
+            emit(
+                JSON.stringify({
+                    payment_hash: OTHER_HASH,
+                    status: 'IN_FLIGHT'
+                }),
+                trackRequestId()
+            );
+            await other;
+
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            const firstId = trackRequestId();
+            emit(paymentEvent('IN_FLIGHT'), firstId);
+            await first;
+
+            // past the max age a lookup replaces the stream, and the
+            // replacement fails, so the registry forgets the hash
+            jest.advanceTimersByTime(60000);
+            const replacement = backend.lookupPayment({ payment_hash: HASH });
+            expect(trackCalls()).toHaveLength(3);
+            emit(
+                'rpc error: code = Unavailable desc = reset',
+                trackRequestId()
+            );
+            await replacement;
+
+            // the first stream is still open: its update takes it back
+            emit(paymentEvent('IN_FLIGHT'), firstId);
+            await expect(
+                backend.lookupPayment({ payment_hash: HASH })
+            ).resolves.toMatchObject({ status: 'IN_FLIGHT' });
+            expect(trackCalls()).toHaveLength(3);
+
+            // its EOF names it, so it ends and the next lookup reopens
+            emit('EOF', firstId);
+            const next = backend.lookupPayment({ payment_hash: HASH });
+            expect(trackCalls()).toHaveLength(4);
+            emit(paymentEvent('SUCCEEDED'), trackRequestId());
+            await expect(next).resolves.toMatchObject({
+                status: 'SUCCEEDED'
+            });
         });
 
         it('opens a new stream after disconnecting', async () => {
