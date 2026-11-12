@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Aktivieren & neu starten",
     "views.GraphSyncPrompt.ignoreOnce": "Einmal ignorieren",
     "views.GraphSyncPrompt.neverAskAgain": "Nicht mehr fragen",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Wallet neu scannen",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Blockchain erneut nach deinen On-Chain-Transaktionen durchsuchen. Die App muss neu gestartet werden, um den Vorgang zu starten. Die Einstellung wird nach Abschluss automatisch zurückgesetzt.",
     "views.Settings.EmbeddedNode.compactDb": "Datenbank komprimieren",
