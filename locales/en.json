@@ -1808,7 +1808,7 @@
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
     "utils.handleAnything.addressError": "Error fetching address",
     "utils.handleAnything.invalidNoffer": "Could not decode CLINK noffer",
-    "stores.ChannelsStore.batchNeedsNativeSegWit": "Opening several channels at once needs UTXOs from native SegWit addresses (bc1q or bc1p). Your node chose at least one nested SegWit or legacy UTXO, so ZEUS stopped before spending anything. Select native SegWit UTXOs, or open the channels one at a time.",
+    "stores.ChannelsStore.batchNeedsNativeSegWit": "Opening several channels at once needs UTXOs from SegWit (P2WKH) or Taproot (P2TR) addresses. Your node chose at least one Nested SegWit (NP2WKH) or legacy UTXO, so ZEUS stopped before spending anything. Select SegWit or Taproot UTXOs, or open the channels one at a time.",
     "stores.ChannelsStore.openOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this channel was opened. Check your pending channels before opening another.",
     "stores.ChannelsStore.openStreamTimeout": "Your node did not start funding this channel in time, so ZEUS stopped the open before spending anything. You can try again.",
     "stores.InvoicesStore.errorCreatingInvoice": "Error creating invoice",
