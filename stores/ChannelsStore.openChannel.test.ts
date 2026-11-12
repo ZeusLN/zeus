@@ -428,6 +428,20 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             })
         );
 
+    const openBatchOf3 = (store: ChannelsStore) =>
+        (store as any).openChannel(
+            new OpenChannelRequest({
+                node_pubkey_string: '02peer',
+                local_funding_amount: '100000',
+                sat_per_vbyte: '2',
+                account: 'default',
+                additionalChannels: [
+                    { node_pubkey_string: '02b', satAmount: '50000' },
+                    { node_pubkey_string: '02c', satAmount: '50000' }
+                ]
+            })
+        );
+
     // as OpenChannel does on mount
     const enterScreen = (store: ChannelsStore) => store.resetOpenChannel();
 
@@ -722,6 +736,67 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
         expect(store.pending_chan_ids).toEqual(['chan-2']);
         expect(store.channelSuccess).toBe(true);
         expect(store.openingChannel).toBe(false);
+    });
+
+    it('verifies a superseded batch with only its own channels when a newer open starts while it signs', async () => {
+        openChannelStream
+            .mockResolvedValueOnce(psbtFund('chan-a'))
+            .mockResolvedValueOnce(psbtFund('chan-b'))
+            .mockResolvedValueOnce(psbtFund('chan-c'))
+            .mockResolvedValueOnce(psbtFund('chan-new'));
+        // the newer open's funding stays pending
+        fundPsbt
+            .mockResolvedValueOnce({ funded_psbt: PSBT })
+            .mockImplementationOnce(never);
+        const signing = held();
+        signPsbt.mockReturnValueOnce(signing.promise);
+        const store = makeStore();
+        enterScreen(store);
+        openBatchOf3(store);
+        await flush();
+        expect(signPsbt).toHaveBeenCalledTimes(1);
+
+        // the newer open replaces pending_chan_ids between fundPsbt and
+        // the batch's first psbt_verify
+        enterScreen(store);
+        openStreamed(store);
+        await flush();
+        expect(store.pending_chan_ids).toEqual(['chan-new']);
+
+        signing.resolve({ signed_psbt: PSBT });
+        await flush();
+
+        expect(fundingSteps()).toEqual([
+            {
+                psbt_verify: {
+                    funded_psbt: PSBT,
+                    pending_chan_id: 'chan-a',
+                    skip_finalize: true
+                }
+            },
+            {
+                psbt_verify: {
+                    funded_psbt: PSBT,
+                    pending_chan_id: 'chan-b',
+                    skip_finalize: true
+                }
+            },
+            {
+                psbt_verify: {
+                    funded_psbt: PSBT,
+                    pending_chan_id: 'chan-c'
+                }
+            },
+            {
+                psbt_finalize: {
+                    signed_psbt: PSBT,
+                    pending_chan_id: 'chan-c'
+                }
+            }
+        ]);
+        expect(store.pending_chan_ids).toEqual(['chan-new']);
+        expect(store.channelSuccess).toBe(false);
+        expect(store.openingChannel).toBe(true);
     });
 
     it.each([
@@ -1279,20 +1354,6 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
                 }
                 return {};
             });
-        const openBatchOf3 = (store: ChannelsStore) =>
-            (store as any).openChannel(
-                new OpenChannelRequest({
-                    node_pubkey_string: '02peer',
-                    local_funding_amount: '100000',
-                    sat_per_vbyte: '2',
-                    account: 'default',
-                    additionalChannels: [
-                        { node_pubkey_string: '02b', satAmount: '50000' },
-                        { node_pubkey_string: '02c', satAmount: '50000' }
-                    ]
-                })
-            );
-
         beforeEach(() => {
             fundPsbt.mockResolvedValue({
                 funded_psbt: PSBT,
@@ -1374,35 +1435,48 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             expect(cancels()).toEqual(['chan-1']);
         });
 
-        it('keeps the leases and the shim of a PSBT handed to the user to sign', async () => {
-            openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
-            signPsbt.mockRejectedValue(new Error('no keys'));
-            failStep('psbt_finalize', { publish_error: 'not signed' });
-            const store = makeStore();
-            enterScreen(store);
-            openStreamed(store);
-            await flush();
+        // the two ways psbt_finalize hands the PSBT back
+        const FINALIZE_FAILURES: Array<[string, any]> = [
+            ['reports a publish error', { publish_error: 'not signed' }],
+            ['throws', new Error('no')]
+        ];
 
-            expect(store.funded_psbt).toBe(PSBT);
-            expect(releaseOutput).not.toHaveBeenCalled();
-            expect(cancels()).toEqual([]);
-        });
+        it.each(FINALIZE_FAILURES)(
+            'keeps the leases and the shim of a PSBT handed to the user to sign when finalize %s',
+            async (_, result) => {
+                openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+                signPsbt.mockRejectedValue(new Error('no keys'));
+                failStep('psbt_finalize', result);
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+                await flush();
 
-        it('releases the inputs of a superseded open whose finalize fails, but keeps its shim', async () => {
-            const first = held();
-            openChannelStream.mockReturnValueOnce(first.promise);
-            failStep('psbt_finalize', new Error('no'));
-            const store = makeStore();
-            enterScreen(store);
-            openStreamed(store);
-            enterScreen(store);
+                expect(store.funded_psbt).toBe(PSBT);
+                expect(releaseOutput).not.toHaveBeenCalled();
+                expect(cancels()).toEqual([]);
+            }
+        );
 
-            first.resolve(psbtFund('chan-1'));
-            await flush();
-            expect(released()).toEqual(LOCKED);
-            // the funding transaction may have been published
-            expect(cancels()).toEqual([]);
-        });
+        it.each(FINALIZE_FAILURES)(
+            'releases the inputs of a superseded open whose finalize %s, but keeps its shim',
+            async (_, result) => {
+                const first = held();
+                openChannelStream.mockReturnValueOnce(first.promise);
+                failStep('psbt_finalize', result);
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+                enterScreen(store);
+
+                first.resolve(psbtFund('chan-1'));
+                await flush();
+                expect(released()).toEqual(LOCKED);
+                // the funding transaction may have been published
+                expect(cancels()).toEqual([]);
+                expect(store.funded_psbt).toBe('');
+            }
+        );
 
         it('keeps the inputs of an open that went through', async () => {
             openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
