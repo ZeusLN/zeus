@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Habilitar y reiniciar",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Re-escanear billetera",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Re-escanear blockchain para sus transacciones en la cadena. Reinicie la aplicación para entrar en vigor. Será desactivado al finalizar.",
     "views.Settings.EmbeddedNode.compactDb": "Compactar bases de datos",
