@@ -1769,6 +1769,30 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             expect(store.syncOpensInFlight).toBe(0);
         });
 
+        it("does not wait on the final channel's own chan_pending", async () => {
+            // the final channel turns pending only after its
+            // psbt_finalize, so waiting on it would stall every batch
+            openChannelStream
+                .mockResolvedValueOnce(psbtFund('chan-a'))
+                .mockResolvedValueOnce(psbtFund('chan-b'))
+                .mockResolvedValueOnce(withPending('chan-c', never()));
+            const store = makeStore();
+            enterScreen(store);
+            openBatchOf3(store);
+            await flush();
+
+            expect(finalizes()).toEqual([
+                {
+                    psbt_finalize: {
+                        signed_psbt: PSBT,
+                        pending_chan_id: 'chan-c'
+                    }
+                }
+            ]);
+            expect(store.channelSuccess).toBe(true);
+            expect(store.syncOpensInFlight).toBe(0);
+        });
+
         it('publishes nothing when an earlier peer fails after its psbt_verify', async () => {
             const pendingB = held();
             const store = startBatch(Promise.resolve({}), pendingB.promise);
