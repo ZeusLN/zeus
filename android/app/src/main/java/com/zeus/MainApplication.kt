@@ -49,6 +49,9 @@ class MainApplication : Application(), ReactApplication {
         WebSocketModule.setCustomClientBuilder { builder ->
             builder.followRedirects(false).followSslRedirects(false)
         }
+        // Before React Native, so it is done by the time JS reaches a
+        // module that calls into the uniffi bindings
+        JnaStructWarmup.start()
         loadReactNative(this)
         ReactNativeBlobUtilUtils.sharedTrustManager = object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
