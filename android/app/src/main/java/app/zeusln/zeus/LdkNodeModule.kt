@@ -13,6 +13,11 @@ import org.lightningdevkit.ldknode.*
 
 class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
 
+    init {
+        // Every LDK Node call goes through this module
+        JnaStructWarmup.await()
+    }
+
     private val moduleScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var builder: Builder? = null
