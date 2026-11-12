@@ -687,10 +687,12 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
         (alertStore.setMempoolErrorFromUrl as jest.Mock).mockClear();
         (alertStore.clearMempoolError as jest.Mock).mockClear();
 
-        // The older call returns a 500 later.
+        // The older call returns a 500 later, but with a valid body.
+        // If the stale branch doesn't check the status, it would
+        // incorrectly return these rates instead of undefined.
         resolveOld({
             info: () => ({ status: 500 }),
-            json: () => ({})
+            json: () => ({ fastestFee: 99 })
         } as any);
 
         // The stale 500 resolves to undefined (failure contract).
