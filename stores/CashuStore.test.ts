@@ -979,6 +979,34 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
         }
     );
 
+    // Nothing may await between the in-flight check and adding the hash,
+    // or two calls started together both get past the check
+    it.each([false, true])(
+        'refuses a second payment started in the same tick as the first (multi-mint: %p)',
+        async (multiMint) => {
+            const wallet = storeWithMint(multiMint);
+            const { store } = wallet;
+            await load(wallet, 'lnbc1second');
+            const release = holdMelt();
+
+            const first = store.payLnInvoiceFromEcash({
+                paymentRequest: 'lnbc1second'
+            });
+            const second = store.payLnInvoiceFromEcash({
+                paymentRequest: 'lnbc1second'
+            });
+            await flush();
+
+            expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
+            await expect(second).resolves.toBeUndefined();
+            expect(store.paymentError).toBe(false);
+
+            release();
+            await first;
+            expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
+        }
+    );
+
     it('does not quote an invoice again while it is being paid', async () => {
         const wallet = storeWithMint(true);
         const { store } = wallet;
