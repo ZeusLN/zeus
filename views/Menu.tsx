@@ -375,6 +375,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         }}
                     >
                         <TouchableOpacity
+                            testID={TEST_IDS.menu.settingsButton}
                             style={styles.columnField}
                             onPress={() => {
                                 navigation.navigate('Settings');
@@ -414,6 +415,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 }}
                             >
                                 <TouchableOpacity
+                                    testID={TEST_IDS.menu.backupButton}
                                     style={styles.columnField}
                                     onPress={() =>
                                         reAuthNavigation(navigation, 'Seed')
@@ -856,6 +858,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             }}
                         >
                             <TouchableOpacity
+                                testID={TEST_IDS.menu.contactsButton}
                                 onPress={() => navigation.navigate('Contacts')}
                             >
                                 <View style={styles.columnField}>

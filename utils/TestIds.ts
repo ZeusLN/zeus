@@ -20,7 +20,10 @@ export const TEST_IDS = {
     },
     menu: {
         addWalletButton: 'menu.addWalletButton',
-        selectedWalletButton: 'menu.selectedWalletButton'
+        selectedWalletButton: 'menu.selectedWalletButton',
+        settingsButton: 'menu.settingsButton',
+        backupButton: 'menu.backupButton',
+        contactsButton: 'menu.contactsButton'
     },
     onboarding: {
         recommendedButton: 'onboarding.recommendedButton',
@@ -81,7 +84,8 @@ export const TEST_IDS = {
         key: (digit: string) => `pinPad.key.${digit}`,
         decimal: 'pinPad.decimal',
         delete: 'pinPad.delete',
-        clear: 'pinPad.clear'
+        clear: 'pinPad.clear',
+        submit: 'pinPad.submit'
     },
     keypad: {
         amount: 'keypad.amount',
@@ -118,6 +122,25 @@ export const TEST_IDS = {
     },
     mint: {
         addButton: 'mint.addButton'
+    },
+    settings: {
+        securityButton: 'settings.securityButton'
+    },
+    security: {
+        option: (screenOrAction: string) => `security.option.${screenOrAction}`
+    },
+    seed: {
+        understandButton: 'seed.understandButton',
+        word: (position: number) => `seed.word.${position}`,
+        backupCompleteButton: 'seed.backupCompleteButton'
+    },
+    contacts: {
+        addButton: 'contacts.addButton'
+    },
+    addContact: {
+        nameInput: 'addContact.nameInput',
+        lightningAddressInput: 'addContact.lightningAddressInput',
+        saveButton: 'addContact.saveButton'
     },
     walletConfiguration: {
         interfaceDropdown: 'walletConfiguration.interfaceDropdown',

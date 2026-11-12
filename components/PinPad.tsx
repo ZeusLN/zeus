@@ -286,6 +286,7 @@ export default function PinPad({
                     ))}
                 {!!hidePinLength && pinValueLength >= minLength && (
                     <Touchable
+                        testID={TEST_IDS.pinPad.submit}
                         touch={() => {
                             submitValue();
                             clearPinValueLength();
