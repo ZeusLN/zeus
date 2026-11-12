@@ -14,8 +14,6 @@ import {
     useCameraDevice,
     useCameraPermission
 } from 'react-native-vision-camera';
-import { useBarcodeScannerOutput } from 'react-native-vision-camera-barcode-scanner';
-import type { TargetBarcodeFormat } from 'react-native-vision-camera-barcode-scanner';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -24,6 +22,8 @@ import QRKit from 'react-native-qr-kit';
 import Header from './Header';
 import Button from '../components/Button';
 
+import useQRCodeOutput from '../hooks/useQRCodeOutput';
+
 import { sha256StringToHex } from '../utils/HashingUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -31,10 +31,6 @@ import { themeColor } from '../utils/ThemeUtils';
 import FlashOffIcon from '../assets/images/SVG/Flash Off.svg';
 import FlashOnIcon from '../assets/images/SVG/Flash On.svg';
 import GalleryIcon from '../assets/images/SVG/Gallery.svg';
-
-// Hoisted: useBarcodeScannerOutput memoizes on the identity of this array, so
-// an inline literal would tear down and recreate the native output every render.
-const BARCODE_FORMATS: TargetBarcodeFormat[] = ['qr-code'];
 
 interface QRProps {
     text?: string;
@@ -114,20 +110,7 @@ export default function QRCodeScanner({
         );
     };
 
-    const codeScannerOutput = useBarcodeScannerOutput({
-        barcodeFormats: BARCODE_FORMATS,
-        // 'preview' (the default) decodes preview-sized buffers, which loses the
-        // detail needed for dense invoices and codes held away from the lens.
-        // 'full' analyses the highest-resolution buffers the session can supply.
-        outputResolution: 'full',
-        onBarcodeScanned: (barcodes) => {
-            const code = barcodes.find((b) => b.rawValue != null)?.rawValue;
-            if (code != null) {
-                handleRead(code);
-            }
-        },
-        onError: (error) => console.error('Barcode scanner error:', error)
-    });
+    const codeScannerOutput = useQRCodeOutput(handleRead);
 
     const toggleTorch = async () => {
         try {
