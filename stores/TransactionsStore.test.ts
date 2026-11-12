@@ -1793,12 +1793,14 @@ describe('TransactionsStore.sendPayment held back by the graph sync prompt', () 
         payLightningInvoice.mockResolvedValueOnce({
             payment_hash: HASH,
             payment_preimage: 'cd'.repeat(32),
+            payment_route: { total_fees: '1' },
             status: 'SUCCEEDED'
         });
         const store = newStore('embedded-lnd');
         store.sendPayment({ payment_request: 'lnbc1first' });
         await flushPromises();
         expect(store.status).toBe('SUCCEEDED');
+        expect(store.payment_route).toEqual({ total_fees: '1' });
         expect(store.paymentInFlight).toBe(false);
 
         checkGraphSync.mockImplementationOnce(
@@ -1831,6 +1833,7 @@ describe('TransactionsStore.sendPayment held back by the graph sync prompt', () 
         expect(store.status).toBeNull();
         expect(store.payment_hash).toBeNull();
         expect(store.payment_preimage).toBeNull();
+        expect(store.payment_route).toBeNull();
     });
 
     it('drops the payment and reports it as not sent when the prompt is dismissed', async () => {
