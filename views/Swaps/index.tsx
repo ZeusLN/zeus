@@ -502,6 +502,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         // Existing fee fetching logic
         if (!prevState.reverse && this.state.reverse) {
+            // Capture the fee at request time so a user-typed fee (or a fee
+            // set by OnchainFeeInput's own fetch) isn't clobbered when this
+            // lookup resolves. Also reset feeRateLookupDone so a second
+            // toggle off/on runs a fresh lookup instead of showing "done".
+            const feeAtFetchStart = this.state.fee;
+            this.setState({ feeRateLookupDone: false });
             try {
                 const feesObj: { [key: string]: number } | undefined =
                     await FeeStore.getOnchainFeesviaMempool();
@@ -512,7 +518,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 const feeRate =
                     feesObj?.[preferredMempoolRate] ?? feesObj?.fastestFee;
 
-                if (feeRate !== undefined) {
+                if (
+                    feeRate !== undefined &&
+                    this.state.fee === feeAtFetchStart
+                ) {
                     this.setState({ fee: feeRate.toString() });
                 }
             } catch (error) {
