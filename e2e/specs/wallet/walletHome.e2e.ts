@@ -3,12 +3,19 @@ import { expect } from 'detox';
 import { createSelfCustodialWallet } from '../../flows/wallet';
 import { byText, waitForVisible } from '../../helpers/elements';
 import { t } from '../../helpers/locale';
+import AddContactScreen from '../../screens/AddContactScreen';
+import ContactsScreen from '../../screens/ContactsScreen';
 import Header from '../../screens/Header';
 import MenuScreen from '../../screens/MenuScreen';
 import WalletScreen from '../../screens/WalletScreen';
 
 // The balances show once the node reports in after its first sync.
 const BALANCES_TIMEOUT_MS = 180000;
+
+const CONTACT_NAME = 'Satoshi';
+const CONTACT_LIGHTNING_ADDRESS = 'satoshi@zeuspay.com';
+// The empty state is a button, and buttons render their titles uppercase.
+const NO_CONTACTS_LABEL = t('views.Settings.Contacts.noContacts').toUpperCase();
 
 // The tests share one fresh install and run in order, each starting where the
 // previous one left off.
@@ -72,6 +79,31 @@ describe('Wallet', () => {
             await Header.goBack();
 
             await WalletScreen.waitUntilDisplayed();
+        });
+    });
+
+    describe('contacts', () => {
+        it('starts with no contacts', async () => {
+            await WalletScreen.menuButton.tap();
+            await MenuScreen.waitUntilDisplayedWithWallet();
+            await MenuScreen.contactsButton.tap();
+
+            await ContactsScreen.waitUntilDisplayed();
+            await expect(byText(NO_CONTACTS_LABEL)).toBeVisible();
+        });
+
+        it('adds a contact with a lightning address', async () => {
+            await ContactsScreen.addButton.tap();
+            await AddContactScreen.waitUntilDisplayed();
+            await AddContactScreen.fill(
+                CONTACT_NAME,
+                CONTACT_LIGHTNING_ADDRESS
+            );
+            await AddContactScreen.saveButton.tap();
+
+            await ContactsScreen.waitUntilDisplayed();
+            await waitForVisible(byText(CONTACT_NAME));
+            await expect(byText(NO_CONTACTS_LABEL)).not.toBeVisible();
         });
     });
 });
