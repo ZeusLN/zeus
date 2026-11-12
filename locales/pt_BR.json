@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Ativar e reiniciar",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Resgan de carteira",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Resgan Blockchain para suas transações na cadeia. Reinicie o aplicativo para entrar em vigor. Estará sem fatura após a conclusão.",
     "views.Settings.EmbeddedNode.compactDb": "Compacte os bancos de dados",

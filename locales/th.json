@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Enable & Restart",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "ตรวจสอบกระเป๋าเงินใหม่อีกครั้ง",
     "views.Settings.EmbeddedNode.rescan.subtitle": "โหลดข้อมูลบล็อคเพื่อหาธุรกรรม on-chain ของคุณ. เปิดปิดแอพใหม่เพื่อให้ระบบทำงาน",
     "views.Settings.EmbeddedNode.compactDb": "Compact databases",

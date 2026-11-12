@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Povolit a restartovat",
     "views.GraphSyncPrompt.ignoreOnce": "Tentokrát ignorovat",
     "views.GraphSyncPrompt.neverAskAgain": "Znovu se neptat",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Přeskenovat peněženku",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Přezkoumat blockchain pro vaše on-chain transakce. Pro uplatnění změn restartujte aplikaci. Po dokončení se nastavení vypne.",
     "views.Settings.EmbeddedNode.compactDb": "Kompaktní databáze",

@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "활성화 후 재시작",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "지갑 재탐색하기",
     "views.Settings.EmbeddedNode.rescan.subtitle": "블록체인을 재탐색하여 온체인 트랜잭션들을 찾아봅니다. 앱을 재시작해야 기능이 적용됩니다. 탐색이 끝나면 자동적으로 비활성화됩니다.",
     "views.Settings.EmbeddedNode.compactDb": "데이터베이스 압축하기",

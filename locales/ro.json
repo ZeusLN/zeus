@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Activare și repornire",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Rescanare portofel",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Rescanare blockchain pentru tranzacțiile onchain. Reporniți aplicația pentru a intra în vigoare. Va fi dezactivat la finalizare.",
     "views.Settings.EmbeddedNode.compactDb": "Compactare Baze de date",

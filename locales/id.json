@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Aktifkan & Mulai Ulang",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Pindai ulang dompet",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Pindai ulang rantai blok untuk transaksi on-chain Anda. Mulai ulang aplikasi agar perubahan diterapkan. Pengaturan ini akan kembali ke semula setelah selesai.",
     "views.Settings.EmbeddedNode.compactDb": "Database kompak",

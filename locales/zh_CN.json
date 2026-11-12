@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "启用并重启",
     "views.GraphSyncPrompt.ignoreOnce": "仅忽略一次",
     "views.GraphSyncPrompt.neverAskAgain": "不再询问",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "重新扫描钱包",
     "views.Settings.EmbeddedNode.rescan.subtitle": "重新扫描区块链以获取您的链上交易。重启应用程序以生效。完成后该选项将被取消。",
     "views.Settings.EmbeddedNode.compactDb": "紧凑型数据库",
