@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Enable & Restart",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "वॉलेट रीस्कैन करें",
     "views.Settings.EmbeddedNode.rescan.subtitle": "अपने ऑन-चेन लेनदेन के लिए ब्लॉकचेन रीस्कैन करें। प्रभावी होने के लिए ऐप को पुनरारंभ करें। पूरा होने पर यह अपने आप अनसेट हो जाएगा।",
     "views.Settings.EmbeddedNode.compactDb": "डेटाबेस कॉम्पैक्ट करें",
