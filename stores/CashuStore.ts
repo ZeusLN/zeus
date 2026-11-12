@@ -5797,11 +5797,16 @@ export default class CashuStore {
             );
         }
 
-        // A part known paid only from its quote has no fee. As in the
-        // single-mint path, leave the fee out rather than show one too low.
-        const totalFeePaid = segmentPayments.some((p) => p.fee_unknown)
-            ? undefined
-            : segmentPayments.reduce((sum, p) => sum + (Number(p.fee) || 0), 0);
+        // A part known paid only from its quote has no fee, and a part still
+        // in flight has not reported one yet. As in the single-mint path,
+        // leave the fee out rather than show one too low.
+        const totalFeePaid =
+            inFlightPart || segmentPayments.some((p) => p.fee_unknown)
+                ? undefined
+                : segmentPayments.reduce(
+                      (sum, p) => sum + (Number(p.fee) || 0),
+                      0
+                  );
         const firstPreimage = segmentPayments
             .map((p) => p?.payment_preimage)
             .find((v) => !!v);
