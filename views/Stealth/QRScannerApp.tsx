@@ -21,10 +21,9 @@ import {
     useCameraPermission
 } from 'react-native-vision-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBarcodeScannerOutput } from 'react-native-vision-camera-barcode-scanner';
-import type { TargetBarcodeFormat } from 'react-native-vision-camera-barcode-scanner';
 import { useStealthTapDetector } from './StealthTapDetector';
 import { DECOY_APP_NAMES } from '../../utils/StealthModeUtils';
+import useQRCodeOutput from '../../hooks/useQRCodeOutput';
 
 interface QRScannerAppProps {
     onUnlock: () => void;
@@ -38,10 +37,6 @@ interface ScanResult {
 }
 
 const STORAGE_KEY = '@stealth_qrscanner_history';
-
-// Hoisted: useBarcodeScannerOutput memoizes on the identity of this array, so
-// an inline literal would tear down and recreate the native output every render.
-const BARCODE_FORMATS: TargetBarcodeFormat[] = ['qr-code'];
 
 const QRScannerApp: React.FC<QRScannerAppProps> = ({
     onUnlock,
@@ -172,17 +167,7 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
         Alert.alert('Scanned', data, buttons);
     }, []);
 
-    const codeScannerOutput = useBarcodeScannerOutput({
-        barcodeFormats: BARCODE_FORMATS,
-        outputResolution: 'full',
-        onBarcodeScanned: (barcodes) => {
-            const code = barcodes.find((b) => b.rawValue != null)?.rawValue;
-            if (code != null) {
-                handleScan(code);
-            }
-        },
-        onError: (error) => console.error('Barcode scanner error:', error)
-    });
+    const codeScannerOutput = useQRCodeOutput(handleScan);
 
     const handleHistoryItemPress = (content: string) => {
         const buttons = buildContentButtons(content);
