@@ -130,6 +130,8 @@ const THIRD_RELAY = 'wss://relay.third.example';
 const WALLET_BALANCE_SATS = 1_000_000;
 // Covers the service start delay and the pacing between subscriptions.
 const SERVICE_START_MS = 10_000;
+// MAX_RELAY_ATTEMPTS in the store: tries per relay subscribe
+const MAX_RELAY_ATTEMPTS = 5;
 
 const PAY_RESTRICTED = {
     result: undefined,
@@ -275,11 +277,15 @@ function connectionWrites(): number {
 
 // Stand-in for the SDK's per-relay NWCWalletService. It records the
 // handlers the store subscribes per client pubkey, so tests can send
-// requests the way a paired NIP-47 client would.
+// requests the way a paired NIP-47 client would. `live` keeps every
+// subscription per client pubkey that has not been unsubscribed: the SDK
+// keeps each one open, so more than one means every request on that
+// pubkey is handled more than once.
 interface FakeRelay {
     relayUrl: string;
     connected: boolean;
     handlers: Map<string, NWCWalletServiceRequestHandler>;
+    live: Map<string, NWCWalletServiceRequestHandler[]>;
     subscribeHolds: Hold[];
     failSubscribe: boolean;
     failPublish: boolean;
@@ -297,6 +303,7 @@ function createFakeRelay(relayUrl: string): FakeRelay {
         relayUrl,
         connected: true,
         handlers: new Map(),
+        live: new Map(),
         subscribeHolds: [],
         failSubscribe: false,
         failPublish: false,
@@ -315,10 +322,23 @@ function createFakeRelay(relayUrl: string): FakeRelay {
                 const hold = relay.subscribeHolds.shift();
                 if (hold) await hold.wait();
                 if (relay.failSubscribe) throw new Error('subscribe failed');
-                relay.handlers.set(keypair.clientPubkey, handler);
+                const pubkey = keypair.clientPubkey;
+                relay.handlers.set(pubkey, handler);
+                relay.live.set(pubkey, [
+                    ...(relay.live.get(pubkey) ?? []),
+                    handler
+                ]);
                 return () => {
-                    if (relay.handlers.get(keypair.clientPubkey) === handler) {
-                        relay.handlers.delete(keypair.clientPubkey);
+                    const live = (relay.live.get(pubkey) ?? []).filter(
+                        (h) => h !== handler
+                    );
+                    relay.live.set(pubkey, live);
+                    if (relay.handlers.get(pubkey) === handler) {
+                        if (live.length) {
+                            relay.handlers.set(pubkey, live[live.length - 1]);
+                        } else {
+                            relay.handlers.delete(pubkey);
+                        }
                     }
                 };
             }
@@ -344,6 +364,13 @@ function relayFor(relayUrl: string): FakeRelay {
 
 function isSubscribed(connection: NWCConnection): boolean {
     return !!relays.get(connection.relayUrl)?.handlers.has(connection.pubkey);
+}
+
+function liveSubscriptions(connection: NWCConnection): number {
+    return (
+        relays.get(connection.relayUrl)?.live.get(connection.pubkey)?.length ??
+        0
+    );
 }
 
 // The handler the store registered for this connection, captured now. A
@@ -1019,8 +1046,11 @@ describe('NostrWalletConnectStore concurrent connection changes', () => {
         });
         await settle(rotationSubscribe.entered);
         const updateSubscribe = relayFor(NEW_RELAY).holdNextSubscribe();
+        // A permission change, so the update opens its own subscription
+        // instead of waiting for the rotation's
         const update = store.updateConnection(connection.id, {
-            name: 'Renamed App'
+            name: 'Renamed App',
+            permissions: ['get_info', 'get_balance', 'make_invoice']
         });
         await settle(updateSubscribe.entered);
 
@@ -1084,8 +1114,11 @@ describe('NostrWalletConnectStore concurrent connection changes', () => {
         });
         await settle(firstSubscribe.entered);
         const secondSubscribe = relayFor(OLD_RELAY).holdNextSubscribe();
+        // A permission change, so the second update opens its own
+        // subscription instead of waiting for the first one's
         const secondUpdate = store.updateConnection(connection.id, {
-            name: 'Second'
+            name: 'Second',
+            permissions: ['get_info', 'get_balance', 'make_invoice']
         });
         await settle(secondSubscribe.entered);
 
@@ -1382,6 +1415,274 @@ describe('NostrWalletConnectStore overlapping initializeService calls', () => {
         secondPublish.release();
         await settle(Promise.all([second, third]));
         expect(store.isInitialized).toBe(true);
+    });
+});
+
+describe('NostrWalletConnectStore overlapping subscribes', () => {
+    const subscribe = (store: NostrWalletConnectStore, c: NWCConnection) =>
+        (store as any).subscribeToConnection(c) as Promise<void>;
+
+    it('leaves one live subscription when two subscribes overlap', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const firstSubscribe = relay.holdNextSubscribe();
+
+        const first = subscribe(store, connection);
+        await settle(firstSubscribe.entered);
+        const second = subscribe(store, connection);
+        await flushMicrotasks();
+        firstSubscribe.release();
+        await settle(Promise.all([first, second]));
+
+        expect(liveSubscriptions(connection)).toBe(1);
+        expect((await clientFor(connection).getBalance()).error).toBe(
+            undefined
+        );
+
+        await settle(store.deleteConnection(connection.id));
+        expect(liveSubscriptions(connection)).toBe(0);
+    });
+
+    it('keeps the in-flight subscription when an overlapping subscribe for the same configuration would fail', async () => {
+        silence('error');
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const firstSubscribe = relay.holdNextSubscribe();
+
+        const first = subscribe(store, connection);
+        await settle(firstSubscribe.entered);
+        // Any relay subscribe made from here on fails, except the held
+        // first one, which goes through
+        relay.failSubscribe = true;
+        const second = subscribe(store, connection);
+        await flushMicrotasks();
+        relay.failSubscribe = false;
+        firstSubscribe.release();
+        await flushMicrotasks();
+        relay.failSubscribe = true;
+        await settle(Promise.all([first, second]));
+
+        expect(liveSubscriptions(connection)).toBe(1);
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            true
+        );
+        // The second subscribe waited for the first instead of opening its own
+        expect(relay.subscribe).toHaveBeenCalledTimes(1);
+        relay.failSubscribe = false;
+        expect((await clientFor(connection).getBalance()).error).toBe(
+            undefined
+        );
+    });
+
+    it('joins the in-flight subscription after a reload replaced the connection object', async () => {
+        silence('error');
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const firstSubscribe = relay.holdNextSubscribe();
+
+        const first = subscribe(store, connection);
+        await settle(firstSubscribe.entered);
+        // The connections list reloads on focus, which builds new objects
+        await settle(store.loadConnections());
+        const reloaded = store.connections[0];
+        expect(reloaded).not.toBe(connection);
+        relay.failSubscribe = true;
+        const second = subscribe(store, reloaded);
+        await flushMicrotasks();
+        relay.failSubscribe = false;
+        firstSubscribe.release();
+        await flushMicrotasks();
+        relay.failSubscribe = true;
+        await settle(Promise.all([first, second]));
+
+        expect(liveSubscriptions(connection)).toBe(1);
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            true
+        );
+        expect(relay.subscribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('subscribes once more for the waiting callers when the in-flight subscribe fails', async () => {
+        silence('error');
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const firstSubscribe = relay.holdNextSubscribe();
+        // The first subscribe uses up all its retries on these failures,
+        // then the relay recovers
+        let failuresLeft = MAX_RELAY_ATTEMPTS;
+        Object.defineProperty(relay, 'failSubscribe', {
+            get: () => failuresLeft-- > 0,
+            set: () => {}
+        });
+
+        const first = subscribe(store, connection);
+        await settle(firstSubscribe.entered);
+        const second = subscribe(store, connection);
+        const third = subscribe(store, connection);
+        await flushMicrotasks();
+        firstSubscribe.release();
+        await settle(Promise.all([first, second, third]));
+
+        expect(liveSubscriptions(connection)).toBe(1);
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            true
+        );
+        // One retry for both waiters, not one each
+        expect(relay.subscribe).toHaveBeenCalledTimes(MAX_RELAY_ATTEMPTS + 1);
+        expect((await clientFor(connection).getBalance()).error).toBe(
+            undefined
+        );
+    });
+
+    it('stops after one shared retry when the relay does not recover', async () => {
+        silence('error');
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const firstSubscribe = relay.holdNextSubscribe();
+        relay.failSubscribe = true;
+
+        const first = subscribe(store, connection);
+        await settle(firstSubscribe.entered);
+        const second = subscribe(store, connection);
+        const third = subscribe(store, connection);
+        await flushMicrotasks();
+        firstSubscribe.release();
+        await settle(Promise.all([first, second, third]));
+
+        // The first attempt and one retry shared by both waiters
+        expect(relay.subscribe).toHaveBeenCalledTimes(2 * MAX_RELAY_ATTEMPTS);
+        expect(liveSubscriptions(connection)).toBe(0);
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            false
+        );
+    });
+
+    it('drops an older in-flight subscribe once an update resubscribes with new permissions', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const staleSubscribe = relayFor(OLD_RELAY).holdNextSubscribe();
+
+        const stale = subscribe(store, connection);
+        await settle(staleSubscribe.entered);
+        await settle(
+            store.updateConnection(connection.id, {
+                permissions: ['get_info', 'get_balance', 'make_invoice']
+            })
+        );
+        staleSubscribe.release();
+        await settle(stale);
+
+        expect(liveSubscriptions(connection)).toBe(1);
+        expect(clientFor(connection).makeInvoice).toEqual(expect.any(Function));
+    });
+
+    it('leaves no live subscription when reset runs while a subscribe is in flight', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const pendingSubscribe = relayFor(OLD_RELAY).holdNextSubscribe();
+
+        const pending = subscribe(store, connection);
+        await settle(pendingSubscribe.entered);
+        await settle(store.reset(true));
+        pendingSubscribe.release();
+        await settle(pending);
+
+        expect(liveSubscriptions(connection)).toBe(0);
+    });
+
+    it('leaves no live subscription when the connection is deleted while a subscribe is in flight', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const pendingSubscribe = relayFor(OLD_RELAY).holdNextSubscribe();
+
+        const pending = subscribe(store, connection);
+        await settle(pendingSubscribe.entered);
+        await settle(store.deleteConnection(connection.id));
+        pendingSubscribe.release();
+        await settle(pending);
+
+        expect(store.connections).toHaveLength(0);
+        expect(liveSubscriptions(connection)).toBe(0);
+    });
+
+    it('drops a subscribe that resolves while a delete is pending', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const pendingSubscribe = relayFor(OLD_RELAY).holdNextSubscribe();
+        (store as any).pushPendingMutation(connection.id, 'delete');
+
+        const pending = subscribe(store, connection);
+        await settle(pendingSubscribe.entered);
+        pendingSubscribe.release();
+        await settle(pending);
+
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            false
+        );
+        expect(liveSubscriptions(connection)).toBe(0);
+        (store as any).popPendingMutation(connection.id, 'delete');
+    });
+
+    it('keeps a subscribe that resolves while wallet identity is unknown', async () => {
+        const {
+            store,
+            nodeInfoStore,
+            connections: [connection]
+        } = await startService();
+        const pendingSubscribe = relayFor(OLD_RELAY).holdNextSubscribe();
+
+        const pending = subscribe(store, connection);
+        await settle(pendingSubscribe.entered);
+        // A failed getNodeInfo leaves nodeInfo empty
+        nodeInfoStore.nodeInfo = {};
+        pendingSubscribe.release();
+        await settle(pending);
+
+        expect((store as any).activeSubscriptions.has(connection.id)).toBe(
+            true
+        );
+        expect(liveSubscriptions(connection)).toBe(1);
+    });
+
+    it('replaces the live subscription on a later resubscribe', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService();
+        const relay = relayFor(OLD_RELAY);
+        const previous = clientFor(connection);
+
+        await settle(subscribe(store, connection));
+
+        expect(relay.subscribe).toHaveBeenCalledTimes(1);
+        expect(liveSubscriptions(connection)).toBe(1);
+        expect(clientFor(connection)).not.toBe(previous);
+        expect((await clientFor(connection).getBalance()).error).toBe(
+            undefined
+        );
     });
 });
 

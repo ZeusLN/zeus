@@ -133,6 +133,19 @@ type PendingConnectionMutation = 'delete' | 'update' | 'rotate';
 
 type Nip47ErrorResponse = ReturnType<typeof NostrConnectUtils.createNip47Error>;
 
+interface SubscribeAttempt {
+    pubkey: string;
+    secretKey?: string;
+    service?: NWCWalletService;
+    handlerConfig: string;
+    // Resolves when the attempt stored its handle, dropped it as stale, or
+    // gave up
+    done: Promise<void>;
+    // Set when the attempt gave up on an error, even after a newer attempt or
+    // reset replaced it. Waiters then retry once with the stored connection.
+    failed?: boolean;
+}
+
 interface ClientKeys {
     [pubkey: string]: string;
 }
@@ -259,6 +272,13 @@ export default class NostrWalletConnectStore {
         string,
         ReturnType<typeof setTimeout>
     >();
+    // The latest subscribe started per connection. A later subscribe for
+    // the same configuration waits for it; one with a different
+    // configuration, an unsubscribe, or a reset replaces or removes the
+    // entry, and an attempt that is no longer here when the relay answers
+    // unsubscribes at once instead of overwriting (and orphaning) the live
+    // subscription.
+    private subscribeAttempts = new Map<string, SubscribeAttempt>();
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -1821,7 +1841,8 @@ export default class NostrWalletConnectStore {
     // SUBSCRIPTION MANAGEMENT
 
     private async subscribeToConnection(
-        connection: NWCConnection
+        connection: NWCConnection,
+        retryIfJoinedFails = true
     ): Promise<void> {
         if (!this.isServiceReady()) {
             runInAction(() => {
@@ -1832,10 +1853,58 @@ export default class NostrWalletConnectStore {
             });
             return;
         }
+        let attempt: SubscribeAttempt | undefined;
+        let finish = () => {};
         try {
+            const serviceSecretKey = this.walletServiceKeys?.privateKey;
+            const nwcWalletService = this.nwcWalletServices.get(
+                connection.relayUrl
+            );
+            const handlerConfig = [
+                this.isCashuConfigured,
+                BackendUtils.supportsMessageSigning(),
+                ...[...(connection.permissions ?? [])].sort()
+            ].join(',');
+            const pending = this.subscribeAttempts.get(connection.id);
+            if (
+                pending &&
+                pending.pubkey === connection.pubkey &&
+                pending.secretKey === serviceSecretKey &&
+                pending.service === nwcWalletService &&
+                pending.handlerConfig === handlerConfig
+            ) {
+                // The in-flight attempt opens the same subscription, so wait
+                // for it instead of replacing it: a replacement that failed
+                // would leave the connection with no subscription at all.
+                await pending.done;
+                if (
+                    !pending.failed ||
+                    !retryIfJoinedFails ||
+                    this.activeSubscriptions.has(connection.id)
+                ) {
+                    return;
+                }
+                // It failed, so try once more for this caller. Callers that
+                // waited on the same attempt join this retry, and the stored
+                // connection is used so they all match it.
+                const { connection: stored } = this.getConnection({
+                    connectionId: connection.id
+                });
+                if (!stored || !this.isServiceReady()) return;
+                return await this.subscribeToConnection(stored, false);
+            }
+            attempt = {
+                pubkey: connection.pubkey,
+                secretKey: serviceSecretKey,
+                service: nwcWalletService,
+                handlerConfig,
+                done: new Promise<void>((resolve) => {
+                    finish = resolve;
+                })
+            };
             this.cancelScheduledRelayRelease(connection.relayUrl);
             this.unsubscribeFromConnection(connection.id);
-            const serviceSecretKey = this.walletServiceKeys?.privateKey;
+            this.subscribeAttempts.set(connection.id, attempt);
 
             if (!serviceSecretKey) {
                 throw new Error(
@@ -1956,9 +2025,6 @@ export default class NostrWalletConnectStore {
                     );
             }
 
-            const nwcWalletService = this.nwcWalletServices.get(
-                connection.relayUrl
-            );
             if (!nwcWalletService) {
                 throw new Error(
                     localeString(
@@ -1977,14 +2043,37 @@ export default class NostrWalletConnectStore {
                 exponentialBackoff: true
             });
 
+            if (
+                this.subscribeAttempts.get(connection.id) !== attempt ||
+                // While wallet identity is unknown getConnection finds
+                // nothing, so keep the subscription, as withGlobalHandler does
+                (this.hasWalletContext() &&
+                    !this.getConnection({ connectionId: connection.id })
+                        .connection) ||
+                this.pendingConnectionMutations
+                    .get(connection.id)
+                    ?.includes('delete')
+            ) {
+                unsubscribe();
+                return;
+            }
             runInAction(() => {
                 this.activeSubscriptions.set(connection.id, unsubscribe);
             });
         } catch (error: any) {
+            if (attempt) attempt.failed = true;
             console.error(
                 `Failed to subscribe to connection ${connection.name}:`,
                 error?.message || String(error)
             );
+        } finally {
+            if (
+                attempt &&
+                this.subscribeAttempts.get(connection.id) === attempt
+            ) {
+                this.subscribeAttempts.delete(connection.id);
+            }
+            finish();
         }
     }
 
@@ -2152,6 +2241,7 @@ export default class NostrWalletConnectStore {
         }
     }
     private unsubscribeFromConnection(connectionId: string): void {
+        this.subscribeAttempts.delete(connectionId);
         const unsub = this.activeSubscriptions.get(connectionId);
         if (!unsub) return;
         try {
@@ -2265,6 +2355,7 @@ export default class NostrWalletConnectStore {
         for (const connectionId of connectionIds) {
             this.unsubscribeFromConnection(connectionId);
         }
+        this.subscribeAttempts.clear();
         runInAction(() => {
             this.activeSubscriptions.clear();
         });
