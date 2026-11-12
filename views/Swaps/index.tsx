@@ -162,6 +162,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     private _unsubscribe?: () => void;
     // the network fee the current amounts were worked out with
     private amountsNetworkFee?: number;
+    private feeLookupToken = 0;
 
     // The claim fee createReverseSwap will store at the rate set below.
     // Without a usable rate the swap cannot start, and the quote is shown.
@@ -502,23 +503,40 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         // Existing fee fetching logic
         if (!prevState.reverse && this.state.reverse) {
+            // Capture a token so a stale lookup can't overwrite a newer one.
+            // Also capture the fee at request time so a user-typed fee (or a
+            // fee set by OnchainFeeInput's own fetch) isn't clobbered.
+            const token = ++this.feeLookupToken;
+            const feeAtFetchStart = this.state.fee;
+            this.setState({ feeRateLookupDone: false });
             try {
                 const feesObj: { [key: string]: number } | undefined =
                     await FeeStore.getOnchainFeesviaMempool();
 
-                const preferredMempoolRate =
-                    settings?.payments?.preferredMempoolRate || 'fastestFee';
+                // Only the latest lookup applies its rate; a stale one falls
+                // through to the rest of componentDidUpdate.
+                if (token === this.feeLookupToken) {
+                    const preferredMempoolRate =
+                        settings?.payments?.preferredMempoolRate ||
+                        'fastestFee';
 
-                const feeRate =
-                    feesObj?.[preferredMempoolRate] ?? feesObj?.fastestFee;
+                    const feeRate =
+                        feesObj?.[preferredMempoolRate] ?? feesObj?.fastestFee;
 
-                if (feeRate !== undefined) {
-                    this.setState({ fee: feeRate.toString() });
+                    if (
+                        feeRate !== undefined &&
+                        this.state.fee === feeAtFetchStart
+                    ) {
+                        this.setState({ fee: feeRate.toString() });
+                    }
                 }
             } catch (error) {
                 console.error('Failed to fetch mempool fees:', error);
             } finally {
-                this.setState({ feeRateLookupDone: true });
+                // Only the latest lookup owns the "done" flag.
+                if (token === this.feeLookupToken) {
+                    this.setState({ feeRateLookupDone: true });
+                }
             }
         }
 

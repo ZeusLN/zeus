@@ -158,7 +158,8 @@ describe('Swaps: reverse fee lookup', () => {
 
     const makeView = (
         getOnchainFeesviaMempool: jest.Mock,
-        preferredMempoolRate?: string
+        preferredMempoolRate?: string,
+        stateOverrides: Record<string, any> = {}
     ) => {
         const routeParams = {};
         const view = new Swap({
@@ -190,11 +191,25 @@ describe('Swaps: reverse fee lookup', () => {
             LSPStore: {}
         } as any);
 
+        // Merge state instead of no-op so tests can observe what the
+        // component actually applied. Calls are still recorded on the spy.
         const setStateSpy = jest
             .spyOn(view, 'setState')
-            .mockImplementation(() => {});
+            .mockImplementation((updater: any) => {
+                const patch =
+                    typeof updater === 'function'
+                        ? updater(view.state)
+                        : updater;
+                view.state = { ...view.state, ...patch };
+            });
 
-        view.state = { ...view.state, reverse: true };
+        // Stub out the side-effect methods componentDidUpdate calls, so the
+        // fee tests only assert on fee state.
+        view.networkFeeSats = jest.fn(() => 0);
+        view.recalculateAmounts = jest.fn();
+        view.checkIsValid = jest.fn();
+
+        view.state = { ...view.state, reverse: true, ...stateOverrides };
 
         const prevProps = {
             navigation: { navigate: jest.fn() },
@@ -268,5 +283,227 @@ describe('Swaps: reverse fee lookup', () => {
         await view.componentDidUpdate(prevProps as any, prevState as any);
 
         expect(setStateSpy).toHaveBeenCalledWith({ fee: '9' });
+    });
+
+    it('does not overwrite a fee the user typed while the lookup is in flight', async () => {
+        let resolveFee: (v: any) => void = () => {};
+        const getOnchainFeesviaMempool = jest.fn(
+            () =>
+                new Promise((res) => {
+                    resolveFee = res;
+                })
+        );
+        const { view, prevProps, prevState } = makeView(
+            getOnchainFeesviaMempool,
+            undefined,
+            { fee: '2', feeRateLookupDone: false }
+        );
+
+        const update = view.componentDidUpdate(
+            prevProps as any,
+            prevState as any
+        );
+
+        // User types a fee while the fetch is still in flight.
+        view.setState({ fee: '5' });
+
+        // The lookup resolves with a different rate.
+        resolveFee({ fastestFee: 20 });
+        await update;
+
+        // The user's value survives; the fetched rate is ignored.
+        expect(view.state.fee).toBe('5');
+    });
+
+    it('applies the fetched rate when the fee has not changed', async () => {
+        let resolveFee: (v: any) => void = () => {};
+        const getOnchainFeesviaMempool = jest.fn(
+            () =>
+                new Promise((res) => {
+                    resolveFee = res;
+                })
+        );
+        const { view, prevProps, prevState } = makeView(
+            getOnchainFeesviaMempool,
+            undefined,
+            { fee: '2', feeRateLookupDone: false }
+        );
+
+        const update = view.componentDidUpdate(
+            prevProps as any,
+            prevState as any
+        );
+
+        // No user edit.
+        resolveFee({ fastestFee: 20 });
+        await update;
+
+        // The fetched rate is applied.
+        expect(view.state.fee).toBe('20');
+    });
+
+    it('resets feeRateLookupDone when reverse is toggled off and on', async () => {
+        let resolveFee: (v: any) => void = () => {};
+        const getOnchainFeesviaMempool = jest.fn(
+            () =>
+                new Promise((res) => {
+                    resolveFee = res;
+                })
+        );
+        // Previous lookup already finished, so the flag starts true.
+        const { view, prevProps, prevState } = makeView(
+            getOnchainFeesviaMempool,
+            undefined,
+            { fee: '2', feeRateLookupDone: true }
+        );
+
+        const update = view.componentDidUpdate(
+            prevProps as any,
+            prevState as any
+        );
+
+        // Reset happens synchronously, before the await.
+        expect(view.state.feeRateLookupDone).toBe(false);
+
+        resolveFee({ fastestFee: 20 });
+        await update;
+
+        // Set to true again on completion.
+        expect(view.state.feeRateLookupDone).toBe(true);
+    });
+
+    it('does not let an older overlapping lookup block a newer lookup result', async () => {
+        let resolveFirst: (v: any) => void = () => {};
+        let resolveSecond: (v: any) => void = () => {};
+        const getOnchainFeesviaMempool = jest
+            .fn()
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveFirst = res;
+                })
+            )
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveSecond = res;
+                })
+            );
+
+        const { view, prevProps } = makeView(
+            getOnchainFeesviaMempool,
+            undefined,
+            { fee: '2', feeRateLookupDone: false }
+        );
+
+        // Lookup 1 starts (prevState.reverse=false, this.state.reverse=true).
+        const update1 = view.componentDidUpdate(
+            prevProps as any,
+            { ...view.state, reverse: false } as any
+        );
+
+        // Toggle reverse off, then on again — lookup 2 starts.
+        view.setState({ reverse: false });
+        view.setState({ reverse: true });
+        const update2 = view.componentDidUpdate(
+            prevProps as any,
+            { ...view.state, reverse: false } as any
+        );
+
+        // The older lookup finishes first with rate 15.
+        resolveFirst({ fastestFee: 15 });
+        await update1;
+
+        // The rest of componentDidUpdate still ran for the stale lookup.
+        expect(view.checkIsValid).toHaveBeenCalledTimes(1);
+
+        // It must NOT apply 15; a newer lookup is still pending.
+        expect(view.state.fee).toBe('2');
+        expect(view.state.feeRateLookupDone).toBe(false);
+
+        // The newer lookup finishes with rate 20.
+        resolveSecond({ fastestFee: 20 });
+        await update2;
+
+        // The newer rate wins.
+        expect(view.state.fee).toBe('20');
+        expect(view.state.feeRateLookupDone).toBe(true);
+        expect(view.checkIsValid).toHaveBeenCalledTimes(2);
+    });
+
+    it('sets feeRateLookupDone true when the lookup rejects', async () => {
+        const getOnchainFeesviaMempool = jest
+            .fn()
+            .mockRejectedValueOnce(new Error('network down'));
+        const consoleErrorSpy = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+        const { view, prevProps, prevState } = makeView(
+            getOnchainFeesviaMempool,
+            undefined,
+            { fee: '2', feeRateLookupDone: false }
+        );
+
+        await view.componentDidUpdate(prevProps as any, prevState as any);
+
+        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(view.state.fee).toBe('2');
+        expect(view.state.feeRateLookupDone).toBe(true);
+
+        consoleErrorSpy.mockRestore();
+    });
+
+    it('keeps feeRateLookupDone false when an older overlapping lookup rejects', async () => {
+        let rejectFirst: (e: any) => void = () => {};
+        let resolveSecond: (v: any) => void = () => {};
+        const getOnchainFeesviaMempool = jest
+            .fn()
+            .mockReturnValueOnce(
+                new Promise((_res, rej) => {
+                    rejectFirst = rej;
+                })
+            )
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveSecond = res;
+                })
+            );
+        const consoleErrorSpy = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+
+        const { view, prevProps } = makeView(
+            getOnchainFeesviaMempool,
+            undefined,
+            { fee: '2', feeRateLookupDone: false }
+        );
+
+        // Lookup 1 starts.
+        const update1 = view.componentDidUpdate(
+            prevProps as any,
+            { ...view.state, reverse: false } as any
+        );
+
+        // Toggle off, then on — lookup 2 starts.
+        view.setState({ reverse: false });
+        view.setState({ reverse: true });
+        const update2 = view.componentDidUpdate(
+            prevProps as any,
+            { ...view.state, reverse: false } as any
+        );
+
+        // Older lookup rejects.
+        rejectFirst(new Error('network down'));
+        await update1;
+
+        expect(view.state.fee).toBe('2');
+        expect(view.state.feeRateLookupDone).toBe(false);
+
+        // Newer lookup resolves.
+        resolveSecond({ fastestFee: 20 });
+        await update2;
+
+        expect(view.state.fee).toBe('20');
+        expect(view.state.feeRateLookupDone).toBe(true);
+
+        consoleErrorSpy.mockRestore();
     });
 });
