@@ -288,6 +288,29 @@ describe('CashuStore receive in flight at a wallet switch', () => {
         await expect(claim).rejects.toThrow('already been destroyed');
     });
 
+    it('does not wait again at a later switch for a receive it gave up on', async () => {
+        jest.useFakeTimers();
+        await openCDK(SEED_A);
+        const claim = store.receiveTokenCDK('token-A', undefined, MINT);
+        await flush();
+        expect(mockCdk.heldClaims).toHaveLength(1);
+
+        const openingB = startSwitchToWalletB();
+        await jest.advanceTimersByTimeAsync(30000);
+        await expect(openingB).resolves.toBe(true);
+
+        // The mint still has not answered when the user switches back
+        settingsStore.lndDir = 'walletA';
+        store.reset();
+        const openingA = openCDK(SEED_A);
+        await flush();
+        expect(mockCdk.openMnemonic).toBe(SEED_A);
+        await expect(openingA).resolves.toBe(true);
+
+        mockCdk.heldClaims[0]();
+        await expect(claim).rejects.toThrow('already been destroyed');
+    });
+
     it('opens the wallet at once when no receive is in flight', async () => {
         jest.useFakeTimers();
         await openCDK(SEED_A);
