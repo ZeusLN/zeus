@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Enable & Restart",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Scan tena pochi",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Skena blockchain kwa ajili ya miamala yako kwenye-laini. Anza tena programu ili mabadiliko yafanye kazi. Yatafutwa baada ya kukamilika.",
     "views.Settings.EmbeddedNode.compactDb": "Compact databases",
