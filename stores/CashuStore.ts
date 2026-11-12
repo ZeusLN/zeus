@@ -10,7 +10,6 @@ import CashuDevKit, {
     CDKMintQuote,
     CDKMeltQuote,
     CDKMelted,
-    CDKPartialMelted,
     CDKToken,
     CDKSendKind,
     CDKSpendingConditions,
@@ -5402,6 +5401,90 @@ export default class CashuStore {
         const meltResults = await Promise.all(
             plannedMeltQuotes.map(
                 async ({ mintUrl, meltQuote, useRegularMelt }, index) => {
+                    // The mint has taken the ecash for this part and may
+                    // still pay it. Record it as in flight and leave it
+                    // tracked, so reconcilePendingMelts settles it either way.
+                    const reportInFlight = async (melt: PendingMelt) => {
+                        const recorded = (this.payments || []).find(
+                            (payment) =>
+                                payment.meltResponse?.quote?.quote ===
+                                melt.quote
+                        );
+                        // A reconcile pass may have settled the melt while
+                        // the quote was being checked. An entry it settled
+                        // says how, even before it untracks the melt.
+                        if (recorded && !recorded.isInTransit) {
+                            if (recorded.isFailed) {
+                                throw new Error(
+                                    localeString(
+                                        'stores.CashuStore.errorPayingInvoice'
+                                    )
+                                );
+                            }
+                            mintProgressInfo[index].status =
+                                MintPaymentStatus.SUCCESS;
+                            mintProgressInfo[index].error = undefined;
+                            mintProgressInfo[index].feePaid =
+                                Number(recorded.fee) || 0;
+                            onProgress?.({
+                                step: MultinutPaymentStep.PROCESSING,
+                                mints: [...mintProgressInfo],
+                                totalSelectedBalance,
+                                isProcessing: true
+                            });
+                            return {
+                                ok: true as const,
+                                payment: recorded
+                            };
+                        }
+                        // Untracked with no settled entry: reconcile found
+                        // the mint did not pay it
+                        if (
+                            !this.pendingMelts.some(
+                                (pending) => pending.quote === melt.quote
+                            )
+                        ) {
+                            throw new Error(
+                                localeString(
+                                    'stores.CashuStore.errorPayingInvoice'
+                                )
+                            );
+                        }
+                        // A failed write must not turn the part into a
+                        // failure to retry: the melt is tracked and may
+                        // still settle
+                        if (!recorded) {
+                            try {
+                                await this.recordInFlightPayment(melt, payReq);
+                            } catch (recordError) {
+                                console.error(
+                                    'CDK payLnInvoiceFromEcashMultiMint: Failed to record in-flight payment:',
+                                    recordError
+                                );
+                            }
+                        }
+                        const reason = localeString(
+                            'stores.CashuStore.paymentInFlight'
+                        );
+                        mintProgressInfo[index].status =
+                            MintPaymentStatus.IN_FLIGHT;
+                        mintProgressInfo[index].error = reason;
+
+                        onProgress?.({
+                            step: MultinutPaymentStep.PROCESSING,
+                            mints: [...mintProgressInfo],
+                            totalSelectedBalance,
+                            isProcessing: true
+                        });
+
+                        return {
+                            ok: false as const,
+                            inFlight: true,
+                            mintUrl,
+                            reason
+                        };
+                    };
+
                     try {
                         mintProgressInfo[index].status =
                             MintPaymentStatus.REQUESTING;
@@ -5429,43 +5512,106 @@ export default class CashuStore {
                         // useRegularMelt: planner fell back to a single mint
                         // (only one funded, or MPP refused by destination
                         // mint). Use the prepared regular quote directly.
-                        // Otherwise meltPartial creates its own MPP quote
-                        // with the mint API and pays the partial.
-                        const meltResult = useRegularMelt
-                            ? await CashuDevKit.melt(mintUrl, meltQuote.id)
-                            : await CashuDevKit.meltPartial(
+                        // Otherwise quote the part with CDK for its share:
+                        // the planner's probe quote never reached CDK and is
+                        // not paid. Quoting before the melt, rather than in
+                        // the same native call, leaves the quote id known
+                        // when the melt throws.
+                        const quote: CDKMeltQuote = useRegularMelt
+                            ? meltQuote
+                            : await CashuDevKit.createMeltQuote(
                                   mintUrl,
                                   paymentRequest,
-                                  partialAmount * 1000
+                                  { mpp: { amount: partialAmount * 1000 } }
                               );
-
-                        // Record the quote this part was paid with. For MPP
-                        // parts that is the quote meltPartial created, not
-                        // the planner's probe quote, which was never paid.
-                        // Builds that omit the paid quote's fee reserve or
-                        // expiry fall back to the planner's.
-                        const partialResult = useRegularMelt
-                            ? undefined
-                            : (meltResult as CDKPartialMelted);
-                        const paidQuoteId = partialResult
-                            ? partialResult.quote_id
-                            : meltQuote.id;
-                        const paidFeeReserve =
-                            partialResult?.fee_reserve ?? meltQuote.fee_reserve;
-                        const paidExpiry =
-                            partialResult?.expiry ?? meltQuote.expiry;
-
-                        const normalizedMeltState = normalizeMeltState(
-                            meltResult.state,
-                            meltQuote.state
-                        );
-
-                        if (normalizedMeltState !== 'PAID') {
+                        // The native side drops MPP options it cannot parse,
+                        // and a quote for the whole invoice would pay all of
+                        // it from this mint
+                        if (
+                            !useRegularMelt &&
+                            Number(quote.amount) !== partialAmount
+                        ) {
                             throw new Error(
                                 localeString(
                                     'stores.CashuStore.errorPayingInvoice'
                                 )
                             );
+                        }
+
+                        const pendingMelt: PendingMelt = {
+                            quote: quote.id,
+                            mintUrl,
+                            source: 'payment',
+                            amount: partialAmount,
+                            feeReserve: quote.fee_reserve,
+                            request: paymentRequest,
+                            expiry: quote.expiry,
+                            createdAt: Date.now()
+                        };
+
+                        // fee_paid is left out when only the melt quote says
+                        // the part was paid: the quote does not carry the fee
+                        let meltResult: Omit<CDKMelted, 'fee_paid'> & {
+                            fee_paid?: number;
+                        };
+                        try {
+                            meltResult = await this.trackAndMelt(pendingMelt);
+                        } catch (meltError) {
+                            // As in the single-mint path: CDK throws when it
+                            // stops waiting on a Pending melt, while its saga
+                            // may still hold the quote and the proofs. Ask
+                            // CDK which it is before calling it a failure.
+                            let checked: CDKMeltQuote | undefined;
+                            let outcome;
+                            try {
+                                checked = await CashuDevKit.checkMeltQuote(
+                                    mintUrl,
+                                    quote.id
+                                );
+                                outcome = meltQuoteOutcome(checked);
+                            } catch (checkError) {
+                                console.error(
+                                    'CDK payLnInvoiceFromEcashMultiMint: Failed to check melt quote after error:',
+                                    checkError
+                                );
+                            }
+
+                            if (!checked || outcome !== 'paid') {
+                                if (outcome === 'unpaid') {
+                                    await this.untrackPendingMelt(quote.id);
+                                    throw meltError;
+                                }
+                                // Still held by CDK, or the check failed
+                                // (mint unreachable, or CDK busy with the
+                                // quote elsewhere) and the part may still
+                                // settle
+                                return await reportInFlight(pendingMelt);
+                            }
+
+                            meltResult = {
+                                state: checked.state,
+                                amount: partialAmount,
+                                preimage: checked.payment_preimage
+                            };
+                        }
+
+                        // Only the melt result counts: the quote's state is
+                        // from before the melt, and an Unpaid fallback would
+                        // drop a part the mint may still pay
+                        const normalizedMeltState = normalizeMeltState(
+                            meltResult.state
+                        );
+
+                        if (!isMeltPaid(normalizedMeltState)) {
+                            if (isMeltSettledUnpaid(normalizedMeltState)) {
+                                await this.untrackPendingMelt(quote.id);
+                                throw new Error(
+                                    localeString(
+                                        'stores.CashuStore.errorPayingInvoice'
+                                    )
+                                );
+                            }
+                            return await reportInFlight(pendingMelt);
                         }
 
                         const paymentPreimage =
@@ -5478,11 +5624,11 @@ export default class CashuStore {
                             bolt11: paymentRequest,
                             meltResponse: {
                                 quote: {
-                                    quote: paidQuoteId,
+                                    quote: quote.id,
                                     amount: meltQuote.amount,
-                                    fee_reserve: paidFeeReserve,
+                                    fee_reserve: quote.fee_reserve,
                                     state: normalizedMeltState,
-                                    expiry: paidExpiry,
+                                    expiry: quote.expiry,
                                     payment_preimage: paymentPreimage || null
                                 },
                                 change: meltResult.change,
@@ -5492,7 +5638,10 @@ export default class CashuStore {
                                 preimage: paymentPreimage
                             },
                             amount: Number(meltResult.amount) || partialAmount,
-                            fee: meltResult.fee_paid,
+                            fee: meltResult.fee_paid ?? 0,
+                            ...(meltResult.fee_paid === undefined
+                                ? { fee_unknown: true }
+                                : {}),
                             payment_preimage: paymentPreimage,
                             mintUrl
                         });
@@ -5547,6 +5696,7 @@ export default class CashuStore {
 
                         return {
                             ok: false as const,
+                            inFlight: false,
                             mintUrl,
                             reason: errorMessage
                         };
@@ -5560,10 +5710,36 @@ export default class CashuStore {
             .map((r) => r.payment);
         const failedMints = meltResults
             .filter((r) => !r.ok)
-            .map((r) => ({ mintUrl: r.mintUrl, reason: r.reason }));
+            .map((r) => ({
+                mintUrl: r.mintUrl,
+                reason: r.reason,
+                inFlight: r.inFlight
+            }));
+        const inFlightPart = failedMints.find((f) => f.inFlight);
+
+        // The parts wrote the tracked melts and in-flight entries while the
+        // others ran, and those writes can land out of order. Now that all
+        // of them are done, store the final state of anything in flight.
+        if (inFlightPart) {
+            try {
+                await this.persistPendingMelts();
+                await Storage.setItem(
+                    `${this.getNodeDir()}-cashu-payments`,
+                    this.payments
+                );
+            } catch (writeError) {
+                console.error(
+                    'CDK payLnInvoiceFromEcashMultiMint: Failed to store in-flight parts:',
+                    writeError
+                );
+            }
+        }
 
         if (segmentPayments.length === 0) {
-            const firstFailure = failedMints[0]?.reason;
+            // A part that may still settle is reported over the failures:
+            // the invoice may yet be paid, so this is not a failed payment
+            // to retry
+            const firstFailure = (inFlightPart || failedMints[0])?.reason;
 
             runInAction(() => {
                 this.paymentError = true;
@@ -5583,16 +5759,49 @@ export default class CashuStore {
             return;
         }
 
-        this.payments?.push(...segmentPayments);
-        await Storage.setItem(
-            `${this.getNodeDir()}-cashu-payments`,
-            this.payments
-        );
+        // A paid part stays tracked until every part is done, so a reconcile
+        // pass in the meantime may have recorded it already. Keep one entry
+        // per quote: the one from the melt result, which has the fee.
+        runInAction(() => {
+            const payments = [...(this.payments || [])];
+            for (const payment of segmentPayments) {
+                const quoteId = payment.meltResponse?.quote?.quote;
+                const index = quoteId
+                    ? payments.findIndex(
+                          (p) => p.meltResponse?.quote?.quote === quoteId
+                      )
+                    : -1;
+                if (index > -1) payments[index] = payment;
+                else payments.push(payment);
+            }
+            this.payments = payments;
+        });
+        // The invoice is paid: a failed write must not report it as a failure
+        // to retry. A part left tracked is settled in place by
+        // reconcilePendingMelts, which keeps the fee recorded here.
+        try {
+            await Storage.setItem(
+                `${this.getNodeDir()}-cashu-payments`,
+                this.payments
+            );
+            // Untracked only once stored, as in the single-mint path. Parts
+            // still in flight stay tracked.
+            for (const payment of segmentPayments) {
+                const paidQuote = payment.meltResponse?.quote?.quote;
+                if (paidQuote) await this.untrackPendingMelt(paidQuote);
+            }
+        } catch (writeError) {
+            console.error(
+                'CDK payLnInvoiceFromEcashMultiMint: Failed to store paid parts:',
+                writeError
+            );
+        }
 
-        const totalFeePaid = segmentPayments.reduce(
-            (sum, p) => sum + (Number(p.fee) || 0),
-            0
-        );
+        // A part known paid only from its quote has no fee. As in the
+        // single-mint path, leave the fee out rather than show one too low.
+        const totalFeePaid = segmentPayments.some((p) => p.fee_unknown)
+            ? undefined
+            : segmentPayments.reduce((sum, p) => sum + (Number(p.fee) || 0), 0);
         const firstPreimage = segmentPayments
             .map((p) => p?.payment_preimage)
             .find((v) => !!v);

@@ -370,6 +370,11 @@ export default class MultimintPayment extends React.Component<
                     item.error || item.mintUrl
                 }`;
             }
+            if (item.status === MintPaymentStatus.IN_FLIGHT) {
+                return `${localeString(
+                    'views.Cashu.MultimintPayment.inFlight'
+                )} | ${item.mintUrl}`;
+            }
             if (item.status === MintPaymentStatus.PAYING && isProcessing) {
                 return `${localeString(
                     'views.Cashu.MultimintPayment.paying'
@@ -412,6 +417,15 @@ export default class MultimintPayment extends React.Component<
                     <Icon
                         name="error"
                         color={themeColor('error')}
+                        size={20}
+                        style={{ marginRight: 10 }}
+                    />
+                )}
+
+                {item.status === MintPaymentStatus.IN_FLIGHT && (
+                    <Icon
+                        name="schedule"
+                        color={themeColor('warning')}
                         size={20}
                         style={{ marginRight: 10 }}
                     />
@@ -516,6 +530,11 @@ export default class MultimintPayment extends React.Component<
                 ? CashuStore?.paymentErrorMsg
                 : undefined);
         const isComplete = step === MultinutPaymentStep.COMPLETE;
+        // The mint may still pay a part in flight, and with it the invoice:
+        // paying again could pay it twice
+        const mayStillSettle = mints.some(
+            (m) => m.status === MintPaymentStatus.IN_FLIGHT
+        );
 
         return (
             <Screen>
@@ -726,18 +745,20 @@ export default class MultimintPayment extends React.Component<
 
                     {hasError && (
                         <>
-                            <Button
-                                title={localeString(
-                                    'views.SendingLightning.tryAgain'
-                                )}
-                                icon={{
-                                    name: 'rotate-ccw',
-                                    type: 'feather',
-                                    size: 25
-                                }}
-                                onPress={() => navigation.goBack()}
-                                secondary
-                            />
+                            {!mayStillSettle && (
+                                <Button
+                                    title={localeString(
+                                        'views.SendingLightning.tryAgain'
+                                    )}
+                                    icon={{
+                                        name: 'rotate-ccw',
+                                        type: 'feather',
+                                        size: 25
+                                    }}
+                                    onPress={() => navigation.goBack()}
+                                    secondary
+                                />
+                            )}
                             <Button
                                 title={localeString(
                                     'views.Settings.Ecash.cashuTroubleshooting'

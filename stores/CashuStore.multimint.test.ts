@@ -1,4 +1,6 @@
-jest.mock('./Stores');
+jest.mock('./Stores', () => ({
+    activityStore: { getSortedActivity: jest.fn() }
+}));
 jest.mock('./SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.one']
 }));
@@ -27,6 +29,7 @@ jest.mock('../cashu-cdk', () => ({
         getBalances: jest.fn(),
         getTotalBalance: jest.fn(),
         createMeltQuote: jest.fn(),
+        checkMeltQuote: jest.fn(),
         melt: jest.fn(),
         meltPartial: jest.fn(),
         restore: jest.fn(),
@@ -186,15 +189,29 @@ beforeEach(() => {
     cdk.addMint.mockResolvedValue(undefined);
     cdk.restore.mockResolvedValue(0);
     cdk.listTransactions.mockResolvedValue([]);
-    cdk.createMeltQuote.mockImplementation(async (mintUrl: string) => ({
-        id: `regular-${mintUrl}`,
-        amount: 1000,
-        fee_reserve: 3,
-        state: 'UNPAID',
-        expiry: 9999999999,
-        unit: 'sat',
-        request: INVOICE
-    }));
+    // An MPP part is quoted with CDK for its share before it is melted
+    cdk.createMeltQuote.mockImplementation(
+        async (mintUrl: string, _request: string, options?: any) =>
+            options?.mpp
+                ? {
+                      id: `cdk-mpp-${mintUrl}`,
+                      amount: options.mpp.amount / 1000,
+                      fee_reserve: 1,
+                      state: 'UNPAID',
+                      expiry: 9999999999,
+                      unit: 'sat',
+                      request: INVOICE
+                  }
+                : {
+                      id: `regular-${mintUrl}`,
+                      amount: 1000,
+                      fee_reserve: 3,
+                      state: 'UNPAID',
+                      expiry: 9999999999,
+                      unit: 'sat',
+                      request: INVOICE
+                  }
+    );
     storage.setItem.mockResolvedValue(true);
     storage.removeItem.mockResolvedValue(true);
     invoiceFor({ num_satoshis: '1000' });
@@ -585,6 +602,20 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         return store;
     };
 
+    // Only A has funds, so the planner prepares one regular quote on it
+    const regularPlannedStore = async () => {
+        const store = newStore({
+            balances: { [A]: 2000, [B]: 0 },
+            selected: [A, B]
+        });
+        mintApi({});
+        await store.getPayReq(INVOICE);
+        expect(store.meltQuotes).toEqual([
+            expect.objectContaining({ mintUrl: A, useRegularMelt: true })
+        ]);
+        return store;
+    };
+
     const paid = (amount: number, fee: number, preimage = PREIMAGE) => ({
         state: 'PAID',
         preimage,
@@ -593,13 +624,37 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         change: []
     });
 
-    it('melts each part, records it, and reports the combined fee', async () => {
+    // A quote a CDK melt saga still holds: CDK keeps it Unpaid until the
+    // saga finishes, so it is still in flight
+    const heldQuote = (id: string) => ({
+        id,
+        amount: 0,
+        fee_reserve: 0,
+        state: 'UNPAID',
+        expiry: 9999999999,
+        used_by_operation: 'saga-1'
+    });
+
+    const pendingQuotes = (store: CashuStore) =>
+        store.pendingMelts.map((melt) => melt.quote);
+
+    beforeEach(() => {
+        // By default a melt that throws left its quote settled unpaid
+        cdk.checkMeltQuote.mockImplementation(
+            async (_mintUrl: string, id: string) => ({
+                id,
+                amount: 0,
+                fee_reserve: 0,
+                state: 'UNPAID',
+                expiry: 1
+            })
+        );
+    });
+
+    it('quotes and melts each part, records it, and reports the combined fee', async () => {
         const store = await plannedStore();
-        cdk.meltPartial.mockImplementation(
-            async (mintUrl: string, _inv: string, amountMsat: number) =>
-                mintUrl === A
-                    ? paid(amountMsat / 1000, 1)
-                    : paid(amountMsat / 1000, 2, '')
+        cdk.melt.mockImplementation(async (mintUrl: string) =>
+            mintUrl === A ? paid(546, 1) : paid(454, 2, '')
         );
         const onProgress = jest.fn();
 
@@ -608,9 +663,15 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             onProgress
         });
 
-        expect(cdk.meltPartial).toHaveBeenCalledWith(A, INVOICE, 546000);
-        expect(cdk.meltPartial).toHaveBeenCalledWith(B, INVOICE, 454000);
-        expect(cdk.melt).not.toHaveBeenCalled();
+        expect(cdk.createMeltQuote).toHaveBeenCalledWith(A, INVOICE, {
+            mpp: { amount: 546000 }
+        });
+        expect(cdk.createMeltQuote).toHaveBeenCalledWith(B, INVOICE, {
+            mpp: { amount: 454000 }
+        });
+        expect(cdk.melt).toHaveBeenCalledWith(A, `cdk-mpp-${A}`);
+        expect(cdk.melt).toHaveBeenCalledWith(B, `cdk-mpp-${B}`);
+        expect(cdk.meltPartial).not.toHaveBeenCalled();
         expect(store.paymentSuccess).toBe(true);
         expect(store.paymentError).toBe(false);
         expect(store.paymentPreimage).toBe(PREIMAGE);
@@ -628,6 +689,12 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             'node1-cashu-payments',
             store.payments
         );
+        // each part was tracked while it melted, and untracked once stored
+        expect(storage.setItem).toHaveBeenCalledWith(
+            'node1-cashu-pending-melts',
+            expect.anything()
+        );
+        expect(store.pendingMelts).toEqual([]);
 
         const steps = onProgress.mock.calls.map(([p]) => p.step);
         expect(steps[0]).toBe(MultinutPaymentStep.PROCESSING);
@@ -647,11 +714,53 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(cdk.listTransactions).toHaveBeenCalled();
     });
 
+    it('records a paid part once when reconcile settles it while another part is still melting', async () => {
+        const store = await plannedStore();
+        cdk.melt.mockImplementation(async (mintUrl: string) => {
+            if (mintUrl === A) return paid(546, 1);
+            // A has been paid and is still tracked while B melts. A reconcile
+            // pass in that window finds A paid and records it.
+            await flush();
+            await store.reconcilePendingMelts();
+            return paid(454, 2, '');
+        });
+        cdk.checkMeltQuote.mockImplementation(async (_m: string, id: string) =>
+            id === `cdk-mpp-${A}`
+                ? {
+                      id,
+                      amount: 546,
+                      fee_reserve: 1,
+                      state: 'PAID',
+                      expiry: 9999999999,
+                      payment_preimage: PREIMAGE
+                  }
+                : heldQuote(id)
+        );
+
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+
+        expect(cdk.checkMeltQuote).toHaveBeenCalledWith(A, `cdk-mpp-${A}`);
+        expect(store.paymentSuccess).toBe(true);
+        expect(store.paymentFee).toBe(3);
+        // one entry per quote, with the fee the melt reported
+        expect(
+            store.payments!.map((p) => [
+                p.meltResponse.quote!.quote,
+                p.isInTransit,
+                p.fee,
+                !!p.fee_unknown
+            ])
+        ).toEqual([
+            [`cdk-mpp-${A}`, false, 1, false],
+            [`cdk-mpp-${B}`, false, 2, false]
+        ]);
+        expect(store.pendingMelts).toEqual([]);
+    });
+
     it('counts a part that paid no fee', async () => {
         const store = await plannedStore();
-        cdk.meltPartial.mockImplementation(
-            async (mintUrl: string, _inv: string, amountMsat: number) =>
-                paid(amountMsat / 1000, mintUrl === A ? 0 : 2)
+        cdk.melt.mockImplementation(async (mintUrl: string) =>
+            mintUrl === A ? paid(546, 0) : paid(454, 2)
         );
 
         await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
@@ -660,29 +769,116 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.payments!.map((p) => p.fee)).toEqual([0, 2]);
     });
 
-    it('melts a regular-quote plan with its quote id instead of meltPartial', async () => {
-        const store = newStore({
-            balances: { [A]: 2000, [B]: 0 },
-            selected: [A, B]
+    it('leaves the fee out when the fee of a paid part is not known', async () => {
+        const store = await plannedStore();
+        cdk.melt.mockImplementation(async (mintUrl: string) => {
+            if (mintUrl === A) return paid(546, 1);
+            throw new Error('connection lost');
         });
-        mintApi({});
-        await store.getPayReq(INVOICE);
+        cdk.checkMeltQuote.mockImplementation(
+            async (_m: string, id: string) => ({
+                id,
+                amount: 454,
+                fee_reserve: 2,
+                state: 'PAID',
+                expiry: 9999999999,
+                payment_preimage: PREIMAGE
+            })
+        );
+
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+
+        expect(store.paymentSuccess).toBe(true);
+        expect(store.paymentFee).toBeUndefined();
+        expect(
+            store.payments!.map((p) => [p.mintUrl, p.fee, !!p.fee_unknown])
+        ).toEqual([
+            [A, 1, false],
+            [B, 0, true]
+        ]);
+    });
+
+    it.each([
+        ['the payments', 'node1-cashu-payments', 0],
+        // the first two writes track the parts before they melt
+        ['the untracked melts', 'node1-cashu-pending-melts', 2]
+    ])(
+        'reports a paid invoice as paid when writing %s after the parts fails',
+        async (_label, failingKey, callsBeforeFailing) => {
+            const store = await plannedStore();
+            cdk.melt.mockImplementation(async (mintUrl: string) =>
+                mintUrl === A ? paid(546, 1) : paid(454, 2, '')
+            );
+            let calls = 0;
+            storage.setItem.mockImplementation(async (key: string) => {
+                if (key === failingKey && calls++ === callsBeforeFailing) {
+                    throw new Error('keychain write failed');
+                }
+                return true;
+            });
+            const onProgress = jest.fn();
+
+            await store.payLnInvoiceFromEcash({
+                paymentRequest: INVOICE,
+                onProgress
+            });
+
+            expect(store.paymentSuccess).toBe(true);
+            expect(store.paymentError).toBe(false);
+            expect(store.paymentFee).toBe(3);
+            expect(onProgress.mock.calls.at(-1)[0].step).toBe(
+                MultinutPaymentStep.COMPLETE
+            );
+            // A part left tracked is settled in place, with the fee its melt
+            // reported
+            expect(store.pendingMelts.length).toBeGreaterThan(0);
+            cdk.checkMeltQuote.mockImplementation(
+                async (_m: string, id: string) => ({
+                    id,
+                    amount: 0,
+                    fee_reserve: 0,
+                    state: 'PAID',
+                    expiry: 9999999999,
+                    payment_preimage: PREIMAGE
+                })
+            );
+            await store.reconcilePendingMelts();
+            expect(
+                store.payments!.map((p) => [
+                    p.mintUrl,
+                    p.fee,
+                    !!p.fee_unknown,
+                    p.isInTransit
+                ])
+            ).toEqual([
+                [A, 1, false, false],
+                [B, 2, false, false]
+            ]);
+            expect(store.pendingMelts).toEqual([]);
+        }
+    );
+
+    it('melts a regular-quote plan with its quote id without quoting it again', async () => {
+        const store = await regularPlannedStore();
+        cdk.createMeltQuote.mockClear();
         cdk.melt.mockResolvedValue(paid(1000, 2));
 
         await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
 
         expect(cdk.melt).toHaveBeenCalledWith(A, `regular-${A}`);
+        expect(cdk.createMeltQuote).not.toHaveBeenCalled();
         expect(cdk.meltPartial).not.toHaveBeenCalled();
         expect(store.paymentSuccess).toBe(true);
         expect(store.paymentFee).toBe(2);
         expect(store.payments!.map((p) => p.meltResponse.quote!.quote)).toEqual(
             [`regular-${A}`]
         );
+        expect(store.pendingMelts).toEqual([]);
     });
 
-    it('reports success when one part is paid and another fails, recording only the paid part', async () => {
+    it('reports success when one part is paid and another fails unpaid, recording only the paid part', async () => {
         const store = await plannedStore();
-        cdk.meltPartial.mockImplementation(async (mintUrl: string) => {
+        cdk.melt.mockImplementation(async (mintUrl: string) => {
             if (mintUrl === B) throw new Error('mint B timed out');
             return paid(546, 1);
         });
@@ -694,12 +890,15 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         });
 
         // A Paid part means the payee released the preimage, so the invoice
-        // is paid. The history entry only carries A's 546 sats.
+        // is paid. B's quote is settled unpaid, so nothing of it is in
+        // flight and the history entry only carries A's 546 sats.
+        expect(cdk.checkMeltQuote).toHaveBeenCalledWith(B, `cdk-mpp-${B}`);
         expect(store.paymentSuccess).toBe(true);
         expect(store.paymentPreimage).toBe(PREIMAGE);
         expect(store.payments!.map((p) => [p.mintUrl, p.amount])).toEqual([
             [A, 546]
         ]);
+        expect(store.pendingMelts).toEqual([]);
         const final = onProgress.mock.calls.at(-1)[0];
         expect(final.step).toBe(MultinutPaymentStep.COMPLETE);
         expect(
@@ -710,9 +909,58 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         ]);
     });
 
+    it('reports success when one part is paid and another may still settle, recording both', async () => {
+        const store = await plannedStore();
+        cdk.melt.mockImplementation(async (mintUrl: string) => {
+            if (mintUrl === B) throw new Error('connection lost');
+            return paid(546, 1);
+        });
+        cdk.checkMeltQuote.mockImplementation(async (_m: string, id: string) =>
+            heldQuote(id)
+        );
+        const onProgress = jest.fn();
+
+        await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
+
+        expect(store.paymentSuccess).toBe(true);
+        expect(store.paymentError).toBe(false);
+        expect(store.paymentPreimage).toBe(PREIMAGE);
+        // B's share is in the history as in flight, not dropped
+        expect(
+            store.payments!.map((p) => [
+                p.mintUrl,
+                p.amount,
+                p.isInTransit,
+                p.meltResponse.quote!.quote
+            ])
+        ).toEqual([
+            [B, 454, true, `cdk-mpp-${B}`],
+            [A, 546, false, `cdk-mpp-${A}`]
+        ]);
+        // and stays tracked for reconcilePendingMelts
+        expect(store.pendingMelts).toEqual([
+            expect.objectContaining({
+                quote: `cdk-mpp-${B}`,
+                mintUrl: B,
+                source: 'payment',
+                amount: 454,
+                request: INVOICE
+            })
+        ]);
+        const final = onProgress.mock.calls.at(-1)[0];
+        expect(final.step).toBe(MultinutPaymentStep.COMPLETE);
+        expect(final.mints.map((m: any) => [m.mintUrl, m.status])).toEqual([
+            [A, MintPaymentStatus.SUCCESS],
+            [B, MintPaymentStatus.IN_FLIGHT]
+        ]);
+    });
+
     it('reports the first failure and records nothing when every part fails', async () => {
         const store = await plannedStore();
-        cdk.meltPartial.mockImplementation(async (mintUrl: string) => {
+        cdk.melt.mockImplementation(async (mintUrl: string) => {
             throw new Error(`${mintUrl} refused`);
         });
         const onProgress = jest.fn();
@@ -727,6 +975,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.paymentError).toBe(true);
         expect(store.paymentErrorMsg).toBe(`${A} refused`);
         expect(store.payments).toEqual([]);
+        expect(store.pendingMelts).toEqual([]);
         expect(storage.setItem).not.toHaveBeenCalledWith(
             'node1-cashu-payments',
             expect.anything()
@@ -738,27 +987,358 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(cdk.restore).not.toHaveBeenCalled();
     });
 
-    it('treats a part the mint has not settled as failed', async () => {
+    // This pinned the opposite before: a part the mint had not settled was
+    // reported as failed and recorded nowhere, while the mint kept the
+    // ecash and could still pay the invoice
+    it('treats a part the mint has not settled as in flight', async () => {
         const store = await plannedStore();
-        cdk.meltPartial.mockResolvedValue({
+        cdk.melt.mockResolvedValue({
             state: 'PENDING',
             amount: 0,
             fee_paid: 0
         });
+        const onProgress = jest.fn();
 
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+        await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
 
         expect(store.paymentSuccess).toBe(false);
         expect(store.paymentError).toBe(true);
-        expect(store.paymentErrorMsg).toBe(
-            'stores.CashuStore.errorPayingInvoice'
-        );
-        expect(store.payments).toEqual([]);
+        expect(store.paymentErrorMsg).toBe('stores.CashuStore.paymentInFlight');
+        expect(store.payments!.map((p) => [p.mintUrl, p.isInTransit])).toEqual([
+            [A, true],
+            [B, true]
+        ]);
+        expect(pendingQuotes(store)).toEqual([`cdk-mpp-${A}`, `cdk-mpp-${B}`]);
+        const final = onProgress.mock.calls.at(-1)[0];
+        expect(final.step).toBe(MultinutPaymentStep.FAILED);
+        expect(final.mints.map((m: any) => m.status)).toEqual([
+            MintPaymentStatus.IN_FLIGHT,
+            MintPaymentStatus.IN_FLIGHT
+        ]);
     });
+
+    it('records a regular-melt part whose melt throws while the mint holds the quote as in flight, and settles it on reconcile', async () => {
+        const store = await regularPlannedStore();
+        cdk.melt.mockRejectedValue(new Error('connection lost'));
+        cdk.checkMeltQuote.mockResolvedValue(heldQuote(`regular-${A}`));
+        const onProgress = jest.fn();
+
+        const result = await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
+
+        expect(result).toBeUndefined();
+        expect(cdk.checkMeltQuote).toHaveBeenCalledWith(A, `regular-${A}`);
+        expect(store.paymentSuccess).toBe(false);
+        expect(store.paymentError).toBe(true);
+        expect(store.paymentErrorMsg).toBe('stores.CashuStore.paymentInFlight');
+        expect(store.pendingMelts).toEqual([
+            expect.objectContaining({
+                quote: `regular-${A}`,
+                mintUrl: A,
+                source: 'payment',
+                amount: 1000,
+                feeReserve: 3,
+                request: INVOICE,
+                expiry: 9999999999
+            })
+        ]);
+        expect(storage.setItem).toHaveBeenCalledWith(
+            'node1-cashu-pending-melts',
+            store.pendingMelts
+        );
+        expect(store.payments).toHaveLength(1);
+        expect(store.payments![0]).toMatchObject({
+            status: 'IN_FLIGHT',
+            mintUrl: A,
+            amount: 1000
+        });
+        const final = onProgress.mock.calls.at(-1)[0];
+        expect(final.step).toBe(MultinutPaymentStep.FAILED);
+        expect(final.mints[0]).toMatchObject({
+            status: MintPaymentStatus.IN_FLIGHT,
+            error: 'stores.CashuStore.paymentInFlight'
+        });
+
+        // The mint pays the invoice later
+        cdk.checkMeltQuote.mockResolvedValue({
+            id: `regular-${A}`,
+            amount: 1000,
+            fee_reserve: 3,
+            state: 'PAID',
+            expiry: 9999999999,
+            payment_preimage: PREIMAGE
+        });
+        await store.reconcilePendingMelts();
+
+        expect(store.pendingMelts).toEqual([]);
+        expect(store.payments).toHaveLength(1);
+        expect(store.payments![0]).toMatchObject({
+            status: 'SUCCEEDED',
+            payment_preimage: PREIMAGE,
+            mintUrl: A
+        });
+    });
+
+    it('reports a part as paid when its melt throws but the mint has paid the quote', async () => {
+        const store = await regularPlannedStore();
+        cdk.melt.mockRejectedValue(new Error('connection lost'));
+        cdk.checkMeltQuote.mockResolvedValue({
+            id: `regular-${A}`,
+            amount: 1000,
+            fee_reserve: 3,
+            state: 'PAID',
+            expiry: 9999999999,
+            payment_preimage: PREIMAGE
+        });
+
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+
+        expect(store.paymentSuccess).toBe(true);
+        expect(store.paymentError).toBe(false);
+        expect(store.paymentPreimage).toBe(PREIMAGE);
+        expect(store.pendingMelts).toEqual([]);
+        // the quote does not carry the fee the mint spent
+        expect(store.payments!.map((p) => [p.amount, p.fee_unknown])).toEqual([
+            [1000, true]
+        ]);
+    });
+
+    it('still fails a part whose melt throws with the quote unpaid and expired', async () => {
+        const store = await regularPlannedStore();
+        cdk.melt.mockRejectedValue(new Error('mint unreachable'));
+        const onProgress = jest.fn();
+
+        await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
+
+        expect(cdk.checkMeltQuote).toHaveBeenCalledWith(A, `regular-${A}`);
+        expect(store.paymentSuccess).toBe(false);
+        expect(store.paymentError).toBe(true);
+        expect(store.paymentErrorMsg).toBe('mint unreachable');
+        expect(store.payments).toEqual([]);
+        expect(store.pendingMelts).toEqual([]);
+        const final = onProgress.mock.calls.at(-1)[0];
+        expect(final.step).toBe(MultinutPaymentStep.FAILED);
+        expect(final.mints[0].status).toBe(MintPaymentStatus.FAILED);
+    });
+
+    it('keeps a part in flight when its melt throws and its quote cannot be checked', async () => {
+        const store = await plannedStore();
+        cdk.melt.mockImplementation(async (mintUrl: string) => {
+            if (mintUrl === B) throw new Error('connection lost');
+            return paid(546, 1);
+        });
+        cdk.checkMeltQuote.mockRejectedValue(new Error('mint unreachable'));
+        const onProgress = jest.fn();
+
+        await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
+
+        expect(cdk.checkMeltQuote).toHaveBeenCalledWith(B, `cdk-mpp-${B}`);
+        expect(store.paymentSuccess).toBe(true);
+        expect(
+            store.payments!.map((p) => [
+                p.mintUrl,
+                p.isInTransit,
+                p.meltResponse.quote!.quote
+            ])
+        ).toEqual([
+            [B, true, `cdk-mpp-${B}`],
+            [A, false, `cdk-mpp-${A}`]
+        ]);
+        expect(pendingQuotes(store)).toEqual([`cdk-mpp-${B}`]);
+        expect(storage.setItem).toHaveBeenCalledWith(
+            'node1-cashu-pending-melts',
+            [expect.objectContaining({ quote: `cdk-mpp-${B}` })]
+        );
+        const final = onProgress.mock.calls.at(-1)[0];
+        expect(final.mints.map((m: any) => [m.mintUrl, m.status])).toEqual([
+            [A, MintPaymentStatus.SUCCESS],
+            [B, MintPaymentStatus.IN_FLIGHT]
+        ]);
+    });
+
+    it.each([
+        [
+            'settled paid',
+            'PAID',
+            undefined,
+            [['SUCCEEDED', A]],
+            [],
+            MintPaymentStatus.SUCCESS,
+            MultinutPaymentStep.COMPLETE,
+            undefined
+        ],
+        [
+            'settled unpaid',
+            'UNPAID',
+            undefined,
+            [],
+            [],
+            MintPaymentStatus.FAILED,
+            MultinutPaymentStep.FAILED,
+            'stores.CashuStore.errorPayingInvoice'
+        ],
+        [
+            'found still in flight',
+            'UNPAID',
+            'saga-1',
+            [['IN_FLIGHT', A]],
+            [`regular-${A}`],
+            MintPaymentStatus.IN_FLIGHT,
+            MultinutPaymentStep.FAILED,
+            'stores.CashuStore.paymentInFlight'
+        ]
+    ])(
+        'reports a part reconcile %s while it was being checked as reconcile found it, with one entry',
+        async (
+            _label,
+            state,
+            usedBy,
+            recorded,
+            tracked,
+            status,
+            step,
+            errorMsg
+        ) => {
+            const store = await regularPlannedStore();
+            cdk.melt.mockRejectedValue(new Error('connection lost'));
+            // A reconcile pass resumes the melt saga at the same moment, so
+            // CDK refuses the pay path's check
+            cdk.checkMeltQuote
+                .mockImplementationOnce(async () => {
+                    await store.reconcilePendingMelts();
+                    throw new Error('Concurrent update detected');
+                })
+                .mockResolvedValueOnce({
+                    id: `regular-${A}`,
+                    amount: 1000,
+                    fee_reserve: 3,
+                    state,
+                    expiry: 9999999999,
+                    payment_preimage: state === 'PAID' ? PREIMAGE : null,
+                    used_by_operation: usedBy
+                });
+            const onProgress = jest.fn();
+
+            await store.payLnInvoiceFromEcash({
+                paymentRequest: INVOICE,
+                onProgress
+            });
+
+            expect(cdk.checkMeltQuote).toHaveBeenCalledTimes(2);
+            expect(pendingQuotes(store)).toEqual(tracked);
+            expect(store.payments!.map((p) => [p.status, p.mintUrl])).toEqual(
+                recorded
+            );
+            expect(store.paymentSuccess).toBe(state === 'PAID');
+            if (errorMsg) {
+                expect(store.paymentErrorMsg).toBe(errorMsg);
+            } else {
+                expect(store.paymentError).toBe(false);
+                expect(store.paymentPreimage).toBe(PREIMAGE);
+            }
+            const final = onProgress.mock.calls.at(-1)[0];
+            expect(final.step).toBe(step);
+            expect(final.mints[0].status).toBe(status);
+        }
+    );
+
+    it.each([
+        ['paid', 'SUCCEEDED'],
+        ['failed', 'FAILED']
+    ])(
+        'reports a part %s when its quote has a settled entry the melt is still tracked for',
+        async (label, status) => {
+            const store = await regularPlannedStore();
+            cdk.melt.mockRejectedValue(new Error('connection lost'));
+            // A reconcile pass has stored the settled entry and is about to
+            // untrack the melt when the pay path's check fails
+            cdk.checkMeltQuote.mockImplementationOnce(async () => {
+                await (store as any).recordSettledMelt(
+                    store.pendingMelts[0],
+                    PREIMAGE
+                );
+                store.payments![0].status = status;
+                throw new Error('Concurrent update detected');
+            });
+            const onProgress = jest.fn();
+
+            await store.payLnInvoiceFromEcash({
+                paymentRequest: INVOICE,
+                onProgress
+            });
+
+            const paid = label === 'paid';
+            expect(store.paymentSuccess).toBe(paid);
+            expect(store.payments!.map((p) => [p.status, p.mintUrl])).toEqual([
+                [status, A]
+            ]);
+            const final = onProgress.mock.calls.at(-1)[0];
+            if (paid) {
+                expect(store.paymentError).toBe(false);
+                expect(store.paymentPreimage).toBe(PREIMAGE);
+                expect(store.pendingMelts).toEqual([]);
+                expect(final.step).toBe(MultinutPaymentStep.COMPLETE);
+                expect(final.mints[0].status).toBe(MintPaymentStatus.SUCCESS);
+            } else {
+                expect(store.paymentErrorMsg).toBe(
+                    'stores.CashuStore.errorPayingInvoice'
+                );
+                expect(final.step).toBe(MultinutPaymentStep.FAILED);
+                expect(final.mints[0].status).toBe(MintPaymentStatus.FAILED);
+            }
+        }
+    );
+
+    it.each([
+        ['the in-flight entry', 'node1-cashu-payments', 0],
+        ['the tracked melts after the melt', 'node1-cashu-pending-melts', 1]
+    ])(
+        'still reports a part in flight when writing %s fails',
+        async (_label, failingKey, callsBeforeFailing) => {
+            const store = await regularPlannedStore();
+            cdk.melt.mockRejectedValue(new Error('connection lost'));
+            cdk.checkMeltQuote.mockResolvedValue(heldQuote(`regular-${A}`));
+            let calls = 0;
+            storage.setItem.mockImplementation(async (key: string) => {
+                if (key === failingKey && calls++ >= callsBeforeFailing) {
+                    throw new Error('keychain write failed');
+                }
+                return true;
+            });
+            const onProgress = jest.fn();
+
+            await store.payLnInvoiceFromEcash({
+                paymentRequest: INVOICE,
+                onProgress
+            });
+
+            expect(store.paymentErrorMsg).toBe(
+                'stores.CashuStore.paymentInFlight'
+            );
+            expect(pendingQuotes(store)).toEqual([`regular-${A}`]);
+            const final = onProgress.mock.calls.at(-1)[0];
+            expect(final.step).toBe(MultinutPaymentStep.FAILED);
+            expect(final.mints[0]).toMatchObject({
+                status: MintPaymentStatus.IN_FLIGHT,
+                error: 'stores.CashuStore.paymentInFlight'
+            });
+        }
+    );
 
     it('turns a melt fee mismatch into a message naming the mint', async () => {
         const store = await plannedStore();
-        cdk.meltPartial.mockImplementation(async (mintUrl: string) => {
+        cdk.melt.mockImplementation(async (mintUrl: string) => {
             throw new Error(
                 mintUrl === A
                     ? 'Not enough inputs provided for melt. Provided: 546, needed: 550'
@@ -797,7 +1377,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             onProgress
         });
 
-        expect(cdk.meltPartial).not.toHaveBeenCalled();
+        expect(cdk.melt).not.toHaveBeenCalled();
         expect(store.paymentError).toBe(true);
         expect(store.paymentErrorMsg).toBe('stores.CashuStore.notEnoughFunds');
         expect(onProgress).toHaveBeenCalledWith(
@@ -818,7 +1398,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             amount: '1000'
         });
 
-        expect(cdk.meltPartial).not.toHaveBeenCalled();
+        expect(cdk.melt).not.toHaveBeenCalled();
         expect(store.paymentErrorMsg).toBe(
             'stores.CashuStore.notEnoughFundsSelfSend'
         );
@@ -841,7 +1421,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             isDonationPayment: true
         });
 
-        expect(cdk.meltPartial).not.toHaveBeenCalled();
+        expect(cdk.melt).not.toHaveBeenCalled();
         expect(store.paymentError).toBeUndefined();
         expect(store.paymentErrorMsg).toBeUndefined();
     });
@@ -850,7 +1430,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         const store = await plannedStore();
         // the main payment already succeeded on this screen
         store.paymentSuccess = true;
-        cdk.meltPartial.mockRejectedValue(new Error('refused'));
+        cdk.melt.mockRejectedValue(new Error('refused'));
 
         await store.payLnInvoiceFromEcash({
             paymentRequest: INVOICE,
@@ -867,118 +1447,80 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     // An absent state is ambiguous, so it must not be reported as paid
     it('does not treat a part with no melt state as paid', async () => {
         const store = await plannedStore();
-        // MPP quotes from the mint arrive with state UNPAID, so blank both
-        cdk.meltPartial.mockResolvedValue({ amount: 0, fee_paid: 0 });
-        store.meltQuotes = store.meltQuotes.map((q) => ({
-            ...q,
-            meltQuote: { ...q.meltQuote, state: '' as any }
-        }));
+        cdk.melt.mockResolvedValue({ amount: 0, fee_paid: 0 });
 
         await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
 
         expect(store.paymentSuccess).toBe(false);
         expect(store.paymentError).toBe(true);
-        expect(store.payments).toEqual([]);
+        // nor as failed: the mint may still pay it
+        expect(store.payments!.every((p) => p.isInTransit)).toBe(true);
+        expect(pendingQuotes(store)).toEqual([`cdk-mpp-${A}`, `cdk-mpp-${B}`]);
     });
 
-    it('records each MPP part with the quote meltPartial paid', async () => {
+    it('records each MPP part with the quote CDK created for it', async () => {
         const store = await plannedStore();
-        cdk.meltPartial.mockImplementation(
-            async (mintUrl: string, _i: string, msat: number) => ({
-                ...paid(msat / 1000, 0),
-                quote_id: `paid-${mintUrl}`
+        cdk.createMeltQuote.mockImplementation(
+            async (mintUrl: string, _r: string, options: any) => ({
+                id: `paid-${mintUrl}`,
+                amount: options.mpp.amount / 1000,
+                fee_reserve: mintUrl === A ? 3 : 0,
+                state: 'UNPAID',
+                expiry: 1234567890,
+                unit: 'sat',
+                request: INVOICE
             })
+        );
+        cdk.melt.mockImplementation(async (mintUrl: string) =>
+            paid(mintUrl === A ? 546 : 454, 0)
         );
 
         await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
 
-        // meltPartial creates its own MPP quote, so its id wins over the
-        // planner's probe quote
+        // The planner's probe quote was never paid, so it is not recorded.
+        // The planner quoted fee 1 and expiry 9999999999 for both parts, so
+        // a falsy fallback would record B's fee reserve as 1.
         expect(store.meltQuotes[0].meltQuote).toMatchObject({
             quote: `mpp-${A}-546`
         });
-        expect(store.payments!.map((p) => p.meltResponse.quote!.quote)).toEqual(
-            [`paid-${A}`, `paid-${B}`]
-        );
-    });
-
-    it('records no quote id for an MPP part when the bridge returns none', async () => {
-        const store = await plannedStore();
-        cdk.meltPartial.mockImplementation(
-            async (_m: string, _i: string, msat: number) => paid(msat / 1000, 0)
-        );
-
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
-
-        // The planner's probe quote was never paid, so it is not recorded
-        expect(store.payments!.map((p) => p.meltResponse.quote!.quote)).toEqual(
-            [undefined, undefined]
-        );
-    });
-
-    it('records the fee reserve and expiry of the quote meltPartial paid', async () => {
-        const store = await plannedStore();
-        cdk.meltPartial.mockImplementation(
-            async (mintUrl: string, _i: string, msat: number) => ({
-                ...paid(msat / 1000, 0),
-                quote_id: `paid-${mintUrl}`,
-                fee_reserve: mintUrl === A ? 3 : 4,
-                expiry: 1234567890
-            })
-        );
-
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
-
-        // The planner quoted fee 1 and expiry 9999999999 for both parts
         expect(
             store.payments!.map((p) => ({
+                quote: p.meltResponse.quote!.quote,
                 fee_reserve: p.meltResponse.quote!.fee_reserve,
                 expiry: p.meltResponse.quote!.expiry
             }))
         ).toEqual([
-            { fee_reserve: 3, expiry: 1234567890 },
-            { fee_reserve: 4, expiry: 1234567890 }
+            { quote: `paid-${A}`, fee_reserve: 3, expiry: 1234567890 },
+            { quote: `paid-${B}`, fee_reserve: 0, expiry: 1234567890 }
         ]);
     });
 
-    it('records a zero fee reserve from meltPartial over the planner fee', async () => {
+    it('refuses to melt an MPP part whose CDK quote is not for its share', async () => {
         const store = await plannedStore();
-        cdk.meltPartial.mockImplementation(
-            async (mintUrl: string, _i: string, msat: number) => ({
-                ...paid(msat / 1000, 0),
-                quote_id: `paid-${mintUrl}`,
-                fee_reserve: 0
-            })
+        const mppQuote = cdk.createMeltQuote.getMockImplementation()!;
+        // A quote for the whole invoice would pay all of it from mint A
+        cdk.createMeltQuote.mockImplementation(
+            async (mintUrl: string, request: string, options: any) =>
+                mintUrl === A
+                    ? {
+                          ...(await mppQuote(mintUrl, request, options)),
+                          amount: 1000
+                      }
+                    : mppQuote(mintUrl, request, options)
         );
+        cdk.melt.mockResolvedValue(paid(454, 0));
+        const onProgress = jest.fn();
 
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+        await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
 
-        // The planner quoted fee 1, so a falsy fallback would record 1
+        expect(cdk.melt).not.toHaveBeenCalledWith(A, expect.anything());
+        expect(cdk.melt).toHaveBeenCalledWith(B, `cdk-mpp-${B}`);
         expect(
-            store.payments!.map((p) => p.meltResponse.quote!.fee_reserve)
-        ).toEqual([0, 0]);
-    });
-
-    it("keeps the planner's fee reserve and expiry when the bridge omits them", async () => {
-        const store = await plannedStore();
-        cdk.meltPartial.mockImplementation(
-            async (mintUrl: string, _i: string, msat: number) => ({
-                ...paid(msat / 1000, 0),
-                quote_id: `paid-${mintUrl}`
-            })
-        );
-
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
-
-        expect(
-            store.payments!.map((p) => ({
-                fee_reserve: p.meltResponse.quote!.fee_reserve,
-                expiry: p.meltResponse.quote!.expiry
-            }))
-        ).toEqual([
-            { fee_reserve: 1, expiry: 9999999999 },
-            { fee_reserve: 1, expiry: 9999999999 }
-        ]);
+            onProgress.mock.calls.at(-1)[0].mints.map((m: any) => m.status)
+        ).toEqual([MintPaymentStatus.FAILED, MintPaymentStatus.SUCCESS]);
     });
 });
 
