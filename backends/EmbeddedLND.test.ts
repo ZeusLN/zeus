@@ -225,6 +225,10 @@ describe('EmbeddedLND.getTransactions', () => {
                 ? decodedTransactions([
                       { tx_hash: 'pending0', num_confirmations: 0 }
                   ])
+                : request.max_transactions === 1
+                ? decodedTransactions([
+                      { tx_hash: 'tx0', num_confirmations: 5000 }
+                  ])
                 : request.end_height === -1
                 ? decodedTransactions([
                       { tx_hash: 'pending0', num_confirmations: 0 },
@@ -239,6 +243,7 @@ describe('EmbeddedLND.getTransactions', () => {
 
         expect(mockGetTransactions.mock.calls.map(([r]) => r)).toEqual([
             { start_height: -1, end_height: 1, max_transactions: 500 },
+            { start_height: 0, end_height: -1, max_transactions: 1 },
             { start_height: 895_969, end_height: -1, max_transactions: 0 },
             { start_height: 895_968, end_height: 1, max_transactions: 198 }
         ]);
@@ -269,9 +274,13 @@ describe('EmbeddedLND.getTransactions', () => {
         const { transactions } = await embeddedLnd.getTransactions();
 
         expect(transactions).toEqual([]);
-        // the empty newest page could be lnd on a SQL database: the recent
-        // blocks, then a capped page from the first block
-        expect(mockGetTransactions).toHaveBeenCalledTimes(3);
+        // the empty newest page could be lnd on a SQL database, until the
+        // oldest transaction shows there is no mined one
+        expect(mockGetTransactions.mock.calls.map(([r]) => r)).toEqual([
+            { start_height: -1, end_height: 1, max_transactions: 500 },
+            { start_height: 0, end_height: -1, max_transactions: 1 }
+        ]);
+        expect(mockGetInfo).not.toHaveBeenCalled();
     });
 });
 

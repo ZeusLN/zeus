@@ -310,7 +310,10 @@ export default class LightningNodeConnect {
                   })
                 : await getNewestTransactions({
                       fetchPage,
-                      getTipHeight: () =>
+                      // a stale height only widens the recent blocks,
+                      // which are read to the top
+                      getTipHeight: async () =>
+                          Number(nodeInfoStore.nodeInfo?.currentBlockHeight) ||
                           this.getMyNodeInfo().then(
                               (info: any) => info.block_height
                           ),

@@ -2,6 +2,7 @@ import {
     ALL_FORWARD,
     DEFAULT_MAX_TRANSACTIONS,
     getNewestTransactions,
+    OLDEST,
     SQL_MAX_TRANSACTIONS,
     SQL_RECENT_BLOCKS,
     TransactionPageRequest
@@ -221,6 +222,7 @@ describe('getNewestTransactions', () => {
             ]);
             expect(calls).toEqual([
                 NEWEST_CONFIRMED_CALL,
+                OLDEST,
                 RECENT_CALL,
                 olderCall(148)
             ]);
@@ -240,6 +242,7 @@ describe('getNewestTransactions', () => {
             expect(txs).toEqual([...pending, ...[...confirmed].reverse()]);
             expect(calls).toEqual([
                 NEWEST_CONFIRMED_CALL,
+                OLDEST,
                 RECENT_CALL,
                 olderCall(188)
             ]);
@@ -260,7 +263,7 @@ describe('getNewestTransactions', () => {
                 ...pending,
                 ...confirmed.slice(402).reverse()
             ]);
-            expect(calls).toEqual([NEWEST_CONFIRMED_CALL, RECENT_CALL]);
+            expect(calls).toEqual([NEWEST_CONFIRMED_CALL, OLDEST, RECENT_CALL]);
         });
 
         it('caps the result at a smaller limit', async () => {
@@ -278,7 +281,7 @@ describe('getNewestTransactions', () => {
                 'pending1',
                 ...hashes(recent.slice(32).reverse())
             ]);
-            expect(calls).toHaveLength(2);
+            expect(calls).toHaveLength(3);
         });
 
         it('reads a capped page from the first block when the recent blocks hold no mined transaction', async () => {
@@ -295,6 +298,7 @@ describe('getNewestTransactions', () => {
             expect(txs).toEqual([...pending, ...[...confirmed].reverse()]);
             expect(calls).toEqual([
                 NEWEST_CONFIRMED_CALL,
+                OLDEST,
                 RECENT_CALL,
                 OLDEST_CALL
             ]);
@@ -317,6 +321,7 @@ describe('getNewestTransactions', () => {
             ]);
             expect(calls).toEqual([
                 NEWEST_CONFIRMED_CALL,
+                OLDEST,
                 RECENT_CALL,
                 OLDEST_CALL,
                 ALL_FORWARD
@@ -329,21 +334,20 @@ describe('getNewestTransactions', () => {
                 sql: true,
                 ignoresMax: true
             });
+            const tipHeight = jest.fn(getTipHeight);
 
             const txs = await getNewestTransactions({
                 fetchPage,
-                getTipHeight
+                getTipHeight: tipHeight
             });
 
             expect(txs).toEqual([
                 ...pending,
                 ...confirmed.slice(102).reverse()
             ]);
-            expect(calls).toEqual([
-                NEWEST_CONFIRMED_CALL,
-                RECENT_CALL,
-                OLDEST_CALL
-            ]);
+            // the oldest transaction comes with all the others
+            expect(calls).toEqual([NEWEST_CONFIRMED_CALL, OLDEST]);
+            expect(tipHeight).not.toHaveBeenCalled();
         });
 
         it('skips the recent blocks when the tip height is unavailable', async () => {
@@ -358,7 +362,7 @@ describe('getNewestTransactions', () => {
             });
 
             expect(txs).toHaveLength(12);
-            expect(calls).toEqual([NEWEST_CONFIRMED_CALL, OLDEST_CALL]);
+            expect(calls).toEqual([NEWEST_CONFIRMED_CALL, OLDEST, OLDEST_CALL]);
         });
 
         it('returns everything when the limit is 0', async () => {
@@ -378,6 +382,29 @@ describe('getNewestTransactions', () => {
             expect(calls).toEqual([
                 { ...NEWEST_CONFIRMED_CALL, max_transactions: 0 },
                 { start_height: 0, end_height: -1, max_transactions: 0 }
+            ]);
+        });
+
+        it('returns a transaction that is mined between the newest page and the oldest one', async () => {
+            const confirmed: FakeTx[] = [];
+            const lnd = fakeLnd(confirmed, [], { sql: true });
+            const fetchPage = async (request: TransactionPageRequest) => {
+                const page = await lnd.fetchPage(request);
+                if (lnd.calls.length === 1) confirmed.push(...at([TIP]));
+                return page;
+            };
+
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight
+            });
+
+            expect(hashes(txs)).toEqual([`h${TIP}`]);
+            expect(lnd.calls).toEqual([
+                NEWEST_CONFIRMED_CALL,
+                OLDEST,
+                RECENT_CALL,
+                olderCall(199)
             ]);
         });
 
@@ -402,22 +429,33 @@ describe('getNewestTransactions', () => {
         });
     });
 
-    it('returns only the unconfirmed transactions of a wallet with no mined ones', async () => {
-        const { fetchPage, calls } = fakeLnd([], pending);
+    describe.each([
+        ['bolt', false],
+        ['SQL', true]
+    ])('on a %s database, a wallet with no mined transactions', (_, sql) => {
+        it('returns only the unconfirmed ones after reading the oldest one', async () => {
+            const { fetchPage, calls } = fakeLnd([], pending, { sql });
+            const getTipHeight = jest.fn(async () => TIP);
 
-        const txs = await getNewestTransactions({ fetchPage });
+            const txs = await getNewestTransactions({
+                fetchPage,
+                getTipHeight
+            });
 
-        expect(txs).toEqual(pending);
-        expect(calls).toHaveLength(2);
-    });
+            expect(txs).toEqual(pending);
+            expect(calls).toEqual([NEWEST_CONFIRMED_CALL, OLDEST]);
+            expect(getTipHeight).not.toHaveBeenCalled();
+        });
 
-    it('returns an empty list for an empty wallet', async () => {
-        const { fetchPage } = fakeLnd([]);
+        it('returns an empty list when the wallet is empty', async () => {
+            const { fetchPage, calls } = fakeLnd([], [], { sql });
 
-        expect(await getNewestTransactions({ fetchPage })).toEqual([]);
-        expect(await getNewestTransactions({ fetchPage, limit: 0 })).toEqual(
-            []
-        );
+            expect(await getNewestTransactions({ fetchPage })).toEqual([]);
+            expect(calls).toEqual([NEWEST_CONFIRMED_CALL, OLDEST]);
+            expect(
+                await getNewestTransactions({ fetchPage, limit: 0 })
+            ).toEqual([]);
+        });
     });
 
     it('keeps the unconfirmed copy of a transaction returned by both requests', async () => {

@@ -16,7 +16,7 @@ jest.mock('../utils/TorUtils', () => ({
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import LND from './LND';
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
-import { settingsStore, nodeInfoStore } from '../stores/Stores';
+import { nodeInfoStore, settingsStore } from '../stores/Stores';
 import { localeString } from '../utils/LocaleUtils';
 import {
     isNodeResponse,
@@ -782,6 +782,10 @@ describe('LND.restReq errors', () => {
 });
 
 describe('LND.getTransactions', () => {
+    afterEach(() => {
+        nodeInfoStore.nodeInfo = {};
+    });
+
     // Follows lnd 0.19+: a negative height is the top of the range, blocks
     // are read backwards when start > end, unconfirmed transactions come
     // after the mined ones, the page is sliced, then sorted by confirmations.
@@ -883,9 +887,34 @@ describe('LND.getTransactions', () => {
         ]);
         expect(urls).toEqual([
             '/v1/transactions?end_height=1&start_height=-1&max_transactions=500',
+            '/v1/transactions?end_height=-1&max_transactions=1',
             '/v1/getinfo',
             '/v1/transactions?end_height=-1&start_height=895969&max_transactions=0',
             '/v1/transactions?end_height=1&start_height=895968&max_transactions=198'
+        ]);
+    });
+
+    it('uses the block height NodeInfoStore already holds', async () => {
+        nodeInfoStore.nodeInfo = { currentBlockHeight: 900_000 };
+        const { lnd, urls } = serve([800_000, 899_999], 1, { sql: true });
+
+        await lnd.getTransactions();
+
+        expect(urls).not.toContain('/v1/getinfo');
+        expect(urls).toContain(
+            '/v1/transactions?end_height=-1&start_height=895969&max_transactions=0'
+        );
+    });
+
+    it('makes two requests for a wallet with no mined transactions', async () => {
+        const { lnd, urls } = serve([], 1);
+
+        const { transactions } = await lnd.getTransactions();
+
+        expect(transactions.map((tx: any) => tx.tx_hash)).toEqual(['pending0']);
+        expect(urls).toEqual([
+            '/v1/transactions?end_height=1&start_height=-1&max_transactions=500',
+            '/v1/transactions?end_height=-1&max_transactions=1'
         ]);
     });
 

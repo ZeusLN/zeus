@@ -43,6 +43,13 @@ export const ALL_FORWARD: TransactionPageRequest = {
     max_transactions: 0
 };
 
+// The oldest transaction: the first mined one, or an unmined one when the
+// wallet has none. Forward ranges work on any database.
+export const OLDEST: TransactionPageRequest = {
+    ...ALL_FORWARD,
+    max_transactions: 1
+};
+
 const byConfirmations = <T extends OnchainTransaction>(a: T, b: T) =>
     Number(a.num_confirmations || 0) - Number(b.num_confirmations || 0);
 
@@ -71,7 +78,8 @@ const newest = <T extends OnchainTransaction>(pages: T[][], limit: number) => {
 // of -1 always does, and lnd doesn't say which block that is, so read the
 // recent blocks forwards, which also returns the unconfirmed transactions.
 // When they include a mined one, a backwards range from just below them
-// starts under a block lnd holds, which it can read.
+// starts under a block lnd holds, which it can read. The caller has
+// checked that the wallet holds a mined transaction.
 const getNewestFromSql = async <T extends OnchainTransaction>({
     fetchPage,
     getTipHeight,
@@ -81,8 +89,6 @@ const getNewestFromSql = async <T extends OnchainTransaction>({
     getTipHeight?: () => Promise<number>;
     limit: number;
 }): Promise<T[]> => {
-    // a caller asking for everything gets everything
-    if (limit === 0) return newest([await fetchPage(ALL_FORWARD)], 0);
     const cap = Math.min(limit, SQL_MAX_TRANSACTIONS);
 
     const tip = Number((await getTipHeight?.().catch(() => 0)) || 0);
@@ -144,6 +150,16 @@ export const getNewestTransactions = async <T extends OnchainTransaction>({
     // Only unconfirmed transactions, if any: lnd on a SQL database, or a
     // wallet with no mined transactions on any database.
     if (!confirmed.some(isMined)) {
+        // a caller asking for everything gets everything
+        if (limit === 0) return newest([await fetchPage(ALL_FORWARD)], 0);
+
+        // Without a mined transaction anywhere, the page already holds the
+        // whole wallet. lnd < 0.19 ignores the cap and sends everything.
+        const oldest = await fetchPage(OLDEST);
+        if (!oldest.some(isMined)) return confirmed;
+        if (oldest.length > 1) {
+            return newest([oldest], Math.min(limit, SQL_MAX_TRANSACTIONS));
+        }
         return getNewestFromSql({ fetchPage, getTipHeight, limit });
     }
 
