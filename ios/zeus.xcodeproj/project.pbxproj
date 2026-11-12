@@ -259,6 +259,10 @@
 		APGI3X00000000000000047 /* AppIconGradientInverse@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APGI3X00000000000000048 /* AppIconGradientInverse@3x.png */; };
 		APMI2X00000000000000049 /* AppIconMaxGradientInverse@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMI2X00000000000000050 /* AppIconMaxGradientInverse@2x.png */; };
 		APMI3X00000000000000051 /* AppIconMaxGradientInverse@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APMI3X00000000000000052 /* AppIconMaxGradientInverse@3x.png */; };
+		APZE2X00000000000000053 /* AppIconZeusEngraved@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APZE2X00000000000000054 /* AppIconZeusEngraved@2x.png */; };
+		APZE3X00000000000000055 /* AppIconZeusEngraved@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APZE3X00000000000000056 /* AppIconZeusEngraved@3x.png */; };
+		APZI2X00000000000000057 /* AppIconZeusIllustrated@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = APZI2X00000000000000058 /* AppIconZeusIllustrated@2x.png */; };
+		APZI3X00000000000000059 /* AppIconZeusIllustrated@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = APZI3X00000000000000060 /* AppIconZeusIllustrated@3x.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -783,6 +787,10 @@
 		APGI3X00000000000000048 /* AppIconGradientInverse@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconGradientInverse@3x.png"; path = "zeus/AppIconGradientInverse@3x.png"; sourceTree = "<group>"; };
 		APMI2X00000000000000050 /* AppIconMaxGradientInverse@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxGradientInverse@2x.png"; path = "zeus/AppIconMaxGradientInverse@2x.png"; sourceTree = "<group>"; };
 		APMI3X00000000000000052 /* AppIconMaxGradientInverse@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconMaxGradientInverse@3x.png"; path = "zeus/AppIconMaxGradientInverse@3x.png"; sourceTree = "<group>"; };
+		APZE2X00000000000000054 /* AppIconZeusEngraved@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconZeusEngraved@2x.png"; path = "zeus/AppIconZeusEngraved@2x.png"; sourceTree = "<group>"; };
+		APZE3X00000000000000056 /* AppIconZeusEngraved@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconZeusEngraved@3x.png"; path = "zeus/AppIconZeusEngraved@3x.png"; sourceTree = "<group>"; };
+		APZI2X00000000000000058 /* AppIconZeusIllustrated@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconZeusIllustrated@2x.png"; path = "zeus/AppIconZeusIllustrated@2x.png"; sourceTree = "<group>"; };
+		APZI3X00000000000000060 /* AppIconZeusIllustrated@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "AppIconZeusIllustrated@3x.png"; path = "zeus/AppIconZeusIllustrated@3x.png"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -1008,6 +1016,10 @@
 				APGI3X00000000000000048 /* AppIconGradientInverse@3x.png */,
 				APMI2X00000000000000050 /* AppIconMaxGradientInverse@2x.png */,
 				APMI3X00000000000000052 /* AppIconMaxGradientInverse@3x.png */,
+				APZE2X00000000000000054 /* AppIconZeusEngraved@2x.png */,
+				APZE3X00000000000000056 /* AppIconZeusEngraved@3x.png */,
+				APZI2X00000000000000058 /* AppIconZeusIllustrated@2x.png */,
+				APZI3X00000000000000060 /* AppIconZeusIllustrated@3x.png */,
 				NWCLB000000000000000002 /* NWCLiveActivityBridge.swift */,
 				NWCLIS000000000000000003 /* NWCLiveActivityShared.swift */,
 				NWCLIS000000000000000006 /* NWCAmbientTracks.swift */,
@@ -2003,6 +2015,10 @@
 				APGI3X00000000000000047 /* AppIconGradientInverse@3x.png in Resources */,
 				APMI2X00000000000000049 /* AppIconMaxGradientInverse@2x.png in Resources */,
 				APMI3X00000000000000051 /* AppIconMaxGradientInverse@3x.png in Resources */,
+				APZE2X00000000000000053 /* AppIconZeusEngraved@2x.png in Resources */,
+				APZE3X00000000000000055 /* AppIconZeusEngraved@3x.png in Resources */,
+				APZI2X00000000000000057 /* AppIconZeusIllustrated@2x.png in Resources */,
+				APZI3X00000000000000059 /* AppIconZeusIllustrated@3x.png in Resources */,
 				80E7BDE37DC54344B6C4B4A2 /* temple.jpeg in Resources */,
 				6762879556A94083B2FB0AEB /* journey.jpeg in Resources */,
 				A053381B1FAD44C8AEC582AF /* zeus.jpeg in Resources */,

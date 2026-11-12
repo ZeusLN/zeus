@@ -89,13 +89,23 @@ describe('AppIconUtils', () => {
             );
         });
 
-        it('leaves out the max* variants on Android', () => {
+        it('leaves out the iOS-only variants on Android', () => {
             const keys = load('android', makeNative())
                 .default.availableVariants()
                 .map((v) => v.key);
             expect(keys).toHaveLength(7);
             expect(keys).toContain('flat');
             expect(keys.some((k) => k.startsWith('max'))).toBe(false);
+            expect(keys).not.toContain('zeusEngraved');
+            expect(keys).not.toContain('zeusIllustrated');
+        });
+
+        it('lists the Zeus face variants on iOS', () => {
+            const keys = load('ios', makeNative())
+                .default.availableVariants()
+                .map((v) => v.key);
+            expect(keys).toContain('zeusEngraved');
+            expect(keys).toContain('zeusIllustrated');
         });
 
         it('is empty on other platforms', () => {
@@ -173,6 +183,34 @@ describe('AppIconUtils', () => {
             expect(native.setVariant).not.toHaveBeenCalled();
         });
 
+        it('rejects a Zeus face variant on Android without calling native', async () => {
+            const native = makeNative();
+            const utils = load('android', native).default;
+
+            await expect(utils.setAppIcon('zeusEngraved')).resolves.toBe(false);
+            await expect(utils.setAppIcon('zeusIllustrated')).resolves.toBe(
+                false
+            );
+            expect(native.setVariant).not.toHaveBeenCalled();
+        });
+
+        it('passes the Zeus face alternate icon names on iOS', async () => {
+            const native = makeNative();
+            const utils = load('ios', native).default;
+
+            await expect(utils.setAppIcon('zeusEngraved')).resolves.toBe(true);
+            expect(native.setAlternateIcon).toHaveBeenLastCalledWith(
+                'AppIconZeusEngraved'
+            );
+
+            await expect(utils.setAppIcon('zeusIllustrated')).resolves.toBe(
+                true
+            );
+            expect(native.setAlternateIcon).toHaveBeenLastCalledWith(
+                'AppIconZeusIllustrated'
+            );
+        });
+
         it('rejects an unknown variant', async () => {
             const native = makeNative();
             const utils = load('ios', native).default;
@@ -205,6 +243,14 @@ describe('AppIconUtils', () => {
             await expect(
                 load('ios', native).default.getAppIcon()
             ).resolves.toBe('gradientRed');
+        });
+
+        it('maps the Zeus face icon names back to variants', async () => {
+            const native = makeNative();
+            native.getAlternateIcon.mockResolvedValue('AppIconZeusIllustrated');
+            await expect(
+                load('ios', native).default.getAppIcon()
+            ).resolves.toBe('zeusIllustrated');
         });
 
         it('maps a null iOS icon name to the primary icon', async () => {

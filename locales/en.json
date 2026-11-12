@@ -1303,6 +1303,8 @@
     "views.Settings.AppIcon.maxRed": "Max Red",
     "views.Settings.AppIcon.maxGradientRed": "Max Gradient Red",
     "views.Settings.AppIcon.maxBlackAndWhite": "Max Black and White",
+    "views.Settings.AppIcon.zeusEngraved": "Engraved Zeus",
+    "views.Settings.AppIcon.zeusIllustrated": "Illustrated Zeus",
     "views.Settings.AppIcon.gradient": "Gradient",
     "views.Settings.AppIcon.flat": "Flat",
     "views.Settings.AppIcon.yellow": "Yellow",
