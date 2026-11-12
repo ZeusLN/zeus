@@ -408,14 +408,18 @@ export default class LightningAddressStore {
             } = statusData;
 
             // The list is server-supplied: keep it only when it is an
-            // array, and only its entries that are objects, so one bad
-            // entry cannot break the Lightning address screen or Redeem All
+            // array, and only its entries that are objects with a quote id,
+            // so one bad entry cannot break the Lightning address screen or
+            // Redeem All. Without a quote id an entry can be neither
+            // redeemed nor deleted.
             const openPayments = Array.isArray(paid)
                 ? paid.filter(
                       (item: any) =>
                           item !== null &&
                           typeof item === 'object' &&
-                          !Array.isArray(item)
+                          !Array.isArray(item) &&
+                          typeof item.quote_id === 'string' &&
+                          item.quote_id !== ''
                   )
                 : [];
 

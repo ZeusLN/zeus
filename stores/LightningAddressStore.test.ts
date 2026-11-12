@@ -170,6 +170,70 @@ describe('LightningAddressStore', () => {
             expect(store.redeemingAll).toBe(false);
         });
 
+        const quotePayment = {
+            quote_id: 'q1',
+            mint_url: 'https://mint.test',
+            amount_msat: 1000
+        };
+
+        it.each([
+            ['no fields', {}],
+            [
+                'no quote id',
+                { mint_url: 'https://mint.test', amount_msat: 1000 }
+            ],
+            [
+                'a number as quote id',
+                {
+                    quote_id: 5,
+                    mint_url: 'https://mint.test',
+                    amount_msat: 1000
+                }
+            ],
+            [
+                'an empty quote id',
+                {
+                    quote_id: '',
+                    mint_url: 'https://mint.test',
+                    amount_msat: 1000
+                }
+            ]
+        ])(
+            'drops a Cashu paid entry with %s',
+            async (_name: string, entry: any) => {
+                const store = statusStore();
+                mockStatusResponse({
+                    addressType: 'cashu',
+                    paid: [entry, quotePayment]
+                });
+
+                await store.status();
+
+                expect(store.paid).toEqual([quotePayment]);
+            }
+        );
+
+        it('lets Redeem All redeem only the entries with a quote id', async () => {
+            const store = statusStore();
+            mockStatusResponse({
+                addressType: 'cashu',
+                paid: [{}, quotePayment]
+            });
+            await store.status();
+            const redeem = jest
+                .spyOn(store, 'redeemCashu')
+                .mockResolvedValue(true);
+
+            await store.redeemAllOpenPaymentsCashu();
+            // the status call at the end of Redeem All
+            await flushPromises();
+
+            expect(redeem.mock.calls).toEqual([
+                ['q1', 'https://mint.test', 1000, true, undefined, false]
+            ]);
+            expect(store.error).toBe(false);
+        });
+
         it('records the error and rethrows when the server rejects the call', async () => {
             const store = statusStore();
             (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
