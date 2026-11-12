@@ -40,7 +40,7 @@ export default class FeeStore {
     @observable public bumpFeeError = false;
     @observable public bumpFeeErrorMsg = '';
 
-    getOnchainFeesToken: any;
+    getOnchainFeesToken: number = 0;
 
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
@@ -58,9 +58,21 @@ export default class FeeStore {
         const url = `${UrlUtils.getMempoolApiUrl(
             this.nodeInfoStore.nodeInfo
         )}/v1/fees/recommended`;
+
+        const token = ++this.getOnchainFeesToken;
+
         return ReactNativeBlobUtil.fetch('get', url)
             .then((response: any) => {
                 const status = response.info().status;
+
+                // A newer call owns the store and the alert. Callers read
+                // the resolved value, so still return this call's own rates.
+                if (token !== this.getOnchainFeesToken) {
+                    return status == 200
+                        ? sanitizeRecommendedFees(response.json()) ?? undefined
+                        : undefined;
+                }
+
                 if (status == 200) {
                     // These rates become defaults the user does not have
                     // to look at (Sweep sends at one without a confirm
@@ -98,6 +110,9 @@ export default class FeeStore {
                 }
             })
             .catch((error: any) => {
+                // Ignore stale failure — a newer call has superseded this one.
+                if (token !== this.getOnchainFeesToken) return;
+
                 console.error('Error fetching fees:', error);
                 const msg =
                     error instanceof SyntaxError
