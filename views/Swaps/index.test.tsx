@@ -424,4 +424,82 @@ describe('Swaps: reverse fee lookup', () => {
         expect(view.state.fee).toBe('20');
         expect(view.state.feeRateLookupDone).toBe(true);
     });
+
+    it('sets feeRateLookupDone true when the lookup rejects', async () => {
+        const getOnchainFeesviaMempool = jest
+            .fn()
+            .mockRejectedValueOnce(new Error('network down'));
+        const consoleErrorSpy = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+        const { view, prevProps, prevState } = makeView(
+            getOnchainFeesviaMempool,
+            undefined,
+            { fee: '2', feeRateLookupDone: false }
+        );
+
+        await view.componentDidUpdate(prevProps as any, prevState as any);
+
+        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(view.state.fee).toBe('2');
+        expect(view.state.feeRateLookupDone).toBe(true);
+
+        consoleErrorSpy.mockRestore();
+    });
+
+    it('keeps feeRateLookupDone false when an older overlapping lookup rejects', async () => {
+        let rejectFirst: (e: any) => void = () => {};
+        let resolveSecond: (v: any) => void = () => {};
+        const getOnchainFeesviaMempool = jest
+            .fn()
+            .mockReturnValueOnce(
+                new Promise((_res, rej) => {
+                    rejectFirst = rej;
+                })
+            )
+            .mockReturnValueOnce(
+                new Promise((res) => {
+                    resolveSecond = res;
+                })
+            );
+        const consoleErrorSpy = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+
+        const { view, prevProps } = makeView(
+            getOnchainFeesviaMempool,
+            undefined,
+            { fee: '2', feeRateLookupDone: false }
+        );
+
+        // Lookup 1 starts.
+        const update1 = view.componentDidUpdate(
+            prevProps as any,
+            { ...view.state, reverse: false } as any
+        );
+
+        // Toggle off, then on — lookup 2 starts.
+        view.setState({ reverse: false });
+        view.setState({ reverse: true });
+        const update2 = view.componentDidUpdate(
+            prevProps as any,
+            { ...view.state, reverse: false } as any
+        );
+
+        // Older lookup rejects.
+        rejectFirst(new Error('network down'));
+        await update1;
+
+        expect(view.state.fee).toBe('2');
+        expect(view.state.feeRateLookupDone).toBe(false);
+
+        // Newer lookup resolves.
+        resolveSecond({ fastestFee: 20 });
+        await update2;
+
+        expect(view.state.fee).toBe('20');
+        expect(view.state.feeRateLookupDone).toBe(true);
+
+        consoleErrorSpy.mockRestore();
+    });
 });
