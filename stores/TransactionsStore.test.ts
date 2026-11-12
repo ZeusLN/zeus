@@ -1179,6 +1179,126 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
     });
 });
 
+describe('TransactionsStore timed-out AMP payments (issue #5715)', () => {
+    const TIMED_OUT = {
+        payment_error: 'views.SendingLightning.paymentTimedOut',
+        payment_timed_out: true
+    };
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockReturnValue(true);
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    // AMP has no single payment hash, so the store can't track it. The
+    // send screen offers Try Again only when error or payment_error is
+    // set, and a retry sends a second AMP payment to the same invoice.
+    const expectUnverifiedInTransit = (store: TransactionsStore) => {
+        expect(store.error).toBe(false);
+        expect(store.payment_error).toBeNull();
+        expect(store.status).toBe('IN_FLIGHT');
+        expect(store.paymentOutcomeUnverified).toBe(true);
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.loading).toBe(false);
+        expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
+    };
+
+    it('shows an embedded LND AMP keysend timeout as in transit, not failed', async () => {
+        sendKeysend.mockResolvedValue({
+            ...TIMED_OUT,
+            dispatch_deadline_ms: Date.now()
+        });
+
+        const store = newStore('embedded-lnd');
+        store.sendPayment({
+            pubkey: '02'.repeat(33),
+            amount: '1000',
+            amp: true
+        });
+        await flush();
+
+        expect(sendKeysend).toHaveBeenCalledWith(
+            expect.objectContaining({ amp: true })
+        );
+        expectUnverifiedInTransit(store);
+    });
+
+    it('shows an LNC AMP timeout that lands after the backstop as in transit', async () => {
+        // LNC resolves its timed-out shape timeout_seconds + 60 s after
+        // dispatch, the same delay as the store's backstop, which releases
+        // the guard of an untrackable payment first
+        const send = deferred();
+        payLightningInvoice.mockReturnValue(send.promise);
+
+        const store = newStore('lightning-node-connect');
+        store.sendPayment({
+            payment_request: 'lnbc1fake',
+            amp: true,
+            timeout_seconds: '10'
+        });
+        await jest.advanceTimersByTimeAsync(70 * 1000);
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.loading).toBe(true);
+
+        send.resolve(TIMED_OUT);
+        await flush();
+
+        expectUnverifiedInTransit(store);
+    });
+
+    it('still shows an AMP payment the node failed as failed', async () => {
+        payLightningInvoice.mockResolvedValue({
+            status: 'FAILED',
+            failure_reason: 'FAILURE_REASON_NO_ROUTE'
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake', amp: true });
+        await flush();
+
+        expect(store.error).toBe(true);
+        expect(store.status).toBe('FAILED');
+        expect(store.paymentOutcomeUnverified).toBe(false);
+        expect(store.paymentInFlight).toBe(false);
+    });
+
+    it('still shows a settled AMP payment as settled', async () => {
+        payLightningInvoice.mockResolvedValue({
+            status: 'SUCCEEDED',
+            payment_preimage: 'deadbeef'
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake', amp: true });
+        await flush();
+
+        expect(store.error).toBe(false);
+        expect(store.status).toBe('SUCCEEDED');
+        expect(store.paymentOutcomeUnverified).toBe(false);
+        expect(store.paymentInFlight).toBe(false);
+    });
+
+    it('clears the unverified note when the next payment is sent', async () => {
+        payLightningInvoice.mockResolvedValueOnce(TIMED_OUT);
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake', amp: true });
+        await flush();
+        expect(store.paymentOutcomeUnverified).toBe(true);
+
+        payLightningInvoice.mockReturnValueOnce(new Promise(() => {}));
+        store.sendPayment({ payment_request: 'lnbc1other' });
+        expect(store.paymentOutcomeUnverified).toBe(false);
+        expect(store.status).toBeNull();
+    });
+});
+
 // A rejected send starts tracking, and the lookup then finds the failed
 // record. Core Lightning and NWC records carry no failure reason, and LDK
 // Node reports every failure as FAILURE_REASON_ERROR, so the node's own
