@@ -772,6 +772,23 @@ describe('LightningNodeConnect', () => {
 
             expect(onPaid).not.toHaveBeenCalled();
             expect(listenerCount()).toBe(1);
+            // an update without r_hash is skipped, not left to throw
+            expect(console.warn).not.toHaveBeenCalled();
+        });
+
+        it('keeps watching, without a warning, when an earlier invoice is cancelled or expires', async () => {
+            const { onPaid } = await watch();
+
+            // lnd ends the stream of a cancelled or expired invoice with its
+            // CANCELED update and then EOF, not with a Canceled error
+            emit(update(EARLIER, { settled: false, state: 'CANCELED' }));
+            emit({ result: 'EOF' });
+
+            expect(listenerCount()).toBe(1);
+            expect(console.warn).not.toHaveBeenCalled();
+
+            emit(update(WATCHED, { settled: true, amt_paid_sat: '300000' }));
+            expect(onPaid).toHaveBeenCalledTimes(1);
         });
 
         it('keeps watching when the stream of an earlier invoice ends', async () => {
