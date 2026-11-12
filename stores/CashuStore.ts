@@ -2053,6 +2053,11 @@ export default class CashuStore {
                 console.warn(
                     `CDK: ${this.receivesInFlight.size} receive(s) still in flight, opening the wallet anyway`
                 );
+                // They run on the handles initializeWallet now replaces, so
+                // waiting for them again at a later init protects nothing.
+                // A receive whose mint never answers never settles, and
+                // would otherwise add the full wait to every later switch
+                this.receivesInFlight.clear();
                 return;
             }
             let capTimeoutId: ReturnType<typeof setTimeout> | undefined;
