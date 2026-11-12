@@ -66,7 +66,11 @@ stop_proc() {
     [ -f "$pidf" ] || return 0
     local pid; pid="$(cat "$pidf")"
     if kill -0 "$pid" 2>/dev/null; then
-        # kill the process group children first (Metro spawns workers)
+        # kill the process group children first (Metro spawns workers).
+        # Git Bash has no pkill; taskkill /T ends the Windows process tree.
+        if [ "$RIG_WINDOWS" = 1 ] && [ -r "/proc/$pid/winpid" ]; then
+            taskkill //F //T //PID "$(cat "/proc/$pid/winpid")" >/dev/null 2>&1 || true
+        fi
         pkill -TERM -P "$pid" 2>/dev/null || true
         kill -TERM "$pid" 2>/dev/null || true
         for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
@@ -81,7 +85,19 @@ proc_running() {
     [ -f "$pidf" ] && kill -0 "$(cat "$pidf")" 2>/dev/null
 }
 
-# wait_until <seconds> <cmd...> : retry cmd every second until it succeeds
+# port_listening <port> : true when a TCP socket listens on <port>. Uses
+# lsof, else netstat (Git Bash on Windows has no lsof).
+port_listening() {
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
+    else
+        netstat -an 2>/dev/null | grep -Eq "[:.]$1 +[^ ]+ +LISTEN"
+    fi
+}
+
+# wait_until <tries> <cmd...> : run cmd up to <tries> times, 1 s apart, until
+# it succeeds. A slow cmd makes the wait longer than <tries> seconds (on
+# Windows a refused connection to localhost takes about 2 s).
 wait_until() {
     local t="$1"; shift
     local i=0

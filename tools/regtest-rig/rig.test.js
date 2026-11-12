@@ -555,6 +555,244 @@ describe('regtest rig: bin/up against a fake docker', () => {
     });
 });
 
+describe('regtest rig: Windows (Git Bash) handling', () => {
+    const os = require('os');
+    const which = (t) => {
+        try {
+            return execFileSync('sh', ['-c', `command -v ${t}`])
+                .toString()
+                .trim();
+        } catch (e) {
+            return null;
+        }
+    };
+    const BASH = which('bash');
+    const maybe = which('jq') ? it : it.skip;
+
+    let dir, fakeBin;
+    beforeEach(() => {
+        dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rig-win-'));
+        fakeBin = path.join(dir, 'bin');
+        fs.mkdirSync(fakeBin);
+        fs.writeFileSync(path.join(dir, 'rig.env'), '');
+    });
+    afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+    const fake = (name, body) =>
+        fs.writeFileSync(path.join(fakeBin, name), `#!/bin/sh\n${body}\n`, {
+            mode: 0o755
+        });
+    // uname -s prints `system`; cygpath logs its arguments and returns the
+    // path unchanged, so converted paths stay usable on this host
+    const fakeHost = (system) => {
+        fake('uname', `echo ${system}`);
+        fake('cygpath', 'echo "$@" >>"$FAKE_CYGPATH_LOG"; echo "$2"');
+    };
+    const cygpathCalls = () => {
+        const f = path.join(dir, 'cygpath.log');
+        return fs.existsSync(f)
+            ? fs.readFileSync(f, 'utf8').trim().split('\n')
+            : [];
+    };
+    const rigEnv = (extra = {}) => {
+        const env = {
+            ...process.env,
+            PATH: `${fakeBin}:${process.env.PATH}`,
+            RIG_ENV: path.join(dir, 'rig.env'),
+            RIG_STATE: path.join(dir, 'state'),
+            RIG_NAME: 'zrigtest',
+            FAKE_CYGPATH_LOG: path.join(dir, 'cygpath.log'),
+            ...extra
+        };
+        for (const k of Object.keys(env)) {
+            if (env[k] === undefined) delete env[k];
+        }
+        return env;
+    };
+    // sources env.sh and prints the named variables, one per line
+    const sourceEnv = (vars, extra) =>
+        execFileSync(
+            BASH,
+            [
+                '-c',
+                `. "$1/env.sh"; for v in ${vars.join(
+                    ' '
+                )}; do printf '%s\\n' "\${!v:-}"; done`,
+                '_',
+                RIG
+            ],
+            { env: rigEnv(extra) }
+        )
+            .toString()
+            .split('\n')
+            .slice(0, vars.length);
+
+    // an SDK dir with the Windows avdmanager.bat
+    const windowsSdk = () => {
+        const sdk = path.join(dir, 'sdk');
+        const b = path.join(sdk, 'cmdline-tools/latest/bin');
+        fs.mkdirSync(b, { recursive: true });
+        fs.writeFileSync(path.join(b, 'avdmanager.bat'), '');
+        return sdk;
+    };
+    const EXCL = [
+        '/CN=',
+        '/data',
+        '/home',
+        '/tls',
+        '/sdcard',
+        '--tlscertpath=',
+        '--macaroonpath='
+    ];
+
+    it('on Git Bash: avdmanager.bat, path exclusions, C:/ host paths', () => {
+        fakeHost('MINGW64_NT-10.0-26100');
+        const sdk = windowsSdk();
+        const [avdmanager, excl, win, zeusDir] = sourceEnv(
+            ['AVDMANAGER', 'MSYS2_ARG_CONV_EXCL', 'RIG_WINDOWS', 'ZEUS_DIR'],
+            {
+                ANDROID_HOME: sdk,
+                MSYS2_ARG_CONV_EXCL: 'mine',
+                ZEUS_DIR: undefined
+            }
+        );
+        expect(avdmanager).toBe(
+            path.join(sdk, 'cmdline-tools/latest/bin/avdmanager.bat')
+        );
+        expect(win).toBe('1');
+        // appended to the user's own list
+        expect(excl.split(';')).toEqual(['mine', ...EXCL]);
+        // RIG_DIR, ZEUS_DIR and the state dir all go through cygpath -m
+        const calls = cygpathCalls();
+        expect(calls).toContain(`-m ${RIG}`);
+        expect(calls).toContain(`-m ${zeusDir}`);
+        expect(calls).toContain(`-m ${path.join(dir, 'state')}`);
+    });
+
+    it('on Git Bash: ANDROID_HOME defaults to %LOCALAPPDATA%/Android/Sdk', () => {
+        fakeHost('MSYS_NT-10.0-26100');
+        const [androidHome] = sourceEnv(['ANDROID_HOME'], {
+            ANDROID_HOME: undefined,
+            ANDROID_SDK_ROOT: undefined,
+            LOCALAPPDATA: path.join(dir, 'appdata')
+        });
+        expect(androidHome).toBe(path.join(dir, 'appdata/Android/Sdk'));
+    });
+
+    it('on macOS: no .bat, no exclusions, no cygpath', () => {
+        fakeHost('Darwin');
+        const sdk = windowsSdk();
+        const [avdmanager, excl, win] = sourceEnv(
+            ['AVDMANAGER', 'MSYS2_ARG_CONV_EXCL', 'RIG_WINDOWS'],
+            { ANDROID_HOME: sdk, MSYS2_ARG_CONV_EXCL: undefined }
+        );
+        expect(avdmanager).toBe(
+            path.join(sdk, 'cmdline-tools/latest/bin/avdmanager')
+        );
+        expect(excl).toBe('');
+        expect(win).toBe('0');
+        expect(cygpathCalls()).toEqual([]);
+    });
+
+    maybe(
+        'bin/metro start runs react-native/cli.js with a resolved projectRoot',
+        () => {
+            const zeus = path.join(dir, 'zeus');
+            fs.mkdirSync(path.join(zeus, 'node_modules'), { recursive: true });
+            fs.writeFileSync(
+                path.join(zeus, 'metro.config.js'),
+                'module.exports = { resolver: {} };\n'
+            );
+            const nodeLog = path.join(dir, 'node.log');
+            // node records its argv; curl (the /status probe) succeeds once
+            // node has started
+            fake('node', `printf '%s\\n' "$@" >"${nodeLog}"`);
+            fake('curl', `[ -s "${nodeLog}" ]`);
+            execFileSync(BASH, [path.join(RIG, 'bin/metro'), 'start'], {
+                // "/." stands in for a root that path.resolve rewrites (on
+                // Windows, C:/... to C:\...)
+                env: rigEnv({
+                    ZEUS_DIR: `${zeus}/.`,
+                    METRO_PORT: String(40000 + Math.floor(Math.random() * 9000))
+                }),
+                stdio: 'pipe'
+            });
+            const argv = fs.readFileSync(nodeLog, 'utf8').trim().split('\n');
+            expect(path.resolve(argv[0])).toBe(
+                path.join(zeus, 'node_modules/react-native/cli.js')
+            );
+            expect(argv[1]).toBe('start');
+            const cfgPath = path.join(dir, 'state/metro.config.js');
+            expect(argv[argv.indexOf('--config') + 1]).toBe(cfgPath);
+            const cfg = require(cfgPath);
+            expect(cfg.projectRoot).toBe(zeus);
+            expect(cfg.resolver.useWatchman).toBe(false);
+        }
+    );
+
+    const portListening = (port, env) => {
+        try {
+            execFileSync(
+                BASH,
+                [
+                    '-c',
+                    '. "$1/lib/common.sh"; port_listening "$2"',
+                    '_',
+                    RIG,
+                    String(port)
+                ],
+                { env, stdio: 'pipe' }
+            );
+            return true;
+        } catch (e) {
+            return false;
+        }
+    };
+
+    (which('lsof') ? it : it.skip)('port_listening with lsof', async () => {
+        const server = require('net').createServer();
+        await new Promise((r) => server.listen(0, '127.0.0.1', r));
+        const { port } = server.address();
+        let open;
+        try {
+            open = portListening(port, process.env);
+        } finally {
+            await new Promise((r) => server.close(r));
+        }
+        expect(open).toBe(true);
+        expect(portListening(port, process.env)).toBe(false);
+    });
+
+    // Git Bash: no lsof on PATH; netstat -an in the Windows format
+    it('port_listening with Windows netstat only', () => {
+        fake(
+            'netstat',
+            `cat <<'EOF'
+
+Active Connections
+
+  Proto  Local Address          Foreign Address        State
+  TCP    0.0.0.0:135            0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:24690        0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:24611        127.0.0.1:5137         ESTABLISHED
+  TCP    [::]:15640             [::]:0                 LISTENING
+  UDP    0.0.0.0:5640           *:*
+EOF`
+        );
+        fs.symlinkSync(which('grep'), path.join(fakeBin, 'grep'));
+        fs.symlinkSync(which('cat'), path.join(fakeBin, 'cat'));
+        const env = { PATH: fakeBin };
+        expect(portListening(24690, env)).toBe(true);
+        expect(portListening(135, env)).toBe(true);
+        // only the foreign end of a connection
+        expect(portListening(5137, env)).toBe(false);
+        // 15640 listens, 5640 is UDP only
+        expect(portListening(5640, env)).toBe(false);
+        expect(portListening(15640, env)).toBe(true);
+        expect(portListening(4690, env)).toBe(false);
+    });
+});
+
 describe('regtest rig: LNURL-auth service', () => {
     const ORIGIN = 'https://auth.lvh.me:24681';
     const newService = () =>
