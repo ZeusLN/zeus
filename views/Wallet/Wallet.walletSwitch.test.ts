@@ -15,6 +15,7 @@ import {
 } from '../../utils/LndMobileErrors';
 import { sourceMethods } from '../../backends/lncTestUtils';
 import { deriveVerifier, hasVerifier } from '../../utils/LockVerifierUtils';
+import * as WalletRecoveryUtils from '../../utils/WalletRecoveryUtils';
 
 const deferred = <T = void>() => {
     let resolve!: (value: T) => void;
@@ -143,8 +144,9 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             retryOnTransientError,
             restartNeeded: jest.fn(),
             LinkingUtils,
-            Storage: { getItem: async () => false },
+            Storage: { getItem: async () => false, setItem: async () => {} },
             CHANNEL_MIGRATION_ACTIVE: 'test-migration-flag',
+            IS_BACKED_UP_KEY: 'backup-complete-v2',
             processSharedQRImageFast: async () => null,
             Platform: { OS: 'ios' },
             applySystemNavigationBarTheme: jest.fn(),
@@ -154,7 +156,8 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             PosEnabled: { Disabled: 'disabled', Standalone: 'standalone' },
             repairMissingChannelEdges,
             isWipePending,
-            BackHandler: { addEventListener: () => ({ remove: () => {} }) }
+            BackHandler: { addEventListener: () => ({ remove: () => {} }) },
+            ...WalletRecoveryUtils
         }
     );
     const view = new Wallet();
@@ -744,5 +747,213 @@ describe('Cashu work on focus', () => {
         expect(CashuDevKit.getBalances).toHaveBeenCalledTimes(1);
         expect(cashu.checkInvoicePaid).toHaveBeenCalledWith('quote-a', MINT_A);
         expect(cashu.reset).not.toHaveBeenCalled();
+    });
+});
+
+// A restored wallet's pending recovery (fetching its channel backup) must
+// survive other wallets connecting in between, or the restored wallet later
+// starts as an ordinary wallet without its channels
+describe('recovery after a restore from seed', () => {
+    const run = async (
+        selectedNode: number,
+        recoverySettings: Record<string, any>,
+        recoverError?: Error,
+        storeState: Record<string, any> = {},
+        // Settings another write puts in place just before the first
+        // update of this connect runs
+        landsFirst?: Record<string, any>
+    ) => {
+        const ctx = setup(selectedNode);
+        Object.assign(ctx.settings, {
+            lndDir: 'c',
+            ldkNodeDir: 'a',
+            ...storeState
+        });
+        ctx.view.props.SyncStore.startSyncing = jest.fn();
+        if (nodes[selectedNode].implementation === 'ldk-node') {
+            ctx.settings.lndDir = undefined;
+        }
+        ctx.settings.settings = {
+            ...ctx.settings.settings,
+            ...recoverySettings
+        };
+        ctx.settings.updateSettings = jest.fn(async (patch: any) => {
+            if (landsFirst) {
+                ctx.settings.settings = {
+                    ...ctx.settings.settings,
+                    ...landsFirst
+                };
+                landsFirst = undefined;
+            }
+            const update =
+                typeof patch === 'function'
+                    ? patch(ctx.settings.settings)
+                    : patch;
+            ctx.settings.settings = { ...ctx.settings.settings, ...update };
+            return ctx.settings.settings;
+        });
+        const { ChannelBackupStore } = ctx.view.props;
+        ChannelBackupStore.recoverStaticChannelBackup = jest.fn(async () => {
+            if (recoverError) throw recoverError;
+        });
+        ChannelBackupStore.initSubscribeChannelEvents = jest.fn();
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        await ctx.runner.run(ctx.refresh);
+        await flush();
+        const { recovery, recoveryWalletDirs } = ctx.settings.settings;
+        return { ...ctx, recovery, recoveryWalletDirs, ChannelBackupStore };
+    };
+
+    it('an LDK Node wallet leaves the pending recovery of another wallet', async () => {
+        const { recovery, recoveryWalletDirs } = await run(0, {
+            recovery: true,
+            recoveryWalletDirs: ['c']
+        });
+        expect(recovery).toBe(true);
+        expect(recoveryWalletDirs).toEqual(['c']);
+    });
+
+    it('a restored LDK Node wallet clears only its own entry', async () => {
+        const { recovery, recoveryWalletDirs } = await run(0, {
+            recovery: true,
+            recoveryWalletDirs: ['c', 'a']
+        });
+        expect(recovery).toBe(true);
+        expect(recoveryWalletDirs).toEqual(['c']);
+    });
+
+    it('a restored embedded LND wallet recovers and clears only its own entry', async () => {
+        const { lnd, ChannelBackupStore, recovery, recoveryWalletDirs } =
+            await run(2, { recovery: true, recoveryWalletDirs: ['c', 'x'] });
+        expect(lnd.startLnd).toHaveBeenCalledWith(
+            expect.objectContaining({ isRecovery: true })
+        );
+        expect(
+            ChannelBackupStore.recoverStaticChannelBackup
+        ).toHaveBeenCalledTimes(1);
+        expect(recovery).toBe(true);
+        expect(recoveryWalletDirs).toEqual(['x']);
+    });
+
+    it('an embedded LND wallet that was not restored starts normally', async () => {
+        const { lnd, ChannelBackupStore, recovery, recoveryWalletDirs } =
+            await run(2, { recovery: true, recoveryWalletDirs: ['x'] });
+        expect(lnd.startLnd).toHaveBeenCalledWith(
+            expect.objectContaining({ isRecovery: false })
+        );
+        expect(
+            ChannelBackupStore.recoverStaticChannelBackup
+        ).not.toHaveBeenCalled();
+        expect(recovery).toBe(true);
+        expect(recoveryWalletDirs).toEqual(['x']);
+    });
+
+    it('keeps a failed recovery pending for the restored wallet', async () => {
+        const { recovery, recoveryWalletDirs } = await run(
+            2,
+            { recovery: true, recoveryWalletDirs: ['c'] },
+            new Error('No backup server reachable')
+        );
+        expect(recovery).toBe(true);
+        expect(recoveryWalletDirs).toEqual(['c']);
+    });
+
+    it("stops another wallet's running daemon before starting a restored wallet", async () => {
+        const { lnd, ChannelBackupStore, recoveryWalletDirs } = await run(
+            2,
+            { recovery: true, recoveryWalletDirs: ['c'] },
+            undefined,
+            { embeddedLndStarted: true, walletJustCreated: false }
+        );
+        expect(lnd.stopLnd).toHaveBeenCalledTimes(1);
+        expect(lnd.stopLnd.mock.invocationCallOrder[0]).toBeLessThan(
+            lnd.startLnd.mock.invocationCallOrder[0]
+        );
+        expect(lnd.startLnd).toHaveBeenCalledWith(
+            expect.objectContaining({ lndDir: 'c', isRecovery: true })
+        );
+        expect(
+            ChannelBackupStore.recoverStaticChannelBackup
+        ).toHaveBeenCalledTimes(1);
+        expect(recoveryWalletDirs).toBeUndefined();
+    });
+
+    it('keeps the daemon a restore just started and still recovers', async () => {
+        const { lnd, ChannelBackupStore, settings, recoveryWalletDirs } =
+            await run(
+                2,
+                { recovery: true, recoveryWalletDirs: ['c'] },
+                undefined,
+                {
+                    embeddedLndStarted: true,
+                    walletJustCreated: true
+                }
+            );
+        expect(lnd.stopLnd).not.toHaveBeenCalled();
+        expect(lnd.startLnd).not.toHaveBeenCalled();
+        expect(settings.walletJustCreated).toBe(false);
+        expect(
+            ChannelBackupStore.recoverStaticChannelBackup
+        ).toHaveBeenCalledTimes(1);
+        expect(recoveryWalletDirs).toBeUndefined();
+    });
+
+    describe('flag written by a version without the wallet list', () => {
+        it('is bound to the embedded LND wallet that connects first', async () => {
+            const { ChannelBackupStore, recovery, recoveryWalletDirs } =
+                await run(
+                    2,
+                    { recovery: true },
+                    new Error('No backup server reachable')
+                );
+            expect(
+                ChannelBackupStore.recoverStaticChannelBackup
+            ).toHaveBeenCalledTimes(1);
+            expect(recovery).toBe(true);
+            expect(recoveryWalletDirs).toEqual(['c']);
+        });
+
+        it('is bound to and cleared by an LDK Node wallet that connects first', async () => {
+            const { recovery, recoveryWalletDirs } = await run(0, {
+                recovery: true
+            });
+            expect(recovery).toBe(false);
+            expect(recoveryWalletDirs).toBeUndefined();
+        });
+
+        it("is not taken when another wallet's binding lands first", async () => {
+            const {
+                lnd,
+                ChannelBackupStore,
+                settings,
+                recovery,
+                recoveryWalletDirs
+            } = await run(
+                2,
+                { recovery: true },
+                undefined,
+                {},
+                {
+                    recoveryWalletDirs: ['other']
+                }
+            );
+            expect(lnd.startLnd).toHaveBeenCalledWith(
+                expect.objectContaining({ lndDir: 'c', isRecovery: false })
+            );
+            expect(
+                ChannelBackupStore.recoverStaticChannelBackup
+            ).not.toHaveBeenCalled();
+            expect(settings.updateSettings).toHaveBeenCalledTimes(1);
+            expect(recovery).toBe(true);
+            expect(recoveryWalletDirs).toEqual(['other']);
+        });
+
+        it('is left alone by a remote wallet', async () => {
+            const { recovery, recoveryWalletDirs } = await run(1, {
+                recovery: true
+            });
+            expect(recovery).toBe(true);
+            expect(recoveryWalletDirs).toBeUndefined();
+        });
     });
 });

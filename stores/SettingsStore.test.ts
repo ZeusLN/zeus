@@ -1343,7 +1343,8 @@ describe('SettingsStore.updateSettings refresh flag', () => {
         ['initialLoad', true, false],
         ['resetExpressGraphSyncOnStartup', true, false],
         ['rescan', true, false],
-        ['recovery', true, false]
+        ['recovery', true, false],
+        ['recoveryWalletDirs', ['a', 'b'], ['a']]
     ])(
         'stays unarmed when only %s changes',
         async (key, storedValue, newValue) => {

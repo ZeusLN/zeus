@@ -74,6 +74,7 @@ import Scan from '../../assets/images/SVG/Scan.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 
 import { getPhoto } from '../../utils/PhotoUtils';
+import { addRecoveryWallet } from '../../utils/WalletRecoveryUtils';
 import {
     clearNodeKeychainData,
     clearCDKDatabase,
@@ -770,6 +771,11 @@ export default class WalletConfiguration extends React.Component<
                 return {
                     nodes,
                     selectedNode: nodes.length - 1,
+                    // Pending next to any earlier restore that has not run
+                    // yet, written with the node so a kill cannot split them
+                    ...(recoveryCipherSeed
+                        ? addRecoveryWallet(current, lndDir || 'lnd')
+                        : {}),
                     // Force Wallet view to restart connection for new wallet
                     justDeletedWallet: false,
                     // Ensure Express Graph Sync runs for new wallet
@@ -795,12 +801,6 @@ export default class WalletConfiguration extends React.Component<
                         console.error('Error updating NWC connections:', error);
                     }
                 }
-                if (recoveryCipherSeed) {
-                    await updateSettings({
-                        recovery: true
-                    });
-                }
-
                 this.setState({
                     saved: true
                 });
