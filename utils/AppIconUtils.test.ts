@@ -285,6 +285,55 @@ describe('AppIconUtils', () => {
         });
     });
 
+    describe('selectedAppIcon', () => {
+        it('trusts the icon iOS has applied over a stale setting', async () => {
+            const native = makeNative();
+            native.getAlternateIcon.mockResolvedValue('AppIconZeusEngraved');
+            await expect(
+                load('ios', native).default.selectedAppIcon({
+                    display: { appIcon: 'maxGradient' }
+                })
+            ).resolves.toBe('zeusEngraved');
+        });
+
+        it('reports the primary icon on iOS when no alternate is applied', async () => {
+            await expect(
+                load('ios', makeNative()).default.selectedAppIcon({
+                    display: { appIcon: 'red' }
+                })
+            ).resolves.toBe('maxGradient');
+        });
+
+        it('falls back to the setting on iOS without the native module', async () => {
+            await expect(
+                load('ios', null).default.selectedAppIcon({
+                    display: { appIcon: 'red' }
+                })
+            ).resolves.toBe('red');
+        });
+
+        it('uses the saved setting on Android without asking native', async () => {
+            const native = makeNative();
+            native.getVariant.mockResolvedValue('AppIconRedActivity');
+            await expect(
+                load('android', native).default.selectedAppIcon({
+                    display: { appIcon: 'yellow' }
+                })
+            ).resolves.toBe('yellow');
+            expect(native.getVariant).not.toHaveBeenCalled();
+        });
+
+        it('falls back to the Android default for missing or iOS-only settings', async () => {
+            const utils = load('android', makeNative()).default;
+            await expect(utils.selectedAppIcon(undefined)).resolves.toBe(
+                'flat'
+            );
+            await expect(
+                utils.selectedAppIcon({ display: { appIcon: 'zeusEngraved' } })
+            ).resolves.toBe('flat');
+        });
+    });
+
     describe('applyStoredIcon', () => {
         it('applies the stored variant', async () => {
             const native = makeNative();

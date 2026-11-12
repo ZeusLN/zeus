@@ -224,6 +224,24 @@ class AppIconUtils {
         return platformDefaultAppIcon();
     }
 
+    // The icon the picker should show as selected. On iOS that is the icon
+    // the system has applied: setAlternateIconName only calls back after
+    // the user dismisses the system alert, so if the app is killed while
+    // the alert is up the icon changes but display.appIcon is never saved.
+    // On Android the saved setting is the source of truth, since the
+    // launcher switch is deferred until the app goes to background.
+    async selectedAppIcon(settings?: {
+        display?: { appIcon?: AppIconVariant };
+    }): Promise<AppIconVariant> {
+        if (Platform.OS === 'ios' && this.isSupported()) {
+            return this.getAppIcon();
+        }
+        const stored = settings?.display?.appIcon;
+        return this.availableVariants().some((v) => v.key === stored)
+            ? (stored as AppIconVariant)
+            : platformDefaultAppIcon();
+    }
+
     async applyStoredIcon(settingsStore: SettingsStoreLike): Promise<boolean> {
         if (!this.isSupported()) return false;
         try {

@@ -72,12 +72,7 @@ export default class Display extends React.Component<
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
-        const storedAppIcon = settings.display && settings.display.appIcon;
-        const appIcon = AppIconUtils.availableVariants().some(
-            (v) => v.key === storedAppIcon
-        )
-            ? (storedAppIcon as AppIconVariant)
-            : platformDefaultAppIcon();
+        const appIcon = await AppIconUtils.selectedAppIcon(settings);
 
         this.setState({
             theme: (settings.display && settings.display.theme) || 'Dark',

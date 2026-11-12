@@ -49,14 +49,9 @@ export default class AppIcon extends React.Component<
     async componentDidMount() {
         const { SettingsStore } = this.props;
         const settings = await SettingsStore.getSettings();
-        const available = AppIconUtils.availableVariants();
-        const storedRaw = settings.display && settings.display.appIcon;
-        const stored = available.find((v) => v.key === storedRaw)
-            ? (storedRaw as AppIconVariant)
-            : platformDefaultAppIcon();
 
         this.setState({
-            selected: stored,
+            selected: await AppIconUtils.selectedAppIcon(settings),
             stealthActive: AppIconUtils.isLockedByStealthMode(settings)
         });
     }
