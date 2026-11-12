@@ -1524,6 +1524,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Enable & Restart",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Skanna om plånboken",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Skanna om blockchain för dina transaktioner i kedjan. Starta om appen för att träda i kraft. Kommer att avaktiveras vid slutförande.",
     "views.Settings.EmbeddedNode.compactDb": "Kompakta databaser",
