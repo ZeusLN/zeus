@@ -9,6 +9,7 @@ const insets = initialWindowMetrics?.insets ?? {
     bottom: 0
 };
 import {
+    Alert,
     Animated,
     AppState,
     Dimensions,
@@ -49,7 +50,7 @@ import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
-import Alert from '../assets/images/SVG/Alert.svg';
+import AlertIcon from '../assets/images/SVG/Alert.svg';
 import CaretUp from '../assets/images/SVG/Caret Up.svg';
 import NWCLogo from '../assets/images/SVG/nwc-logo.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
@@ -202,9 +203,26 @@ const ClipboardBadge = ({
 }) => (
     <TouchableOpacity
         onPress={async () => {
-            const response = await handleAnything(clipboard);
-            const [route, props] = response;
-            navigation.navigate(route, props);
+            try {
+                const response = await handleAnything(clipboard);
+                // handleAnything alerts and resolves nothing when it cannot
+                // route the value, eg an LNURL tag this backend can't handle
+                if (!response) return;
+                const [route, props] = response;
+                navigation.navigate(route, props);
+            } catch (err: any) {
+                Alert.alert(
+                    localeString('general.error'),
+                    err?.message ?? String(err),
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
+                    { cancelable: false }
+                );
+            }
         }}
     >
         <ClipboardSVG fill={themeColor('text')} width="24" height="30" />
@@ -613,7 +631,7 @@ export default class WalletHeader extends React.Component<
                 onPress={() => ModalStore?.toggleAlertModal(true)}
                 accessibilityLabel={localeString('general.search')}
             >
-                <Alert
+                <AlertIcon
                     fill={themeColor('error')}
                     width="31"
                     height="31"
