@@ -86,12 +86,16 @@ proc_running() {
 }
 
 # port_listening <port> : true when a TCP socket listens on <port>. Uses
-# lsof, else netstat (Git Bash on Windows has no lsof).
+# lsof, else netstat (Git Bash on Windows has no lsof). Windows translates
+# netstat's State column (German: ABHOEREN), so a Windows TCP row also
+# counts when its foreign address is the 0.0.0.0:0 or [::]:0 that only
+# listening sockets show.
 port_listening() {
     if command -v lsof >/dev/null 2>&1; then
         lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
     else
-        netstat -an 2>/dev/null | grep -Eq "[:.]$1 +[^ ]+ +LISTEN"
+        netstat -an 2>/dev/null | grep -Eq \
+            "[:.]$1 +[^ ]+ +LISTEN|^ *TCP +[^ ]+:$1 +(0\.0\.0\.0:0|\[::\]:0)( |\$)"
     fi
 }
 

@@ -555,7 +555,13 @@ describe('regtest rig: bin/up against a fake docker', () => {
     });
 });
 
-describe('regtest rig: Windows (Git Bash) handling', () => {
+// These tests fake Git Bash (uname, cygpath, netstat) on a POSIX host and
+// compare Node paths with what bash prints, so they do not run on Windows,
+// where paths, PATH separators and symlinks differ. The scripts themselves
+// are checked on Windows by hand.
+const describePosix = process.platform === 'win32' ? describe.skip : describe;
+
+describePosix('regtest rig: Windows (Git Bash) handling', () => {
     const os = require('os');
     const which = (t) => {
         try {
@@ -763,12 +769,10 @@ describe('regtest rig: Windows (Git Bash) handling', () => {
         expect(portListening(port, process.env)).toBe(false);
     });
 
-    // Git Bash: no lsof on PATH; netstat -an in the Windows format
-    it('port_listening with Windows netstat only', () => {
-        fake(
-            'netstat',
-            `cat <<'EOF'
-
+    // Git Bash: no lsof on PATH; netstat -an in the Windows format, with
+    // the State column in English or translated
+    const NETSTAT = {
+        english: `
 Active Connections
 
   Proto  Local Address          Foreign Address        State
@@ -777,20 +781,37 @@ Active Connections
   TCP    127.0.0.1:24611        127.0.0.1:5137         ESTABLISHED
   TCP    [::]:15640             [::]:0                 LISTENING
   UDP    0.0.0.0:5640           *:*
-EOF`
-        );
-        fs.symlinkSync(which('grep'), path.join(fakeBin, 'grep'));
-        fs.symlinkSync(which('cat'), path.join(fakeBin, 'cat'));
-        const env = { PATH: fakeBin };
-        expect(portListening(24690, env)).toBe(true);
-        expect(portListening(135, env)).toBe(true);
-        // only the foreign end of a connection
-        expect(portListening(5137, env)).toBe(false);
-        // 15640 listens, 5640 is UDP only
-        expect(portListening(5640, env)).toBe(false);
-        expect(portListening(15640, env)).toBe(true);
-        expect(portListening(4690, env)).toBe(false);
-    });
+`,
+        german: `
+Aktive Verbindungen
+
+  Proto  Lokale Adresse         Remoteadresse          Status
+  TCP    0.0.0.0:135            0.0.0.0:0              ABHÖREN
+  TCP    127.0.0.1:24690        0.0.0.0:0              ABHÖREN
+  TCP    127.0.0.1:24611        127.0.0.1:5137         HERGESTELLT
+  TCP    [::]:15640             [::]:0                 ABHÖREN
+  UDP    0.0.0.0:5640           *:*
+`
+    };
+    it.each(Object.keys(NETSTAT))(
+        'port_listening with Windows netstat only (%s)',
+        (lang) => {
+            fake('netstat', `cat <<'EOF'${NETSTAT[lang]}EOF`);
+            fs.symlinkSync(which('grep'), path.join(fakeBin, 'grep'));
+            fs.symlinkSync(which('cat'), path.join(fakeBin, 'cat'));
+            const env = { PATH: fakeBin };
+            expect(portListening(24690, env)).toBe(true);
+            expect(portListening(135, env)).toBe(true);
+            expect(portListening(15640, env)).toBe(true);
+            // both ends of a connection that does not listen
+            expect(portListening(24611, env)).toBe(false);
+            expect(portListening(5137, env)).toBe(false);
+            // UDP only
+            expect(portListening(5640, env)).toBe(false);
+            // a suffix of a listening port
+            expect(portListening(4690, env)).toBe(false);
+        }
+    );
 });
 
 describe('regtest rig: LNURL-auth service', () => {
