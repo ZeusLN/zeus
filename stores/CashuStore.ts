@@ -6582,17 +6582,11 @@ export default class CashuStore {
                     );
                 }
                 try {
-                    await this.sweepMint(mintUrl);
+                    // Auto-sweep should fail silently, and must not touch
+                    // the loading and error state another view may own
+                    await this.sweepMint(mintUrl, { background: true });
                 } catch (error) {
                     console.error(`Error sweeping mint ${mintUrl}:`, error);
-                } finally {
-                    // Auto-sweep should fail silently —
-                    // clear any error state set by sweepMint
-                    // so it doesn't leak into other views
-                    runInAction(() => {
-                        this.error = false;
-                        this.error_msg = undefined;
-                    });
                 }
             } else {
                 if (__DEV__) {
@@ -6605,11 +6599,14 @@ export default class CashuStore {
     };
 
     @action
-    public sweepMint = async (mintUrl: string): Promise<boolean> => {
+    public sweepMint = async (
+        mintUrl: string,
+        { background = false }: { background?: boolean } = {}
+    ): Promise<boolean> => {
         if (__DEV__) {
             console.log(`Attempting to sweep funds from mint: ${mintUrl}`);
         }
-        this.loading = true;
+        if (!background) this.loading = true;
 
         try {
             // Get balance from CDK
@@ -6618,7 +6615,7 @@ export default class CashuStore {
                 if (__DEV__) {
                     console.log(`Sweep skipped for ${mintUrl}: Zero balance.`);
                 }
-                this.loading = false;
+                if (!background) this.loading = false;
                 return true;
             }
 
@@ -6679,7 +6676,7 @@ export default class CashuStore {
                 console.warn(
                     `Sweep ${mintUrl}: Fee reserve (${feeReserve}) plus input fees (${inputFee}) exceed or equal amount to sweep (${amountToSweep}). Cannot sweep.`
                 );
-                this.loading = false;
+                if (!background) this.loading = false;
                 return false;
             }
 
@@ -6762,11 +6759,12 @@ export default class CashuStore {
                     `Sweep ${mintUrl}: Successfully swept ${receiveAmtSat} sats.`
                 );
             }
-            this.loading = false;
+            if (!background) this.loading = false;
             return true;
         } catch (e: any) {
             const error = e;
             console.error(`Sweep failed for mint ${mintUrl}:`, error);
+            if (background) return false;
             runInAction(() => {
                 this.loading = false;
                 this.error = true;

@@ -369,7 +369,157 @@ describe('CashuStore checkAndSweepMints', () => {
             ecash: { automaticallySweep: true, sweepThresholdSats: 10000 }
         });
         await store.checkAndSweepMints();
-        expect(sweepMint).toHaveBeenCalledWith('https://mint.example.com');
+        expect(sweepMint).toHaveBeenCalledWith('https://mint.example.com', {
+            background: true
+        });
+    });
+});
+
+describe('CashuStore auto-sweep and the shared loading and error state', () => {
+    const mintUrl = 'https://mint.example.com';
+    const otherError = 'stores.CashuStore.errorPayingInvoice';
+
+    const sweepingStore = () => {
+        const store: any = new CashuStore(
+            {
+                implementation: 'lnd',
+                lndDir: 'lnd',
+                settings: {
+                    ecash: { automaticallySweep: true, sweepThresholdSats: 100 }
+                }
+            } as any,
+            {
+                createInvoice: jest.fn().mockResolvedValue({
+                    paymentRequest: 'lnbc10n1psweepinvoice'
+                })
+            } as any,
+            { channels: [{}] } as any,
+            {} as any
+        );
+        store.cdkInitialized = true;
+        store.mintUrls = [mintUrl];
+        store.mintBalances = { [mintUrl]: 1000 };
+        store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
+        store.isOwnInvoicePaid = jest.fn().mockResolvedValue(true);
+        store.estimateMeltInputFee = jest.fn().mockResolvedValue(0);
+        return store;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (CashuDevKit.getMintBalance as jest.Mock).mockResolvedValue(1000);
+        (CashuDevKit.createMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            amount: 990,
+            fee_reserve: 10,
+            expiry: 9999999999
+        });
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+            state: 'Paid',
+            amount: 990
+        });
+        (Storage.setItem as jest.Mock).mockReset().mockResolvedValue(true);
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('leaves loading set by another operation when it ends', async () => {
+        const store = sweepingStore();
+        // e.g. ReceiveEcash waiting on getPayReq
+        store.loading = true;
+
+        await store.checkAndSweepMints();
+
+        expect(CashuDevKit.melt).toHaveBeenCalled();
+        expect(store.loading).toBe(true);
+    });
+
+    it('does not set loading while it runs', async () => {
+        const store = sweepingStore();
+        const seen: boolean[] = [];
+        store.invoicesStore.createInvoice.mockImplementation(async () => {
+            seen.push(store.loading);
+            return { paymentRequest: 'lnbc10n1psweepinvoice' };
+        });
+
+        await store.checkAndSweepMints();
+
+        expect(seen).toEqual([false, false]);
+        expect(store.loading).toBe(false);
+    });
+
+    it('keeps an error a foreground flow set before it ran', async () => {
+        const store = sweepingStore();
+        store.error = true;
+        store.error_msg = otherError;
+
+        await store.checkAndSweepMints();
+
+        expect(CashuDevKit.melt).toHaveBeenCalled();
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe(otherError);
+    });
+
+    it('fails without touching the shared loading or error', async () => {
+        const store = sweepingStore();
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+            state: 'Failed',
+            amount: 990
+        });
+        store.loading = true;
+        store.error = true;
+        store.error_msg = otherError;
+
+        await store.checkAndSweepMints();
+
+        expect(store.loading).toBe(true);
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe(otherError);
+    });
+
+    it('a failed auto-sweep sets no error of its own', async () => {
+        const store = sweepingStore();
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+            state: 'Failed',
+            amount: 990
+        });
+
+        await store.checkAndSweepMints();
+
+        expect(store.loading).toBe(false);
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBeUndefined();
+    });
+
+    it('a direct sweepMint still sets loading while it runs and clears it', async () => {
+        const store = sweepingStore();
+        const seen: boolean[] = [];
+        store.invoicesStore.createInvoice.mockImplementation(async () => {
+            seen.push(store.loading);
+            return { paymentRequest: 'lnbc10n1psweepinvoice' };
+        });
+
+        await expect(store.sweepMint(mintUrl)).resolves.toBe(true);
+
+        expect(seen).toEqual([true, true]);
+        expect(store.loading).toBe(false);
+    });
+
+    it('a failed direct sweepMint still reports its error', async () => {
+        const store = sweepingStore();
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+            state: 'Failed',
+            amount: 990
+        });
+
+        await expect(store.sweepMint(mintUrl)).resolves.toBe(false);
+
+        expect(store.loading).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toContain('stores.CashuStore.sweepError');
     });
 });
 
