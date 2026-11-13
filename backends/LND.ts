@@ -359,6 +359,16 @@ export default class LND {
             outpoints: data.outpoints,
             label: data.label
         });
+    estimateOnchainFee = (data: any) => {
+        const params: any = {
+            target_conf: data.target_conf,
+            spend_unconfirmed: data.spend_unconfirmed
+        };
+        Object.keys(data.addr_to_amount).forEach((addr: string) => {
+            params[`AddrToAmount[${addr}]`] = data.addr_to_amount[addr];
+        });
+        return this.getRequest('/v1/transactions/fee', params);
+    };
     sendCustomMessage = (data: any) =>
         this.postRequest('/v1/custommessage', {
             peer: Base64Utils.hexToBase64(data.peer),
@@ -1128,6 +1138,7 @@ export default class LND {
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;
+    supportsOnchainFeeEstimation = () => true;
     supportsOnchainReceiving = () => true;
     supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => true;

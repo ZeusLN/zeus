@@ -783,6 +783,7 @@ describe('LND capability flags', () => {
         ['supportsCustomPreimages', true],
         ['supportsSweep', true],
         ['supportsOnchainBatching', true],
+        ['supportsOnchainFeeEstimation', true],
         ['supportsChannelBatching', true],
         ['supportsChannelFundMax', true],
         ['supportsLSPScustomMessage', true],

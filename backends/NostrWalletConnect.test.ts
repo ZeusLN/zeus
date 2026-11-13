@@ -690,6 +690,7 @@ describe('NostrWalletConnect capability flags', () => {
         supportsSweep: false,
         supportsOnchainSendMax: false,
         supportsOnchainBatching: false,
+        supportsOnchainFeeEstimation: false,
         supportsChannelBatching: false,
         supportsChannelFundMax: false,
         // not read anywhere: BackendUtils asks for supportsLSPScustomMessage
