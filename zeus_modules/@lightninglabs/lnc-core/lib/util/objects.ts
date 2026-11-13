@@ -29,6 +29,20 @@ export const isObject = (o: any) => {
 };
 
 /**
+ * Sets `key` on `obj` as an own data property. Plain assignment would invoke
+ * the inherited `__proto__` setter when a converted key equals `__proto__`,
+ * replacing the object's prototype instead of adding a property.
+ */
+const setOwn = (obj: Record<string, unknown>, key: string, value: unknown) => {
+    Object.defineProperty(obj, key, {
+        value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+    });
+};
+
+/**
  * Recursively converts the keys of a Javascript object from snake-case to camel-case
  * Ex: { some-key: 'foo' } becomes { someKey: 'foo' }
  * @param o any Javascript object
@@ -38,7 +52,7 @@ export const snakeKeysToCamel = <T>(o: any): T => {
         const n: Record<string, unknown> = {};
 
         Object.keys(o).forEach((k) => {
-            n[toCamel(k)] = snakeKeysToCamel(o[k]);
+            setOwn(n, toCamel(k), snakeKeysToCamel(o[k]));
         });
 
         return n as T;
@@ -61,7 +75,7 @@ export const camelKeysToSnake = <T>(o: any): T => {
         const n: Record<string, unknown> = {};
 
         Object.keys(o).forEach((k) => {
-            n[toSnake(k)] = camelKeysToSnake(o[k]);
+            setOwn(n, toSnake(k), camelKeysToSnake(o[k]));
         });
 
         return n as T;
