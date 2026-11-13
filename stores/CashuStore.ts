@@ -357,6 +357,10 @@ export default class CashuStore {
     // Bumped by reset() so background work started for one wallet session
     // can tell that the wallet changed while it ran
     private walletSession = 0;
+    // The node dir initializeWallets() loaded the offline queues from. A
+    // wallet switch points getNodeDir() at the next wallet before reset()
+    // runs, and the store holds this wallet's queues until then
+    private walletNodeDir: string | undefined;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -515,9 +519,13 @@ export default class CashuStore {
         if (this.addedMintsCache.has(normalizedUrl)) {
             return;
         }
+        // reset() clears the cache for the next wallet, whose CDK database
+        // this addMint did not reach
+        const session = this.walletSession;
 
         try {
             await CashuDevKit.addMint(normalizedUrl);
+            if (session !== this.walletSession) return;
             this.addedMintsCache.add(normalizedUrl);
             runInAction(() => {
                 if (this.cashuWallets[normalizedUrl]) {
@@ -530,7 +538,10 @@ export default class CashuStore {
             // a later, more confusing one.
             console.error(`CDK: Failed to add mint ${normalizedUrl}:`, e);
             runInAction(() => {
-                if (this.cashuWallets[normalizedUrl]) {
+                if (
+                    session === this.walletSession &&
+                    this.cashuWallets[normalizedUrl]
+                ) {
                     this.cashuWallets[normalizedUrl].errorConnecting = true;
                 }
             });
@@ -2094,6 +2105,7 @@ export default class CashuStore {
         // A pass still waiting on the previous wallet's mint would otherwise
         // be joined by this wallet's first sweep, which then skips its melts
         this.reconcileRun = undefined;
+        this.walletNodeDir = undefined;
         this.stopConnectivityMonitoring();
     };
 
@@ -3941,6 +3953,7 @@ export default class CashuStore {
         this.startConnectivityMonitoring();
 
         const lndDir = this.getNodeDir();
+        this.walletNodeDir = lndDir;
 
         // Load app-specific data from local storage (activity, preferences, seed)
         const [
@@ -6172,14 +6185,20 @@ export default class CashuStore {
             this.offlinePendingTokens.length === 0 ||
             !this.cdkInitialized ||
             this.isOffline ||
-            this.isSweeping
+            this.isSweeping ||
+            // A wallet switch has started: leave the queue for this
+            // wallet's next sweep rather than write it under the next
+            // wallet's node dir
+            this.walletNodeDir !== this.getNodeDir()
         ) {
             if (__DEV__) {
                 console.log('sweepOfflinePendingTokens: skipping', {
                     count: this.offlinePendingTokens.length,
                     cdkInitialized: this.cdkInitialized,
                     isOffline: this.isOffline,
-                    isSweeping: this.isSweeping
+                    isSweeping: this.isSweeping,
+                    walletNodeDir: this.walletNodeDir,
+                    nodeDir: this.getNodeDir()
                 });
             }
             return;
@@ -6192,6 +6211,11 @@ export default class CashuStore {
         }
 
         this.isSweeping = true;
+        // After a wallet switch getNodeDir() and the CDK wallet handle point
+        // at the next wallet, so remember which wallet this sweep is for
+        const session = this.walletSession;
+        const nodeDir = this.getNodeDir();
+        let stoppedAt = -1;
 
         try {
             const results = { claimed: 0, alreadySpent: 0, failed: 0 };
@@ -6201,6 +6225,10 @@ export default class CashuStore {
             const tokensToProcess = [...this.offlinePendingTokens];
 
             for (let i = 0; i < tokensToProcess.length; i++) {
+                if (session !== this.walletSession) {
+                    stoppedAt = i;
+                    break;
+                }
                 const token = tokensToProcess[i];
                 if (!token.encodedToken) {
                     remaining.push(token);
@@ -6210,6 +6238,10 @@ export default class CashuStore {
                     // Ensure the token's mint is added to CDK before receiving
                     if (token.mint) {
                         await this.ensureMintAdded(token.mint);
+                    }
+                    if (session !== this.walletSession) {
+                        stoppedAt = i;
+                        break;
                     }
 
                     const isLocked = CashuUtils.isTokenP2PKLocked(token);
@@ -6257,6 +6289,21 @@ export default class CashuStore {
                 }
             }
 
+            if (session !== this.walletSession) {
+                // The store now holds the next wallet's state. Only update
+                // the stored queues of the wallet this sweep was started for
+                const processed =
+                    stoppedAt === -1
+                        ? tokensToProcess
+                        : tokensToProcess.slice(0, stoppedAt);
+                await this.saveStoppedSweep(
+                    nodeDir,
+                    processed.filter((token) => !remaining.includes(token)),
+                    spent
+                );
+                return;
+            }
+
             runInAction(() => {
                 this.offlinePendingTokens = remaining;
                 this.offlinePendingBalance = remaining.reduce(
@@ -6272,19 +6319,25 @@ export default class CashuStore {
                 }
             });
 
-            // Persist arrays
+            // Persist arrays. Write the lists this sweep set: a reset()
+            // during the first write loads the next wallet's lists into
+            // the store
+            const spentTokens = this.offlineSpentTokens;
             await Storage.setItem(
-                `${this.getNodeDir()}-cashu-offline-pending-tokens`,
-                this.offlinePendingTokens
+                `${nodeDir}-cashu-offline-pending-tokens`,
+                remaining
             );
             if (spent.length > 0) {
                 await Storage.setItem(
-                    `${this.getNodeDir()}-cashu-offline-spent-tokens`,
-                    this.offlineSpentTokens
+                    `${nodeDir}-cashu-offline-spent-tokens`,
+                    spentTokens
                 );
             }
 
             await this.syncCDKBalances(true);
+            // After a reset() during these awaits the next wallet is open,
+            // and this wallet's claim summary does not belong there
+            if (session !== this.walletSession) return;
 
             // Show summary alert (spent tokens handled by UI modal)
             const parts: string[] = [];
@@ -6309,7 +6362,41 @@ export default class CashuStore {
                 );
             }
         } finally {
-            this.isSweeping = false;
+            // After a reset the flag belongs to the sweep started since
+            if (session === this.walletSession) {
+                this.isSweeping = false;
+            }
+        }
+    };
+
+    /**
+     * Record what a sweep stopped by reset() got done in the stored queues
+     * of the wallet it was started for: claimed and spent tokens leave the
+     * pending queue, spent ones join the spent list
+     */
+    private saveStoppedSweep = async (
+        nodeDir: string,
+        settled: CashuToken[],
+        spent: CashuToken[]
+    ) => {
+        if (settled.length === 0) return;
+        const settledTokens = new Set(
+            settled.map((token) => token.encodedToken)
+        );
+        const pendingKey = `${nodeDir}-cashu-offline-pending-tokens`;
+        const storedPending = await Storage.getItem(pendingKey);
+        const pending: any[] = storedPending ? JSON.parse(storedPending) : [];
+        await Storage.setItem(
+            pendingKey,
+            pending.filter((token) => !settledTokens.has(token.encodedToken))
+        );
+        if (spent.length > 0) {
+            const spentKey = `${nodeDir}-cashu-offline-spent-tokens`;
+            const storedSpent = await Storage.getItem(spentKey);
+            await Storage.setItem(spentKey, [
+                ...(storedSpent ? JSON.parse(storedSpent) : []),
+                ...spent
+            ]);
         }
     };
 
