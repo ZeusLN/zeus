@@ -4,6 +4,10 @@
 
 static NSString *const kHasRunBeforeKey = @"HAS_RUN_BEFORE";
 
+// Attempts per keychain class in the first-run clear, and the pause between them
+static const int kKeychainClearAttempts = 3;
+static const NSTimeInterval kKeychainClearRetryDelay = 0.1;
+
 /**
  Path of the file NSUserDefaults persists standardUserDefaults to. Read
  directly so a value cached in this process cannot stand in for it.
@@ -24,6 +28,10 @@ static NSString *StandardDefaultsPath(void) {
  well. isProtectedDataAvailable is also NO while the device is locked after the first unlock,
  when the file is readable, so the check waits then too, which is stricter than needed.
 
+ A class whose delete fails is retried in place, up to kKeychainClearAttempts in total. The flag
+ is then written even if a class still failed: a later run could delete data the user has saved
+ since, so the clear runs at most once.
+
  Returns NO when it could not run yet, so the caller can retry once protected data is available.
  */
 static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defaultsPath) {
@@ -43,9 +51,6 @@ static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defa
         return YES;
     }
 
-    // Set the appropriate value so we don't clear next time the app is launched
-    [defaults setBool:YES forKey:kHasRunBeforeKey];
-
     NSArray *secItemClasses = @[
         (__bridge id)kSecClassGenericPassword,
         (__bridge id)kSecClassInternetPassword,
@@ -55,11 +60,28 @@ static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defa
     ];
 
     // Maps through all Keychain classes and deletes all items that match
-    for (id secItemClass in secItemClasses) {
-        NSDictionary *spec = @{(__bridge id)kSecClass: secItemClass};
-        SecItemDelete((__bridge CFDictionaryRef)spec);
+    NSArray *remaining = secItemClasses;
+    for (int attempt = 1; attempt <= kKeychainClearAttempts && remaining.count > 0; attempt++) {
+        if (attempt > 1) {
+            [NSThread sleepForTimeInterval:kKeychainClearRetryDelay];
+        }
+        NSMutableArray *failed = [NSMutableArray array];
+        for (id secItemClass in remaining) {
+            NSDictionary *spec = @{(__bridge id)kSecClass: secItemClass};
+            OSStatus status = SecItemDelete((__bridge CFDictionaryRef)spec);
+            if (status != errSecSuccess && status != errSecItemNotFound) {
+                NSLog(@"First-run keychain clear attempt %d failed for %@: %d", attempt, secItemClass, (int)status);
+                [failed addObject:secItemClass];
+            }
+        }
+        remaining = failed;
+    }
+    if (remaining.count > 0) {
+        NSLog(@"First-run keychain clear gave up on %@", remaining);
     }
 
+    // Set the appropriate value so we don't clear next time the app is launched
+    [defaults setBool:YES forKey:kHasRunBeforeKey];
     return YES;
 }
 
