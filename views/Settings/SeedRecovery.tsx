@@ -22,7 +22,6 @@ import {
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
-import RNRestart from 'react-native-restart';
 import { validateMnemonic } from '@scure/bip39';
 
 import {
@@ -40,8 +39,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import DropdownSetting from '../../components/DropdownSetting';
 import PreventRemove from '../../components/PreventRemove';
 
-import { IN_APP_RESTART } from '../../utils/InAppRestartUtils';
-import { restartNeeded } from '../../utils/RestartUtils';
+import { restartApp, restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import {
@@ -300,7 +298,14 @@ export default class SeedRecovery extends React.PureComponent<
                 [
                     {
                         text: localeString('views.Wallet.restart'),
-                        onPress: () => RNRestart.Restart(IN_APP_RESTART)
+                        onPress: async () => {
+                            try {
+                                await stopLnd();
+                            } catch (e) {
+                                console.log('stopLnd before restart:', e);
+                            }
+                            restartApp();
+                        }
                     }
                 ],
                 { cancelable: false }
@@ -317,7 +322,14 @@ export default class SeedRecovery extends React.PureComponent<
                 [
                     {
                         text: localeString('views.Wallet.restart'),
-                        onPress: () => RNRestart.Restart(IN_APP_RESTART)
+                        onPress: async () => {
+                            try {
+                                await stopLnd();
+                            } catch (e) {
+                                console.log('stopLnd before restart:', e);
+                            }
+                            restartApp();
+                        }
                     }
                 ],
                 { cancelable: false }
