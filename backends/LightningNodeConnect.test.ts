@@ -89,6 +89,7 @@ import { NativeEventEmitter, NativeModules } from 'react-native';
 
 import LightningNodeConnect from './LightningNodeConnect';
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
+import { isRequestNotSent } from '../utils/PaymentLookupUtils';
 import { settingsStore } from '../stores/Stores';
 
 const mockSettings = settingsStore as any;
@@ -232,6 +233,16 @@ describe('LightningNodeConnect', () => {
                 expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
             }
         );
+
+        it('tags the error for a send without a session as not sent', async () => {
+            const backend = new LightningNodeConnect();
+            const error = await backend
+                .sendCoins({ addr: 'bc1q', amount: '1000' } as any)
+                .catch((e: any) => e);
+
+            expect(error.message).toBe('stores.SettingsStore.lncConnectError');
+            expect(isRequestNotSent(error)).toBe(true);
+        });
 
         it('is false without a client', async () => {
             expect(await new LightningNodeConnect().isConnected()).toBe(false);
