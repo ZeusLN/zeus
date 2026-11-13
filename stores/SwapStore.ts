@@ -189,6 +189,12 @@ const invoiceAmountSats = (invoice?: string): number | undefined => {
 // RNBlobUtil's native default (60s) only measures inactivity.
 const SWAP_STATUS_TIMEOUT_MS = 10000;
 
+// A refund this wallet broadcast: updateSwapOnRefund stores it with its
+// txid. The host is not told about it, so a status it sends later (such as
+// swap.expired) must not replace it and offer the refund again.
+const isRefundedByWallet = (swap: any) =>
+    swap?.status === SwapState.TransactionRefunded && !!swap?.txid;
+
 /**
  * Keeps one stored entry per swap ID. Running the rescue again used to
  * append a second copy of a reverse swap already re-filed under
@@ -1627,7 +1633,11 @@ export default class SwapStore {
                         ? JSON.parse(latestReverseSwaps)
                         : [])
                 ].map((swap: any) => {
-                    if (swap?.id && statuses.has(swap.id)) {
+                    if (
+                        swap?.id &&
+                        statuses.has(swap.id) &&
+                        !isRefundedByWallet(swap)
+                    ) {
                         return { ...swap, status: statuses.get(swap.id) };
                     }
                     // stored before only strings were accepted as a status
@@ -1690,7 +1700,7 @@ export default class SwapStore {
                 const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
                 const updatedSwaps = swaps.map((swap: any) =>
-                    swap.id === swapId
+                    swap.id === swapId && !isRefundedByWallet(swap)
                         ? {
                               ...swap,
                               status,
