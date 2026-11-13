@@ -1,5 +1,5 @@
 import { TEST_IDS } from '../../utils/TestIds';
-import { byId, byText, waitForVisible } from '../helpers/elements';
+import { byId, chooseOption, waitForVisible } from '../helpers/elements';
 
 const IDS = TEST_IDS.walletSettings;
 
@@ -40,12 +40,9 @@ class WalletSettingsScreen {
         await waitForVisible(this.clipboardSwitch);
     }
 
-    // Opens the native picker (action sheet on iOS, dialog on Android) and
-    // picks the entry with the given label from FIAT_RATES_SOURCE_KEYS.
+    // label is an entry of FIAT_RATES_SOURCE_KEYS.
     async selectFiatRatesSource(label: string): Promise<void> {
-        await this.fiatRatesSourceDropdown.tap();
-        await waitForVisible(byText(label));
-        await byText(label).tap();
+        await chooseOption(this.fiatRatesSourceDropdown, label);
     }
 }
 
