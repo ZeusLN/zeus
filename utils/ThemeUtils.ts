@@ -380,11 +380,23 @@ const Ember: { [key: string]: any } = {
     chain: '#FFA900'
 };
 
-export function themeColor(themeString: string): any {
+function activeTheme(): string | undefined {
     const { settings } = settingsStore;
-    const theme = settings.display && settings.display.theme;
+    return settings.display && settings.display.theme;
+}
 
-    switch (theme) {
+export function themeColor(themeString: string): any {
+    return themeColorFor(undefined, themeString);
+}
+
+// Looks a color up in the given theme, or in the selected theme when `theme`
+// is undefined. The theme picker uses it to draw previews of themes that are
+// not applied.
+export function themeColorFor(
+    theme: string | undefined,
+    themeString: string
+): any {
+    switch (theme ?? activeTheme()) {
         case 'kyriaki':
             return Kyriaki[themeString] || Dark[themeString];
         case 'light':
@@ -436,8 +448,8 @@ export function placeholderColor(): string {
 }
 
 // based on https://stackoverflow.com/a/41491220/1836528
-export function isLightTheme() {
-    let backgroundColor = themeColor('background');
+export function isLightTheme(theme?: string) {
+    let backgroundColor = themeColorFor(theme, 'background');
     if (backgroundColor.startsWith('#') && backgroundColor.length === 4) {
         backgroundColor =
             '#' +
