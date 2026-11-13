@@ -1815,7 +1815,7 @@
     "stores.InvoicesStore.zeroAmountLndhub": "Σ' αυτήν την περίπτωση το LNDHub ενδέχεται να μην υποστηρίζει τιμολόγια μηδενικού ποσού",
     "stores.InvoicesStore.errorRedeemingWithdrawalRequest": "Σφάλμα κατά την επεξεργασία αιτήματος ανάληψης",
     "stores.InvoicesStore.lspFeeAboveMaxWithdrawable": "The withdrawal amount doesn't cover the LSP's {fee} sats setup fee. Adding the fee on top would withdraw {total} sats, more than the {max} sats this service allows.",
-    "stores.TransactionsStore.sendOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this transaction was sent. Check your on-chain activity before sending again.",
+    "stores.TransactionsStore.sendOutcomeUnknown": "The connection to your node failed before it answered, so ZEUS cannot tell whether this transaction was sent. Check your on-chain activity before sending again.",
     "stores.SettingsStore.btcPayImplementationSupport": "Λυπούμαστε, προς το παρόν υποστηρίζουμε μόνο περιπτώσεις BTCPay που χρησιμοποιούν LND",
     "stores.SettingsStore.btcPayFetchConfigError": "Σφάλμα ανάκτησης ρυθμίσεων BTCPay",
     "stores.SettingsStore.btcPayFetchConfirmMessage": "Το ZEUS θα επικοινωνήσει με το {host} για να λάβει αυτή τη διαμόρφωση του κόμβου BTCPay. Συνεχίστε μόνο αν εμπιστεύεστε αυτόν τον κωδικό QR.",

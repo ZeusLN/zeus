@@ -1815,7 +1815,7 @@
     "stores.InvoicesStore.zeroAmountLndhub": "La instancia de lndhub podría no admitir facturas de cantidad cero",
     "stores.InvoicesStore.errorRedeemingWithdrawalRequest": "Error al canjear la solicitud de retiro",
     "stores.InvoicesStore.lspFeeAboveMaxWithdrawable": "The withdrawal amount doesn't cover the LSP's {fee} sats setup fee. Adding the fee on top would withdraw {total} sats, more than the {max} sats this service allows.",
-    "stores.TransactionsStore.sendOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this transaction was sent. Check your on-chain activity before sending again.",
+    "stores.TransactionsStore.sendOutcomeUnknown": "The connection to your node failed before it answered, so ZEUS cannot tell whether this transaction was sent. Check your on-chain activity before sending again.",
     "stores.SettingsStore.btcPayImplementationSupport": "Lo sentimos, actualmente solo admitimos instancias de BTCPay que utilicen LND",
     "stores.SettingsStore.btcPayFetchConfigError": "Error al obtener la configuración de BTCPay",
     "stores.SettingsStore.btcPayFetchConfirmMessage": "ZEUS will contact {host} to fetch this BTCPay node configuration. Only continue if you trust this QR code.",

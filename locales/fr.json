@@ -1815,7 +1815,7 @@
     "stores.InvoicesStore.zeroAmountLndhub": "L'instance LNDHUB peut ne pas prendre en charge les factures zéro-amont",
     "stores.InvoicesStore.errorRedeemingWithdrawalRequest": "Erreur lors de l'utilisation de la demande de retrait",
     "stores.InvoicesStore.lspFeeAboveMaxWithdrawable": "The withdrawal amount doesn't cover the LSP's {fee} sats setup fee. Adding the fee on top would withdraw {total} sats, more than the {max} sats this service allows.",
-    "stores.TransactionsStore.sendOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this transaction was sent. Check your on-chain activity before sending again.",
+    "stores.TransactionsStore.sendOutcomeUnknown": "The connection to your node failed before it answered, so ZEUS cannot tell whether this transaction was sent. Check your on-chain activity before sending again.",
     "stores.SettingsStore.btcPayImplementationSupport": "Désolé, nous ne prenons actuellement en charge que les instances BTCPay utilisant LND",
     "stores.SettingsStore.btcPayFetchConfigError": "Erreur lors de la récupération de la configuration BTCPay",
     "stores.SettingsStore.btcPayFetchConfirmMessage": "ZEUS will contact {host} to fetch this BTCPay node configuration. Only continue if you trust this QR code.",
