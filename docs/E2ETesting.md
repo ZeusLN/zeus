@@ -102,7 +102,16 @@ Android runs a debug build against Metro. The emulator defaults to the
 | `wallet/keypad` | Adding a mint by URL, entering, grouping, deleting and clearing an amount, singular sat, ecash and self-custody modes, switching units through the currency picker, requesting ecash, the send options |
 | `wallet/walletHome` | Wallet tabs, the balance of each layer, the activity list, the header menu and wallet list, adding a contact |
 | `wallet/security` | Revealing the recovery phrase behind its warning, setting a PIN and a mismatched confirmation, the lock after a restart, a wrong PIN, unlocking, and the PIN before the backup |
+| `settings/privacy` | Default block explorer, clipboard, lurker mode and mempool instance, the clipboard and lurker mode explainers, custom block explorer and mempool URLs and their validation, the fallback for an empty custom URL, switches kept after a restart |
+| `settings/display` | Default theme, view and display options, switching the theme and default view, keypad and decimal options, changes kept after a restart, the date format in Date and time |
+| `settings/currency` | Default fiat currency and rates source, picking a currency, switching to Yadio rates, turning fiat off and on, choices kept after a restart |
+| `settings/password` | Setting a password, an empty one and a mismatched confirmation, the current password before a change, the lock after a restart, a wrong password, unlocking, deleting the password |
 | `walletConfiguration` | Picking a backend for a remote wallet connection |
+
+The `settings/` specs need no wallet: `openSettings()` in
+`e2e/flows/settings.ts` installs the app and opens Settings from the splash's
+advanced set-up menu, and `reopenSettings()` restarts the app to check what
+was kept.
 
 The `wallet/` specs create a real wallet first, with a flow from
 `e2e/flows/wallet.ts`. Each builds and starts an LDK Node on mainnet, so those
