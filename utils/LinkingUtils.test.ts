@@ -76,7 +76,12 @@ describe('LinkingUtils.handleDeepLink', () => {
         expect(navigation.popTo).not.toHaveBeenCalled();
     });
 
-    it.each(['SendingLightning', 'SendingOnChain', 'CashuSendingLightning'])(
+    it.each([
+        'SendingLightning',
+        'SendingOnChain',
+        'CashuSendingLightning',
+        'MultimintPayment'
+    ])(
         'does not pop while a payment is in flight on %s',
         async (sendingScreen) => {
             const navigation = makeNavigation([

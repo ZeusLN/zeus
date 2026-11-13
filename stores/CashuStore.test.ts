@@ -938,6 +938,111 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
             'quote for lnbc1second'
         );
     });
+
+    // The melt of the first payment does not resolve until the test says so
+    const holdMelt = () => {
+        let release: () => void = () => {};
+        (CashuDevKit.melt as jest.Mock).mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    release = () =>
+                        resolve({ state: 'Paid', amount: 100, fee_paid: 0 });
+                })
+        );
+        return () => release();
+    };
+
+    it.each([false, true])(
+        'refuses a second payment of an invoice that is still being paid (multi-mint: %p)',
+        async (multiMint) => {
+            const wallet = storeWithMint(multiMint);
+            const { store } = wallet;
+            await load(wallet, 'lnbc1second');
+            const release = holdMelt();
+
+            const first = store.payLnInvoiceFromEcash({
+                paymentRequest: 'lnbc1second'
+            });
+            await flush();
+            expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
+
+            await expect(
+                store.payLnInvoiceFromEcash({ paymentRequest: 'lnbc1second' })
+            ).resolves.toBeUndefined();
+            expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
+            // the refused attempt leaves the first payment's state alone
+            expect(store.paymentError).toBe(false);
+
+            release();
+            await first;
+            expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
+        }
+    );
+
+    // Nothing may await between the in-flight check and adding the hash,
+    // or two calls started together both get past the check
+    it.each([false, true])(
+        'refuses a second payment started in the same tick as the first (multi-mint: %p)',
+        async (multiMint) => {
+            const wallet = storeWithMint(multiMint);
+            const { store } = wallet;
+            await load(wallet, 'lnbc1second');
+            const release = holdMelt();
+
+            const first = store.payLnInvoiceFromEcash({
+                paymentRequest: 'lnbc1second'
+            });
+            const second = store.payLnInvoiceFromEcash({
+                paymentRequest: 'lnbc1second'
+            });
+            await flush();
+
+            expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
+            await expect(second).resolves.toBeUndefined();
+            expect(store.paymentError).toBe(false);
+
+            release();
+            await first;
+            expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
+        }
+    );
+
+    it('does not quote an invoice again while it is being paid', async () => {
+        const wallet = storeWithMint(true);
+        const { store } = wallet;
+        await load(wallet, 'lnbc1second');
+        const release = holdMelt();
+
+        const first = store.payLnInvoiceFromEcash({
+            paymentRequest: 'lnbc1second'
+        });
+        await flush();
+        const quotes = (store.createMeltQuoteCDK as jest.Mock).mock.calls
+            .length;
+
+        await store.getPayReq('lnbc1second');
+
+        expect(store.getPayReqError).toBe('stores.CashuStore.pending');
+        expect(store.meltQuote).toBeUndefined();
+        expect(store.meltQuotes).toEqual([]);
+        expect((store.createMeltQuoteCDK as jest.Mock).mock.calls.length).toBe(
+            quotes
+        );
+
+        release();
+        await first;
+    });
+
+    it('quotes the invoice again once its payment has ended', async () => {
+        const wallet = storeWithMint(true);
+        const { store } = wallet;
+        await load(wallet, 'lnbc1second');
+        await store.payLnInvoiceFromEcash({ paymentRequest: 'lnbc1second' });
+
+        await load(wallet, 'lnbc1second');
+
+        expect(store.getPayReqError).toBeUndefined();
+    });
 });
 
 describe('CashuStore single-mint melt state', () => {
