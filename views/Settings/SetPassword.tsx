@@ -118,7 +118,9 @@ export default class SetPassphrase extends React.Component<
             }
 
             const passphraseVerifier = await deriveVerifier(passphrase);
-            await updateSettings({ passphraseVerifier });
+            // drop any plaintext the verifier migration has not hashed
+            // yet, so it cannot win over this record later
+            await updateSettings({ passphraseVerifier, passphrase: undefined });
         } catch (error) {
             console.error('Failed to save the password', error);
             this.setState({ saveError: true });
@@ -141,6 +143,9 @@ export default class SetPassphrase extends React.Component<
         await updateSettings({
             duressPassphraseVerifier: undefined,
             passphraseVerifier: undefined,
+            // and any plaintext the verifier migration has not hashed yet
+            duressPassphrase: undefined,
+            passphrase: undefined,
             isBiometryEnabled: false
         });
         navigation.popTo('Security');

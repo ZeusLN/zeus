@@ -775,6 +775,12 @@ class MigrationsUtils {
                 // written before it.
                 settings[verifier] = await deriveVerifier(value);
                 changed = true;
+            } else if (value === '' && settings[verifier] !== undefined) {
+                // Those builds write an empty string only when the user
+                // deletes the credential, so a credential deleted on
+                // v13.2.4 after a downgrade drops the verifier from before
+                delete settings[verifier];
+                changed = true;
             }
             if (settings[plain] !== undefined) {
                 delete settings[plain];

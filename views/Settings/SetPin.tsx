@@ -106,7 +106,9 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             }
 
             const pinVerifier = await deriveVerifier(pin);
-            await updateSettings({ pinVerifier });
+            // drop any plaintext the verifier migration has not hashed
+            // yet, so it cannot win over this record later
+            await updateSettings({ pinVerifier, pin: undefined });
         } catch (error) {
             console.error('Failed to save the PIN', error);
             this.setState({ saveError: true, pin: '', pinConfirm: '' });

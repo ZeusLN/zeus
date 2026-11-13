@@ -12,6 +12,7 @@ import {
     verifySecret,
     hasVerifier,
     getDummyVerifier,
+    getLockVerifier,
     getPlaintextCredential,
     hasLockCredential,
     resolveLoginVerifiers,
@@ -327,6 +328,44 @@ describe('LockVerifierUtils', () => {
             expect(hasLockCredential({ pin: '' }, 'pin')).toBe(false);
             expect(hasLockCredential({}, 'pin')).toBe(false);
             expect(hasLockCredential(undefined, 'pin')).toBe(false);
+            expect(hasLockCredential({ duressPin: '0000' }, 'duressPin')).toBe(
+                true
+            );
+        });
+
+        // builds before verifiers write '' only when the user deletes the
+        // credential: one deleted on v13.2.4 after a downgrade
+        it('does not count a verifier whose plaintext field was emptied', async () => {
+            const record = await deriveVerifier('1234', salt);
+            expect(
+                hasLockCredential({ pinVerifier: record, pin: '' }, 'pin')
+            ).toBe(false);
+            expect(
+                hasLockCredential(
+                    { duressPinVerifier: record, duressPin: '' },
+                    'duressPin'
+                )
+            ).toBe(false);
+        });
+    });
+
+    describe('getLockVerifier', () => {
+        it('returns a well-formed record unless its plaintext field is empty', async () => {
+            const record = await deriveVerifier('1234', salt);
+            expect(getLockVerifier({ pinVerifier: record }, 'pin')).toBe(
+                record
+            );
+            expect(
+                getLockVerifier({ pinVerifier: record, pin: '' }, 'pin')
+            ).toBeUndefined();
+            // a plaintext value is the migration's business, not a deletion
+            expect(
+                getLockVerifier({ pinVerifier: record, pin: '5555' }, 'pin')
+            ).toBe(record);
+            expect(
+                getLockVerifier({ pinVerifier: { salt: '', hash: '' } }, 'pin')
+            ).toBeUndefined();
+            expect(getLockVerifier(undefined, 'pin')).toBeUndefined();
         });
     });
 

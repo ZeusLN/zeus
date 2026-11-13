@@ -520,6 +520,19 @@ describe('SettingsStore.startNewRootSession', () => {
         expect(store.loginRequired()).toBe(true);
     });
 
+    // a PIN deleted on v13.2.4 after a downgrade leaves '' beside the
+    // verifier from before
+    it('does not require a PIN deleted by an older build', () => {
+        const store = loggedInStore({
+            pinVerifier: { kdf: 'pbkdf2-sha256', salt: 'aa', hash: 'bb' },
+            pin: ''
+        });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBeFalsy();
+    });
+
     it('does not count an empty plaintext PIN as a login method', () => {
         const store = loggedInStore({ pin: '' });
 

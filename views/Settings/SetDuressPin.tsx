@@ -104,7 +104,9 @@ export default class SetDuressPin extends React.Component<
             }
 
             const duressPinVerifier = await deriveVerifier(duressPin);
-            await updateSettings({ duressPinVerifier });
+            // drop any plaintext the verifier migration has not hashed
+            // yet, so it cannot win over this record later
+            await updateSettings({ duressPinVerifier, duressPin: undefined });
         } catch (error) {
             console.error('Failed to save the duress PIN', error);
             this.setState({

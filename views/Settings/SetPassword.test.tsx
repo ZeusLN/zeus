@@ -62,12 +62,65 @@ describe('SetPassword deletePassword', () => {
 
         expect(navigation.popTo).toHaveBeenCalledWith('Security');
         const writes = updateSettings.mock.calls.map((call: any[]) => call[0]);
-        for (const key of ['passphraseVerifier', 'duressPassphraseVerifier']) {
+        // the plaintext fields too, in case the verifier migration has not
+        // hashed them yet
+        for (const key of [
+            'passphraseVerifier',
+            'duressPassphraseVerifier',
+            'passphrase',
+            'duressPassphrase'
+        ]) {
             expect(
                 writes.some(
                     (patch: any) => key in patch && patch[key] === undefined
                 )
             ).toBe(true);
         }
+    });
+});
+
+describe('SetPassword saveSettings', () => {
+    // a plaintext passphrase the verifier migration has not hashed yet
+    // would otherwise win over the new record at the next unlock
+    it('clears the plaintext passphrase with the new verifier', async () => {
+        const { deriveVerifier, verifySecret } = jest.requireMock(
+            '../../utils/LockVerifierUtils'
+        );
+        const record = { kdf: 'pbkdf2-sha256', salt: 'aa', hash: 'bb' };
+        deriveVerifier.mockResolvedValue(record);
+        verifySecret.mockResolvedValue(false);
+        const ref = React.createRef<any>();
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const SettingsStore = {
+            getSettings: jest.fn(async () => ({ passphrase: 'old secret' })),
+            updateSettings,
+            setLoginStatus: jest.fn()
+        };
+        await render(
+            <SetPassword
+                ref={ref}
+                SettingsStore={SettingsStore as any}
+                ModalStore={{} as any}
+                navigation={{ popTo: jest.fn() } as any}
+                route={{ params: {} }}
+            />
+        );
+
+        await act(async () => {
+            ref.current.setState({
+                passphrase: 'new secret',
+                passphraseConfirm: 'new secret'
+            });
+        });
+        await act(async () => {
+            await ref.current.saveSettings();
+        });
+
+        expect(updateSettings).toHaveBeenCalledWith({
+            passphraseVerifier: record,
+            passphrase: undefined
+        });
+        const patch: any = (updateSettings.mock.calls[0] as any[])[0];
+        expect('passphrase' in patch).toBe(true);
     });
 });

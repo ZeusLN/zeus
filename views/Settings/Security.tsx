@@ -13,7 +13,7 @@ import SettingsStore, { Settings } from '../../stores/SettingsStore';
 import ModalStore from '../../stores/ModalStore';
 
 import { verifyBiometry } from '../../utils/BiometricUtils';
-import { hasVerifier } from '../../utils/LockVerifierUtils';
+import { hasLockCredential } from '../../utils/LockVerifierUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -47,12 +47,16 @@ const buildSecurityItems = (
         | 'pinVerifier'
         | 'duressPassphraseVerifier'
         | 'duressPinVerifier'
+        | 'passphrase'
+        | 'pin'
+        | 'duressPassphrase'
+        | 'duressPin'
     >
 ): SecurityItem[] => {
-    // Credentials persist as verifier records; presence is checked via
-    // hasVerifier since the plaintext fields no longer exist post-migration.
-    const passphraseSet = hasVerifier(settings.passphraseVerifier);
-    const pinSet = hasVerifier(settings.pinVerifier);
+    // A verifier record, or a plaintext credential the migration has not
+    // hashed yet (see hasLockCredential)
+    const passphraseSet = hasLockCredential(settings, 'passphrase');
+    const pinSet = hasLockCredential(settings, 'pin');
     // Three cases:
     // 1) If no passphrase or pin is set, allow user to set passphrase or pin
     // 2) If passphrase is set, allow user to change passphrase or set/change duress passphrase
@@ -70,8 +74,9 @@ const buildSecurityItems = (
         ];
     }
     if (passphraseSet) {
-        const duressPassphraseSet = hasVerifier(
-            settings.duressPassphraseVerifier
+        const duressPassphraseSet = hasLockCredential(
+            settings,
+            'duressPassphrase'
         );
         const items: SecurityItem[] = [
             {
@@ -98,7 +103,7 @@ const buildSecurityItems = (
         return items;
     }
     // Remaining case: pin is set (branch 1 handled neither; branch 2 handled passphrase)
-    const duressPinSet = hasVerifier(settings.duressPinVerifier);
+    const duressPinSet = hasLockCredential(settings, 'duressPin');
     const items: SecurityItem[] = [
         {
             translateKey: 'views.Settings.ChangePin.title',
@@ -134,8 +139,8 @@ const deriveStateFromSettings = (
     scramblePin: settings.scramblePin ?? true,
     loginBackground: settings.loginBackground ?? false,
     displaySecurityItems: buildSecurityItems(settings),
-    pinExists: hasVerifier(settings.pinVerifier),
-    passphraseExists: hasVerifier(settings.passphraseVerifier),
+    pinExists: hasLockCredential(settings, 'pin'),
+    passphraseExists: hasLockCredential(settings, 'passphrase'),
     supportedBiometryType:
         biometrics?.supportedBiometryType ?? settings.supportedBiometryType,
     isBiometryEnabled:
@@ -186,12 +191,12 @@ export default class Security extends React.Component<
 
     async handleBiometricsSwitchChange(value: boolean): Promise<void> {
         const { SettingsStore, ModalStore, navigation } = this.props;
-        const { pinVerifier, passphraseVerifier } = SettingsStore.settings;
+        const { settings } = SettingsStore;
 
         if (
             value &&
-            !hasVerifier(pinVerifier) &&
-            !hasVerifier(passphraseVerifier)
+            !hasLockCredential(settings, 'pin') &&
+            !hasLockCredential(settings, 'passphrase')
         ) {
             ModalStore.toggleInfoModal({
                 text: localeString(
@@ -248,8 +253,8 @@ export default class Security extends React.Component<
         if (!('action' in item)) {
             if (
                 !(
-                    hasVerifier(settings.passphraseVerifier) ||
-                    hasVerifier(settings.pinVerifier)
+                    hasLockCredential(settings, 'passphrase') ||
+                    hasLockCredential(settings, 'pin')
                 )
             ) {
                 navigation.navigate(item.screen);

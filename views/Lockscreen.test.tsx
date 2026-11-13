@@ -406,6 +406,84 @@ describe('Lockscreen with a failed key derivation', () => {
 // (the blob in memory is the loaded one), or v13.2.4 wrote a new PIN after a
 // downgrade. The Lockscreen hashes it in memory and checks against that.
 describe('Lockscreen with a credential still in plaintext', () => {
+    // The migration can land while the screen is up: the attempt-count
+    // write retries it. The records must be read at attempt time, or the
+    // correct PIN is checked against the empty record from mount.
+    it('unlocks with the correct PIN after the attempt write hashed the plaintext', async () => {
+        const saved: any = { pin: PIN };
+        // the attempt write retries the verifier migration, which now
+        // succeeds
+        const updateSettings = makeUpdateSettings(saved, async () => {
+            if (saved.pin) {
+                saved.pinVerifier = pinVerifier;
+                delete saved.pin;
+            }
+        });
+        const { navigation } = await renderLockscreen(updateSettings, {
+            settings: saved
+        });
+
+        await submitWrongPin();
+        await waitFor(() => expect(saved.authenticationAttempts).toBe(1), {
+            timeout: 5000
+        });
+
+        await submitPin();
+        await untilCalled(navigation.pop);
+        expect(saved.authenticationAttempts).toBe(0);
+    });
+
+    it('wipes for the duress PIN after the migration hashed it while the screen was up', async () => {
+        const saved: any = { pin: PIN, duressPin: DURESS_PIN };
+        const updateSettings = makeUpdateSettings(saved);
+        const { SettingsStore } = await renderLockscreen(updateSettings, {
+            settings: saved
+        });
+        // a queued write elsewhere lands the migration
+        saved.pinVerifier = pinVerifier;
+        saved.duressPinVerifier = await deriveVerifier(DURESS_PIN);
+        delete saved.pin;
+        delete saved.duressPin;
+
+        await submitWrongPin();
+        await untilCalled(clearAllData as jest.Mock);
+
+        expect(markWipePending).toHaveBeenCalledTimes(1);
+        expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
+    });
+
+    // '' beside a verifier: deleted on v13.2.4 after a downgrade
+    it('does not ask for a PIN an older build deleted', async () => {
+        const saved: any = { pinVerifier, pin: '', nodes: [{}] };
+        const { navigation } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        expect(navigation.pop).toHaveBeenCalledTimes(1);
+        expect(screen.queryByRole('button', { name: 'Submit PIN' })).toBeNull();
+    });
+
+    it('counts a duress PIN an older build deleted as a wrong entry', async () => {
+        const saved: any = {
+            pinVerifier,
+            duressPinVerifier: await deriveVerifier(DURESS_PIN),
+            duressPin: ''
+        };
+        const updateSettings = makeUpdateSettings(saved);
+        const { navigation } = await renderLockscreen(updateSettings, {
+            settings: saved
+        });
+
+        await submitWrongPin();
+        await waitFor(() => expect(saved.authenticationAttempts).toBe(1), {
+            timeout: 5000
+        });
+
+        expect(clearAllData).not.toHaveBeenCalled();
+        expect(navigation.pop).not.toHaveBeenCalled();
+    });
+
     it('unlocks with the plaintext PIN when no verifier exists', async () => {
         const derive = jest.spyOn(LockKdf, 'pbkdf2Sha256');
         const saved: any = { pin: PIN };
@@ -420,7 +498,9 @@ describe('Lockscreen with a credential still in plaintext', () => {
 
         expect(SettingsStore.setLoginStatus).toHaveBeenCalledWith(true);
         // the primary and a throwaway duress record are hashed, then both
-        // are checked: the same cost as a stored PIN with a duress PIN
+        // are checked: twice the two derivations of a stored PIN, the same
+        // for every state with plaintext, so it does not reveal a duress
+        // credential
         expect(derive).toHaveBeenCalledTimes(4);
         derive.mockRestore();
     });

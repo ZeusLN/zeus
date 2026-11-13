@@ -2388,6 +2388,47 @@ describe('MigrationUtils', () => {
             );
         });
 
+        // those builds write '' only when the user deletes the credential,
+        // so a PIN deleted on v13.2.4 after a downgrade stays deleted
+        it('drops a verifier whose plaintext field was emptied', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            // v13.2.4's deletePin empties the duress PIN as well
+            const settings: any = {
+                pinVerifier: await deriveVerifier('1111'),
+                pin: '',
+                duressPinVerifier: await deriveVerifier('8888'),
+                duressPin: '',
+                passphraseVerifier: await deriveVerifier('kept')
+            };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(
+                settings,
+                true
+            );
+
+            expect(Object.keys(settings)).toEqual(['passphraseVerifier']);
+            expect(
+                await verifySecret('kept', settings.passphraseVerifier)
+            ).toBe(true);
+        });
+
+        it('drops only the duress verifier when only the duress PIN was emptied', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const pinVerifier = await deriveVerifier('1111');
+            const settings: any = {
+                pinVerifier,
+                duressPinVerifier: await deriveVerifier('8888'),
+                duressPin: ''
+            };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(
+                settings,
+                true
+            );
+
+            expect(settings).toEqual({ pinVerifier });
+        });
+
         it('outside the queue, routes plaintext through a queued update instead of persisting the snapshot', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             const queued = { pinVerifier: { v: 1 } };

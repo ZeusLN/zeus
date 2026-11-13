@@ -112,7 +112,12 @@ export default class SetDuressPassphrase extends React.Component<
             const duressPassphraseVerifier = await deriveVerifier(
                 duressPassphrase
             );
-            await updateSettings({ duressPassphraseVerifier });
+            // drop any plaintext the verifier migration has not hashed
+            // yet, so it cannot win over this record later
+            await updateSettings({
+                duressPassphraseVerifier,
+                duressPassphrase: undefined
+            });
         } catch (error) {
             console.error('Failed to save the duress password', error);
             this.setState({ saveError: true });
@@ -127,11 +132,12 @@ export default class SetDuressPassphrase extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { updateSettings } = SettingsStore;
 
-        await updateSettings({ duressPassphraseVerifier: undefined }).then(
-            () => {
-                navigation.popTo('Security');
-            }
-        );
+        await updateSettings({
+            duressPassphraseVerifier: undefined,
+            duressPassphrase: undefined
+        }).then(() => {
+            navigation.popTo('Security');
+        });
     };
 
     render() {

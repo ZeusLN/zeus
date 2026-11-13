@@ -127,6 +127,12 @@ export const hasVerifier = (record?: VerifierRecord | null): boolean =>
     typeof record.hash === 'string' &&
     record.hash.length > 0;
 
+export type LockCredentialField =
+    | 'pin'
+    | 'duressPin'
+    | 'passphrase'
+    | 'duressPassphrase';
+
 /**
  * A lock credential still stored in plaintext, or undefined. The verifier
  * migration replaces these, so one is only present when that migration has
@@ -135,24 +141,39 @@ export const hasVerifier = (record?: VerifierRecord | null): boolean =>
  */
 export const getPlaintextCredential = (
     settings: any,
-    field: 'pin' | 'duressPin' | 'passphrase' | 'duressPassphrase'
+    field: LockCredentialField
 ): string | undefined => {
     const value = settings?.[field];
     return typeof value === 'string' && value.length > 0 ? value : undefined;
 };
 
 /**
- * True when a PIN or passphrase lock is configured, hashed or not. Auth
- * gates use this instead of hasVerifier alone, so a credential the
- * migration has not hashed yet still locks the app.
+ * The verifier record for a credential, or undefined. Builds from before
+ * verifiers write an empty string to the plaintext field only when the
+ * user deletes that credential, so an empty field next to a verifier (a
+ * credential deleted on v13.2.4 after a downgrade) makes the verifier
+ * stale.
+ */
+export const getLockVerifier = (
+    settings: any,
+    field: LockCredentialField
+): VerifierRecord | undefined => {
+    if (settings?.[field] === '') return undefined;
+    const record = settings?.[`${field}Verifier`];
+    return hasVerifier(record) ? record : undefined;
+};
+
+/**
+ * True when a credential is configured, hashed or not. Auth gates use this
+ * instead of hasVerifier alone, so a credential the migration has not
+ * hashed yet still locks the app, and one an older build deleted does not.
  */
 export const hasLockCredential = (
     settings: any,
-    method: 'pin' | 'passphrase'
+    field: LockCredentialField
 ): boolean =>
-    !!settings &&
-    (hasVerifier(settings[`${method}Verifier`]) ||
-        !!getPlaintextCredential(settings, method));
+    !!getLockVerifier(settings, field) ||
+    !!getPlaintextCredential(settings, field);
 
 // Hashed and thrown away to keep the derivation count equal; never verified
 // against, so its value does not matter.
