@@ -40,6 +40,9 @@ class MainApplication : Application(), ReactApplication {
 
     override fun onCreate() {
         super.onCreate()
+        // Before React Native, so it is done by the time JS reaches a
+        // module that calls into the uniffi bindings
+        JnaStructWarmup.start()
         loadReactNative(this)
         ReactNativeBlobUtilUtils.sharedTrustManager = object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
