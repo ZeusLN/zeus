@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { Alert, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -19,8 +20,10 @@ import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 
 import AddressUtils from '../../utils/AddressUtils';
+import { isPlausibleSatPerVbyte } from '../../utils/FeeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
 
 import TransactionRequest from '../../models/TransactionRequest';
 
@@ -73,6 +76,49 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
         }
     }
 
+    // A sweep spends the whole balance at the fee rate in the input, which
+    // starts at a default the user may not have changed, so the user has to
+    // see and accept amount, destination and rate before it is broadcast
+    confirmSweep = () =>
+        new Promise<boolean>((resolve) => {
+            const { BalanceStore, SettingsStore } = this.props;
+            const { destination, fee } = this.state;
+            // CLN's withdraw spends confirmed outputs only (minconf
+            // defaults to 1, and CLNRest.sendCoins does not pass
+            // spend_unconfirmed on)
+            const amount = new BigNumber(
+                BalanceStore.confirmedBlockchainBalance || 0
+            ).plus(
+                SettingsStore.implementation === 'cln-rest'
+                    ? 0
+                    : BalanceStore.unconfirmedBlockchainBalance || 0
+            );
+            Alert.alert(
+                localeString('views.Sweep.title'),
+                localeString('views.Sweep.confirm', {
+                    amount: numberWithCommas(amount.toString()),
+                    destination,
+                    fee
+                }),
+                [
+                    {
+                        text: localeString('general.cancel'),
+                        style: 'cancel',
+                        onPress: () => resolve(false)
+                    },
+                    {
+                        text: localeString('general.confirm'),
+                        onPress: () => resolve(true)
+                    }
+                ],
+                { cancelable: false }
+            );
+        });
+
+    confirmAndSendCoins = async () => {
+        if (await this.confirmSweep()) this.sendCoins();
+    };
+
     sendCoins = () => {
         const { SettingsStore, TransactionsStore, navigation } = this.props;
         const { destination, fee } = this.state;
@@ -121,7 +167,16 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
             confirmedBlockchainBalance === 0 &&
             unconfirmedBlockchainBalance === 0;
 
-        const disabled = !destination || !isValid || noOnchainBalance;
+        // Send stays off while the fee field shows an error. With an empty
+        // or 0 rate the node picks its own fee, so the rate the user
+        // confirms would not be the one used. The rate is shown as typed in
+        // the confirmation, and LND takes whole sat/vB, so only digits
+        const disabled =
+            !destination ||
+            !isValid ||
+            noOnchainBalance ||
+            !/^\d+$/.test(fee) ||
+            !isPlausibleSatPerVbyte(fee);
 
         return (
             <Screen>
@@ -240,7 +295,9 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                                         size: 25
                                     }
                                 }
-                                onPress={() => this.sendCoins()}
+                                onPress={() => {
+                                    this.confirmAndSendCoins();
+                                }}
                                 disabled={disabled}
                             />
                         </View>
