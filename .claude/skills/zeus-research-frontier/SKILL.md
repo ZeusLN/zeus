@@ -1,6 +1,7 @@
 ---
 name: zeus-research-frontier
-description: Load when the task is choosing or scoping research/roadmap work on Zeus: "what should we build next", "where can Zeus advance the state of the art", "is this feature/scheme novel", "can we claim X publicly", picking up stalled work (bip-321, LSPS7 refund UI, payLightningInvoiceStreaming, 16 KB ELF alignment check in CI), or writing external-facing claims (blog posts, release notes, conference talks, comparisons with other wallets). Covers the four maintainer-endorsed research directions (self-custodial UX parity, protocol leadership, multi-backend robustness, privacy leadership), candidate infrastructure problems, and the proof/reproducibility standards required before any public novelty claim.
+description: >-
+  Load when the task is choosing or scoping research/roadmap work on Zeus: "what should we build next", "where can Zeus advance the state of the art", "is this feature/scheme novel", "can we claim X publicly", picking up stalled work (bip-321, LSPS7 refund UI, payLightningInvoiceStreaming, 16 KB ELF alignment check in CI), or writing external-facing claims (blog posts, release notes, conference talks, comparisons with other wallets). Covers the four maintainer-endorsed research directions (self-custodial UX parity, protocol leadership, multi-backend robustness, privacy leadership), candidate infrastructure problems, and the proof/reproducibility standards required before any public novelty claim.
 ---
 
 # Zeus Research Frontier

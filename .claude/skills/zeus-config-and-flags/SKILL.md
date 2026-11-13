@@ -1,6 +1,7 @@
 ---
 name: zeus-config-and-flags
-description: Catalog of every Zeus configuration axis and the add-a-setting checklist. Load when you need to add/change/remove a user setting or flag, find where a setting lives (settings blob key, per-node vs global, nested group vs top-level), look up a default value (theme, routing fee, LSP/swap/esplora/RGS/VSS URLs, neutrino peers, invoice expiry), change a default for existing users, work in views/Settings/* or stores/SettingsStore.ts, or answer "why does a fresh install behave differently from a migrated one" (bimodalPathfinding, showMillisatoshiAmounts). Keywords: settings, defaults, updateSettings, zeus-settings-v2, certVerification, enableLSP, DropdownSetting, feature flag, deprecated setting, MOD_KEY, per-node config, embeddedLndNetwork, ldkNetwork, mutinynet.
+description: >-
+  Catalog of every Zeus configuration axis and the add-a-setting checklist. Load when you need to add/change/remove a user setting or flag, find where a setting lives (settings blob key, per-node vs global, nested group vs top-level), look up a default value (theme, routing fee, LSP/swap/esplora/RGS/VSS URLs, neutrino peers, invoice expiry), change a default for existing users, work in views/Settings/* or stores/SettingsStore.ts, or answer "why does a fresh install behave differently from a migrated one" (bimodalPathfinding, showMillisatoshiAmounts). Keywords: settings, defaults, updateSettings, zeus-settings-v2, certVerification, enableLSP, DropdownSetting, feature flag, deprecated setting, MOD_KEY, per-node config, embeddedLndNetwork, ldkNetwork, mutinynet.
 ---
 
 # Zeus Config and Flags

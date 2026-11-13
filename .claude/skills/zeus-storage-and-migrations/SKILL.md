@@ -1,6 +1,7 @@
 ---
 name: zeus-storage-and-migrations
-description: Load when touching ANY persisted data in Zeus - keychain reads/writes, the zeus-settings-v2 settings blob, SettingsStore.setSettings/updateSettings, MigrationUtils MOD_KEY migrations, DataClearUtils/KeychainRecoveryUtils, adding a new storage key, iCloud keychain behavior, duress-PIN wipe, Cashu/LDK/LND on-disk data, or VSS remote state. Also load when debugging symptoms like "settings lost after update", "wallet disappeared", "nested settings group reset to defaults", "migration ran twice / never ran", "old data reappeared on a new iPhone", "data survives Clear All Data", or "3600 hours" style display corruption. Keywords: Storage.getItem, Storage.setItem, EncryptedStorage, AsyncStorage, keychain, cloudSync, zeus-settings-v2, MOD_KEY, migration, storageMigrationV2, keychainCloudSyncMigration, clearAllData, duress.
+description: >-
+  Load when touching ANY persisted data in Zeus - keychain reads/writes, the zeus-settings-v2 settings blob, SettingsStore.setSettings/updateSettings, MigrationUtils MOD_KEY migrations, DataClearUtils/KeychainRecoveryUtils, adding a new storage key, iCloud keychain behavior, duress-PIN wipe, Cashu/LDK/LND on-disk data, or VSS remote state. Also load when debugging symptoms like "settings lost after update", "wallet disappeared", "nested settings group reset to defaults", "migration ran twice / never ran", "old data reappeared on a new iPhone", "data survives Clear All Data", or "3600 hours" style display corruption. Keywords: Storage.getItem, Storage.setItem, EncryptedStorage, AsyncStorage, keychain, cloudSync, zeus-settings-v2, MOD_KEY, migration, storageMigrationV2, keychainCloudSyncMigration, clearAllData, duress.
 ---
 
 # Zeus Storage and Migrations

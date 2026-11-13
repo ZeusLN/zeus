@@ -1,6 +1,7 @@
 ---
 name: zeus-validation-and-qa
-description: Load when validating changes to Zeus: running or fixing `yarn verify` / CI checks (Test, Lint, Prettier, Typescript Check), writing or extending Jest unit tests, deciding what evidence a PR needs (manual testing matrix, screenshots, which backends to test), or debugging CI-only failures. Symptoms/keywords - "yarn verify fails", "themeColor StyleSheet lint error", "no-themecolor-in-static-stylesheet", "Cannot use import statement outside a module" in jest, "prettier check fails in CI but not locally", "how do I run one test", "where are the tests", "do stores have tests", "what do I need to test before opening a PR", transformIgnorePatterns, moduleNameMapper, test coverage.
+description: >-
+  Load when validating changes to Zeus: running or fixing `yarn verify` / CI checks (Test, Lint, Prettier, Typescript Check), writing or extending Jest unit tests, deciding what evidence a PR needs (manual testing matrix, screenshots, which backends to test), or debugging CI-only failures. Symptoms/keywords - "yarn verify fails", "themeColor StyleSheet lint error", "no-themecolor-in-static-stylesheet", "Cannot use import statement outside a module" in jest, "prettier check fails in CI but not locally", "how do I run one test", "where are the tests", "do stores have tests", "what do I need to test before opening a PR", transformIgnorePatterns, moduleNameMapper, test coverage.
 ---
 
 # Zeus Validation and QA
