@@ -19,6 +19,7 @@ jest.mock('../storage', () => ({
 }));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { Notifications } from 'react-native-notifications';
 import Storage from '../storage';
 import LightningAddressStore, {
     HASHES_STORAGE_STRING
@@ -327,6 +328,203 @@ describe('LightningAddressStore', () => {
                 'Failed to update push credentials',
                 expect.any(Error)
             );
+        });
+    });
+
+    describe('redeemCashu', () => {
+        const QUOTE = 'quote-1';
+        const MINT = 'https://mint.test';
+        const transportError = {
+            type: 'Network',
+            message:
+                'Http transport error None: error sending request for url (https://mint.test/v1/keysets)'
+        };
+
+        const setup = (cashuStore: any) => {
+            const store = new LightningAddressStore(
+                {
+                    decodeTokenCDK: jest
+                        .fn()
+                        .mockResolvedValue({ mint_url: MINT }),
+                    ...cashuStore
+                },
+                { nodeInfo: { identity_pubkey: '03cd' } } as any,
+                { settings: { lightningAddress: { mintUrl: MINT } } } as any
+            );
+            jest.spyOn(store as any, 'getAuthData').mockResolvedValue({
+                verification: 'v',
+                signature: 's'
+            });
+            jest.spyOn(store, 'status').mockResolvedValue(undefined as any);
+            return store;
+        };
+
+        const mockRedeemResponse = (status: number, body: any) =>
+            (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+                info: () => ({ status }),
+                json: () => body
+            });
+
+        const redeem = (store: LightningAddressStore) =>
+            store.redeemCashu(QUOTE, MINT, 21000, true);
+
+        it('says the mint is unreachable and keeps the cause when the claim step has no connectivity', async () => {
+            const store = setup({
+                checkInvoicePaid: jest.fn().mockRejectedValue(transportError)
+            });
+
+            await expect(redeem(store)).resolves.toBe(true);
+
+            expect(store.error).toBe(true);
+            expect(store.redeeming).toBe(false);
+            expect(store.error_msg).toBe(
+                `stores.LightningAddressStore.Cashu.mintUnreachable: ${transportError.message}`
+            );
+            expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+        });
+
+        it('appends the cause to the generic message for non-network claim failures', async () => {
+            const store = setup({
+                checkInvoicePaid: jest.fn().mockRejectedValue({
+                    type: 'Generic',
+                    message: 'Signature verification failed'
+                })
+            });
+
+            await redeem(store);
+
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.quotePaymentErr: Signature verification failed'
+            );
+        });
+
+        it('extracts the mint detail from a raw FFI error string', async () => {
+            const store = setup({
+                checkInvoicePaid: jest
+                    .fn()
+                    .mockRejectedValue(
+                        new Error(
+                            'CashuDevKit.FfiError.Cdk(code: 20001, errorMessage: "code: 20001, detail: quote not paid")'
+                        )
+                    )
+            });
+
+            await redeem(store);
+
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.quotePaymentErr: Quote not paid'
+            );
+        });
+
+        it('keeps the ZEUS Pay /redeem error instead of overwriting it with the generic message', async () => {
+            const store = setup({
+                checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: true })
+            });
+            mockRedeemResponse(400, {
+                success: false,
+                error: 'Invoice is not paid'
+            });
+
+            await expect(redeem(store)).resolves.toBe(true);
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.redeemErr: Invoice is not paid'
+            );
+        });
+
+        it('does not call a /redeem connectivity failure a mint outage', async () => {
+            const store = setup({
+                checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: true })
+            });
+            (ReactNativeBlobUtil.fetch as jest.Mock).mockRejectedValue(
+                new Error('Unable to resolve host "zeuspay.com"')
+            );
+
+            await redeem(store);
+
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.redeemErr: Unable to resolve host "zeuspay.com"'
+            );
+        });
+
+        it('falls back to the bare prefix when /redeem fails without an error field', async () => {
+            const store = setup({
+                checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: true })
+            });
+            mockRedeemResponse(500, { success: false });
+
+            await redeem(store);
+
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.redeemErr'
+            );
+        });
+
+        it('does not promise a retry when receiving a server token fails after /redeem', async () => {
+            const store = setup({
+                checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: true }),
+                deriveCashuSecretKey: jest.fn().mockReturnValue(null),
+                receiveTokenCDK: jest.fn().mockRejectedValue(transportError)
+            });
+            mockRedeemResponse(200, { success: true, token: 'cashuB...' });
+
+            await redeem(store);
+
+            expect(store.error_msg).toBe(
+                `stores.LightningAddressStore.Cashu.quotePaymentErr: ${transportError.message}`
+            );
+        });
+
+        it('does not report a redeem failure when the notification throws after /redeem succeeds', async () => {
+            (
+                Notifications.postLocalNotification as jest.Mock
+            ).mockImplementationOnce(() => {
+                throw new TypeError('post failed');
+            });
+            const store = setup({
+                checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: true })
+            });
+            mockRedeemResponse(200, { success: true });
+
+            await expect(
+                store.redeemCashu(QUOTE, MINT, 21000, false, true)
+            ).resolves.toBe(true);
+
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+            expect(store.redeeming).toBe(false);
+            expect(console.log).toHaveBeenCalledWith(
+                'Error posting payment notification',
+                expect.any(TypeError)
+            );
+            expect(store.status).toHaveBeenCalledWith(true);
+        });
+
+        it('clears the error state on success', async () => {
+            const store = setup({
+                checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: true })
+            });
+            mockRedeemResponse(200, { success: true });
+
+            await expect(redeem(store)).resolves.toBe(true);
+
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+            expect(store.redeeming).toBe(false);
+        });
+
+        it('reports an unpaid quote without a cause suffix', async () => {
+            const store = setup({
+                checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: false })
+            });
+
+            await redeem(store);
+
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.quoteNotPaid'
+            );
+            expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
         });
     });
 });
