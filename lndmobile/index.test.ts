@@ -1,50 +1,356 @@
-jest.mock('react-native', () => ({
-    NativeModules: { LndMobile: {}, LndMobileTools: {} }
-}));
+// Import-time scaffolding: LndMobileUtils pulls in device info, stores,
+// and the native module at import time, so it is replaced wholesale with
+// a controllable in-process event emitter plus a checkLndStreamErrorResponse
+// stand-in that mirrors the real contract (EOF sentinel, transient null,
+// Error otherwise). The native transport in ./utils is stubbed; the
+// protobuf codecs stay real so events round-trip through actual encoding.
+jest.mock('../utils/LndMobileUtils', () => {
+    const { EventEmitter } = require('events');
+    const emitter = new EventEmitter();
+    return {
+        __emitter: emitter,
+        LndMobileEventEmitter: {
+            addListener: (name: string, cb: (e: any) => void) => {
+                emitter.on(name, cb);
+                return {
+                    remove: () => emitter.removeListener(name, cb)
+                };
+            }
+        },
+        checkLndStreamErrorResponse: (_name: string, e: any) => {
+            if (!e || typeof e !== 'object') return new Error('invalid');
+            if (e.error_code) {
+                const desc = e.error_desc || '';
+                if (desc === 'EOF') return 'EOF';
+                if (desc === 'transient') return null;
+                return new Error(desc);
+            }
+            return null;
+        }
+    };
+});
 jest.mock('./utils', () => ({
     sendCommand: jest.fn(),
-    sendStreamCommand: jest.fn(),
-    // test events carry the decoded lnrpc.Payment as JSON
-    decodeStreamResult: jest.fn(({ base64Result }) => JSON.parse(base64Result))
-}));
-// the RouterSendPaymentV2 listeners currently registered
-const mockListeners = new Set<(event: any) => void>();
-jest.mock('../utils/LndMobileUtils', () => ({
-    // reduced to the two outcomes the payment listeners distinguish: end of
-    // stream and an error
-    checkLndStreamErrorResponse: jest.fn((_name: string, event: any) => {
-        if (!event.error_code) return null;
-        return event.error_desc === 'EOF' ? 'EOF' : new Error(event.error_desc);
-    }),
-    LndMobileEventEmitter: {
-        addListener: jest.fn((_event: string, callback: any) => {
-            mockListeners.add(callback);
-            return { remove: () => mockListeners.delete(callback) };
-        })
-    }
+    sendStreamCommand: jest.fn(async () => 'stream started'),
+    sendBidiStreamCommand: jest.fn(),
+    writeToStream: jest.fn(),
+    decodeStreamResult: jest.requireActual('./utils').decodeStreamResult
 }));
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
+// stopLnd calls the native module, which index.ts reads at import time
+jest.mock('react-native', () => {
+    const reactNative = jest.requireActual('react-native');
+    reactNative.NativeModules.LndMobile = {
+        stopLnd: jest.fn(async () => ({ data: '' }))
+    };
+    return reactNative;
+});
+jest.mock('../stores/Stores', () => ({
+    settingsStore: { settings: {} },
+    nodeInfoStore: { nodeInfo: {} }
+}));
 
 import {
+    clearTrackPaymentStreams,
     listInvoices,
     listPayments,
     sendKeysendPaymentV2,
-    sendPaymentV2Sync
+    sendPaymentV2Sync,
+    stopLnd,
+    trackPaymentV2
 } from './index';
 import { sendCommand, sendStreamCommand } from './utils';
+import { lnrpc, routerrpc } from '../proto/lightning';
+import Base64Utils from '../utils/Base64Utils';
 
-// the request id the nth stream since the last mockClear was started with
-const requestIdOf = (n: number) =>
-    (sendStreamCommand as jest.Mock).mock.calls[n][0].requestId;
-// the native bridge sends every call's events to every listener, tagged with
-// the request id of the call they belong to
-const emit = (event: object, request_id: string) =>
-    Array.from(mockListeners).forEach((callback) =>
-        callback({ ...event, request_id })
-    );
-const payment = (data: object) => ({ data: JSON.stringify(data) });
+const { __emitter: emitter } = jest.requireMock('../utils/LndMobileUtils');
+
+const HASH_HEX =
+    '9f1459d8a2ac9353e6e229e4d85b11d1830b6a25f7f3f1786a107ecfd86f5d34';
+const OTHER_HASH_HEX = 'ab'.repeat(32);
+
+const paymentEvent = (
+    payment_hash: string,
+    status: lnrpc.Payment.PaymentStatus
+) => ({
+    data: Base64Utils.bytesToBase64(
+        lnrpc.Payment.encode(
+            lnrpc.Payment.create({ payment_hash, status })
+        ).finish()
+    )
+});
+
+const emit = (event: any) => emitter.emit('RouterTrackPaymentV2', event);
+// the request id the latest track stream was started with
+const trackRequestId = () =>
+    (sendStreamCommand as jest.Mock).mock.calls.at(-1)[0].requestId;
+
+describe('trackPaymentV2', () => {
+    beforeEach(() => {
+        (sendStreamCommand as jest.Mock).mockClear();
+    });
+
+    afterEach(() => {
+        clearTrackPaymentStreams();
+        jest.useRealTimers();
+    });
+
+    it('sends a TrackPaymentRequest for the hash', async () => {
+        const promise = trackPaymentV2(HASH_HEX);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await promise;
+
+        const call = (sendStreamCommand as jest.Mock).mock.calls.at(-1)[0];
+        expect(call.method).toBe('RouterTrackPaymentV2');
+        expect(call.request).toBe(routerrpc.TrackPaymentRequest);
+        expect(Base64Utils.bytesToHex(call.options.payment_hash)).toBe(
+            HASH_HEX
+        );
+        expect(call.options.no_inflight_updates).toBe(false);
+        expect(call.requestId).toEqual(expect.any(String));
+    });
+
+    it('resolves with the first update carrying its hash, whatever the status', async () => {
+        const promise = trackPaymentV2(HASH_HEX);
+        // another lookup's update on the shared channel must not answer
+        emit(
+            paymentEvent(OTHER_HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED)
+        );
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT));
+
+        const payment = await promise;
+        expect(payment.payment_hash).toBe(HASH_HEX);
+        expect(payment.status).toBe(lnrpc.Payment.PaymentStatus.IN_FLIGHT);
+    });
+
+    it('matches the hash case-insensitively', async () => {
+        const promise = trackPaymentV2(HASH_HEX.toUpperCase());
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(promise).resolves.toMatchObject({
+            payment_hash: HASH_HEX
+        });
+    });
+
+    it('rejects with the stream error (NOT_FOUND surfaces to the caller)', async () => {
+        const promise = trackPaymentV2(HASH_HEX);
+        emit({
+            error_code: 5,
+            error_desc: "payment isn't initiated",
+            request_id: trackRequestId()
+        });
+        await expect(promise).rejects.toThrow("payment isn't initiated");
+    });
+
+    it('rejects only the lookup whose stream the error came from', async () => {
+        const held = trackPaymentV2(HASH_HEX);
+        const heldId = trackRequestId();
+        const unknown = trackPaymentV2(OTHER_HASH_HEX);
+        const unknownId = trackRequestId();
+        expect(unknownId).not.toEqual(heldId);
+
+        emit({
+            error_code: 5,
+            error_desc: "payment isn't initiated",
+            request_id: unknownId
+        });
+        await expect(unknown).rejects.toThrow("payment isn't initiated");
+
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT));
+        await expect(held).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.IN_FLIGHT
+        });
+    });
+
+    it('ignores an error without a request id', async () => {
+        const promise = trackPaymentV2(HASH_HEX);
+        emit({ error_code: 5, error_desc: "payment isn't initiated" });
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(promise).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
+    });
+
+    it('ignores untagged EOF, transient errors, and payload-less events', async () => {
+        const promise = trackPaymentV2(HASH_HEX);
+        emit({ error_code: 1, error_desc: 'EOF' });
+        emit({ error_code: 1, error_desc: 'transient' });
+        emit({});
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.FAILED));
+        await expect(promise).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.FAILED
+        });
+    });
+
+    it('ends a stream on its EOF, so the next lookup reopens', async () => {
+        const first = trackPaymentV2(HASH_HEX);
+        const firstId = trackRequestId();
+        emit({
+            ...paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT),
+            request_id: firstId
+        });
+        await first;
+
+        // closed without a terminal update: its in-flight state is stale
+        emit({ error_code: 'Error', error_desc: 'EOF', request_id: firstId });
+        const next = trackPaymentV2(HASH_HEX);
+        expect(sendStreamCommand).toHaveBeenCalledTimes(2);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(next).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
+    });
+
+    it('rejects a waiting lookup when its stream sends EOF', async () => {
+        const promise = trackPaymentV2(HASH_HEX);
+        emit({
+            error_code: 'Error',
+            error_desc: 'EOF',
+            request_id: trackRequestId()
+        });
+        await expect(promise).rejects.toThrow('EOF');
+    });
+
+    it('ignores the EOF that follows a terminal update', async () => {
+        const first = trackPaymentV2(HASH_HEX);
+        const firstId = trackRequestId();
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await first;
+
+        const next = trackPaymentV2(HASH_HEX);
+        emit({ error_code: 'Error', error_desc: 'EOF', request_id: firstId });
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(next).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
+    });
+
+    it('rejects with a timeout when the stream never answers', async () => {
+        jest.useFakeTimers();
+        const promise = trackPaymentV2(HASH_HEX);
+        jest.advanceTimersByTime(10001);
+        await expect(promise).rejects.toThrow('Request timeout');
+    });
+
+    it('rejects after the caller-supplied timeout', async () => {
+        jest.useFakeTimers();
+        const promise = trackPaymentV2(HASH_HEX, 2000);
+        jest.advanceTimersByTime(2000);
+        await expect(promise).rejects.toThrow('Request timeout');
+    });
+
+    it('shares one stream between lookups of a held payment', async () => {
+        const first = trackPaymentV2(HASH_HEX);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT));
+        await first;
+
+        // the stream can't be cancelled and stays open while the payment
+        // is held, so a later poll reads it instead of opening another
+        await expect(trackPaymentV2(HASH_HEX)).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.IN_FLIGHT
+        });
+        expect(sendStreamCommand).toHaveBeenCalledTimes(1);
+        expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(1);
+
+        // a terminal update ends the stream; the next lookup opens a new
+        // one, which lnd answers and closes at once
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(0);
+        const next = trackPaymentV2(HASH_HEX);
+        expect(sendStreamCommand).toHaveBeenCalledTimes(2);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(next).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
+    });
+
+    it('removes its listener once no stream is open', async () => {
+        const promise = trackPaymentV2(HASH_HEX);
+        await Promise.resolve();
+        expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(1);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await promise;
+        expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(0);
+    });
+
+    it('forgets its streams when lnd stops, so the next lookup reopens', async () => {
+        const first = trackPaymentV2(HASH_HEX);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT));
+        await first;
+
+        // the stream ended with lnd, so its in-flight update is stale
+        await stopLnd();
+        expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(0);
+
+        const next = trackPaymentV2(HASH_HEX);
+        expect(sendStreamCommand).toHaveBeenCalledTimes(2);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(next).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
+    });
+
+    it('ends a stream taken back by an update on its own EOF', async () => {
+        jest.useFakeTimers();
+        // another held payment keeps the shared listener attached, so
+        // events still arrive once this hash's streams are all forgotten
+        const other = trackPaymentV2(OTHER_HASH_HEX);
+        emit(
+            paymentEvent(OTHER_HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT)
+        );
+        await other;
+
+        const first = trackPaymentV2(HASH_HEX);
+        const firstId = trackRequestId();
+        emit({
+            ...paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT),
+            request_id: firstId
+        });
+        await first;
+
+        // past the max age a lookup replaces the stream, and the
+        // replacement fails, so the registry forgets the hash
+        jest.advanceTimersByTime(60000);
+        const replacement = trackPaymentV2(HASH_HEX);
+        expect(sendStreamCommand).toHaveBeenCalledTimes(3);
+        emit({
+            error_code: 2,
+            error_desc: 'stream reset',
+            request_id: trackRequestId()
+        });
+        await expect(replacement).rejects.toThrow('stream reset');
+
+        // the first stream is still open: its update takes it back
+        emit({
+            ...paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.IN_FLIGHT),
+            request_id: firstId
+        });
+        await expect(trackPaymentV2(HASH_HEX)).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.IN_FLIGHT
+        });
+        expect(sendStreamCommand).toHaveBeenCalledTimes(3);
+
+        // its EOF names it, so it ends and the next lookup reopens
+        emit({ error_code: 'Error', error_desc: 'EOF', request_id: firstId });
+        const next = trackPaymentV2(HASH_HEX);
+        expect(sendStreamCommand).toHaveBeenCalledTimes(4);
+        emit(paymentEvent(HASH_HEX, lnrpc.Payment.PaymentStatus.SUCCEEDED));
+        await expect(next).resolves.toMatchObject({
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
+    });
+
+    it('rejects when the stream command fails', async () => {
+        (sendStreamCommand as jest.Mock).mockRejectedValueOnce(
+            new Error('lnd is not running')
+        );
+        await expect(trackPaymentV2(HASH_HEX)).rejects.toThrow(
+            'lnd is not running'
+        );
+        expect(emitter.listenerCount('RouterTrackPaymentV2')).toBe(0);
+    });
+});
 
 describe('sendPaymentV2Sync', () => {
     beforeEach(() => {
@@ -172,7 +478,21 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
         'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
     const SPEC_PAYMENT_HASH =
         '0001020304050607080900010203040506070809000102030405060708090102';
+    const { SUCCEEDED, FAILED } = lnrpc.Payment.PaymentStatus;
 
+    // the request id the nth stream since the last mockClear was started with
+    const requestIdOf = (n: number) =>
+        (sendStreamCommand as jest.Mock).mock.calls[n][0].requestId;
+    // the native bridge sends every call's events to every listener, tagged
+    // with the request id of the call they belong to
+    const emit = (event: object, request_id: string) =>
+        emitter.emit('RouterSendPaymentV2', { ...event, request_id });
+    const emitPayment = (
+        payment_hash: string,
+        status: lnrpc.Payment.PaymentStatus,
+        request_id: string
+    ) => emit(paymentEvent(payment_hash, status), request_id);
+    const listeners = () => emitter.listenerCount('RouterSendPaymentV2');
     const keysend = (hashHex: string) =>
         sendKeysendPaymentV2({
             dest: '02'.repeat(33),
@@ -182,7 +502,7 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
 
     beforeEach(() => {
         // earlier tests leave calls that never got an event
-        mockListeners.clear();
+        emitter.removeAllListeners('RouterSendPaymentV2');
         jest.useFakeTimers();
         (sendStreamCommand as jest.Mock).mockClear().mockResolvedValue('');
     });
@@ -197,29 +517,23 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
         let aSettled = false;
         a.then(() => (aSettled = true));
 
-        emit(
-            payment({ payment_hash: HASH_B, status: 'SUCCEEDED' }),
-            requestIdOf(1)
-        );
-        await expect(b).resolves.toEqual({
+        emitPayment(HASH_B, SUCCEEDED, requestIdOf(1));
+        await expect(b).resolves.toMatchObject({
             payment_hash: HASH_B,
-            status: 'SUCCEEDED'
+            status: SUCCEEDED
         });
         await jest.advanceTimersByTimeAsync(0);
 
         // A's listener must survive B's event, or A never resolves
         expect(aSettled).toBe(false);
-        expect(mockListeners.size).toBe(1);
+        expect(listeners()).toBe(1);
 
-        emit(
-            payment({ payment_hash: HASH_A, status: 'FAILED' }),
-            requestIdOf(0)
-        );
-        await expect(a).resolves.toEqual({
+        emitPayment(HASH_A, FAILED, requestIdOf(0));
+        await expect(a).resolves.toMatchObject({
             payment_hash: HASH_A,
-            status: 'FAILED'
+            status: FAILED
         });
-        expect(mockListeners.size).toBe(0);
+        expect(listeners()).toBe(0);
     });
 
     it("keeps an invoice payment waiting through a keysend's event", async () => {
@@ -231,18 +545,12 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
         let invoiceSettled = false;
         invoice.then(() => (invoiceSettled = true));
 
-        emit(
-            payment({ payment_hash: HASH_B, status: 'SUCCEEDED' }),
-            requestIdOf(1)
-        );
+        emitPayment(HASH_B, SUCCEEDED, requestIdOf(1));
         await expect(b).resolves.toMatchObject({ payment_hash: HASH_B });
         await jest.advanceTimersByTimeAsync(0);
         expect(invoiceSettled).toBe(false);
 
-        emit(
-            payment({ payment_hash: SPEC_PAYMENT_HASH, status: 'SUCCEEDED' }),
-            requestIdOf(0)
-        );
+        emitPayment(SPEC_PAYMENT_HASH, SUCCEEDED, requestIdOf(0));
         await expect(invoice).resolves.toMatchObject({
             payment_hash: SPEC_PAYMENT_HASH
         });
@@ -264,10 +572,7 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
         await jest.advanceTimersByTimeAsync(0);
         expect(aSettled).toBe(false);
 
-        emit(
-            payment({ payment_hash: HASH_A, status: 'SUCCEEDED' }),
-            requestIdOf(0)
-        );
+        emitPayment(HASH_A, SUCCEEDED, requestIdOf(0));
         await expect(a).resolves.toMatchObject({ payment_hash: HASH_A });
     });
 
@@ -288,10 +593,7 @@ describe('concurrent RouterSendPaymentV2 calls', () => {
         await jest.advanceTimersByTimeAsync(0);
         expect(invoiceSettled).toBe(false);
 
-        emit(
-            payment({ payment_hash: SPEC_PAYMENT_HASH, status: 'SUCCEEDED' }),
-            requestIdOf(0)
-        );
+        emitPayment(SPEC_PAYMENT_HASH, SUCCEEDED, requestIdOf(0));
         await expect(invoice).resolves.toMatchObject({
             payment_hash: SPEC_PAYMENT_HASH
         });

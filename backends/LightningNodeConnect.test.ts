@@ -798,6 +798,228 @@ describe('LightningNodeConnect', () => {
         });
     });
 
+    describe('lookupPayment', () => {
+        const EVENT = 'routerrpc.Router.TrackPaymentV2';
+        const HASH = 'ab'.repeat(32);
+        const NOT_FOUND =
+            "rpc error: code = NotFound desc = payment isn't initiated";
+        let backend: LightningNodeConnect;
+        let lnc: any;
+        let emit: (result: string, request_id?: string) => void;
+
+        const trackCalls = () =>
+            lnc.subscribe.mock.calls.filter(
+                ([method]: [string]) => method === EVENT
+            );
+        // the request id the latest track stream was started with
+        const trackRequestId = () => trackCalls().at(-1)[2];
+
+        const paymentEvent = (status: string) =>
+            JSON.stringify({ payment_hash: HASH, status });
+
+        beforeEach(async () => {
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            const listeners: Array<(event: any) => void> = [];
+            emit = (result, request_id) =>
+                listeners.forEach((cb) => cb({ result, request_id }));
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((_name: string, cb: any) => {
+                listeners.push(cb);
+                return {
+                    remove: () => listeners.splice(listeners.indexOf(cb), 1)
+                } as any;
+            });
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.lightning.listPayments = jest.fn();
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+            jest.useRealTimers();
+        });
+
+        it('shares one stream between lookups of a held payment', async () => {
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            emit(paymentEvent('IN_FLIGHT'));
+            await expect(first).resolves.toMatchObject({
+                status: 'IN_FLIGHT'
+            });
+
+            await expect(
+                backend.lookupPayment({ payment_hash: HASH })
+            ).resolves.toMatchObject({ status: 'IN_FLIGHT' });
+            expect(trackCalls()).toHaveLength(1);
+            expect(lnc.lnd.lightning.listPayments).not.toHaveBeenCalled();
+        });
+
+        it('starts the stream with the hash and a request id', async () => {
+            const lookup = backend.lookupPayment({ payment_hash: HASH });
+
+            expect(lnc.subscribe).toHaveBeenCalledWith(
+                EVENT,
+                {
+                    payment_hash: Buffer.from(HASH, 'hex').toString('base64'),
+                    no_inflight_updates: false
+                },
+                expect.any(String)
+            );
+            emit(paymentEvent('SUCCEEDED'), trackRequestId());
+            await lookup;
+        });
+
+        it("answers a held payment's lookup despite another stream's NOT_FOUND", async () => {
+            const held = backend.lookupPayment({ payment_hash: HASH });
+            const heldId = trackRequestId();
+            lnc.lnd.lightning.listPayments.mockResolvedValue({ payments: [] });
+            const unknown = backend.lookupPayment({
+                payment_hash: 'cd'.repeat(32)
+            });
+            expect(trackRequestId()).not.toEqual(heldId);
+
+            emit(NOT_FOUND, trackRequestId());
+            await expect(unknown).resolves.toBeNull();
+
+            emit(paymentEvent('IN_FLIGHT'));
+            await expect(held).resolves.toMatchObject({
+                status: 'IN_FLIGHT'
+            });
+            // only the unknown hash fell back to the scan
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledTimes(1);
+        });
+
+        it('rejects when the scan confirming a NOT_FOUND fails', async () => {
+            // a failed scan must not read as no record
+            lnc.lnd.lightning.listPayments.mockRejectedValue(
+                new Error('rpc error')
+            );
+            const lookup = backend.lookupPayment({ payment_hash: HASH });
+            emit(NOT_FOUND, trackRequestId());
+            await expect(lookup).rejects.toThrow('rpc error');
+        });
+
+        it('answers null when NOT_FOUND and the scan agrees', async () => {
+            lnc.lnd.lightning.listPayments.mockResolvedValue({ payments: [] });
+            const lookup = backend.lookupPayment({ payment_hash: HASH });
+            emit(NOT_FOUND, trackRequestId());
+            await expect(lookup).resolves.toBeNull();
+        });
+
+        it('scans once when NOT_FOUND meets a full page that missed', async () => {
+            lnc.lnd.lightning.listPayments
+                .mockResolvedValueOnce({
+                    payments: Array.from({ length: 50 }, (_, i) => ({
+                        payment_hash: i.toString(16).padStart(64, '0')
+                    }))
+                })
+                .mockResolvedValue({ payments: [] });
+            const lookup = backend.lookupPayment({
+                payment_hash: HASH,
+                creation_date_start: 1700000000
+            });
+            emit(NOT_FOUND, trackRequestId());
+            await expect(lookup).rejects.toMatchObject({
+                name: 'PaymentLookupInconclusive'
+            });
+            // the bounded page and the newest page, once each
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledTimes(2);
+        });
+
+        it('ends a stream on its EOF, so the next lookup reopens', async () => {
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            const firstId = trackRequestId();
+            emit(paymentEvent('IN_FLIGHT'), firstId);
+            await first;
+
+            // closed without a terminal update: its in-flight state is stale
+            emit('EOF', firstId);
+            const next = backend.lookupPayment({ payment_hash: HASH });
+            expect(trackCalls()).toHaveLength(2);
+            emit(paymentEvent('SUCCEEDED'), trackRequestId());
+            await expect(next).resolves.toMatchObject({
+                status: 'SUCCEEDED'
+            });
+            expect(lnc.lnd.lightning.listPayments).not.toHaveBeenCalled();
+        });
+
+        it('settles a lookup waiting on a stream that sends EOF by the scan', async () => {
+            lnc.lnd.lightning.listPayments.mockResolvedValue({ payments: [] });
+            const lookup = backend.lookupPayment({ payment_hash: HASH });
+            emit('EOF', trackRequestId());
+            await expect(lookup).resolves.toBeNull();
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledTimes(1);
+        });
+
+        it('ends a stream taken back by an update on its own EOF', async () => {
+            jest.useFakeTimers();
+            const OTHER_HASH = 'cd'.repeat(32);
+            lnc.lnd.lightning.listPayments.mockResolvedValue({ payments: [] });
+            // another held payment keeps the shared listener attached, so
+            // events still arrive once this hash's streams are all forgotten
+            const other = backend.lookupPayment({ payment_hash: OTHER_HASH });
+            emit(
+                JSON.stringify({
+                    payment_hash: OTHER_HASH,
+                    status: 'IN_FLIGHT'
+                }),
+                trackRequestId()
+            );
+            await other;
+
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            const firstId = trackRequestId();
+            emit(paymentEvent('IN_FLIGHT'), firstId);
+            await first;
+
+            // past the max age a lookup replaces the stream, and the
+            // replacement fails, so the registry forgets the hash
+            jest.advanceTimersByTime(60000);
+            const replacement = backend.lookupPayment({ payment_hash: HASH });
+            expect(trackCalls()).toHaveLength(3);
+            emit(
+                'rpc error: code = Unavailable desc = reset',
+                trackRequestId()
+            );
+            await replacement;
+
+            // the first stream is still open: its update takes it back
+            emit(paymentEvent('IN_FLIGHT'), firstId);
+            await expect(
+                backend.lookupPayment({ payment_hash: HASH })
+            ).resolves.toMatchObject({ status: 'IN_FLIGHT' });
+            expect(trackCalls()).toHaveLength(3);
+
+            // its EOF names it, so it ends and the next lookup reopens
+            emit('EOF', firstId);
+            const next = backend.lookupPayment({ payment_hash: HASH });
+            expect(trackCalls()).toHaveLength(4);
+            emit(paymentEvent('SUCCEEDED'), trackRequestId());
+            await expect(next).resolves.toMatchObject({
+                status: 'SUCCEEDED'
+            });
+        });
+
+        it('opens a new stream after disconnecting', async () => {
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            emit(paymentEvent('IN_FLIGHT'));
+            await first;
+
+            await backend.disconnect();
+            lnc.connected = true;
+            const next = backend.lookupPayment({ payment_hash: HASH });
+            expect(trackCalls()).toHaveLength(2);
+            emit(paymentEvent('SUCCEEDED'));
+            await expect(next).resolves.toMatchObject({
+                status: 'SUCCEEDED'
+            });
+        });
+    });
+
     describe('getPayments', () => {
         it('passes creation_date_start through to ListPayments', async () => {
             const backend = new LightningNodeConnect();
@@ -805,6 +1027,10 @@ describe('LightningNodeConnect', () => {
             lnc.lnd.lightning.listPayments = jest.fn(async () => ({
                 payments: []
             }));
+            // no track stream, so the lookup goes straight to the scan
+            lnc.subscribe.mockImplementation(() => {
+                throw new Error('not connected');
+            });
 
             await backend.lookupPayment({
                 payment_hash: 'ab'.repeat(32),
@@ -825,6 +1051,10 @@ describe('LightningNodeConnect', () => {
             lnc.lnd.lightning.listPayments = jest.fn(async () => ({
                 payments: []
             }));
+            // no track stream, so the lookup goes straight to the scan
+            lnc.subscribe.mockImplementation(() => {
+                throw new Error('not connected');
+            });
 
             await backend.lookupPayment({ payment_hash: 'ab'.repeat(32) });
 
@@ -845,10 +1075,19 @@ describe('LightningNodeConnect', () => {
                 payments: []
             }));
 
-            await backend.lookupPayment({
-                payment_hash: 'ab'.repeat(32),
-                creation_date_start: 1700000000
-            });
+            // the track stream never answers, so the lookup falls back to
+            // the scan once it times out
+            jest.useFakeTimers();
+            try {
+                const lookup = backend.lookupPayment({
+                    payment_hash: 'ab'.repeat(32),
+                    creation_date_start: 1700000000
+                });
+                await jest.advanceTimersByTimeAsync(10000);
+                await lookup;
+            } finally {
+                jest.useRealTimers();
+            }
 
             expect(lnc.lnd.lightning.listPayments).toHaveBeenNthCalledWith(1, {
                 include_incomplete: true,
