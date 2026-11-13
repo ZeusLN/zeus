@@ -38,6 +38,10 @@ jest.mock('../../components/CollapsedQR', () => 'CollapsedQR');
 jest.mock('../../components/EcashMintPicker', () => 'EcashMintPicker');
 jest.mock('../../components/Header', () => 'Header');
 jest.mock('../../components/HopPicker', () => 'HopPicker');
+jest.mock(
+    '../../components/LightningAddressMintPicker',
+    () => 'LightningAddressMintPicker'
+);
 jest.mock('../../components/LoadingIndicator', () => 'LoadingIndicator');
 jest.mock('../../components/PaidIndicator', () => 'PaidIndicator');
 jest.mock('../../components/Screen', () => 'Screen');
@@ -692,6 +696,28 @@ describe('ReceiveEcash Lightning address tab', () => {
 
         expect(addressQRs()[0].props.value).toBe('lightning:user@zeuspay.com');
         expect(createButton()).toBeUndefined();
+    });
+
+    const mintPickers = () =>
+        screen.root!.queryAll(
+            (node: any) => node.type === 'LightningAddressMintPicker'
+        );
+
+    it('shows the Lightning address mint next to the address QR', async () => {
+        const navigate = await renderTab({
+            lightningAddress: 'user@zeuspay.com'
+        });
+        await waitFor(() => expect(addressQRs()).toHaveLength(1));
+
+        expect(mintPickers()).toHaveLength(1);
+        expect(mintPickers()[0].props.navigation.navigate).toBe(navigate);
+    });
+
+    it('shows no Lightning address mint before an address exists', async () => {
+        await renderTab();
+        await waitFor(() => expect(createButton()).toBeTruthy());
+
+        expect(mintPickers()).toHaveLength(0);
     });
 
     it.each([

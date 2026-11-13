@@ -367,6 +367,17 @@ export default class LightningAddressStore {
         }
     };
 
+    // Moves a Cashu address to another mint on ZEUS Pay, then records the
+    // mint locally. The local value is only written once ZEUS Pay accepts.
+    @action
+    public setMintUrl = async (mint_url: string) => {
+        const result = await this.update({ mint_url });
+        await this.settingsStore.updateSettingsGroup('lightningAddress', {
+            mintUrl: mint_url
+        });
+        return result;
+    };
+
     @action
     public status = async (isRedeem?: boolean) => {
         this.loading = true;

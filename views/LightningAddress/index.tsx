@@ -35,6 +35,7 @@ import {
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 import Accordion from '../../components/Accordion';
+import LightningAddressMintPicker from '../../components/LightningAddressMintPicker';
 
 import LightningAddressStore from '../../stores/LightningAddressStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -381,6 +382,10 @@ export default class LightningAddress extends React.Component<
                                             </TouchableOpacity>
                                         )}
                                     </Row>
+                                    <LightningAddressMintPicker
+                                        navigation={navigation}
+                                        style={{ marginTop: 30 }}
+                                    />
                                     {isZaplocker && (
                                         <View
                                             style={{
