@@ -252,6 +252,162 @@ describe('LSPStore custom-message request timeouts', () => {
         expect(store.error_msg).toBe('');
         expect(store.getExtendableChannelsError).toBe(true);
     });
+
+    describe('replies that arrive after the timeout (#4946)', () => {
+        const reply = (store: LSPStore, payload: any) =>
+            store.handleCustomMessages({
+                peer: Buffer.from('aa', 'hex').toString('base64'),
+                data: Buffer.from(
+                    JSON.stringify({ jsonrpc: '2.0', ...payload })
+                ).toString('base64')
+            });
+
+        const createOrder = (store: LSPStore) =>
+            store.lsps1CreateOrderCustomMessage({
+                lspBalanceSat: 100000,
+                clientBalanceSat: 0,
+                requiredChannelConfirmations: '0',
+                confirmsWithinBlocks: '6',
+                channelExpiryBlocks: 13000
+            });
+
+        it('a late get_info reply fills the info and clears the timeout error', () => {
+            const store = makeStore();
+            store.lsps1GetInfoCustomMessage();
+            const id = store.getInfoId;
+            jest.advanceTimersByTime(TIMEOUT_MS);
+            expect(store.error_msg).toBe('views.LSPS1.timeoutError');
+
+            expect(reply(store, { id, result: { min_channel_size: 1 } })).toBe(
+                true
+            );
+
+            expect(store.getInfoData.result.min_channel_size).toBe(1);
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+            expect(store.loadingLSPS1).toBe(false);
+        });
+
+        it('a late create_order reply fills the order and clears the timeout error', () => {
+            const store = makeStore();
+            createOrder(store);
+            const id = store.createOrderId;
+            jest.advanceTimersByTime(TIMEOUT_MS);
+            expect(store.error).toBe(true);
+
+            expect(reply(store, { id, result: { order_id: 'late' } })).toBe(
+                true
+            );
+
+            expect(store.createOrderResponse.result.order_id).toBe('late');
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+            expect(store.loadingLSPS1).toBe(false);
+        });
+
+        it('a late lsps7 create_order reply fills the order and clears the timeout error', async () => {
+            const store = makeStore();
+            store.lsps7CreateOrderCustomMessage({});
+            const id = store.createExtensionOrderId;
+            await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+            expect(store.error).toBe(true);
+
+            expect(reply(store, { id, result: { order_id: 'late7' } })).toBe(
+                true
+            );
+
+            expect(store.createExtensionOrderResponse.result.order_id).toBe(
+                'late7'
+            );
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+        });
+
+        it('a late create_order error reply replaces the timeout error', () => {
+            const store = makeStore();
+            createOrder(store);
+            const id = store.createOrderId;
+            jest.advanceTimersByTime(TIMEOUT_MS);
+
+            reply(store, {
+                id,
+                error: { code: 1, data: { message: 'balance too low' } }
+            });
+
+            expect(store.createOrderResponse).toEqual({});
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('balance too low');
+        });
+
+        it('ignores a reply to a create_order that a newer request replaced', () => {
+            const store = makeStore();
+            createOrder(store);
+            const oldId = store.createOrderId;
+            jest.advanceTimersByTime(TIMEOUT_MS);
+            createOrder(store);
+
+            expect(
+                reply(store, { id: oldId, result: { order_id: 'old' } })
+            ).toBe(false);
+
+            expect(store.createOrderResponse).toEqual({});
+            expect(store.loadingLSPS1).toBe(true);
+            expect(store.error).toBe(false);
+        });
+
+        it('a late get_info reply does not clear a later create_order error', () => {
+            const store = makeStore();
+            store.lsps1GetInfoCustomMessage();
+            const infoId = store.getInfoId;
+            jest.advanceTimersByTime(TIMEOUT_MS);
+            createOrder(store);
+            reply(store, {
+                id: store.createOrderId,
+                error: { code: 1, data: { message: 'balance too low' } }
+            });
+
+            reply(store, { id: infoId, result: { min_channel_size: 1 } });
+
+            expect(store.getInfoData.result.min_channel_size).toBe(1);
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('balance too low');
+        });
+
+        it('a late create_order reply does not clear a later get_info error', () => {
+            const store = makeStore();
+            createOrder(store);
+            const orderId = store.createOrderId;
+            jest.advanceTimersByTime(TIMEOUT_MS);
+            store.lsps1GetInfoCustomMessage();
+            reply(store, {
+                id: store.getInfoId,
+                error: { code: 1, message: 'info failed' }
+            });
+            const infoError = store.error_msg;
+            expect(store.error).toBe(true);
+            expect(infoError).not.toBe('views.LSPS1.timeoutError');
+
+            reply(store, { id: orderId, result: { order_id: 'late' } });
+
+            expect(store.createOrderResponse.result.order_id).toBe('late');
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe(infoError);
+        });
+
+        it('a repeated get_info reply does not clear a create_order timeout', () => {
+            const store = makeStore();
+            store.lsps1GetInfoCustomMessage();
+            const infoId = store.getInfoId;
+            reply(store, { id: infoId, result: {} });
+            createOrder(store);
+            jest.advanceTimersByTime(TIMEOUT_MS);
+
+            reply(store, { id: infoId, result: {} });
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('views.LSPS1.timeoutError');
+        });
+    });
 });
 
 const extendableChannelsReply = (store: LSPStore, reply: any) =>
