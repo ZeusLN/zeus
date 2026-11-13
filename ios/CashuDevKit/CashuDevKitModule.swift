@@ -40,14 +40,30 @@ class CashuDevKitModule: RCTEventEmitter {
 
     // MARK: - Helper Methods
 
-    /// Parse P2PK spending conditions from JSON dictionary
-    private func parseP2PKConditions(from json: [String: Any]) throws -> SpendingConditions? {
-        guard let kind = json["kind"] as? String,
-              kind == "P2PK",
-              let condData = json["data"] as? [String: Any],
+    /// Parse P2PK spending conditions from JSON dictionary. Throws instead of
+    /// returning nil for anything it cannot convert: nil means "no
+    /// conditions" to CDK and would mint or send an unlocked token.
+    private func parseP2PKConditions(from json: [String: Any]) throws -> SpendingConditions {
+        let kind = json["kind"] as? String
+        guard kind == "P2PK" else {
+            throw makeP2PKValidationError(
+                "Unsupported spending condition kind: \(kind ?? "none")"
+            )
+        }
+        guard let condData = json["data"] as? [String: Any],
               let pubkey = condData["pubkey"] as? String,
               !pubkey.isEmpty else {
-            return nil
+            throw makeP2PKValidationError("P2PK spending conditions require a pubkey")
+        }
+
+        // An unknown field (e.g. a camelCase numSigs) is rejected rather than
+        // ignored, which would lock to fewer signers than the caller wrote.
+        let knownKeys: Set<String> = [
+            "pubkey", "locktime", "pubkeys", "refund_keys",
+            "num_sigs", "num_sigs_refund", "sig_flag"
+        ]
+        if let unknownKey = condData.keys.sorted().first(where: { !knownKeys.contains($0) }) {
+            throw makeP2PKValidationError("Unsupported P2PK field: \(unknownKey)")
         }
 
         // NUT-11 tags must be omitted entirely when they don't apply. Emitting
@@ -55,30 +71,26 @@ class CashuDevKitModule: RCTEventEmitter {
         // `["n_sigs_refund", "0"]`) produces tokens that mints such as CDK
         // refuse to redeem, and a zero locktime marks the lock as already
         // expired.
-        let locktime = optionalPositiveUInt64(from: condData, key: "locktime")
-        let numSigs = optionalPositiveUInt64(from: condData, key: "num_sigs")
-        let numSigsRefund = optionalPositiveUInt64(from: condData, key: "num_sigs_refund")
+        let locktime = try optionalPositiveUInt64(from: condData, key: "locktime")
+        let numSigs = try optionalPositiveUInt64(from: condData, key: "num_sigs")
+        let numSigsRefund = try optionalPositiveUInt64(from: condData, key: "num_sigs_refund")
 
-        // Parse element-wise rather than casting the whole array to
-        // `[String]`: if the bridge delivers even one non-string entry
-        // (e.g. NSNull from a malformed caller payload), a whole-array cast
-        // fails to nil and silently drops every pubkey instead of just the
-        // bad one.
-        let pubkeys: [String] = {
-            if let keys = condData["pubkeys"] as? [Any] {
-                return keys.compactMap { $0 as? String }.filter { !$0.isEmpty }
-            }
-            return []
-        }()
+        let pubkeys = try optionalKeyList(from: condData, key: "pubkeys")
+        let refundKeys = try optionalKeyList(from: condData, key: "refund_keys")
 
-        let refundKeys: [String] = {
-            if let keys = condData["refund_keys"] as? [Any] {
-                return keys.compactMap { $0 as? String }.filter { !$0.isEmpty }
-            }
-            return []
-        }()
-
-        let sigFlag: UInt8 = (condData["sig_flag"] as? String) == "SigAll" ? 1 : 0
+        // A present but unrecognised sig_flag is rejected rather than read as
+        // SigInputs, so the lock is never weaker than the caller asked for.
+        let sigFlag: UInt8
+        switch condData["sig_flag"] {
+        case nil, is NSNull:
+            sigFlag = 0
+        case let flag as String where flag == "SigInputs":
+            sigFlag = 0
+        case let flag as String where flag == "SigAll":
+            sigFlag = 1
+        case let other?:
+            throw makeP2PKValidationError("Unsupported sig_flag: \(other)")
+        }
 
         // NUT-11: "If n_sigs or n_sigs_refund ... exceeds the total number of
         // keys in its pathway, the P2PK secret is malformed and the Proof
@@ -88,7 +100,7 @@ class CashuDevKitModule: RCTEventEmitter {
         // has `1 (pubkey) + pubkeys.count` possible signers; refund pathway
         // has `refundKeys.count`. Compared in the unsigned domain rather
         // than via Int(numSigs), which traps at runtime when numSigs
-        // exceeds Int64.max - reachable through readPositiveUInt64's
+        // exceeds Int64.max - reachable through optionalPositiveUInt64's
         // string-parsing path - turning a malformed payload into a crash
         // instead of a rejected promise.
         let maxMainSigs = 1 + pubkeys.count
@@ -125,9 +137,44 @@ class CashuDevKitModule: RCTEventEmitter {
 
     /// Returns the value at `key` only when it is a positive integer, so that
     /// optional NUT-11 tags stay absent instead of being serialized as 0.
-    private func optionalPositiveUInt64(from json: [String: Any], key: String) -> UInt64? {
-        let value = readPositiveUInt64(from: json, key: key)
+    /// A present value that is not a non-negative integer (or a string of
+    /// one) throws instead of being dropped.
+    private func optionalPositiveUInt64(from json: [String: Any], key: String) throws -> UInt64? {
+        guard let raw = json[key], !(raw is NSNull) else {
+            return nil
+        }
+
+        var value: UInt64?
+        if let string = raw as? String {
+            value = UInt64(string)
+        } else if let number = raw as? NSNumber,
+                  CFGetTypeID(number) != CFBooleanGetTypeID() {
+            // Checked through CoreFoundation because a JSON 0 or 1 also
+            // matches `is Bool` once bridged.
+            value = UInt64(exactly: number.doubleValue)
+        }
+        guard let value else {
+            throw makeP2PKValidationError("\(key) must be a non-negative integer")
+        }
         return value > 0 ? value : nil
+    }
+
+    /// Reads an optional array of hex pubkeys. Every entry must be a
+    /// non-empty string: dropping a bad entry would change which keys the
+    /// lock names.
+    private func optionalKeyList(from json: [String: Any], key: String) throws -> [String] {
+        guard let raw = json[key], !(raw is NSNull) else {
+            return []
+        }
+        guard let entries = raw as? [Any] else {
+            throw makeP2PKValidationError("\(key) must be an array")
+        }
+        return try entries.map { entry in
+            guard let pubkey = entry as? String, !pubkey.isEmpty else {
+                throw makeP2PKValidationError("\(key) entries must be non-empty strings")
+            }
+            return pubkey
+        }
     }
 
     private func readPositiveUInt64(from json: [String: Any], key: String) -> UInt64 {
@@ -1196,12 +1243,15 @@ class CashuDevKitModule: RCTEventEmitter {
 
         Task {
             do {
-                // Parse spending conditions if provided
+                // Parse spending conditions if provided. Conditions that
+                // cannot be parsed are rejected rather than minted unlocked.
                 var conditions: SpendingConditions? = nil
-                if let json = conditionsJson,
-                   let data = json.data(using: .utf8),
-                   let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                   conditions = try parseP2PKConditions(from: parsed)
+                if let json = conditionsJson {
+                    guard let data = json.data(using: .utf8),
+                          let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                        throw makeP2PKValidationError("Spending conditions are not a JSON object")
+                    }
+                    conditions = try parseP2PKConditions(from: parsed)
                 }
 
                 let wallet = try await getWallet(mintUrl)
@@ -1355,8 +1405,13 @@ class CashuDevKitModule: RCTEventEmitter {
                     if let fee = parsed["include_fee"] as? Bool {
                         includeFee = fee
                     }
-                    if let cond = parsed["conditions"] as? [String: Any] {
-                    spendingConditions = try parseP2PKConditions(from: cond)
+                    // A present value that is not an object is rejected,
+                    // not dropped.
+                    if let cond = parsed["conditions"], !(cond is NSNull) {
+                        guard let condDict = cond as? [String: Any] else {
+                            throw makeP2PKValidationError("Spending conditions are not a JSON object")
+                        }
+                        spendingConditions = try parseP2PKConditions(from: condDict)
                     }
                     if let kindStr = parsed["send_kind"] as? String {
                         let tolerance = (parsed["tolerance"] as? NSNumber).map { Amount(value: $0.uint64Value) } ?? Amount(value: 0)

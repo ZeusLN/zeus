@@ -1,0 +1,343 @@
+import { execFileSync } from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+
+// The native spending-condition parsers must never turn caller-supplied
+// conditions into "no conditions": CDK reads nil/null as a request for an
+// ordinary, unlocked bearer proof.
+//
+// The Swift parser is compiled out of CashuDevKitModule.swift against stub
+// CDK types and run on each payload. That needs swiftc, so it is skipped on
+// the Linux CI runners. The Kotlin module cannot be built without the CDK
+// aar and an Android toolchain, so it is covered by a source scan.
+
+const IOS_SOURCE = fs.readFileSync(
+    path.join(__dirname, '../ios/CashuDevKit/CashuDevKitModule.swift'),
+    'utf8'
+);
+const ANDROID_SOURCE = fs.readFileSync(
+    path.join(
+        __dirname,
+        '../android/app/src/main/java/com/zeus/cashudevkit/CashuDevKitModule.kt'
+    ),
+    'utf8'
+);
+
+const PUBKEY =
+    '02a9acc1e48c25eeeb9289b5031cc57da9fe72f3fe2861d264bdc074209b107ba2';
+const HASH = 'ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5';
+
+const UNSUPPORTED: Array<[string, any]> = [
+    ['an HTLC condition', { kind: 'HTLC', data: { hash: HASH } }],
+    ['a missing kind', { data: { pubkey: PUBKEY } }],
+    ['P2PK without data', { kind: 'P2PK' }],
+    ['P2PK without a pubkey', { kind: 'P2PK', data: {} }],
+    ['P2PK with an empty pubkey', { kind: 'P2PK', data: { pubkey: '' } }],
+    ...invalidP2PKFields()
+];
+
+// Present but invalid optional P2PK fields must be refused, not dropped.
+function invalidP2PKFields(): Array<[string, any]> {
+    const withData = (extra: object) => ({
+        kind: 'P2PK',
+        data: { pubkey: PUBKEY, ...extra }
+    });
+    return [
+        ['a null pubkeys entry', withData({ pubkeys: [PUBKEY, null] })],
+        ['a numeric pubkeys entry', withData({ pubkeys: [2] })],
+        ['an empty pubkeys entry', withData({ pubkeys: [''] })],
+        ['pubkeys that are not an array', withData({ pubkeys: PUBKEY })],
+        ['a null refund_keys entry', withData({ refund_keys: [null] })],
+        ['refund_keys that are not an array', withData({ refund_keys: {} })],
+        ['a negative locktime', withData({ locktime: -1 })],
+        ['a fractional locktime', withData({ locktime: 1.5 })],
+        ['a non-numeric locktime string', withData({ locktime: 'soon' })],
+        ['a boolean num_sigs', withData({ num_sigs: true })],
+        ['an object num_sigs_refund', withData({ num_sigs_refund: {} })],
+        ['an unknown sig_flag', withData({ sig_flag: 'SigNone' })],
+        ['a numeric sig_flag', withData({ sig_flag: 1 })],
+        ['a camelCase numSigs', withData({ pubkeys: [PUBKEY], numSigs: 2 })],
+        ['an unknown field set to null', withData({ refundKeys: null })]
+    ];
+}
+
+const between = (source: string, start: string, end: string) => {
+    const from = source.indexOf(start);
+    const to = source.indexOf(end, from + 1);
+    expect(from).toBeGreaterThanOrEqual(0);
+    expect(to).toBeGreaterThan(from);
+    return source.slice(from, to);
+};
+
+const hasSwiftc = (() => {
+    if (process.platform !== 'darwin') return false;
+    try {
+        execFileSync('xcrun', ['--find', 'swiftc'], { stdio: 'pipe' });
+        return true;
+    } catch {
+        return false;
+    }
+})();
+
+const HARNESS = (parser: string) => `import Foundation
+
+struct Conditions {
+    let locktime: UInt64?
+    let pubkeys: [String]
+    let refundKeys: [String]
+    let numSigs: UInt64?
+    let sigFlag: UInt8
+    let numSigsRefund: UInt64?
+}
+
+enum SpendingConditions {
+    case p2pk(pubkey: String, conditions: Conditions?)
+    case htlc(hash: String, conditions: Conditions?)
+}
+
+final class Module {
+${parser}
+
+    func run(_ json: String) -> String {
+        let parsed = try! JSONSerialization.jsonObject(
+            with: json.data(using: .utf8)!
+        ) as! [String: Any]
+        do {
+            let result: SpendingConditions? = try parseP2PKConditions(from: parsed)
+            switch result {
+            case .p2pk(let pubkey, let conditions)?:
+                let c = conditions!
+                return [
+                    "p2pk", pubkey, "\\(c.locktime ?? 0)",
+                    "\\(c.pubkeys.count)", "\\(c.refundKeys.count)",
+                    "\\(c.numSigs ?? 0)", "\\(c.numSigsRefund ?? 0)",
+                    "\\(c.sigFlag)"
+                ].joined(separator: " ")
+            case .htlc(let hash, _)?:
+                return "htlc \\(hash)"
+            case nil:
+                return "none"
+            }
+        } catch {
+            return "error \\(error.localizedDescription)"
+        }
+    }
+}
+
+let module = Module()
+for arg in CommandLine.arguments.dropFirst() {
+    print(module.run(arg))
+}
+`;
+
+(hasSwiftc ? describe : describe.skip)('iOS parseP2PKConditions', () => {
+    let dir: string;
+    let binary: string;
+
+    beforeAll(() => {
+        dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdk-conditions-'));
+        const parser = between(
+            IOS_SOURCE,
+            '    /// Parse P2PK spending conditions',
+            '    private func parseMeltOptions'
+        );
+        const file = path.join(dir, 'main.swift');
+        fs.writeFileSync(file, HARNESS(parser));
+        binary = path.join(dir, 'parse');
+        execFileSync('xcrun', ['swiftc', '-O', '-o', binary, file], {
+            stdio: 'pipe'
+        });
+    }, 120000);
+
+    afterAll(() => {
+        if (dir) fs.rmSync(dir, { recursive: true, force: true });
+    });
+
+    const run = (...payloads: any[]) =>
+        execFileSync(
+            binary,
+            payloads.map((p) => JSON.stringify(p)),
+            {
+                encoding: 'utf8'
+            }
+        )
+            .trim()
+            .split('\n');
+
+    it.each(UNSUPPORTED)('rejects %s', (_label, payload) => {
+        expect(run(payload)[0]).toMatch(/^error /);
+    });
+
+    it('names the unsupported kind', () => {
+        expect(run(UNSUPPORTED[0][1])).toEqual([
+            'error Unsupported spending condition kind: HTLC'
+        ]);
+    });
+
+    it('names an unknown P2PK field', () => {
+        expect(
+            run({
+                kind: 'P2PK',
+                data: { pubkey: PUBKEY, pubkeys: [PUBKEY], numSigs: 2 }
+            })
+        ).toEqual(['error Unsupported P2PK field: numSigs']);
+    });
+
+    it('converts a P2PK condition with its locktime', () => {
+        expect(
+            run({
+                kind: 'P2PK',
+                data: { pubkey: PUBKEY, locktime: 1900000000 }
+            })
+        ).toEqual([`p2pk ${PUBKEY} 1900000000 0 0 0 0 0`]);
+    });
+
+    it('converts every optional P2PK field', () => {
+        expect(
+            run({
+                kind: 'P2PK',
+                data: {
+                    pubkey: PUBKEY,
+                    locktime: '1900000000',
+                    pubkeys: [PUBKEY],
+                    refund_keys: [PUBKEY],
+                    num_sigs: 2,
+                    num_sigs_refund: 1,
+                    sig_flag: 'SigAll'
+                }
+            })
+        ).toEqual([`p2pk ${PUBKEY} 1900000000 1 1 2 1 1`]);
+    });
+
+    // A bridged JSON 1 also matches `is Bool`, which used to read num_sigs: 1
+    // as absent.
+    it('keeps a num_sigs of 1 and leaves out zeros and nulls', () => {
+        expect(
+            run({
+                kind: 'P2PK',
+                data: {
+                    pubkey: PUBKEY,
+                    locktime: 0,
+                    pubkeys: null,
+                    num_sigs: 1,
+                    num_sigs_refund: null,
+                    sig_flag: 'SigInputs'
+                }
+            })
+        ).toEqual([`p2pk ${PUBKEY} 0 0 0 1 0 0`]);
+    });
+});
+
+describe('iOS CashuDevKitModule condition call sites', () => {
+    it('rejects mint conditions that are not a JSON object', () => {
+        const mint = between(IOS_SOURCE, 'func mint(_ mintUrl', 'wallet.mint(');
+        expect(mint).toContain('if let json = conditionsJson {');
+        expect(mint).toMatch(
+            /guard let data = json\.data[\s\S]*?else \{\s*throw makeP2PKValidationError/
+        );
+    });
+
+    it('rejects send conditions that are not a JSON object', () => {
+        const send = between(
+            IOS_SOURCE,
+            'func prepareSend(_ mintUrl',
+            'let sendOptions = SendOptions('
+        );
+        expect(send).toContain(
+            'if let cond = parsed["conditions"], !(cond is NSNull) {'
+        );
+        expect(send).toMatch(
+            /guard let condDict = cond as\? \[String: Any\] else \{\s*throw makeP2PKValidationError/
+        );
+    });
+});
+
+describe('Android CashuDevKitModule conditions', () => {
+    const parser = between(
+        ANDROID_SOURCE,
+        'private fun parseP2PKConditions',
+        'private fun optionalPositiveULong'
+    );
+
+    it('returns a non-null SpendingConditions or throws', () => {
+        expect(parser).toContain(
+            'private fun parseP2PKConditions(json: JSONObject): SpendingConditions {'
+        );
+        expect(parser).not.toMatch(/return null/);
+        expect(parser).toContain(
+            'require(kind == "P2PK") { "Unsupported spending condition kind: $kind" }'
+        );
+        expect(parser).toMatch(
+            /requireNotNull\(json\.optJSONObject\("data"\)\)/
+        );
+        expect(parser).toContain('require(pubkeyHex.isNotEmpty())');
+    });
+
+    it('rejects unknown P2PK fields instead of ignoring them', () => {
+        expect(parser).toMatch(
+            /val knownKeys = setOf\(\s*"pubkey", "locktime", "pubkeys", "refund_keys",\s*"num_sigs", "num_sigs_refund", "sig_flag"\s*\)/
+        );
+        expect(parser).toContain(
+            'val unknownKey = data.keys().asSequence().sorted().firstOrNull { it !in knownKeys }'
+        );
+        expect(parser).toContain(
+            'require(unknownKey == null) { "Unsupported P2PK field: $unknownKey" }'
+        );
+    });
+
+    it('rejects invalid optional P2PK fields instead of dropping them', () => {
+        expect(parser).toContain(
+            'val pubkeys = optionalKeyList(data, "pubkeys")'
+        );
+        expect(parser).toContain(
+            'val refundKeys = optionalKeyList(data, "refund_keys")'
+        );
+        expect(parser).not.toContain('optJSONArray');
+        expect(parser).not.toContain('optString(i)');
+        expect(parser).toMatch(
+            /"SigAll" -> 1\.toUByte\(\)\s*else -> throw IllegalArgumentException\("Unsupported sig_flag/
+        );
+
+        const helpers = between(
+            ANDROID_SOURCE,
+            'private fun optionalPositiveULong',
+            'private fun readPositiveLong'
+        );
+        expect(helpers).not.toContain('readPositiveLong');
+        expect(helpers).toMatch(
+            /requireNotNull\(parsed\?\.takeIf \{ it >= 0L \}\)/
+        );
+        expect(helpers).toContain(
+            'requireNotNull(json.opt(key) as? JSONArray) { "$key must be an array" }'
+        );
+        expect(helpers).toMatch(
+            /requireNotNull\(\(arr\.opt\(i\) as\? String\)\?\.takeIf \{ it\.isNotEmpty\(\) \}\)/
+        );
+    });
+
+    it('does not mint unlocked when the conditions JSON is malformed', () => {
+        const mint = between(
+            ANDROID_SOURCE,
+            'fun mint(mintUrl: String, quoteId: String, conditionsJson',
+            'wallet.mint('
+        );
+        expect(mint).not.toContain('runCatching');
+        expect(mint).toContain('parseP2PKConditions(JSONObject(json))');
+    });
+
+    it('does not drop send conditions that are not an object', () => {
+        const send = between(
+            ANDROID_SOURCE,
+            'fun prepareSend(mintUrl: String',
+            'val sendOptions = SendOptions('
+        );
+        expect(send).not.toContain('optJSONObject("conditions")');
+        expect(send).toContain(
+            'if (parsed.has("conditions") && !parsed.isNull("conditions")) {'
+        );
+        expect(send).toContain(
+            'parseP2PKConditions(parsed.getJSONObject("conditions"))'
+        );
+    });
+});
