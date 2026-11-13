@@ -1621,7 +1621,12 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val bolt12 = node.bolt12Payment()
             val refund = Refund.fromStr(refundStr)
             val invoice = bolt12.requestRefundPayment(refund)
-            val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
+            // ldk-node stores the refund payment under the invoice's payment
+            // hash, so JS can wait for this payment by that id.
+            val result = Arguments.createMap().apply {
+                putString("invoice", invoice.toString())
+                putString("paymentHash", invoice.paymentHash())
+            }
             promise.resolve(result)
         } catch (e: Exception) {
             promise.reject("error", errorMessage(e))

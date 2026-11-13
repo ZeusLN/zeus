@@ -656,9 +656,9 @@ const bolt12InitiateRefund = async ({
 
 const bolt12RequestRefundPayment = async (
     refundStr: string
-): Promise<string> => {
+): Promise<{ invoice: string; paymentHash: string }> => {
     const result = await LdkNodeModule.bolt12RequestRefundPayment(refundStr);
-    return result.invoice;
+    return { invoice: result.invoice, paymentHash: result.paymentHash };
 };
 
 export interface DecodedOffer {
@@ -1231,7 +1231,9 @@ export interface ILdkNodeInjections {
             maxPathCount?: number;
             paymentTimeoutSecs?: number;
         }) => Promise<string>;
-        bolt12RequestRefundPayment: (refundStr: string) => Promise<string>;
+        bolt12RequestRefundPayment: (
+            refundStr: string
+        ) => Promise<{ invoice: string; paymentHash: string }>;
         bolt12DecodeOffer: (params: { offer: string }) => Promise<DecodedOffer>;
     };
     payments: {

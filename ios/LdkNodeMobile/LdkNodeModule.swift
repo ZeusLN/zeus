@@ -1544,7 +1544,12 @@ class LdkNodeModule: RCTEventEmitter {
             let bolt12 = node.bolt12Payment()
             let refund = try Refund.fromStr(refundStr: refundStr)
             let invoice = try bolt12.requestRefundPayment(refund: refund)
-            resolve(["invoice": String(describing: invoice)])
+            // ldk-node stores the refund payment under the invoice's payment
+            // hash, so JS can wait for this payment by that id.
+            resolve([
+                "invoice": String(describing: invoice),
+                "paymentHash": invoice.paymentHash()
+            ])
         } catch {
             reject("error", self.errorMessage(error), error)
         }
