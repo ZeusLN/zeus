@@ -12,6 +12,8 @@ import Invoice from '../models/Invoice';
 const mockSettingsStore: any = {};
 // getter: the factory runs when the backend is imported, which is hoisted
 // above the const declaration
+// returns the locale key
+jest.mock('../utils/LocaleUtils');
 jest.mock('../stores/Stores', () => ({
     get settingsStore() {
         return mockSettingsStore;
@@ -19,8 +21,10 @@ jest.mock('../stores/Stores', () => ({
 }));
 
 import NostrWalletConnect, {
+    SDK_EMPTY_REPLY_MESSAGE,
     SDK_ERROR_MESSAGE_PREFIXES
 } from './NostrWalletConnect';
+import { localeString } from '../utils/LocaleUtils';
 
 const WALLET_PUBKEY = 'b'.repeat(64);
 const SECRET = 'a'.repeat(64);
@@ -617,6 +621,42 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         expect(error.nodeResponded).toBeUndefined();
     });
 
+    // the SDK fills in 'unknown Error' for a wallet reply without a
+    // message, which says nothing about why the payment failed
+    it('shows the generic failure for an INTERNAL reply without a message, unmarked', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError(SDK_EMPTY_REPLY_MESSAGE, 'INTERNAL')
+        );
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error.code).toBe('INTERNAL');
+        expect(error.message).toBe(localeString('error.sendingPayment'));
+        expect(error.walletReplied).toBeUndefined();
+        expect(error.nodeResponded).toBeUndefined();
+    });
+
+    it('still marks an answer code without a message as the wallet answering', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError(SDK_EMPTY_REPLY_MESSAGE, 'PAYMENT_FAILED')
+        );
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error).toMatchObject({
+            code: 'PAYMENT_FAILED',
+            nodeResponded: true,
+            message: localeString('error.sendingPayment')
+        });
+        expect(error.walletReplied).toBeUndefined();
+    });
+
     it('leaves a reply timeout unmarked', async () => {
         const { backend, client } = await setup();
         client.payInvoice.mockRejectedValue(
@@ -969,6 +1009,25 @@ describe('SDK_ERROR_MESSAGE_PREFIXES', () => {
                     )
                 ]).toEqual([match[1], start, true]);
             }
+        }
+    );
+
+    it.each(['dist/esm/index.js', 'dist/cjs/index.cjs'])(
+        'matches the placeholder %s gives a wallet reply without a message',
+        (file) => {
+            const source: string = fs.readFileSync(
+                path.join(sdkDir, file),
+                'utf8'
+            );
+            const fallbacks = [
+                ...source.matchAll(
+                    /new (?:\w+\.)?Nip47WalletError\([^;]*?\|\|\s*(["'`])(.*?)\1/g
+                )
+            ].map((match) => match[2]);
+            expect(fallbacks.length).toBeGreaterThanOrEqual(1);
+            expect(new Set(fallbacks)).toEqual(
+                new Set([SDK_EMPTY_REPLY_MESSAGE])
+            );
         }
     );
 });

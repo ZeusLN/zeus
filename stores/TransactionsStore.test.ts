@@ -1270,6 +1270,30 @@ describe('TransactionsStore failed payment message after tracking', () => {
         expect(store.payment_error).toBeNull();
     });
 
+    // what the backend throws for a wallet reply without a message: the
+    // generic text, untagged
+    it('shows the generic failure for an NWC reply that had no message', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            Object.assign(new Error('error.sendingPayment'), {
+                code: 'INTERNAL'
+            })
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            failedRecord()
+        );
+
+        const store = newStore('nostr-wallet-connect');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        // untagged: the payment may still be in flight, so tracking polls
+        // on to the failed record
+        await advancePoll();
+
+        expect(store.status).toBe('FAILED');
+        expect(store.error_msg).toBe('error.sendingPayment');
+        expect(store.payment_error).toBeNull();
+    });
+
     it('holds the guard for repeated no-record answers after an INTERNAL wallet reply', async () => {
         (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
             markWalletReplied(

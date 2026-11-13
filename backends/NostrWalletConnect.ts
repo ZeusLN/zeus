@@ -4,6 +4,7 @@ import BigNumber from 'bignumber.js';
 import { settingsStore } from '../stores/Stores';
 
 import Bolt11Utils from '../utils/Bolt11Utils';
+import { localeString } from '../utils/LocaleUtils';
 import {
     markNodeResponded,
     markWalletReplied
@@ -44,6 +45,12 @@ export const SDK_ERROR_MESSAGE_PREFIXES = [
     'Failed to connect to ',
     'no compatible encryption or version found between wallet and client'
 ];
+
+// The SDK's text for a wallet error reply that carries no message (it
+// builds Nip47WalletError(message || 'unknown Error', code || 'INTERNAL')).
+// It says nothing about the failure, so it is never shown as the wallet's
+// reason. NostrWalletConnect.test.ts checks it against the installed SDK.
+export const SDK_EMPTY_REPLY_MESSAGE = 'unknown Error';
 
 const isSdkError = (error: any): boolean => {
     const message = error?.message;
@@ -146,6 +153,15 @@ export default class NostrWalletConnect {
         try {
             return await this.nwc.sendPayment(data.payment_request);
         } catch (error: any) {
+            // a reply without a message: show the generic failure, not the
+            // SDK's placeholder, and don't keep it as the wallet's reason
+            if (error?.message === SDK_EMPTY_REPLY_MESSAGE) {
+                error.message = localeString('error.sendingPayment');
+                if (WALLET_ANSWER_CODES.includes(error?.code)) {
+                    throw markNodeResponded(error);
+                }
+                throw error;
+            }
             // the wallet's error reply is its answer to the request, like
             // a node's rejection; see WALLET_ANSWER_CODES
             if (WALLET_ANSWER_CODES.includes(error?.code)) {
