@@ -898,6 +898,8 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.payments!.map((p) => [p.mintUrl, p.amount])).toEqual([
             [A, 546]
         ]);
+        // B paid no fee, so A's fee is the whole fee
+        expect(store.paymentFee).toBe(1);
         expect(store.pendingMelts).toEqual([]);
         const final = onProgress.mock.calls.at(-1)[0];
         expect(final.step).toBe(MultinutPaymentStep.COMPLETE);
@@ -928,6 +930,9 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.paymentSuccess).toBe(true);
         expect(store.paymentError).toBe(false);
         expect(store.paymentPreimage).toBe(PREIMAGE);
+        // B's fee is not known until it settles, so A's fee alone would
+        // be too low
+        expect(store.paymentFee).toBeUndefined();
         // B's share is in the history as in flight, not dropped
         expect(
             store.payments!.map((p) => [
