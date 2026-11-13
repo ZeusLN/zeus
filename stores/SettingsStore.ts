@@ -1250,6 +1250,11 @@ export const THEME_KEYS = [
         value: 'radioactive'
     },
     {
+        key: 'Spooky',
+        translateKey: 'views.Settings.Theme.spooky',
+        value: 'orange'
+    },
+    {
         key: 'Gilded',
         translateKey: 'views.Settings.Theme.gilded',
         value: 'gilded'
@@ -1258,11 +1263,6 @@ export const THEME_KEYS = [
         key: 'Ember',
         translateKey: 'views.Settings.Theme.ember',
         value: 'ember'
-    },
-    {
-        key: 'Spooky',
-        translateKey: 'views.Settings.Theme.spooky',
-        value: 'orange'
     }
 ];
 
