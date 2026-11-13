@@ -26,6 +26,7 @@ export default class SweepStore {
     @observable utxos: any[] = [];
     @observable psbt: bitcoin.Psbt;
     @observable privateKey: string;
+    @observable compressed: boolean = true;
     @observable wif: string;
     @observable network: bitcoin.Network;
     @observable vBytes: number;
@@ -69,29 +70,35 @@ export default class SweepStore {
                 .address!
         });
 
-        addresses.push({
-            type: 'p2sh-p2wpkh',
-            address: bitcoin.payments.p2sh({
-                redeem: bitcoin.payments.p2wpkh({ pubkey: publicKey, network }),
-                network
-            }).address!
-        });
+        // Segwit and taproot outputs need a compressed public key
+        if (publicKey.length === 33) {
+            addresses.push({
+                type: 'p2sh-p2wpkh',
+                address: bitcoin.payments.p2sh({
+                    redeem: bitcoin.payments.p2wpkh({
+                        pubkey: publicKey,
+                        network
+                    }),
+                    network
+                }).address!
+            });
 
-        addresses.push({
-            type: 'p2wpkh',
-            address: bitcoin.payments.p2wpkh({ pubkey: publicKey, network })
-                .address!
-        });
+            addresses.push({
+                type: 'p2wpkh',
+                address: bitcoin.payments.p2wpkh({ pubkey: publicKey, network })
+                    .address!
+            });
 
-        // For taproot, use the x-only public key
-        const internalPubkey = toXOnly(publicKey);
-        addresses.push({
-            type: 'p2tr',
-            address: bitcoin.payments.p2tr({
-                internalPubkey,
-                network
-            }).address!
-        });
+            // For taproot, use the x-only public key
+            const internalPubkey = toXOnly(publicKey);
+            addresses.push({
+                type: 'p2tr',
+                address: bitcoin.payments.p2tr({
+                    internalPubkey,
+                    network
+                }).address!
+            });
+        }
 
         for (const { type, address } of addresses) {
             const utxos = await this.getUtxosFromAddress(address);
@@ -113,9 +120,14 @@ export default class SweepStore {
         try {
             // Refuse keys encoded for another network; the sweep signs on
             // the node's network
-            const { privateKey } = wifDecode(this.wif, this.network.wif);
+            // the WIF says which form of the public key its addresses use
+            const { privateKey, compressed } = wifDecode(
+                this.wif,
+                this.network.wif
+            );
             this.privateKey = Buffer.from(privateKey).toString('hex');
-            const publicKey = Buffer.from(getPublicKey(privateKey, true));
+            this.compressed = compressed;
+            const publicKey = Buffer.from(getPublicKey(privateKey, compressed));
 
             const result = await this.detectAddressWithUtxos(
                 publicKey,
@@ -302,7 +314,7 @@ export default class SweepStore {
             this.feeRate = feeRate;
             const privateKey = Buffer.from(this.privateKey, 'hex');
 
-            const fullPub = ecc.pointFromScalar(privateKey, true);
+            const fullPub = ecc.pointFromScalar(privateKey, this.compressed);
             if (!fullPub)
                 throw new Error(localeString('views.Wif.failedToDerivePubkey'));
 
