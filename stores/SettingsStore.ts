@@ -1735,19 +1735,21 @@ export const DEFAULT_SETTINGS: Settings = {
     selectNodeOnStartup: false
 };
 
-// Settings whose changes never need a Wallet refetch: bookkeeping values
-// and the one-shot flags the refresh resets itself, which only take effect
-// on the next node start. Exclusion rather than an allowlist on purpose: a
-// setting missing here costs an extra refetch, one missing from an
-// allowlist would silently skip a needed one.
-const REFRESH_EXEMPT_SETTINGS: Array<keyof Settings> = [
+// Settings whose changes never need a Wallet refetch: bookkeeping values,
+// the one-shot flags the refresh resets itself, which only take effect
+// on the next node start, and lurker mode, which views read straight from
+// the store. Exclusion rather than an allowlist on purpose: a setting
+// missing here costs an extra refetch, one missing from an allowlist
+// would silently skip a needed one. Entries are lodash paths.
+const REFRESH_EXEMPT_SETTINGS: Array<keyof Settings | 'privacy.lurkerMode'> = [
     'authenticationAttempts',
     'supportedBiometryType',
     'initialLoad',
     'resetExpressGraphSyncOnStartup',
     'rescan',
     'recovery',
-    'recoveryWalletDirs'
+    'recoveryWalletDirs',
+    'privacy.lurkerMode'
 ];
 
 export default class SettingsStore {
@@ -2876,6 +2878,24 @@ export default class SettingsStore {
             this.settings.privacy.lurkerMode = true;
             this.lurkerTimeout = null;
         }, 3000);
+    };
+
+    // Turns lurker mode on or off for good, ending any reveal started by
+    // toggleLurker so its timer cannot hide the values again afterwards.
+    // The in-memory setting changes before the write lands so the toggle
+    // responds on the press.
+    @action
+    public setLurkerMode = (enabled: boolean): Promise<Settings> => {
+        if (this.lurkerTimeout) {
+            clearTimeout(this.lurkerTimeout);
+            this.lurkerTimeout = null;
+        }
+        this.lurkerExposed = false;
+        if (this.settings.privacy) {
+            this.settings.privacy.lurkerMode = enabled;
+        }
+
+        return this.updateSettingsGroup('privacy', { lurkerMode: enabled });
     };
 
     public setPosStatus = (setting: string) => {
