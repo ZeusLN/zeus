@@ -56,9 +56,9 @@ jest.mock('../stores/Stores', () => ({
     syncStore: {}
 }));
 jest.mock('../stores/SettingsStore', () => ({
-    DEFAULT_NEUTRINO_PEERS_MAINNET: [],
-    SECONDARY_NEUTRINO_PEERS_MAINNET: [],
-    DEFAULT_NEUTRINO_PEERS_TESTNET: [],
+    DEFAULT_NEUTRINO_PEERS_MAINNET: ['a.mainnet', 'b.mainnet', 'c.mainnet'],
+    SECONDARY_NEUTRINO_PEERS_MAINNET: [['d.mainnet']],
+    DEFAULT_NEUTRINO_PEERS_TESTNET: ['a.testnet', 'b.testnet', 'c.testnet'],
     DEFAULT_FEE_ESTIMATOR: 'https://example.com/fees',
     DEFAULT_SPEEDLOADER: 'https://example.com/graph'
 }));
@@ -80,8 +80,10 @@ import {
     deleteLndWallet,
     deleteNeutrinoFiles,
     expressGraphSync,
+    hasUserNeutrinoPeers,
     initializeLnd,
     LndMobileEventEmitter,
+    optimizeNeutrinoPeers,
     startLnd
 } from './LndMobileUtils';
 
@@ -472,5 +474,173 @@ describe('startLnd while another LND cannot be stopped', () => {
         expect(isLndError(error, LndErrorCode.LND_START_FAILED)).toBe(true);
         expect(lndMobile.index.startLnd).toHaveBeenCalledTimes(11);
         expect(lndMobile.index.subscribeState).not.toHaveBeenCalled();
+    });
+});
+
+describe('optimizeNeutrinoPeers', () => {
+    const originalSettings = settingsStore.settings;
+    const originalUpdateSettings = settingsStore.updateSettings;
+    const originalFetch = global.fetch;
+    const defaults = {
+        neutrinoPeersMainnet: ['a.mainnet', 'b.mainnet', 'c.mainnet'],
+        neutrinoPeersTestnet: ['a.testnet', 'b.testnet', 'c.testnet'],
+        dontAllowOtherPeers: false
+    };
+
+    beforeEach(() => {
+        settingsStore.updateSettings = jest.fn().mockResolvedValue(undefined);
+        // every host answers
+        global.fetch = jest.fn().mockResolvedValue({});
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        settingsStore.settings = originalSettings;
+        settingsStore.updateSettings = originalUpdateSettings;
+        global.fetch = originalFetch;
+        jest.restoreAllMocks();
+    });
+
+    it('selects peers while the settings are still the defaults', async () => {
+        settingsStore.settings = { ...defaults } as any;
+
+        await optimizeNeutrinoPeers();
+
+        expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+            neutrinoPeersMainnet: ['a.mainnet', 'b.mainnet', 'c.mainnet'],
+            dontAllowOtherPeers: true
+        });
+    });
+
+    it('re-selects among the peers ZEUS ships', async () => {
+        settingsStore.settings = {
+            ...defaults,
+            neutrinoPeersMainnet: ['b.mainnet', 'd.mainnet'],
+            dontAllowOtherPeers: true
+        } as any;
+
+        await optimizeNeutrinoPeers();
+
+        expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+            neutrinoPeersMainnet: ['a.mainnet', 'b.mainnet', 'c.mainnet'],
+            dontAllowOtherPeers: true
+        });
+    });
+
+    it.each([
+        {
+            change: 'a mainnet peer of their own',
+            isTestnet: false,
+            settings: {
+                neutrinoPeersMainnet: ['bitcoind.home.example'],
+                dontAllowOtherPeers: true
+            }
+        },
+        {
+            change: 'their own peer next to a default one',
+            isTestnet: false,
+            settings: {
+                neutrinoPeersMainnet: ['a.mainnet', 'bitcoind.home.example']
+            }
+        },
+        {
+            change: 'a testnet peer of their own',
+            isTestnet: true,
+            settings: { neutrinoPeersTestnet: ['testnet.home.example'] }
+        },
+        {
+            change: 'an empty list',
+            isTestnet: false,
+            settings: { neutrinoPeersMainnet: [] }
+        }
+    ])(
+        'keeps $change when a wallet is added on that network',
+        async ({ isTestnet, settings }) => {
+            settingsStore.settings = { ...defaults, ...settings } as any;
+
+            await optimizeNeutrinoPeers(isTestnet);
+
+            expect(global.fetch).not.toHaveBeenCalled();
+            expect(settingsStore.updateSettings).not.toHaveBeenCalled();
+        }
+    );
+
+    it('selects mainnet peers when only testnet peers are their own', async () => {
+        settingsStore.settings = {
+            ...defaults,
+            neutrinoPeersTestnet: ['testnet.home.example']
+        } as any;
+
+        await optimizeNeutrinoPeers(false);
+
+        // dontAllowOtherPeers is shared, so their testnet setup keeps it
+        expect(settingsStore.updateSettings).toHaveBeenCalledTimes(1);
+        expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+            neutrinoPeersMainnet: ['a.mainnet', 'b.mainnet', 'c.mainnet']
+        });
+    });
+
+    it('selects testnet peers when only mainnet peers are their own', async () => {
+        settingsStore.settings = {
+            ...defaults,
+            neutrinoPeersMainnet: ['bitcoind.home.example'],
+            dontAllowOtherPeers: true
+        } as any;
+
+        await optimizeNeutrinoPeers(true);
+
+        expect(settingsStore.updateSettings).toHaveBeenCalledTimes(1);
+        expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+            neutrinoPeersTestnet: ['a.testnet', 'b.testnet', 'c.testnet']
+        });
+    });
+
+    it('sets dontAllowOtherPeers from the Optimize button even when the other network has peers of their own', async () => {
+        settingsStore.settings = {
+            ...defaults,
+            neutrinoPeersTestnet: ['testnet.home.example'],
+            dontAllowOtherPeers: false
+        } as any;
+
+        await optimizeNeutrinoPeers(false, undefined, true);
+
+        expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+            neutrinoPeersMainnet: ['a.mainnet', 'b.mainnet', 'c.mainnet'],
+            dontAllowOtherPeers: true
+        });
+    });
+
+    it('replaces peers of their own when asked to', async () => {
+        settingsStore.settings = {
+            ...defaults,
+            neutrinoPeersMainnet: ['bitcoind.home.example'],
+            dontAllowOtherPeers: true
+        } as any;
+
+        await optimizeNeutrinoPeers(false, undefined, true);
+
+        expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+            neutrinoPeersMainnet: ['a.mainnet', 'b.mainnet', 'c.mainnet'],
+            dontAllowOtherPeers: true
+        });
+    });
+});
+
+describe('hasUserNeutrinoPeers', () => {
+    const known = ['a.mainnet', 'b.mainnet'];
+
+    it('is false when no list is stored', () => {
+        expect(hasUserNeutrinoPeers(undefined, known)).toBe(false);
+    });
+
+    it('is false for peers ZEUS ships', () => {
+        expect(hasUserNeutrinoPeers(['b.mainnet'], known)).toBe(false);
+    });
+
+    it('is true for an empty list or a peer ZEUS does not ship', () => {
+        expect(hasUserNeutrinoPeers([], known)).toBe(true);
+        expect(hasUserNeutrinoPeers(['a.mainnet', 'home.example'], known)).toBe(
+            true
+        );
     });
 });
