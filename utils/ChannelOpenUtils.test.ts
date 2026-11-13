@@ -8,7 +8,8 @@ import {
     OPEN_MEMO_PREFIX,
     findChannelByMemo,
     getFundingOutpoints,
-    makeOpenMemo
+    makeOpenMemo,
+    signingKeepsTxid
 } from './ChannelOpenUtils';
 
 describe('makeOpenMemo', () => {
@@ -230,5 +231,177 @@ describe('getFundingOutpoints', () => {
         expect(
             getFundingOutpoints(new Uint8Array(psbt.toBuffer()), [a])
         ).toEqual([{ funding_txid_str: unsignedTxid(psbt), output_index: 0 }]);
+    });
+});
+
+describe('signingKeepsTxid', () => {
+    const regtest = bitcoin.networks.regtest;
+    const key = Buffer.from(
+        '02' +
+            '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
+        'hex'
+    );
+    const p2wpkh = bitcoin.payments.p2wpkh({ pubkey: key, network: regtest });
+    // P2SH-P2WPKH: signing fills in a scriptSig that pushes the redeem
+    // script, which the txid commits to
+    const np2wkh = bitcoin.payments.p2sh({ redeem: p2wpkh, network: regtest });
+    const p2pkh = bitcoin.payments.p2pkh({ pubkey: key, network: regtest });
+    // a taproot output script, written out to need no ECC library
+    const p2tr = {
+        output: bitcoin.script.compile([
+            bitcoin.opcodes.OP_1,
+            Buffer.alloc(32, 5)
+        ])
+    };
+    const p2wsh = bitcoin.payments.p2wsh({
+        redeem: { output: Buffer.from('51', 'hex') },
+        network: regtest
+    });
+
+    // a transaction paying each script, for inputs that carry only the
+    // full previous transaction
+    const prevTx = (scripts: Buffer[]) => {
+        const tx = new bitcoin.Transaction();
+        tx.addInput(Buffer.alloc(32, 7), 0);
+        scripts.forEach((script) => tx.addOutput(script, 100000));
+        return tx;
+    };
+
+    const funded = (
+        inputs: Array<
+            | { witness: Buffer }
+            | { nonWitness: bitcoin.Transaction; index: number }
+            | {}
+        >
+    ) => {
+        const psbt = new bitcoin.Psbt({ network: regtest });
+        inputs.forEach((input: any, i) => {
+            if (input.witness) {
+                psbt.addInput({
+                    hash: Buffer.alloc(32, i + 1),
+                    index: 0,
+                    witnessUtxo: { script: input.witness, value: 100000 }
+                });
+            } else if (input.nonWitness) {
+                psbt.addInput({
+                    hash: input.nonWitness.getHash(),
+                    index: input.index,
+                    nonWitnessUtxo: input.nonWitness.toBuffer()
+                });
+            } else {
+                psbt.addInput({ hash: Buffer.alloc(32, i + 1), index: 0 });
+            }
+        });
+        psbt.addOutput({ script: p2wsh.output as Buffer, value: 90000 });
+        return psbt;
+    };
+
+    it.each([
+        ['P2WPKH', p2wpkh.output as Buffer],
+        ['P2TR', p2tr.output as Buffer],
+        ['P2WSH', p2wsh.output as Buffer]
+    ])('keeps the txid for a native SegWit %s input', (_, script) => {
+        expect(signingKeepsTxid(funded([{ witness: script }]).toBase64())).toBe(
+            true
+        );
+    });
+
+    it('parses a taproot input that carries the fields lnd adds', () => {
+        const xOnlyKey = key.subarray(1);
+        const psbt = new bitcoin.Psbt({ network: regtest });
+        psbt.addInput({
+            hash: Buffer.alloc(32, 1),
+            index: 0,
+            witnessUtxo: {
+                script: bitcoin.script.compile([
+                    bitcoin.opcodes.OP_1,
+                    xOnlyKey
+                ]),
+                value: 100000
+            },
+            tapInternalKey: xOnlyKey,
+            tapBip32Derivation: [
+                {
+                    masterFingerprint: Buffer.from('deadbeef', 'hex'),
+                    pubkey: xOnlyKey,
+                    path: "m/86'/1'/0'/0/0",
+                    leafHashes: []
+                }
+            ]
+        });
+        psbt.addOutput({ script: p2wsh.output as Buffer, value: 90000 });
+        expect(signingKeepsTxid(psbt.toBase64())).toBe(true);
+    });
+
+    it('changes the txid for a nested SegWit input', () => {
+        expect(
+            signingKeepsTxid(
+                funded([{ witness: np2wkh.output as Buffer }]).toBase64()
+            )
+        ).toBe(false);
+    });
+
+    it('changes the txid for a legacy input', () => {
+        expect(
+            signingKeepsTxid(
+                funded([{ witness: p2pkh.output as Buffer }]).toBase64()
+            )
+        ).toBe(false);
+    });
+
+    it('changes the txid when any one input is nested SegWit', () => {
+        expect(
+            signingKeepsTxid(
+                funded([
+                    { witness: p2wpkh.output as Buffer },
+                    { witness: np2wkh.output as Buffer },
+                    { witness: p2tr.output as Buffer }
+                ]).toBase64()
+            )
+        ).toBe(false);
+    });
+
+    it('reads the spent output from the previous transaction', () => {
+        const prev = prevTx([np2wkh.output as Buffer, p2wpkh.output as Buffer]);
+
+        expect(
+            signingKeepsTxid(
+                funded([{ nonWitness: prev, index: 1 }]).toBase64()
+            )
+        ).toBe(true);
+        expect(
+            signingKeepsTxid(
+                funded([{ nonWitness: prev, index: 0 }]).toBase64()
+            )
+        ).toBe(false);
+    });
+
+    it('counts an input without its spent output as one that changes the txid', () => {
+        expect(
+            signingKeepsTxid(
+                funded([{ witness: p2wpkh.output as Buffer }, {}]).toBase64()
+            )
+        ).toBe(false);
+    });
+
+    it('agrees with the signed transaction for a nested SegWit input', () => {
+        const psbt = funded([{ witness: np2wkh.output as Buffer }]);
+        const unsigned = bitcoin.Transaction.fromBuffer(
+            psbt.data.getTransaction()
+        ).getId();
+        psbt.data.inputs[0].finalScriptSig = bitcoin.script.compile([
+            p2wpkh.output as Buffer
+        ]);
+        psbt.data.inputs[0].finalScriptWitness = Buffer.from('00', 'hex');
+
+        expect(psbt.extractTransaction(true).getId()).not.toBe(unsigned);
+        expect(signingKeepsTxid(psbt.toBase64())).toBe(false);
+    });
+
+    it('accepts the PSBT as hex or bytes', () => {
+        const psbt = funded([{ witness: p2wpkh.output as Buffer }]);
+
+        expect(signingKeepsTxid(psbt.toHex())).toBe(true);
+        expect(signingKeepsTxid(new Uint8Array(psbt.toBuffer()))).toBe(true);
     });
 });

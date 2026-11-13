@@ -23,7 +23,8 @@ import { getCooperativeCloses, getForceCloses } from '../utils/BalanceUtils';
 import {
     findChannelByMemo,
     getFundingOutpoints,
-    makeOpenMemo
+    makeOpenMemo,
+    signingKeepsTxid
 } from '../utils/ChannelOpenUtils';
 import { isRequestTimeout } from '../utils/RequestTimeoutUtils';
 
@@ -1182,6 +1183,22 @@ export default class ChannelsStore {
                     data.funded_psbt
                 ).getFormatted();
 
+                // lnd records the channels verified with skip_finalize
+                // under the unsigned transaction's txid, so a batch
+                // whose signed transaction gets another txid would leave
+                // them waiting on an outpoint that never confirms. Stop
+                // before anything is signed or verified
+                if (
+                    pendingChanIds.length > 1 &&
+                    !signingKeepsTxid(funded_psbt)
+                ) {
+                    throw new Error(
+                        localeString(
+                            'stores.ChannelsStore.batchNeedsNativeSegWit'
+                        )
+                    );
+                }
+
                 await BackendUtils.signPsbt({ funded_psbt })
                     .then((data: any) => {
                         if (data.signed_psbt) funded_psbt = data.signed_psbt;
@@ -1317,8 +1334,9 @@ export default class ChannelsStore {
                     });
             })
             .catch((error: any) => {
-                // fundPsbt failed (nothing leased), or a step before the
-                // last psbt_verify did
+                // fundPsbt failed (nothing leased), the batch's inputs
+                // would change its txid, or a step before the last
+                // psbt_verify failed
                 const errorMsg = errorToUserFriendly(error);
                 abandon();
                 runInAction(() => {

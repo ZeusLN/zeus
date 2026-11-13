@@ -22,18 +22,24 @@ jest.mock('../utils/LocaleUtils', () => ({
 }));
 jest.mock('../utils/ChannelOpenUtils', () => ({
     ...jest.requireActual('../utils/ChannelOpenUtils'),
-    getFundingOutpoints: jest.fn(() => [])
+    getFundingOutpoints: jest.fn(() => []),
+    // the stub PSBTs here do not parse; the tests that check inputs
+    // use the real check
+    signingKeepsTxid: jest.fn(() => true)
 }));
 jest.mock('../utils/ErrorUtils', () => ({
     errorToUserFriendly: (e: any) => e?.message ?? String(e)
 }));
+
+import * as bitcoin from 'bitcoinjs-lib';
 
 import ChannelsStore from './ChannelsStore';
 import BackendUtils from '../utils/BackendUtils';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import {
     OPEN_MEMO_PREFIX,
-    getFundingOutpoints
+    getFundingOutpoints,
+    signingKeepsTxid
 } from '../utils/ChannelOpenUtils';
 
 const isLNDBased = BackendUtils.isLNDBased as jest.Mock;
@@ -1659,6 +1665,122 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
                 expect(store.errorMsgChannel).toBe('psbt invalid');
                 expect(store.syncOpensInFlight).toBe(0);
                 expect(released()).toEqual(LOCKED);
+            });
+        });
+
+        describe('inputs whose signature changes the txid', () => {
+            // lnd keys the channels verified with skip_finalize by the
+            // unsigned txid, and publishes the signed transaction (#5701)
+            const fundedFrom = (script: string) => {
+                const psbt = new bitcoin.Psbt();
+                psbt.addInput({
+                    hash: Buffer.alloc(32, 1),
+                    index: 0,
+                    witnessUtxo: {
+                        script: Buffer.from(script, 'hex'),
+                        value: 1000000
+                    }
+                });
+                psbt.addOutput({
+                    script: Buffer.from('0020' + '02'.repeat(32), 'hex'),
+                    value: 200000
+                });
+                return psbt.toBase64();
+            };
+            const NESTED = fundedFrom('a914' + '09'.repeat(20) + '87');
+            const NATIVE = fundedFrom('0014' + '09'.repeat(20));
+            const verifies = () =>
+                fundingSteps().filter((step: any) => step.psbt_verify);
+            const startBatch = (funded_psbt: string) => {
+                fundPsbt.mockResolvedValue({
+                    funded_psbt,
+                    locked_utxos: LOCKED
+                });
+                openChannelStream
+                    .mockResolvedValueOnce(psbtFund('chan-a'))
+                    .mockResolvedValueOnce(psbtFund('chan-b'))
+                    .mockResolvedValueOnce(psbtFund('chan-c'));
+                const store = makeStore();
+                enterScreen(store);
+                openBatchOf3(store);
+                return store;
+            };
+
+            beforeEach(() => {
+                (signingKeepsTxid as jest.Mock).mockImplementation(
+                    jest.requireActual('../utils/ChannelOpenUtils')
+                        .signingKeepsTxid
+                );
+            });
+
+            afterEach(() => {
+                (signingKeepsTxid as jest.Mock).mockImplementation(() => true);
+            });
+
+            it('stops a batch funded from a nested SegWit input before signing or verifying', async () => {
+                const store = startBatch(NESTED);
+                await flush();
+
+                expect(signPsbt).not.toHaveBeenCalled();
+                expect(verifies()).toEqual([]);
+                expect(released()).toEqual(LOCKED);
+                expect(new Set(cancels())).toEqual(
+                    new Set(['chan-a', 'chan-b', 'chan-c'])
+                );
+                // nothing was verified, so there is nothing to abandon
+                expect(abandonChannel).not.toHaveBeenCalled();
+                expect(store.errorOpenChannel).toBe(true);
+                expect(store.errorMsgChannel).toBe(
+                    'stores.ChannelsStore.batchNeedsNativeSegWit'
+                );
+                expect(store.syncOpensInFlight).toBe(0);
+            });
+
+            it('funds a batch from native SegWit inputs as before', async () => {
+                const store = startBatch(NATIVE);
+                await flush();
+
+                expect(verifies()).toEqual([
+                    {
+                        psbt_verify: {
+                            funded_psbt: PSBT,
+                            pending_chan_id: 'chan-a',
+                            skip_finalize: true
+                        }
+                    },
+                    {
+                        psbt_verify: {
+                            funded_psbt: PSBT,
+                            pending_chan_id: 'chan-b',
+                            skip_finalize: true
+                        }
+                    },
+                    {
+                        psbt_verify: {
+                            funded_psbt: PSBT,
+                            pending_chan_id: 'chan-c'
+                        }
+                    }
+                ]);
+                expect(store.channelSuccess).toBe(true);
+                expect(releaseOutput).not.toHaveBeenCalled();
+            });
+
+            it('funds a single channel from a nested SegWit input', async () => {
+                // psbt_finalize gives lnd the signed transaction
+                fundPsbt.mockResolvedValue({
+                    funded_psbt: NESTED,
+                    locked_utxos: LOCKED
+                });
+                openChannelStream.mockResolvedValueOnce(psbtFund('chan-1'));
+                const store = makeStore();
+                enterScreen(store);
+                openStreamed(store);
+                await flush();
+
+                expect(signPsbt).toHaveBeenCalledWith({ funded_psbt: NESTED });
+                expect(store.channelSuccess).toBe(true);
+                expect(releaseOutput).not.toHaveBeenCalled();
             });
         });
 
