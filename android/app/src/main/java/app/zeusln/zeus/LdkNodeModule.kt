@@ -22,6 +22,11 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     // the FFI call. A new build must not touch the same storage dir until
     // it finishes and cleans up after itself.
     @Volatile private var pendingDualBuildThread: Thread? = null
+    // Advanced under nodeLock by stop() and by every buildNode(). A build
+    // publishes its node only while the generation is still the one it
+    // started with, so a build that was waiting on VSS when the wallet was
+    // stopped or switched cannot install the old wallet's node afterwards.
+    private var buildGeneration = 0L
     private var logFileObserver: LogFileObserver? = null
 
     // Stored config values for building with custom Config
@@ -352,13 +357,33 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
     // Node Build Methods
 
+    private fun isCurrentBuild(generation: Long): Boolean =
+        synchronized(nodeLock) { generation == buildGeneration }
+
+    // Drops a node built by a build that stop() or a newer buildNode()
+    // superseded. The builder and stored config may already belong to the
+    // next wallet, so this leaves them alone.
+    private suspend fun rejectSupersededBuild(builtNode: Node?, promise: Promise) {
+        Log.w("LdkNodeModule", "buildNode: superseded by stop() or a newer build, discarding its node")
+        builtNode?.let { staleNode ->
+            try { staleNode.stop() } catch (_: Exception) { /* never started */ }
+            Thread {
+                Thread.sleep(2000)
+                staleNode.hashCode() // prevent GC before sleep finishes
+            }.start()
+        }
+        withContext(Dispatchers.Main) {
+            promise.reject("build_cancelled", "The node was stopped before its build finished")
+        }
+    }
+
     @ReactMethod
     fun buildNode(mnemonic: String, passphrase: String?, promise: Promise) {
         // Stop and release any existing node before building a new one.
         // Call stop() on this (non-Tokio) thread, then keep the reference
         // alive briefly so internal Tokio tasks can drop their Arc refs
         // before ours — preventing the Runtime-dropped-on-worker panic.
-        synchronized(nodeLock) {
+        val generation = synchronized(nodeLock) {
             this@LdkNodeModule.node?.let { existingNode ->
                 this@LdkNodeModule.logFileObserver?.stopObserving()
                 this@LdkNodeModule.logFileObserver = null
@@ -370,6 +395,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                     existingRef.hashCode() // prevent GC before sleep finishes
                 }.start()
             }
+            ++this@LdkNodeModule.buildGeneration
         }
 
         moduleScope.launch {
@@ -417,7 +443,12 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 val nodeEntropy = NodeEntropy.fromBip39Mnemonic(mnemonic, passphrase)
                 val vssUrl = this@LdkNodeModule.storedVssUrl
                 val vssStoreId = this@LdkNodeModule.storedVssStoreId
+                // Read before the VSS wait: by the time it returns, a stop and
+                // the next wallet's setup may have replaced the stored values
+                val failHard = this@LdkNodeModule.storedVssFailOnError
+                val storageDirPath = config.storageDirPath
 
+                var builtNode: Node? = null
                 var vssError: String? = null
                 var vssBuildPending = false
 
@@ -437,8 +468,6 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                         // thread is orphaned and must clean up after itself).
                         val resultClaimed = java.util.concurrent.atomic.AtomicBoolean(false)
                         val dualStoreStartMs = System.currentTimeMillis()
-                        val failHard = this@LdkNodeModule.storedVssFailOnError
-                        val storageDirPath = config.storageDirPath
 
                         val dualThread = Thread {
                             val ffiStartMs = System.currentTimeMillis()
@@ -489,7 +518,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                             throw dualBuildError!!
                         } else {
                             val elapsedMs = System.currentTimeMillis() - dualStoreStartMs
-                            synchronized(nodeLock) { this@LdkNodeModule.node = dualNode }
+                            builtNode = dualNode
                             Log.d("LdkNodeModule", "[timing] Node built with dual store successfully in ${elapsedMs}ms")
                         }
                     } catch (e: Exception) {
@@ -501,14 +530,16 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 // During restore-from-seed a silent local fallback would come up
                 // as a fresh node with no channels — fail hard instead so the
                 // caller can surface the error and retry
-                if (vssError != null && this@LdkNodeModule.storedVssFailOnError) {
-                    this@LdkNodeModule.builder = null
+                if (vssError != null && failHard) {
+                    if (isCurrentBuild(generation)) {
+                        this@LdkNodeModule.builder = null
+                    }
                     // A failed build can leave a partial local DB that would
                     // shadow VSS on retry. On a fast failure remove it now; on
                     // timeout the still-running build thread removes it once
                     // the FFI call returns.
                     if (!vssBuildPending) {
-                        try { java.io.File(this@LdkNodeModule.storedStorageDirPath).deleteRecursively() } catch (_: Exception) {}
+                        try { java.io.File(storageDirPath).deleteRecursively() } catch (_: Exception) {}
                     }
                     withContext(Dispatchers.Main) {
                         promise.reject("vss_error", vssError)
@@ -516,21 +547,33 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                     return@launch
                 }
 
-                // Fall back to local SQLite store if dual store failed or VSS was not configured
-                if (this@LdkNodeModule.node == null) {
-                    if (vssError != null) {
-                        Log.w("LdkNodeModule", "[timing] Falling back to local SQLite store")
+                // The local build runs under nodeLock so that stop() and the
+                // next buildNode() wait for it instead of opening the same
+                // storage dir while it is still running. A superseded build
+                // skips it.
+                val published = synchronized(nodeLock) {
+                    val current = generation == this@LdkNodeModule.buildGeneration
+                    if (current) {
+                        // Fall back to local SQLite store if dual store failed or VSS was not configured
+                        if (builtNode == null) {
+                            if (vssError != null) {
+                                Log.w("LdkNodeModule", "[timing] Falling back to local SQLite store")
+                            }
+                            val localStartMs = System.currentTimeMillis()
+                            val localBuilder = Builder.fromConfig(config)
+                            applyBuilderSettings(localBuilder)
+                            builtNode = localBuilder.build(nodeEntropy)
+                            Log.d("LdkNodeModule", "[timing] Local-only build completed in ${System.currentTimeMillis() - localStartMs}ms")
+                        }
+                        this@LdkNodeModule.node = builtNode
+                        this@LdkNodeModule.builder = null // Builder is consumed
                     }
-                    val localStartMs = System.currentTimeMillis()
-                    val localBuilder = Builder.fromConfig(config)
-                    applyBuilderSettings(localBuilder)
-                    synchronized(nodeLock) {
-                        this@LdkNodeModule.node = localBuilder.build(nodeEntropy)
-                    }
-                    Log.d("LdkNodeModule", "[timing] Local-only build completed in ${System.currentTimeMillis() - localStartMs}ms")
+                    current
                 }
-
-                this@LdkNodeModule.builder = null // Builder is consumed
+                if (!published) {
+                    rejectSupersededBuild(builtNode, promise)
+                    return@launch
+                }
                 val result = Arguments.createMap()
                 if (vssError != null) {
                     result.putString("vssError", vssError)
@@ -650,6 +693,8 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     @ReactMethod
     fun stop(promise: Promise) {
         val node = synchronized(nodeLock) {
+            // Also cancels a build still in flight (see buildGeneration)
+            this@LdkNodeModule.buildGeneration++
             val n = this@LdkNodeModule.node
             if (n != null) {
                 this@LdkNodeModule.node = null
