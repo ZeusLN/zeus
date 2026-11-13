@@ -4,7 +4,7 @@
  * Examples: "Alice Bob" -> "AB", "John Quincy Adams" -> "JA", "John" -> "J"
  */
 export const getAvatarInitials = (name: string | undefined): string => {
-    const n = (name || '').trim();
+    const n = typeof name === 'string' ? name.trim() : '';
     if (!n) return '';
     const words = n.split(/\s+/).filter(Boolean);
     const first = words[0][0] || '';
