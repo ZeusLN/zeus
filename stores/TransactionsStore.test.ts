@@ -2101,4 +2101,33 @@ describe('TransactionsStore result of an earlier payment', () => {
         expect(store.loading).toBe(false);
         expect(store.paymentInFlight).toBe(false);
     });
+
+    it('keeps naming the dispatched payment while the next one is held by the graph sync prompt', async () => {
+        const store = newStore('cln-rest');
+        const first = deferred();
+        payLightningInvoice.mockReturnValueOnce(first.promise);
+
+        const dispatched = store.sendPayment({ payment_request: 'lnbc1' });
+        jest.advanceTimersByTime(120_000);
+        expect(store.paymentInFlight).toBe(false);
+
+        (checkGraphSyncBeforePayment as jest.Mock).mockImplementationOnce(
+            (_settings: any, _impl: any, paymentData: any, s: any) => {
+                s.pendingPaymentData = paymentData;
+                s.showGraphSyncPrompt = true;
+                return false;
+            }
+        );
+        const held = store.sendPayment({ payment_request: 'lnbc2' });
+        expect(held).not.toBe(dispatched);
+        expect(payLightningInvoice).toHaveBeenCalledTimes(1);
+
+        first.resolve({ status: 'complete' });
+        await flushPromises();
+
+        // the success is the dispatched payment's: its screen donates and
+        // the held payment's screen does not
+        expect(store.status).toBe('complete');
+        expect(store.lastPaymentSequence).toBe(dispatched);
+    });
 });
