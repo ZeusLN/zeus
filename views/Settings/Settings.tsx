@@ -432,6 +432,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
 
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.privacyButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Privacy')}
                         >
@@ -489,6 +490,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         }}
                     >
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.currencyButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Currency')}
                         >
@@ -540,6 +542,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         }}
                     >
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.displayButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Display')}
                         >

@@ -11,6 +11,7 @@ import TextInput from '../../components/TextInput';
 
 import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import {
     deriveVerifier,
     verifySecret,
@@ -214,6 +215,7 @@ export default class SetPassphrase extends React.Component<
                         {localeString('views.Settings.newPassword')}
                     </Text>
                     <TextInput
+                        testID={TEST_IDS.setPassword.passwordInput}
                         ref={this.firstInput}
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
@@ -247,6 +249,7 @@ export default class SetPassphrase extends React.Component<
                         {localeString('views.Settings.confirmPassword')}
                     </Text>
                     <TextInput
+                        testID={TEST_IDS.setPassword.confirmInput}
                         ref={this.secondInput}
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
@@ -278,6 +281,7 @@ export default class SetPassphrase extends React.Component<
                     />
                     <View style={{ paddingTop: 10, margin: 10 }}>
                         <Button
+                            testID={TEST_IDS.setPassword.saveButton}
                             title={localeString(
                                 'views.Settings.SetPassword.save'
                             )}

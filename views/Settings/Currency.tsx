@@ -17,6 +17,7 @@ import SettingsStore, {
 import UnitsStore from '../../stores/UnitsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 import DropdownSetting from '../../components/DropdownSetting';
 import Switch from '../../components/Switch';
@@ -105,6 +106,7 @@ export default class Currency extends React.Component<
                             }}
                         >
                             <Switch
+                                testID={TEST_IDS.currency.fiatSwitch}
                                 value={fiatEnabled}
                                 onValueChange={async () => {
                                     const newFiatEnabled = !fiatEnabled;
@@ -130,6 +132,9 @@ export default class Currency extends React.Component<
                         <>
                             <View style={{ marginHorizontal: 16 }}>
                                 <DropdownSetting
+                                    testID={
+                                        TEST_IDS.currency.ratesSourceDropdown
+                                    }
                                     title={
                                         localeString(
                                             'views.Settings.Currency.source'
@@ -160,6 +165,7 @@ export default class Currency extends React.Component<
                                 />
                             </View>
                             <ListItem
+                                testID={TEST_IDS.currency.selectCurrencyRow}
                                 containerStyle={{
                                     backgroundColor: 'transparent'
                                 }}
@@ -167,6 +173,10 @@ export default class Currency extends React.Component<
                             >
                                 <ListItem.Content>
                                     <ListItem.Title
+                                        testID={
+                                            TEST_IDS.currency
+                                                .selectCurrencyLabel
+                                        }
                                         style={{
                                             color: themeColor('secondaryText'),
                                             fontFamily: 'PPNeueMontreal-Book'
