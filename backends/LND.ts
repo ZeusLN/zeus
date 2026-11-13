@@ -340,6 +340,11 @@ export default class LND {
                 this.getTransactionsPage(request).then(
                     (page: any) => page.transactions
                 ),
+            // a stale height only widens the recent blocks, which are read
+            // to the top
+            getTipHeight: async () =>
+                Number(nodeInfoStore.nodeInfo?.currentBlockHeight) ||
+                this.getMyNodeInfo().then((info: any) => info.block_height),
             limit: data?.max_transactions ?? DEFAULT_MAX_TRANSACTIONS
         });
         return { transactions };

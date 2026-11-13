@@ -19,6 +19,7 @@ const mockSendPaymentV2Sync = jest.fn();
 const mockSendKeysendPaymentV2 = jest.fn();
 const mockListPayments = jest.fn();
 const mockGetTransactions = jest.fn();
+const mockGetInfo = jest.fn();
 const mockSendCoins = jest.fn();
 const mockOpenChannel = jest.fn();
 const mockAbandonChannel = jest.fn();
@@ -29,6 +30,7 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
     default: {
         index: {
             listPeers: jest.fn(),
+            getInfo: (...args: any[]) => mockGetInfo(...args),
             listPayments: (...args: any[]) => mockListPayments(...args),
             sendPaymentV2Sync: (...args: any[]) =>
                 mockSendPaymentV2Sync(...args),
@@ -182,7 +184,10 @@ describe('EmbeddedLND.getTransactions', () => {
             ).finish()
         );
 
-    afterEach(() => mockGetTransactions.mockReset());
+    afterEach(() => {
+        mockGetTransactions.mockReset();
+        mockGetInfo.mockReset();
+    });
 
     it('requests the newest mined page, then the unconfirmed ones when it is full', async () => {
         mockGetTransactions.mockImplementation(async (request: any) =>
@@ -213,6 +218,42 @@ describe('EmbeddedLND.getTransactions', () => {
         ]);
     });
 
+    it('reads the recent blocks forwards, then older ones backwards, when the newest page has no mined ones', async () => {
+        mockGetInfo.mockResolvedValue({ block_height: 900_000 });
+        mockGetTransactions.mockImplementation(async (request: any) =>
+            request.start_height === -1
+                ? decodedTransactions([
+                      { tx_hash: 'pending0', num_confirmations: 0 }
+                  ])
+                : request.max_transactions === 1
+                ? decodedTransactions([
+                      { tx_hash: 'tx0', num_confirmations: 5000 }
+                  ])
+                : request.end_height === -1
+                ? decodedTransactions([
+                      { tx_hash: 'pending0', num_confirmations: 0 },
+                      { tx_hash: 'tx1', num_confirmations: 2 }
+                  ])
+                : decodedTransactions([
+                      { tx_hash: 'tx0', num_confirmations: 5000 }
+                  ])
+        );
+
+        const { transactions } = await embeddedLnd.getTransactions();
+
+        expect(mockGetTransactions.mock.calls.map(([r]) => r)).toEqual([
+            { start_height: -1, end_height: 1, max_transactions: 500 },
+            { start_height: 0, end_height: -1, max_transactions: 1 },
+            { start_height: 895_969, end_height: -1, max_transactions: 0 },
+            { start_height: 895_968, end_height: 1, max_transactions: 198 }
+        ]);
+        expect(transactions.map((tx: any) => tx.tx_hash)).toEqual([
+            'pending0',
+            'tx1',
+            'tx0'
+        ]);
+    });
+
     it('passes an explicit range through as one request', async () => {
         mockGetTransactions.mockResolvedValue(decodedTransactions([]));
 
@@ -227,12 +268,19 @@ describe('EmbeddedLND.getTransactions', () => {
     });
 
     it('returns an empty list for a wallet with no transactions', async () => {
+        mockGetInfo.mockResolvedValue({ block_height: 900_000 });
         mockGetTransactions.mockResolvedValue({});
 
         const { transactions } = await embeddedLnd.getTransactions();
 
         expect(transactions).toEqual([]);
-        expect(mockGetTransactions).toHaveBeenCalledTimes(1);
+        // the empty newest page could be lnd on a SQL database, until the
+        // oldest transaction shows there is no mined one
+        expect(mockGetTransactions.mock.calls.map(([r]) => r)).toEqual([
+            { start_height: -1, end_height: 1, max_transactions: 500 },
+            { start_height: 0, end_height: -1, max_transactions: 1 }
+        ]);
+        expect(mockGetInfo).not.toHaveBeenCalled();
     });
 });
 

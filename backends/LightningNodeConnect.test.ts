@@ -90,7 +90,7 @@ import { NativeEventEmitter, NativeModules } from 'react-native';
 import LightningNodeConnect from './LightningNodeConnect';
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import { isRequestNotSent } from '../utils/PaymentLookupUtils';
-import { settingsStore } from '../stores/Stores';
+import { nodeInfoStore, settingsStore } from '../stores/Stores';
 
 const mockSettings = settingsStore as any;
 
@@ -881,6 +881,10 @@ describe('LightningNodeConnect', () => {
             );
         });
 
+        afterEach(() => {
+            nodeInfoStore.nodeInfo = {};
+        });
+
         it('requests the newest mined page, then the unconfirmed ones when it is full', async () => {
             const { transactions } = await backend.getTransactions({
                 max_transactions: 2
@@ -913,6 +917,84 @@ describe('LightningNodeConnect', () => {
             expect(transactions.map((t: any) => t.tx_hash)).toEqual([
                 'tx1',
                 'tx2'
+            ]);
+        });
+
+        it('reads the recent blocks forwards, then older ones backwards, when the newest page has no mined ones', async () => {
+            // lnd on a SQL database answers a backwards range from -1 with
+            // only the unconfirmed transactions
+            lnc.lnd.lightning.getInfo.mockResolvedValue({
+                blockHeight: 900_000
+            });
+            lnc.lnd.lightning.getTransactions.mockImplementation(
+                async (request: any) => ({
+                    transactions:
+                        request.startHeight === -1
+                            ? PENDING
+                            : request.maxTransactions === 1
+                            ? [tx('tx1', 5000)]
+                            : request.endHeight === -1
+                            ? [...PENDING, tx('tx2', 1)]
+                            : [tx('tx1', 5000)]
+                })
+            );
+
+            const { transactions } = await backend.getTransactions();
+
+            expect(
+                lnc.lnd.lightning.getTransactions.mock.calls.map(
+                    ([request]: any[]) => request
+                )
+            ).toEqual([
+                { startHeight: -1, endHeight: 1, maxTransactions: 500 },
+                { startHeight: 0, endHeight: -1, maxTransactions: 1 },
+                { startHeight: 895_969, endHeight: -1, maxTransactions: 0 },
+                { startHeight: 895_968, endHeight: 1, maxTransactions: 198 }
+            ]);
+            expect(transactions.map((t: any) => t.tx_hash)).toEqual([
+                'tx1',
+                'tx2',
+                'pending0'
+            ]);
+        });
+
+        it('uses the block height NodeInfoStore already holds', async () => {
+            nodeInfoStore.nodeInfo = { currentBlockHeight: 900_000 };
+            lnc.lnd.lightning.getTransactions.mockImplementation(
+                async (request: any) => ({
+                    transactions:
+                        request.startHeight === -1 ? PENDING : [tx('tx1', 5000)]
+                })
+            );
+
+            await backend.getTransactions();
+
+            expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
+            expect(lnc.lnd.lightning.getTransactions).toHaveBeenCalledWith({
+                startHeight: 895_969,
+                endHeight: -1,
+                maxTransactions: 0
+            });
+        });
+
+        it('makes two requests for a wallet with no mined transactions', async () => {
+            lnc.lnd.lightning.getTransactions.mockResolvedValue({
+                transactions: PENDING
+            });
+
+            const { transactions } = await backend.getTransactions();
+
+            expect(
+                lnc.lnd.lightning.getTransactions.mock.calls.map(
+                    ([request]: any[]) => request
+                )
+            ).toEqual([
+                { startHeight: -1, endHeight: 1, maxTransactions: 500 },
+                { startHeight: 0, endHeight: -1, maxTransactions: 1 }
+            ]);
+            expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
+            expect(transactions.map((t: any) => t.tx_hash)).toEqual([
+                'pending0'
             ]);
         });
 
