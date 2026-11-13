@@ -84,6 +84,11 @@ export default class CashuSendingLightning extends React.Component<
     // later payments made while this screen stays mounted.
     private donationAttempted = false;
 
+    // The main payment's invoice. The donation's getPayReq replaces
+    // CashuStore.payReq, and the success details must not show the
+    // donation's hash and memo.
+    private mainPayReq: CashuStore['payReq'];
+
     constructor(props: CashuSendingLightningProps) {
         super(props);
         this.state = {
@@ -167,6 +172,7 @@ export default class CashuSendingLightning extends React.Component<
 
     handleDonationPayment = async (donationAmount: string) => {
         const { CashuStore } = this.props;
+        this.mainPayReq = CashuStore.payReq;
         this.setState({ payingDonation: true, paymentType: 'donation' });
 
         try {
@@ -256,13 +262,13 @@ export default class CashuSendingLightning extends React.Component<
             paymentError,
             paymentSuccess,
             error_msg,
-            payReq,
             paymentPreimage,
             paymentErrorMsg,
             noteKey,
             paymentDuration,
             paymentFee
         } = CashuStore;
+        const payReq = this.mainPayReq || CashuStore.payReq;
         const payment_hash = payReq && payReq.payment_hash;
         const paymentAmount =
             amountFromRoute > 0 ? amountFromRoute : payReq?.getRequestAmount;
