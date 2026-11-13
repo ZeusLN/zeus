@@ -13,8 +13,8 @@ import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import {
     deriveVerifier,
-    verifySecret,
-    hasVerifier
+    hasLockCredential,
+    matchesLockCredential
 } from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
@@ -64,7 +64,7 @@ export default class SetPassphrase extends React.Component<
 
         this.setState({
             isBiometryEnabled: settings.isBiometryEnabled,
-            hasSavedPassphrase: hasVerifier(settings.passphraseVerifier)
+            hasSavedPassphrase: hasLockCredential(settings, 'passphrase')
         });
 
         this.firstInput.current?.focus();
@@ -105,9 +105,12 @@ export default class SetPassphrase extends React.Component<
             }
 
             if (
-                await verifySecret(
+                // the duress passphrase may still be plaintext, or deleted by
+                // an older build next to its old verifier
+                await matchesLockCredential(
                     passphrase,
-                    settings.duressPassphraseVerifier
+                    settings,
+                    'duressPassphrase'
                 )
             ) {
                 this.setState({

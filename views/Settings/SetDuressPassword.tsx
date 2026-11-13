@@ -13,8 +13,8 @@ import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import {
     deriveVerifier,
-    verifySecret,
-    hasVerifier
+    hasLockCredential,
+    matchesLockCredential
 } from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
@@ -56,8 +56,9 @@ export default class SetDuressPassphrase extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            hasSavedDuressPassphrase: hasVerifier(
-                settings.duressPassphraseVerifier
+            hasSavedDuressPassphrase: hasLockCredential(
+                settings,
+                'duressPassphrase'
             )
         });
     }
@@ -97,9 +98,12 @@ export default class SetDuressPassphrase extends React.Component<
             const settings = await getSettings();
 
             if (
-                await verifySecret(
+                // the passphrase may still be plaintext, or deleted by an
+                // older build next to its old verifier
+                await matchesLockCredential(
                     duressPassphrase,
-                    settings.passphraseVerifier
+                    settings,
+                    'passphrase'
                 )
             ) {
                 this.setState({

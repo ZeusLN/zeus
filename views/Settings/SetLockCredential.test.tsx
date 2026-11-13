@@ -10,8 +10,8 @@ jest.mock('../../utils/ThemeUtils', () => ({
 }));
 jest.mock('../../utils/LockVerifierUtils', () => ({
     deriveVerifier: jest.fn(),
-    verifySecret: jest.fn(),
-    hasVerifier: jest.fn(() => false)
+    matchesLockCredential: jest.fn(),
+    hasLockCredential: jest.fn(() => false)
 }));
 jest.mock('../../components/Button', () => 'Button');
 jest.mock('../../components/Header', () => 'Header');
@@ -34,7 +34,10 @@ jest.mock('../../components/TextInput', () => {
 import * as React from 'react';
 import { act, render } from '@testing-library/react-native';
 
-import { deriveVerifier, verifySecret } from '../../utils/LockVerifierUtils';
+import {
+    deriveVerifier,
+    matchesLockCredential
+} from '../../utils/LockVerifierUtils';
 
 import SetPin from './SetPin';
 import SetDuressPin from './SetDuressPin';
@@ -42,7 +45,7 @@ import SetPassword from './SetPassword';
 import SetDuressPassword from './SetDuressPassword';
 
 const mockDeriveVerifier = deriveVerifier as jest.Mock;
-const mockVerifySecret = verifySecret as jest.Mock;
+const mockMatchesLockCredential = matchesLockCredential as jest.Mock;
 
 const VERIFIER = {
     v: 1,
@@ -122,7 +125,7 @@ describe.each(screens)('$name saveSettings', ({ Component, entry, field }) => {
 
     beforeEach(() => {
         jest.spyOn(console, 'error').mockImplementation(() => {});
-        mockVerifySecret.mockReset().mockResolvedValue(false);
+        mockMatchesLockCredential.mockReset().mockResolvedValue(false);
         mockDeriveVerifier.mockReset().mockResolvedValue(VERIFIER);
     });
 
@@ -155,7 +158,9 @@ describe.each(screens)('$name saveSettings', ({ Component, entry, field }) => {
     });
 
     it('shows an error and saves nothing when the cross-check derivation fails', async () => {
-        mockVerifySecret.mockRejectedValue(new Error('LockKdf failed'));
+        mockMatchesLockCredential.mockRejectedValue(
+            new Error('LockKdf failed')
+        );
         const ref = await renderScreen();
 
         await save(ref);

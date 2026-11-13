@@ -15,6 +15,7 @@ import {
     getLockVerifier,
     getPlaintextCredential,
     hasLockCredential,
+    matchesLockCredential,
     resolveLoginVerifiers,
     DUMMY_VERIFIER,
     PBKDF2_ITERATIONS,
@@ -366,6 +367,57 @@ describe('LockVerifierUtils', () => {
                 getLockVerifier({ pinVerifier: { salt: '', hash: '' } }, 'pin')
             ).toBeUndefined();
             expect(getLockVerifier(undefined, 'pin')).toBeUndefined();
+        });
+    });
+
+    describe('matchesLockCredential', () => {
+        it('compares against a plaintext credential', async () => {
+            const derive = jest.spyOn(LockKdf, 'pbkdf2Sha256');
+            expect(
+                await matchesLockCredential('1234', { pin: '1234' }, 'pin')
+            ).toBe(true);
+            expect(
+                await matchesLockCredential('0000', { pin: '1234' }, 'pin')
+            ).toBe(false);
+            expect(derive).not.toHaveBeenCalled();
+        });
+
+        it('prefers the plaintext over a stored record', async () => {
+            const settings = {
+                pinVerifier: await deriveVerifier('1111', salt),
+                pin: '2222'
+            };
+            expect(await matchesLockCredential('2222', settings, 'pin')).toBe(
+                true
+            );
+            expect(await matchesLockCredential('1111', settings, 'pin')).toBe(
+                false
+            );
+        });
+
+        it('verifies against the record, unless an older build deleted it', async () => {
+            const record = await deriveVerifier('1234', salt);
+            expect(
+                await matchesLockCredential(
+                    '1234',
+                    { duressPinVerifier: record },
+                    'duressPin'
+                )
+            ).toBe(true);
+            expect(
+                await matchesLockCredential(
+                    '1234',
+                    { duressPinVerifier: record, duressPin: '' },
+                    'duressPin'
+                )
+            ).toBe(false);
+            expect(await matchesLockCredential('1234', {}, 'pin')).toBe(false);
+        });
+
+        it('never matches an empty entry', async () => {
+            expect(
+                await matchesLockCredential('', { pin: '1234' }, 'pin')
+            ).toBe(false);
         });
     });
 

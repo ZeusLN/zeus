@@ -13,8 +13,8 @@ import SettingsStore from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import {
     deriveVerifier,
-    verifySecret,
-    hasVerifier
+    hasLockCredential,
+    matchesLockCredential
 } from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -95,7 +95,9 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         try {
             const settings = await getSettings();
 
-            if (await verifySecret(pin, settings.duressPinVerifier)) {
+            // the duress PIN may still be plaintext, or deleted by an older
+            // build next to its old verifier
+            if (await matchesLockCredential(pin, settings, 'duressPin')) {
                 this.setState({
                     pinInvalidError: true,
                     pin: '',
@@ -171,7 +173,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                 }}
                             >
                                 {localeString(
-                                    hasVerifier(settings.pinVerifier)
+                                    hasLockCredential(settings, 'pin')
                                         ? 'views.Settings.SetPin.newPin'
                                         : 'views.Settings.SetPin.createPin'
                                 )}

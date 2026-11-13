@@ -10,8 +10,8 @@ jest.mock('../../utils/ThemeUtils', () => ({
 }));
 jest.mock('../../utils/LockVerifierUtils', () => ({
     deriveVerifier: jest.fn(),
-    verifySecret: jest.fn(),
-    hasVerifier: jest.fn(() => true)
+    matchesLockCredential: jest.fn(),
+    hasLockCredential: jest.fn(() => true)
 }));
 jest.mock('../../components/Button', () => 'Button');
 jest.mock('../../components/Header', () => 'Header');
@@ -83,12 +83,12 @@ describe('SetPassword saveSettings', () => {
     // a plaintext passphrase the verifier migration has not hashed yet
     // would otherwise win over the new record at the next unlock
     it('clears the plaintext passphrase with the new verifier', async () => {
-        const { deriveVerifier, verifySecret } = jest.requireMock(
+        const { deriveVerifier, matchesLockCredential } = jest.requireMock(
             '../../utils/LockVerifierUtils'
         );
         const record = { kdf: 'pbkdf2-sha256', salt: 'aa', hash: 'bb' };
         deriveVerifier.mockResolvedValue(record);
-        verifySecret.mockResolvedValue(false);
+        matchesLockCredential.mockResolvedValue(false);
         const ref = React.createRef<any>();
         const updateSettings = jest.fn(() => Promise.resolve());
         const SettingsStore = {

@@ -175,6 +175,24 @@ export const hasLockCredential = (
     !!getLockVerifier(settings, field) ||
     !!getPlaintextCredential(settings, field);
 
+/**
+ * Whether `secret` matches a configured credential, hashed or not, for the
+ * Set* screens' check that a duress credential differs from the primary.
+ * A plaintext credential the migration has not hashed yet is compared
+ * directly: these screens run after login, so the compare's timing tells
+ * nothing to someone who could not already read the settings. Rejects
+ * when the derivation fails.
+ */
+export const matchesLockCredential = async (
+    secret: string,
+    settings: any,
+    field: LockCredentialField
+): Promise<boolean> => {
+    const plaintext = getPlaintextCredential(settings, field);
+    if (plaintext !== undefined) return !!secret && secret === plaintext;
+    return verifySecret(secret, getLockVerifier(settings, field));
+};
+
 // Hashed and thrown away to keep the derivation count equal; never verified
 // against, so its value does not matter.
 const THROWAWAY_SECRET = 'zeus-lock-throwaway';
