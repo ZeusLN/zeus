@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -34,6 +34,7 @@ interface DisplayState {
     removeDecimalSpaces: boolean;
     showMillisatoshiAmounts: boolean;
     selectNodeOnStartup: boolean;
+    liquidGlass: boolean;
 }
 
 @inject('SettingsStore')
@@ -50,7 +51,8 @@ export default class Display extends React.Component<
         showAllDecimalPlaces: false,
         removeDecimalSpaces: false,
         showMillisatoshiAmounts: false,
-        selectNodeOnStartup: false
+        selectNodeOnStartup: false,
+        liquidGlass: true
     };
 
     async componentDidMount() {
@@ -77,7 +79,8 @@ export default class Display extends React.Component<
                 (settings.display &&
                     settings.display.showMillisatoshiAmounts) ||
                 false,
-            selectNodeOnStartup: settings.selectNodeOnStartup || false
+            selectNodeOnStartup: settings.selectNodeOnStartup || false,
+            liquidGlass: settings.display?.liquidGlass !== false
         });
     }
 
@@ -100,7 +103,8 @@ export default class Display extends React.Component<
             showAllDecimalPlaces,
             removeDecimalSpaces,
             showMillisatoshiAmounts,
-            selectNodeOnStartup
+            selectNodeOnStartup,
+            liquidGlass
         } = this.state;
         const { updateSettings, updateSettingsGroup } = SettingsStore;
 
@@ -356,6 +360,61 @@ export default class Display extends React.Component<
                         </View>
                         <ForwardIcon stroke={themeColor('secondaryText')} />
                     </TouchableOpacity>
+
+                    {Platform.OS === 'ios' && (
+                        <>
+                            <View
+                                style={{ flexDirection: 'row', marginTop: 20 }}
+                            >
+                                <View style={{ flex: 1 }}>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontSize: 17,
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Display.liquidGlass'
+                                        )}
+                                    </Text>
+                                </View>
+                                <View
+                                    style={{
+                                        alignSelf: 'center',
+                                        marginLeft: 5
+                                    }}
+                                >
+                                    <Switch
+                                        value={liquidGlass}
+                                        onValueChange={async (
+                                            value: boolean
+                                        ) => {
+                                            this.setState({
+                                                liquidGlass: value
+                                            });
+                                            await updateSettingsGroup(
+                                                'display',
+                                                { liquidGlass: value }
+                                            );
+                                        }}
+                                    />
+                                </View>
+                            </View>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 14,
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    marginTop: 8
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Display.liquidGlass.subtitle'
+                                )}
+                            </Text>
+                        </>
+                    )}
                 </ScrollView>
             </Screen>
         );

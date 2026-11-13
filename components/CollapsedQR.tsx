@@ -11,7 +11,7 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
-import { ButtonGroup } from '@rneui/themed';
+import ButtonGroup from './GlassButtonGroup';
 
 import QRCode, { QRCodeProps } from 'react-native-qrcode-svg';
 

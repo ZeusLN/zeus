@@ -38,6 +38,7 @@ jest.mock('../../components/Button', () => {
         </Pressable>
     );
 });
+jest.mock('../../components/GlassButtonGroup', () => 'ButtonGroup');
 jest.mock('../../components/SuccessErrorMessage', () => {
     const { Text } = require('react-native');
     return {
