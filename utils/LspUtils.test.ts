@@ -1,4 +1,4 @@
-import { verifyWrappedInvoice } from './LspUtils';
+import { verifyOrderTerms, verifyWrappedInvoice } from './LspUtils';
 
 // Deterministic fixtures signed with throwaway test keys. The scenario:
 // the user requests 100 000 sats with a quoted zero-conf fee of
@@ -125,5 +125,150 @@ describe('verifyWrappedInvoice', () => {
             valid: false,
             error: 'decode_failure'
         });
+    });
+});
+
+describe('verifyOrderTerms', () => {
+    // what lsps1CreateOrderREST sends with the LSPS1 screen defaults
+    const REQUEST = {
+        lsp_balance_sat: '1000000',
+        client_balance_sat: '0',
+        required_channel_confirmations: 3,
+        funding_confirms_within_blocks: 6,
+        channel_expiry_blocks: 13140,
+        announce_channel: false
+    };
+    // the matching order as Olympus returns it
+    const ORDER = {
+        order_id: 'order-1',
+        lsp_balance_sat: '1000000',
+        client_balance_sat: '0',
+        required_channel_confirmations: 3,
+        funding_confirms_within_blocks: 6,
+        channel_expiry_blocks: 13140,
+        announce_channel: false,
+        order_state: 'CREATED'
+    };
+
+    it('accepts an order with the requested terms', () => {
+        expect(verifyOrderTerms(REQUEST, ORDER)).toEqual({
+            valid: true,
+            mismatches: []
+        });
+    });
+
+    it('accepts the order inside a JSON-RPC reply', () => {
+        expect(
+            verifyOrderTerms(REQUEST, {
+                jsonrpc: '2.0',
+                id: 'x',
+                result: ORDER
+            })
+        ).toEqual({ valid: true, mismatches: [] });
+    });
+
+    it('compares balances as numbers, not strings', () => {
+        expect(
+            verifyOrderTerms(REQUEST, {
+                ...ORDER,
+                lsp_balance_sat: 1000000,
+                client_balance_sat: 0
+            }).valid
+        ).toBe(true);
+        expect(
+            verifyOrderTerms(
+                { ...REQUEST, channel_expiry_blocks: '13140' },
+                { ...ORDER, channel_expiry_blocks: '13140' }
+            ).valid
+        ).toBe(true);
+    });
+
+    it.each([
+        ['lsp_balance_sat', '999999'],
+        ['lsp_balance_sat', '1000001'],
+        ['client_balance_sat', '50000'],
+        ['channel_expiry_blocks', 13139],
+        ['required_channel_confirmations', 2],
+        ['required_channel_confirmations', 0],
+        ['funding_confirms_within_blocks', 7],
+        ['announce_channel', true]
+    ])('rejects %s of %p', (key, value) => {
+        expect(verifyOrderTerms(REQUEST, { ...ORDER, [key]: value })).toEqual({
+            valid: false,
+            mismatches: [key]
+        });
+    });
+
+    it('accepts terms the LSP improves on', () => {
+        expect(
+            verifyOrderTerms(REQUEST, {
+                ...ORDER,
+                channel_expiry_blocks: 26280,
+                required_channel_confirmations: 6,
+                funding_confirms_within_blocks: 3
+            }).valid
+        ).toBe(true);
+    });
+
+    it('rejects an order missing a requested term', () => {
+        const {
+            announce_channel: _announce,
+            channel_expiry_blocks: _expiry,
+            ...rest
+        } = ORDER;
+        expect(verifyOrderTerms(REQUEST, rest)).toEqual({
+            valid: false,
+            mismatches: ['channel_expiry_blocks', 'announce_channel']
+        });
+    });
+
+    it.each([null, 'abc', '', {}])(
+        'rejects a non-numeric balance %p in the order',
+        (value) => {
+            expect(
+                verifyOrderTerms(REQUEST, { ...ORDER, lsp_balance_sat: value })
+            ).toEqual({ valid: false, mismatches: ['lsp_balance_sat'] });
+        }
+    );
+
+    it('lists every mismatched term', () => {
+        expect(
+            verifyOrderTerms(REQUEST, {
+                ...ORDER,
+                lsp_balance_sat: '500000',
+                channel_expiry_blocks: 4380,
+                announce_channel: true
+            }).mismatches
+        ).toEqual([
+            'lsp_balance_sat',
+            'channel_expiry_blocks',
+            'announce_channel'
+        ]);
+    });
+
+    it('skips terms the request left to the LSP', () => {
+        // parseInt of an empty field gives NaN; LDK Node sends no
+        // confirmation targets; 'N/A' is the screen's unset expiry
+        expect(
+            verifyOrderTerms(
+                {
+                    lsp_balance_sat: '1000000',
+                    required_channel_confirmations: NaN,
+                    funding_confirms_within_blocks: undefined,
+                    channel_expiry_blocks: 'N/A'
+                },
+                {
+                    lsp_balance_sat: '1000000',
+                    required_channel_confirmations: 0,
+                    funding_confirms_within_blocks: 144,
+                    channel_expiry_blocks: 1
+                }
+            )
+        ).toEqual({ valid: true, mismatches: [] });
+    });
+
+    it('rejects an empty or missing response', () => {
+        expect(verifyOrderTerms(REQUEST, {}).valid).toBe(false);
+        expect(verifyOrderTerms(REQUEST, undefined).valid).toBe(false);
     });
 });

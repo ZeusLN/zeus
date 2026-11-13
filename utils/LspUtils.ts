@@ -76,3 +76,80 @@ export function verifyWrappedInvoice(
 
     return { valid: true };
 }
+
+export interface OrderTerms {
+    lsp_balance_sat?: number | string;
+    client_balance_sat?: number | string;
+    channel_expiry_blocks?: number | string;
+    required_channel_confirmations?: number | string;
+    funding_confirms_within_blocks?: number | string;
+    announce_channel?: boolean;
+}
+
+export interface OrderTermsCheck {
+    valid: boolean;
+    mismatches: Array<keyof OrderTerms>;
+}
+
+// How each requested term may differ in the LSP's answer. Balances and
+// announce_channel must match exactly. The others are guarantees, so the
+// LSP may only improve on them: keep the channel open at least as long,
+// wait for at least as many confirmations, fund at least as fast.
+const ORDER_TERM_RULES: Record<
+    Exclude<keyof OrderTerms, 'announce_channel'>,
+    'equal' | 'atLeast' | 'atMost'
+> = {
+    lsp_balance_sat: 'equal',
+    client_balance_sat: 'equal',
+    channel_expiry_blocks: 'atLeast',
+    required_channel_confirmations: 'atLeast',
+    funding_confirms_within_blocks: 'atMost'
+};
+
+const toNumber = (value: any): BigNumber | null => {
+    if (typeof value !== 'number' && typeof value !== 'string') return null;
+    if (typeof value === 'string' && value.trim() === '') return null;
+    const n = new BigNumber(value);
+    return n.isFinite() ? n : null;
+};
+
+/**
+ * Compares an LSPS1 create_order response with the terms the wallet
+ * requested. Only terms that were actually sent are checked: pass
+ * undefined (or a value that is not a number) for a term the request
+ * left to the LSP. A requested term missing from the response is a
+ * mismatch. Accepts the order itself or a JSON-RPC reply wrapping it.
+ */
+export function verifyOrderTerms(
+    requested: OrderTerms,
+    response: any
+): OrderTermsCheck {
+    const order = response?.result ?? response;
+    const mismatches: Array<keyof OrderTerms> = [];
+
+    (
+        Object.keys(ORDER_TERM_RULES) as Array<keyof typeof ORDER_TERM_RULES>
+    ).forEach((key) => {
+        const want = toNumber(requested[key]);
+        if (want === null) return;
+        const got = toNumber(order?.[key]);
+        const rule = ORDER_TERM_RULES[key];
+        if (
+            got === null ||
+            (rule === 'equal' && !got.eq(want)) ||
+            (rule === 'atLeast' && got.lt(want)) ||
+            (rule === 'atMost' && got.gt(want))
+        ) {
+            mismatches.push(key);
+        }
+    });
+
+    if (
+        typeof requested.announce_channel === 'boolean' &&
+        order?.announce_channel !== requested.announce_channel
+    ) {
+        mismatches.push('announce_channel');
+    }
+
+    return { valid: mismatches.length === 0, mismatches };
+}

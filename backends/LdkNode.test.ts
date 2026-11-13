@@ -9,6 +9,7 @@ const mockBolt12DecodeOffer = jest.fn();
 const mockListChannels = jest.fn();
 const mockCloseChannel = jest.fn();
 const mockForceCloseChannel = jest.fn();
+const mockLsps1RequestChannel = jest.fn();
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
@@ -31,6 +32,9 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
         spontaneous: {
             sendSpontaneousPayment: (...args: any[]) =>
                 mockSendSpontaneousPayment(...args)
+        },
+        lsps1: {
+            requestChannel: (...args: any[]) => mockLsps1RequestChannel(...args)
         },
         bolt12: {
             bolt12SendUsingAmount: (...args: any[]) =>
@@ -688,6 +692,93 @@ describe('LdkNode.lnurlAuth', () => {
         );
         expect(Buffer.from(signature).toString('hex')).toBe(
             '974844ab2f50a8fc85ca54a9fc686854e902ad46f1b72219d05e0f371f29bb8c'
+        );
+    });
+});
+
+describe('LdkNode.requestLsps1Liquidity', () => {
+    // the map lsps1OrderStatusToMap / serializeLsps1OrderStatus build in the
+    // Android and iOS modules
+    const nativeOrder = (announceChannel: boolean) => ({
+        orderId: 'order-1',
+        orderParams: {
+            lspBalanceSat: 1000000,
+            clientBalanceSat: 0,
+            requiredChannelConfirmations: 3,
+            fundingConfirmsWithinBlocks: 6,
+            channelExpiryBlocks: 13140,
+            token: '',
+            announceChannel
+        },
+        paymentInfo: {
+            state: 'ExpectPayment',
+            feeTotalSat: 2000,
+            orderTotalSat: 2000,
+            bolt11Invoice: {
+                state: 'ExpectPayment',
+                expiresAt: '2026-11-03T00:00:00Z',
+                feeTotalSat: 2000,
+                orderTotalSat: 2000,
+                invoice: 'lnbc1'
+            }
+        }
+    });
+
+    let ldk: LdkNode;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ldk = new LdkNode();
+    });
+
+    it('passes the request through to the native module', async () => {
+        mockLsps1RequestChannel.mockResolvedValue(nativeOrder(false));
+        await ldk.requestLsps1Liquidity({
+            amount_sat: 1000000,
+            client_balance_sat: 0,
+            expiry_blocks: 13140,
+            announce_channel: true
+        });
+        expect(mockLsps1RequestChannel).toHaveBeenCalledWith({
+            lspBalanceSat: 1000000,
+            clientBalanceSat: 0,
+            channelExpiryBlocks: 13140,
+            announceChannel: true
+        });
+    });
+
+    it.each([false, true])(
+        'maps the order terms with announceChannel %p',
+        async (announceChannel) => {
+            mockLsps1RequestChannel.mockResolvedValue(
+                nativeOrder(announceChannel)
+            );
+            const order = await ldk.requestLsps1Liquidity({
+                amount_sat: 1000000,
+                expiry_blocks: 13140
+            });
+            expect(order).toMatchObject({
+                order_id: 'order-1',
+                lsp_balance_sat: 1000000,
+                client_balance_sat: 0,
+                funding_confirms_within_blocks: 6,
+                channel_expiry_blocks: 13140,
+                announce_channel: announceChannel,
+                payment: {
+                    state: 'ExpectPayment',
+                    fee_total_sat: 2000,
+                    order_total_sat: 2000,
+                    bolt11_invoice: 'lnbc1'
+                }
+            });
+        }
+    );
+
+    it('falls back to a one-year expiry when none is given', async () => {
+        mockLsps1RequestChannel.mockResolvedValue(nativeOrder(false));
+        await ldk.requestLsps1Liquidity({ amount_sat: 1000000 });
+        expect(mockLsps1RequestChannel).toHaveBeenCalledWith(
+            expect.objectContaining({ channelExpiryBlocks: 52560 })
         );
     });
 });
