@@ -20,6 +20,12 @@ jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));
 jest.mock('react-native-blob-util', () => ({}));
+jest.mock('../../stores/Stores', () => ({}));
+jest.mock('../../utils/TorUtils', () => ({
+    doTorRequest: jest.fn(),
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
+}));
 jest.mock('../../utils/LnurlPayUtils', () => ({}));
 jest.mock('../../utils/DonationUtils', () => ({
     ...jest.requireActual('../../utils/DonationUtils'),
