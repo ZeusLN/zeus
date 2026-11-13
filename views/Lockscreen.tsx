@@ -4,6 +4,7 @@ import {
     AppState,
     AppStateStatus,
     BackHandler,
+    KeyboardAvoidingView,
     NativeEventSubscription,
     Platform,
     StyleSheet,
@@ -815,86 +816,101 @@ export default class Lockscreen extends React.Component<
                     )
                 )}
                 {authMethod === 'passphrase' && (
-                    <View
-                        style={{
-                            ...styles.content,
-                            flex: 1,
-                            justifyContent: 'center',
-                            marginTop:
-                                Platform.OS === 'android' &&
-                                SettingsStore.loginRequired()
-                                    ? 30
-                                    : 0
-                        }}
+                    // The field focuses as the screen opens, so the form
+                    // moves up to keep its button above the keyboard.
+                    <KeyboardAvoidingView
+                        style={styles.container}
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                     >
-                        {error && (
-                            <ErrorMessage
-                                message={this.generateErrorMessage()}
-                            />
-                        )}
-                        <View style={{ marginBottom: 40 }}>
-                            <Text
-                                style={{
-                                    ...styles.mainText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {modifySecurityScreen === 'SetDuressPassword'
-                                    ? localeString(
-                                          'views.Lockscreen.enterExistingPassword'
-                                      )
-                                    : deleteDuressPassword
-                                    ? localeString(
-                                          'views.Lockscreen.enterLoginPassword'
-                                      )
-                                    : localeString(
-                                          'views.Lockscreen.enterPassword'
-                                      )}
-                            </Text>
-                        </View>
-                        <View style={styles.inputContainer}>
-                            <TextInput
-                                placeholder={'****************'}
-                                placeholderTextColor="darkgray"
-                                value={passphraseAttempt}
-                                onChangeText={(text: string) =>
-                                    this.setState({
-                                        passphraseAttempt: text,
-                                        error: false
-                                    })
-                                }
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                                secureTextEntry={hidden}
-                                autoFocus={true}
-                                style={{
-                                    ...styles.textInput,
-                                    paddingTop: passphraseAttempt === '' ? 6 : 2
-                                }}
-                                onSubmitEditing={() => this.onAttemptLogIn()}
-                            />
-                            <View style={styles.showHideToggle}>
-                                <ShowHideToggle
-                                    onPress={() => this.onInputLabelPressed()}
+                        <View
+                            style={{
+                                ...styles.content,
+                                flex: 1,
+                                justifyContent: 'center',
+                                marginTop:
+                                    Platform.OS === 'android' &&
+                                    SettingsStore.loginRequired()
+                                        ? 30
+                                        : 0
+                            }}
+                        >
+                            {error && (
+                                <ErrorMessage
+                                    message={this.generateErrorMessage()}
+                                />
+                            )}
+                            <View style={{ marginBottom: 40 }}>
+                                <Text
+                                    style={{
+                                        ...styles.mainText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {modifySecurityScreen ===
+                                    'SetDuressPassword'
+                                        ? localeString(
+                                              'views.Lockscreen.enterExistingPassword'
+                                          )
+                                        : deleteDuressPassword
+                                        ? localeString(
+                                              'views.Lockscreen.enterLoginPassword'
+                                          )
+                                        : localeString(
+                                              'views.Lockscreen.enterPassword'
+                                          )}
+                                </Text>
+                            </View>
+                            <View style={styles.inputContainer}>
+                                <TextInput
+                                    placeholder={'****************'}
+                                    placeholderTextColor="darkgray"
+                                    value={passphraseAttempt}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            passphraseAttempt: text,
+                                            error: false
+                                        })
+                                    }
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    secureTextEntry={hidden}
+                                    autoFocus={true}
+                                    style={{
+                                        ...styles.textInput,
+                                        paddingTop:
+                                            passphraseAttempt === '' ? 6 : 2
+                                    }}
+                                    onSubmitEditing={() =>
+                                        this.onAttemptLogIn()
+                                    }
+                                />
+                                <View style={styles.showHideToggle}>
+                                    <ShowHideToggle
+                                        onPress={() =>
+                                            this.onInputLabelPressed()
+                                        }
+                                    />
+                                </View>
+                            </View>
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        deletePassword
+                                            ? 'views.Settings.SetPassword.deletePassword'
+                                            : deleteDuressPassword
+                                            ? 'views.Settings.SetDuressPassword.deletePassword'
+                                            : 'views.Lockscreen.login'
+                                    )}
+                                    onPress={() => this.onAttemptLogIn()}
+                                    containerStyle={{ width: 300 }}
+                                    adaptiveWidth
+                                    warning={
+                                        deletePassword || deleteDuressPassword
+                                    }
                                 />
                             </View>
                         </View>
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    deletePassword
-                                        ? 'views.Settings.SetPassword.deletePassword'
-                                        : deleteDuressPassword
-                                        ? 'views.Settings.SetDuressPassword.deletePassword'
-                                        : 'views.Lockscreen.login'
-                                )}
-                                onPress={() => this.onAttemptLogIn()}
-                                containerStyle={{ width: 300 }}
-                                adaptiveWidth
-                                warning={deletePassword || deleteDuressPassword}
-                            />
-                        </View>
-                    </View>
+                    </KeyboardAvoidingView>
                 )}
                 {authMethod === 'pin' && (
                     <View style={styles.container}>
