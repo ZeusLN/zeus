@@ -5,7 +5,10 @@ jest.mock('react-native-blob-util', () => {
     const fetch = jest.fn();
     return { fetch, config: () => ({ fetch }) };
 });
-jest.mock('../ldknode/LdkNodeInjection', () => ({}));
+jest.mock('../ldknode/LdkNodeInjection', () => ({
+    __esModule: true,
+    default: { bolt11: { sendBolt11Probes: jest.fn() } }
+}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
@@ -27,6 +30,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import InvoicesStore from './InvoicesStore';
 import BackendUtils from '../utils/BackendUtils';
+import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 
 // decodes with timestamp 1700074718 and expiry 3600 (see Bolt11Utils.test.ts)
 const paymentRequest =
@@ -89,6 +93,24 @@ describe('InvoicesStore.getPayReq', () => {
 
         expect(store.pay_req).toBeNull();
         expect(store.getPayReqError).toBe('decode failed');
+    });
+
+    it('does not send LDK Node probes for an invoice that was only decoded', async () => {
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
+            lndDecodeResponse
+        );
+
+        const store = new InvoicesStore(
+            { implementation: 'ldk-node' } as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        await store.getPayReq(paymentRequest);
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(store.pay_req!.getRequestAmount).toBeGreaterThan(0);
+        expect(LdkNodeInjection.bolt11.sendBolt11Probes).not.toHaveBeenCalled();
     });
 });
 
