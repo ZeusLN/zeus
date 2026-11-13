@@ -68,6 +68,7 @@ import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
 import { fetchLncData } from '../../utils/LncFetchUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
+import { processPendingNwcActivityLink } from '../../utils/NwcActivityLinkUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { applySystemNavigationBarTheme } from '../../utils/SystemNavigationBarUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
@@ -1515,6 +1516,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // Process any deep link that was deferred while login was required
         LinkingUtils.processPendingDeepLink(this.props.navigation);
+        processPendingNwcActivityLink();
 
         // Process pending share intent after wallet is fully loaded and synced
         this.processPendingShareIntent();
@@ -1551,12 +1553,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         try {
             const pendingPaymentData = await loadPendingPaymentData();
             if (pendingPaymentData) {
-                const { InvoicesStore, navigation } = this.props;
+                const { InvoicesStore, SettingsStore, navigation } = this.props;
+
+                // like a deep link, wait for the login; the payment stays in
+                // storage for the refresh that follows it
+                if (SettingsStore.externalInputAuthRequired()) return;
 
                 if (pendingPaymentData.payment_request) {
                     await InvoicesStore.getPayReq(
                         pendingPaymentData.payment_request
                     );
+                    // the session can lock while the invoice is decoded
+                    if (SettingsStore.externalInputAuthRequired()) return;
                     navigation.navigate('PaymentRequest', {
                         fromGraphSync: true
                     });
