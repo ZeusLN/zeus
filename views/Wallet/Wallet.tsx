@@ -654,7 +654,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ldkVssServer,
             updateSettings
         } = SettingsStore;
-        const { isSyncing } = SyncStore;
         const {
             fiatEnabled,
             pos,
@@ -1235,24 +1234,30 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     if (!isBackedUp) {
                         await Storage.setItem(IS_BACKED_UP_KEY, true);
                     }
-                    if (isSyncing || !isCurrent()) return;
-                    try {
-                        await ChannelBackupStore.recoverStaticChannelBackup().catch(
-                            (e: any) => {
-                                // nothing to recover, start backups as usual
-                                if (e?.message !== NO_BACKUP_FOUND) throw e;
-                            }
-                        );
-                        if (!isCurrent()) return;
-                        await clearRecovery();
-                        if (!isCurrent()) return;
-                        if (
-                            SettingsStore.settings
-                                .automaticDisasterRecoveryBackup
-                        )
-                            ChannelBackupStore.initSubscribeChannelEvents();
-                    } catch (recoverError) {
-                        console.error('recover error', recoverError);
+                    if (!isCurrent()) return;
+                    // A refresh while the node syncs leaves the recovery to a
+                    // later refresh and still finishes. A connect reset
+                    // SyncStore above, so the sync it sees is its own and it
+                    // recovers now (#5583)
+                    if (connecting || !SyncStore.isSyncing) {
+                        try {
+                            await ChannelBackupStore.recoverStaticChannelBackup().catch(
+                                (e: any) => {
+                                    // nothing to recover, start backups as usual
+                                    if (e?.message !== NO_BACKUP_FOUND) throw e;
+                                }
+                            );
+                            if (!isCurrent()) return;
+                            await clearRecovery();
+                            if (!isCurrent()) return;
+                            if (
+                                SettingsStore.settings
+                                    .automaticDisasterRecoveryBackup
+                            )
+                                ChannelBackupStore.initSubscribeChannelEvents();
+                        } catch (recoverError) {
+                            console.error('recover error', recoverError);
+                        }
                     }
                 } else {
                     if (SettingsStore.settings.automaticDisasterRecoveryBackup)
