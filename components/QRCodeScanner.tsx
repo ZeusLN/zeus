@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     StyleSheet,
     Text,
@@ -11,9 +11,8 @@ import {
 } from 'react-native';
 import {
     Camera,
-    Point,
     useCameraDevice,
-    useCodeScanner
+    useCameraPermission
 } from 'react-native-vision-camera';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,6 +22,8 @@ import QRKit from 'react-native-qr-kit';
 import Header from './Header';
 import Button from '../components/Button';
 
+import useQRCodeOutput from '../hooks/useQRCodeOutput';
+
 import { sha256StringToHex } from '../utils/HashingUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -30,8 +31,6 @@ import { themeColor } from '../utils/ThemeUtils';
 import FlashOffIcon from '../assets/images/SVG/Flash Off.svg';
 import FlashOnIcon from '../assets/images/SVG/Flash On.svg';
 import GalleryIcon from '../assets/images/SVG/Gallery.svg';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
 
 interface QRProps {
     text?: string;
@@ -43,12 +42,6 @@ interface QRProps {
     mode?: string;
 }
 
-const CameraAuthStatus = Object.freeze({
-    AUTHORIZED: 'AUTHORIZED',
-    NOT_AUTHORIZED: 'NOT_AUTHORIZED',
-    UNKNOWN: 'UNKNOWN'
-});
-
 export default function QRCodeScanner({
     text,
     handleQRScanned,
@@ -58,12 +51,14 @@ export default function QRCodeScanner({
     totalParts,
     mode
 }: QRProps) {
-    const [cameraStatus, setCameraStatus] = useState<string>(
-        CameraAuthStatus.UNKNOWN
-    );
     const [isTorchOn, setIsTorchOn] = useState(false);
     const scannedCache = useRef(new Set<string>());
     const [cameraIsActive, setCameraIsActive] = useState(true);
+
+    // useCameraPermission re-reads the status whenever the app returns to the
+    // foreground, so returning from the system settings picks up a new grant.
+    const { hasPermission, canRequestPermission, requestPermission } =
+        useCameraPermission();
 
     useEffect(() => {
         const backHandler = BackHandler.addEventListener(
@@ -115,15 +110,7 @@ export default function QRCodeScanner({
         );
     };
 
-    const codeScanner = useCodeScanner({
-        codeTypes: ['qr'],
-        onCodeScanned: (codes) => {
-            const code = codes.find((c) => c.value != null)?.value;
-            if (code != null) {
-                handleRead(code);
-            }
-        }
-    });
+    const codeScannerOutput = useQRCodeOutput(handleRead);
 
     const toggleTorch = async () => {
         try {
@@ -136,75 +123,46 @@ export default function QRCodeScanner({
     const handleFocus = () => scannedCache.current.clear();
 
     useEffect(() => {
-        (async () => {
-            // triggers when loaded from navigation or back action
-            navigation.addListener('focus', handleFocus);
-            const appStateChangeSubscription = AppState.addEventListener(
-                'change',
-                (state) => {
-                    setCameraIsActive(state === 'active');
-                    if (state === 'active') {
-                        const permission = Camera.getCameraPermissionStatus();
-                        if (permission === 'granted') {
-                            setCameraStatus(CameraAuthStatus.AUTHORIZED);
-                        }
-                    }
-                }
-            );
+        // triggers when loaded from navigation or back action
+        navigation.addListener('focus', handleFocus);
+        const appStateChangeSubscription = AppState.addEventListener(
+            'change',
+            (state) => setCameraIsActive(state === 'active')
+        );
 
-            const hasPermission = Camera.getCameraPermissionStatus();
-            if (hasPermission === 'granted') {
-                setCameraStatus(CameraAuthStatus.AUTHORIZED);
-            } else {
-                const result = await Camera.requestCameraPermission();
-                if (result === 'granted') {
-                    setCameraStatus(CameraAuthStatus.AUTHORIZED);
-                } else {
-                    setCameraStatus(CameraAuthStatus.NOT_AUTHORIZED);
-                }
-            }
-
-            return () => {
-                navigation.removeListener('focus', handleFocus);
-                appStateChangeSubscription.remove();
-            };
-        })();
+        return () => {
+            navigation.removeListener('focus', handleFocus);
+            appStateChangeSubscription.remove();
+        };
     }, []);
 
-    const camera = useRef<Camera>(null);
-
-    const focusCamera = useCallback(
-        (point: Point) => camera.current?.focus(point),
-        []
-    );
-
-    const gesture = Gesture.Tap().onEnd(({ x, y }) =>
-        runOnJS(focusCamera)({ x, y })
-    );
+    useEffect(() => {
+        if (!hasPermission && canRequestPermission) {
+            requestPermission();
+        }
+    }, [hasPermission, canRequestPermission, requestPermission]);
 
     const hasPartsCount = parts && totalParts;
 
     return (
         <>
-            {device && cameraStatus === CameraAuthStatus.AUTHORIZED && (
+            {device && hasPermission && (
                 <View
                     style={{ flex: 1 }}
                     accessibilityLabel={localeString('general.scan')}
                 >
-                    <GestureDetector gesture={gesture}>
-                        <Camera
-                            ref={camera}
-                            style={StyleSheet.absoluteFill}
-                            device={device}
-                            codeScanner={codeScanner}
-                            torch={isTorchOn ? 'on' : 'off'}
-                            isActive={cameraIsActive}
-                            enableZoomGesture={true}
-                            onError={(error) =>
-                                console.error('Camera error:', error)
-                            }
-                        />
-                    </GestureDetector>
+                    <Camera
+                        style={StyleSheet.absoluteFill}
+                        device={device}
+                        outputs={[codeScannerOutput]}
+                        torchMode={isTorchOn ? 'on' : 'off'}
+                        isActive={cameraIsActive}
+                        enableNativeZoomGesture
+                        enableNativeTapToFocusGesture
+                        onError={(error) =>
+                            console.error('Camera error:', error)
+                        }
+                    />
                     <Header
                         leftComponent="Back"
                         onBack={() => goBack()}
@@ -226,7 +184,7 @@ export default function QRCodeScanner({
                         }
                         rightComponent={
                             <View style={styles.actionOverlay}>
-                                {device.hasFlash && (
+                                {device.hasTorch && (
                                     <TouchableOpacity
                                         style={styles.flashButton}
                                         onPress={toggleTorch}
@@ -282,7 +240,7 @@ export default function QRCodeScanner({
                 </View>
             )}
 
-            {device && cameraStatus === CameraAuthStatus.NOT_AUTHORIZED && (
+            {device && !hasPermission && !canRequestPermission && (
                 <View style={styles.content}>
                     <Text
                         style={{
