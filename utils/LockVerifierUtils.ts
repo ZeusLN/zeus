@@ -127,6 +127,75 @@ export const hasVerifier = (record?: VerifierRecord | null): boolean =>
     typeof record.hash === 'string' &&
     record.hash.length > 0;
 
+/**
+ * A lock credential still stored in plaintext, or undefined. The verifier
+ * migration replaces these, so one is only present when that migration has
+ * not landed (it threw on this boot) or an older build wrote the credential
+ * back after a downgrade.
+ */
+export const getPlaintextCredential = (
+    settings: any,
+    field: 'pin' | 'duressPin' | 'passphrase' | 'duressPassphrase'
+): string | undefined => {
+    const value = settings?.[field];
+    return typeof value === 'string' && value.length > 0 ? value : undefined;
+};
+
+/**
+ * True when a PIN or passphrase lock is configured, hashed or not. Auth
+ * gates use this instead of hasVerifier alone, so a credential the
+ * migration has not hashed yet still locks the app.
+ */
+export const hasLockCredential = (
+    settings: any,
+    method: 'pin' | 'passphrase'
+): boolean =>
+    !!settings &&
+    (hasVerifier(settings[`${method}Verifier`]) ||
+        !!getPlaintextCredential(settings, method));
+
+// Hashed and thrown away to keep the derivation count equal; never verified
+// against, so its value does not matter.
+const THROWAWAY_SECRET = 'zeus-lock-throwaway';
+
+/**
+ * The records to check a login attempt against. Without plaintext this is
+ * the stored primary record and the duress record, or a dummy with the
+ * primary's KDF when no duress credential is set. A plaintext credential is
+ * hashed here, in memory, and replaces the stored record for its field,
+ * since only an older build writes plaintext. When either side is plaintext
+ * both sides are derived, a throwaway standing in for the other, so the
+ * cost does not reveal which credentials exist. Rejects when a derivation
+ * fails, which the caller reports without counting the attempt.
+ */
+export const resolveLoginVerifiers = async (
+    primary: VerifierRecord | undefined,
+    primaryPlaintext: string | undefined,
+    duress: VerifierRecord | undefined,
+    duressPlaintext: string | undefined
+): Promise<{ primary?: VerifierRecord; duress: VerifierRecord }> => {
+    if (!primaryPlaintext && !duressPlaintext) {
+        return {
+            primary,
+            duress: hasVerifier(duress) ? duress! : getDummyVerifier(primary)
+        };
+    }
+    const [derivedPrimary, derivedDuress] = await Promise.all([
+        deriveVerifier(primaryPlaintext ?? THROWAWAY_SECRET),
+        deriveVerifier(duressPlaintext ?? THROWAWAY_SECRET)
+    ]);
+    const resolvedPrimary = primaryPlaintext ? derivedPrimary : primary;
+    let resolvedDuress: VerifierRecord;
+    if (duressPlaintext) {
+        resolvedDuress = derivedDuress;
+    } else if (hasVerifier(duress)) {
+        resolvedDuress = duress!;
+    } else {
+        resolvedDuress = getDummyVerifier(resolvedPrimary);
+    }
+    return { primary: resolvedPrimary, duress: resolvedDuress };
+};
+
 const constantTimeEqual = (a: Buffer, b: Buffer): boolean => {
     if (a.length === 0 || a.length !== b.length) {
         return false;

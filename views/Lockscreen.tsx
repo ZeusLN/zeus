@@ -35,8 +35,9 @@ import { localeString } from '../utils/LocaleUtils';
 import { restartApp } from '../utils/RestartUtils';
 import {
     verifySecret,
-    hasVerifier,
-    getDummyVerifier,
+    getPlaintextCredential,
+    hasLockCredential,
+    resolveLoginVerifiers,
     VerifierRecord
 } from '../utils/LockVerifierUtils';
 import {
@@ -308,13 +309,15 @@ export default class Lockscreen extends React.Component<
             });
         }
 
-        if (settings && hasVerifier(settings.passphraseVerifier)) {
+        // A credential the verifier migration has not hashed yet still
+        // selects its method; onAttemptLogIn hashes it in memory
+        if (hasLockCredential(settings, 'passphrase')) {
             this.setState({
                 authMethod: 'passphrase',
                 passphraseVerifier: settings.passphraseVerifier,
                 duressPassphraseVerifier: settings.duressPassphraseVerifier
             });
-        } else if (settings && hasVerifier(settings.pinVerifier)) {
+        } else if (hasLockCredential(settings, 'pin')) {
             this.setState({
                 authMethod: 'pin',
                 pinVerifier: settings.pinVerifier,
@@ -407,9 +410,17 @@ export default class Lockscreen extends React.Component<
             authMethod === 'passphrase'
                 ? duressPassphraseVerifier
                 : duressPinVerifier;
-        const duressVerifier = hasVerifier(configuredDuressVerifier)
-            ? configuredDuressVerifier
-            : getDummyVerifier(primaryVerifier);
+        // set only when the verifier migration has not hashed the
+        // credential yet (it threw on this boot, or a downgrade wrote it)
+        const { settings } = SettingsStore;
+        const primaryPlaintext = getPlaintextCredential(
+            settings,
+            authMethod === 'passphrase' ? 'passphrase' : 'pin'
+        );
+        const duressPlaintext = getPlaintextCredential(
+            settings,
+            authMethod === 'passphrase' ? 'duressPassphrase' : 'duressPin'
+        );
 
         try {
             // A rejection here is a failed derivation, not a wrong entry, so
@@ -418,9 +429,15 @@ export default class Lockscreen extends React.Component<
             let primaryMatch: boolean;
             let duressMatch: boolean;
             try {
+                const verifiers = await resolveLoginVerifiers(
+                    primaryVerifier,
+                    primaryPlaintext,
+                    configuredDuressVerifier,
+                    duressPlaintext
+                );
                 [primaryMatch, duressMatch] = await Promise.all([
-                    verifySecret(attempt, primaryVerifier),
-                    verifySecret(attempt, duressVerifier)
+                    verifySecret(attempt, verifiers.primary),
+                    verifySecret(attempt, verifiers.duress)
                 ]);
             } catch (error) {
                 console.error('Failed to verify the lock credential', error);

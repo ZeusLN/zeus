@@ -9,7 +9,7 @@ import omit from 'lodash/omit';
 import BackendUtils from '../utils/BackendUtils';
 import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { VerifierRecord, hasVerifier } from '../utils/LockVerifierUtils';
+import { VerifierRecord, hasLockCredential } from '../utils/LockVerifierUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { SETTINGS_VERSION } from '../utils/SettingsVersion';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
@@ -2785,8 +2785,11 @@ export default class SettingsStore {
 
     public loginMethodConfigured = () =>
         this.settings &&
-        (hasVerifier(this.settings.passphraseVerifier) ||
-            hasVerifier(this.settings.pinVerifier) ||
+        // a plaintext credential counts too: if the verifier migration
+        // threw on this boot, the blob in memory still holds it, and
+        // checking verifiers alone would boot with no lock
+        (hasLockCredential(this.settings, 'passphrase') ||
+            hasLockCredential(this.settings, 'pin') ||
             this.isBiometryConfigured());
 
     public checkBiometricsStatus = async () => {

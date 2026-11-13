@@ -12,6 +12,9 @@ import {
     verifySecret,
     hasVerifier,
     getDummyVerifier,
+    getPlaintextCredential,
+    hasLockCredential,
+    resolveLoginVerifiers,
     DUMMY_VERIFIER,
     PBKDF2_ITERATIONS,
     VerifierRecord
@@ -291,6 +294,135 @@ describe('LockVerifierUtils', () => {
                     hash: 'bb'
                 } as unknown as VerifierRecord)
             ).toBe(false);
+        });
+    });
+
+    // A credential the verifier migration has not hashed yet: the migration
+    // threw on this boot, or an older build wrote it after a downgrade
+    describe('getPlaintextCredential', () => {
+        it('returns a non-empty string and nothing else', () => {
+            expect(getPlaintextCredential({ pin: '1234' }, 'pin')).toBe('1234');
+            expect(getPlaintextCredential({ pin: '' }, 'pin')).toBeUndefined();
+            expect(
+                getPlaintextCredential({ pin: 1234 }, 'pin')
+            ).toBeUndefined();
+            expect(getPlaintextCredential({}, 'pin')).toBeUndefined();
+            expect(getPlaintextCredential(undefined, 'pin')).toBeUndefined();
+        });
+    });
+
+    describe('hasLockCredential', () => {
+        it('counts a verifier or a plaintext credential for the method', async () => {
+            const record = await deriveVerifier('1234', salt);
+            expect(hasLockCredential({ pinVerifier: record }, 'pin')).toBe(
+                true
+            );
+            expect(hasLockCredential({ pin: '1234' }, 'pin')).toBe(true);
+            expect(
+                hasLockCredential({ passphrase: 'open sesame' }, 'passphrase')
+            ).toBe(true);
+            expect(hasLockCredential({ pin: '1234' }, 'passphrase')).toBe(
+                false
+            );
+            expect(hasLockCredential({ pin: '' }, 'pin')).toBe(false);
+            expect(hasLockCredential({}, 'pin')).toBe(false);
+            expect(hasLockCredential(undefined, 'pin')).toBe(false);
+        });
+    });
+
+    describe('resolveLoginVerifiers', () => {
+        it('passes stored records through without deriving', async () => {
+            const primary = await deriveVerifier('1234', salt);
+            const duress = await deriveVerifier('0000', salt);
+            const derive = jest.spyOn(LockKdf, 'pbkdf2Sha256');
+
+            expect(
+                await resolveLoginVerifiers(
+                    primary,
+                    undefined,
+                    duress,
+                    undefined
+                )
+            ).toEqual({ primary, duress });
+            expect(
+                await resolveLoginVerifiers(
+                    primary,
+                    undefined,
+                    undefined,
+                    undefined
+                )
+            ).toEqual({ primary, duress: getDummyVerifier(primary) });
+            expect(derive).not.toHaveBeenCalled();
+        });
+
+        it('hashes a plaintext primary and pairs it with a dummy duress record', async () => {
+            const derive = jest.spyOn(LockKdf, 'pbkdf2Sha256');
+
+            const result = await resolveLoginVerifiers(
+                undefined,
+                '1234',
+                undefined,
+                undefined
+            );
+
+            // the throwaway duress derivation keeps the count at two, as
+            // with a duress credential set
+            expect(derive).toHaveBeenCalledTimes(2);
+            expect(await verifySecret('1234', result.primary)).toBe(true);
+            expect(await verifySecret('0000', result.primary)).toBe(false);
+            expect(result.duress).toEqual(getDummyVerifier(result.primary));
+        });
+
+        it('hashes a plaintext duress credential', async () => {
+            const derive = jest.spyOn(LockKdf, 'pbkdf2Sha256');
+
+            const result = await resolveLoginVerifiers(
+                undefined,
+                '1234',
+                undefined,
+                '0000'
+            );
+
+            expect(derive).toHaveBeenCalledTimes(2);
+            expect(await verifySecret('0000', result.duress)).toBe(true);
+            expect(await verifySecret('1234', result.duress)).toBe(false);
+        });
+
+        it('prefers the plaintext over a stored record for the same field', async () => {
+            const stale = await deriveVerifier('1111', salt);
+
+            const result = await resolveLoginVerifiers(
+                stale,
+                '2222',
+                undefined,
+                undefined
+            );
+
+            expect(await verifySecret('2222', result.primary)).toBe(true);
+            expect(await verifySecret('1111', result.primary)).toBe(false);
+        });
+
+        it('keeps a stored duress record when only the primary is plaintext', async () => {
+            const duress = await deriveVerifier('0000', salt);
+
+            const result = await resolveLoginVerifiers(
+                undefined,
+                '1234',
+                duress,
+                undefined
+            );
+
+            expect(result.duress).toBe(duress);
+        });
+
+        it('rejects when the derivation fails', async () => {
+            jest.spyOn(LockKdf, 'pbkdf2Sha256').mockRejectedValue(
+                new Error('LockKdf native module unavailable')
+            );
+
+            await expect(
+                resolveLoginVerifiers(undefined, '1234', undefined, undefined)
+            ).rejects.toThrow('LockKdf native module unavailable');
         });
     });
 });

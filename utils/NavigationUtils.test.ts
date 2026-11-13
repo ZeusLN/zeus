@@ -119,6 +119,18 @@ describe('NavigationUtils', () => {
             });
         });
 
+        // the verifier migration has not hashed it yet
+        it('routes via Lockscreen when POS is active and the pin is still in plaintext', async () => {
+            mockSettingsStore.posStatus = 'active';
+            mockSettingsStore.settings = { pin: '1234' };
+
+            await protectedNavigation(navigation, 'Menu');
+
+            expect(navigation.navigate).toHaveBeenCalledWith('Lockscreen', {
+                pendingNavigation: { screen: 'Menu', params: undefined }
+            });
+        });
+
         it('navigates directly when POS is active but no credential is configured', async () => {
             mockSettingsStore.posStatus = 'active';
             mockSettingsStore.settings = {};

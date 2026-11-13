@@ -402,6 +402,95 @@ describe('Lockscreen with a failed key derivation', () => {
     });
 });
 
+// A credential the verifier migration has not hashed: it threw on this boot
+// (the blob in memory is the loaded one), or v13.2.4 wrote a new PIN after a
+// downgrade. The Lockscreen hashes it in memory and checks against that.
+describe('Lockscreen with a credential still in plaintext', () => {
+    it('unlocks with the plaintext PIN when no verifier exists', async () => {
+        const derive = jest.spyOn(LockKdf, 'pbkdf2Sha256');
+        const saved: any = { pin: PIN };
+        const updateSettings = makeUpdateSettings(saved);
+        const { SettingsStore, navigation } = await renderLockscreen(
+            updateSettings,
+            { settings: saved }
+        );
+
+        await submitPin();
+        await untilCalled(navigation.pop);
+
+        expect(SettingsStore.setLoginStatus).toHaveBeenCalledWith(true);
+        // the primary and a throwaway duress record are hashed, then both
+        // are checked: the same cost as a stored PIN with a duress PIN
+        expect(derive).toHaveBeenCalledTimes(4);
+        derive.mockRestore();
+    });
+
+    it('counts a wrong entry against the plaintext PIN', async () => {
+        const saved: any = { pin: PIN };
+        const updateSettings = makeUpdateSettings(saved);
+        const { navigation } = await renderLockscreen(updateSettings, {
+            settings: saved
+        });
+
+        await submitWrongPin();
+        await waitFor(() => expect(saved.authenticationAttempts).toBe(1), {
+            timeout: 5000
+        });
+
+        expect(navigation.pop).not.toHaveBeenCalled();
+        expect(clearAllData).not.toHaveBeenCalled();
+    });
+
+    it('takes the plaintext PIN over a stale verifier', async () => {
+        const saved: any = {
+            pinVerifier: await deriveVerifier('5555'),
+            pin: PIN
+        };
+        const updateSettings = makeUpdateSettings(saved);
+        const { navigation } = await renderLockscreen(updateSettings, {
+            settings: saved
+        });
+
+        await submitPin();
+        await untilCalled(navigation.pop);
+    });
+
+    it('runs the duress wipe for a plaintext duress PIN', async () => {
+        const saved: any = { pin: PIN, duressPin: DURESS_PIN };
+        const updateSettings = makeUpdateSettings(saved);
+        const { SettingsStore } = await renderLockscreen(updateSettings, {
+            settings: saved
+        });
+
+        await submitWrongPin();
+        await untilCalled(clearAllData as jest.Mock);
+
+        expect(markWipePending).toHaveBeenCalledTimes(1);
+        expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
+    });
+
+    it('shows an error without counting the attempt when the PIN cannot be hashed', async () => {
+        const derive = jest
+            .spyOn(LockKdf, 'pbkdf2Sha256')
+            .mockRejectedValue(new Error('LockKdf native module unavailable'));
+        const saved: any = { pin: PIN };
+        const updateSettings = makeUpdateSettings(saved);
+        const { SettingsStore, navigation } = await renderLockscreen(
+            updateSettings,
+            { settings: saved }
+        );
+
+        await submitPin();
+        await screen.findByText('views.Lockscreen.verificationFailed');
+
+        expect(updateSettings).not.toHaveBeenCalled();
+        expect(saved.authenticationAttempts).toBeUndefined();
+        expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
+        expect(navigation.pop).not.toHaveBeenCalled();
+        derive.mockRestore();
+    });
+});
+
 describe('Lockscreen header', () => {
     const headers = () =>
         screen.queryAllByTestId('header').map((h) => h.props.children);

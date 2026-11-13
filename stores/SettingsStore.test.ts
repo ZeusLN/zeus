@@ -503,6 +503,31 @@ describe('SettingsStore.startNewRootSession', () => {
         expect(store.loginRequired()).toBe(true);
     });
 
+    // a credential the verifier migration has not hashed yet still locks
+    it('requires the PIN again when it is still in plaintext', () => {
+        const store = loggedInStore({ pin: '1234' });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBe(true);
+    });
+
+    it('requires the passphrase again when it is still in plaintext', () => {
+        const store = loggedInStore({ passphrase: 'open sesame' });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBe(true);
+    });
+
+    it('does not count an empty plaintext PIN as a login method', () => {
+        const store = loggedInStore({ pin: '' });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBeFalsy();
+    });
+
     it('does not require a login when no login method is configured', () => {
         const store = loggedInStore({});
 
@@ -1519,6 +1544,35 @@ describe('SettingsStore.getSettings', () => {
             expect(store.settings).toEqual({ pinVerifier: verifier });
             expect(store.settingsLoaded).toBe(true);
         });
+
+        // The first boot after the upgrade: a keychain write in the queued
+        // migration rejects, getSettings logs it and keeps the plaintext
+        // blob it loaded. The app must still ask for the PIN.
+        it.each([
+            ['PIN', { pin: '1234' }],
+            ['passphrase', { passphrase: 'open sesame' }]
+        ])(
+            'still requires the %s when the verifier migration throws',
+            async (_, credential) => {
+                seedSettings({ ...credential, nodes: [{}] });
+                MigrationUtilsMock.migrateLockCredentialsToVerifiers.mockRejectedValueOnce(
+                    new Error('keychain write failed')
+                );
+                const store = new SettingsStore();
+
+                await store.getSettings();
+
+                expect(errorSpy).toHaveBeenCalledWith(
+                    'Could not load settings',
+                    expect.any(Error)
+                );
+                // the suite-wide afterEach fails on this expected error;
+                // clear it so a failure below stays local
+                errorSpy.mockClear();
+                expect(store.settings).toMatchObject(credential);
+                expect(store.loginRequired()).toBe(true);
+            }
+        );
 
         it('run on the synchronizable-partition fallback', async () => {
             StorageMock.getRawItem.mockImplementation(
