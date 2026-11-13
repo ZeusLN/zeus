@@ -17,6 +17,7 @@ jest.mock('../utils/BackendUtils', () => ({
         getNewAddress: jest.fn(),
         getNewChangeAddress: jest.fn(),
         rescan: jest.fn(),
+        getMyNodeInfo: jest.fn(),
         supportsAccountImportRescan: jest.fn(() => false)
     }
 }));
@@ -57,6 +58,9 @@ describe('UTXOsStore.importAccount', () => {
             addr: 'bcrt1p-change'
         });
         (BackendUtils.rescan as jest.Mock).mockResolvedValue({});
+        (BackendUtils.getMyNodeInfo as jest.Mock).mockResolvedValue({
+            block_height: 870000
+        });
     });
 
     const dryRunData = () => ({
@@ -151,5 +155,116 @@ describe('UTXOsStore.importAccount', () => {
 
         expect(data).toEqual(snapshot);
         expect(realData).toEqual(realSnapshot);
+    });
+
+    // #4640: the fork resolves birthday_height 0 (proto3 unset) to the
+    // genesis block and moves the wallet birthday back to it
+    describe('new account (no birthday height)', () => {
+        const newAccountDryRun = () => ({
+            name: 'SeedSigner',
+            extended_public_key: 'tpubDDfvzhdVV4u',
+            dry_run: true
+        });
+        const newAccountImport = () => ({
+            name: 'SeedSigner',
+            extended_public_key: 'tpubDDfvzhdVV4u',
+            dry_run: false
+        });
+
+        beforeEach(() => {
+            (
+                BackendUtils.supportsAccountImportRescan as jest.Mock
+            ).mockReturnValue(true);
+        });
+
+        it('sends the current tip as birthday_height on the fork backend', async () => {
+            const store = newStore();
+            await store.importAccount(newAccountDryRun());
+            await store.importAccount(newAccountImport());
+
+            const request = (BackendUtils.importAccount as jest.Mock).mock
+                .calls[1][0];
+            expect(request.birthday_height).toBe(870000);
+            // the tip is only the birthday stamp; a new account gets no
+            // pre-generation or rescan, same as before
+            expect(store.start_height).toBeUndefined();
+            expect(BackendUtils.getNewAddress).not.toHaveBeenCalled();
+            expect(BackendUtils.rescan).not.toHaveBeenCalled();
+            expect(store.success).toBe(true);
+        });
+
+        it('reads a string block_height from the node info', async () => {
+            (BackendUtils.getMyNodeInfo as jest.Mock).mockResolvedValue({
+                block_height: '870001'
+            });
+
+            await newStore().importAccount(newAccountImport());
+
+            const request = (BackendUtils.importAccount as jest.Mock).mock
+                .calls[0][0];
+            expect(request.birthday_height).toBe(870001);
+        });
+
+        it('does not fetch the tip for a dry run', async () => {
+            await newStore().importAccount(newAccountDryRun());
+
+            const request = (BackendUtils.importAccount as jest.Mock).mock
+                .calls[0][0];
+            expect('birthday_height' in request).toBe(false);
+            expect(BackendUtils.getMyNodeInfo).not.toHaveBeenCalled();
+        });
+
+        it('keeps a user-supplied birthday over the tip', async () => {
+            const store = newStore();
+            await store.importAccount({
+                ...newAccountDryRun(),
+                birthday_height: 800000
+            });
+            await store.importAccount(newAccountImport());
+
+            const request = (BackendUtils.importAccount as jest.Mock).mock
+                .calls[1][0];
+            expect(request.birthday_height).toBe(800000);
+            expect(BackendUtils.getMyNodeInfo).not.toHaveBeenCalled();
+        });
+
+        it('still imports when the tip lookup fails', async () => {
+            (BackendUtils.getMyNodeInfo as jest.Mock).mockRejectedValue(
+                new Error('not synced')
+            );
+
+            const store = newStore();
+            await store.importAccount(newAccountImport());
+
+            const request = (BackendUtils.importAccount as jest.Mock).mock
+                .calls[0][0];
+            expect('birthday_height' in request).toBe(false);
+            expect(store.success).toBe(true);
+        });
+
+        it('does not send a zero tip', async () => {
+            (BackendUtils.getMyNodeInfo as jest.Mock).mockResolvedValue({
+                block_height: 0
+            });
+
+            await newStore().importAccount(newAccountImport());
+
+            const request = (BackendUtils.importAccount as jest.Mock).mock
+                .calls[0][0];
+            expect('birthday_height' in request).toBe(false);
+        });
+
+        it('does not fetch the tip on backends without the fork extensions', async () => {
+            (
+                BackendUtils.supportsAccountImportRescan as jest.Mock
+            ).mockReturnValue(false);
+
+            await newStore().importAccount(newAccountImport());
+
+            const request = (BackendUtils.importAccount as jest.Mock).mock
+                .calls[0][0];
+            expect('birthday_height' in request).toBe(false);
+            expect(BackendUtils.getMyNodeInfo).not.toHaveBeenCalled();
+        });
     });
 });
