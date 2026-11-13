@@ -124,10 +124,54 @@ export const TEST_IDS = {
         addButton: 'mint.addButton'
     },
     settings: {
-        securityButton: 'settings.securityButton'
+        privacyButton: 'settings.privacyButton',
+        securityButton: 'settings.securityButton',
+        currencyButton: 'settings.currencyButton',
+        displayButton: 'settings.displayButton'
+    },
+    privacy: {
+        blockExplorerDropdown: 'privacy.blockExplorerDropdown',
+        customBlockExplorerInput: 'privacy.customBlockExplorerInput',
+        clipboardLabel: 'privacy.clipboardLabel',
+        clipboardSwitch: 'privacy.clipboardSwitch',
+        lurkerModeLabel: 'privacy.lurkerModeLabel',
+        lurkerModeSwitch: 'privacy.lurkerModeSwitch',
+        mempoolRatesSwitch: 'privacy.mempoolRatesSwitch',
+        mempoolInstanceDropdown: 'privacy.mempoolInstanceDropdown',
+        customMempoolInstanceInput: 'privacy.customMempoolInstanceInput'
+    },
+    display: {
+        themeDropdown: 'display.themeDropdown',
+        defaultViewDropdown: 'display.defaultViewDropdown',
+        displayNicknameSwitch: 'display.displayNicknameSwitch',
+        bigKeypadButtonsSwitch: 'display.bigKeypadButtonsSwitch',
+        showAllDecimalPlacesSwitch: 'display.showAllDecimalPlacesSwitch',
+        removeDecimalSpacesSwitch: 'display.removeDecimalSpacesSwitch',
+        showMillisatoshiAmountsSwitch: 'display.showMillisatoshiAmountsSwitch',
+        selectNodeOnStartupSwitch: 'display.selectNodeOnStartupSwitch',
+        dateTimeButton: 'display.dateTimeButton'
+    },
+    dateTime: {
+        dateFormatDropdown: 'dateTime.dateFormatDropdown',
+        timeFormatDropdown: 'dateTime.timeFormatDropdown',
+        showSecondsSwitch: 'dateTime.showSecondsSwitch'
+    },
+    currency: {
+        fiatSwitch: 'currency.fiatSwitch',
+        ratesSourceDropdown: 'currency.ratesSourceDropdown',
+        selectCurrencyRow: 'currency.selectCurrencyRow',
+        selectCurrencyLabel: 'currency.selectCurrencyLabel'
     },
     security: {
         option: (screenOrAction: string) => `security.option.${screenOrAction}`
+    },
+    setPassword: {
+        passwordInput: 'setPassword.passwordInput',
+        confirmInput: 'setPassword.confirmInput',
+        saveButton: 'setPassword.saveButton'
+    },
+    lockscreen: {
+        passwordInput: 'lockscreen.passwordInput'
     },
     seed: {
         understandButton: 'seed.understandButton',
