@@ -562,6 +562,19 @@ export default class LND {
             // keep pulling in responses until the socket closes
             let resp: any;
 
+            // settles with the chan_pending update that follows psbt_fund
+            // (the peer has signed the commitment), or with the error or
+            // close that ends the stream first. Resolved along with
+            // psbt_fund as chanPending
+            let resolvePending: (data: any) => void = () => {};
+            let rejectPending: (error: any) => void = () => {};
+            const chanPending = new Promise((res, rej) => {
+                resolvePending = res;
+                rejectPending = rej;
+            });
+            // nothing may wait on it
+            chanPending.catch(() => {});
+
             ws.addEventListener('open', () => {
                 // connection opened
                 ws.send(JSON.stringify(request)); // send a message
@@ -571,10 +584,12 @@ export default class LND {
                 // a message was received
                 const data = JSON.parse(e.data);
                 if (data?.result?.psbt_fund) {
-                    resolve(data);
+                    resolve({ ...data, chanPending });
                 } else if (data.error) {
                     reject(data.error);
+                    rejectPending(data.error);
                 } else {
+                    if (data?.result?.chan_pending) resolvePending(data);
                     resp = e.data;
                 }
             });
@@ -582,12 +597,17 @@ export default class LND {
             ws.addEventListener('error', (e: any) => {
                 const certWarning = localeString('backends.LND.wsReq.warning');
                 // an error occurred
-                reject(
-                    e.message ? `${certWarning} (${e.message})` : certWarning
-                );
+                const error = e.message
+                    ? `${certWarning} (${e.message})`
+                    : certWarning;
+                reject(error);
+                rejectPending(error);
             });
 
             ws.addEventListener('close', () => {
+                rejectPending(
+                    localeString('backends.LND.restReq.connectionError')
+                );
                 // connection closed; nothing catches what a listener throws,
                 // so don't parse a response that never came
                 if (resp === undefined) {

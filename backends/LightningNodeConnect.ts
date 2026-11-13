@@ -551,6 +551,19 @@ export default class LightningNodeConnect {
             requestId
         );
 
+        // settles with the chan_pending update that follows psbt_fund (the
+        // peer has signed the commitment), or with the error or end that
+        // ends the stream first. Resolved along with psbt_fund as
+        // chanPending, so the listener stays until then
+        let resolvePending: (data: any) => void = () => {};
+        let rejectPending: (error: any) => void = () => {};
+        const chanPending = new Promise((res, rej) => {
+            resolvePending = res;
+            rejectPending = rej;
+        });
+        // nothing may wait on it
+        chanPending.catch(() => {});
+
         const { LncModule } = NativeModules;
         const eventEmitter = new NativeEventEmitter(LncModule);
         return new Promise((resolve, reject) => {
@@ -558,13 +571,25 @@ export default class LightningNodeConnect {
                 streamingCall,
                 (event: any) => {
                     if (!isEventForRequest(event, requestId)) return;
-                    if (event.result && event.result !== 'EOF') {
+                    if (event.result === 'EOF') {
+                        rejectPending(
+                            new Error(
+                                localeString(
+                                    'backends.LND.restReq.connectionError'
+                                )
+                            )
+                        );
+                        listener.remove();
+                    } else if (event.result) {
                         let result;
                         try {
                             result = JSON.parse(event.result);
 
-                            resolve({ result });
-                            listener.remove();
+                            resolve({ result, chanPending });
+                            if (result?.chan_pending) {
+                                resolvePending({ result });
+                                listener.remove();
+                            }
                         } catch (e) {
                             try {
                                 result = JSON.parse(event);
@@ -573,6 +598,7 @@ export default class LightningNodeConnect {
                             }
 
                             reject(result);
+                            rejectPending(result);
                             listener.remove();
                         }
                     }

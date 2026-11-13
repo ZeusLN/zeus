@@ -607,7 +607,56 @@ describe('LND WebSocket calls whose socket closes', () => {
             })
         });
         expect(() => listeners.close()).not.toThrow();
-        await expect(outcome).resolves.toEqual(psbtFund);
+        await expect(outcome).resolves.toMatchObject(psbtFund);
+    });
+
+    // a batch publishes only once every earlier channel is pending (#5240)
+    describe('chanPending', () => {
+        const fundedOpen = async () => {
+            const outcome = lnd.openChannelStream({
+                node_pubkey_string: '02ab'
+            } as any) as Promise<any>;
+            listeners.message({ data: JSON.stringify(psbtFund) });
+            // wrapped, or the async function would wait for it
+            return { chanPending: (await outcome).chanPending };
+        };
+
+        it('resolves with the chan_pending update that follows psbt_fund', async () => {
+            const { chanPending } = await fundedOpen();
+            const update = {
+                result: { chan_pending: { txid: 'dHhpZA==', output_index: 1 } }
+            };
+            listeners.message({ data: JSON.stringify(update) });
+            listeners.close();
+            await expect(chanPending).resolves.toEqual(update);
+        });
+
+        it("rejects with the node's error when the peer fails before signing", async () => {
+            const { chanPending } = await fundedOpen();
+            listeners.message({
+                data: JSON.stringify({
+                    error: { message: 'remote canceled funding' }
+                })
+            });
+            listeners.close();
+            await expect(chanPending).rejects.toEqual({
+                message: 'remote canceled funding'
+            });
+        });
+
+        it('rejects when the socket closes before chan_pending', async () => {
+            const { chanPending } = await fundedOpen();
+            listeners.close();
+            await expect(chanPending).rejects.toBe(connectionError);
+        });
+
+        it('rejects when the socket fails before chan_pending', async () => {
+            const { chanPending } = await fundedOpen();
+            listeners.error({ message: 'reset' });
+            await expect(chanPending).rejects.toEqual(
+                expect.stringContaining('(reset)')
+            );
+        });
     });
 });
 
