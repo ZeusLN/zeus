@@ -168,7 +168,8 @@ describe('ChannelBackupStore', () => {
         // Wallet.fetchDataCore starts backups when the message equals
         // NO_BACKUP_FOUND, so it must match the server's reply exactly
         it('throws NO_BACKUP_FOUND when the server has no backup', async () => {
-            // the /api/recover reply in olympus-backups routes/backups.js
+            // the /api/recover reply in olympus-lnd-backups routes/backups.js,
+            // pinned there by its own test (see NO_BACKUP_FOUND)
             mockServer(
                 jsonResponse(200, { success: false, error: 'No backup found' })
             );
