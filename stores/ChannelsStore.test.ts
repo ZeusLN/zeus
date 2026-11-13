@@ -331,6 +331,52 @@ describe('ChannelsStore.closeChannel', () => {
         expectOneRefresh();
     });
 
+    describe('on LDK Node', () => {
+        const CHANNEL_POINT = { funding_txid_str: 'txid', output_index: '1' };
+
+        beforeEach(() => {
+            store = new ChannelsStore(
+                { implementation: 'ldk-node' } as any,
+                balanceStore as any
+            );
+        });
+
+        it('reports a close that fails after six seconds', async () => {
+            let reject: (error: Error) => void = () => {};
+            jest.mocked(BackendUtils.closeChannel).mockReturnValue(
+                new Promise((_, rej) => {
+                    reject = rej;
+                }) as any
+            );
+
+            const close = store.closeChannel(CHANNEL_POINT);
+            await jest.advanceTimersByTimeAsync(10_000);
+
+            expect(store.closingChannel).toBe(true);
+            expect(BackendUtils.getChannels).not.toHaveBeenCalled();
+
+            // the backend resolves on LDK's channelClosed event, which
+            // comes once the shutdown negotiation ends
+            reject(new Error('cooperative close became a force close'));
+            await close;
+
+            expect(store.closingChannel).toBe(false);
+            expect(store.closeChannelErr).toBe(
+                'cooperative close became a force close'
+            );
+            expectOneRefresh();
+        });
+
+        it('reloads channels and balances once the close succeeds', async () => {
+            jest.mocked(BackendUtils.closeChannel).mockResolvedValue({} as any);
+
+            await store.closeChannel(CHANNEL_POINT);
+
+            expectOneRefresh();
+            expect(store.closeChannelErr).toBeNull();
+        });
+    });
+
     describe('on LNC', () => {
         const CHANNEL_POINT = { funding_txid_str: 'txid', output_index: '1' };
 
