@@ -46,6 +46,23 @@ export const markNodeResponded = (
 export const isNodeResponse = (error: unknown): boolean =>
     (error as any)?.nodeResponded === true;
 
+// Tags an error whose message is the wallet's own reply, though the reply
+// may not settle whether the request went out (an NWC wallet answers a
+// routing failure and its own timeout with the same INTERNAL code). The
+// message says why a payment failed, so it can be shown for a failed
+// record, but unlike markNodeResponded this does not shorten tracking.
+// String rejections are wrapped so they can carry the tag.
+export const markWalletReplied = (error: unknown): unknown => {
+    const tagged = typeof error === 'string' ? new Error(error) : error;
+    if (tagged && typeof tagged === 'object') {
+        (tagged as any).walletReplied = true;
+    }
+    return tagged;
+};
+
+export const isWalletReply = (error: unknown): boolean =>
+    (error as any)?.walletReplied === true;
+
 // Tags an error thrown before a request went out at all (no session to the
 // node, Tor not running), so a caller knows the node never saw it. String
 // rejections are wrapped so they can carry the tag.

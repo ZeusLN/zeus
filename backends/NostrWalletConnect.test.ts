@@ -18,7 +18,9 @@ jest.mock('../stores/Stores', () => ({
     }
 }));
 
-import NostrWalletConnect from './NostrWalletConnect';
+import NostrWalletConnect, {
+    SDK_ERROR_MESSAGE_PREFIXES
+} from './NostrWalletConnect';
 
 const WALLET_PUBKEY = 'b'.repeat(64);
 const SECRET = 'a'.repeat(64);
@@ -557,7 +559,9 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         'UNAUTHORIZED',
         'RATE_LIMITED',
         'NOT_IMPLEMENTED',
-        'NOT_FOUND'
+        'NOT_FOUND',
+        'BAD_REQUEST',
+        'EXPIRED'
     ])('marks a %s reply as the wallet answering', async (code) => {
         const { backend, client } = await setup();
         client.payInvoice.mockRejectedValue(
@@ -569,24 +573,49 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         ).rejects.toMatchObject({ code, nodeResponded: true });
     });
 
-    // the SDK uses these codes for its own failures too, so the request
-    // may still have reached the wallet
-    it.each(['INTERNAL', 'OTHER'])(
-        'leaves a %s reply unmarked',
-        async (code) => {
+    // the SDK uses these codes for its own failures too, and a wallet may
+    // send them after its own timeout, so the request may still be in
+    // flight: the message is the wallet's, but it is not an answer
+    it.each([
+        ['INTERNAL', 'Failed to send payment: no route'],
+        ['OTHER', 'wallet error']
+    ])(
+        "marks a wallet's %s reply as a reply, not as an answer",
+        async (code, message) => {
             const { backend, client } = await setup();
             client.payInvoice.mockRejectedValue(
-                new Nip47WalletError('wallet error', code)
+                new Nip47WalletError(message, code)
             );
 
             const error: any = await backend
                 .payLightningInvoice({ payment_request: SPEC_INVOICE })
                 .catch((e: any) => e);
 
-            expect(error.code).toBe(code);
+            expect(error).toMatchObject({ code, message, walletReplied: true });
             expect(error.nodeResponded).toBeUndefined();
         }
     );
+
+    // the SDK's own failures carry these codes with fixed messages
+    it.each([
+        ['failed to deserialize response', 'INTERNAL'],
+        ['response from NWC failed validation: {}', 'INTERNAL'],
+        ['publish timeout: abc', 'INTERNAL'],
+        ['failed to publish: relay said no', 'INTERNAL'],
+        ['Failed to connect to wss://relay.example', 'OTHER']
+    ])('leaves the SDK error "%s" unmarked', async (message, code) => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError(message, code)
+        );
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error.walletReplied).toBeUndefined();
+        expect(error.nodeResponded).toBeUndefined();
+    });
 
     it('leaves a reply timeout unmarked', async () => {
         const { backend, client } = await setup();
@@ -600,6 +629,7 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
 
         expect(error).toBeInstanceOf(Nip47ReplyTimeoutError);
         expect(error.nodeResponded).toBeUndefined();
+        expect(error.walletReplied).toBeUndefined();
     });
 
     it('does not retry a failed payment', async () => {
@@ -900,4 +930,45 @@ describe('NostrWalletConnect capability flags', () => {
         );
         expect(flags.sort()).toEqual(Object.keys(expected).sort());
     });
+});
+
+// The wallet-reply classification relies on every error the SDK builds
+// itself starting with one of SDK_ERROR_MESSAGE_PREFIXES. Read the
+// installed SDK (both builds Metro may resolve) so an upgrade that adds or
+// rewords one fails here instead of passing the SDK's message off as the
+// wallet's.
+describe('SDK_ERROR_MESSAGE_PREFIXES', () => {
+    const fs = require('fs');
+    const path = require('path');
+    // the package's exports map does not expose package.json
+    const sdkDir = path.join(__dirname, '..', 'node_modules', '@getalby/sdk');
+
+    it.each(['dist/esm/index.js', 'dist/cjs/index.cjs'])(
+        'covers every error %s builds itself',
+        (file) => {
+            const source: string = fs.readFileSync(
+                path.join(sdkDir, file),
+                'utf8'
+            );
+            const constructed = [
+                ...source.matchAll(/new (Nip47(?!Wallet)\w*Error)\(\s*/g)
+            ];
+            // a vacuous pass would hide a renamed class
+            expect(constructed.length).toBeGreaterThanOrEqual(8);
+            for (const match of constructed) {
+                const rest = source.slice(match.index! + match[0].length);
+                const literal = /^(["'`])((?:\\.|(?!\1).)*)\1/.exec(rest);
+                // every message must start with a literal
+                expect([match[1], !!literal]).toEqual([match[1], true]);
+                const start = literal![2].split('${')[0];
+                expect([
+                    match[1],
+                    start,
+                    SDK_ERROR_MESSAGE_PREFIXES.some((prefix) =>
+                        start.startsWith(prefix)
+                    )
+                ]).toEqual([match[1], start, true]);
+            }
+        }
+    );
 });

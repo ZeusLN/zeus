@@ -57,6 +57,7 @@ import {
     markHttpStatus,
     markJsonRpcCode,
     markNodeResponded,
+    markWalletReplied,
     paymentLookupInconclusiveError
 } from '../utils/PaymentLookupUtils';
 import { lnrpc } from '../proto/lightning';
@@ -1244,6 +1245,107 @@ describe('TransactionsStore failed payment message after tracking', () => {
         expect(store.error_msg).toBe('error.sendingPayment');
         expect(store.payment_error).toBeNull();
     });
+
+    // Alby Hub sends a routing failure as INTERNAL, a code it also uses
+    // after its own timeout: the backend tags it as a reply, not as an
+    // answer
+    it("keeps an NWC wallet's INTERNAL reply for a failed record without a reason", async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markWalletReplied(
+                Object.assign(new Error('Failed to send payment: no route'), {
+                    code: 'INTERNAL'
+                })
+            )
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            failedRecord()
+        );
+
+        const store = newStore('nostr-wallet-connect');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(store.status).toBe('FAILED');
+        expect(store.error_msg).toBe('Failed to send payment: no route');
+        expect(store.payment_error).toBeNull();
+    });
+
+    it('holds the guard for repeated no-record answers after an INTERNAL wallet reply', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markWalletReplied(
+                Object.assign(new Error('Failed to send payment: timeout'), {
+                    code: 'INTERNAL'
+                })
+            )
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(null);
+
+        const store = newStore('nostr-wallet-connect');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        // the payment may still be in flight at the wallet
+        expect(store.paymentInFlight).toBe(true);
+        for (let i = 1; i < PAYMENT_TRACK_MAX_NOT_FOUND; i++) {
+            await advancePoll();
+        }
+        expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(
+            PAYMENT_TRACK_MAX_NOT_FOUND
+        );
+        expect(store.paymentInFlight).toBe(false);
+    });
+
+    // the generic-reason rule is LDK Node's alone: LND's
+    // FAILURE_REASON_ERROR is the node's own reason
+    it('shows the reason from an LND record with FAILURE_REASON_ERROR', async () => {
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markNodeResponded(new Error('payment failed'), 2)
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            failedRecord({ failure_reason: 'FAILURE_REASON_ERROR' })
+        );
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(store.status).toBe('FAILED');
+        expect(store.payment_error).toBe(
+            errorToUserFriendly('FAILURE_REASON_ERROR' as any)
+        );
+        expect(store.payment_error).toBeTruthy();
+        expect(store.error_msg).toBeNull();
+    });
+
+    // Tracking started from an in-flight send result has no rejection to
+    // keep. A record without a reason used to leave only the error title
+    // (or LDK Node's generic text) on screen.
+    it.each([
+        ['cln-rest', {}],
+        ['ldk-node', { failure_reason: 'FAILURE_REASON_ERROR' }],
+        ['nostr-wallet-connect', {}]
+    ])(
+        'shows a generic failure on %s when an in-flight send ends on a record without a reason',
+        async (implementation, record) => {
+            (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValue({
+                status: 'IN_FLIGHT',
+                payment_hash: HASH
+            });
+            (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+                failedRecord(record)
+            );
+
+            const store = newStore(implementation);
+            store.sendPayment({ payment_request: 'lnbc1fake' });
+            await flush();
+
+            expect(store.status).toBe('FAILED');
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('error.sendingPayment');
+            expect(store.payment_error).toBeNull();
+        }
+    );
 
     it('shows the reason from an LND record that has one', async () => {
         (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);

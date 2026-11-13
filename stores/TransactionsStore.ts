@@ -25,6 +25,7 @@ import {
     isNodeResponse,
     isPaymentLookupInconclusive,
     isPaymentRefusedAsDuplicate,
+    isWalletReply,
     paymentCreationTimeMs
 } from '../utils/PaymentLookupUtils';
 import { sleep } from '../utils/SleepUtils';
@@ -1570,15 +1571,16 @@ export default class TransactionsStore {
             // records a payment before dispatching it, so one no-record
             // answer shows it was never sent. A transport failure may
             // still deliver the request, so it needs repeated answers.
-            // The node's own message is kept for a record that only says
-            // the payment failed; a transport error is not.
+            // The node's or wallet's own message is kept for a record
+            // that only says the payment failed; a transport error is not.
             this.trackPaymentToTerminal(
                 seq,
                 Date.now(),
                 isNodeResponse(err) ? 1 : PAYMENT_TRACK_MAX_NOT_FOUND,
-                mayHaveBeenSent(err, this.settingsStore.implementation)
-                    ? undefined
-                    : message
+                !mayHaveBeenSent(err, this.settingsStore.implementation) ||
+                    isWalletReply(err)
+                    ? message
+                    : undefined
             );
         } else {
             this.clearPaymentInFlight(seq);

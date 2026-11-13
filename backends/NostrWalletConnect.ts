@@ -4,7 +4,10 @@ import BigNumber from 'bignumber.js';
 import { settingsStore } from '../stores/Stores';
 
 import Bolt11Utils from '../utils/Bolt11Utils';
-import { markNodeResponded } from '../utils/PaymentLookupUtils';
+import {
+    markNodeResponded,
+    markWalletReplied
+} from '../utils/PaymentLookupUtils';
 
 // NIP-47 error codes only a wallet's reply carries. The SDK's own failures
 // (reply and publish timeouts, relay and decoding errors) use INTERNAL or
@@ -20,8 +23,35 @@ const WALLET_ANSWER_CODES = [
     'UNAUTHORIZED',
     'RATE_LIMITED',
     'NOT_IMPLEMENTED',
-    'NOT_FOUND'
+    'NOT_FOUND',
+    // Alby Hub: an invoice it cannot decode, and an expired one
+    'BAD_REQUEST',
+    'EXPIRED'
 ];
+
+// How the SDK's own errors start (@getalby/sdk 9.0.0, NWCClient). An
+// INTERNAL or OTHER error with any other message is the wallet's reply:
+// Alby Hub, for one, sends every payment failure it has no code for,
+// routing failures included, as INTERNAL. NostrWalletConnect.test.ts
+// checks this list against the installed SDK.
+export const SDK_ERROR_MESSAGE_PREFIXES = [
+    'failed to deserialize response',
+    'response from NWC failed validation: ',
+    'reply timeout: event ',
+    'publish timeout: ',
+    'failed to publish: ',
+    'Failed to publish notification event',
+    'Failed to connect to ',
+    'no compatible encryption or version found between wallet and client'
+];
+
+const isSdkError = (error: any): boolean => {
+    const message = error?.message;
+    return (
+        typeof message !== 'string' ||
+        SDK_ERROR_MESSAGE_PREFIXES.some((prefix) => message.startsWith(prefix))
+    );
+};
 
 export default class NostrWalletConnect {
     nwc: any;
@@ -120,6 +150,15 @@ export default class NostrWalletConnect {
             // a node's rejection; see WALLET_ANSWER_CODES
             if (WALLET_ANSWER_CODES.includes(error?.code)) {
                 throw markNodeResponded(error);
+            }
+            // a wallet may also send these after its own timeout, so the
+            // request may still be in flight: keep its message, but leave
+            // tracking as for any other unknown outcome
+            if (
+                (error?.code === 'INTERNAL' || error?.code === 'OTHER') &&
+                !isSdkError(error)
+            ) {
+                throw markWalletReplied(error);
             }
             throw error;
         }
