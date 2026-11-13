@@ -271,7 +271,7 @@ export default class MultimintPayment extends React.Component<
                 onProgress: this.onProgressUpdate
             });
 
-            if (!payment || CashuStore!!.paymentError) {
+            if (!payment) {
                 this.setState({
                     step: MultinutPaymentStep.FAILED,
                     isProcessing: false,
@@ -287,12 +287,6 @@ export default class MultimintPayment extends React.Component<
                 isProcessing: false,
                 error: undefined
             });
-
-            this.paymentAmountSat =
-                CashuStore?.payReq?.getRequestAmount ||
-                Number(route.params?.paymentAmount || 0);
-            this.paymentHash =
-                CashuStore?.payReq?.payment_hash || this.paymentHash;
 
             // Send exactly what the coverage check in the constructor
             // counted, rather than deciding again here: re-reading the
