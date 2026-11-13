@@ -5,9 +5,9 @@ import {
     PrivacyMode
 } from '@branta-ops/branta';
 import { gcm } from '@noble/ciphers/aes';
-import { hmac } from '@noble/hashes/hmac';
-import { sha256 } from '@noble/hashes/sha256';
-import { randomBytes } from '@noble/hashes/utils';
+import { hmac } from '@noble/hashes/hmac.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { randomBytes } from '@noble/hashes/utils.js';
 // @ts-ignore: module resolution workaround for subpath export
 import { BrantaService } from '@branta-ops/branta/v2';
 
@@ -60,7 +60,11 @@ export default class BrantaStore {
             {
                 crypto: createNobleCryptoProvider({
                     sha256,
-                    hmac: (_hash, key, message) => hmac(sha256, key, message),
+                    hmac: (
+                        _hash: unknown,
+                        key: Uint8Array,
+                        message: Uint8Array
+                    ) => hmac(sha256, key, message),
                     gcm,
                     randomBytes
                 })
