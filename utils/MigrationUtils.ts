@@ -110,7 +110,7 @@ import Storage, {
     getRawItem,
     setRawLocalItem
 } from '../storage';
-import { deriveVerifier, hasVerifier } from './LockVerifierUtils';
+import { deriveVerifier } from './LockVerifierUtils';
 
 export const KEYCHAIN_DESYNC_KEY = 'keychain-desync-v1';
 const MOD_KEY_LOCK_VERIFIER = 'lock-verifier-hash-mod';
@@ -759,19 +759,21 @@ class MigrationsUtils {
         );
     }
 
-    // Hashes each plaintext credential into its verifier field (unless one
-    // already exists) and deletes the plaintext. In memory only; returns
-    // whether anything changed.
+    // Hashes each plaintext credential into its verifier field and deletes
+    // the plaintext. In memory only; returns whether anything changed.
     public async applyLockCredentialVerifiers(settings: any): Promise<boolean> {
         if (!settings) return false;
         let changed = false;
         for (const { plain, verifier } of LOCK_CREDENTIAL_FIELDS) {
             const value = settings[plain];
             if (typeof value === 'string' && value.length > 0) {
-                // don't clobber a verifier that already exists
-                if (!hasVerifier(settings[verifier])) {
-                    settings[verifier] = await deriveVerifier(value);
-                }
+                // The plaintext replaces a verifier that is already there.
+                // Only a build from before verifiers writes plaintext, and
+                // it keeps the verifier fields it does not know about, so
+                // the plaintext is the newer credential: a PIN set on
+                // v13.2.4 after a downgrade must win over the record
+                // written before it.
+                settings[verifier] = await deriveVerifier(value);
                 changed = true;
             }
             if (settings[plain] !== undefined) {

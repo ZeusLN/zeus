@@ -228,7 +228,7 @@ import MigrationUtils from './MigrationUtils';
 import { SETTINGS_VERSION } from './SettingsVersion';
 // resolves to the mocked ../stores/SettingsStore above
 import { DEFAULT_SETTINGS } from '../stores/SettingsStore';
-import { verifySecret } from './LockVerifierUtils';
+import { deriveVerifier, verifySecret } from './LockVerifierUtils';
 
 // Mock console logs to keep test output clean
 const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -2356,6 +2356,36 @@ describe('MigrationUtils', () => {
             expect(
                 await verifySecret('burn it', settings.duressPassphraseVerifier)
             ).toBe(true);
+        });
+
+        // v13.2.4 keeps verifier fields it does not know about, so a PIN set
+        // there after a downgrade sits next to the record written before it
+        it('replaces an existing verifier with the newer plaintext', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = {
+                pinVerifier: await deriveVerifier('1111'),
+                pin: '2222',
+                duressPinVerifier: await deriveVerifier('8888'),
+                duressPin: '9999'
+            };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(
+                settings,
+                true
+            );
+
+            expect(settings.pin).toBeUndefined();
+            expect(settings.duressPin).toBeUndefined();
+            expect(await verifySecret('2222', settings.pinVerifier)).toBe(true);
+            expect(await verifySecret('1111', settings.pinVerifier)).toBe(
+                false
+            );
+            expect(await verifySecret('9999', settings.duressPinVerifier)).toBe(
+                true
+            );
+            expect(await verifySecret('8888', settings.duressPinVerifier)).toBe(
+                false
+            );
         });
 
         it('outside the queue, routes plaintext through a queued update instead of persisting the snapshot', async () => {
