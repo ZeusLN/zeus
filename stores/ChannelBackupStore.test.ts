@@ -31,7 +31,8 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import ChannelBackupStore, {
     BACKUPS_HOST,
     LAST_CHANNEL_BACKUP_STATUS,
-    LAST_CHANNEL_BACKUP_TIME
+    LAST_CHANNEL_BACKUP_TIME,
+    NO_BACKUP_FOUND
 } from './ChannelBackupStore';
 import BackendUtils from '../utils/BackendUtils';
 import { exportAllChannelBackups } from '../lndmobile/channel';
@@ -160,6 +161,22 @@ describe('ChannelBackupStore', () => {
 
             await expect(store.recoverStaticChannelBackup()).rejects.toThrow(
                 message
+            );
+            expect(triggerRecovery).not.toHaveBeenCalled();
+        });
+
+        // Wallet.fetchDataCore starts backups when the message equals
+        // NO_BACKUP_FOUND, so it must match the server's reply exactly
+        it('throws NO_BACKUP_FOUND when the server has no backup', async () => {
+            // the /api/recover reply in olympus-backups routes/backups.js
+            mockServer(
+                jsonResponse(200, { success: false, error: 'No backup found' })
+            );
+            const store = createStore();
+            const triggerRecovery = jest.spyOn(store, 'triggerRecovery');
+
+            await expect(store.recoverStaticChannelBackup()).rejects.toThrow(
+                new Error(NO_BACKUP_FOUND)
             );
             expect(triggerRecovery).not.toHaveBeenCalled();
         });

@@ -145,6 +145,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             restartNeeded: jest.fn(),
             LinkingUtils,
             Storage: { getItem: async () => false, setItem: async () => {} },
+            NO_BACKUP_FOUND: 'No backup found',
             CHANNEL_MIGRATION_ACTIVE: 'test-migration-flag',
             IS_BACKED_UP_KEY: 'backup-complete-v2',
             processSharedQRImageFast: async () => null,
@@ -904,6 +905,35 @@ describe('recovery after a restore from seed', () => {
         ).toHaveBeenCalledTimes(1);
         expect(recoveryWalletDirs).toBeUndefined();
     });
+
+    it.each([
+        ['a backup was recovered', undefined, true],
+        ['the server has no backup', 'No backup found', true],
+        ['the recovery failed', 'Auth response status code: 503', false]
+    ])(
+        'a restored embedded LND wallet when %s',
+        async (_case, recoverError, backupsStart) => {
+            const { ChannelBackupStore, recoveryWalletDirs } = await run(
+                2,
+                {
+                    recovery: true,
+                    recoveryWalletDirs: ['c'],
+                    automaticDisasterRecoveryBackup: true
+                },
+                recoverError ? new Error(recoverError) : undefined
+            );
+
+            // after a failed recovery, the next launch tries again and
+            // nothing is uploaded that could replace the backup still to
+            // be recovered
+            expect(recoveryWalletDirs).toEqual(
+                backupsStart ? undefined : ['c']
+            );
+            expect(
+                ChannelBackupStore.initSubscribeChannelEvents
+            ).toHaveBeenCalledTimes(backupsStart ? 1 : 0);
+        }
+    );
 
     describe('flag written by a version without the wallet list', () => {
         it('is bound to the embedded LND wallet that connects first', async () => {
