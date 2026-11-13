@@ -1247,7 +1247,8 @@ describe('TransactionsStore releasePaymentInFlight', () => {
     it("clears loading when the released payment's send request is still open", async () => {
         const store = newStore('lnd');
         await startHungPayment(store);
-        expect(store.loading).toBe(true);
+        // already cleared when the node reported the payment in flight
+        expect(store.loading).toBe(false);
 
         expect(store.releasePaymentInFlight()).toBe(true);
         expect(store.loading).toBe(false);
@@ -1299,6 +1300,81 @@ describe('TransactionsStore releasePaymentInFlight', () => {
                 lookups
         ).toBe(1);
         expect(store.paymentInFlight).toBe(true);
+    });
+});
+
+describe('TransactionsStore send request still open at the backstop', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockReturnValue(true);
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    // embedded LND's sendPaymentV2Sync has no client timeout, so a held
+    // HTLC (e.g. a hold invoice) keeps the send request open
+    it('shows an embedded LND payment as in transit once tracking finds it in flight', async () => {
+        const send = deferred();
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            send.promise
+        );
+        // embedded LND statuses are numeric protobuf enums (1 = IN_FLIGHT)
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            status: 1,
+            payment_hash: HASH
+        });
+
+        const store = newStore('embedded-lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        expect(store.loading).toBe(true);
+
+        await jest.advanceTimersByTimeAsync((60 + 60) * 1000);
+        expect(store.loading).toBe(false);
+        expect(store.status).toBe('IN_FLIGHT');
+        expect(store.error).toBe(false);
+        // the guard stays with the tracker
+        expect(store.paymentInFlight).toBe(true);
+        expect(store.paymentInFlightConfirmed).toBe(true);
+
+        // another operation sharing the flag (e.g. an on-chain send) is
+        // left alone by later polls
+        store.loading = true;
+        await advancePoll();
+        expect(store.loading).toBe(true);
+        store.loading = false;
+
+        // the send request answering later still settles the screen
+        send.resolve({
+            status: 2,
+            payment_hash: HASH,
+            payment_preimage: 'deadbeef'
+        });
+        await flush();
+        // embedded LND's numeric SUCCEEDED, which SendingLightning accepts
+        expect(store.status).toBe(2);
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.loading).toBe(false);
+    });
+
+    it('keeps the sending view until the node reports the payment', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            new Promise(() => {})
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockReturnValue(
+            new Promise(() => {})
+        );
+
+        const store = newStore('embedded-lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await jest.advanceTimersByTimeAsync((60 + 60) * 1000);
+        expect(BackendUtils.lookupPayment).toHaveBeenCalled();
+        expect(store.loading).toBe(true);
+        expect(store.status).toBeNull();
     });
 });
 

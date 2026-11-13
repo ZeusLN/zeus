@@ -1260,6 +1260,18 @@ export default class TransactionsStore {
     @action
     private markPaymentInTransit = () => {
         this.clearPaymentError();
+        // the first time the node reports the payment while its send
+        // request is still open (the backstop handed it to tracking, e.g.
+        // embedded LND holding an HTLC), replace the sending view, which
+        // has no way out, with the in-transit one. Later polls leave
+        // `loading` alone: by then it may belong to another operation.
+        if (
+            !this.paymentInFlightConfirmed &&
+            this.inFlightOwnerSeq !== null &&
+            this.pendingSendSeqs.has(this.inFlightOwnerSeq)
+        ) {
+            this.loading = false;
+        }
         this.status = 'IN_FLIGHT';
         this.paymentInFlightConfirmed = true;
     };
