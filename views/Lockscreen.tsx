@@ -35,9 +35,9 @@ import { localeString } from '../utils/LocaleUtils';
 import { restartApp } from '../utils/RestartUtils';
 import {
     verifySecret,
+    getLockMethod,
     getLockVerifier,
     getPlaintextCredential,
-    hasLockCredential,
     resolveLoginVerifiers
 } from '../utils/LockVerifierUtils';
 import {
@@ -302,11 +302,11 @@ export default class Lockscreen extends React.Component<
         }
 
         // A credential the verifier migration has not hashed yet still
-        // selects its method; onAttemptLogIn hashes it in memory
-        if (hasLockCredential(settings, 'passphrase')) {
-            this.setState({ authMethod: 'passphrase' });
-        } else if (hasLockCredential(settings, 'pin')) {
-            this.setState({ authMethod: 'pin' });
+        // selects its method (onAttemptLogIn hashes it in memory), and wins
+        // over the other method's records from before a downgrade
+        const lockMethod = getLockMethod(settings);
+        if (lockMethod) {
+            this.setState({ authMethod: lockMethod });
         } else if (settings && settings.nodes && settings?.nodes?.length > 0) {
             this.proceed(pendingNavigation?.screen, pendingNavigation?.params);
         } else {

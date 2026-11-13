@@ -176,6 +176,21 @@ export const hasLockCredential = (
     !!getPlaintextCredential(settings, field);
 
 /**
+ * The lock method the app asks for, or null without a lock. A plaintext
+ * credential comes first: builds from before verifiers set a PIN or a
+ * passphrase only when neither is set, so one in plaintext is the newer
+ * lock (set there after a downgrade) and the other method's records are
+ * from before it. The passphrase comes first, as in those builds.
+ */
+export const getLockMethod = (settings: any): 'passphrase' | 'pin' | null => {
+    if (getPlaintextCredential(settings, 'passphrase')) return 'passphrase';
+    if (getPlaintextCredential(settings, 'pin')) return 'pin';
+    if (getLockVerifier(settings, 'passphrase')) return 'passphrase';
+    if (getLockVerifier(settings, 'pin')) return 'pin';
+    return null;
+};
+
+/**
  * Whether `secret` matches a configured credential, hashed or not, for the
  * Set* screens' check that a duress credential differs from the primary.
  * A plaintext credential the migration has not hashed yet is compared

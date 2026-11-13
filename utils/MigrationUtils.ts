@@ -110,7 +110,7 @@ import Storage, {
     getRawItem,
     setRawLocalItem
 } from '../storage';
-import { deriveVerifier } from './LockVerifierUtils';
+import { deriveVerifier, getPlaintextCredential } from './LockVerifierUtils';
 
 export const KEYCHAIN_DESYNC_KEY = 'keychain-desync-v1';
 const MOD_KEY_LOCK_VERIFIER = 'lock-verifier-hash-mod';
@@ -764,6 +764,24 @@ class MigrationsUtils {
     public async applyLockCredentialVerifiers(settings: any): Promise<boolean> {
         if (!settings) return false;
         let changed = false;
+        // Those builds set a PIN or a passphrase only when neither is set,
+        // so a plaintext PIN without a plaintext passphrase (or the
+        // reverse) is a lock set there after a downgrade, and the other
+        // method's verifiers are from before it: an RC passphrase must not
+        // stay the lock over a PIN set on v13.2.4
+        const pinSet = !!getPlaintextCredential(settings, 'pin');
+        const passphraseSet = !!getPlaintextCredential(settings, 'passphrase');
+        if (pinSet !== passphraseSet) {
+            const stale = pinSet
+                ? ['passphraseVerifier', 'duressPassphraseVerifier']
+                : ['pinVerifier', 'duressPinVerifier'];
+            for (const key of stale) {
+                if (settings[key] !== undefined) {
+                    delete settings[key];
+                    changed = true;
+                }
+            }
+        }
         for (const { plain, verifier } of LOCK_CREDENTIAL_FIELDS) {
             const value = settings[plain];
             if (typeof value === 'string' && value.length > 0) {

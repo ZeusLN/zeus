@@ -157,14 +157,27 @@ const renderLockscreen = async (
         popTo: jest.fn(),
         replace: jest.fn()
     };
+    const ref = React.createRef<any>();
     const { unmount } = await render(
         <Lockscreen
+            ref={ref}
             SettingsStore={SettingsStore as any}
             navigation={navigation as any}
             route={{ params } as any}
         />
     );
-    return { SettingsStore, navigation, unmount };
+    return { SettingsStore, navigation, unmount, lockscreen: ref };
+};
+
+// the TextInput mock renders nothing, so a passphrase is entered through
+// the component
+const submitPassphrase = async (lockscreen: any, passphrase: string) => {
+    await act(async () => {
+        lockscreen.current.setState({ passphraseAttempt: passphrase });
+    });
+    await act(async () => {
+        await lockscreen.current.onAttemptLogIn();
+    });
 };
 
 const submitPin = () =>
@@ -568,6 +581,133 @@ describe('Lockscreen with a credential still in plaintext', () => {
         expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
         expect(navigation.pop).not.toHaveBeenCalled();
         derive.mockRestore();
+    });
+});
+
+// A PIN or passphrase set on v13.2.4 after a downgrade can change the
+// method: that build offers both when neither is set in plaintext
+describe('Lockscreen after a downgrade changed the lock method', () => {
+    it('asks for the PIN set on an older build, not the passphrase from before the downgrade', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier('old passphrase'),
+            pin: PIN
+        };
+        const { navigation } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        await submitPin();
+        await untilCalled(navigation.pop);
+    });
+
+    it('asks for the passphrase set on an older build, not the PIN from before the downgrade', async () => {
+        const saved: any = {
+            pinVerifier,
+            duressPinVerifier: await deriveVerifier(DURESS_PIN),
+            passphrase: 'new passphrase'
+        };
+        const { navigation, lockscreen } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        expect(screen.queryByRole('button', { name: 'Submit PIN' })).toBeNull();
+        await submitPassphrase(lockscreen, 'new passphrase');
+        expect(navigation.pop).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('Lockscreen with a passphrase', () => {
+    const PASSPHRASE = 'open sesame';
+    const DURESS_PASSPHRASE = 'burn';
+
+    it.each([
+        ['in plaintext', async () => ({ passphrase: PASSPHRASE })],
+        [
+            'stored as a verifier',
+            async () => ({
+                passphraseVerifier: await deriveVerifier(PASSPHRASE)
+            })
+        ]
+    ])('unlocks with the passphrase %s', async (_, makeSettings) => {
+        const saved: any = await makeSettings();
+        const { navigation, lockscreen } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        await submitPassphrase(lockscreen, PASSPHRASE);
+
+        expect(navigation.pop).toHaveBeenCalledTimes(1);
+        expect(saved.authenticationAttempts).toBe(0);
+    });
+
+    it.each([
+        ['in plaintext', async () => ({ passphrase: PASSPHRASE })],
+        [
+            'stored as a verifier',
+            async () => ({
+                passphraseVerifier: await deriveVerifier(PASSPHRASE)
+            })
+        ]
+    ])('counts a wrong passphrase %s', async (_, makeSettings) => {
+        const saved: any = await makeSettings();
+        const { navigation, lockscreen } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        await submitPassphrase(lockscreen, 'wrong');
+
+        expect(saved.authenticationAttempts).toBe(1);
+        expect(navigation.pop).not.toHaveBeenCalled();
+        expect(clearAllData).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        [
+            'in plaintext',
+            async () => ({
+                passphrase: PASSPHRASE,
+                duressPassphrase: DURESS_PASSPHRASE
+            })
+        ],
+        [
+            'stored as verifiers',
+            async () => ({
+                passphraseVerifier: await deriveVerifier(PASSPHRASE),
+                duressPassphraseVerifier: await deriveVerifier(
+                    DURESS_PASSPHRASE
+                )
+            })
+        ]
+    ])('wipes for the duress passphrase %s', async (_, makeSettings) => {
+        const saved: any = await makeSettings();
+        const { SettingsStore, lockscreen } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        await submitPassphrase(lockscreen, DURESS_PASSPHRASE);
+
+        expect(markWipePending).toHaveBeenCalledTimes(1);
+        expect(clearAllData).toHaveBeenCalledTimes(1);
+        expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
+    });
+
+    it('does not ask for a passphrase an older build deleted', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier(PASSPHRASE),
+            passphrase: '',
+            nodes: [{}]
+        };
+        const { navigation } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        expect(navigation.pop).toHaveBeenCalledTimes(1);
     });
 });
 
@@ -980,10 +1120,23 @@ describe('Lockscreen delete handlers', () => {
     };
 
     it.each([
-        ['deletePin', ['pinVerifier', 'duressPinVerifier']],
-        ['deleteDuressPin', ['duressPinVerifier']],
-        ['deletePassword', ['passphraseVerifier', 'duressPassphraseVerifier']],
-        ['deleteDuressPassword', ['duressPassphraseVerifier']]
+        // with the plaintext fields: a delete that left them while the
+        // verifier migration has not landed would keep the app locked
+        ['deletePin', ['pinVerifier', 'duressPinVerifier', 'pin', 'duressPin']],
+        ['deleteDuressPin', ['duressPinVerifier', 'duressPin']],
+        [
+            'deletePassword',
+            [
+                'passphraseVerifier',
+                'duressPassphraseVerifier',
+                'passphrase',
+                'duressPassphrase'
+            ]
+        ],
+        [
+            'deleteDuressPassword',
+            ['duressPassphraseVerifier', 'duressPassphrase']
+        ]
     ])('%s clears %j', async (handler, verifierKeys) => {
         const { lockscreen, updateSettings, navigation } =
             await renderForDelete();

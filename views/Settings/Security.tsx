@@ -13,7 +13,10 @@ import SettingsStore, { Settings } from '../../stores/SettingsStore';
 import ModalStore from '../../stores/ModalStore';
 
 import { verifyBiometry } from '../../utils/BiometricUtils';
-import { hasLockCredential } from '../../utils/LockVerifierUtils';
+import {
+    getLockMethod,
+    hasLockCredential
+} from '../../utils/LockVerifierUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -53,10 +56,12 @@ const buildSecurityItems = (
         | 'duressPin'
     >
 ): SecurityItem[] => {
-    // A verifier record, or a plaintext credential the migration has not
-    // hashed yet (see hasLockCredential)
-    const passphraseSet = hasLockCredential(settings, 'passphrase');
-    const pinSet = hasLockCredential(settings, 'pin');
+    // the method the Lockscreen asks for (see getLockMethod), so the rows
+    // match the lock even with the other method's records from before a
+    // downgrade
+    const lockMethod = getLockMethod(settings);
+    const passphraseSet = lockMethod === 'passphrase';
+    const pinSet = lockMethod === 'pin';
     // Three cases:
     // 1) If no passphrase or pin is set, allow user to set passphrase or pin
     // 2) If passphrase is set, allow user to change passphrase or set/change duress passphrase
@@ -139,8 +144,8 @@ const deriveStateFromSettings = (
     scramblePin: settings.scramblePin ?? true,
     loginBackground: settings.loginBackground ?? false,
     displaySecurityItems: buildSecurityItems(settings),
-    pinExists: hasLockCredential(settings, 'pin'),
-    passphraseExists: hasLockCredential(settings, 'passphrase'),
+    pinExists: getLockMethod(settings) === 'pin',
+    passphraseExists: getLockMethod(settings) === 'passphrase',
     supportedBiometryType:
         biometrics?.supportedBiometryType ?? settings.supportedBiometryType,
     isBiometryEnabled:

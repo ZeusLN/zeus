@@ -2412,6 +2412,62 @@ describe('MigrationUtils', () => {
             ).toBe(true);
         });
 
+        // v13.2.4 sets a PIN or a passphrase only when neither is set in
+        // plaintext, so one set there after a downgrade can change the
+        // method; the other method's records are from before it
+        it('drops the passphrase records when a plaintext PIN is present', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = {
+                passphraseVerifier: await deriveVerifier('old passphrase'),
+                duressPassphraseVerifier: await deriveVerifier('old duress'),
+                pin: '2222'
+            };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(
+                settings,
+                true
+            );
+
+            expect(Object.keys(settings)).toEqual(['pinVerifier']);
+            expect(await verifySecret('2222', settings.pinVerifier)).toBe(true);
+        });
+
+        it('drops the PIN records when a plaintext passphrase is present', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = {
+                pinVerifier: await deriveVerifier('1111'),
+                duressPinVerifier: await deriveVerifier('8888'),
+                passphrase: 'new passphrase'
+            };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(
+                settings,
+                true
+            );
+
+            expect(Object.keys(settings)).toEqual(['passphraseVerifier']);
+        });
+
+        // the same method's duress verifier stays: one written by this
+        // build next to a PIN still in plaintext has the same shape
+        it('keeps the duress verifier of the method a plaintext PIN belongs to', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const duressPinVerifier = await deriveVerifier('8888');
+            const settings: any = {
+                pinVerifier: await deriveVerifier('1111'),
+                duressPinVerifier,
+                pin: '2222'
+            };
+
+            await MigrationUtils.migrateLockCredentialsToVerifiers(
+                settings,
+                true
+            );
+
+            expect(settings.duressPinVerifier).toBe(duressPinVerifier);
+            expect(await verifySecret('2222', settings.pinVerifier)).toBe(true);
+        });
+
         it('drops only the duress verifier when only the duress PIN was emptied', async () => {
             EncryptedStorage.getItem.mockResolvedValue('true');
             const pinVerifier = await deriveVerifier('1111');

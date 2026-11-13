@@ -137,3 +137,32 @@ describe.each(SCREENS)(
         });
     }
 );
+
+describe('SetDuressPassword deleteDuressPassword', () => {
+    it('clears the duress passphrase verifier and any plaintext', async () => {
+        const ref = React.createRef<any>();
+        const updateSettings = jest.fn(async () => ({}));
+        await render(
+            <SetDuressPassword
+                ref={ref}
+                SettingsStore={
+                    {
+                        settings: {},
+                        getSettings: jest.fn(async () => ({})),
+                        updateSettings
+                    } as any
+                }
+                navigation={{ popTo: jest.fn() } as any}
+            />
+        );
+
+        await act(async () => {
+            await ref.current.deleteDuressPassword();
+        });
+
+        const patch: any = (updateSettings.mock.calls[0] as any[])[0];
+        for (const key of ['duressPassphraseVerifier', 'duressPassphrase']) {
+            expect(key in patch && patch[key] === undefined).toBe(true);
+        }
+    });
+});

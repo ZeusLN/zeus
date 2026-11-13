@@ -12,6 +12,7 @@ import {
     verifySecret,
     hasVerifier,
     getDummyVerifier,
+    getLockMethod,
     getLockVerifier,
     getPlaintextCredential,
     hasLockCredential,
@@ -367,6 +368,30 @@ describe('LockVerifierUtils', () => {
                 getLockVerifier({ pinVerifier: { salt: '', hash: '' } }, 'pin')
             ).toBeUndefined();
             expect(getLockVerifier(undefined, 'pin')).toBeUndefined();
+        });
+    });
+
+    describe('getLockMethod', () => {
+        it('prefers a plaintext credential, the passphrase first, then the records', async () => {
+            const record = await deriveVerifier('1234', salt);
+            expect(getLockMethod({ passphraseVerifier: record })).toBe(
+                'passphrase'
+            );
+            expect(getLockMethod({ pinVerifier: record })).toBe('pin');
+            // set on an older build after a downgrade
+            expect(
+                getLockMethod({ passphraseVerifier: record, pin: '2222' })
+            ).toBe('pin');
+            expect(
+                getLockMethod({ pinVerifier: record, passphrase: 'new' })
+            ).toBe('passphrase');
+            expect(getLockMethod({ pin: '1', passphrase: 'p' })).toBe(
+                'passphrase'
+            );
+            // deleted by an older build
+            expect(getLockMethod({ pinVerifier: record, pin: '' })).toBeNull();
+            expect(getLockMethod({})).toBeNull();
+            expect(getLockMethod(undefined)).toBeNull();
         });
     });
 
