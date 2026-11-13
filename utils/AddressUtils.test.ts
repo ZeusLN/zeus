@@ -100,6 +100,18 @@ describe('AddressUtils', () => {
     });
 
     describe('processBIP21Uri', () => {
+        it('ignores whitespace before the bitcoin: scheme', () => {
+            // the swap QR scanners pass the raw scan without trimming
+            expect(
+                AddressUtils.processBIP21Uri(
+                    '\n bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            });
+        });
+
         it('processes all BIP-21 URI variations', () => {
             // with fee
             expect(
@@ -265,6 +277,33 @@ describe('AddressUtils', () => {
                 value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
                 clinkNoffer:
                     'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
+            });
+        });
+    });
+
+    describe('processBIP21Uri scheme handling', () => {
+        it('accepts the bitcoin: scheme in any case', () => {
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'Bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            });
+        });
+
+        it('only treats bitcoin: as a scheme at the start of the input', () => {
+            const embedded =
+                'https://example.com/pay?uri=bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003';
+            expect(AddressUtils.processBIP21Uri(embedded)).toEqual({
+                value: embedded
+            });
+
+            const prefixed =
+                'note bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu';
+            expect(AddressUtils.processBIP21Uri(prefixed)).toEqual({
+                value: prefixed
             });
         });
     });
