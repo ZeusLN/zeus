@@ -78,6 +78,15 @@ export default class LightningAddressStore {
     @observable public paid: any = [];
     @observable public minimumSats: number;
     @observable public socket: any;
+    // Set from prepareToAutomaticallyAcceptCashu until the socket is
+    // assigned, so a second call during the auth request opens no other
+    private socketPending: boolean = false;
+    // Bumped by reset(): a socket or Redeem All started before it belongs
+    // to the previous wallet and stops at its next step
+    private generation: number = 0;
+    // Redeems in flight by quote id (socket event, Redeem All, a tap on
+    // a payment)
+    private redeemingQuotes = new Map<string, Promise<boolean>>();
     // Push
     @observable public currentDeviceToken: string;
     @observable public serviceDeviceToken: string;
@@ -560,8 +569,47 @@ export default class LightningAddressStore {
         });
     };
 
+    public redeemCashu = (
+        quote_id: string,
+        mint_url: string,
+        amount_msat: number,
+        skipStatus?: boolean,
+        localNotification?: boolean,
+        skipMintCheck?: boolean
+    ): Promise<boolean> => {
+        // The socket event and Redeem All can name the same quote; the
+        // second caller waits for the redeem in flight and gets its result
+        const inFlight = this.redeemingQuotes.get(quote_id);
+        if (inFlight) {
+            const generation = this.generation;
+            return inFlight.then((redeemed) => {
+                // the redeem in flight may be a socket event's, which shows
+                // no alert, so show its mint rejection to this caller
+                if (redeemed === false && generation === this.generation) {
+                    this.rejectUntrustedMint(localNotification);
+                }
+                return redeemed;
+            });
+        }
+        const redeem = this.redeemQuote(
+            quote_id,
+            mint_url,
+            amount_msat,
+            skipStatus,
+            localNotification,
+            skipMintCheck
+        ).finally(() => {
+            // after a reset the quote may belong to a newer redeem
+            if (this.redeemingQuotes.get(quote_id) === redeem) {
+                this.redeemingQuotes.delete(quote_id);
+            }
+        });
+        this.redeemingQuotes.set(quote_id, redeem);
+        return redeem;
+    };
+
     @action
-    public redeemCashu = async (
+    private redeemQuote = async (
         quote_id: string,
         mint_url: string,
         amount_msat: number,
@@ -775,6 +823,7 @@ export default class LightningAddressStore {
 
     @action
     public redeemAllOpenPaymentsCashu = async (localNotification?: boolean) => {
+        const generation = this.generation;
         this.redeemingAll = true;
         // Each redeemCashu call clears the error first, so a mint rejection
         // would be wiped by the next payment. redeemCashu only returns
@@ -786,6 +835,7 @@ export default class LightningAddressStore {
             const totalPayments = openPaymentsToProcess.length;
 
             for (let i = 0; i < totalPayments; i++) {
+                if (generation !== this.generation) break;
                 const item = openPaymentsToProcess[i];
                 const isLast = i === totalPayments - 1; // True if this is the last item
 
@@ -806,18 +856,33 @@ export default class LightningAddressStore {
                 }
             }
         } finally {
-            if (rejected) this.rejectUntrustedMint(localNotification);
-            runInAction(() => {
-                this.status(true).catch((e) =>
-                    console.log('Error fetching Lightning address status', e)
-                );
-                this.redeemingAll = false;
-            });
+            // after a reset, the next wallet's state is not this run's to
+            // report on or clear
+            if (generation === this.generation) {
+                if (rejected) this.rejectUntrustedMint(localNotification);
+                runInAction(() => {
+                    this.status(true).catch((e) =>
+                        console.log(
+                            'Error fetching Lightning address status',
+                            e
+                        )
+                    );
+                    this.redeemingAll = false;
+                });
+            }
         }
     };
 
     private subscribeUpdatesCashu = async () => {
-        const { verification, signature } = await this.getAuthData();
+        const generation = this.generation;
+        let auth: Auth;
+        try {
+            auth = await this.getAuthData();
+        } finally {
+            if (generation === this.generation) this.socketPending = false;
+        }
+        if (generation !== this.generation) return;
+        const { verification, signature } = auth;
 
         this.socket = io(LNURL_HOST, {
             path: LNURL_SOCKET_PATH
@@ -829,6 +894,7 @@ export default class LightningAddressStore {
         });
 
         this.socket.on('paid', (data: any) => {
+            if (generation !== this.generation) return;
             const { quote_id, mint_url, amount_msat } = data;
             this.redeemCashu(
                 quote_id,
@@ -843,7 +909,12 @@ export default class LightningAddressStore {
     };
 
     public prepareToAutomaticallyAcceptCashu = () => {
-        if (this.socket && this.socket.connected) return;
+        // socket.io's `active` stays true while the socket connects or
+        // reconnects, so a socket that is still connecting counts as open.
+        // It turns false when the server ends the session, which socket.io
+        // does not recover from, and a new socket is opened then.
+        if (this.socket?.active || this.socketPending) return;
+        this.socketPending = true;
         this.redeemAllOpenPaymentsCashu(true).catch((e) =>
             console.log('Error redeeming payments', e)
         );
@@ -863,6 +934,12 @@ export default class LightningAddressStore {
         // reject calls with 'invalid signature'
         this.auth = undefined;
         this.authDate = undefined;
+        this.generation += 1;
+        this.socketPending = false;
+        // a redeem still running belongs to the previous connection, so
+        // the next one does not wait for it
+        this.redeemingQuotes.clear();
+        this.redeemingAll = false;
         if (this.socket) this.socket.disconnect();
         this.socket = undefined;
         this.lightningAddress = '';
