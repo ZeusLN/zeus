@@ -76,3 +76,50 @@ export function verifyWrappedInvoice(
 
     return { valid: true };
 }
+
+export type OrderInvoiceError =
+    | 'decode_failure'
+    | 'order_total_invalid'
+    | 'amount_missing'
+    | 'amount_mismatch';
+
+export interface OrderInvoiceCheck {
+    valid: boolean;
+    error?: OrderInvoiceError;
+}
+
+/**
+ * Verifies an LSPS1/LSPS7 order invoice against the order total the LSP
+ * returned alongside it. Both come from the LSP, so this cannot catch an
+ * LSP that quotes a high total; it stops the screen from showing one
+ * amount while the invoice asks for another. LSPS1/LSPS7 orders carry no
+ * separate payment hash, so there is nothing else to bind the invoice to.
+ */
+export function verifyOrderInvoice(
+    bolt11: string,
+    orderTotalSat: string | number | undefined
+): OrderInvoiceCheck {
+    // LSPS1 encodes sat amounts as decimal strings; accept plain numbers too
+    if (!/^[1-9]\d*$/.test(String(orderTotalSat ?? ''))) {
+        return { valid: false, error: 'order_total_invalid' };
+    }
+    const totalSat = new BigNumber(String(orderTotalSat));
+
+    let decoded;
+    try {
+        decoded = Bolt11Utils.decode(bolt11);
+    } catch (e) {
+        return { valid: false, error: 'decode_failure' };
+    }
+
+    // an amountless invoice lets the payer's wallet pick any amount
+    if (decoded.millisatoshis == null) {
+        return { valid: false, error: 'amount_missing' };
+    }
+
+    if (!new BigNumber(decoded.millisatoshis).eq(totalSat.times(1000))) {
+        return { valid: false, error: 'amount_mismatch' };
+    }
+
+    return { valid: true };
+}
