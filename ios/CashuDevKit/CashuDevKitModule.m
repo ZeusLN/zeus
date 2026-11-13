@@ -199,4 +199,9 @@ RCT_EXTERN_METHOD(removeProofs:(NSString *)proofsYJson
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+// Diagnostics logging
+RCT_EXTERN_METHOD(tailCashuLog:(nonnull NSNumber *)numLines
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end
