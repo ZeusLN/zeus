@@ -4,6 +4,24 @@ import BigNumber from 'bignumber.js';
 import { settingsStore } from '../stores/Stores';
 
 import Bolt11Utils from '../utils/Bolt11Utils';
+import { markNodeResponded } from '../utils/PaymentLookupUtils';
+
+// NIP-47 error codes only a wallet's reply carries. The SDK's own failures
+// (reply and publish timeouts, relay and decoding errors) use INTERNAL or
+// OTHER, which a wallet may also send, so those stay unmarked: the request
+// may still have reached the wallet. Matched by code because instanceof
+// on the SDK's Error subclasses is unreliable under Babel's class
+// transform.
+const WALLET_ANSWER_CODES = [
+    'PAYMENT_FAILED',
+    'INSUFFICIENT_BALANCE',
+    'QUOTA_EXCEEDED',
+    'RESTRICTED',
+    'UNAUTHORIZED',
+    'RATE_LIMITED',
+    'NOT_IMPLEMENTED',
+    'NOT_FOUND'
+];
 
 export default class NostrWalletConnect {
     nwc: any;
@@ -94,8 +112,18 @@ export default class NostrWalletConnect {
         );
         return { payments };
     };
-    payLightningInvoice = async (data: any) =>
-        await this.nwc.sendPayment(data.payment_request);
+    payLightningInvoice = async (data: any) => {
+        try {
+            return await this.nwc.sendPayment(data.payment_request);
+        } catch (error: any) {
+            // the wallet's error reply is its answer to the request, like
+            // a node's rejection; see WALLET_ANSWER_CODES
+            if (WALLET_ANSWER_CODES.includes(error?.code)) {
+                throw markNodeResponded(error);
+            }
+            throw error;
+        }
+    };
     decodePaymentRequest = (urlParams?: Array<string>) =>
         Promise.resolve().then(() =>
             Bolt11Utils.decode((urlParams && urlParams[0]) || '')

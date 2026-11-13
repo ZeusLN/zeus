@@ -547,6 +547,61 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         await expect(promise).rejects.toBeInstanceOf(Nip47ReplyTimeoutError);
     });
 
+    // the wallet's reply is its answer, like a node's rejection, so the
+    // tracker can rely on one no-record lookup and keep its message
+    it.each([
+        'PAYMENT_FAILED',
+        'INSUFFICIENT_BALANCE',
+        'QUOTA_EXCEEDED',
+        'RESTRICTED',
+        'UNAUTHORIZED',
+        'RATE_LIMITED',
+        'NOT_IMPLEMENTED',
+        'NOT_FOUND'
+    ])('marks a %s reply as the wallet answering', async (code) => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError('wallet said no', code)
+        );
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).rejects.toMatchObject({ code, nodeResponded: true });
+    });
+
+    // the SDK uses these codes for its own failures too, so the request
+    // may still have reached the wallet
+    it.each(['INTERNAL', 'OTHER'])(
+        'leaves a %s reply unmarked',
+        async (code) => {
+            const { backend, client } = await setup();
+            client.payInvoice.mockRejectedValue(
+                new Nip47WalletError('wallet error', code)
+            );
+
+            const error: any = await backend
+                .payLightningInvoice({ payment_request: SPEC_INVOICE })
+                .catch((e: any) => e);
+
+            expect(error.code).toBe(code);
+            expect(error.nodeResponded).toBeUndefined();
+        }
+    );
+
+    it('leaves a reply timeout unmarked', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47ReplyTimeoutError('reply timeout: event abc', 'INTERNAL')
+        );
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error).toBeInstanceOf(Nip47ReplyTimeoutError);
+        expect(error.nodeResponded).toBeUndefined();
+    });
+
     it('does not retry a failed payment', async () => {
         const { backend, client } = await setup();
         client.payInvoice.mockRejectedValue(
