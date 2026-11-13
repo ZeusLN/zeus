@@ -52,7 +52,10 @@ import TransactionsStore, {
 } from './TransactionsStore';
 import BackendUtils from '../utils/BackendUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 import {
+    markHttpStatus,
+    markJsonRpcCode,
     markNodeResponded,
     paymentLookupInconclusiveError
 } from '../utils/PaymentLookupUtils';
@@ -1114,6 +1117,199 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
             (BackendUtils.lookupPayment as jest.Mock).mock.calls.length
         ).toBeLessThanOrEqual(calls + 1);
         expect(store.paymentInFlight).toBe(false);
+    });
+});
+
+// A rejected send starts tracking, and the lookup then finds the failed
+// record. Core Lightning and NWC records carry no failure reason, and LDK
+// Node reports every failure as FAILURE_REASON_ERROR, so the node's own
+// rejection is the only text that says why the payment failed.
+describe('TransactionsStore failed payment message after tracking', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockReturnValue(true);
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(false);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    const failedRecord = (overrides: any = {}) => ({
+        status: 'FAILED',
+        payment_hash: HASH,
+        ...overrides
+    });
+
+    it('keeps the Core Lightning rejection when listpays has no reason', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markJsonRpcCode(
+                markHttpStatus(new Error('Failed after 4 attempts'), 500),
+                { code: 210, message: 'Failed after 4 attempts' }
+            )
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            failedRecord()
+        );
+
+        const store = newStore('cln-rest');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(BackendUtils.lookupPayment).toHaveBeenCalled();
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe('FAILED');
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('Failed after 4 attempts');
+        expect(store.payment_error).toBeNull();
+    });
+
+    it("keeps LDK Node's rejection over its generic FAILURE_REASON_ERROR", async () => {
+        const rejection = new Error('RouteNotFound');
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            rejection
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            failedRecord({ failure_reason: 'FAILURE_REASON_ERROR' })
+        );
+
+        const store = newStore('ldk-node');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(store.status).toBe('FAILED');
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe(errorToUserFriendly(rejection));
+        expect(store.payment_error).toBeNull();
+    });
+
+    it("keeps an NWC wallet's error reply when lookup_invoice has no reason", async () => {
+        // the backend tags a wallet's error reply as the node's answer
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markNodeResponded(
+                Object.assign(new Error('no route found'), {
+                    code: 'PAYMENT_FAILED'
+                })
+            )
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            failedRecord()
+        );
+
+        const store = newStore('nostr-wallet-connect');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(store.status).toBe('FAILED');
+        expect(store.error_msg).toBe('no route found');
+        expect(store.payment_error).toBeNull();
+    });
+
+    it('releases the guard after one no-record answer to a tagged NWC wallet error', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markNodeResponded(
+                Object.assign(new Error('insufficient balance'), {
+                    code: 'INSUFFICIENT_BALANCE'
+                })
+            )
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(null);
+
+        const store = newStore('nostr-wallet-connect');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(1);
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.error_msg).toBe('insufficient balance');
+    });
+
+    it('shows a generic failure, not the transport error, for a reasonless record after a transport failure', async () => {
+        // no HTTP status: the request may have reached the node, so the
+        // error says nothing about why the payment failed
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            new Error('Network request failed')
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            failedRecord()
+        );
+
+        const store = newStore('cln-rest');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(store.status).toBe('FAILED');
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('error.sendingPayment');
+        expect(store.payment_error).toBeNull();
+    });
+
+    it('shows the reason from an LND record that has one', async () => {
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markNodeResponded(new Error('payment failed'), 2)
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            failedRecord({ failure_reason: 'FAILURE_REASON_NO_ROUTE' })
+        );
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(store.status).toBe('FAILED');
+        expect(store.payment_error).toBe(
+            errorToUserFriendly('FAILURE_REASON_NO_ROUTE' as any)
+        );
+        expect(store.payment_error).toBeTruthy();
+        expect(store.error_msg).toBeNull();
+    });
+
+    it('reads a numeric embedded LND reason', async () => {
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markNodeResponded(new Error('payment failed'), 'Unknown')
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            failedRecord({
+                status: lnrpc.Payment.PaymentStatus.FAILED,
+                failure_reason:
+                    lnrpc.PaymentFailureReason
+                        .FAILURE_REASON_INSUFFICIENT_BALANCE
+            })
+        );
+
+        const store = newStore('embedded-lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        // embedded LND results keep the numeric status
+        expect(store.status).toBe(lnrpc.Payment.PaymentStatus.FAILED);
+        expect(store.payment_error).toBeTruthy();
+        expect(store.error_msg).toBeNull();
+    });
+
+    it('keeps the rejection for a numeric FAILURE_REASON_NONE on embedded LND', async () => {
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markNodeResponded(new Error('payment failed'), 'Unknown')
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            failedRecord({
+                status: lnrpc.Payment.PaymentStatus.FAILED,
+                failure_reason: lnrpc.PaymentFailureReason.FAILURE_REASON_NONE
+            })
+        );
+
+        const store = newStore('embedded-lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        // embedded LND results keep the numeric status
+        expect(store.status).toBe(lnrpc.Payment.PaymentStatus.FAILED);
+        expect(store.error_msg).toBe('payment failed');
+        expect(store.payment_error).toBeNull();
     });
 });
 
