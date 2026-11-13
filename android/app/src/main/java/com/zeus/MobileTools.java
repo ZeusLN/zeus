@@ -12,6 +12,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Base64;
 import android.os.Build;
+import android.os.Parcelable;
 import android.os.PowerManager;
 import android.provider.Settings;
 
@@ -55,21 +56,38 @@ class MobileTools extends ReactContextBaseJavaModule {
       return;
     }
 
-    Tag tag;
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag.class);
-    } else {
-      tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-    }
-    if (tag == null) {
-      promise.resolve(null);
-      return;
+    // MainActivity is exported, so any local app can start it with any
+    // Parcelable under EXTRA_TAG. Check the type instead of casting, and
+    // treat an extra that cannot be unparcelled (BadParcelableException,
+    // e.g. a class this app does not have) as no tag.
+    Tag tag = null;
+    try {
+      if (!intent.hasExtra(NfcAdapter.EXTRA_TAG)) {
+        promise.resolve(null);
+        return;
+      }
+      Parcelable extra;
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        extra = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag.class);
+      } else {
+        extra = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+      }
+      if (extra instanceof Tag) {
+        tag = (Tag) extra;
+      }
+    } catch (RuntimeException e) {
+      android.util.Log.w(TAG, "Could not read NFC tag extra", e);
     }
 
     // Consume the tag. The activity keeps its intent until Android delivers
     // another one, and this is called again on every resume.
     intent.removeExtra(NfcAdapter.EXTRA_TAG);
     intent.removeExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+
+    if (tag == null) {
+      promise.resolve(null);
+      return;
+    }
 
     Ndef ndef = Ndef.get(tag);
     if (ndef == null) {
