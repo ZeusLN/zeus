@@ -493,6 +493,13 @@ describe('isNodeAnswer', () => {
             'lightning-node-connect',
             new Error('rpc error: code = Unknown desc = invoice expired')
         ],
+        [
+            'an LNC node error that mentions a timeout',
+            'lightning-node-connect',
+            new Error(
+                'rpc error: code = Unknown desc = payment attempt timed out'
+            )
+        ],
         ['an LDK Node rejection', 'ldk-node', new Error('RouteNotFound')]
     ])('counts %s', (_, implementation, error) => {
         expect(isNodeAnswer(error, implementation)).toBe(true);

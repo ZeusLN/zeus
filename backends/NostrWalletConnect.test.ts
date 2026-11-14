@@ -625,6 +625,22 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         }
     );
 
+    // only a wallet's reply carries a code: a plain Error (the SDK's
+    // "Missing secret key", a socket error) is not the wallet's text
+    it('leaves an error without a code unmarked', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(new Error('WebSocket closed'));
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error.message).toBe('WebSocket closed');
+        expect(error.walletReplied).toBeUndefined();
+        expect(error.nodeResponded).toBeUndefined();
+        expect(error.sendRefused).toBeUndefined();
+    });
+
     it('marks a refusal without a message as a refusal with the generic text', async () => {
         const { backend, client } = await setup();
         client.payInvoice.mockRejectedValue(
