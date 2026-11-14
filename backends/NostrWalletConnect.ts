@@ -1,9 +1,16 @@
-import { NostrWebLNProvider } from '@getalby/sdk';
+import {
+    Nip47PublishTimeoutError,
+    Nip47ReplyTimeoutError,
+    Nip47ResponseDecodingError,
+    NostrWebLNProvider
+} from '@getalby/sdk';
 import BigNumber from 'bignumber.js';
 
 import { settingsStore } from '../stores/Stores';
 
+import Base64Utils from '../utils/Base64Utils';
 import Bolt11Utils from '../utils/Bolt11Utils';
+import { sha256Hex } from '../utils/HashingUtils';
 import { localeString } from '../utils/LocaleUtils';
 import {
     markNodeResponded,
@@ -159,9 +166,41 @@ export default class NostrWalletConnect {
         return { payments };
     };
     payLightningInvoice = async (data: any) => {
+        let payment_hash: string | undefined;
         try {
-            return await this.nwc.sendPayment(data.payment_request);
+            payment_hash = Bolt11Utils.decode(
+                data.payment_request
+            ).payment_hash;
+        } catch (e) {
+            // decoding is best-effort; the wallet service validates the
+            // invoice itself
+        }
+
+        let preimage: string | undefined;
+        try {
+            ({ preimage } = await this.nwc.sendPayment(data.payment_request));
         } catch (error: any) {
+            // These errors leave the outcome unknown, so the payment may
+            // still complete:
+            // - reply timeout: the wallet did not answer in time.
+            // - publish timeout: no relay acknowledged the request within
+            //   5 s. The SDK does not cancel the publish, and a relay that
+            //   acknowledges late may already have passed it on.
+            // - response decoding error: the wallet answered with something
+            //   that could not be parsed.
+            // Nip47PublishError still rejects. Since SDK 9.0.0 it only
+            // covers relays that refused the request or could not be
+            // reached; a missing acknowledgement is a publish timeout. A
+            // relay that drops the connection after taking the request
+            // also ends here. A retry reuses the payment hash.
+            // Wallet errors are classified below.
+            if (
+                error instanceof Nip47ReplyTimeoutError ||
+                error instanceof Nip47PublishTimeoutError ||
+                error instanceof Nip47ResponseDecodingError
+            ) {
+                return { status: 'IN_FLIGHT', payment_hash };
+            }
             const code = error?.code;
             // a reply without a message: show the generic failure, not the
             // SDK's placeholder, and don't keep it as the wallet's reason
@@ -184,6 +223,30 @@ export default class NostrWalletConnect {
             }
             throw error;
         }
+
+        // A reply with no preimage is not proof of payment. Zeus's own NWC
+        // service answers with an empty preimage while the HTLC is still out
+        if (!preimage) {
+            return { status: 'IN_FLIGHT', payment_hash };
+        }
+
+        const normalizedPreimage = preimage.toLowerCase();
+        if (
+            payment_hash &&
+            (!/^[0-9a-f]{64}$/.test(normalizedPreimage) ||
+                sha256Hex(Base64Utils.hexToBytes(normalizedPreimage)) !==
+                    payment_hash.toLowerCase())
+        ) {
+            throw new Error(
+                localeString('backends.NWC.payLightningInvoice.wrongPreimage')
+            );
+        }
+
+        return {
+            status: 'SUCCEEDED',
+            payment_hash,
+            preimage: normalizedPreimage
+        };
     };
     decodePaymentRequest = (urlParams?: Array<string>) =>
         Promise.resolve().then(() =>
