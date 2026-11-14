@@ -54,6 +54,7 @@ interface CashuTokenProps {
 interface CashuTokenState {
     updatedToken?: CashuToken;
     success: boolean;
+    receivedAmtSat?: number;
     errorMessage: string;
     warningMessage: string;
     infoIndex: number;
@@ -73,6 +74,7 @@ export default class CashuTokenView extends React.Component<
     state = {
         updatedToken: undefined,
         success: false,
+        receivedAmtSat: undefined,
         errorMessage: '',
         warningMessage: '',
         infoIndex: 0,
@@ -220,6 +222,7 @@ export default class CashuTokenView extends React.Component<
         const { navigation, route, CashuStore, ChannelsStore } = this.props;
         const {
             success,
+            receivedAmtSat,
             errorMessage,
             warningMessage,
             updatedToken,
@@ -354,7 +357,7 @@ export default class CashuTokenView extends React.Component<
                     {isSupported && (
                         <View style={styles.center}>
                             <Amount
-                                sats={getAmount}
+                                sats={receivedAmtSat ?? getAmount}
                                 sensitive
                                 jumboText
                                 toggleable
@@ -610,7 +613,8 @@ export default class CashuTokenView extends React.Component<
                                     const {
                                         success,
                                         errorMessage,
-                                        warningMessage
+                                        warningMessage,
+                                        receivedAmtSat
                                     } = await claimToken(
                                         encodedToken!,
                                         decoded,
@@ -619,10 +623,14 @@ export default class CashuTokenView extends React.Component<
 
                                     if (success) {
                                         // the token can be claimed without
-                                        // the sweep to the node completing
+                                        // the sweep to the node completing.
+                                        // A completed sweep shows what the
+                                        // node received after the mint's fee
                                         this.setState({
                                             success,
-                                            warningMessage: warningMessage || ''
+                                            warningMessage:
+                                                warningMessage || '',
+                                            receivedAmtSat
                                         });
                                     } else {
                                         this.setState({
