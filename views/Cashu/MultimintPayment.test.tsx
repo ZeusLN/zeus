@@ -9,6 +9,8 @@ jest.mock('../../utils/ThemeUtils', () => ({
 }));
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('../../utils/LnurlPayUtils', () => ({}));
+jest.mock('../../utils/NetworkUtils', () => ({}));
+jest.mock('../../stores/Stores', () => ({}));
 jest.mock('../../utils/DonationUtils', () => ({
     ...jest.requireActual('../../utils/DonationUtils'),
     loadDonationLnurl: jest.fn()

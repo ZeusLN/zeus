@@ -7,6 +7,10 @@ jest.mock('react-native-randombytes', () => ({
 jest.mock('./SettingsStore', () => ({}));
 jest.mock('./NodeInfoStore', () => ({}));
 jest.mock('./ChannelsStore', () => ({}));
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: {}
+}));
 jest.mock('./BalanceStore', () => ({}));
 jest.mock('./ModalStore', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
