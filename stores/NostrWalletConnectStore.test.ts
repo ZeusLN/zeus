@@ -108,6 +108,7 @@ import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
 import CashuPayment from '../models/CashuPayment';
 import Base64Utils from '../utils/Base64Utils';
+import Bolt11Utils from '../utils/Bolt11Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
 import InvoicesStore from './InvoicesStore';
 import CashuStore from './CashuStore';
@@ -3196,6 +3197,30 @@ describe('NostrWalletConnectStore payment notifications', () => {
             });
         });
 
+        it('publishes no payment_sent when the preimage could not be verified', async () => {
+            const { store, connections } = await startService([
+                { maxAmountSats: 10000 }
+            ]);
+            const connection = connections[0];
+            const relay = relays.get(connection.relayUrl)!;
+
+            await (store as any).finalizePayment({
+                rawInvoice: invoice,
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                decoded: settledPayment(),
+                connection,
+                amountSats: 10000,
+                feeSats: 50,
+                paymentHash,
+                unverifiedError: 'stores.TransactionsStore.preimageMismatch'
+            });
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(connection.activity[0].status).toBe('failed');
+            expect(relay.publishNotification).not.toHaveBeenCalled();
+        });
+
         it('publishes the pay_invoice row when a make_invoice row has the same id', async () => {
             const { store, connections } = await startService([
                 { maxAmountSats: 10000 }
@@ -5750,6 +5775,207 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(connection.activity[0].status).toBe('success');
         expect(connection.activity[0].isBudgetDebited).toBe(true);
         expect(connection.totalSpendSats).toBe(5010);
+    });
+
+    it("checks the payment's preimage against the invoice's payment hash", async () => {
+        jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
+            payment_hash: paymentHash
+        } as any);
+        const { store, transactionsStore } = buildHandlerStore();
+        const result = { status: 'SUCCEEDED' };
+        transactionsStore.sendPaymentSilently.mockResolvedValue(result);
+        const connection = addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 100000
+        });
+
+        await (store as any).handleLightningPayInvoice(
+            connection,
+            {
+                invoice
+            },
+            () => true
+        );
+
+        expect(transactionsStore.getPaymentOutcome).toHaveBeenCalledWith(
+            result,
+            paymentHash
+        );
+    });
+
+    describe('when the preimage does not match the payment hash', () => {
+        // what getPaymentOutcome returns for a success whose preimage
+        // doesn't hash to the invoice's payment hash
+        const mismatchOutcome = {
+            noteKey: '',
+            payment_hash: paymentHash,
+            payment_fee: '10',
+            isIncomplete: false,
+            status: 'SUCCEEDED',
+            error: true,
+            error_msg: 'stores.TransactionsStore.preimageMismatch',
+            preimageMismatch: true
+        };
+
+        beforeEach(() => {
+            jest.spyOn(
+                NostrConnectUtils,
+                'notifyOutgoingNwcPaymentFailed'
+            ).mockImplementation(() => undefined);
+            jest.spyOn(
+                NostrConnectUtils,
+                'notifyOutgoingNwcPayment'
+            ).mockImplementation(() => undefined);
+        });
+
+        it('answers with an error and debits the budget', async () => {
+            const { store, transactionsStore } = buildHandlerStore();
+            transactionsStore.getPaymentOutcome.mockReturnValue(
+                mismatchOutcome
+            );
+            const connection = addConnection(store, {
+                permissions: ['pay_invoice'],
+                maxAmountSats: 100000
+            });
+
+            const response = await (store as any).handleLightningPayInvoice(
+                connection,
+                { invoice },
+                () => true
+            );
+
+            expect(response.result).toBeUndefined();
+            expect(response.error?.code).toBe(
+                Nip47ErrorCode.FAILED_TO_PAY_INVOICE
+            );
+            expect(response.error?.message).toBe(
+                'stores.TransactionsStore.preimageMismatch'
+            );
+            expect(connection.activity).toHaveLength(1);
+            expect(connection.activity[0]).toEqual(
+                expect.objectContaining({
+                    status: 'failed',
+                    error: 'stores.TransactionsStore.preimageMismatch',
+                    isBudgetDebited: true,
+                    paymentHash
+                })
+            );
+            // the node says the payment went out, so it counts against the
+            // budget, and is not held again as pending
+            expect(connection.totalSpendSats).toBe(5010);
+            expect(connection.pendingSpendSats).toBe(0);
+            expect(
+                connection.isUnresolvedPayInvoiceActivity(
+                    connection.activity[0]
+                )
+            ).toBe(false);
+            expect(
+                NostrConnectUtils.notifyOutgoingNwcPaymentFailed
+            ).toHaveBeenCalled();
+            expect(
+                NostrConnectUtils.notifyOutgoingNwcPayment
+            ).not.toHaveBeenCalled();
+        });
+
+        it("doesn't return the preimage from the node's payment list", async () => {
+            const listed = new Payment({
+                payment_request: invoice,
+                payment_hash: paymentHash,
+                status: 'SUCCEEDED',
+                value_sat: 5000,
+                fee_sat: '10',
+                payment_preimage: hex64('d')
+            });
+            const { store, transactionsStore } = buildHandlerStore([listed]);
+            transactionsStore.getPaymentOutcome.mockReturnValue(
+                mismatchOutcome
+            );
+            const connection = addConnection(store, {
+                permissions: ['pay_invoice'],
+                maxAmountSats: 100000
+            });
+
+            const response = await (store as any).handleLightningPayInvoice(
+                connection,
+                { invoice },
+                () => true
+            );
+
+            expect(response.result).toBeUndefined();
+            expect(response.error?.code).toBe(
+                Nip47ErrorCode.FAILED_TO_PAY_INVOICE
+            );
+            expect(connection.activity[0].status).toBe('failed');
+            expect(connection.totalSpendSats).toBe(5010);
+        });
+
+        it('does not notify a failure when a success is already recorded', async () => {
+            const { store } = buildHandlerStore();
+            const connection = addConnection(store, {
+                maxAmountSats: 100000,
+                activity: [
+                    {
+                        id: invoice,
+                        type: 'pay_invoice',
+                        payment_source: 'lightning',
+                        status: 'success',
+                        satAmount: 5000,
+                        paymentHash,
+                        isBudgetDebited: true,
+                        createdAt: new Date(Date.now() - 60_000)
+                    }
+                ]
+            });
+
+            await (store as any).finalizePayment({
+                rawInvoice: invoice,
+                type: 'pay_invoice',
+                decoded: null,
+                payment_source: 'lightning',
+                connection,
+                amountSats: 5000,
+                paymentHash,
+                unverifiedError: 'stores.TransactionsStore.preimageMismatch'
+            });
+
+            // the recorded success stays, so there is no failure to report
+            expect(connection.activity[0].status).toBe('success');
+            expect(
+                NostrConnectUtils.notifyOutgoingNwcPaymentFailed
+            ).not.toHaveBeenCalled();
+            expect(
+                NostrConnectUtils.notifyOutgoingNwcPayment
+            ).not.toHaveBeenCalled();
+        });
+
+        it('does not debit a payment the budget already counted', async () => {
+            const { store, transactionsStore } = buildHandlerStore();
+            transactionsStore.getPaymentOutcome.mockReturnValue(
+                mismatchOutcome
+            );
+            const connection = addConnection(store, {
+                permissions: ['pay_invoice'],
+                maxAmountSats: 100000
+            });
+
+            await (store as any).handleLightningPayInvoice(
+                connection,
+                {
+                    invoice
+                },
+                () => true
+            );
+            await (store as any).handleLightningPayInvoice(
+                connection,
+                {
+                    invoice
+                },
+                () => true
+            );
+
+            expect(connection.activity).toHaveLength(1);
+            expect(connection.totalSpendSats).toBe(5010);
+        });
     });
 
     it("answers with its own payment's result, not the shared store's", async () => {

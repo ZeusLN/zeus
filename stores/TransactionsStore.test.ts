@@ -24,10 +24,16 @@ jest.mock('../utils/BackendUtils', () => ({
         isLNDBased: jest.fn(() => false)
     }
 }));
+// invoices decode to HASH, the hash of PREIMAGE
 jest.mock('../utils/Bolt11Utils', () => ({
     __esModule: true,
     default: {
-        decode: jest.fn(() => ({ payment_hash: 'ab'.repeat(32) }))
+        decode: jest.fn(() => ({
+            payment_hash: require('node:crypto')
+                .createHash('sha256')
+                .update(Buffer.from('11'.repeat(32), 'hex'))
+                .digest('hex')
+        }))
     }
 }));
 jest.mock('../utils/GraphSyncUtils', () => ({
@@ -50,6 +56,7 @@ import TransactionsStore, {
     PAYMENT_TRACK_MAX_MS,
     PAYMENT_STALE_ATTEMPT_SLACK_MS
 } from './TransactionsStore';
+
 import BackendUtils from '../utils/BackendUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
@@ -76,7 +83,10 @@ const supportsOffersDirectPay =
 const offer = 'lno1qgsyxjtl6luzd9t3pr62xr7eemp6awnejusgf6gw45q75vcfqqqqqqq';
 
 // 64-char hex: normalizePaymentHash rejects anything that isn't a real hash
-const HASH = 'ab'.repeat(32);
+const PREIMAGE = '11'.repeat(32);
+const HASH = createHash('sha256')
+    .update(Buffer.from(PREIMAGE, 'hex'))
+    .digest('hex');
 
 const newStore = (implementation = 'ldk-node') =>
     new TransactionsStore(
@@ -374,7 +384,7 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
             .mockResolvedValueOnce({
                 status: 'SUCCEEDED',
                 payment_hash: HASH,
-                payment_preimage: 'deadbeef'
+                payment_preimage: PREIMAGE
             });
 
         const store = newStore('lnd');
@@ -434,7 +444,7 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
             status: 'SUCCEEDED',
             payment_hash: HASH,
-            payment_preimage: 'deadbeef'
+            payment_preimage: PREIMAGE
         });
 
         const store = newStore('lnd');
@@ -516,7 +526,7 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
             .mockResolvedValueOnce({
                 status: 'SUCCEEDED',
                 payment_hash: HASH,
-                payment_preimage: 'deadbeef'
+                payment_preimage: PREIMAGE
             });
 
         const store = newStore('lnd');
@@ -543,7 +553,7 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
             .mockResolvedValueOnce({
                 status: 'SUCCEEDED',
                 payment_hash: HASH,
-                payment_preimage: 'deadbeef'
+                payment_preimage: PREIMAGE
             });
 
         const store = newStore();
@@ -607,7 +617,7 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         lookup.mockResolvedValueOnce({
             status: 'SUCCEEDED',
             payment_hash: HASH,
-            payment_preimage: 'deadbeef'
+            payment_preimage: PREIMAGE
         });
 
         const store = newStore('lnd');
@@ -674,7 +684,7 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
             .mockResolvedValueOnce({
                 status: 'SUCCEEDED',
                 payment_hash: HASH,
-                payment_preimage: 'deadbeef'
+                payment_preimage: PREIMAGE
             });
 
         const store = newStore('lnd');
@@ -750,7 +760,7 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
     const staleSuccess = () => ({
         status: 'SUCCEEDED',
         payment_hash: HASH,
-        payment_preimage: 'deadbeef',
+        payment_preimage: PREIMAGE,
         creation_date: String(
             Math.floor(
                 (Date.now() - PAYMENT_STALE_ATTEMPT_SLACK_MS - 60_000) / 1000
@@ -767,7 +777,7 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
             status: 'SUCCEEDED',
             payment_hash: HASH,
-            payment_preimage: 'deadbeef',
+            payment_preimage: PREIMAGE,
             // the earlier attempt settled seconds ago, inside the slack
             creation_date: String(Math.floor((Date.now() - 10_000) / 1000))
         });
@@ -832,8 +842,25 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
             new Error('connection closed')
         );
-        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
-            staleSuccess()
+        // the node returns the preimage the store generated for this keysend
+        (BackendUtils.lookupPayment as jest.Mock).mockImplementation(
+            async () => {
+                const { dest_custom_records, payment_hash } = (
+                    BackendUtils.payLightningInvoice as jest.Mock
+                ).mock.calls[0][0];
+                const preimage = Object.values(
+                    dest_custom_records
+                )[0] as string;
+                return {
+                    ...staleSuccess(),
+                    payment_hash: Buffer.from(payment_hash, 'base64').toString(
+                        'hex'
+                    ),
+                    payment_preimage: Buffer.from(preimage, 'base64').toString(
+                        'hex'
+                    )
+                };
+            }
         );
 
         const store = newStore('lnd');
@@ -1106,7 +1133,7 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         store.handlePayment({
             status: 'SUCCEEDED',
             payment_hash: HASH,
-            payment_preimage: 'deadbeef'
+            payment_preimage: PREIMAGE
         });
         expect(store.paymentInFlight).toBe(false);
         expect(store.status).toBe('SUCCEEDED');
@@ -1604,7 +1631,10 @@ describe('TransactionsStore failed payment message after tracking', () => {
 });
 
 describe('TransactionsStore releasePaymentInFlight', () => {
-    const HASH2 = 'cd'.repeat(32);
+    const PREIMAGE2 = '33'.repeat(32);
+    const HASH2 = createHash('sha256')
+        .update(Buffer.from(PREIMAGE2, 'hex'))
+        .digest('hex');
 
     beforeEach(() => {
         jest.useFakeTimers();
@@ -1694,7 +1724,7 @@ describe('TransactionsStore releasePaymentInFlight', () => {
         firstLookup.resolve({
             status: 'SUCCEEDED',
             payment_hash: HASH,
-            payment_preimage: 'deadbeef'
+            payment_preimage: PREIMAGE
         });
         await flush();
         expect(store.status).toBeNull();
@@ -1709,7 +1739,7 @@ describe('TransactionsStore releasePaymentInFlight', () => {
         second.resolve({
             status: 'SUCCEEDED',
             payment_hash: HASH2,
-            payment_preimage: 'beefdead'
+            payment_preimage: PREIMAGE2
         });
         await flush();
         expect(store.status).toBe('SUCCEEDED');
@@ -1747,7 +1777,7 @@ describe('TransactionsStore releasePaymentInFlight', () => {
         first.resolve({
             status: 'SUCCEEDED',
             payment_hash: HASH,
-            payment_preimage: 'deadbeef'
+            payment_preimage: PREIMAGE
         });
         await flush();
         expect(store.status).toBeNull();
@@ -1851,6 +1881,249 @@ describe('TransactionsStore releasePaymentInFlight', () => {
                 lookups
         ).toBe(1);
         expect(store.paymentInFlight).toBe(true);
+    });
+});
+
+describe('TransactionsStore payment preimage check', () => {
+    const OTHER_PREIMAGE = '22'.repeat(32);
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockReturnValue(true);
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('reports a success whose preimage does not match the invoice as an error', async () => {
+        payLightningInvoice.mockResolvedValue({
+            status: 'SUCCEEDED',
+            payment_hash: HASH,
+            payment_preimage: OTHER_PREIMAGE
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flushPromises();
+
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe(
+            'stores.TransactionsStore.preimageMismatch'
+        );
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.paymentDuration).toBeNull();
+        // the preimage isn't kept as proof of payment, and the hash is the
+        // invoice's rather than one derived from that preimage
+        expect(store.payment_preimage).toBeNull();
+        expect(store.payment_hash).toBe(HASH);
+        expect(store).not.toHaveProperty('preimageMismatch');
+    });
+
+    it('reports a success whose preimage matches the invoice as a success', async () => {
+        payLightningInvoice.mockResolvedValue({
+            status: 'SUCCEEDED',
+            payment_hash: HASH,
+            payment_preimage: PREIMAGE
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flushPromises();
+
+        expect(store.error).toBe(false);
+        expect(store.status).toBe('SUCCEEDED');
+        expect(store.payment_preimage).toBe(PREIMAGE);
+    });
+
+    it('does not check the preimage of an AMP payment', async () => {
+        // each AMP shard has its own preimage, so none hashes to the
+        // invoice's payment hash
+        payLightningInvoice.mockResolvedValue({
+            status: 'SUCCEEDED',
+            payment_hash: HASH,
+            payment_preimage: OTHER_PREIMAGE
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake', amp: true });
+        await flushPromises();
+
+        expect(store.error).toBe(false);
+        expect(store.status).toBe('SUCCEEDED');
+    });
+
+    it('checks a keysend preimage against the hash of the one it sent', async () => {
+        payLightningInvoice.mockResolvedValue({
+            status: 'SUCCEEDED',
+            payment_preimage: OTHER_PREIMAGE
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ pubkey: '02' + 'ab'.repeat(32), amount: '1000' });
+        await flushPromises();
+
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe(
+            'stores.TransactionsStore.preimageMismatch'
+        );
+    });
+
+    it.each(['cln-rest', 'ldk-node'])(
+        'accepts the preimage a %s node picked for a keysend',
+        async (implementation) => {
+            // these nodes ignore the preimage generated by the store
+            sendKeysend.mockResolvedValue({
+                status: 'SUCCEEDED',
+                payment_preimage: OTHER_PREIMAGE
+            });
+
+            const store = newStore(implementation);
+            store.sendPayment({
+                pubkey: '02' + 'ab'.repeat(32),
+                amount: '1000'
+            });
+            await flushPromises();
+
+            expect(sendKeysend).toHaveBeenCalled();
+            expect(store.error).toBe(false);
+            expect(store.status).toBe('SUCCEEDED');
+            expect(store.payment_preimage).toBe(OTHER_PREIMAGE);
+        }
+    );
+
+    it('checks a keysend preimage on embedded LND, which uses the one it sent', async () => {
+        sendKeysend.mockResolvedValue({
+            // embedded LND reports the numeric enum: 2 is SUCCEEDED
+            status: 2,
+            payment_preimage: OTHER_PREIMAGE
+        });
+
+        const store = newStore('embedded-lnd');
+        store.sendPayment({ pubkey: '02' + 'ab'.repeat(32), amount: '1000' });
+        await flushPromises();
+
+        expect(sendKeysend).toHaveBeenCalled();
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe(
+            'stores.TransactionsStore.preimageMismatch'
+        );
+    });
+
+    it('checks a preimage returned by payment tracking', async () => {
+        payLightningInvoice.mockRejectedValue(new Error('connection closed'));
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            status: 'SUCCEEDED',
+            payment_hash: HASH,
+            payment_preimage: OTHER_PREIMAGE
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flushPromises();
+        await flushPromises();
+
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe(
+            'stores.TransactionsStore.preimageMismatch'
+        );
+    });
+
+    it('accepts a matching preimage in base64', () => {
+        const store = newStore('lnd');
+
+        const outcome = store.getPaymentOutcome(
+            {
+                status: 'SUCCEEDED',
+                payment_preimage: Buffer.from(PREIMAGE, 'hex').toString(
+                    'base64'
+                )
+            },
+            HASH
+        );
+
+        expect(outcome.error).toBeUndefined();
+    });
+
+    it('leaves the preimage out of a mismatched outcome', () => {
+        const store = newStore('lnd');
+
+        const outcome = store.getPaymentOutcome(
+            {
+                status: 'SUCCEEDED',
+                payment_hash: HASH,
+                payment_preimage: OTHER_PREIMAGE,
+                fee_sat: '3'
+            },
+            HASH.toUpperCase()
+        );
+
+        expect(outcome.error).toBe(true);
+        expect(outcome.preimageMismatch).toBe(true);
+        expect(outcome).not.toHaveProperty('payment_preimage');
+        expect(outcome.payment_hash).toBe(HASH);
+        expect(outcome.payment_fee).toBe('3');
+        expect(outcome.status).toBe('SUCCEEDED');
+    });
+
+    it('reports the expected hash, not one derived from the wrong preimage', () => {
+        const store = newStore('lnd');
+
+        // no payment_hash in the result, so Payment derives one from the
+        // preimage the node returned
+        const outcome = store.getPaymentOutcome(
+            { status: 'SUCCEEDED', payment_preimage: OTHER_PREIMAGE },
+            HASH.toUpperCase()
+        );
+
+        expect(outcome.preimageMismatch).toBe(true);
+        expect(outcome.payment_hash).toBe(HASH);
+    });
+
+    it('does not flag a matching preimage as a mismatch', () => {
+        const store = newStore('lnd');
+
+        const outcome = store.getPaymentOutcome(
+            { status: 'SUCCEEDED', payment_preimage: PREIMAGE },
+            HASH
+        );
+
+        expect(outcome.preimageMismatch).toBeUndefined();
+        expect(outcome.payment_preimage).toBe(PREIMAGE);
+    });
+
+    it('leaves an outcome alone when no hash is expected or no preimage was returned', () => {
+        const store = newStore('lnd');
+
+        expect(
+            store.getPaymentOutcome({
+                status: 'SUCCEEDED',
+                payment_preimage: OTHER_PREIMAGE
+            }).error
+        ).toBeUndefined();
+        expect(
+            store.getPaymentOutcome({ status: 'SUCCEEDED' }, HASH).error
+        ).toBeUndefined();
+    });
+
+    it('keeps the failure reason of a failed payment', () => {
+        const store = newStore('lnd');
+
+        const outcome = store.getPaymentOutcome(
+            {
+                status: 'FAILED',
+                failure_reason: 'FAILURE_REASON_NO_ROUTE',
+                payment_preimage: OTHER_PREIMAGE
+            },
+            HASH
+        );
+
+        expect(outcome.error).toBe(true);
+        expect(outcome.error_msg).toBeUndefined();
+        expect(outcome.payment_error).toBeTruthy();
     });
 });
 
@@ -2074,7 +2347,10 @@ describe('TransactionsStore.sendPaymentSilently', () => {
 });
 
 describe('TransactionsStore late results for an earlier payment', () => {
-    const HASH2 = 'cd'.repeat(32);
+    const PREIMAGE2 = '33'.repeat(32);
+    const HASH2 = createHash('sha256')
+        .update(Buffer.from(PREIMAGE2, 'hex'))
+        .digest('hex');
     const route2 = { total_amt: 2000, hops: [] };
 
     beforeEach(() => {
@@ -2131,7 +2407,7 @@ describe('TransactionsStore late results for an earlier payment', () => {
             {
                 status: 'SUCCEEDED',
                 payment_hash: HASH,
-                payment_preimage: 'deadbeef',
+                payment_preimage: PREIMAGE,
                 payment_route: { total_amt: 1000, hops: [] }
             }
         ],
@@ -2186,7 +2462,7 @@ describe('TransactionsStore late results for an earlier payment', () => {
                 second.resolve({
                     status: 'SUCCEEDED',
                     payment_hash: HASH2,
-                    payment_preimage: 'beefdead',
+                    payment_preimage: PREIMAGE2,
                     payment_route: route2
                 });
                 await flush();
@@ -2196,7 +2472,7 @@ describe('TransactionsStore late results for an earlier payment', () => {
                 await flush();
                 expect(store.status).toBe('SUCCEEDED');
                 expect(store.payment_route).toEqual(route2);
-                expect(store.payment_preimage).toBe('beefdead');
+                expect(store.payment_preimage).toBe(PREIMAGE2);
                 expect(store.payment_hash).toBe(HASH2);
                 expect(store.error).toBe(false);
                 expect(store.payment_error).toBeNull();
@@ -2233,7 +2509,7 @@ describe('TransactionsStore late results for an earlier payment', () => {
             second.resolve({
                 status: 'SUCCEEDED',
                 payment_hash: HASH2,
-                payment_preimage: 'beefdead',
+                payment_preimage: PREIMAGE2,
                 payment_route: route2
             });
             await flush();
@@ -2286,7 +2562,7 @@ describe('TransactionsStore late results for an earlier payment', () => {
         first.resolve(lateOutcomes[0][1]);
         await flush();
         expect(store.status).toBe('SUCCEEDED');
-        expect(store.payment_preimage).toBe('deadbeef');
+        expect(store.payment_preimage).toBe(PREIMAGE);
     });
 
     // reset() replaces the latest payment with none, so its result is
@@ -2324,7 +2600,7 @@ describe('TransactionsStore late results for an earlier payment', () => {
         (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValueOnce({
             status: 'SUCCEEDED',
             payment_hash: HASH,
-            payment_preimage: 'deadbeef'
+            payment_preimage: PREIMAGE
         });
         const store = newStore('lnd');
         store.sendPayment({ payment_request: 'lnbc1fake' });
