@@ -40,7 +40,7 @@ case "${1:-}" in
         log "AVD $AVD_NAME created ($AVD_IMAGE)" ;;
     boot)
         if proc_running emulator && booted; then log "emulator already booted ($ANDROID_SERIAL)"; exit 0; fi
-        lsof -nP -iTCP:"$EMU_PORT" -sTCP:LISTEN >/dev/null 2>&1 && die "console port $EMU_PORT in use"
+        if port_listening "$EMU_PORT"; then die "console port $EMU_PORT in use"; fi
         "$ADB" start-server >/dev/null 2>&1
         start_proc emulator "$EMULATOR" -avd "$AVD_NAME" -port "$EMU_PORT" \
             -no-window -no-snapshot -no-audio -no-boot-anim

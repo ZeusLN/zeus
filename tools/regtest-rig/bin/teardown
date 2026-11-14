@@ -31,5 +31,5 @@ fi
 # report leftovers
 left=$(docker ps -a --filter "label=com.docker.compose.project=$RIG_NAME" -q | wc -l | tr -d ' ')
 echo "containers left: $left"
-echo "listening on rig ports: $(for p in $METRO_PORT $LSP_PORT $LNURL_PORT $EMU_PORT $ADB_SERVER_PORT; do lsof -nP -iTCP:$p -sTCP:LISTEN -t 2>/dev/null; done | sort -u | tr '\n' ' ')"
+echo "listening on rig ports: $(for p in $METRO_PORT $LSP_PORT $LNURL_PORT $LNURLA_PORT $EMU_PORT $ADB_SERVER_PORT; do port_listening "$p" && printf '%s ' "$p"; done)"
 echo "AVD: $("$EMULATOR" -list-avds | grep -qx "$AVD_NAME" && echo present || echo absent)"
