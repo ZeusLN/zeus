@@ -26,7 +26,6 @@ import {
     isPaymentLookupInconclusive,
     isPaymentRefusedAsDuplicate,
     isSendRefused,
-    isWalletReply,
     paymentCreationTimeMs
 } from '../utils/PaymentLookupUtils';
 import { sleep } from '../utils/SleepUtils';
@@ -34,6 +33,7 @@ import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 import {
     findSentTransaction,
+    isNodeAnswer,
     mayHaveBeenSent,
     makeSendLabel
 } from '../utils/OnchainSendUtils';
@@ -1585,8 +1585,7 @@ export default class TransactionsStore {
                 seq,
                 Date.now(),
                 isNodeResponse(err) ? 1 : PAYMENT_TRACK_MAX_NOT_FOUND,
-                !mayHaveBeenSent(err, this.settingsStore.implementation) ||
-                    isWalletReply(err)
+                isNodeAnswer(err, this.settingsStore.implementation)
                     ? message
                     : undefined
             );

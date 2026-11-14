@@ -16,6 +16,7 @@ import {
     feeLimitSatsToMaxRoutingFeeMsat
 } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { markRequestTimeout } from '../utils/RequestTimeoutUtils';
 import type {
     Network,
     NodeStatus,
@@ -2057,7 +2058,11 @@ export default class LdkNode {
                         pending: true
                     };
                 }
-                throw new Error(localeString('error.paymentTimedOut'));
+                // the app's own timeout, not LDK's answer: tagged so it is
+                // read as one in every locale
+                throw markRequestTimeout(
+                    new Error(localeString('error.paymentTimedOut'))
+                );
             }
 
             return {

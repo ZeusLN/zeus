@@ -300,6 +300,8 @@ describe('LdkNode payment timeouts', () => {
         );
 
         expect(error.message).toEqual('error.paymentTimedOut');
+        // the app's own timeout, read as one whatever the locale's text
+        expect(error.requestTimedOut).toBe(true);
     });
 });
 

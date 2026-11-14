@@ -3,7 +3,8 @@ import {
     hasJsonRpcCode,
     httpStatusOf,
     isNodeResponse,
-    isRequestNotSent
+    isRequestNotSent,
+    isWalletReply
 } from './PaymentLookupUtils';
 import {
     isRequestTimeout,
@@ -132,6 +133,31 @@ export const mayHaveBeenSent = (
             return !(cln && status === 500 && hasJsonRpcCode(error));
         }
     }
+};
+
+// Whether a rejected send's text is the node's (or wallet's) own answer,
+// so it can explain a failed payment record that gives no reason. It looks
+// at the evidence on the error before the text: a node's answer can
+// mention a timeout without being one (Core Lightning's xpay gives up with
+// "Timed out after N attempts" when retry_for runs out). Without such
+// evidence it falls back to !mayHaveBeenSent, which stays conservative
+// about timeouts for the callers that decide whether to retry.
+export const isNodeAnswer = (error: any, implementation?: string): boolean => {
+    if (isWalletReply(error)) return true;
+    if (isRequestNotSent(error)) return false;
+    if (implementation === 'cln-rest') {
+        // clnrest answers a command's own error with a 500 and a JSON-RPC
+        // code; a proxy's 5xx has no code
+        if (httpStatusOf(error) === 500 && hasJsonRpcCode(error)) return true;
+    } else if (implementation === 'lightning-node-connect') {
+        const message = String(error?.message ?? error ?? '');
+        const code = /^rpc error: code = (\w+)/.exec(message)?.[1];
+        if (code) return !TRANSPORT_GRPC_CODES.includes(code);
+    } else if (isNodeResponse(error)) {
+        // lnd's own gRPC codes, or a wallet's NIP-47 answer (no code)
+        return !TRANSPORT_GRPC_CODES.includes((error as any).grpcCode);
+    }
+    return !mayHaveBeenSent(error, implementation);
 };
 
 // Looks for a sent transaction in the wallet's transactions. Resolves the
