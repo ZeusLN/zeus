@@ -70,7 +70,9 @@ export default class RecommendedSettings extends React.Component<
         enableCashu: true,
         discoverMode: 'zeus',
         clipboard: true,
-        fiatEnabled: false,
+        // fiat rates are on by default, as in SettingsStore and
+        // WalletSettings
+        fiatEnabled: true,
         selectedCurrency: DEFAULT_FIAT,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
         initialMintUrls: [],
@@ -285,7 +287,7 @@ export default class RecommendedSettings extends React.Component<
         const hasCustomized =
             !enableCashu ||
             !clipboard ||
-            fiatEnabled ||
+            !fiatEnabled ||
             discoverMode !== 'zeus' ||
             implementation !== 'ldk-node';
 
