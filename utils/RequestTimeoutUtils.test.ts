@@ -1,4 +1,8 @@
-import { isRequestTimeout, lookUpWithRetries } from './RequestTimeoutUtils';
+import {
+    isRequestTimeout,
+    lookUpWithRetries,
+    markRequestTimeout
+} from './RequestTimeoutUtils';
 
 describe('isRequestTimeout', () => {
     it.each([
@@ -28,6 +32,26 @@ describe('isRequestTimeout', () => {
 
     it('does not match a missing error', () => {
         expect(isRequestTimeout(undefined)).toBe(false);
+    });
+});
+
+describe('markRequestTimeout', () => {
+    // a localized timeout text does not match the English pattern
+    it.each(['Zeitüberschreitung bei der Zahlung', 'Pago caducado'])(
+        'makes "%s" a timeout',
+        (text) => {
+            expect(isRequestTimeout(new Error(text))).toBe(false);
+            expect(isRequestTimeout(markRequestTimeout(new Error(text)))).toBe(
+                true
+            );
+        }
+    );
+
+    it('wraps a string rejection', () => {
+        const tagged: any = markRequestTimeout('Pago caducado');
+        expect(tagged).toBeInstanceOf(Error);
+        expect(tagged.message).toBe('Pago caducado');
+        expect(isRequestTimeout(tagged)).toBe(true);
     });
 });
 

@@ -25,6 +25,7 @@ import {
     isNodeResponse,
     isPaymentLookupInconclusive,
     isPaymentRefusedAsDuplicate,
+    isSendRefused,
     paymentCreationTimeMs
 } from '../utils/PaymentLookupUtils';
 import { sleep } from '../utils/SleepUtils';
@@ -32,6 +33,7 @@ import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 import {
     findSentTransaction,
+    isNodeAnswer,
     mayHaveBeenSent,
     makeSendLabel
 } from '../utils/OnchainSendUtils';
@@ -64,6 +66,26 @@ export const PAYMENT_TRACK_MAX_FAILURES = 3;
 // When the node itself rejected the send request, the request isn't in
 // transit and one such answer is enough
 export const PAYMENT_TRACK_MAX_NOT_FOUND = 3;
+
+// Whether a failed payment record says why it failed. Core Lightning's
+// listpays and NIP-47 lookup_invoice carry no reason, and LDK Node maps
+// every failure to FAILURE_REASON_ERROR, so their records only say that
+// the payment failed.
+const failedPaymentHasReason = (
+    payment: any,
+    implementation?: string
+): boolean => {
+    if (payment?.payment_error) return true;
+    const reason =
+        typeof payment?.failure_reason === 'number'
+            ? lnrpc.PaymentFailureReason[payment.failure_reason]
+            : payment?.failure_reason;
+    if (!reason || reason === 'FAILURE_REASON_NONE') return false;
+    return !(
+        implementation === 'ldk-node' && reason === 'FAILURE_REASON_ERROR'
+    );
+};
+
 // how far before the recorded dispatch time lookupPayment's
 // creation_date_start filter reaches, to absorb clock skew between the
 // device and the node
@@ -1133,10 +1155,15 @@ export default class TransactionsStore {
     //
     // `requiredNotFound` is how many consecutive no-record answers conclude
     // the payment never reached the node.
+    //
+    // `rejectionMessage` is the node's own message when it rejected the
+    // send. It stays on screen if the record only says the payment failed,
+    // since it says why and the record does not.
     private trackPaymentToTerminal = async (
         seq: number,
         neverDispatchedAfter: number | null,
-        requiredNotFound: number = PAYMENT_TRACK_MAX_NOT_FOUND
+        requiredNotFound: number = PAYMENT_TRACK_MAX_NOT_FOUND,
+        rejectionMessage?: string
     ) => {
         if (this.trackingSeq === seq) return;
         const payment_hash = this.inFlightPaymentHash;
@@ -1210,6 +1237,15 @@ export default class TransactionsStore {
                     // from the payment's actual terminal result
                     this.clearPaymentError();
                     this.handlePayment(payment, seq);
+                    if (
+                        status === 'FAILED' &&
+                        !failedPaymentHasReason(
+                            payment,
+                            this.settingsStore.implementation
+                        )
+                    ) {
+                        this.showFailureWithoutReason(rejectionMessage);
+                    }
                     return;
                 }
 
@@ -1296,6 +1332,17 @@ export default class TransactionsStore {
         this.error = false;
         this.error_msg = null;
         this.payment_error = null;
+    };
+
+    // A failed record with no reason would leave the send screen with only
+    // an error title (or LDK Node's generic text). Show the node's own
+    // rejection instead when there was one, else a generic failure.
+    @action
+    private showFailureWithoutReason = (rejectionMessage?: string) => {
+        this.error = true;
+        this.payment_error = null;
+        this.error_msg =
+            rejectionMessage || localeString('error.sendingPayment');
     };
 
     @action
@@ -1503,6 +1550,8 @@ export default class TransactionsStore {
         if (this.isStalePayment(seq)) return;
         this.error = true;
         this.loading = false;
+        const message =
+            errorToUserFriendly(err) || localeString('error.sendingPayment');
         // A rejected dispatch (dropped connection, Tor timeout) doesn't
         // prove the payment failed on the node: the request may have gone
         // through before transport was lost. Surface the error, but verify
@@ -1516,6 +1565,13 @@ export default class TransactionsStore {
             // show that attempt's outcome (e.g. an earlier success for an
             // already-paid invoice) as this one's.
             this.clearPaymentInFlight(seq);
+        } else if (isSendRefused(err)) {
+            // the wallet refused the request before sending anything
+            // (insufficient balance, a budget or permission refusal, an
+            // invalid invoice), so there is nothing to track. It often
+            // refuses the lookup for the same reason, which would hold the
+            // guard and end on the "may pay twice" notice.
+            this.clearPaymentInFlight(seq);
         } else if (seq !== undefined && this.canTrackPayment(seq)) {
             // the rejection settled the request, so no-record answers
             // count from now on. A rejection from the node itself (e.g. an
@@ -1523,16 +1579,20 @@ export default class TransactionsStore {
             // records a payment before dispatching it, so one no-record
             // answer shows it was never sent. A transport failure may
             // still deliver the request, so it needs repeated answers.
+            // The node's or wallet's own message is kept for a record
+            // that only says the payment failed; a transport error is not.
             this.trackPaymentToTerminal(
                 seq,
                 Date.now(),
-                isNodeResponse(err) ? 1 : PAYMENT_TRACK_MAX_NOT_FOUND
+                isNodeResponse(err) ? 1 : PAYMENT_TRACK_MAX_NOT_FOUND,
+                isNodeAnswer(err, this.settingsStore.implementation)
+                    ? message
+                    : undefined
             );
         } else {
             this.clearPaymentInFlight(seq);
         }
-        this.error_msg =
-            errorToUserFriendly(err) || localeString('error.sendingPayment');
+        this.error_msg = message;
     };
 
     @action

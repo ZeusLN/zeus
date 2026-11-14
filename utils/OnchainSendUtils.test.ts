@@ -8,6 +8,7 @@ import path from 'path';
 import {
     SEND_LABEL_PREFIX,
     findSentTransaction,
+    isNodeAnswer,
     mayHaveBeenSent,
     makeSendLabel
 } from './OnchainSendUtils';
@@ -16,8 +17,10 @@ import {
     markJsonRpcCode,
     markNodeResponded,
     markRequestNotSent,
-    markRestErrorResponse
+    markRestErrorResponse,
+    markWalletReplied
 } from './PaymentLookupUtils';
+import { markRequestTimeout } from './RequestTimeoutUtils';
 
 describe('makeSendLabel', () => {
     it('is the prefix plus 16 hex characters', () => {
@@ -442,5 +445,105 @@ describe('mayHaveBeenSent', () => {
         ]
     ])('is true for %s', (_, message) => {
         expect(mayHaveBeenSent(new Error(message), 'lnd')).toBe(true);
+    });
+});
+
+// For a failed payment record without a reason: is the rejection's text the
+// node's own answer? Evidence on the error comes before the text, so an
+// answer that mentions a timeout still counts, unlike in mayHaveBeenSent.
+describe('isNodeAnswer', () => {
+    const clnAnswer = (text: string) =>
+        markJsonRpcCode(markHttpStatus(new Error(text), 500), {
+            code: 209,
+            message: text
+        });
+
+    it.each([
+        [
+            'xpay giving up when retry_for runs out',
+            'cln-rest',
+            clnAnswer(
+                'Timed out after after 4 attempts. We got temporary_channel_failure'
+            )
+        ],
+        [
+            'xpay giving up after an MPP timeout',
+            'cln-rest',
+            clnAnswer(
+                'Failed after 3 attempts. We got a weird error: reached destination, but timed out before the rest arrived.'
+            )
+        ],
+        [
+            'an lnd error with an application code',
+            'lnd',
+            markNodeResponded(new Error('payment attempt timed out'), 2)
+        ],
+        [
+            "an NWC wallet's answer",
+            'nostr-wallet-connect',
+            markNodeResponded(new Error('payment timed out'))
+        ],
+        [
+            "an NWC wallet's reply",
+            'nostr-wallet-connect',
+            markWalletReplied(new Error('Failed to send payment: timeout'))
+        ],
+        [
+            'an LNC node error',
+            'lightning-node-connect',
+            new Error('rpc error: code = Unknown desc = invoice expired')
+        ],
+        [
+            'an LNC node error that mentions a timeout',
+            'lightning-node-connect',
+            new Error(
+                'rpc error: code = Unknown desc = payment attempt timed out'
+            )
+        ],
+        ['an LDK Node rejection', 'ldk-node', new Error('RouteNotFound')]
+    ])('counts %s', (_, implementation, error) => {
+        expect(isNodeAnswer(error, implementation)).toBe(true);
+    });
+
+    it.each([
+        [
+            'a proxy 502 without a JSON-RPC code',
+            'cln-rest',
+            markHttpStatus(new Error('Bad Gateway'), 502)
+        ],
+        [
+            "a CLN client's own timeout",
+            'cln-rest',
+            new Error('Request timeout')
+        ],
+        [
+            'an lnd transport code',
+            'lnd',
+            markNodeResponded(new Error('connection refused'), 14)
+        ],
+        [
+            'an LNC transport code',
+            'lightning-node-connect',
+            new Error(
+                'rpc error: code = DeadlineExceeded desc = context deadline exceeded'
+            )
+        ],
+        [
+            "LNC's own request timer",
+            'lightning-node-connect',
+            new Error('routerrpc.Router.SendPaymentV2 timed out after 60000ms')
+        ],
+        [
+            "LDK Node's own timeout in German",
+            'ldk-node',
+            markRequestTimeout(new Error('Zeitüberschreitung bei der Zahlung'))
+        ],
+        [
+            'a request that never went out',
+            'lightning-node-connect',
+            markRequestNotSent(new Error('RPC connection not ready'))
+        ]
+    ])('does not count %s', (_, implementation, error) => {
+        expect(isNodeAnswer(error, implementation)).toBe(false);
     });
 });
