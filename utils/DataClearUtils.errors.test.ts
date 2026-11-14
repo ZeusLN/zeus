@@ -333,11 +333,25 @@ describe('clearAllData baseline (no failures)', () => {
         expect(MigrationUtils.clearConfirmedFlags).toHaveBeenCalled();
     });
 
-    // Step 3 clears NOTES_KEY (it is in STORAGE_KEYS), then step 4 reads
-    // NOTES_KEY to find the per-note keys, so it always reads a miss
-    it.todo(
-        'clears individual note entries (step 4 reads the note index after step 3 deleted it)'
-    );
+    // Step 3 clears NOTES_KEY (it is in STORAGE_KEYS), so step 4 has to use
+    // the note index read before that, not read NOTES_KEY again
+    it('clears individual note entries listed in the current and legacy note indexes', async () => {
+        seedInstall();
+        seedEverywhere('zeus-notes-v2', '["note-a","note-b"]');
+        seedEverywhere('note-a', 'paid alice');
+        seedEverywhere('note-b', 'paid bob');
+        // Pre-v2 installs kept the index under note-Keys in EncryptedStorage;
+        // storageMigrationV2 copied the notes into the keychain under the
+        // same key names
+        mockEncryptedStorage.items.set('note-Keys', '["note-legacy"]');
+        mockEncryptedStorage.items.set('note-legacy', 'paid carol');
+        seedEverywhere('note-legacy', 'paid carol');
+
+        await clearAllData();
+
+        expect(remainingEntries()).toEqual([]);
+        expect([...mockEncryptedStorage.items.keys()]).toEqual([]);
+    });
 });
 
 describe('clearKey: one location rejects, the others are still cleared', () => {
@@ -506,12 +520,23 @@ describe('clearAllData: a failing step does not stop later steps', () => {
         expect(mockFs.files.has(ANDROID_DATASTORE)).toBe(false);
     });
 
-    // removeItem('zeus-settings') and clear() share one try block, so a
-    // rejected removeItem skips clear() and leaves the legacy settings blob
-    // (node configs with seeds and macaroons) in EncryptedStorage
-    it.todo(
-        'clears EncryptedStorage, including the legacy zeus-settings blob, when removeItem rejects'
-    );
+    // A rejected removeItem('zeus-settings') must not skip clear(), which
+    // also removes the legacy settings blob (node configs with seeds and
+    // macaroons) and the migration flags
+    it('clears EncryptedStorage, including the legacy zeus-settings blob, when removeItem rejects', async () => {
+        seedInstall();
+        mockEncryptedStorage.failRemove = true;
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(warnedAbout('Error clearing legacy settings')).toBe(true);
+        // The pending-wipe record is saved again after clear() and its
+        // removal at the end fails too, so the next launch finishes the wipe
+        expect([...mockEncryptedStorage.items.keys()]).toEqual([
+            'wipe-pending'
+        ]);
+        expect(MigrationUtils.clearConfirmedFlags).toHaveBeenCalled();
+    });
 
     it.each([
         [
