@@ -21,6 +21,7 @@ import {
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY,
     isValidRescueKey,
+    keyIndexAfter,
     verifyReverseSwapInvoice,
     verifyReverseSwapResponse,
     verifySubmarineSwapResponse,
@@ -266,6 +267,18 @@ export default class SwapStore {
     private withSwapStorage = <T>(update: () => Promise<T>): Promise<T> => {
         const run = this.swapStorageQueue.then(update, update);
         this.swapStorageQueue = run.catch(() => undefined);
+        return run;
+    };
+
+    // Every read-modify-write of SWAPS_LAST_USED_KEY runs through
+    // withKeyIndex, one at a time. Two swaps created at once would
+    // otherwise both read the counter before either wrote it back and
+    // take the same key index, and so the same preimage.
+    private keyIndexQueue: Promise<unknown> = Promise.resolve();
+
+    private withKeyIndex = <T>(update: () => Promise<T>): Promise<T> => {
+        const run = this.keyIndexQueue.then(update, update);
+        this.keyIndexQueue = run.catch(() => undefined);
         return run;
     };
 
@@ -2081,6 +2094,8 @@ export default class SwapStore {
         // wallet seed would expose the wallet's own key tree.
         const mnemonic = generateMnemonic(BIP39_WORD_LIST);
         await Storage.setItem(SWAPS_RESCUE_KEY, mnemonic);
+        // a new key has used no index yet
+        await this.setLastUsedKey(0);
 
         return mnemonic;
     };
@@ -2098,10 +2113,83 @@ export default class SwapStore {
         await Storage.setItem(SWAPS_LAST_USED_KEY, val.toString());
     };
 
+    /**
+     * Moves an existing key index counter past the swaps given, never back.
+     * A missing counter is left missing: the swaps may come from a host
+     * other than the current one, and a counter set from them would stop
+     * generateNewKey from asking the current host which indexes it has
+     * seen. The rescued swaps are in storage, which that lookup counts.
+     */
+    private advanceLastUsedKey = (swaps: any[]): Promise<void> =>
+        this.withKeyIndex(async () => {
+            if (!(await Storage.getItem(SWAPS_LAST_USED_KEY))) return;
+            const next = keyIndexAfter(swaps);
+            if (next > (await this.getLastUsedKey())) {
+                await this.setLastUsedKey(next);
+            }
+        });
+
+    /**
+     * A rescue key without a key index counter was restored on this device
+     * (new install, or deleted and restored), and the counter would start
+     * over at 0. Each reverse swap's preimage is derived from its index and
+     * handed to the host when the swap is claimed, so reusing an index
+     * reuses a preimage the host already holds. Before the first new swap,
+     * set the counter past every index used by the swaps this device has
+     * rescued and the swaps the host lists for the key.
+     */
+    private skipUsedKeyIndexes = async (): Promise<void> => {
+        const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
+        if (!mnemonic) {
+            throw new Error('Rescue mnemonic not found in storage.');
+        }
+
+        let hostSwaps: any;
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${this.getHost}/swap/restore`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify({
+                    xpub: this.getXpub(mnemonic)
+                })
+            );
+            // only a 200 with a list answers the question; an error
+            // status or empty body must not read as "no swaps", which
+            // would start the counter at 0
+            if (response.info().status === 200 && response.data) {
+                hostSwaps = JSON.parse(response.data);
+            }
+        } catch (error) {
+            console.error('Could not list the swaps of the rescue key:', error);
+        }
+        if (!Array.isArray(hostSwaps)) {
+            throw new Error(localeString('views.Swaps.usedKeysUnavailable'));
+        }
+
+        const storedSwaps: any[] = [];
+        for (const key of [SWAPS_KEY, REVERSE_SWAPS_KEY]) {
+            const stored = await Storage.getItem(key);
+            if (stored) storedSwaps.push(...JSON.parse(stored));
+        }
+
+        await this.setLastUsedKey(
+            Math.max(keyIndexAfter(hostSwaps), keyIndexAfter(storedSwaps))
+        );
+    };
+
     @action
     public generateNewKey = async () => {
-        const index = await this.getLastUsedKey();
-        await this.setLastUsedKey(index + 1);
+        const index = await this.withKeyIndex(async () => {
+            if (!(await Storage.getItem(SWAPS_LAST_USED_KEY))) {
+                await this.skipUsedKeyIndexes();
+            }
+            const next = await this.getLastUsedKey();
+            await this.setLastUsedKey(next + 1);
+            return next;
+        });
         const keys = await this.deriveKey(index);
         return { index, keys };
     };
@@ -2234,6 +2322,12 @@ export default class SwapStore {
                 );
 
                 const importedSwaps = JSON.parse(response.data || '[]');
+
+                // new swaps under this key must not reuse the indexes, and
+                // so the preimages, of the swaps found
+                if (mnemonic === (await Storage.getItem(SWAPS_RESCUE_KEY))) {
+                    await this.advanceLastUsedKey(importedSwaps);
+                }
 
                 if (importedSwaps.length > 0) {
                     await this.withSwapStorage(async () => {
