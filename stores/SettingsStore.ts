@@ -2138,6 +2138,7 @@ export default class SettingsStore {
             await MigrationsUtils.keychainDesyncMigration();
             await MigrationsUtils.keychainCloudSyncMigration();
             await MigrationsUtils.purgeRescueKeyFiles();
+            await MigrationsUtils.checkLegacyExportFiles();
 
             let modernSettings: any = await Storage.getItem(STORAGE_KEY);
 

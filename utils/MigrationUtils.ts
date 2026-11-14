@@ -86,6 +86,8 @@ import {
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
 
+import { checkLegacyExportFiles } from '../utils/LegacyExportUtils';
+
 import {
     TimePeriod,
     displayFromExpirySeconds,
@@ -1081,6 +1083,25 @@ class MigrationsUtils {
         await purgeLegacyRescueKeyFiles();
 
         await this.writeFlag(MOD_KEY_RESCUE_FILE);
+    }
+
+    // Older builds wrote activity CSVs and wallet config backups to the iOS
+    // Documents dir, which the Files app showed as the ZEUS folder. File
+    // sharing is now disabled, so those files are invisible but still swept
+    // into iCloud/iTunes backups. This step deletes nothing: it records that
+    // legacy files exist (flag 'legacy-export-file-cleanup' unset, pending
+    // prompt key set), and the Wallet view asks the user after unlock to
+    // share or delete them (LegacyExportUtils.promptLegacyExportCleanup).
+    // Android Downloads is left to clearAllData. It also sweeps stale share
+    // staging on every launch, on both platforms. Runs before the settings
+    // blob is read, so it covers both the legacy and zeus-settings-v2 paths;
+    // a failure never blocks settings load.
+    public async checkLegacyExportFiles() {
+        try {
+            await checkLegacyExportFiles();
+        } catch (e) {
+            console.warn('Error checking legacy export files:', e);
+        }
     }
 
     public async storageMigrationV2(settings: any) {

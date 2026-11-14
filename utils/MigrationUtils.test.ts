@@ -35,6 +35,21 @@ jest.mock('../stores/LightningAddressStore', () => ({}));
 jest.mock('../stores/LSPStore', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({}));
 
+const mockPurgeCsvExports = jest.fn();
+const mockPurgeConfigExports = jest.fn();
+jest.mock('../utils/ActivityCsvUtils', () => ({
+    purgeLegacyActivityCsvExports: (...args: any[]) =>
+        mockPurgeCsvExports(...args)
+}));
+jest.mock('../utils/NodeConfigUtils', () => ({
+    purgeLegacyNodeConfigExports: (...args: any[]) =>
+        mockPurgeConfigExports(...args)
+}));
+const mockCheckLegacyExports = jest.fn();
+jest.mock('../utils/LegacyExportUtils', () => ({
+    checkLegacyExportFiles: (...args: any[]) => mockCheckLegacyExports(...args)
+}));
+
 jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_FIAT_RATES_SOURCE: 'Zeus',
     DEFAULT_FIAT: 'USD',
@@ -2881,6 +2896,32 @@ describe('MigrationUtils', () => {
             expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
             expect(settingsStore.updateSettings).not.toHaveBeenCalled();
             expect(Storage.setItem).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('checkLegacyExportFiles', () => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+            mockCheckLegacyExports.mockResolvedValue(undefined);
+        });
+
+        // Startup must not delete legacy exports: the user is asked after
+        // unlock (LegacyExportUtils.promptLegacyExportCleanup) whether to
+        // share or delete them
+        it('records the pending prompt and deletes nothing', async () => {
+            await MigrationUtils.checkLegacyExportFiles();
+
+            expect(mockCheckLegacyExports).toHaveBeenCalledTimes(1);
+            expect(mockPurgeCsvExports).not.toHaveBeenCalled();
+            expect(mockPurgeConfigExports).not.toHaveBeenCalled();
+        });
+
+        it('does not block settings load when the check throws', async () => {
+            mockCheckLegacyExports.mockRejectedValue(new Error('EIO'));
+
+            await expect(
+                MigrationUtils.checkLegacyExportFiles()
+            ).resolves.toBeUndefined();
         });
     });
 });
