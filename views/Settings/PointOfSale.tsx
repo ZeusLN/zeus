@@ -10,7 +10,7 @@ import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { hasVerifier } from '../../utils/LockVerifierUtils';
+import { hasLockCredential } from '../../utils/LockVerifierUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -128,8 +128,8 @@ export default class PointOfSale extends React.Component<
             SettingsStore;
         const { fiatEnabled } = settings;
         const authConfigured =
-            hasVerifier(settings.passphraseVerifier) ||
-            hasVerifier(settings.pinVerifier);
+            hasLockCredential(settings, 'passphrase') ||
+            hasLockCredential(settings, 'pin');
 
         const LIST_ITEMS = [
             {

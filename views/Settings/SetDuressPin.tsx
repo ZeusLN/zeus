@@ -9,7 +9,10 @@ import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { deriveVerifier, verifySecret } from '../../utils/LockVerifierUtils';
+import {
+    deriveVerifier,
+    matchesLockCredential
+} from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
@@ -93,7 +96,9 @@ export default class SetDuressPin extends React.Component<
         try {
             const settings = await getSettings();
 
-            if (await verifySecret(duressPin, settings.pinVerifier)) {
+            // the PIN may still be plaintext, or deleted by an older build
+            // next to its old verifier
+            if (await matchesLockCredential(duressPin, settings, 'pin')) {
                 this.setState({
                     duressPinInvalidError: true,
                     duressPin: '',
@@ -104,7 +109,9 @@ export default class SetDuressPin extends React.Component<
             }
 
             const duressPinVerifier = await deriveVerifier(duressPin);
-            await updateSettings({ duressPinVerifier });
+            // drop any plaintext the verifier migration has not hashed
+            // yet, so it cannot win over this record later
+            await updateSettings({ duressPinVerifier, duressPin: undefined });
         } catch (error) {
             console.error('Failed to save the duress PIN', error);
             this.setState({

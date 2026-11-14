@@ -7,7 +7,7 @@ import type {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { settingsStore } from '../stores/Stores';
-import { hasVerifier } from './LockVerifierUtils';
+import { hasLockCredential } from './LockVerifierUtils';
 
 // Screens that an active POS session can open without the PIN. Their own
 // links to other screens go through lockRouteGuard like every other
@@ -116,12 +116,12 @@ const protectedNavigation = async (
     if (!settingsStore.sessionStarted()) return;
 
     const { posStatus, settings, setPosStatus } = settingsStore;
-    // credentials are stored as verifier records; the plaintext
-    // passphrase/pin fields no longer exist post-migration
+    // verifier records, or a plaintext credential the migration has not
+    // hashed yet (see hasLockCredential)
     const loginRequired =
         settings &&
-        (hasVerifier(settings.passphraseVerifier) ||
-            hasVerifier(settings.pinVerifier));
+        (hasLockCredential(settings, 'passphrase') ||
+            hasLockCredential(settings, 'pin'));
     const posEnabled = posStatus === 'active';
 
     if (posEnabled && loginRequired) {

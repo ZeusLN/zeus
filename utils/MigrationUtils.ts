@@ -110,7 +110,7 @@ import Storage, {
     getRawItem,
     setRawLocalItem
 } from '../storage';
-import { deriveVerifier, hasVerifier } from './LockVerifierUtils';
+import { deriveVerifier, getPlaintextCredential } from './LockVerifierUtils';
 
 export const KEYCHAIN_DESYNC_KEY = 'keychain-desync-v1';
 const MOD_KEY_LOCK_VERIFIER = 'lock-verifier-hash-mod';
@@ -759,19 +759,45 @@ class MigrationsUtils {
         );
     }
 
-    // Hashes each plaintext credential into its verifier field (unless one
-    // already exists) and deletes the plaintext. In memory only; returns
-    // whether anything changed.
+    // Hashes each plaintext credential into its verifier field and deletes
+    // the plaintext. In memory only; returns whether anything changed.
     public async applyLockCredentialVerifiers(settings: any): Promise<boolean> {
         if (!settings) return false;
         let changed = false;
+        // Those builds set a PIN or a passphrase only when neither is set,
+        // so a plaintext PIN without a plaintext passphrase (or the
+        // reverse) is a lock set there after a downgrade, and the other
+        // method's verifiers are from before it: an RC passphrase must not
+        // stay the lock over a PIN set on v13.2.4
+        const pinSet = !!getPlaintextCredential(settings, 'pin');
+        const passphraseSet = !!getPlaintextCredential(settings, 'passphrase');
+        if (pinSet !== passphraseSet) {
+            const stale = pinSet
+                ? ['passphraseVerifier', 'duressPassphraseVerifier']
+                : ['pinVerifier', 'duressPinVerifier'];
+            for (const key of stale) {
+                if (settings[key] !== undefined) {
+                    delete settings[key];
+                    changed = true;
+                }
+            }
+        }
         for (const { plain, verifier } of LOCK_CREDENTIAL_FIELDS) {
             const value = settings[plain];
             if (typeof value === 'string' && value.length > 0) {
-                // don't clobber a verifier that already exists
-                if (!hasVerifier(settings[verifier])) {
-                    settings[verifier] = await deriveVerifier(value);
-                }
+                // The plaintext replaces a verifier that is already there.
+                // Only a build from before verifiers writes plaintext, and
+                // it keeps the verifier fields it does not know about, so
+                // the plaintext is the newer credential: a PIN set on
+                // v13.2.4 after a downgrade must win over the record
+                // written before it.
+                settings[verifier] = await deriveVerifier(value);
+                changed = true;
+            } else if (value === '' && settings[verifier] !== undefined) {
+                // Those builds write an empty string only when the user
+                // deletes the credential, so a credential deleted on
+                // v13.2.4 after a downgrade drops the verifier from before
+                delete settings[verifier];
                 changed = true;
             }
             if (settings[plain] !== undefined) {

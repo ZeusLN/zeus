@@ -14,7 +14,10 @@ import {
     retryOnTransientError
 } from '../../utils/LndMobileErrors';
 import { sourceMethods } from '../../backends/lncTestUtils';
-import { deriveVerifier, hasVerifier } from '../../utils/LockVerifierUtils';
+import {
+    deriveVerifier,
+    hasLockCredential
+} from '../../utils/LockVerifierUtils';
 import * as WalletRecoveryUtils from '../../utils/WalletRecoveryUtils';
 
 const deferred = <T = void>() => {
@@ -77,8 +80,9 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
                   ]
                 : [])
         ],
-        // loginMethodConfigured checks the stored verifiers with hasVerifier
-        { BackendUtils, hasVerifier }
+        // loginMethodConfigured checks the stored credentials with
+        // hasLockCredential
+        { BackendUtils, hasLockCredential }
     );
     const settings = new Settings();
     Object.assign(settings, {

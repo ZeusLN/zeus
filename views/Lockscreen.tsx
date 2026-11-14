@@ -35,9 +35,10 @@ import { localeString } from '../utils/LocaleUtils';
 import { restartApp } from '../utils/RestartUtils';
 import {
     verifySecret,
-    hasVerifier,
-    getDummyVerifier,
-    VerifierRecord
+    getLockMethod,
+    getLockVerifier,
+    getPlaintextCredential,
+    resolveLoginVerifiers
 } from '../utils/LockVerifierUtils';
 import {
     authenticatedShareIntent,
@@ -64,12 +65,8 @@ interface LockscreenProps {
 
 interface LockscreenState {
     authMethod: 'pin' | 'passphrase' | null;
-    passphraseVerifier?: VerifierRecord;
     passphraseAttempt: string;
-    duressPassphraseVerifier?: VerifierRecord;
-    pinVerifier?: VerifierRecord;
     pinAttempt: string;
-    duressPinVerifier?: VerifierRecord;
     hidden: boolean;
     error: boolean;
     attemptNotSaved: boolean;
@@ -113,11 +110,7 @@ export default class Lockscreen extends React.Component<
         this.state = {
             authMethod: null,
             passphraseAttempt: '',
-            passphraseVerifier: undefined,
-            duressPassphraseVerifier: undefined,
-            pinVerifier: undefined,
             pinAttempt: '',
-            duressPinVerifier: undefined,
             hidden: true,
             error: false,
             attemptNotSaved: false,
@@ -308,18 +301,12 @@ export default class Lockscreen extends React.Component<
             });
         }
 
-        if (settings && hasVerifier(settings.passphraseVerifier)) {
-            this.setState({
-                authMethod: 'passphrase',
-                passphraseVerifier: settings.passphraseVerifier,
-                duressPassphraseVerifier: settings.duressPassphraseVerifier
-            });
-        } else if (settings && hasVerifier(settings.pinVerifier)) {
-            this.setState({
-                authMethod: 'pin',
-                pinVerifier: settings.pinVerifier,
-                duressPinVerifier: settings.duressPinVerifier
-            });
+        // A credential the verifier migration has not hashed yet still
+        // selects its method (onAttemptLogIn hashes it in memory), and wins
+        // over the other method's records from before a downgrade
+        const lockMethod = getLockMethod(settings);
+        if (lockMethod) {
+            this.setState({ authMethod: lockMethod });
         } else if (settings && settings.nodes && settings?.nodes?.length > 0) {
             this.proceed(pendingNavigation?.screen, pendingNavigation?.params);
         } else {
@@ -352,12 +339,8 @@ export default class Lockscreen extends React.Component<
         const { SettingsStore, navigation, route } = this.props;
         const {
             authMethod,
-            passphraseVerifier,
-            duressPassphraseVerifier,
             passphraseAttempt,
-            pinVerifier,
             pinAttempt,
-            duressPinVerifier,
             modifySecurityScreen,
             deletePin,
             deleteDuressPin,
@@ -401,15 +384,16 @@ export default class Lockscreen extends React.Component<
         // of the two derivations would be a measurable tell.
         const attempt =
             authMethod === 'passphrase' ? passphraseAttempt : pinAttempt;
-        const primaryVerifier =
-            authMethod === 'passphrase' ? passphraseVerifier : pinVerifier;
-        const configuredDuressVerifier =
-            authMethod === 'passphrase'
-                ? duressPassphraseVerifier
-                : duressPinVerifier;
-        const duressVerifier = hasVerifier(configuredDuressVerifier)
-            ? configuredDuressVerifier
-            : getDummyVerifier(primaryVerifier);
+        // Read the credentials now, not at mount: a queued settings write
+        // (this screen's own attempt count included) can land the verifier
+        // migration while the screen is up, replacing a plaintext
+        // credential with its verifier. The plaintext is set only while the
+        // migration has not hashed the credential (it threw on this boot,
+        // or a downgrade wrote it).
+        const { settings } = SettingsStore;
+        const primaryField = authMethod === 'passphrase' ? 'passphrase' : 'pin';
+        const duressField =
+            authMethod === 'passphrase' ? 'duressPassphrase' : 'duressPin';
 
         try {
             // A rejection here is a failed derivation, not a wrong entry, so
@@ -418,9 +402,15 @@ export default class Lockscreen extends React.Component<
             let primaryMatch: boolean;
             let duressMatch: boolean;
             try {
+                const verifiers = await resolveLoginVerifiers(
+                    getLockVerifier(settings, primaryField),
+                    getPlaintextCredential(settings, primaryField),
+                    getLockVerifier(settings, duressField),
+                    getPlaintextCredential(settings, duressField)
+                );
                 [primaryMatch, duressMatch] = await Promise.all([
-                    verifySecret(attempt, primaryVerifier),
-                    verifySecret(attempt, duressVerifier)
+                    verifySecret(attempt, verifiers.primary),
+                    verifySecret(attempt, verifiers.duress)
                 ]);
             } catch (error) {
                 console.error('Failed to verify the lock credential', error);
@@ -621,6 +611,13 @@ export default class Lockscreen extends React.Component<
         updateSettings({
             passphraseVerifier: undefined,
             duressPassphraseVerifier: undefined,
+            // and any plaintext the verifier migration has not hashed yet
+            passphrase: undefined,
+            duressPassphrase: undefined,
+            // and the other method's records from before a downgrade, which
+            // would otherwise become the lock
+            pinVerifier: undefined,
+            duressPinVerifier: undefined,
             authenticationAttempts: 0,
             isBiometryEnabled: false
         }).then(() => {
@@ -634,6 +631,7 @@ export default class Lockscreen extends React.Component<
 
         updateSettings({
             duressPassphraseVerifier: undefined,
+            duressPassphrase: undefined,
             authenticationAttempts: 0
         }).then(() => {
             navigation.popTo('Security');
@@ -649,6 +647,13 @@ export default class Lockscreen extends React.Component<
         updateSettings({
             pinVerifier: undefined,
             duressPinVerifier: undefined,
+            // and any plaintext the verifier migration has not hashed yet
+            pin: undefined,
+            duressPin: undefined,
+            // and the other method's records from before a downgrade, which
+            // would otherwise become the lock
+            passphraseVerifier: undefined,
+            duressPassphraseVerifier: undefined,
             authenticationAttempts: 0,
             isBiometryEnabled: false
         }).then(() => {
@@ -662,6 +667,7 @@ export default class Lockscreen extends React.Component<
 
         updateSettings({
             duressPinVerifier: undefined,
+            duressPin: undefined,
             authenticationAttempts: 0
         }).then(() => {
             navigation.popTo('Security');

@@ -13,8 +13,8 @@ import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import {
     deriveVerifier,
-    verifySecret,
-    hasVerifier
+    hasLockCredential,
+    matchesLockCredential
 } from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
@@ -64,7 +64,7 @@ export default class SetPassphrase extends React.Component<
 
         this.setState({
             isBiometryEnabled: settings.isBiometryEnabled,
-            hasSavedPassphrase: hasVerifier(settings.passphraseVerifier)
+            hasSavedPassphrase: hasLockCredential(settings, 'passphrase')
         });
 
         this.firstInput.current?.focus();
@@ -105,9 +105,12 @@ export default class SetPassphrase extends React.Component<
             }
 
             if (
-                await verifySecret(
+                // the duress passphrase may still be plaintext, or deleted by
+                // an older build next to its old verifier
+                await matchesLockCredential(
                     passphrase,
-                    settings.duressPassphraseVerifier
+                    settings,
+                    'duressPassphrase'
                 )
             ) {
                 this.setState({
@@ -118,7 +121,17 @@ export default class SetPassphrase extends React.Component<
             }
 
             const passphraseVerifier = await deriveVerifier(passphrase);
-            await updateSettings({ passphraseVerifier });
+            // drop any plaintext the verifier migration has not hashed
+            // yet, so it cannot win over this record later
+            await updateSettings({
+                passphraseVerifier,
+                passphrase: undefined,
+                // only one method is ever set, so the PIN fields can hold
+                // only records from before a downgrade, which would become
+                // the lock again once the plaintext is gone
+                pinVerifier: undefined,
+                duressPinVerifier: undefined
+            });
         } catch (error) {
             console.error('Failed to save the password', error);
             this.setState({ saveError: true });
@@ -141,6 +154,13 @@ export default class SetPassphrase extends React.Component<
         await updateSettings({
             duressPassphraseVerifier: undefined,
             passphraseVerifier: undefined,
+            // and any plaintext the verifier migration has not hashed yet
+            duressPassphrase: undefined,
+            passphrase: undefined,
+            // and the other method's records from before a downgrade, which
+            // would otherwise become the lock
+            pinVerifier: undefined,
+            duressPinVerifier: undefined,
             isBiometryEnabled: false
         });
         navigation.popTo('Security');

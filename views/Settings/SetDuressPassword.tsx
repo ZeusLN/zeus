@@ -13,8 +13,8 @@ import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import {
     deriveVerifier,
-    verifySecret,
-    hasVerifier
+    hasLockCredential,
+    matchesLockCredential
 } from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
@@ -56,8 +56,9 @@ export default class SetDuressPassphrase extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            hasSavedDuressPassphrase: hasVerifier(
-                settings.duressPassphraseVerifier
+            hasSavedDuressPassphrase: hasLockCredential(
+                settings,
+                'duressPassphrase'
             )
         });
     }
@@ -97,9 +98,12 @@ export default class SetDuressPassphrase extends React.Component<
             const settings = await getSettings();
 
             if (
-                await verifySecret(
+                // the passphrase may still be plaintext, or deleted by an
+                // older build next to its old verifier
+                await matchesLockCredential(
                     duressPassphrase,
-                    settings.passphraseVerifier
+                    settings,
+                    'passphrase'
                 )
             ) {
                 this.setState({
@@ -112,7 +116,12 @@ export default class SetDuressPassphrase extends React.Component<
             const duressPassphraseVerifier = await deriveVerifier(
                 duressPassphrase
             );
-            await updateSettings({ duressPassphraseVerifier });
+            // drop any plaintext the verifier migration has not hashed
+            // yet, so it cannot win over this record later
+            await updateSettings({
+                duressPassphraseVerifier,
+                duressPassphrase: undefined
+            });
         } catch (error) {
             console.error('Failed to save the duress password', error);
             this.setState({ saveError: true });
@@ -127,11 +136,12 @@ export default class SetDuressPassphrase extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { updateSettings } = SettingsStore;
 
-        await updateSettings({ duressPassphraseVerifier: undefined }).then(
-            () => {
-                navigation.popTo('Security');
-            }
-        );
+        await updateSettings({
+            duressPassphraseVerifier: undefined,
+            duressPassphrase: undefined
+        }).then(() => {
+            navigation.popTo('Security');
+        });
     };
 
     render() {

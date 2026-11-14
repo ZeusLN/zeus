@@ -13,8 +13,8 @@ import SettingsStore from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import {
     deriveVerifier,
-    verifySecret,
-    hasVerifier
+    hasLockCredential,
+    matchesLockCredential
 } from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -95,7 +95,9 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         try {
             const settings = await getSettings();
 
-            if (await verifySecret(pin, settings.duressPinVerifier)) {
+            // the duress PIN may still be plaintext, or deleted by an older
+            // build next to its old verifier
+            if (await matchesLockCredential(pin, settings, 'duressPin')) {
                 this.setState({
                     pinInvalidError: true,
                     pin: '',
@@ -106,7 +108,17 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             }
 
             const pinVerifier = await deriveVerifier(pin);
-            await updateSettings({ pinVerifier });
+            // drop any plaintext the verifier migration has not hashed
+            // yet, so it cannot win over this record later
+            await updateSettings({
+                pinVerifier,
+                pin: undefined,
+                // only one method is ever set, so the passphrase fields can
+                // hold only records from before a downgrade, which would
+                // become the lock again once the plaintext is gone
+                passphraseVerifier: undefined,
+                duressPassphraseVerifier: undefined
+            });
         } catch (error) {
             console.error('Failed to save the PIN', error);
             this.setState({ saveError: true, pin: '', pinConfirm: '' });
@@ -169,7 +181,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                 }}
                             >
                                 {localeString(
-                                    hasVerifier(settings.pinVerifier)
+                                    hasLockCredential(settings, 'pin')
                                         ? 'views.Settings.SetPin.newPin'
                                         : 'views.Settings.SetPin.createPin'
                                 )}
