@@ -6866,6 +6866,50 @@ export default class CashuStore {
     };
 
     @action
+    /**
+     * Record a token created by sendTokenCDK in the sent-token history, so it
+     * shows in activity and can be reclaimed while unspent
+     */
+    private recordSentToken = async (
+        mintUrl: string,
+        cdkToken: CDKToken,
+        memo?: string
+    ): Promise<CashuToken> => {
+        const decoded = new CashuToken({
+            mint: mintUrl,
+            memo,
+            unit: 'sat',
+            sent: true,
+            proofs: cdkToken.proofs,
+            encodedToken: cdkToken.encoded,
+            created_at: Date.now() / 1000,
+            spent: false,
+            value: cdkToken.value
+        });
+
+        this.sentTokens?.push(decoded);
+        await Storage.setItem(
+            `${this.getNodeDir()}-cashu-sent-tokens`,
+            this.sentTokens
+        );
+
+        return decoded;
+    };
+
+    /**
+     * Create a token for a Cashu payment request (CREQ) from a given mint and
+     * record it like a token from mintToken
+     */
+    public sendTokenForRequest = async (
+        mintUrl: string,
+        amount: number,
+        memo?: string
+    ): Promise<{ token: string; decoded: CashuToken }> => {
+        const cdkToken = await this.sendTokenCDK(mintUrl, amount, memo);
+        const decoded = await this.recordSentToken(mintUrl, cdkToken, memo);
+        return { token: cdkToken.encoded, decoded };
+    };
+
     public mintToken = async ({
         memo,
         value,
@@ -6956,25 +7000,7 @@ export default class CashuStore {
             );
 
             const token = cdkToken.encoded;
-
-            const decoded = new CashuToken({
-                mint: mintUrl,
-                memo,
-                unit: 'sat',
-                sent: true,
-                proofs: cdkToken.proofs,
-                encodedToken: token,
-                created_at: Date.now() / 1000,
-                spent: false,
-                value: cdkToken.value
-            });
-
-            // Record sent token activity
-            this.sentTokens?.push(decoded);
-            await Storage.setItem(
-                `${this.getNodeDir()}-cashu-sent-tokens`,
-                this.sentTokens
-            );
+            const decoded = await this.recordSentToken(mintUrl, cdkToken, memo);
 
             // CDK handles balance updates internally
             await this.syncCDKBalances();

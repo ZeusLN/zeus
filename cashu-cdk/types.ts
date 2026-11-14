@@ -40,6 +40,24 @@ export interface CDKToken {
     proofs: CDKProof[];
 }
 
+/**
+ * Cashu payment request (NUT-18 creqA or NUT-26 creqb), decoded by CDK
+ */
+export interface CDKPaymentRequest {
+    payment_id?: string;
+    amount?: number;
+    unit?: string;
+    single_use?: boolean;
+    description?: string;
+    mints: string[];
+    transports: Array<{
+        /** 'nostr' or 'post' */
+        type: string;
+        target: string;
+        tags: string[][];
+    }>;
+}
+
 // ============================================================================
 // Mint Types
 // ============================================================================
@@ -327,6 +345,7 @@ export interface CashuDevKitNativeModule {
     // Token Utility
     decodeToken(encodedToken: string): Promise<string>;
     isValidToken(encodedToken: string): Promise<boolean>;
+    decodePaymentRequest(encoded: string): Promise<string>;
 
     // Restore
     restore(mintUrl: string): Promise<number>;

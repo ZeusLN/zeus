@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     AppState,
     FlatList,
     Image,
@@ -26,7 +27,8 @@ import InvoicesStore from '../stores/InvoicesStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore, {
-    DEFAULT_SLIDE_TO_PAY_THRESHOLD
+    DEFAULT_SLIDE_TO_PAY_THRESHOLD,
+    DEFAULT_TAP_TO_PAY_LIMIT
 } from '../stores/SettingsStore';
 import TransactionsStore from '../stores/TransactionsStore';
 import UTXOsStore from '../stores/UTXOsStore';
@@ -51,10 +53,11 @@ import UTXOPicker from '../components/UTXOPicker';
 import AddressUtils from '../utils/AddressUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
-import { scanNfcTag } from '../utils/NFCUtils';
+import { scanNfcTag, payViaNfcTap } from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { getRawAmountFromSats, isWholeSatAmount } from '../utils/AmountUtils';
+import { cashuStore } from '../stores/Stores';
 import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
 
 import NFC from '../assets/images/SVG/NFC-alt.svg';
@@ -301,6 +304,12 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     componentWillUnmount(): void {
+        // hiding the NFC modal cancels a tap-to-pay request that hasn't
+        // reached a tag yet, so it can't pay after Send is gone
+        const { ModalStore } = this.props;
+        if (ModalStore.showAndroidNfcModal) {
+            ModalStore.toggleAndroidNfcModal(false);
+        }
         this.backPressSubscription?.remove();
         this.appStateSubscription?.remove();
         if (this.focusListener) this.focusListener();
@@ -322,6 +331,38 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     scanNfc = async () => {
+        // With ecash, one NFC session pays a CREQ tag (tap-to-pay) and hands
+        // any other tag content to validateAddress
+        if (BackendUtils.supportsCashuWallet() && cashuStore.cdkInitialized) {
+            const limit =
+                this.props.SettingsStore.settings?.payments?.tapToPayLimit ??
+                DEFAULT_TAP_TO_PAY_LIMIT;
+            const result = await payViaNfcTap(
+                this.props.ModalStore,
+                cashuStore,
+                { limit }
+            );
+            if (result.status === 'paid') {
+                Alert.alert(
+                    localeString('general.success'),
+                    `${result.amount} ${localeString('general.sats')}`
+                );
+            } else if (result.status === 'confirm') {
+                this.props.navigation.navigate('CREQPayment', {
+                    creqParams: result.creqParams,
+                    creqString: result.creqString,
+                    invoice: result.invoice
+                });
+            } else if (result.status === 'read') {
+                if (result.text) this.validateAddress(result.text);
+            } else if (result.status === 'failed') {
+                // an alert, since Send may have no destination to show an
+                // error under
+                Alert.alert(localeString('general.error'), result.error);
+            }
+            return;
+        }
+
         const str = await scanNfcTag(this.props.ModalStore, 'pay');
         if (str) this.validateAddress(str);
     };
@@ -664,6 +705,9 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     backPressed = () => {
+        // Send's handler runs before App's, so close an open modal here.
+        // Closing the NFC modal also cancels a pending tap-to-pay request
+        if (this.props.ModalStore.closeVisibleModalDialog()) return true;
         if (this.state.clearOnBackPress && this.state.transactionType) {
             this.setState({
                 contactName: '',

@@ -146,6 +146,11 @@ RCT_EXTERN_METHOD(isValidToken:(NSString *)encodedToken
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+// Payment Requests
+RCT_EXTERN_METHOD(decodePaymentRequest:(NSString *)encoded
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 // Restore
 RCT_EXTERN_METHOD(restore:(NSString *)mintUrl
                   resolver:(RCTPromiseResolveBlock)resolve

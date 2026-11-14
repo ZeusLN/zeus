@@ -24,6 +24,7 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsCoinControl: () => false,
     supportsKeysend: jest.fn(() => false),
     supportsAMP: () => false,
+    supportsCashuWallet: jest.fn(() => false),
     supportsOffersDirectPay: jest.fn(() => false),
     decodeOffer: jest.fn(),
     fetchInvoiceFromOffer: jest.fn()
@@ -32,7 +33,13 @@ jest.mock('../utils/AddressUtils', () => ({
     extractBolt12Offer: (value: string) =>
         value.startsWith('lno1') ? value : undefined
 }));
-jest.mock('../utils/NFCUtils', () => ({ scanNfcTag: jest.fn() }));
+jest.mock('../utils/NFCUtils', () => ({
+    scanNfcTag: jest.fn(),
+    payViaNfcTap: jest.fn()
+}));
+jest.mock('../stores/Stores', () => ({
+    cashuStore: { cdkInitialized: false }
+}));
 jest.mock('../utils/AmountUtils', () => ({
     getRawAmountFromSats: jest.fn(),
     isWholeSatAmount: (sats: string | number) => Number.isInteger(Number(sats))
@@ -69,16 +76,19 @@ jest.mock('../models/Contact', () => class Contact {});
 jest.mock('../stores/SettingsStore', () => ({
     __esModule: true,
     default: class SettingsStore {},
-    DEFAULT_SLIDE_TO_PAY_THRESHOLD: 10000
+    DEFAULT_SLIDE_TO_PAY_THRESHOLD: 10000,
+    DEFAULT_TAP_TO_PAY_LIMIT: 10000
 }));
 
 import * as React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import type { TestInstance } from 'test-renderer';
 import NfcManager from 'react-native-nfc-manager';
 import Send from './Send';
+import { Alert } from 'react-native';
 import BackendUtils from '../utils/BackendUtils';
-import { scanNfcTag } from '../utils/NFCUtils';
+import { payViaNfcTap, scanNfcTag } from '../utils/NFCUtils';
+import { cashuStore as mockCashuStore } from '../stores/Stores';
 
 const BALANCE = 500000;
 
@@ -631,5 +641,247 @@ describe('Send NFC scan', () => {
         await fireEvent.press(hosts('NFC')[0]);
 
         expect(scanNfcTag).toHaveBeenCalledWith(expect.anything(), 'pay');
+    });
+});
+
+describe('Send scanNfc', () => {
+    const ModalStore = {};
+    let navigation: any;
+
+    const renderWithRef = async (settings: any = {}) => {
+        const ref = React.createRef<any>();
+        navigation = {
+            navigate: jest.fn(),
+            addListener: jest.fn(() => jest.fn())
+        };
+        await render(
+            <Send
+                ref={ref}
+                {...({
+                    navigation,
+                    route: { params: {} },
+                    BalanceStore: {
+                        lightningBalance: 0,
+                        getLightningBalance: jest.fn()
+                    },
+                    ContactStore: { contacts: [] },
+                    InvoicesStore: {},
+                    ModalStore,
+                    NodeInfoStore: {},
+                    SettingsStore: {
+                        implementation: 'lnd',
+                        settings,
+                        getSettings: jest.fn(async () => ({}))
+                    },
+                    TransactionsStore: {},
+                    UTXOsStore: {}
+                } as any)}
+            />
+        );
+        return ref.current;
+    };
+
+    beforeEach(() => {
+        (BackendUtils.supportsCashuWallet as jest.Mock).mockReturnValue(true);
+        mockCashuStore.cdkInitialized = true;
+        (scanNfcTag as jest.Mock).mockReset().mockResolvedValue(undefined);
+        (payViaNfcTap as jest.Mock).mockReset();
+    });
+
+    afterEach(() => {
+        (BackendUtils.supportsCashuWallet as jest.Mock).mockReturnValue(false);
+        mockCashuStore.cdkInitialized = false;
+    });
+
+    it('skips CREQ tap-to-pay when the backend has no ecash wallet', async () => {
+        (BackendUtils.supportsCashuWallet as jest.Mock).mockReturnValue(false);
+        const send = await renderWithRef();
+
+        await act(() => send.scanNfc());
+
+        expect(payViaNfcTap).not.toHaveBeenCalled();
+        expect(scanNfcTag).toHaveBeenCalledWith(ModalStore, 'pay');
+    });
+
+    it('skips CREQ tap-to-pay before CDK is initialized', async () => {
+        mockCashuStore.cdkInitialized = false;
+        const send = await renderWithRef();
+
+        await act(() => send.scanNfc());
+
+        expect(payViaNfcTap).not.toHaveBeenCalled();
+        expect(scanNfcTag).toHaveBeenCalledWith(ModalStore, 'pay');
+    });
+
+    it('alerts after a successful CREQ payment', async () => {
+        const alertSpy = jest
+            .spyOn(Alert, 'alert')
+            .mockImplementation(() => void 0);
+        (payViaNfcTap as jest.Mock).mockResolvedValue({
+            status: 'paid',
+            amount: 21
+        });
+        const send = await renderWithRef();
+
+        await act(() => send.scanNfc());
+
+        expect(payViaNfcTap).toHaveBeenCalledWith(ModalStore, mockCashuStore, {
+            limit: 10000
+        });
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.success',
+            '21 general.sats'
+        );
+        expect(scanNfcTag).not.toHaveBeenCalled();
+        alertSpy.mockRestore();
+    });
+
+    it('routes other tag content from the same tap', async () => {
+        (payViaNfcTap as jest.Mock).mockResolvedValue({
+            status: 'read',
+            text: 'lnurlw://example.com/withdraw'
+        });
+        const send = await renderWithRef();
+        send.validateAddress = jest.fn();
+
+        await act(() => send.scanNfc());
+
+        expect(send.validateAddress).toHaveBeenCalledWith(
+            'lnurlw://example.com/withdraw'
+        );
+        // no second NFC session
+        expect(scanNfcTag).not.toHaveBeenCalled();
+    });
+
+    it('passes the tap-to-pay limit from the payments settings', async () => {
+        (payViaNfcTap as jest.Mock).mockResolvedValue({ status: 'cancelled' });
+        const send = await renderWithRef({ payments: { tapToPayLimit: 0 } });
+
+        await act(() => send.scanNfc());
+
+        expect(payViaNfcTap).toHaveBeenCalledWith(ModalStore, mockCashuStore, {
+            limit: 0
+        });
+    });
+
+    it('opens CREQPayment to confirm a request above the limit', async () => {
+        const creqParams = { amount: 50000, unit: 'sat' };
+        (payViaNfcTap as jest.Mock).mockResolvedValue({
+            status: 'confirm',
+            creqParams,
+            creqString: 'CREQB1QYQQSE',
+            invoice: 'LNBC500U1XYZ'
+        });
+        const send = await renderWithRef();
+
+        await act(() => send.scanNfc());
+
+        expect(navigation.navigate).toHaveBeenCalledWith('CREQPayment', {
+            creqParams,
+            creqString: 'CREQB1QYQQSE',
+            invoice: 'LNBC500U1XYZ'
+        });
+    });
+
+    it('alerts CREQ failures, which have no destination to show under', async () => {
+        const alertSpy = jest
+            .spyOn(Alert, 'alert')
+            .mockImplementation(() => void 0);
+        (payViaNfcTap as jest.Mock).mockResolvedValue({
+            status: 'failed',
+            error: 'utils.NFCUtils.tokenNotDelivered',
+            tokenSaved: true
+        });
+        const send = await renderWithRef();
+
+        await act(() => send.scanNfc());
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'utils.NFCUtils.tokenNotDelivered'
+        );
+        expect(scanNfcTag).not.toHaveBeenCalled();
+        alertSpy.mockRestore();
+    });
+
+    it.each([
+        ['a cancelled tap', { status: 'cancelled' }],
+        ['an empty tag', { status: 'read' }]
+    ])('does nothing after %s', async (_, result) => {
+        (payViaNfcTap as jest.Mock).mockResolvedValue(result);
+        const send = await renderWithRef();
+        send.validateAddress = jest.fn();
+
+        await act(() => send.scanNfc());
+
+        expect(send.validateAddress).not.toHaveBeenCalled();
+        expect(send.state.error_msg).toBeFalsy();
+        expect(scanNfcTag).not.toHaveBeenCalled();
+    });
+});
+
+describe('Send NFC modal', () => {
+    const renderWithModal = async (closesDialog: boolean) => {
+        const ref = React.createRef<any>();
+        const navigation = {
+            navigate: jest.fn(),
+            pop: jest.fn(),
+            addListener: jest.fn(() => jest.fn())
+        };
+        const ModalStore = {
+            showAndroidNfcModal: true,
+            closeVisibleModalDialog: jest.fn(() => closesDialog),
+            toggleAndroidNfcModal: jest.fn()
+        };
+        await render(
+            <Send
+                ref={ref}
+                {...({
+                    navigation,
+                    route: { params: {} },
+                    BalanceStore: {
+                        lightningBalance: 0,
+                        getLightningBalance: jest.fn()
+                    },
+                    ContactStore: { contacts: [] },
+                    InvoicesStore: {},
+                    ModalStore,
+                    NodeInfoStore: {},
+                    SettingsStore: {
+                        implementation: 'lnd',
+                        settings: {},
+                        getSettings: jest.fn(async () => ({}))
+                    },
+                    TransactionsStore: {},
+                    UTXOsStore: {}
+                } as any)}
+            />
+        );
+        return { send: ref.current, navigation, ModalStore };
+    };
+
+    it('closes an open modal on back instead of leaving Send', async () => {
+        const { send, navigation, ModalStore } = await renderWithModal(true);
+
+        expect(send.backPressed()).toBe(true);
+
+        expect(ModalStore.closeVisibleModalDialog).toHaveBeenCalled();
+        expect(navigation.pop).not.toHaveBeenCalled();
+    });
+
+    it('leaves Send on back when no modal is open', async () => {
+        const { send, navigation } = await renderWithModal(false);
+
+        expect(send.backPressed()).toBe(true);
+
+        expect(navigation.pop).toHaveBeenCalled();
+    });
+
+    it('hides the NFC modal when Send unmounts', async () => {
+        const { ModalStore } = await renderWithModal(false);
+
+        await act(() => screen.unmount());
+
+        expect(ModalStore.toggleAndroidNfcModal).toHaveBeenCalledWith(false);
     });
 });
