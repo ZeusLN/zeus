@@ -90,12 +90,17 @@ const renderView = async ({
     },
     TransactionsStore = {},
     InvoicesStore = {},
-    settings = {}
+    settings = {},
+    storeSettings = {},
+    lightningBalance = 0
 }: {
     params?: any;
     TransactionsStore?: any;
     InvoicesStore?: any;
     settings?: any;
+    // SettingsStore.settings, which render reads synchronously
+    storeSettings?: any;
+    lightningBalance?: number;
 } = {}) => {
     const navigation = {
         navigate: jest.fn(),
@@ -104,7 +109,7 @@ const renderView = async ({
     const BalanceStore = {
         confirmedBlockchainBalance: BALANCE,
         totalBlockchainBalanceAccounts: BALANCE,
-        lightningBalance: 0,
+        lightningBalance,
         getLightningBalance: jest.fn()
     };
     await render(
@@ -119,7 +124,7 @@ const renderView = async ({
                 NodeInfoStore: { supportsOffers: true },
                 SettingsStore: {
                     implementation: 'lnd',
-                    settings: {},
+                    settings: storeSettings,
                     getSettings: jest.fn(async () => settings)
                 },
                 TransactionsStore,
@@ -615,6 +620,71 @@ describe('Send keysend fee limit', () => {
                 max_fee_percent: '0.5'
             })
         );
+    });
+});
+
+describe('Send keysend slide to pay', () => {
+    const supportsKeysend = BackendUtils.supportsKeysend as jest.Mock;
+    const PUBKEY = '02' + 'ef'.repeat(32);
+
+    beforeEach(() => supportsKeysend.mockReturnValue(true));
+    afterEach(() => supportsKeysend.mockReturnValue(false));
+
+    const renderKeysend = async (paymentInFlight = false) => {
+        const TransactionsStore = { paymentInFlight, sendPayment: jest.fn() };
+        const { navigation } = await renderView({
+            params: {
+                destination: PUBKEY,
+                transactionType: 'Keysend',
+                isValid: true
+            },
+            TransactionsStore,
+            storeSettings: { payments: { slideToPayThreshold: 1000 } },
+            lightningBalance: 100000
+        });
+        return { TransactionsStore, navigation };
+    };
+
+    const swipeButton = () => hosts('SwipeButton')[0];
+
+    it('shows the swipe button at the threshold, without a side margin of its own', async () => {
+        await renderKeysend();
+        await enterAmount('1000', 1000);
+
+        expect(swipeButton()).toBeDefined();
+        expect(button('general.send')).toBeUndefined();
+        // the ScrollView already pads the sides
+        expect(swipeButton().props.containerStyle).toEqual(
+            expect.objectContaining({ marginHorizontal: 0 })
+        );
+        expect(swipeButton().props.disabled).toBe(false);
+    });
+
+    it('sends the keysend payment when the swipe completes', async () => {
+        const { TransactionsStore, navigation } = await renderKeysend();
+        await enterAmount('5000', 5000);
+
+        swipeButton().props.onSwipeSuccess();
+
+        expect(TransactionsStore.sendPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ amount: '5000', pubkey: PUBKEY })
+        );
+        expect(navigation.navigate).toHaveBeenCalledWith('SendingLightning');
+    });
+
+    it('shows the Send button below the threshold', async () => {
+        await renderKeysend();
+        await enterAmount('999', 999);
+
+        expect(swipeButton()).toBeUndefined();
+        expect(button('general.send').props.disabled).toBe(false);
+    });
+
+    it('disables the swipe button while a payment is in flight', async () => {
+        await renderKeysend(true);
+        await enterAmount('5000', 5000);
+
+        expect(swipeButton().props.disabled).toBe(true);
     });
 });
 

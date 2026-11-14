@@ -44,16 +44,20 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
 
     // How far the knob can travel, from the track's measured width. It is
     // null until the first layout, and the knob can't be dragged before
-    // then, so the swipe is never judged against a guessed width.
+    // then (or at all on a track no wider than the knob), so the swipe is
+    // never judged against a guessed width. The ref is what the responder
+    // reads and is set on layout, so a touch right after layout isn't
+    // refused while the state update is pending; the state drives the
+    // text fade.
     const [maxTranslation, setMaxTranslation] = useState<number | null>(null);
     const maxTranslationRef = useRef<number | null>(null);
-    maxTranslationRef.current = maxTranslation;
 
     const onLayout = (e: LayoutChangeEvent) => {
         const travel = Math.max(
             e.nativeEvent.layout.width - SWIPE_BUTTON_WIDTH,
             0
         );
+        maxTranslationRef.current = travel;
         // keep a completed knob at the end of a resized track
         if (completed.current) pan.setValue(travel);
         setMaxTranslation(travel);
@@ -102,10 +106,9 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
             },
             onPanResponderMove: (_e, gesture) => {
                 const maxTranslation = maxTranslationRef.current ?? 0;
-                const newValue = gesture.dx;
-                if (newValue >= 0 && newValue <= maxTranslation) {
-                    pan.setValue(newValue);
-                }
+                // clamp, so a fast drag past either end still puts the
+                // knob at that end
+                pan.setValue(Math.min(Math.max(gesture.dx, 0), maxTranslation));
             },
             onPanResponderRelease: (
                 _e: GestureResponderEvent,
@@ -159,6 +162,7 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
                     { transform: [{ translateX: pan }] }
                 ]}
                 {...panResponder.panHandlers}
+                testID="swipe-button-knob"
             >
                 <CaretRight
                     fill={themeColor('background')}

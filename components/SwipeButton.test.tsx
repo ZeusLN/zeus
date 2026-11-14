@@ -10,7 +10,7 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 import * as React from 'react';
-import { Dimensions, PanResponder, StyleSheet } from 'react-native';
+import { Animated, Dimensions, PanResponder, StyleSheet } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import SwipeButton from './SwipeButton';
@@ -45,6 +45,15 @@ const layoutTrack = async (width: number) => {
 };
 
 const canStartDrag = () => responderConfig.onStartShouldSetPanResponder();
+const canTakeOverDrag = () => responderConfig.onMoveShouldSetPanResponder();
+
+// how far the knob is drawn from the start of the track
+const knobOffset = () => {
+    const { transform } = StyleSheet.flatten(
+        screen.getByTestId('swipe-button-knob').props.style
+    );
+    return transform[0].translateX;
+};
 
 const swipe = (dx: number) =>
     act(async () => {
@@ -142,5 +151,108 @@ describe('SwipeButton', () => {
         await swipe(240);
 
         expect(onSwipeSuccess).toHaveBeenCalledTimes(2);
+    });
+
+    it('only takes over a drag once measured, enabled and not completed', async () => {
+        await renderButton();
+        expect(canTakeOverDrag()).toBe(false);
+
+        await layoutTrack(TRACK_WIDTH);
+        expect(canTakeOverDrag()).toBe(true);
+
+        await swipe(240);
+        expect(canTakeOverDrag()).toBe(false);
+    });
+
+    it('does not take over a drag while disabled', async () => {
+        await renderButton({ disabled: true });
+        await layoutTrack(TRACK_WIDTH);
+
+        expect(canTakeOverDrag()).toBe(false);
+    });
+
+    it('accepts a touch as soon as the track is laid out', async () => {
+        await renderButton();
+        const event = {
+            nativeEvent: {
+                layout: { x: 0, y: 0, width: TRACK_WIDTH, height: 50 }
+            }
+        };
+        let accepted: boolean | undefined;
+        await act(async () => {
+            screen.getByTestId('swipe-button-track').props.onLayout(event);
+            // before React re-renders with the new width
+            accepted = canStartDrag();
+        });
+
+        expect(accepted).toBe(true);
+    });
+
+    it('keeps a completed knob at the end of a resized track', async () => {
+        await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+        await swipe(240);
+        expect(knobOffset()).toBe(250);
+
+        await layoutTrack(200);
+
+        expect(knobOffset()).toBe(150);
+    });
+
+    it('clamps the knob to the ends of the track during a drag', async () => {
+        await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await act(async () => {
+            responderConfig.onPanResponderGrant();
+            responderConfig.onPanResponderMove({}, { dx: 400 });
+        });
+        expect(knobOffset()).toBe(250);
+
+        await act(async () => {
+            responderConfig.onPanResponderMove({}, { dx: -30 });
+        });
+        expect(knobOffset()).toBe(0);
+    });
+
+    it('springs back when another responder takes the drag', async () => {
+        const spring = jest.spyOn(Animated, 'spring');
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await act(async () => {
+            responderConfig.onPanResponderGrant();
+            responderConfig.onPanResponderMove({}, { dx: 100 });
+            responderConfig.onPanResponderTerminate();
+        });
+
+        expect(spring).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ toValue: 0 })
+        );
+        expect(onSwipeSuccess).not.toHaveBeenCalled();
+    });
+
+    it('stays at the end when the drag is taken after a completed swipe', async () => {
+        const spring = jest.spyOn(Animated, 'spring');
+        await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+        await swipe(240);
+
+        await act(async () => responderConfig.onPanResponderTerminate());
+
+        expect(spring).not.toHaveBeenCalled();
+        expect(knobOffset()).toBe(250);
+    });
+
+    it('cannot be swiped on a track no wider than the knob', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(50);
+
+        expect(canStartDrag()).toBe(false);
+        expect(canTakeOverDrag()).toBe(false);
+        await swipe(50);
+
+        expect(onSwipeSuccess).not.toHaveBeenCalled();
     });
 });
