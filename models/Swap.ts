@@ -59,6 +59,9 @@ export default class Swap extends BaseModel {
     imported?: boolean;
     claimAddressFromWallet?: boolean;
     onchainAmountVerified?: boolean;
+    // a submarine swap's transaction.claimed was recorded after its invoice
+    // was confirmed paid
+    claimVerified?: boolean;
     keyIndex?: number;
     preimageHash?: string;
     serverPublicKey?: string;
