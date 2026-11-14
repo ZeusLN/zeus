@@ -57,6 +57,7 @@ import {
     markHttpStatus,
     markJsonRpcCode,
     markNodeResponded,
+    markSendRefused,
     markWalletReplied,
     paymentLookupInconclusiveError
 } from '../utils/PaymentLookupUtils';
@@ -1210,8 +1211,8 @@ describe('TransactionsStore failed payment message after tracking', () => {
     it('releases the guard after one no-record answer to a tagged NWC wallet error', async () => {
         (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
             markNodeResponded(
-                Object.assign(new Error('insufficient balance'), {
-                    code: 'INSUFFICIENT_BALANCE'
+                Object.assign(new Error('no route found'), {
+                    code: 'PAYMENT_FAILED'
                 })
             )
         );
@@ -1223,7 +1224,63 @@ describe('TransactionsStore failed payment message after tracking', () => {
 
         expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(1);
         expect(store.paymentInFlight).toBe(false);
-        expect(store.error_msg).toBe('insufficient balance');
+        expect(store.error_msg).toBe('no route found');
+    });
+
+    // the wallet refused before sending anything, and often refuses the
+    // lookup too (Alby Hub's EXPIRED app, a missing scope): tracking it
+    // would hold the guard and end on the "may pay twice" notice
+    it.each([
+        'INSUFFICIENT_BALANCE',
+        'RESTRICTED',
+        'EXPIRED',
+        'INVALID_INVOICE'
+    ])('releases the guard without tracking a %s refusal', async (code) => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markSendRefused(
+                markNodeResponded(
+                    Object.assign(new Error('the wallet said no'), {
+                        code
+                    })
+                )
+            )
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockRejectedValue(
+            Object.assign(new Error('the wallet said no'), { code })
+        );
+
+        const store = newStore('nostr-wallet-connect');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.paymentOutcomeUnverified).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('the wallet said no');
+    });
+
+    // ZEUS's wallet service replies FAILED_TO_PAY_INVOICE with the node's
+    // message, which the backend tags as the wallet's reply
+    it("keeps a ZEUS wallet service's FAILED_TO_PAY_INVOICE reply for a failed record", async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markWalletReplied(
+                Object.assign(new Error('No route found'), {
+                    code: 'FAILED_TO_PAY_INVOICE'
+                })
+            )
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            failedRecord()
+        );
+
+        const store = newStore('nostr-wallet-connect');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(store.status).toBe('FAILED');
+        expect(store.error_msg).toBe('No route found');
+        expect(store.payment_error).toBeNull();
     });
 
     it('shows a generic failure, not the transport error, for a reasonless record after a transport failure', async () => {

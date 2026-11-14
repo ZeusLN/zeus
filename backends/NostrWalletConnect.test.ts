@@ -553,28 +553,93 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         await expect(promise).rejects.toBeInstanceOf(Nip47ReplyTimeoutError);
     });
 
-    // the wallet's reply is its answer, like a node's rejection, so the
-    // tracker can rely on one no-record lookup and keep its message
+    // a refusal before anything is sent: the store keeps the message and
+    // releases the guard without tracking (the wallet often refuses the
+    // lookup for the same reason)
     it.each([
-        'PAYMENT_FAILED',
         'INSUFFICIENT_BALANCE',
         'QUOTA_EXCEEDED',
         'RESTRICTED',
         'UNAUTHORIZED',
         'RATE_LIMITED',
         'NOT_IMPLEMENTED',
-        'NOT_FOUND',
+        // Alby Hub
         'BAD_REQUEST',
-        'EXPIRED'
-    ])('marks a %s reply as the wallet answering', async (code) => {
+        'EXPIRED',
+        // ZEUS's wallet service
+        'INVALID_INVOICE',
+        'INVOICE_EXPIRED'
+    ])('marks a %s reply as a refusal', async (code) => {
         const { backend, client } = await setup();
         client.payInvoice.mockRejectedValue(
             new Nip47WalletError('wallet said no', code)
         );
 
-        await expect(
-            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
-        ).rejects.toMatchObject({ code, nodeResponded: true });
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error).toMatchObject({
+            code,
+            nodeResponded: true,
+            sendRefused: true
+        });
+        expect(error.walletReplied).toBeUndefined();
+    });
+
+    // the wallet tried the payment: one no-record lookup settles it
+    it.each(['PAYMENT_FAILED', 'NOT_FOUND'])(
+        'marks a %s reply as the wallet answering, not as a refusal',
+        async (code) => {
+            const { backend, client } = await setup();
+            client.payInvoice.mockRejectedValue(
+                new Nip47WalletError('wallet said no', code)
+            );
+
+            const error: any = await backend
+                .payLightningInvoice({ payment_request: SPEC_INVOICE })
+                .catch((e: any) => e);
+
+            expect(error).toMatchObject({ code, nodeResponded: true });
+            expect(error.sendRefused).toBeUndefined();
+        }
+    );
+
+    // ZEUS's wallet service sends its own codes; FAILED_TO_PAY_INVOICE also
+    // covers a pay still in progress, so it is not an answer
+    it.each(['FAILED_TO_PAY_INVOICE', 'INTERNAL_ERROR', 'SOME_NEW_CODE'])(
+        'marks a %s reply as a reply, not as an answer',
+        async (code) => {
+            const { backend, client } = await setup();
+            client.payInvoice.mockRejectedValue(
+                new Nip47WalletError('No route found', code)
+            );
+
+            const error: any = await backend
+                .payLightningInvoice({ payment_request: SPEC_INVOICE })
+                .catch((e: any) => e);
+
+            expect(error).toMatchObject({ code, walletReplied: true });
+            expect(error.nodeResponded).toBeUndefined();
+            expect(error.sendRefused).toBeUndefined();
+        }
+    );
+
+    it('marks a refusal without a message as a refusal with the generic text', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError(SDK_EMPTY_REPLY_MESSAGE, 'QUOTA_EXCEEDED')
+        );
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error).toMatchObject({
+            sendRefused: true,
+            message: localeString('error.sendingPayment')
+        });
+        expect(error.walletReplied).toBeUndefined();
     });
 
     // the SDK uses these codes for its own failures too, and a wallet may

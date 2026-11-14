@@ -25,6 +25,7 @@ import {
     isNodeResponse,
     isPaymentLookupInconclusive,
     isPaymentRefusedAsDuplicate,
+    isSendRefused,
     isWalletReply,
     paymentCreationTimeMs
 } from '../utils/PaymentLookupUtils';
@@ -1563,6 +1564,13 @@ export default class TransactionsStore {
             // existing record is an earlier attempt's, so tracking it would
             // show that attempt's outcome (e.g. an earlier success for an
             // already-paid invoice) as this one's.
+            this.clearPaymentInFlight(seq);
+        } else if (isSendRefused(err)) {
+            // the wallet refused the request before sending anything
+            // (insufficient balance, a budget or permission refusal, an
+            // invalid invoice), so there is nothing to track. It often
+            // refuses the lookup for the same reason, which would hold the
+            // guard and end on the "may pay twice" notice.
             this.clearPaymentInFlight(seq);
         } else if (seq !== undefined && this.canTrackPayment(seq)) {
             // the rejection settled the request, so no-record answers

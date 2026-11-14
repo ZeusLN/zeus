@@ -63,6 +63,21 @@ export const markWalletReplied = (error: unknown): unknown => {
 export const isWalletReply = (error: unknown): boolean =>
     (error as any)?.walletReplied === true;
 
+// Tags a send the wallet refused before sending anything (insufficient
+// balance, a budget or permission refusal, an invalid invoice), so there is
+// no payment to track. String rejections are wrapped so they can carry the
+// tag.
+export const markSendRefused = (error: unknown): unknown => {
+    const tagged = typeof error === 'string' ? new Error(error) : error;
+    if (tagged && typeof tagged === 'object') {
+        (tagged as any).sendRefused = true;
+    }
+    return tagged;
+};
+
+export const isSendRefused = (error: unknown): boolean =>
+    (error as any)?.sendRefused === true;
+
 // Tags an error thrown before a request went out at all (no session to the
 // node, Tor not running), so a caller knows the node never saw it. String
 // rejections are wrapped so they can carry the tag.

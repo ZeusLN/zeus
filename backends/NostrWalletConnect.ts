@@ -7,34 +7,43 @@ import Bolt11Utils from '../utils/Bolt11Utils';
 import { localeString } from '../utils/LocaleUtils';
 import {
     markNodeResponded,
+    markSendRefused,
     markWalletReplied
 } from '../utils/PaymentLookupUtils';
 
-// NIP-47 error codes only a wallet's reply carries. The SDK's own failures
-// (reply and publish timeouts, relay and decoding errors) use INTERNAL or
-// OTHER, which a wallet may also send, so those stay unmarked: the request
-// may still have reached the wallet. Matched by code because instanceof
-// on the SDK's Error subclasses is unreliable under Babel's class
-// transform.
-const WALLET_ANSWER_CODES = [
-    'PAYMENT_FAILED',
+// Codes are matched as strings because instanceof on the SDK's Error
+// subclasses is unreliable under Babel's class transform.
+
+// NIP-47 error codes a wallet sends when it refuses a pay request before
+// sending anything, so there is no payment to track. Alby Hub also sends
+// BAD_REQUEST (an invoice it cannot decode) and EXPIRED (an expired app
+// connection); ZEUS's wallet service sends INVALID_INVOICE and
+// INVOICE_EXPIRED from its checks before paying (Nip47ErrorCode).
+const WALLET_REFUSAL_CODES = [
     'INSUFFICIENT_BALANCE',
     'QUOTA_EXCEEDED',
     'RESTRICTED',
     'UNAUTHORIZED',
     'RATE_LIMITED',
     'NOT_IMPLEMENTED',
-    'NOT_FOUND',
-    // Alby Hub: an invoice it cannot decode, and an expired one
     'BAD_REQUEST',
-    'EXPIRED'
+    'EXPIRED',
+    'INVALID_INVOICE',
+    'INVOICE_EXPIRED'
 ];
 
-// How the SDK's own errors start (@getalby/sdk 9.0.0, NWCClient). An
-// INTERNAL or OTHER error with any other message is the wallet's reply:
-// Alby Hub, for one, sends every payment failure it has no code for,
-// routing failures included, as INTERNAL. NostrWalletConnect.test.ts
-// checks this list against the installed SDK.
+// Codes that settle a pay request the wallet tried, like a node's
+// rejection, so one lookup without a record ends tracking. NOT_FOUND is
+// here rather than a refusal because a wallet may send it after a send
+// attempt.
+const WALLET_ANSWER_CODES = ['PAYMENT_FAILED', 'NOT_FOUND'];
+
+// How the SDK's own errors start (@getalby/sdk 9.0.0, NWCClient); they use
+// only the codes INTERNAL, OTHER and UNSUPPORTED_ENCRYPTION. A coded error
+// with any other message is the wallet's reply, whatever the code: Alby
+// Hub sends every payment failure it has no code for as INTERNAL, and
+// ZEUS's wallet service sends FAILED_TO_PAY_INVOICE.
+// NostrWalletConnect.test.ts checks this list against the installed SDK.
 export const SDK_ERROR_MESSAGE_PREFIXES = [
     'failed to deserialize response',
     'response from NWC failed validation: ',
@@ -153,27 +162,24 @@ export default class NostrWalletConnect {
         try {
             return await this.nwc.sendPayment(data.payment_request);
         } catch (error: any) {
+            const code = error?.code;
             // a reply without a message: show the generic failure, not the
             // SDK's placeholder, and don't keep it as the wallet's reason
-            if (error?.message === SDK_EMPTY_REPLY_MESSAGE) {
+            const emptyReply = error?.message === SDK_EMPTY_REPLY_MESSAGE;
+            if (emptyReply) {
                 error.message = localeString('error.sendingPayment');
-                if (WALLET_ANSWER_CODES.includes(error?.code)) {
-                    throw markNodeResponded(error);
-                }
-                throw error;
             }
-            // the wallet's error reply is its answer to the request, like
-            // a node's rejection; see WALLET_ANSWER_CODES
-            if (WALLET_ANSWER_CODES.includes(error?.code)) {
+            if (WALLET_REFUSAL_CODES.includes(code)) {
+                throw markSendRefused(markNodeResponded(error));
+            }
+            if (WALLET_ANSWER_CODES.includes(code)) {
                 throw markNodeResponded(error);
             }
-            // a wallet may also send these after its own timeout, so the
-            // request may still be in flight: keep its message, but leave
-            // tracking as for any other unknown outcome
-            if (
-                (error?.code === 'INTERNAL' || error?.code === 'OTHER') &&
-                !isSdkError(error)
-            ) {
+            // any other code may also follow the wallet's own timeout
+            // (ZEUS's service sends FAILED_TO_PAY_INVOICE for a pay still
+            // in progress), so the request may still be in flight: keep
+            // the message, but track as for any other unknown outcome
+            if (!emptyReply && typeof code === 'string' && !isSdkError(error)) {
                 throw markWalletReplied(error);
             }
             throw error;
