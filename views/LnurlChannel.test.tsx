@@ -111,6 +111,16 @@ describe('LnurlChannel', () => {
         expect(connectButton()).toBeDisabled();
     });
 
+    it('enables Connect when the peer is already connected', async () => {
+        (BackendUtils.connectPeer as jest.Mock).mockRejectedValueOnce(
+            new Error('already connected to peer')
+        );
+        await renderView();
+        expect(connectButton()).toBeEnabled();
+        await fireEvent.press(connectButton());
+        expect(fetchLnurlUrl).toHaveBeenCalledTimes(1);
+    });
+
     it('renders the themed Switch for the announced toggle, off', async () => {
         await renderView();
         const toggle = screen.getByRole('switch');

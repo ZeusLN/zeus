@@ -115,15 +115,12 @@ export default class LnurlChannel extends React.Component<
             })
             .catch((error: any) => {
                 // handle error
-                this.setState({ connectingToPeer: false });
-                this.setState({ errorMsgPeer: error.toString() });
-
-                if (
-                    this.state.errorMsgPeer &&
-                    this.state.errorMsgPeer.includes('already')
-                ) {
-                    this.setState({ peerSuccess: true });
-                }
+                const msg = error.toString();
+                this.setState({
+                    connectingToPeer: false,
+                    errorMsgPeer: msg,
+                    peerSuccess: msg.includes('already')
+                });
             });
     }
     componentDidMount() {
