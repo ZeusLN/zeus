@@ -74,6 +74,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import { LNURLAUTH_CANONICAL_PHRASE } from './LnurlAuthUtils';
+import { OLYMPUS_AUTH_TAG, ZEUS_PAY_AUTH_TAG } from './AuthChallengeUtils';
 import {
     graphDataExists,
     validateChannelBackupFile,
@@ -94,19 +95,21 @@ const jsonResponse = (body: any) => ({
 });
 
 const BACKUPS = 'https://backups.example.com';
-// The server issues 64 random bytes as lowercase hex
-const CHALLENGE = 'a1'.repeat(64);
+// The server issues its tag followed by 64 random bytes as lowercase hex
+const NONCE = 'a1'.repeat(64);
+const CHALLENGE = `${OLYMPUS_AUTH_TAG}${NONCE}`;
+const SECOND_CHALLENGE = `${OLYMPUS_AUTH_TAG}${'b2'.repeat(64)}`;
 
 const signMessageMock = (BackendUtils as any).signMessage as jest.Mock;
 
-// Answers each /api/auth call with the next challenge in the list and
+// Answers each /api/auth/v2 call with the next challenge in the list and
 // every other path with a successful reply.
 const serveChallenges = (challenges: any[], statusBody: any = {}) => {
     const queue = [...challenges];
     mockFetch.mockImplementation(async (_m: string, url: string) => {
         const path = url.replace(BACKUPS, '');
         const body =
-            path === '/api/auth'
+            path === '/api/auth/v2'
                 ? { success: true, verification: queue.shift() }
                 : { success: true, ...statusBody };
         return {
@@ -498,7 +501,7 @@ describe('ChannelMigrationUtils', () => {
         afterEach(() => jest.restoreAllMocks());
 
         describe('uploadChannelBackupToOlympus', () => {
-            it('refuses to sign a status challenge that is not hex', async () => {
+            it('refuses to sign a status challenge that is not tagged for Olympus', async () => {
                 serveChallenges([LNURLAUTH_CANONICAL_PHRASE]);
 
                 await uploadChannelBackupToOlympus(
@@ -509,14 +512,14 @@ describe('ChannelMigrationUtils', () => {
                 );
 
                 expect(signMessageMock).not.toHaveBeenCalled();
-                expect(fetchedPaths()).toEqual(['/api/auth']);
+                expect(fetchedPaths()).toEqual(['/api/auth/v2']);
                 expect(mockAlert).toHaveBeenCalledWith(
                     'general.error',
                     'views.Tools.migration.export.failedToUpload'
                 );
             });
 
-            it('refuses to sign an upload challenge that is not hex', async () => {
+            it('refuses to sign an upload challenge that is not tagged for Olympus', async () => {
                 serveChallenges([CHALLENGE, LNURLAUTH_CANONICAL_PHRASE]);
 
                 await uploadChannelBackupToOlympus(
@@ -529,15 +532,32 @@ describe('ChannelMigrationUtils', () => {
                 expect(signMessageMock).toHaveBeenCalledTimes(1);
                 expect(signMessageMock).toHaveBeenCalledWith(CHALLENGE);
                 expect(fetchedPaths()).toEqual([
-                    '/api/auth',
+                    '/api/auth/v2',
                     '/api/status',
-                    '/api/auth'
+                    '/api/auth/v2'
                 ]);
                 expect(mockZipFolder).not.toHaveBeenCalled();
             });
 
-            it('signs hex challenges and uploads', async () => {
-                serveChallenges([CHALLENGE, 'b2'.repeat(64)]);
+            it.each([
+                ['a bare hex nonce', NONCE],
+                ['a ZEUS Pay challenge', `${ZEUS_PAY_AUTH_TAG}${NONCE}`]
+            ])('refuses to sign %s', async (_label, challenge) => {
+                serveChallenges([challenge]);
+
+                await uploadChannelBackupToOlympus(
+                    'lnd',
+                    false,
+                    '03cd',
+                    'seed'
+                );
+
+                expect(signMessageMock).not.toHaveBeenCalled();
+                expect(fetchedPaths()).toEqual(['/api/auth/v2']);
+            });
+
+            it('signs tagged challenges and uploads', async () => {
+                serveChallenges([CHALLENGE, SECOND_CHALLENGE]);
 
                 await uploadChannelBackupToOlympus(
                     'lnd',
@@ -548,30 +568,41 @@ describe('ChannelMigrationUtils', () => {
 
                 expect(signMessageMock.mock.calls).toEqual([
                     [CHALLENGE],
-                    ['b2'.repeat(64)]
+                    [SECOND_CHALLENGE]
                 ]);
                 expect(fetchedPaths()).toContain('/api/channels-backup');
+                expect(JSON.parse(mockFetch.mock.calls[0][3])).toEqual({
+                    pubkey: '03cd',
+                    version: 2
+                });
             });
         });
 
         describe('restoreChannelBackupFromOlympus', () => {
-            it('refuses to sign a status challenge that is not hex', async () => {
-                serveChallenges([CHALLENGE.toUpperCase()]);
+            it.each([
+                ['uppercase hex', `${OLYMPUS_AUTH_TAG}${NONCE.toUpperCase()}`],
+                ['a bare hex nonce', NONCE],
+                ['a ZEUS Pay challenge', `${ZEUS_PAY_AUTH_TAG}${NONCE}`]
+            ])(
+                'refuses to sign %s as the status challenge',
+                async (_label, challenge) => {
+                    serveChallenges([challenge]);
 
-                await expect(
-                    restoreChannelBackupFromOlympus(
-                        'lnd',
-                        false,
-                        '03cd',
-                        'seed'
-                    )
-                ).rejects.toThrow('Invalid auth response');
+                    await expect(
+                        restoreChannelBackupFromOlympus(
+                            'lnd',
+                            false,
+                            '03cd',
+                            'seed'
+                        )
+                    ).rejects.toThrow('Invalid auth response');
 
-                expect(mockSignNodePubkey).not.toHaveBeenCalled();
-                expect(fetchedPaths()).toEqual(['/api/auth']);
-            });
+                    expect(mockSignNodePubkey).not.toHaveBeenCalled();
+                    expect(fetchedPaths()).toEqual(['/api/auth/v2']);
+                }
+            );
 
-            it('refuses to sign a restore challenge that is not hex', async () => {
+            it('refuses to sign a restore challenge that is not tagged for Olympus', async () => {
                 serveChallenges([CHALLENGE, LNURLAUTH_CANONICAL_PHRASE], {
                     last_backup_at: '2026-01-01T00:00:00Z'
                 });
@@ -594,9 +625,9 @@ describe('ChannelMigrationUtils', () => {
                     Buffer.from(mockSignNodePubkey.mock.calls[0][0]).toString()
                 ).toBe(CHALLENGE);
                 expect(fetchedPaths()).toEqual([
-                    '/api/auth',
+                    '/api/auth/v2',
                     '/api/status',
-                    '/api/auth'
+                    '/api/auth/v2'
                 ]);
             });
         });
