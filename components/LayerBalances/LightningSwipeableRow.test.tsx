@@ -348,6 +348,25 @@ describe('LightningSwipeableRow lnurl resolve', () => {
         expectAlert('utils.handleAnything.invalidLnurlParams');
         expect(navigation.navigate).not.toHaveBeenCalled();
     });
+
+    it('names the host the LNURL error came from', async () => {
+        mockFetchLnurlParams.mockResolvedValue({
+            status: 'ERROR',
+            reason: 'Claim your refund',
+            // js-lnurl's getDomain reads shop.example out of this URL
+            domain: 'shop.example',
+            url: 'https://other.example\\@shop.example/lnurl'
+        });
+
+        await tapRow(undefined, asLnurl('https://example.com/lnurl'));
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'other.example says: Claim your refund',
+            expect.any(Array),
+            { cancelable: false }
+        );
+    });
 });
 
 describe('LightningSwipeableRow LNURL errors', () => {
@@ -368,9 +387,12 @@ describe('LightningSwipeableRow LNURL errors', () => {
     // #5060: this error used to end up as an unhandled rejection
     it('alerts on an .onion LNURL error response', async () => {
         const navigation = await tapRowWith({
+            // js-lnurl's error responses carry the request URL, which the
+            // row names the host from
             lnurlParams: {
                 status: 'ERROR',
                 domain: ONION,
+                url: `http://${ONION}/lnurl`,
                 reason: 'unreachable'
             }
         });
@@ -427,4 +449,75 @@ describe('LightningSwipeableRow LNURL errors', () => {
         );
         expect(alertSpy).not.toHaveBeenCalled();
     });
+});
+
+describe('LightningSwipeableRow LNURL requests', () => {
+    const mountRow = async (lnurlParams?: any) => {
+        const ref = React.createRef<any>();
+        const navigation = { navigate: jest.fn() };
+        await render(
+            <LightningSwipeableRow
+                {...({
+                    ref,
+                    lightning: asLnurl('https://example.com/lnurl'),
+                    lnurlParams,
+                    locked: true,
+                    navigation,
+                    SyncStore: { isSyncing: false }
+                } as any)}
+            >
+                <Text>Pay</Text>
+            </LightningSwipeableRow>
+        );
+        return { ref, navigation };
+    };
+
+    let alertSpy: jest.SpyInstance;
+    beforeEach(() => {
+        mockFetchLnurlParams.mockReset();
+        alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+    afterEach(() => alertSpy.mockRestore());
+
+    it('rejects an LNURL error from an onion host named by the request host', async () => {
+        // Pressing the row alerts the rejection (see LNURL errors), so call
+        // the handler directly to check which host it names
+        const { ref, navigation } = await mountRow();
+
+        await expect(
+            ref.current.handleLnurlRequest(
+                undefined,
+                {
+                    status: 'ERROR',
+                    reason: 'Claim your refund',
+                    domain: 'shop.example',
+                    url: 'http://abc.onion\\@shop.example/lnurl'
+                },
+                navigation
+            )
+        ).rejects.toThrow('abc.onion says: Claim your refund');
+        expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    // the resolve refuses these callbacks too; params handed to the row
+    // already resolved are checked here
+    it.each(['https:///a.example/cb', 'https://\\a.example/cb'])(
+        'refuses a withdraw whose callback %s has no host',
+        async (callback) => {
+            const { navigation } = await mountRow({
+                tag: 'withdrawRequest',
+                callback,
+                k1: 'k1'
+            });
+            await fireEvent.press(screen.getByText('Pay'));
+            await new Promise(setImmediate);
+
+            expect(mockFetchLnurlParams).not.toHaveBeenCalled();
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            expect(alertSpy).toHaveBeenCalledWith(
+                'general.error',
+                'utils.handleAnything.invalidLnurlParams'
+            );
+        }
+    );
 });

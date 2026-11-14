@@ -289,6 +289,7 @@ describe('PaymentMethodList balance checks', () => {
             lnurlParams: {
                 tag: 'withdrawRequest',
                 domain: 'faucet.example',
+                callback: 'https://faucet.example/withdraw',
                 defaultDescription: ''
             },
             lightningBalance: 0,
@@ -312,6 +313,20 @@ describe('PaymentMethodList balance checks', () => {
         });
 
         expect(row('general.lightning').subtitle).toBe('Free sats');
+    });
+
+    it('names a withdraw by the host its callback is sent to', async () => {
+        await renderList({
+            lnurlParams: {
+                tag: 'withdrawRequest',
+                // what js-lnurl's getDomain makes of this callback
+                domain: 'faucet.example',
+                callback: 'https://other.example\\@faucet.example/withdraw',
+                defaultDescription: ''
+            }
+        });
+
+        expect(row('general.lightning').subtitle).toBe('other.example');
     });
 
     it('checks each account against its own balance', async () => {
