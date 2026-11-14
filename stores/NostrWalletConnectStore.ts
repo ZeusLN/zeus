@@ -3633,6 +3633,37 @@ export default class NostrWalletConnectStore {
             };
         }
 
+        // The node's payment list covers the whole wallet. If it already
+        // lists this invoice as settled or in flight and this connection has
+        // no record of paying it, the payment was made by the user or by
+        // another connection. Refuse, as the Cashu handler does, instead of
+        // adopting that payment and returning its preimage. An own attempt
+        // recorded failed is not refused: a dispatch rejected by a transport
+        // error after reaching the node is recorded failed, is not
+        // reconciled, and can settle, so refusing it would leave the spend
+        // outside the budget.
+        if (!existing) {
+            const listed = NostrConnectUtils.findPaymentForInvoice(
+                request.invoice,
+                await this.paymentsStore.getPayments(),
+                decodedPaymentHash
+            );
+            if (
+                listed &&
+                (NostrConnectUtils.isSettledPayment(listed) ||
+                    NostrConnectUtils.isListedPaymentInTransit(listed))
+            ) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
+                    ),
+                    Nip47ErrorCode.INVALID_INVOICE
+                );
+            }
+            // The connections may have been reloaded during the lookup
+            connection = this.storedConnection(connection);
+        }
+
         if (amountSats <= 0) {
             return NostrConnectUtils.createNip47Error(
                 localeString(
@@ -3721,6 +3752,35 @@ export default class NostrWalletConnectStore {
             zeroAmountInvoice ? amountSats.toString() : undefined,
             feeLimitSats
         );
+
+        // The node refused this send because it already has a payment for
+        // the hash, so this send sent nothing. With no record for the
+        // invoice, that payment was made after the lookup above by the
+        // wallet or by another connection: refuse rather than adopt it
+        // below. An own pending or timed-out attempt returned early above,
+        // and an own attempt recorded failed may be the payment the node
+        // has, as in the check above.
+        const refusals = [paymentState.payment_error, paymentState.error_msg];
+        const paidOrStartedElsewhere = refusals.some(
+            (message) =>
+                NostrConnectUtils.isAlreadyPaidError(message) ||
+                NostrConnectUtils.isDuplicatePaymentError(message)
+        );
+        const inFlightElsewhere = refusals.some((message) =>
+            NostrConnectUtils.isPaymentInTransitionError(message)
+        );
+        if (
+            !paymentState.payment_preimage &&
+            (paidOrStartedElsewhere || inFlightElsewhere) &&
+            !existing
+        ) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
+                ),
+                Nip47ErrorCode.INVALID_INVOICE
+            );
+        }
 
         // The payment has been sent. A failed list refresh must not throw past
         // this point, or nothing would be recorded and the spend would escape
