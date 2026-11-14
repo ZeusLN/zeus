@@ -1176,6 +1176,11 @@
   dependencies:
     "@noble/curves" "^1.7.0"
 
+"@branta-ops/branta@4.3.0":
+  version "4.3.0"
+  resolved "https://registry.yarnpkg.com/@branta-ops/branta/-/branta-4.3.0.tgz#5787e51a558467a3198fbce88794195df004304b"
+  integrity sha512-xijIfesGAUot/2m/O7Jsz3+rprih2HtP3r7NPveeKX8Vs1Xapu//2CkvVk9tZkRGuvHVs/cphakTqeWNUj3TfQ==
+
 "@codesandbox/nodebox@0.1.8":
   version "0.1.8"
   resolved "https://registry.yarnpkg.com/@codesandbox/nodebox/-/nodebox-0.1.8.tgz#2dc701005cedefac386f17a69a4c9a4f38c2325d"
@@ -1716,6 +1721,11 @@
   integrity sha512-54/JRvkLIzzDWshCWfuhadfrfZVPiElY8Fcgmg1HroEly/EDSszzhBAsarCux+D/kOslTRquNzuyGSmUSTTHGg==
   dependencies:
     eslint-scope "5.1.1"
+
+"@noble/ciphers@0.5.3":
+  version "0.5.3"
+  resolved "https://registry.yarnpkg.com/@noble/ciphers/-/ciphers-0.5.3.tgz#48b536311587125e0d0c1535f73ec8375cd76b23"
+  integrity sha512-B0+6IIHiqEs3BPMT0hcRmHvEj2QHOLu+uwt+tqDDeVd0oyVzh7BPrDcPjRnV1PV/5LaknXJJQvOuRGR0zQJz+w==
 
 "@noble/ciphers@2.1.1":
   version "2.1.1"
