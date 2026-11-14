@@ -101,6 +101,7 @@ import ChannelBackupStore, {
     NO_BACKUP_FOUND
 } from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
+import ConnectivityStore from '../../stores/ConnectivityStore';
 import TransactionsStore from '../../stores/TransactionsStore';
 import FiatStore from '../../stores/FiatStore';
 import InvoicesStore from '../../stores/InvoicesStore';
@@ -155,6 +156,7 @@ interface WalletProps {
     ContactStore: ContactStore;
     ModalStore: ModalStore;
     SyncStore: SyncStore;
+    ConnectivityStore: ConnectivityStore;
     LSPStore: LSPStore;
     NotesStore: NotesStore;
     SwapStore: SwapStore;
@@ -177,6 +179,7 @@ interface WalletState {
     'BalanceStore',
     'CashuStore',
     'ChannelsStore',
+    'ConnectivityStore',
     'TransactionsStore',
     'InvoicesStore',
     'NodeInfoStore',
@@ -613,6 +616,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             BalanceStore,
             CashuStore,
             ChannelsStore,
+            ConnectivityStore,
             TransactionsStore,
             UTXOsStore,
             ContactStore,
@@ -706,6 +710,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             // partition; re-read now that getSettings has completed
             UnitsStore.getUnits();
             CashuStore.reset();
+
+            // LDK Node and Cashu skip network-bound init work (VSS, chain
+            // sync, Nostr mint restore) while offline, so isOffline has to
+            // be current before they start
+            if (implementation === 'ldk-node' || settings?.ecash?.enableCashu) {
+                ConnectivityStore.start();
+                await ConnectivityStore.checkNow();
+            }
         }
 
         LnurlPayStore.reset();
@@ -794,6 +806,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         trustedPeers0conf: trustedPeers,
                         vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
                         skipInit: justCreated,
+                        offline: ConnectivityStore.isOffline,
                         onSyncStart: () => {
                             SettingsStore.ldkNodeSyncing = true;
                         }
