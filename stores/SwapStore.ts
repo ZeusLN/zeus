@@ -567,19 +567,76 @@ export default class SwapStore {
         }
     };
 
+    /**
+     * Whether a stored swap was made for an invoice with the same payment
+     * hash. The host claims a submarine swap's lockup with the invoice's
+     * preimage, which it learns by paying the invoice once, so every swap
+     * made for one invoice can be claimed with that one payment. Swaps of
+     * every host and status count: a failed or refunded status can come
+     * from the host, and our own refund mark is set when the refund is
+     * broadcast, not when it confirms.
+     */
+    private isInvoiceInUse = (swaps: any[], paymentHash: string): boolean =>
+        swaps.some(
+            (swap: any) =>
+                typeof swap?.invoice === 'string' &&
+                this.paymentHashOf(swap.invoice) === paymentHash
+        );
+
+    private paymentHashOf = (paymentRequest: string): string | undefined => {
+        try {
+            return Bolt11Utils.decode(paymentRequest).payment_hash;
+        } catch {
+            return undefined;
+        }
+    };
+
+    // Payment hashes of submarine swaps being created. A swap is only
+    // stored after the host has made it, so without this two overlapping
+    // requests for one invoice both pass isInvoiceInUse.
+    private submarineSwapsInFlight = new Set<string>();
+
     @action
     public createSubmarineSwap = async (invoice: any, navigation: any) => {
-        runInAction(() => {
-            this.loading = true;
-        });
-        const { implementation } = this.settingsStore;
-        const { nodeInfo } = this.nodeInfoStore;
-        const nodePubkey = nodeInfo.nodeId;
-        // the quote the Swaps screen showed when the user started the swap
-        const fees = this.subInfo?.fees;
-        const pairHash = this.subInfo?.hash;
-        const apiUrl = UrlUtils.getMempoolApiUrl(nodeInfo);
+        // reserved before the first await, released in finally
+        const paymentHash = this.paymentHashOf(invoice);
+        // the same user action as the request in flight, which reports
+        // the outcome, so return without touching apiError or loading
+        if (paymentHash && this.submarineSwapsInFlight.has(paymentHash)) {
+            return;
+        }
+        if (paymentHash) this.submarineSwapsInFlight.add(paymentHash);
+        // everything after the reservation is inside the try, so a throw
+        // cannot skip the release in finally
         try {
+            runInAction(() => {
+                this.loading = true;
+            });
+            const { implementation } = this.settingsStore;
+            const { nodeInfo } = this.nodeInfoStore;
+            const nodePubkey = nodeInfo.nodeId;
+            // the quote the Swaps screen showed when the user started the swap
+            const fees = this.subInfo?.fees;
+            const pairHash = this.subInfo?.hash;
+            const apiUrl = UrlUtils.getMempoolApiUrl(nodeInfo);
+
+            // before a refund key is used and the host sees the invoice
+            const storedSwaps = await Storage.getItem(SWAPS_KEY);
+            // an invoice we cannot decode is left to the host to refuse
+            if (
+                paymentHash &&
+                this.isInvoiceInUse(
+                    storedSwaps ? JSON.parse(storedSwaps) : [],
+                    paymentHash
+                )
+            ) {
+                runInAction(() => {
+                    this.apiError = localeString('views.Swaps.invoiceInUse');
+                    this.loading = false;
+                });
+                return;
+            }
+
             // Run the checks that don't need the host's answer before the
             // host creates the swap: the Swaps screen retries with the same
             // invoice, and the host refuses a second swap for its payment
@@ -754,6 +811,8 @@ export default class SwapStore {
                 this.loading = false;
             });
             console.error('Error creating Submarine Swap:', error);
+        } finally {
+            if (paymentHash) this.submarineSwapsInFlight.delete(paymentHash);
         }
     };
 
