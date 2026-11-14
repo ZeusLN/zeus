@@ -1279,6 +1279,203 @@ describe('LightningNodeConnect', () => {
         });
     });
 
+    // Native LNC streams cannot be cancelled and every stream of a method
+    // emits under the method name. A stream per Activity or Receive visit
+    // stayed open for the whole session, and each one's events reached
+    // every listener, so updates ran once per earlier visit.
+    describe('shared subscriptions', () => {
+        const TRANSACTIONS = 'lnrpc.Lightning.SubscribeTransactions';
+        const INVOICES = 'lnrpc.Lightning.SubscribeInvoices';
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+
+        // the streams of a method started on a client, as subscribe() calls
+        const started = (client: any, method: string) =>
+            client.subscribe.mock.calls.filter(
+                ([name]: [string]) => name === method
+            );
+        // the request id of the newest stream of a method on a client
+        const idOf = (client: any, method: string) =>
+            started(client, method).at(-1)[2];
+
+        // one native event, delivered to every live JS listener of the
+        // name and tagged with the request id of the stream it came from
+        const emit = (
+            name: string,
+            result: string,
+            request_id: string = idOf(lnc, name)
+        ) =>
+            listeners
+                .filter((l) => l.name === name && !l.removed)
+                .forEach((l) => l.handler({ result, request_id }));
+
+        const tx = (address: string) =>
+            JSON.stringify({
+                dest_addresses: [address],
+                num_confirmations: 0,
+                amount: '1000',
+                tx_hash: 'txid'
+            });
+
+        let backend: LightningNodeConnect;
+        let lnc: any;
+
+        beforeEach(async () => {
+            listeners = [];
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('starts each stream once for repeated Activity visits', () => {
+            const watchers = [1, 2, 3].map(() => ({
+                onTransaction: jest.fn(),
+                onInvoice: jest.fn()
+            }));
+            watchers.forEach(({ onTransaction, onInvoice }) =>
+                backend.watchActivityUpdates(onTransaction, onInvoice)
+            );
+
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
+            expect(started(lnc, INVOICES)).toHaveLength(1);
+
+            emit(TRANSACTIONS, tx('bc1qa'));
+            emit(INVOICES, JSON.stringify({ settled: true }));
+
+            watchers.forEach(({ onTransaction, onInvoice }) => {
+                expect(onTransaction).toHaveBeenCalledTimes(1);
+                expect(onInvoice).toHaveBeenCalledTimes(1);
+            });
+        });
+
+        it('stops calling a watcher after it unsubscribes', () => {
+            const left = jest.fn();
+            const stayed = jest.fn();
+            const unsubscribe = backend.watchActivityUpdates(left, jest.fn());
+            backend.watchActivityUpdates(stayed, jest.fn());
+
+            unsubscribe();
+            emit(TRANSACTIONS, tx('bc1qa'));
+
+            expect(left).not.toHaveBeenCalled();
+            expect(stayed).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps the stream for the next visit after every watcher left', () => {
+            backend.watchActivityUpdates(jest.fn(), jest.fn())();
+            const onTransaction = jest.fn();
+            backend.watchActivityUpdates(onTransaction, jest.fn());
+
+            emit(TRANSACTIONS, tx('bc1qa'));
+
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
+            expect(onTransaction).toHaveBeenCalledTimes(1);
+        });
+
+        it('reuses the transactions stream for on-chain receive watchers', () => {
+            const onTransaction = jest.fn();
+            const onReceivedA = jest.fn();
+            const onReceivedB = jest.fn();
+            backend.watchActivityUpdates(onTransaction, jest.fn());
+            backend.watchOnchainReceived(
+                { address: 'bc1qa', numConfPreference: 0 },
+                onReceivedA
+            );
+            backend.watchOnchainReceived(
+                { address: 'bc1qb', numConfPreference: 0 },
+                onReceivedB
+            );
+
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
+
+            emit(TRANSACTIONS, tx('bc1qa'));
+            emit(TRANSACTIONS, tx('bc1qa'));
+
+            expect(onReceivedA).toHaveBeenCalledTimes(1);
+            expect(onReceivedA).toHaveBeenCalledWith({
+                amountSat: 1000,
+                txid: 'txid'
+            });
+            expect(onReceivedB).not.toHaveBeenCalled();
+            expect(onTransaction).toHaveBeenCalledTimes(2);
+        });
+
+        it('starts a new stream once the previous one ended', () => {
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+
+            emit(TRANSACTIONS, 'rpc error: code = Unavailable desc = gone');
+            emit(INVOICES, 'EOF');
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(2);
+            expect(started(lnc, INVOICES)).toHaveLength(2);
+        });
+
+        it('starts fresh streams on a new LNC client', async () => {
+            const first = jest.fn();
+            backend.watchActivityUpdates(first, jest.fn());
+
+            const next = await openWallet(backend, 'phrase-b');
+            const second = jest.fn();
+            backend.watchActivityUpdates(second, jest.fn());
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+
+            expect(next).not.toBe(lnc);
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
+            expect(started(next, TRANSACTIONS)).toHaveLength(1);
+            expect(started(next, INVOICES)).toHaveLength(1);
+
+            emit(TRANSACTIONS, tx('bc1qa'), idOf(next, TRANSACTIONS));
+
+            expect(second).toHaveBeenCalledTimes(1);
+        });
+
+        it('ignores a late end from the previous client stream', async () => {
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+            const next = await openWallet(backend, 'phrase-b');
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+
+            // the old client's stream closes after the new one started
+            emit(
+                TRANSACTIONS,
+                'rpc error: code = Canceled desc = grpc: the client connection is closing'
+            );
+            const onTransaction = jest.fn();
+            backend.watchActivityUpdates(onTransaction, jest.fn());
+
+            expect(started(next, TRANSACTIONS)).toHaveLength(1);
+
+            // and its last updates do not reach the new wallet's watchers
+            emit(TRANSACTIONS, tx('bc1qa'));
+            expect(onTransaction).not.toHaveBeenCalled();
+            emit(TRANSACTIONS, tx('bc1qa'), idOf(next, TRANSACTIONS));
+            expect(onTransaction).toHaveBeenCalledTimes(1);
+        });
+    });
+
     describe('watchInvoicePaid', () => {
         const EVENT = 'invoicesrpc.Invoices.SubscribeSingleInvoice';
         // contains both characters that differ between base64 and base64url
