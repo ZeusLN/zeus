@@ -112,6 +112,11 @@ const ecc: TinySecp256k1InterfaceExtended & TinySecp256k1Interface & TinySecp256
 
   privateAdd: (d: Uint8Array, tweak: Uint8Array): Uint8Array | null =>
     throwToNull(() => {
+      // noble rejects a zero tweak as an invalid key; tiny-secp256k1 (and ecpair's self-test) expect d back
+      if (tweak.length === 32 && tweak.every(b => b === 0)) {
+        if (!necc.utils.isValidPrivateKey(d)) return null;
+        return Uint8Array.from(d);
+      }
       // console.log({ d, tweak });
       const ret = necc.utils.privateAdd(d, tweak);
       // console.log(ret);
@@ -124,10 +129,13 @@ const ecc: TinySecp256k1InterfaceExtended & TinySecp256k1Interface & TinySecp256
   privateNegate: (d: Uint8Array): Uint8Array => necc.utils.privateNegate(d),
 
   sign: (h: Uint8Array, d: Uint8Array, e?: Uint8Array): Uint8Array => {
+    // e is folded into the RFC6979 nonce seed and must never be attacker-influenced
     return necc.signSync(h, d, { der: false, extraEntropy: e });
   },
 
-  signSchnorr: (h: Uint8Array, d: Uint8Array, e: Uint8Array = Buffer.alloc(32, 0x00)): Uint8Array => {
+  signSchnorr: (h: Uint8Array, d: Uint8Array, e: Uint8Array = necc.utils.randomBytes(32)): Uint8Array => {
+    // fresh BIP340 aux randomness per signature; a fixed default (e.g. zeros) is
+    // spec-legal but forfeits fault-injection and side-channel defense in depth
     return necc.schnorr.signSync(h, d, e);
   },
 
