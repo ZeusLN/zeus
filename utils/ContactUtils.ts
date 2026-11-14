@@ -4,8 +4,19 @@ import RNFS from 'react-native-fs';
 
 import Contact from '../models/Contact';
 
-const transformContactData = async (contact: any) => {
+// Keeps only the string fields of a Nostr profile (kind 0 content)
+const sanitizeNostrProfile = (profile: any): any => {
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+        return {};
+    }
+    return Object.fromEntries(
+        Object.entries(profile).filter(([, value]) => typeof value === 'string')
+    );
+};
+
+const transformContactData = async (profile: any) => {
     try {
+        const contact = sanitizeNostrProfile(profile);
         const name = contact?.display_name || contact?.name || '';
         const transformedContact = {
             photo: '',
@@ -113,6 +124,7 @@ const toCardContact = (contact: any) => ({
 });
 
 export default {
+    sanitizeNostrProfile,
     transformContactData,
     findContactByLightningAddress,
     toCardContact

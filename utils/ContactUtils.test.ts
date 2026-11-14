@@ -97,6 +97,74 @@ describe('ContactUtils', () => {
             expect(transformedContact).toBeDefined();
             expect(transformedContact).toBeInstanceOf(Object);
         });
+        it('drops profile fields that are not strings', async () => {
+            const transformedContact = await ContactUtils.transformContactData({
+                display_name: [['Mallory']],
+                name: { first: 'Mallory' },
+                about: 5,
+                lud16: ['mallory@example.com'],
+                lud06: 7,
+                nip05: true,
+                npub: ['npub1'],
+                pubkey: 9,
+                picture: ['https://example.com/me.png'],
+                banner: {}
+            });
+
+            expect(transformedContact).toEqual({
+                photo: '',
+                name: '',
+                description: '',
+                lnAddress: [],
+                onchainAddress: [''],
+                pubkey: [''],
+                nip05: [],
+                nostrNpub: [],
+                contactId: 'mocked-uuid',
+                isFavourite: false,
+                banner: '',
+                isSelected: false
+            });
+        });
+
+        it('falls back to the next profile field that is a string', async () => {
+            const transformedContact = await ContactUtils.transformContactData({
+                display_name: 5,
+                name: 'Mallory',
+                lud16: ['mallory@example.com'],
+                lud06: 'lnurl1dp68gurn8ghj7'
+            });
+
+            expect(transformedContact).toMatchObject({
+                name: 'Mallory',
+                lnAddress: ['lnurl1dp68gurn8ghj7']
+            });
+        });
+    });
+
+    describe('sanitizeNostrProfile', () => {
+        it('keeps the string fields only', () => {
+            expect(
+                ContactUtils.sanitizeNostrProfile({
+                    name: 'Mallory',
+                    about: 5,
+                    lud16: ['mallory@example.com'],
+                    picture: 'https://example.com/me.png',
+                    banner: null
+                })
+            ).toEqual({
+                name: 'Mallory',
+                picture: 'https://example.com/me.png'
+            });
+        });
+
+        it('returns an empty profile for content that is not an object', () => {
+            expect(ContactUtils.sanitizeNostrProfile(null)).toEqual({});
+            expect(ContactUtils.sanitizeNostrProfile(undefined)).toEqual({});
+            expect(ContactUtils.sanitizeNostrProfile(5)).toEqual({});
+            expect(ContactUtils.sanitizeNostrProfile('Mallory')).toEqual({});
+            expect(ContactUtils.sanitizeNostrProfile(['Mallory'])).toEqual({});
+        });
     });
 
     describe('toCardContact', () => {

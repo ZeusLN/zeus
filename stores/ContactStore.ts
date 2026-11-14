@@ -1,6 +1,6 @@
 import { action, observable } from 'mobx';
 import { v4 as uuidv4 } from 'uuid';
-import Contact from '../models/Contact';
+import Contact, { normalizeContactData } from '../models/Contact';
 import Storage from '../storage';
 
 export const LEGACY_CONTACTS_KEY = 'zeus-contacts';
@@ -19,7 +19,9 @@ export default class ContactStore {
             const contactsString: any = await Storage.getItem(CONTACTS_KEY);
             if (contactsString) {
                 const allContacts: Contact[] = JSON.parse(contactsString);
-                this.contacts = allContacts;
+                this.contacts = Array.isArray(allContacts)
+                    ? allContacts.map(normalizeContactData)
+                    : [];
                 this.loading = false;
             } else {
                 this.loading = false;
