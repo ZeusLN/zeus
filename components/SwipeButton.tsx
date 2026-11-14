@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -7,7 +7,7 @@ import {
     PanResponder,
     PanResponderGestureState,
     GestureResponderEvent,
-    Dimensions
+    LayoutChangeEvent
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -36,22 +36,38 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
     // always see its latest value (e.g. once a payment goes in flight).
     const disabledRef = useRef(disabled);
     disabledRef.current = disabled;
-    const screenWidth = Dimensions.get('window').width;
-
-    const containerWidth = screenWidth - 40;
-    const swipeButtonWidth = 50;
-    const maxTranslation = containerWidth - swipeButtonWidth;
-
-    const textOpacity = pan.interpolate({
-        inputRange: [0, maxTranslation / 2, maxTranslation],
-        outputRange: [1, 0, 0],
-        extrapolate: 'clamp'
-    });
 
     // the responder is created once, so its handlers only ever see refs
     const completed = useRef(false);
     const onSwipeSuccessRef = useRef(onSwipeSuccess);
     onSwipeSuccessRef.current = onSwipeSuccess;
+
+    // How far the knob can travel, from the track's measured width. It is
+    // null until the first layout, and the knob can't be dragged before
+    // then, so the swipe is never judged against a guessed width.
+    const [maxTranslation, setMaxTranslation] = useState<number | null>(null);
+    const maxTranslationRef = useRef<number | null>(null);
+    maxTranslationRef.current = maxTranslation;
+
+    const onLayout = (e: LayoutChangeEvent) => {
+        const travel = Math.max(
+            e.nativeEvent.layout.width - SWIPE_BUTTON_WIDTH,
+            0
+        );
+        // keep a completed knob at the end of a resized track
+        if (completed.current) pan.setValue(travel);
+        setMaxTranslation(travel);
+    };
+
+    const textOpacity = useMemo(() => {
+        // interpolate needs a non-empty range
+        const travel = Math.max(maxTranslation ?? 0, 1);
+        return pan.interpolate({
+            inputRange: [0, travel / 2, travel],
+            outputRange: [1, 0, 0],
+            extrapolate: 'clamp'
+        });
+    }, [pan, maxTranslation]);
 
     const springBack = () =>
         Animated.spring(pan, {
@@ -74,13 +90,18 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () =>
-                !completed.current && !disabledRef.current,
+                !completed.current &&
+                !disabledRef.current &&
+                !!maxTranslationRef.current,
             onMoveShouldSetPanResponder: () =>
-                !completed.current && !disabledRef.current,
+                !completed.current &&
+                !disabledRef.current &&
+                !!maxTranslationRef.current,
             onPanResponderGrant: () => {
                 pan.setValue(0);
             },
             onPanResponderMove: (_e, gesture) => {
+                const maxTranslation = maxTranslationRef.current ?? 0;
                 const newValue = gesture.dx;
                 if (newValue >= 0 && newValue <= maxTranslation) {
                     pan.setValue(newValue);
@@ -90,7 +111,9 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
                 _e: GestureResponderEvent,
                 gesture: PanResponderGestureState
             ) => {
+                const maxTranslation = maxTranslationRef.current;
                 if (
+                    !!maxTranslation &&
                     gesture.dx > maxTranslation * 0.95 &&
                     !disabledRef.current
                 ) {
@@ -117,6 +140,8 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
                 containerStyle,
                 disabled && styles.disabled
             ]}
+            onLayout={onLayout}
+            testID="swipe-button-track"
         >
             <Animated.View
                 style={[
@@ -145,8 +170,14 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
     );
 };
 
+const SWIPE_BUTTON_WIDTH = 50;
+
 const styles = StyleSheet.create({
     container: {
+        // fill the parent's width even when the parent centers its
+        // children, which would otherwise shrink the track to the
+        // instruction text
+        alignSelf: 'stretch',
         height: 50,
         backgroundColor: '#ccc',
         borderRadius: 5,
@@ -166,7 +197,7 @@ const styles = StyleSheet.create({
     swipeButton: {
         position: 'absolute',
         left: 0,
-        width: 50,
+        width: SWIPE_BUTTON_WIDTH,
         height: 50,
         color: 'black',
         backgroundColor: 'white',
