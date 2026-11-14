@@ -1007,6 +1007,9 @@ export default class WalletConfiguration extends React.Component<
             // keeps a concurrent settings write from either resurrecting
             // the deleted node or being clobbered by a snapshot taken
             // before it.
+            // The nodes array this deletion writes, to check below that
+            // the write landed
+            let expectedNodes: Array<any> | undefined;
             const newSettings = await updateSettings(
                 (currentSettings: Settings) => {
                     const currentNodes = currentSettings.nodes || [];
@@ -1027,18 +1030,36 @@ export default class WalletConfiguration extends React.Component<
                         // nothing to filter, just flag the deletion
                         return { justDeletedWallet: active };
                     }
+                    expectedNodes = currentNodes.filter(
+                        (_: any, i: number) => i !== freshIndex
+                    );
                     return {
-                        nodes: currentNodes.filter(
-                            (_: any, i: number) => i !== freshIndex
-                        ),
+                        nodes: expectedNodes,
                         selectedNode: this.getNewSelectedNodeIndex(
                             freshIndex,
                             currentSettings
                         ),
                         justDeletedWallet: active
                     };
-                }
+                },
+                // Deleting the last wallet legitimately leaves `nodes`
+                // empty; every other empty write is refused so a failed
+                // settings load cannot wipe the wallet list.
+                { allowEmptyNodes: true }
             );
+            // A refused write (data wipe in progress, or a settings load
+            // that failed) resolves with the unchanged settings, which
+            // still list this wallet. Stop before deleting its data
+            // directory: that would leave a config pointing at a wallet
+            // with no data, still selected if it was the active one.
+            if (
+                expectedNodes &&
+                !isEqual(newSettings?.nodes || [], expectedNodes)
+            ) {
+                throw new Error(
+                    'Wallet config was not removed: settings write refused'
+                );
+            }
             const remainingNodes = newSettings?.nodes || [];
 
             // Delete wallet data after settings are updated. Retried: the
