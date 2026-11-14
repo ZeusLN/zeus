@@ -2,6 +2,15 @@ jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: { fetch: jest.fn() }
 }));
+// backupChannels encrypts natively; ChannelBackupStore.encryption.test.ts
+// covers the wire format
+jest.mock('../utils/ZipUtils', () => ({
+    encryptString: jest.fn().mockResolvedValue('encrypted'),
+    decryptString: jest.fn()
+}));
+jest.mock('../utils/LocaleUtils', () => ({
+    localeString: (key: string) => key
+}));
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
     default: { channel: { subscribeChannelEvents: jest.fn() } }
