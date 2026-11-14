@@ -9,7 +9,8 @@ jest.mock('../utils/BackendUtils', () => ({
 // FeeLimit imports AmountUtils, which loads the store graph and its native
 // modules
 jest.mock('../stores/Stores', () => ({
-    settingsStore: { settings: {} },
+    // word labels, so the assertions don't depend on the β default
+    settingsStore: { settings: { display: { useSatsSymbol: false } } },
     fiatStore: {},
     unitsStore: {}
 }));

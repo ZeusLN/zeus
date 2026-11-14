@@ -5,6 +5,12 @@ jest.mock('mobx-react', () => ({
 jest.mock('@react-native-community/slider', () => 'Slider');
 jest.mock('@rneui/themed', () => ({ ButtonGroup: 'ButtonGroup' }));
 jest.mock('../../utils/LocaleUtils');
+// AmountUtils reads the β setting from the stores singleton
+jest.mock('../../stores/Stores', () => ({
+    settingsStore: { settings: { display: { useSatsSymbol: false } } },
+    fiatStore: {},
+    unitsStore: {}
+}));
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: (key: string) => `theme:${key}`
 }));

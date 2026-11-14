@@ -35,7 +35,12 @@ const USD = {
 
 beforeEach(() => {
     Object.assign(settingsStore, {
-        settings: { fiat: 'USD', display: {}, privacy: {} },
+        // word labels, so the assertions don't depend on the β default
+        settings: {
+            fiat: 'USD',
+            display: { useSatsSymbol: false },
+            privacy: {}
+        },
         lurkerExposed: false,
         toggleLurker: jest.fn()
     });
@@ -114,7 +119,10 @@ describe('Amount in sats', () => {
     });
 
     it('shows millisatoshis when the setting is on', async () => {
-        settingsStore.settings.display = { showMillisatoshiAmounts: true };
+        settingsStore.settings.display = {
+            showMillisatoshiAmounts: true,
+            useSatsSymbol: false
+        };
         await renderAmount({ sats: '1000.5', roundAmount: true });
 
         expect(screen.getByText('1,000.5')).toBeOnTheScreen();
@@ -122,7 +130,10 @@ describe('Amount in sats', () => {
     });
 
     it('rounds millisatoshis away when the setting is off', async () => {
-        settingsStore.settings.display = { showMillisatoshiAmounts: false };
+        settingsStore.settings.display = {
+            showMillisatoshiAmounts: false,
+            useSatsSymbol: false
+        };
         await renderAmount({ sats: '1000.5' });
 
         expect(screen.getByText('1,001')).toBeOnTheScreen();
@@ -130,7 +141,10 @@ describe('Amount in sats', () => {
     });
 
     it('marks a rounded amount when asked to', async () => {
-        settingsStore.settings.display = { showMillisatoshiAmounts: false };
+        settingsStore.settings.display = {
+            showMillisatoshiAmounts: false,
+            useSatsSymbol: false
+        };
         await renderAmount({ sats: '1000.5', roundAmount: true });
 
         expect(screen.getByText('~')).toBeOnTheScreen();
@@ -138,14 +152,20 @@ describe('Amount in sats', () => {
     });
 
     it('keeps millisatoshis on a fee even when the setting is off', async () => {
-        settingsStore.settings.display = { showMillisatoshiAmounts: false };
+        settingsStore.settings.display = {
+            showMillisatoshiAmounts: false,
+            useSatsSymbol: false
+        };
         await renderAmount({ sats: '0.5', fee: true });
 
         expect(screen.getByText('0.5')).toBeOnTheScreen();
     });
 
     it('keeps millisatoshis when forced even when the setting is off', async () => {
-        settingsStore.settings.display = { showMillisatoshiAmounts: false };
+        settingsStore.settings.display = {
+            showMillisatoshiAmounts: false,
+            useSatsSymbol: false
+        };
         await renderAmount({ sats: '0.5', forceMsats: true });
 
         expect(screen.getByText('0.5')).toBeOnTheScreen();
