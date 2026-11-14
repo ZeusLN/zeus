@@ -166,3 +166,33 @@ describe('SetDuressPassword deleteDuressPassword', () => {
         }
     });
 });
+
+// Only one method is ever set, so a PIN or passphrase save clears the
+// other method's records, which can only be from before a downgrade and
+// would become the lock again once the plaintext is gone
+describe.each([
+    [
+        'SetPin',
+        SetPin,
+        'pin',
+        ['passphraseVerifier', 'duressPassphraseVerifier']
+    ],
+    [
+        'SetPassword',
+        SetPassword,
+        'passphrase',
+        ['pinVerifier', 'duressPinVerifier']
+    ]
+])('%s save', (_, Screen, field, otherKeys) => {
+    it("clears the other method's records", async () => {
+        const { updateSettings } = await save(Screen, field, {});
+
+        const patch: any = (updateSettings.mock.calls[0] as any[])[0];
+        for (const key of otherKeys) {
+            expect([key, key in patch && patch[key] === undefined]).toEqual([
+                key,
+                true
+            ]);
+        }
+    });
+});

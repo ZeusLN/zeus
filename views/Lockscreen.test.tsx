@@ -1122,7 +1122,18 @@ describe('Lockscreen delete handlers', () => {
     it.each([
         // with the plaintext fields: a delete that left them while the
         // verifier migration has not landed would keep the app locked
-        ['deletePin', ['pinVerifier', 'duressPinVerifier', 'pin', 'duressPin']],
+        // and the other method's records from before a downgrade
+        [
+            'deletePin',
+            [
+                'pinVerifier',
+                'duressPinVerifier',
+                'pin',
+                'duressPin',
+                'passphraseVerifier',
+                'duressPassphraseVerifier'
+            ]
+        ],
         ['deleteDuressPin', ['duressPinVerifier', 'duressPin']],
         [
             'deletePassword',
@@ -1130,7 +1141,9 @@ describe('Lockscreen delete handlers', () => {
                 'passphraseVerifier',
                 'duressPassphraseVerifier',
                 'passphrase',
-                'duressPassphrase'
+                'duressPassphrase',
+                'pinVerifier',
+                'duressPinVerifier'
             ]
         ],
         [

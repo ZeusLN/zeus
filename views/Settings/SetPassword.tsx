@@ -123,7 +123,15 @@ export default class SetPassphrase extends React.Component<
             const passphraseVerifier = await deriveVerifier(passphrase);
             // drop any plaintext the verifier migration has not hashed
             // yet, so it cannot win over this record later
-            await updateSettings({ passphraseVerifier, passphrase: undefined });
+            await updateSettings({
+                passphraseVerifier,
+                passphrase: undefined,
+                // only one method is ever set, so the PIN fields can hold
+                // only records from before a downgrade, which would become
+                // the lock again once the plaintext is gone
+                pinVerifier: undefined,
+                duressPinVerifier: undefined
+            });
         } catch (error) {
             console.error('Failed to save the password', error);
             this.setState({ saveError: true });
@@ -149,6 +157,10 @@ export default class SetPassphrase extends React.Component<
             // and any plaintext the verifier migration has not hashed yet
             duressPassphrase: undefined,
             passphrase: undefined,
+            // and the other method's records from before a downgrade, which
+            // would otherwise become the lock
+            pinVerifier: undefined,
+            duressPinVerifier: undefined,
             isBiometryEnabled: false
         });
         navigation.popTo('Security');

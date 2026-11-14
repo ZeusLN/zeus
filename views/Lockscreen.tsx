@@ -614,6 +614,10 @@ export default class Lockscreen extends React.Component<
             // and any plaintext the verifier migration has not hashed yet
             passphrase: undefined,
             duressPassphrase: undefined,
+            // and the other method's records from before a downgrade, which
+            // would otherwise become the lock
+            pinVerifier: undefined,
+            duressPinVerifier: undefined,
             authenticationAttempts: 0,
             isBiometryEnabled: false
         }).then(() => {
@@ -646,6 +650,10 @@ export default class Lockscreen extends React.Component<
             // and any plaintext the verifier migration has not hashed yet
             pin: undefined,
             duressPin: undefined,
+            // and the other method's records from before a downgrade, which
+            // would otherwise become the lock
+            passphraseVerifier: undefined,
+            duressPassphraseVerifier: undefined,
             authenticationAttempts: 0,
             isBiometryEnabled: false
         }).then(() => {

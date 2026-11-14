@@ -68,7 +68,10 @@ describe('SetPassword deletePassword', () => {
             'passphraseVerifier',
             'duressPassphraseVerifier',
             'passphrase',
-            'duressPassphrase'
+            'duressPassphrase',
+            // the other method's records from before a downgrade
+            'pinVerifier',
+            'duressPinVerifier'
         ]) {
             expect(
                 writes.some(
@@ -121,6 +124,9 @@ describe('SetPassword saveSettings', () => {
             passphrase: undefined
         });
         const patch: any = (updateSettings.mock.calls[0] as any[])[0];
-        expect('passphrase' in patch).toBe(true);
+        // with the PIN records from before a downgrade
+        for (const key of ['passphrase', 'pinVerifier', 'duressPinVerifier']) {
+            expect(key in patch && patch[key] === undefined).toBe(true);
+        }
     });
 });

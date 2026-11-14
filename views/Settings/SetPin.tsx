@@ -110,7 +110,15 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             const pinVerifier = await deriveVerifier(pin);
             // drop any plaintext the verifier migration has not hashed
             // yet, so it cannot win over this record later
-            await updateSettings({ pinVerifier, pin: undefined });
+            await updateSettings({
+                pinVerifier,
+                pin: undefined,
+                // only one method is ever set, so the passphrase fields can
+                // hold only records from before a downgrade, which would
+                // become the lock again once the plaintext is gone
+                passphraseVerifier: undefined,
+                duressPassphraseVerifier: undefined
+            });
         } catch (error) {
             console.error('Failed to save the PIN', error);
             this.setState({ saveError: true, pin: '', pinConfirm: '' });
