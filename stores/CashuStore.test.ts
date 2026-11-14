@@ -89,6 +89,7 @@ describe('CashuStore synchronizable seed recovery', () => {
         jest.clearAllMocks();
         Platform.OS = 'ios';
         (getRawItem as jest.Mock).mockReset();
+        (Storage.getItem as jest.Mock).mockReset().mockResolvedValue(false);
         (Storage.setItem as jest.Mock).mockReset().mockResolvedValue(true);
         jest.spyOn(console, 'log').mockImplementation(() => {});
         jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -192,11 +193,177 @@ describe('CashuStore synchronizable seed recovery', () => {
 
         expect(await store.initializeCDK()).toBe(true);
         expect(getRawItem).not.toHaveBeenCalled();
+        // the seed in memory is not read again from the keychain
+        expect(Storage.getItem).not.toHaveBeenCalled();
         expect(Storage.setItem).not.toHaveBeenCalled();
         expect(CashuDevKit.initializeWallet).toHaveBeenCalledWith(
             mnemonic,
             'sat'
         );
+    });
+
+    // Remote nodes never run initializeWallets, so claimToken reaches
+    // initializeCDK with the stored seed still only in the keychain
+    const storedSeed = (phrase: string) =>
+        (Storage.getItem as jest.Mock).mockImplementation(
+            async (key: string) =>
+                ({
+                    'lnd-cashu-seed-phrase': phrase,
+                    'lnd-cashu-seed-version': 'v2-bip39'
+                }[key] ?? false)
+        );
+
+    it('uses the stored seed when none is loaded', async () => {
+        storedSeed(JSON.stringify(words));
+        const store = newStore();
+
+        expect(await store.initializeCDK()).toBe(true);
+        expect(store.seedPhrase).toEqual(words);
+        expect(store.seedVersion).toBe('v2-bip39');
+        expect(getRawItem).not.toHaveBeenCalled();
+        expect(Storage.setItem).not.toHaveBeenCalled();
+        expect(CashuDevKit.initializeWallet).toHaveBeenCalledWith(
+            mnemonic,
+            'sat'
+        );
+    });
+
+    it('does not replace a stored seed that is not valid BIP-39', async () => {
+        const invalid = Array(12).fill('abandon');
+        storedSeed(JSON.stringify(invalid));
+        (getRawItem as jest.Mock).mockResolvedValue(null);
+        const store = newStore();
+
+        expect(await store.initializeCDK()).toBe(false);
+        expect(store.seedPhrase).toEqual(invalid);
+        expect(Storage.setItem).not.toHaveBeenCalled();
+        expect(CashuDevKit.initializeWallet).not.toHaveBeenCalled();
+    });
+
+    it('does not generate a seed when the stored one cannot be read', async () => {
+        (Storage.getItem as jest.Mock).mockRejectedValue(
+            new Error('keychain unavailable')
+        );
+        (getRawItem as jest.Mock).mockResolvedValue(null);
+        const store = newStore();
+
+        expect(await store.initializeCDK()).toBe(false);
+        expect(store.seedPhrase).toBeUndefined();
+        expect(Storage.setItem).not.toHaveBeenCalled();
+        expect(CashuDevKit.initializeWallet).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        'invalid json',
+        'null',
+        '{}',
+        '[]',
+        JSON.stringify(mnemonic),
+        JSON.stringify(words.map((word) => [word]))
+    ])('does not replace a malformed local seed %p', async (stored) => {
+        storedSeed(stored);
+        (getRawItem as jest.Mock).mockResolvedValue(null);
+        const store = newStore();
+
+        expect(await store.initializeCDK()).toBe(false);
+        expect(store.seedPhrase).toBeUndefined();
+        expect(Storage.setItem).not.toHaveBeenCalled();
+        expect(CashuDevKit.initializeWallet).not.toHaveBeenCalled();
+    });
+
+    // A v1 wallet in the shared 'lnd' namespace before its first CDK start
+    const storedV1Seed = () =>
+        (Storage.getItem as jest.Mock).mockImplementation(
+            async (key: string) =>
+                ({
+                    'lnd-cashu-seed-version': 'v1',
+                    'lnd-cashu-seed': 'AAAA'
+                }[key] ?? false)
+        );
+
+    it.each([
+        ['the v1 version and seed bytes', storedV1Seed],
+        [
+            'only the v1 version',
+            () =>
+                (Storage.getItem as jest.Mock).mockImplementation(
+                    async (key: string) =>
+                        key === 'lnd-cashu-seed-version' ? 'v1' : false
+                )
+        ],
+        [
+            'only seed bytes',
+            () =>
+                (Storage.getItem as jest.Mock).mockImplementation(
+                    async (key: string) =>
+                        key === 'lnd-cashu-seed' ? 'AAAA' : false
+                )
+        ]
+    ])(
+        'does not generate a seed over %s on a remote node',
+        async (_, stored) => {
+            Platform.OS = 'android';
+            stored();
+            const store = newStore();
+
+            expect(await store.initializeCDK()).toBe(false);
+            expect(store.seedPhrase).toBeUndefined();
+            expect(Storage.setItem).not.toHaveBeenCalled();
+            expect(CashuDevKit.initializeWallet).not.toHaveBeenCalled();
+        }
+    );
+
+    it('still derives a v1 wallet seed from its LND seed', async () => {
+        storedV1Seed();
+        const store = new CashuStore(
+            {
+                implementation: 'embedded-lnd',
+                seedPhrase: Array(24).fill('abandon')
+            } as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+
+        expect(await store.initializeCDK()).toBe(true);
+        expect(CashuDevKit.initializeWallet).toHaveBeenCalledTimes(1);
+    });
+
+    it('tells the user a stored seed blocks a claim', async () => {
+        Platform.OS = 'android';
+        storedV1Seed();
+        const store = newStore();
+
+        const result = await store.claimToken('cashuA', {
+            mint: 'https://mint.example'
+        } as any);
+
+        expect(result).toEqual({
+            success: false,
+            errorMessage: 'stores.CashuStore.storedSeedUnusable'
+        });
+    });
+
+    it('tells the user a stored seed blocks adding a mint', async () => {
+        Platform.OS = 'android';
+        storedV1Seed();
+        const store = newStore();
+
+        await store.addMint('https://mint.example');
+
+        expect(store.error_msg).toBe('stores.CashuStore.storedSeedUnusable');
+    });
+
+    it('keeps the generic message when CDK fails to open the wallet', async () => {
+        Platform.OS = 'android';
+        (CashuDevKit.initializeWallet as jest.Mock).mockRejectedValueOnce(
+            new Error('database locked')
+        );
+        const store = newStore();
+
+        await store.addMint('https://mint.example');
+
+        expect(store.error_msg).toBe('stores.CashuStore.errorAddingMint');
     });
 
     it('does not read the sync partition on Android', async () => {

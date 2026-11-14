@@ -341,6 +341,9 @@ export default class CashuStore {
     private addedMintsCache: Set<string> = new Set();
     // Original seed version before CDK migration (preserved for v1 P2PK derivation)
     private originalSeedVersion: string | undefined;
+    // Set when initializeCDK stopped because a seed is stored for this
+    // wallet that it could not read or use, rather than replace it
+    private storedSeedUnusable = false;
 
     // Offline support
     public get isOffline(): boolean {
@@ -418,18 +421,54 @@ export default class CashuStore {
             return false;
         }
 
+        this.storedSeedUnusable = false;
         try {
-            // Get mnemonic from seed derivation
-            let mnemonic = this.getCDKMnemonic();
-            if (!mnemonic) {
-                // Remote nodes have no wallet seed to derive from, so a
-                // missing stored seed normally means a fresh wallet. But on
-                // iOS it can also mean keychainDesyncMigration failed for
-                // this key and the real seed still sits in the
-                // synchronizable partition; generating a new one here would
-                // permanently shadow it under copy-if-missing. Check there
-                // before generating.
-                mnemonic = await this.recoverSeedFromSyncPartition();
+            let mnemonic: string | null;
+            try {
+                // initializeWallets is the only other reader of the stored
+                // seed and does not run for remote nodes, so claimToken can
+                // get here with the stored seed not loaded. Load it first so
+                // it is used rather than replaced: remote nodes share the
+                // 'lnd' namespace with embedded LND wallets created without
+                // an lndDir.
+                await this.loadStoredSeed();
+
+                // Get mnemonic from seed derivation
+                mnemonic = this.getCDKMnemonic();
+                if (
+                    !mnemonic &&
+                    this.seedPhrase &&
+                    this.seedPhrase.length > 0
+                ) {
+                    // A seed is stored for this wallet but CDK can't use
+                    // it. Never write a generated seed over it.
+                    throw new Error(
+                        'Stored cashu seed is not usable, not generating a new one'
+                    );
+                }
+                if (!mnemonic) {
+                    // Remote nodes have no wallet seed to derive from, so a
+                    // missing stored seed normally means a fresh wallet. But
+                    // on iOS it can also mean keychainDesyncMigration failed
+                    // for this key and the real seed still sits in the
+                    // synchronizable partition; generating a new one here
+                    // would permanently shadow it under copy-if-missing.
+                    // Check there before generating.
+                    mnemonic = await this.recoverSeedFromSyncPartition();
+                }
+                if (!mnemonic && (await this.hasLegacySeed())) {
+                    // A v1 wallet keeps only its seed bytes and version
+                    // until its first CDK start derives a phrase from its
+                    // LND seed, which a remote node sharing the namespace
+                    // does not have. A generated seed would replace it and
+                    // mark it v2-bip39, so the v1 restore would never run.
+                    throw new Error(
+                        'Stored v1 cashu seed has no phrase yet, not generating a new one'
+                    );
+                }
+            } catch (e) {
+                this.storedSeedUnusable = true;
+                throw e;
             }
             if (!mnemonic) {
                 // Generate and persist a mnemonic so CDK can operate
@@ -655,6 +694,55 @@ export default class CashuStore {
 
         console.log('CDK: Derived and stored cashu seed from wallet seed');
         return cashuSeedPhrase;
+    };
+
+    /**
+     * Whether this wallet has a v1 cashu seed: seed bytes, or the v1
+     * version, stored without a seed phrase.
+     */
+    private hasLegacySeed = async (): Promise<boolean> => {
+        if (this.seed || this.seedVersion === 'v1') return true;
+        const nodeDir = this.getNodeDir();
+        const [storedSeedVersion, storedSeed] = await Promise.all([
+            Storage.getItem(`${nodeDir}-cashu-seed-version`),
+            Storage.getItem(`${nodeDir}-cashu-seed`)
+        ]);
+        return storedSeedVersion === 'v1' || !!storedSeed;
+    };
+
+    private cdkNotInitializedError = () =>
+        new Error(
+            this.storedSeedUnusable
+                ? localeString('stores.CashuStore.storedSeedUnusable')
+                : 'CDK wallet not initialized'
+        );
+
+    /**
+     * Loads the cashu seed from Storage when none is in memory, so that
+     * initializeCDK only generates a seed after a confirmed miss. A failed
+     * or malformed read throws, since the entry may be the wallet's only
+     * seed.
+     */
+    private loadStoredSeed = async (): Promise<void> => {
+        if (this.seedPhrase && this.seedPhrase.length > 0) return;
+        const nodeDir = this.getNodeDir();
+        const [storedSeedVersion, storedSeedPhrase] = await Promise.all([
+            Storage.getItem(`${nodeDir}-cashu-seed-version`),
+            Storage.getItem(`${nodeDir}-cashu-seed-phrase`)
+        ]);
+        if (!storedSeedPhrase) return;
+        const words = JSON.parse(storedSeedPhrase);
+        if (
+            !Array.isArray(words) ||
+            words.length === 0 ||
+            !words.every((word) => typeof word === 'string')
+        ) {
+            throw new Error('Invalid stored cashu seed');
+        }
+        runInAction(() => {
+            this.seedPhrase = words;
+            this.seedVersion = storedSeedVersion || undefined;
+        });
     };
 
     /**
@@ -2952,7 +3040,7 @@ export default class CashuStore {
             if (!this.cdkInitialized) {
                 const initialized = await this.initializeCDK();
                 if (!initialized) {
-                    throw new Error('CDK wallet not initialized');
+                    throw this.cdkNotInitializedError();
                 }
             }
             if (this.mintUrls.length === 0 && this.seedVersion !== 'v1') {
@@ -3032,9 +3120,10 @@ export default class CashuStore {
                 this.loading = false;
                 this.errorAddingMint = true;
                 this.error = true;
-                this.error_msg = localeString(
-                    'stores.CashuStore.errorAddingMint'
-                );
+                this.error_msg =
+                    !this.cdkInitialized && this.storedSeedUnusable
+                        ? localeString('stores.CashuStore.storedSeedUnusable')
+                        : localeString('stores.CashuStore.errorAddingMint');
             });
         }
     };
@@ -6421,7 +6510,7 @@ export default class CashuStore {
             if (!this.cdkInitialized) {
                 const initialized = await this.initializeCDK();
                 if (!initialized) {
-                    throw new Error('CDK wallet not initialized');
+                    throw this.cdkNotInitializedError();
                 }
             }
 
