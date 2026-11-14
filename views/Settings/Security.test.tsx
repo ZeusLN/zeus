@@ -51,7 +51,14 @@ const renderSecurity = async (settings: any) => {
     await render(
         <Security
             ref={ref}
-            SettingsStore={{ settings, updateSettings: jest.fn() } as any}
+            SettingsStore={
+                {
+                    settings,
+                    updateSettings: jest.fn(),
+                    enableBiometry: jest.fn(async () => 'success'),
+                    disableBiometry: jest.fn(async () => {})
+                } as any
+            }
             ModalStore={ModalStore as any}
             navigation={navigation as any}
             route={{ params: {} }}
