@@ -1,34 +1,24 @@
 import { action, observable, runInAction } from 'mobx';
 import {
-    BrantaServerBaseUrl,
+    BrantaEnvironment,
+    BrantaService,
     createNobleCryptoProvider,
-    PrivacyMode
+    VerifyStatus
 } from '@branta-ops/branta';
+import type { NobleDeps } from '@branta-ops/branta';
 import { gcm } from '@noble/ciphers/aes';
 import { hmac } from '@noble/hashes/hmac.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { randomBytes } from '@noble/hashes/utils.js';
-// @ts-ignore: module resolution workaround for subpath export
-import { BrantaService } from '@branta-ops/branta/v2';
 
 import SettingsStore from './SettingsStore';
 
-interface Payment {
-    description?: string;
-    platform?: string;
-    platformLogoUrl?: string;
-    platformLogoLightUrl?: string;
-    parentPlatform?: {
-        name?: string;
-        logoUrl?: string;
-        logoLightUrl?: string;
-    };
-}
-
-interface PaymentsResult {
-    payments: Payment[];
-    verifyUrl: string;
-}
+const nobleCryptoDeps: NobleDeps = {
+    sha256,
+    hmac,
+    gcm: gcm as NobleDeps['gcm'],
+    randomBytes: (length: number) => randomBytes(length)
+};
 
 export interface BrantaVerification {
     platform: string;
@@ -52,24 +42,10 @@ export default class BrantaStore {
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
-        this.service = new BrantaService(
-            {
-                baseUrl: BrantaServerBaseUrl.Production,
-                privacy: PrivacyMode.Strict
-            },
-            {
-                crypto: createNobleCryptoProvider({
-                    sha256,
-                    hmac: (
-                        _hash: unknown,
-                        key: Uint8Array,
-                        message: Uint8Array
-                    ) => hmac(sha256, key, message),
-                    gcm,
-                    randomBytes
-                })
-            }
-        );
+        this.service = new BrantaService({
+            environment: BrantaEnvironment.Production,
+            crypto: createNobleCryptoProvider(nobleCryptoDeps)
+        });
     }
 
     @action
@@ -84,34 +60,20 @@ export default class BrantaStore {
     ): Promise<BrantaVerification | null> => {
         this.loading = true;
         this.verification = null;
+        let verification: BrantaVerification | null = null;
 
         try {
-            const result: PaymentsResult =
-                await this.service.getPaymentsByQrCode(qrCode);
+            const result = await this.service.verify(qrCode);
+            const payment =
+                result.status === VerifyStatus.Match
+                    ? result.payments[0]
+                    : undefined;
 
-            if (!result.payments || result.payments.length === 0) {
-                runInAction(() => {
-                    this.loading = false;
-                    this.verification = null;
-                });
+            if (!payment?.platform || !payment.platformLogoUrl) {
                 return null;
             }
 
-            const payment: Payment = result.payments[0];
-
-            if (
-                !payment.platform ||
-                !payment.platformLogoUrl ||
-                !result.verifyUrl
-            ) {
-                runInAction(() => {
-                    this.loading = false;
-                    this.verification = null;
-                });
-                return null;
-            }
-
-            const verification: BrantaVerification = {
+            verification = {
                 platform: payment.platform,
                 platformLogoUrl: payment.platformLogoUrl,
                 platformLogoLightUrl: payment.platformLogoLightUrl,
@@ -126,18 +88,14 @@ export default class BrantaStore {
                     : undefined
             };
 
+            return verification;
+        } catch {
+            return null;
+        } finally {
             runInAction(() => {
                 this.verification = verification;
                 this.loading = false;
             });
-
-            return verification;
-        } catch {
-            runInAction(() => {
-                this.loading = false;
-                this.verification = null;
-            });
-            return null;
         }
     };
 }
