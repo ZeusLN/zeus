@@ -1163,6 +1163,51 @@ export default class NostrConnectUtils {
     }
 
     /**
+     * How far behind the newest request a connection has accepted another
+     * request may be. A relay cannot change an event's created_at (the SDK's
+     * relay client checks the event id and signature), so an older event
+     * is a replay or a request delivered long after it was signed. The same
+     * 10 minutes as for pay requests leaves room for clocks that are a few
+     * minutes off and for events that arrive out of order.
+     */
+    static readonly REQUEST_REPLAY_WINDOW_SECONDS = 10 * 60;
+
+    /**
+     * The oldest created_at a connection still accepts, given the newest
+     * request it accepted (its mark). The mark counts as no later than now,
+     * so a clock that was set forward and back does not make every new
+     * request look old. Undefined without a mark.
+     */
+    static requestMarkFloor(
+        mark: number | undefined,
+        nowSeconds: number = Math.floor(Date.now() / 1000)
+    ): number | undefined {
+        if (mark === undefined || !Number.isFinite(mark)) return undefined;
+        return (
+            Math.min(mark, nowSeconds) -
+            NostrConnectUtils.REQUEST_REPLAY_WINDOW_SECONDS
+        );
+    }
+
+    /**
+     * True when a request event is older than the replay window behind the
+     * connection's mark. Without a mark nothing is behind it.
+     */
+    static isRequestEventBehindMark(
+        event: { created_at?: number },
+        mark: number | undefined,
+        nowSeconds: number = Math.floor(Date.now() / 1000)
+    ): boolean {
+        const floor = NostrConnectUtils.requestMarkFloor(mark, nowSeconds);
+        if (floor === undefined) return false;
+        const createdAt = event?.created_at;
+        if (typeof createdAt !== 'number' || !Number.isFinite(createdAt)) {
+            return true;
+        }
+        return createdAt < floor;
+    }
+
+    /**
      * True when a request event's created_at is within
      * PAY_REQUEST_MAX_CLOCK_DIFFERENCE_SECONDS of now.
      */

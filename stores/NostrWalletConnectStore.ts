@@ -80,12 +80,18 @@ export const NWC_SERVICE_KEYS = 'zeus-nwc-service-keys';
 // connections so a request does not rewrite them and a reload cannot drop a
 // claim.
 export const NWC_PROCESSED_EVENTS_KEY = 'zeus-nwc-processed-events';
+// The created_at of the newest request each connection accepted, by
+// connection id (see acceptRequestEvent)
+export const NWC_REQUEST_MARKS_KEY = 'zeus-nwc-request-marks';
 export const NWC_CASHU_ENABLED = 'zeus-nwc-cashu-enabled';
 export const NWC_LUD16_ENABLED = 'zeus-nwc-lud16-enabled';
 
 export const NWC_PERSISTENT_SERVICE_ENABLED = 'persistentNWCServicesEnabled';
 
 const MAX_RELAY_ATTEMPTS = 5;
+// A mark is saved when it moved this far past the saved one, so a busy
+// connection does not write the keychain on every request
+const REQUEST_MARK_SAVE_INTERVAL_SECONDS = 60;
 const SUBSCRIPTION_DELAY_MS = 1000;
 const SERVICE_START_DELAY_MS = 2000;
 const PAYMENT_TIMEOUT_SECONDS = 120;
@@ -247,6 +253,14 @@ export default class NostrWalletConnectStore {
     private _processedEventsWrite: Promise<void> = Promise.resolve();
     // The write queued behind the running one, if it has not started yet
     private queuedProcessedEventsWrite: Promise<void> | undefined;
+    // The created_at of the newest request each connection accepted, loaded
+    // from NWC_REQUEST_MARKS_KEY on first use. Requests older than the replay
+    // window behind it are ignored, which covers the events whose ids are no
+    // longer remembered.
+    private requestMarks = new Map<string, number>();
+    private savedRequestMarks = new Map<string, number>();
+    private requestMarksLoad: Promise<void> | undefined;
+    private _requestMarksWrite: Promise<void> = Promise.resolve();
     private resetInFlight: Promise<void> | null = null;
     // Bumped by every teardown, so an initializeService() that a reset ran
     // during (node switch, Android Stop Service) does not finish over it
@@ -523,7 +537,35 @@ export default class NostrWalletConnectStore {
             console.warn('NWC: ignoring expired request', event?.id);
             return false;
         }
+
+        // A request older than the replay window behind the newest one this
+        // connection accepted is a replay or a late delivery
+        const connection = this.connections.find(
+            (c) => c.pubkey === event?.pubkey
+        );
+        if (connection) {
+            try {
+                await this.loadRequestMarks();
+            } catch (error) {
+                console.error('NWC: failed to load request marks:', error);
+            }
+            if (
+                NostrConnectUtils.isRequestEventBehindMark(
+                    event,
+                    this.requestMarks.get(connection.id),
+                    nowSeconds
+                )
+            ) {
+                console.warn(
+                    'NWC: ignoring request behind the mark',
+                    event?.id
+                );
+                return false;
+            }
+        }
+
         if (NostrConnectUtils.isRequestEventRecent(event, nowSeconds)) {
+            this.advanceRequestMark(connection, event, nowSeconds);
             return true;
         }
 
@@ -554,7 +596,88 @@ export default class NostrWalletConnectStore {
             );
             return false;
         }
+        this.advanceRequestMark(connection, event, nowSeconds);
         return true;
+    }
+
+    private loadRequestMarks(): Promise<void> {
+        if (!this.requestMarksLoad) {
+            this.requestMarksLoad = (async () => {
+                const data = await Storage.getItem(NWC_REQUEST_MARKS_KEY);
+                const stored = data ? JSON.parse(data) : {};
+                for (const [connectionId, mark] of Object.entries(stored)) {
+                    if (typeof mark !== 'number' || !Number.isFinite(mark)) {
+                        continue;
+                    }
+                    this.savedRequestMarks.set(connectionId, mark);
+                    this.requestMarks.set(
+                        connectionId,
+                        Math.max(mark, this.requestMarks.get(connectionId) ?? 0)
+                    );
+                }
+            })().catch((error) => {
+                // Try again on the next request
+                this.requestMarksLoad = undefined;
+                throw error;
+            });
+        }
+        return this.requestMarksLoad;
+    }
+
+    /**
+     * Moves a connection's mark up to the created_at of a request it
+     * accepted, but never past now: a request dated in the future must not
+     * make the ones that follow it look old. The mark is saved when it has
+     * moved on by REQUEST_MARK_SAVE_INTERVAL_SECONDS since the saved one.
+     */
+    private advanceRequestMark(
+        connection: NWCConnection | undefined,
+        event: { created_at?: number },
+        nowSeconds: number
+    ): void {
+        const createdAt = event?.created_at;
+        if (
+            !connection ||
+            typeof createdAt !== 'number' ||
+            !Number.isFinite(createdAt)
+        ) {
+            return;
+        }
+        const mark = Math.min(createdAt, nowSeconds);
+        const current = this.requestMarks.get(connection.id);
+        if (current !== undefined && mark <= current) return;
+        this.requestMarks.set(connection.id, mark);
+
+        const saved = this.savedRequestMarks.get(connection.id);
+        if (
+            saved === undefined ||
+            mark - saved >= REQUEST_MARK_SAVE_INTERVAL_SECONDS
+        ) {
+            this.saveRequestMarks();
+        }
+    }
+
+    private saveRequestMarks(): void {
+        this._requestMarksWrite = this._requestMarksWrite
+            .then(async () => {
+                // The stored marks must be read first: writing only what is
+                // in memory would drop the marks of the connections not seen
+                // yet. If they cannot be read nothing is written, and the
+                // next mark that moves tries again.
+                await this.loadRequestMarks();
+                const marks = Object.fromEntries(this.requestMarks);
+                await Storage.setItem(
+                    NWC_REQUEST_MARKS_KEY,
+                    JSON.stringify(marks)
+                );
+                for (const [id, mark] of Object.entries(marks)) {
+                    this.savedRequestMarks.set(id, mark);
+                }
+            })
+            .catch((error) =>
+                // The mark is an extra guard next to the remembered ids
+                console.error('NWC: failed to save request marks:', error)
+            );
     }
 
     @action
@@ -892,6 +1015,7 @@ export default class NostrWalletConnectStore {
                     connectionId
                 );
                 this.makeInvoiceTimestampsByConnection.delete(connectionId);
+                this.requestMarks.delete(connectionId);
                 let hadInFlight = false;
                 if (this.inFlightHandlersByConnection.get(connectionId)?.size) {
                     runInAction(() => {
@@ -1080,6 +1204,10 @@ export default class NostrWalletConnectStore {
         this.processedEventIds.clear();
         await this._processedEventsWrite;
         await Storage.removeItem(NWC_PROCESSED_EVENTS_KEY);
+        this.requestMarks.clear();
+        this.savedRequestMarks.clear();
+        await this._requestMarksWrite;
+        await Storage.removeItem(NWC_REQUEST_MARKS_KEY);
     };
 
     /**
@@ -1338,6 +1466,11 @@ export default class NostrWalletConnectStore {
                         'NWC: failed to prune processed event ids:',
                         error
                     )
+                );
+                void this.pruneRequestMarks(
+                    new Set(connections.map((c: NWCConnectionData) => c.id))
+                ).catch((error) =>
+                    console.error('NWC: failed to prune request marks:', error)
                 );
                 // Stamp the current wallet config on its connections, so
                 // they can be deleted with that config while another
@@ -2042,9 +2175,26 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
+            // Ask the relay only for requests newer than the replay window
+            // behind the newest one this connection accepted; acceptRequestEvent
+            // holds the ones a relay sends anyway to the same bound
+            try {
+                await this.loadRequestMarks();
+            } catch (error) {
+                console.error('NWC: failed to load request marks:', error);
+            }
+            const floor = NostrConnectUtils.requestMarkFloor(
+                this.requestMarks.get(connection.id)
+            );
+            const filter =
+                floor !== undefined && floor > 0 ? { since: floor } : undefined;
             const unsubscribe = await retry({
                 fn: async () => {
-                    return await nwcWalletService.subscribe(keypair, handler);
+                    return await nwcWalletService.subscribe(
+                        keypair,
+                        handler,
+                        filter
+                    );
                 },
                 maxRetries: MAX_RELAY_ATTEMPTS,
                 exponentialBackoff: true
@@ -2200,6 +2350,27 @@ export default class NostrWalletConnectStore {
             }
         }
         if (pruned) await this.saveProcessedEventIds();
+    }
+
+    /**
+     * Forgets the marks of connections that no longer exist, like the ids
+     * above. Called with the connections of every wallet when they are
+     * loaded.
+     */
+    private async pruneRequestMarks(connectionIds: Set<string>): Promise<void> {
+        await this.loadRequestMarks();
+        let pruned = false;
+        for (const id of [...this.requestMarks.keys()]) {
+            if (!connectionIds.has(id)) {
+                this.requestMarks.delete(id);
+                this.savedRequestMarks.delete(id);
+                pruned = true;
+            }
+        }
+        if (pruned) {
+            this.saveRequestMarks();
+            await this._requestMarksWrite;
+        }
     }
 
     private async subscribeToAllConnections(): Promise<void> {

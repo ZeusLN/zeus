@@ -2090,3 +2090,63 @@ describe('NostrConnectUtils request event checks', () => {
         }
     });
 });
+
+describe('NostrConnectUtils request mark', () => {
+    const NOW = 1_800_000_000;
+    const window = NostrConnectUtils.REQUEST_REPLAY_WINDOW_SECONDS;
+
+    it('uses a 10 minute window', () => {
+        expect(window).toBe(600);
+    });
+
+    it('has no floor without a mark', () => {
+        expect(NostrConnectUtils.requestMarkFloor(undefined, NOW)).toBe(
+            undefined
+        );
+        expect(NostrConnectUtils.requestMarkFloor(NaN, NOW)).toBe(undefined);
+    });
+
+    it('puts the floor a window behind the mark', () => {
+        expect(NostrConnectUtils.requestMarkFloor(NOW - 100, NOW)).toBe(
+            NOW - 100 - window
+        );
+    });
+
+    it('counts a mark in the future as now, so a clock set back does not lock requests out', () => {
+        expect(NostrConnectUtils.requestMarkFloor(NOW + 86_400, NOW)).toBe(
+            NOW - window
+        );
+    });
+
+    it('holds nothing behind a missing mark', () => {
+        expect(
+            NostrConnectUtils.isRequestEventBehindMark(
+                { created_at: 1 },
+                undefined,
+                NOW
+            )
+        ).toBe(false);
+    });
+
+    it('is behind the mark only when older than the window', () => {
+        const mark = NOW - 60;
+        const behind = (createdAt: number) =>
+            NostrConnectUtils.isRequestEventBehindMark(
+                { created_at: createdAt },
+                mark,
+                NOW
+            );
+        expect(behind(mark - window)).toBe(false);
+        expect(behind(mark - window - 1)).toBe(true);
+        expect(behind(mark)).toBe(false);
+        expect(behind(NOW + 30)).toBe(false);
+    });
+
+    it('is behind a mark without a created_at', () => {
+        for (const event of [{}, { created_at: NaN }]) {
+            expect(
+                NostrConnectUtils.isRequestEventBehindMark(event, NOW, NOW)
+            ).toBe(true);
+        }
+    });
+});

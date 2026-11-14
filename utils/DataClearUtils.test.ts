@@ -150,6 +150,7 @@ jest.mock('../stores/NostrWalletConnectStore', () => ({
     NWC_CLIENT_KEYS: 'zeus-nwc-client-keys',
     NWC_SERVICE_KEYS: 'zeus-nwc-service-keys',
     NWC_PROCESSED_EVENTS_KEY: 'zeus-nwc-processed-events',
+    NWC_REQUEST_MARKS_KEY: 'zeus-nwc-request-marks',
     NWC_CASHU_ENABLED: 'zeus-nwc-cashu-enabled',
     NWC_LUD16_ENABLED: 'zeus-nwc-lud16-enabled',
     NWC_PERSISTENT_SERVICE_ENABLED: 'persistentNWCServicesEnabled'
@@ -972,6 +973,7 @@ describe('clearAllData write latch (settings resurrection regression)', () => {
         expect(removedKeys()).toContain('zeus-nwc-client-keys');
         expect(removedKeys()).toContain('zeus-nwc-connections');
         expect(removedKeys()).toContain('zeus-nwc-processed-events');
+        expect(removedKeys()).toContain('zeus-nwc-request-marks');
         expect(removedKeys()).toContain('successfulPaymentCount');
         expect(removedKeys()).toContain('lnurlpay:');
     });
