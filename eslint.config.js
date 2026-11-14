@@ -16,6 +16,8 @@ module.exports = [
             'shim.js',
             'babel.config.js',
             'metro.config.js',
+            '.detoxrc.js',
+            'e2e/jest.config.js',
             'react-native.config.js',
             'index.js',
             // generated per-run files (Metro config, logs) of the regtest rig
@@ -152,12 +154,28 @@ module.exports = [
     // rules to 'warn'; registering the root eslint-plugin-jest copy under
     // the same name would be a redefinition error, so only rules are set.
     {
-        files: ['**/*.test.js', '**/*.test.ts', '**/*.test.tsx'],
+        files: ['**/*.test.js', '**/*.test.ts', '**/*.test.tsx', '**/*.e2e.ts'],
         rules: {
             'jest/no-focused-tests': 'error',
             'jest/no-disabled-tests': 'error',
             'jest/no-identical-title': 'error',
             'jest/valid-expect': 'error'
+        }
+    },
+
+    // Detox specs run under Jest, but only *.test files get its globals from
+    // @react-native/eslint-config
+    {
+        files: ['**/*.e2e.ts'],
+        languageOptions: {
+            globals: {
+                afterAll: 'readonly',
+                afterEach: 'readonly',
+                beforeAll: 'readonly',
+                beforeEach: 'readonly',
+                describe: 'readonly',
+                it: 'readonly'
+            }
         }
     },
 

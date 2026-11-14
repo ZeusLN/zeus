@@ -18,6 +18,7 @@ import {
     hasLockCredential
 } from '../../utils/LockVerifierUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface SecurityProps {
@@ -322,6 +323,9 @@ export default class Security extends React.Component<
     renderItem = ({ item }: { item: SecurityItem }) => {
         return (
             <ListItem
+                testID={TEST_IDS.security.option(
+                    'screen' in item ? item.screen : item.action
+                )}
                 containerStyle={{
                     borderBottomWidth: 0,
                     backgroundColor: 'transparent'

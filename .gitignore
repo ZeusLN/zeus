@@ -71,6 +71,9 @@ buck-out/
 .jest/
 coverage/
 
+# Detox
+e2e/artifacts/
+
 # CocoaPods
 ios/Pods
 **.swp

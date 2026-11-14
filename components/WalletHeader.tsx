@@ -44,6 +44,7 @@ import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 import BackendUtils from '../utils/BackendUtils';
 import { getPhoto } from '../utils/PhotoUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { TEST_IDS } from '../utils/TestIds';
 import { protectedNavigation } from '../utils/NavigationUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -181,6 +182,7 @@ const MenuBadge = ({
     navigation: NativeStackNavigationProp<any, any>;
 }) => (
     <TouchableOpacity
+        testID={TEST_IDS.walletHeader.menuButton}
         onPress={() =>
             protectedNavigation(navigation, 'Menu', undefined, {
                 animation: 'fade'
@@ -471,6 +473,7 @@ export default class WalletHeader extends React.Component<
 
         const NodeButton = () => (
             <TouchableOpacity
+                testID={TEST_IDS.walletHeader.walletsButton}
                 onPress={() =>
                     protectedNavigation(navigation, 'Wallets', undefined, {
                         animation: 'slide_from_right'

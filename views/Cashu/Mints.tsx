@@ -20,6 +20,7 @@ import Switch from '../../components/Switch';
 import { Row } from '../../components/layout/Row';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import CashuStore from '../../stores/CashuStore';
@@ -146,6 +147,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
 
         const AddMintButton = () => (
             <TouchableOpacity
+                testID={TEST_IDS.mints.addButton}
                 onPress={() => navigation.navigate('AddMint')}
                 accessibilityLabel={localeString('views.Cashu.AddMint.title')}
             >

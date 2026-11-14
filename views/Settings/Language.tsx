@@ -10,6 +10,7 @@ import Screen from '../../components/Screen';
 import SettingsStore, { LOCALE_KEYS } from '../../stores/SettingsStore';
 
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 
 interface LanguageProps {
@@ -86,6 +87,7 @@ export default class Language extends React.Component<
                         navigation={navigation}
                     />
                     <SearchBar
+                        testID={TEST_IDS.language.searchInput}
                         placeholder={localeString('general.search')}
                         // @ts-ignore:next-line
                         onChangeText={this.updateSearch}
@@ -113,6 +115,7 @@ export default class Language extends React.Component<
                         data={locales}
                         renderItem={({ item }) => (
                             <ListItem
+                                testID={TEST_IDS.language.option(item.key)}
                                 containerStyle={{
                                     borderBottomWidth: 0,
                                     backgroundColor: 'transparent'

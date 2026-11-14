@@ -54,7 +54,13 @@
     "android:clean": "rm -rf android/app/.cxx android/build && yarn gradlew clean",
     "fetch-libraries": "bash fetch-libraries.sh",
     "fix-all": "yarn prettier-write && yarn lint-fix",
-    "lint-fix": "eslint . --fix"
+    "lint-fix": "eslint . --fix",
+    "e2e:build:ios": "detox build --configuration ios.sim.release",
+    "e2e:test:ios": "detox test --configuration ios.sim.release",
+    "e2e:build:ios:debug": "detox build --configuration ios.sim.debug",
+    "e2e:test:ios:debug": "detox test --configuration ios.sim.debug",
+    "e2e:build:android": "detox build --configuration android.emu.debug",
+    "e2e:test:android": "detox test --configuration android.emu.debug"
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "1.2.0",
@@ -193,6 +199,7 @@
     "@typescript-eslint/parser": "8.72.1",
     "babel-jest": "29.7.0",
     "concurrently": "10.0.6",
+    "detox": "20.51.4",
     "eslint": "9.39.4",
     "eslint-import-resolver-typescript": "4.4.5",
     "eslint-plugin-import": "2.32.0",

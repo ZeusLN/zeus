@@ -32,6 +32,7 @@ import {
     markWipePending
 } from '../utils/DataClearUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { TEST_IDS } from '../utils/TestIds';
 import { restartApp } from '../utils/RestartUtils';
 import {
     verifySecret,
@@ -860,6 +861,7 @@ export default class Lockscreen extends React.Component<
                         </View>
                         <View style={styles.inputContainer}>
                             <TextInput
+                                testID={TEST_IDS.lockscreen.passwordInput}
                                 placeholder={'****************'}
                                 placeholderTextColor="darkgray"
                                 value={passphraseAttempt}

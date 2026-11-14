@@ -29,6 +29,7 @@ import Screen from '../../components/Screen';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
@@ -431,6 +432,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
 
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.privacyButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Privacy')}
                         >
@@ -453,6 +455,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
 
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.securityButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Security')}
                         >
@@ -487,6 +490,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         }}
                     >
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.currencyButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Currency')}
                         >
@@ -538,6 +542,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         }}
                     >
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.displayButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Display')}
                         >

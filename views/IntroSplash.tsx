@@ -20,6 +20,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 import SettingsStore, { LOCALE_KEYS } from '../stores/SettingsStore';
 
 import { localeString } from '../utils/LocaleUtils';
+import { TEST_IDS } from '../utils/TestIds';
 import { themeColor } from '../utils/ThemeUtils';
 
 import TresArrows from '../assets/images/SVG/TresArrows.svg';
@@ -119,6 +120,7 @@ export default class IntroSplash extends React.Component<
                                 }}
                             >
                                 <Button
+                                    testID={TEST_IDS.introSplash.languageButton}
                                     title={locale ? localeName : 'English'}
                                     icon={
                                         <Globe
@@ -139,6 +141,9 @@ export default class IntroSplash extends React.Component<
                                 }}
                             >
                                 <Button
+                                    testID={
+                                        TEST_IDS.introSplash.advancedSetupButton
+                                    }
                                     title={localeString(
                                         'views.Intro.advancedSetUp'
                                     )}
@@ -162,6 +167,9 @@ export default class IntroSplash extends React.Component<
                                         paddingLeft: 10,
                                         color: themeColor('background')
                                     }}
+                                    testID={
+                                        TEST_IDS.introSplash.getStartedButton
+                                    }
                                     title={localeString(
                                         'views.Intro.getStarted'
                                     )}

@@ -18,6 +18,7 @@ interface TextProps {
         title: string;
         callback?: () => void;
     }>;
+    testID?: string;
 }
 
 @inject('ModalStore')
@@ -32,7 +33,8 @@ export default class ZeusText extends React.Component<TextProps, {}> {
             infoModalText,
             infoModalLink,
             infoModalAdditionalButtons,
-            ModalStore
+            ModalStore,
+            testID
         } = this.props;
         const { toggleInfoModal } = ModalStore!;
 
@@ -40,6 +42,7 @@ export default class ZeusText extends React.Component<TextProps, {}> {
             <Text
                 numberOfLines={numberOfLines}
                 ellipsizeMode={ellipsizeMode}
+                testID={testID}
                 style={{
                     fontFamily: 'PPNeueMontreal-Book',
                     color: themeColor('text'),

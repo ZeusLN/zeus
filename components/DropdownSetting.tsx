@@ -22,6 +22,7 @@ interface DropdownSettingProps {
     values: Array<any>;
     disabled?: boolean;
     infoModalText?: string | Array<string>;
+    testID?: string;
 }
 
 export default class DropdownSetting extends React.Component<
@@ -36,7 +37,8 @@ export default class DropdownSetting extends React.Component<
             onValueChange,
             values,
             disabled,
-            infoModalText
+            infoModalText,
+            testID
         } = this.props;
 
         const pickerValuesAndroid: Array<any> = [];
@@ -129,6 +131,7 @@ export default class DropdownSetting extends React.Component<
                             }}
                             dropdownIconColor={themeColor('text')}
                             enabled={!disabled}
+                            testID={testID}
                         >
                             {pickerValuesAndroid}
                         </Picker>
@@ -151,6 +154,7 @@ export default class DropdownSetting extends React.Component<
                             </ZeusText>
                         )}
                         <TouchableOpacity
+                            testID={testID}
                             onPress={() =>
                                 !disabled &&
                                 ActionSheetIOS.showActionSheetWithOptions(

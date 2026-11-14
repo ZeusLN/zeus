@@ -9,6 +9,7 @@ import SettingsStore, {
 } from '../../stores/SettingsStore';
 import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Text from '../../components/Text';
@@ -79,6 +80,7 @@ export default class DateTime extends React.Component<
                     keyboardShouldPersistTaps="handled"
                 >
                     <DropdownSetting
+                        testID={TEST_IDS.dateTime.dateFormatDropdown}
                         title={localeString(
                             'views.Settings.DateTime.dateFormat'
                         )}
@@ -93,6 +95,7 @@ export default class DateTime extends React.Component<
                     />
 
                     <DropdownSetting
+                        testID={TEST_IDS.dateTime.timeFormatDropdown}
                         title={localeString(
                             'views.Settings.DateTime.timeFormat'
                         )}
@@ -122,6 +125,7 @@ export default class DateTime extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
+                                testID={TEST_IDS.dateTime.showSecondsSwitch}
                                 value={showSeconds}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({ showSeconds: value });
