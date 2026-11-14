@@ -31,6 +31,7 @@ jest.mock('../utils/ThemeUtils', () => ({
 }));
 jest.mock('../stores/ChannelsStore', () => ({ ChannelsView: {} }));
 jest.mock('../stores/SettingsStore', () => ({ PosEnabled: {} }));
+jest.mock('../stores/TorStore', () => ({ TOR_INDICATOR_COLORS: {} }));
 // Renders the side slots, where the clipboard badge lives
 jest.mock('./Header', () => {
     const { View } = require('react-native');
@@ -78,7 +79,8 @@ const renderHeader = async ({
     nodeInfo = {},
     settings = {},
     settingsStore = {},
-    isOffline = false
+    isOffline = false,
+    TorStore = { torInUse: false }
 }: {
     clipboard: boolean;
     connecting?: boolean;
@@ -88,6 +90,7 @@ const renderHeader = async ({
     settings?: any;
     settingsStore?: any;
     isOffline?: boolean;
+    TorStore?: any;
 }) => {
     const setPosStatus = jest.fn();
     const listeners: { [event: string]: () => void } = {};
@@ -119,7 +122,8 @@ const renderHeader = async ({
                 NodeInfoStore: { nodeInfo },
                 ModalStore: {},
                 AlertStore: {},
-                ConnectivityStore: { isOffline }
+                ConnectivityStore: { isOffline },
+                TorStore
             } as any)}
         />
     );
@@ -369,9 +373,11 @@ describe('WalletHeader before the session starts', () => {
             isOffline: true,
             nodeInfo: { isTestNet: true },
             settings: nicknameSettings,
-            settingsStore: {
-                host: 'abc.onion',
-                implementation: 'lndhub'
+            settingsStore: { implementation: 'lndhub' },
+            TorStore: {
+                torInUse: true,
+                statusText: 'Connected',
+                indicator: 'connected'
             }
         });
     const badge = (value: string) =>
@@ -381,7 +387,7 @@ describe('WalletHeader before the session starts', () => {
     const torIcon = () =>
         screen.container.queryAll((n) => n.type === 'Image')[0];
 
-    it('does not open Networking or NodeInfo from the status badges before the session starts', async () => {
+    it('does not open Networking from the status badges before the session starts', async () => {
         const { navigation } = await statusBadgeHeader(false);
 
         await click(badge('general.offline'));
@@ -396,14 +402,16 @@ describe('WalletHeader before the session starts', () => {
         ).toBe(true);
     });
 
-    it('opens Networking and NodeInfo from the status badges once the session has started', async () => {
+    it('opens Networking from the offline and Tor badges once the session has started', async () => {
         const { navigation } = await statusBadgeHeader(true);
 
         await click(badge('general.offline'));
         await click(torIcon());
 
-        expect(navigation.navigate).toHaveBeenCalledWith('Networking');
-        expect(navigation.navigate).toHaveBeenCalledWith('NodeInfo');
+        expect(navigation.navigate.mock.calls).toEqual([
+            ['Networking'],
+            ['Networking']
+        ]);
         expect(
             badge('views.Wallet.MainPane.testnet').props.pressableProps.disabled
         ).toBe(false);
@@ -484,5 +492,35 @@ describe('WalletHeader network badge', () => {
         await renderHeader({ clipboard: false, nodeInfo: {} });
 
         expect(badges()).toEqual([]);
+    });
+});
+
+describe('WalletHeader Tor badge', () => {
+    it('shows the Tor status and opens Networking when pressed', async () => {
+        const { navigation } = await renderHeader({
+            clipboard: false,
+            TorStore: {
+                torInUse: true,
+                statusText: 'Connected',
+                indicator: 'connected'
+            }
+        });
+
+        const badge = screen.getByLabelText(
+            'views.Settings.Networking.tor: Connected'
+        );
+        await fireEvent.press(badge);
+
+        expect(navigation.navigate).toHaveBeenCalledWith('Networking');
+    });
+
+    it('shows no Tor badge when Tor is not in use', async () => {
+        await renderHeader({ clipboard: false });
+
+        expect(
+            screen.queryByLabelText('views.Settings.Networking.tor', {
+                exact: false
+            })
+        ).not.toBeOnTheScreen();
     });
 });

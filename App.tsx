@@ -42,6 +42,7 @@ import {
     settingsStore,
     swapStore,
     syncStore,
+    torStore,
     transactionsStore,
     unitsStore,
     utxosStore,
@@ -384,6 +385,8 @@ export default class App extends React.PureComponent {
 
         // Ensure stealth mode is in a valid state (safety check)
         StealthModeUtils.fixStealthModeIfNeeded();
+
+        torStore.initialize();
     }
 
     componentWillUnmount() {
@@ -458,6 +461,7 @@ export default class App extends React.PureComponent {
                 SettingsStore={settingsStore}
                 SwapStore={swapStore}
                 SyncStore={syncStore}
+                TorStore={torStore}
                 TransactionsStore={transactionsStore}
                 UnitsStore={unitsStore}
                 UTXOsStore={utxosStore}
