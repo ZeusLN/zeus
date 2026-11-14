@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { ListItem, Divider } from '@rneui/themed';
-import Clipboard from '@react-native-clipboard/clipboard';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
@@ -17,6 +16,7 @@ import {
 } from '../../../stores/ChannelBackupStore';
 
 import Base64Utils from '../../../utils/Base64Utils';
+import { copySensitive } from '../../../utils/ClipboardUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -261,9 +261,7 @@ export default class DisasterRecovery extends React.Component<
                                                             multi
                                                         );
 
-                                                    Clipboard.setString(
-                                                        multiString
-                                                    );
+                                                    copySensitive(multiString);
 
                                                     this.setState({
                                                         disasterRecoveryCopied:

@@ -212,6 +212,7 @@ export default class CashuSeed extends React.PureComponent<
                                                 'views.Settings.Seed.dangerousButton'
                                             )}
                                             copyValue={seedPhrase.join(' ')}
+                                            sensitive
                                             icon={{
                                                 name: 'warning',
                                                 size: 25
