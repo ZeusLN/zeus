@@ -67,8 +67,10 @@ jest.mock('../../components/ShowHideToggle', () => 'ShowHideToggle');
 
 import * as React from 'react';
 import { Alert, Platform } from 'react-native';
-import { fireEvent, render, screen } from '@testing-library/react-native';
-import KeychainRecoveryUtils from '../../utils/KeychainRecoveryUtils';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import KeychainRecoveryUtils, {
+    RecoveryScanResult
+} from '../../utils/KeychainRecoveryUtils';
 import { saveNodeConfigs } from '../../utils/NodeConfigUtils';
 import NodeConfigExportImport from './NodeConfigExportImport';
 
@@ -93,6 +95,10 @@ describe('NodeConfigExportImport', () => {
     beforeEach(() => {
         Platform.OS = 'ios';
         jest.clearAllMocks();
+        (KeychainRecoveryUtils.scanForRecoverableData as jest.Mock).mockReset();
+        (
+            KeychainRecoveryUtils.scanForRecoverableData as jest.Mock
+        ).mockResolvedValue({ settingsFound: [] });
     });
 
     afterAll(() => {
@@ -138,6 +144,176 @@ describe('NodeConfigExportImport', () => {
         expect(
             KeychainRecoveryUtils.scanForRecoverableData
         ).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a retryable error instead of no data when a scan fails', async () => {
+        (
+            KeychainRecoveryUtils.scanForRecoverableData as jest.Mock
+        ).mockResolvedValueOnce({
+            settingsFound: [],
+            otherDataFound: [],
+            hasCurrentSettings: false,
+            error: 'sensitive error details'
+        });
+        await renderView({ nodes: [] });
+
+        await fireEvent.press(screen.getByText(RESTORE_LEGACY));
+
+        expect(
+            await screen.findByText(
+                'views.Tools.nodeConfigExportImport.recovery.scanError'
+            )
+        ).toBeTruthy();
+        expect(
+            screen.queryByText(
+                'views.Tools.nodeConfigExportImport.recovery.noDataFound'
+            )
+        ).toBeNull();
+        expect(screen.queryByText('sensitive error details')).toBeNull();
+        expect(
+            screen.getByText(
+                'views.Tools.nodeConfigExportImport.recovery.rescan'
+            )
+        ).toBeTruthy();
+    });
+
+    it('does not offer results from an incomplete scan', async () => {
+        (
+            KeychainRecoveryUtils.scanForRecoverableData as jest.Mock
+        ).mockResolvedValueOnce({
+            settingsFound: [
+                {
+                    key: 'zeus-settings-v2',
+                    source: 'prefixed-cloud',
+                    data: JSON.stringify({
+                        nodes: [{ implementation: 'lnd' }]
+                    }),
+                    description: 'Wallet Configurations'
+                }
+            ],
+            otherDataFound: [],
+            hasCurrentSettings: false,
+            error: 'scan failed'
+        });
+        await renderView({ nodes: [] });
+
+        await fireEvent.press(screen.getByText(RESTORE_LEGACY));
+
+        expect(
+            await screen.findByText(
+                'views.Tools.nodeConfigExportImport.recovery.scanError'
+            )
+        ).toBeTruthy();
+        expect(
+            screen.queryByText(
+                'views.Tools.nodeConfigExportImport.recovery.tapToRestore'
+            )
+        ).toBeNull();
+    });
+
+    it('allows retry after the scan promise rejects', async () => {
+        (
+            KeychainRecoveryUtils.scanForRecoverableData as jest.Mock
+        ).mockRejectedValueOnce(new Error('sensitive error details'));
+        await renderView({ nodes: [] });
+
+        await fireEvent.press(screen.getByText(RESTORE_LEGACY));
+
+        expect(
+            await screen.findByText(
+                'views.Tools.nodeConfigExportImport.recovery.scanError'
+            )
+        ).toBeTruthy();
+        expect(screen.queryByText('sensitive error details')).toBeNull();
+        await fireEvent.press(
+            screen.getByText(
+                'views.Tools.nodeConfigExportImport.recovery.rescan'
+            )
+        );
+        expect(
+            await screen.findByText(
+                'views.Tools.nodeConfigExportImport.recovery.noDataFound'
+            )
+        ).toBeTruthy();
+        expect(
+            screen.queryByText(
+                'views.Tools.nodeConfigExportImport.recovery.scanError'
+            )
+        ).toBeNull();
+    });
+
+    it('treats an empty error string as a failed scan', async () => {
+        (
+            KeychainRecoveryUtils.scanForRecoverableData as jest.Mock
+        ).mockResolvedValueOnce({
+            settingsFound: [],
+            otherDataFound: [],
+            hasCurrentSettings: false,
+            error: ''
+        });
+        await renderView({ nodes: [] });
+
+        await fireEvent.press(screen.getByText(RESTORE_LEGACY));
+
+        expect(
+            await screen.findByText(
+                'views.Tools.nodeConfigExportImport.recovery.scanError'
+            )
+        ).toBeTruthy();
+        expect(
+            screen.queryByText(
+                'views.Tools.nodeConfigExportImport.recovery.noDataFound'
+            )
+        ).toBeNull();
+    });
+
+    it('ignores a scan that completes after closing and reopening', async () => {
+        let resolveFirst!: (result: RecoveryScanResult) => void;
+        const firstScan = new Promise<RecoveryScanResult>((resolve) => {
+            resolveFirst = resolve;
+        });
+        (KeychainRecoveryUtils.scanForRecoverableData as jest.Mock)
+            .mockReturnValueOnce(firstScan)
+            .mockResolvedValueOnce({
+                settingsFound: [],
+                otherDataFound: [],
+                hasCurrentSettings: false,
+                error: 'scan failed'
+            });
+        await renderView({ nodes: [] });
+
+        const firstPress = fireEvent.press(screen.getByText(RESTORE_LEGACY));
+        await screen.findByText(
+            'views.Tools.nodeConfigExportImport.recovery.scanning'
+        );
+        await fireEvent.press(screen.getByText('general.close'));
+        await fireEvent.press(screen.getByText(RESTORE_LEGACY));
+        expect(
+            await screen.findByText(
+                'views.Tools.nodeConfigExportImport.recovery.scanError'
+            )
+        ).toBeTruthy();
+
+        await act(() => {
+            resolveFirst({
+                settingsFound: [],
+                otherDataFound: [],
+                divergentDataFound: [],
+                hasCurrentSettings: false
+            });
+        });
+        await firstPress;
+
+        expect(
+            screen.getByText(
+                'views.Tools.nodeConfigExportImport.recovery.scanError'
+            )
+        ).toBeTruthy();
+        expect(
+            screen.queryByText(
+                'views.Tools.nodeConfigExportImport.recovery.noDataFound'
+            )
+        ).toBeNull();
     });
 
     it('only offers the legacy scan on iOS', async () => {
@@ -187,7 +363,7 @@ describe('NodeConfigExportImport', () => {
             settings: { nodes: [] }
         });
         const buttons = alert.mock.calls[0][2] as any[];
-        buttons[0].onPress();
+        await act(() => buttons[0].onPress());
         expect(navigation.navigate).toHaveBeenCalledWith('Wallets');
 
         alert.mockRestore();
