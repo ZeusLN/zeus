@@ -1654,7 +1654,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             )}
                                             containerStyle={{
                                                 backgroundColor:
-                                                    themeColor('secondaryText')
+                                                    themeColor('secondaryText'),
+                                                // the ScrollView already
+                                                // pads the sides
+                                                marginHorizontal: 0
                                             }}
                                             swipeButtonStyle={{
                                                 backgroundColor:
