@@ -5,12 +5,66 @@
 static NSString *const kHasRunBeforeKey = @"HAS_RUN_BEFORE";
 
 /**
+ Set when a fresh install finds device-local keychain items left by an earlier install on this
+ device. JS reads it through KeychainAudit.m and then does not copy the iCloud Keychain
+ partition back into the device-local one, so a reinstall starts empty as the first-run clear
+ intends. Never cleared: the install stays a reinstall.
+ */
+static NSString *const kKeychainSurvivedReinstallKey = @"KEYCHAIN_SURVIVED_REINSTALL";
+
+/**
  Path of the file NSUserDefaults persists standardUserDefaults to. Read
  directly so a value cached in this process cannot stand in for it.
  */
 static NSString *StandardDefaultsPath(void) {
     NSString *library = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES).firstObject;
     return [NSString stringWithFormat:@"%@/Preferences/%@.plist", library, [[NSBundle mainBundle] bundleIdentifier]];
+}
+
+/**
+ Notification AppDelegate posts once a deferred first-run check has run. KeychainAudit.m waits
+ for it before answering keychainSurvivedReinstall, so the name is repeated there.
+ */
+static NSString *const kFirstRunKeychainCheckDidRunNotification = @"ZeusFirstRunKeychainCheckDidRun";
+
+typedef NS_ENUM(NSInteger, LocalKeychainItems) {
+    // The keychain could not be read, as before the first unlock after a reboot
+    LocalKeychainItemsUnknown,
+    LocalKeychainItemsNone,
+    LocalKeychainItemsFound
+};
+
+static NSArray *SecItemClasses(void) {
+    return @[
+        (__bridge id)kSecClassGenericPassword,
+        (__bridge id)kSecClassInternetPassword,
+        (__bridge id)kSecClassCertificate,
+        (__bridge id)kSecClassKey,
+        (__bridge id)kSecClassIdentity
+    ];
+}
+
+/**
+ Whether device-local keychain items exist. A query without kSecAttrSynchronizable matches
+ device-local items only, so items that reached this device through iCloud Keychain do not count.
+ On a fresh install only this device's earlier install can have left device-local items behind.
+ */
+static LocalKeychainItems ReadLocalKeychainItems(void) {
+    BOOL unknown = NO;
+    for (id secItemClass in SecItemClasses()) {
+        NSDictionary *query = @{
+            (__bridge id)kSecClass: secItemClass,
+            (__bridge id)kSecMatchLimit: (__bridge id)kSecMatchLimitOne
+        };
+        OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, NULL);
+        if (status == errSecSuccess) {
+            return LocalKeychainItemsFound;
+        }
+        if (status != errSecItemNotFound) {
+            unknown = YES;
+        }
+    }
+    return unknown ? LocalKeychainItemsUnknown : LocalKeychainItemsNone;
 }
 
 /**
@@ -24,9 +78,15 @@ static NSString *StandardDefaultsPath(void) {
  well. isProtectedDataAvailable is also NO while the device is locked after the first unlock,
  when the file is readable, so the check waits then too, which is stricter than needed.
 
+ itemsAtLaunch is what ReadLocalKeychainItems returned at launch, before JS started. A check
+ deferred until protected data is available uses it to decide whether this is a reinstall, because
+ by then JS may have written device-local items of its own. Zeus items use
+ kSecAttrAccessibleAfterFirstUnlock, so whenever JS could write one, the launch read could see
+ those an earlier install left. Only when launch could not read the keychain is it read again here.
+
  Returns NO when it could not run yet, so the caller can retry once protected data is available.
  */
-static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defaultsPath) {
+static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defaultsPath, LocalKeychainItems itemsAtLaunch) {
     if (!protectedDataAvailable) {
         return NO;
     }
@@ -46,16 +106,14 @@ static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defa
     // Set the appropriate value so we don't clear next time the app is launched
     [defaults setBool:YES forKey:kHasRunBeforeKey];
 
-    NSArray *secItemClasses = @[
-        (__bridge id)kSecClassGenericPassword,
-        (__bridge id)kSecClassInternetPassword,
-        (__bridge id)kSecClassCertificate,
-        (__bridge id)kSecClassKey,
-        (__bridge id)kSecClassIdentity
-    ];
+    LocalKeychainItems items =
+        itemsAtLaunch != LocalKeychainItemsUnknown ? itemsAtLaunch : ReadLocalKeychainItems();
+    if (items == LocalKeychainItemsFound) {
+        [defaults setBool:YES forKey:kKeychainSurvivedReinstallKey];
+    }
 
     // Maps through all Keychain classes and deletes all items that match
-    for (id secItemClass in secItemClasses) {
+    for (id secItemClass in SecItemClasses()) {
         NSDictionary *spec = @{(__bridge id)kSecClass: secItemClass};
         SecItemDelete((__bridge CFDictionaryRef)spec);
     }
@@ -68,12 +126,12 @@ static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defa
  at most once, and only with protected data available. Returns YES when it ran, so the caller
  can stop listening for retries.
  */
-static BOOL RunPendingKeychainCheck(BOOL *pending, BOOL protectedDataAvailable, NSString *defaultsPath) {
+static BOOL RunPendingKeychainCheck(BOOL *pending, BOOL protectedDataAvailable, NSString *defaultsPath, LocalKeychainItems itemsAtLaunch) {
     if (!*pending || !protectedDataAvailable) {
         return NO;
     }
     *pending = NO;
-    ClearKeychainIfNecessary(YES, defaultsPath);
+    ClearKeychainIfNecessary(YES, defaultsPath, itemsAtLaunch);
     return YES;
 }
 
@@ -81,6 +139,8 @@ static BOOL RunPendingKeychainCheck(BOOL *pending, BOOL protectedDataAvailable, 
   // Set when launch happened without protected data, so the first-run
   // keychain check still has to run
   BOOL _keychainCheckPending;
+  // What ReadLocalKeychainItems returned at launch, for the deferred check
+  LocalKeychainItems _localKeychainItemsAtLaunch;
 }
 @end
 
@@ -90,7 +150,8 @@ static BOOL RunPendingKeychainCheck(BOOL *pending, BOOL protectedDataAvailable, 
 {
   // React Native is started by SceneDelegate once the window scene connects.
   [RNNotifications startMonitorNotifications];
-  _keychainCheckPending = !ClearKeychainIfNecessary(application.isProtectedDataAvailable, StandardDefaultsPath());
+  _localKeychainItemsAtLaunch = ReadLocalKeychainItems();
+  _keychainCheckPending = !ClearKeychainIfNecessary(application.isProtectedDataAvailable, StandardDefaultsPath(), _localKeychainItemsAtLaunch);
   if (_keychainCheckPending) {
     // The protected-data callback alone is not enough: it is not documented
     // to reach an app that was suspended when the device unlocked. Becoming
@@ -128,11 +189,19 @@ static BOOL RunPendingKeychainCheck(BOOL *pending, BOOL protectedDataAvailable, 
 - (void)runPendingKeychainCheck {
   if (RunPendingKeychainCheck(&_keychainCheckPending,
                               [UIApplication sharedApplication].isProtectedDataAvailable,
-                              StandardDefaultsPath())) {
+                              StandardDefaultsPath(),
+                              _localKeychainItemsAtLaunch)) {
     [[NSNotificationCenter defaultCenter] removeObserver:self
                                                     name:UIApplicationDidBecomeActiveNotification
                                                   object:nil];
+    [[NSNotificationCenter defaultCenter] postNotificationName:kFirstRunKeychainCheckDidRunNotification
+                                                        object:nil];
   }
+}
+
+// Read by KeychainAudit.m, which holds keychainSurvivedReinstall until this is NO
+- (BOOL)firstRunKeychainCheckPending {
+  return _keychainCheckPending;
 }
 
 - (void)applicationProtectedDataDidBecomeAvailable:(UIApplication *)application {

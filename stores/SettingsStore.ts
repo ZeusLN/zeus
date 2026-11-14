@@ -8,6 +8,7 @@ import omit from 'lodash/omit';
 
 import BackendUtils from '../utils/BackendUtils';
 import { getSupportedBiometryType } from '../utils/BiometricUtils';
+import { keychainSurvivedReinstall } from '../utils/KeychainReinstallUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { VerifierRecord, hasLockCredential } from '../utils/LockVerifierUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
@@ -2141,7 +2142,12 @@ export default class SettingsStore {
 
             let modernSettings: any = await Storage.getItem(STORAGE_KEY);
 
-            if (!modernSettings && Platform.OS === 'ios') {
+            if (
+                !modernSettings &&
+                Platform.OS === 'ios' &&
+                // a reinstall starts empty; see keychainDesyncMigration
+                !(await keychainSurvivedReinstall())
+            ) {
                 // An empty local partition is indistinguishable from a failed
                 // desync migration: the blob may still live only in the
                 // synchronizable partition. Read it there for this boot;
