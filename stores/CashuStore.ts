@@ -113,6 +113,12 @@ const MELT_QUOTE_CHECK_TIMEOUT_MS = 10000;
 const SAGA_RECOVERY_MAX_ATTEMPTS = 3;
 const SAGA_RECOVERY_RETRY_MS = 60 * 1000;
 
+// How long initializeCDK waits for receives still running on the open CDK
+// wallet before it opens the next one. CDK sets no timeout of its own, and
+// the next wallet's connect waits here, so a mint that never answers must
+// not hold it forever.
+const RECEIVE_DRAIN_TIMEOUT_MS = 30000;
+
 // ZEUS official npub for trusted mint recommendations
 const ZEUS_NPUB =
     'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5';
@@ -361,6 +367,10 @@ export default class CashuStore {
     // wallet switch points getNodeDir() at the next wallet before reset()
     // runs, and the store holds this wallet's queues until then
     private walletNodeDir: string | undefined;
+    // receiveTokenCDK calls that have not settled. Kept across reset(): a
+    // receive started on the previous wallet is still running on its CDK
+    // handles, which the next initializeCDK replaces
+    private receivesInFlight: Set<Promise<number>> = new Set();
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -466,6 +476,11 @@ export default class CashuStore {
                 );
             }
 
+            // On Android initializeWallet destroys the open wallet's
+            // database. A receive the mint has already answered would then
+            // fail to store the new proofs, and the token would later show
+            // as spent by its sender
+            await this.waitForReceivesInFlight();
             await CashuDevKit.initializeWallet(mnemonic, 'sat');
 
             runInAction(() => {
@@ -2000,20 +2015,61 @@ export default class CashuStore {
             throw new Error('CDK not initialized');
         }
 
-        // Ensure the token's mint is added so CDK knows its keysets
-        if (mintUrl) {
-            await this.ensureMintAdded(mintUrl);
+        // Tracked from here, not only around CashuDevKit.receive, so a
+        // switch during ensureMintAdded still waits for this receive and it
+        // reaches the wallet it was started on
+        const receive = (async () => {
+            // Ensure the token's mint is added so CDK knows its keysets
+            if (mintUrl) {
+                await this.ensureMintAdded(mintUrl);
+            }
+
+            // p2pk_signing_keys when the token is P2PK-locked.
+            const options: { p2pk_signing_keys: string[] } = {
+                p2pk_signing_keys: signingKey ? [signingKey] : []
+            };
+
+            const amount = await CashuDevKit.receive(encodedToken, options);
+            await this.syncCDKBalances();
+
+            return amount;
+        })();
+        this.receivesInFlight.add(receive);
+        const settle = () => this.receivesInFlight.delete(receive);
+        receive.then(settle, settle);
+
+        return await receive;
+    };
+
+    /**
+     * Wait, at most RECEIVE_DRAIN_TIMEOUT_MS, until no receiveTokenCDK call
+     * is running
+     */
+    private waitForReceivesInFlight = async () => {
+        const deadline = Date.now() + RECEIVE_DRAIN_TIMEOUT_MS;
+        while (this.receivesInFlight.size > 0) {
+            const remaining = deadline - Date.now();
+            if (remaining <= 0) {
+                console.warn(
+                    `CDK: ${this.receivesInFlight.size} receive(s) still in flight, opening the wallet anyway`
+                );
+                // They run on the handles initializeWallet now replaces, so
+                // waiting for them again at a later init protects nothing.
+                // A receive whose mint never answers never settles, and
+                // would otherwise add the full wait to every later switch
+                this.receivesInFlight.clear();
+                return;
+            }
+            let capTimeoutId: ReturnType<typeof setTimeout> | undefined;
+            const cap = new Promise<void>((resolve) => {
+                capTimeoutId = setTimeout(resolve, remaining);
+            });
+            await Promise.race([
+                Promise.allSettled(Array.from(this.receivesInFlight)),
+                cap
+            ]);
+            clearTimeout(capTimeoutId);
         }
-
-        // p2pk_signing_keys when the token is P2PK-locked.
-        const options: { p2pk_signing_keys: string[] } = {
-            p2pk_signing_keys: signingKey ? [signingKey] : []
-        };
-
-        const amount = await CashuDevKit.receive(encodedToken, options);
-        await this.syncCDKBalances();
-
-        return amount;
     };
 
     /**
