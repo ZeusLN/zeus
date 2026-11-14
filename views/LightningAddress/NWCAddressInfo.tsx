@@ -83,6 +83,23 @@ export default class NWCAddressInfo extends React.Component<
                                 margin: 10
                             }}
                         >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 18
+                                }}
+                            >
+                                {localeString(
+                                    'views.LightningAddress.NWC.explainer3'
+                                )}
+                            </Text>
+                        </View>
+                        <View
+                            style={{
+                                margin: 10
+                            }}
+                        >
                             {minimumSats && (
                                 <KeyValue
                                     keyValue={localeString(
