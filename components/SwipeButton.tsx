@@ -41,6 +41,9 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
     const completed = useRef(false);
     const onSwipeSuccessRef = useRef(onSwipeSuccess);
     onSwipeSuccessRef.current = onSwipeSuccess;
+    // the drag in progress, if any; 'cancelled' once the track's width
+    // changes under it, so it can't complete
+    const drag = useRef<'idle' | 'active' | 'cancelled'>('idle');
 
     // How far the knob can travel, from the track's measured width. It is
     // null until the first layout, and the knob can't be dragged before
@@ -52,14 +55,27 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
     const [maxTranslation, setMaxTranslation] = useState<number | null>(null);
     const maxTranslationRef = useRef<number | null>(null);
 
+    const springBack = () =>
+        Animated.spring(pan, {
+            toValue: 0,
+            useNativeDriver: false
+        }).start();
+
     const onLayout = (e: LayoutChangeEvent) => {
         const travel = Math.max(
             e.nativeEvent.layout.width - SWIPE_BUTTON_WIDTH,
             0
         );
+        const resized = travel !== maxTranslationRef.current;
         maxTranslationRef.current = travel;
         // keep a completed knob at the end of a resized track
         if (completed.current) pan.setValue(travel);
+        // a drag that started on a track of another width is judged
+        // against neither width: drop it, and the user swipes again
+        if (resized && drag.current === 'active') {
+            drag.current = 'cancelled';
+            springBack();
+        }
         setMaxTranslation(travel);
     };
 
@@ -72,12 +88,6 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
             extrapolate: 'clamp'
         });
     }, [pan, maxTranslation]);
-
-    const springBack = () =>
-        Animated.spring(pan, {
-            toValue: 0,
-            useNativeDriver: false
-        }).start();
 
     // every screen using this button navigates away in onSwipeSuccess; if
     // the user comes back (e.g. the send failed), unlock the knob so they
@@ -102,9 +112,11 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
                 !disabledRef.current &&
                 !!maxTranslationRef.current,
             onPanResponderGrant: () => {
+                drag.current = 'active';
                 pan.setValue(0);
             },
             onPanResponderMove: (_e, gesture) => {
+                if (drag.current !== 'active') return;
                 const maxTranslation = maxTranslationRef.current ?? 0;
                 // clamp, so a fast drag past either end still puts the
                 // knob at that end
@@ -115,7 +127,10 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
                 gesture: PanResponderGestureState
             ) => {
                 const maxTranslation = maxTranslationRef.current;
+                const active = drag.current === 'active';
+                drag.current = 'idle';
                 if (
+                    active &&
                     !!maxTranslation &&
                     gesture.dx > maxTranslation * 0.95 &&
                     !disabledRef.current
@@ -131,6 +146,7 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
                 }
             },
             onPanResponderTerminate: () => {
+                drag.current = 'idle';
                 if (!completed.current) springBack();
             }
         })

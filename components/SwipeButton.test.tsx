@@ -255,4 +255,80 @@ describe('SwipeButton', () => {
 
         expect(onSwipeSuccess).not.toHaveBeenCalled();
     });
+
+    it('cancels a drag when the track narrows under it', async () => {
+        const spring = jest.spyOn(Animated, 'spring');
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await act(async () => {
+            responderConfig.onPanResponderGrant();
+            responderConfig.onPanResponderMove({}, { dx: 200 });
+        });
+        // 200 is 80% of the 250 travel the drag started on, but past 95%
+        // of the 150 travel left after the resize
+        await layoutTrack(200);
+        expect(spring).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ toValue: 0 })
+        );
+        await act(async () => {
+            responderConfig.onPanResponderMove({}, { dx: 200 });
+            responderConfig.onPanResponderRelease({}, { dx: 200 });
+        });
+
+        expect(onSwipeSuccess).not.toHaveBeenCalled();
+        expect(canStartDrag()).toBe(true);
+    });
+
+    it('cancels a drag when the track widens under it', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(200);
+
+        await act(async () => {
+            responderConfig.onPanResponderGrant();
+            responderConfig.onPanResponderMove({}, { dx: 150 });
+        });
+        await layoutTrack(TRACK_WIDTH);
+        await act(async () => {
+            responderConfig.onPanResponderMove({}, { dx: 250 });
+            responderConfig.onPanResponderRelease({}, { dx: 250 });
+        });
+
+        expect(onSwipeSuccess).not.toHaveBeenCalled();
+    });
+
+    it('completes a new drag on the resized track', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await act(async () => {
+            responderConfig.onPanResponderGrant();
+            responderConfig.onPanResponderMove({}, { dx: 200 });
+        });
+        await layoutTrack(200);
+        await act(async () => {
+            responderConfig.onPanResponderRelease({}, { dx: 200 });
+        });
+        await swipe(145);
+
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps a drag through a layout pass that leaves the width unchanged', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await act(async () => {
+            responderConfig.onPanResponderGrant();
+            responderConfig.onPanResponderMove({}, { dx: 200 });
+        });
+        await layoutTrack(TRACK_WIDTH);
+        await act(async () => {
+            responderConfig.onPanResponderMove({}, { dx: 240 });
+            responderConfig.onPanResponderRelease({}, { dx: 240 });
+        });
+
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+    });
 });
