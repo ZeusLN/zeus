@@ -4,7 +4,7 @@ import BigNumber from 'bignumber.js';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
 import { crypto, initEccLib, Transaction } from 'bitcoinjs-lib';
-import { HDKey } from '@scure/bip32';
+import { HDKey, HARDENED_OFFSET } from '@scure/bip32';
 import { mnemonicToSeedSync, generateMnemonic } from '@scure/bip39';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -2108,8 +2108,9 @@ export default class SwapStore {
 
     /**
      * Builds the stored form of one swap from a /swap/restore response, or
-     * returns null for an entry without an ID or key details, and for a
-     * reverse swap whose preimage hash doesn't match the key at its keyIndex.
+     * returns null for an entry that is not an object or has no ID or key
+     * details, for an entry with an unusable keyIndex, and for a reverse
+     * swap whose preimage hash doesn't match the key at its keyIndex.
      */
     private buildRescuedSwap = (
         swap: any,
@@ -2120,9 +2121,11 @@ export default class SwapStore {
             host
         }: { implementation: string; nodePubkey: string; host: string }
     ): any | null => {
+        // a null entry would throw below and fail the whole restore
+        if (!swap || typeof swap !== 'object') return null;
         const isReverseSwap = swap.type === 'reverse';
         const details = isReverseSwap ? swap.claimDetails : swap.refundDetails;
-        if (!swap?.id || !details) return null;
+        if (!swap.id || !details) return null;
 
         // Only fields describing the host's side of the swap are taken from
         // the response. The claim address, keys and preimage are ours to set:
@@ -2132,7 +2135,28 @@ export default class SwapStore {
         if (typeof swapDetails.status !== 'string') delete swapDetails.status;
         const hostDetails = pickFields(details, RESCUE_DETAIL_FIELDS);
 
-        const { keyIndex } = details;
+        // keyIndex is host-supplied. Boltz sends a number; a string of
+        // digits is accepted too, as it derives the same path. Anything else
+        // makes derive throw, which would fail the whole restore, so skip
+        // just this entry. Number() is not applied to other values because
+        // it turns '', null and [] into 0.
+        const keyIndex =
+            typeof details.keyIndex === 'string' &&
+            /^\d+$/.test(details.keyIndex)
+                ? Number(details.keyIndex)
+                : details.keyIndex;
+        if (
+            !Number.isSafeInteger(keyIndex) ||
+            keyIndex < 0 ||
+            keyIndex >= HARDENED_OFFSET
+        ) {
+            console.error(
+                `Skipping rescued swap ${swap.id}: unusable key index ${details.keyIndex}`
+            );
+            return null;
+        }
+        // store the number, as models/Swap types it
+        hostDetails.keyIndex = keyIndex;
 
         const hdKey = this.mnemonicToHDKey(mnemonic);
         const childKey = hdKey.derive(this.getPath(keyIndex));
