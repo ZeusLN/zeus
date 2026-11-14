@@ -12,6 +12,11 @@ jest.mock('react-native-encrypted-storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn()
 }));
+// imported by MigrationUtils
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    getItem: jest.fn(),
+    setItem: jest.fn()
+}));
 jest.mock('@nostr-dev-kit/ndk', () => ({
     __esModule: true,
     default: jest.fn()
