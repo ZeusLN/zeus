@@ -1639,8 +1639,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-nfc-manager (3.17.5):
+  - react-native-nfc-manager (4.2.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
     - React-Core
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-notifications (5.2.2):
     - React-Core
   - react-native-print (0.11.0):
@@ -3171,7 +3191,7 @@ SPEC CHECKSUMS:
   react-native-hce: ad5462e792d84e87924308dda1ee516757f1c0eb
   react-native-image-picker: 75fb1e6b05aebef8e3fceee06572ae7579cd1522
   react-native-netinfo: aac21e38ce217d5625187e3388fba2ff22a422d1
-  react-native-nfc-manager: 2949055c7321cd7776455b3c5860cf7cc3cd8c28
+  react-native-nfc-manager: 8a6dd7a45f010b75bced8ef24e3d36b81aa9707c
   react-native-notifications: e2d3c022d6077de7e420ba5c01b4bd9464f3941d
   react-native-print: 692e8782bc89872ea01738c6759631388e77358c
   react-native-qr-kit: a40acb98a771a6e614602b5dd53546a5c51e8af4
