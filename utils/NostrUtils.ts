@@ -154,19 +154,70 @@ class NostrUtils {
      * NIP-05 names are case-insensitive, but nostr-tools looks them up
      * case-sensitively in nostr.json, whose keys are lowercase, so the
      * identifier is lowercased first.
-     * nostr-tools sends the request through the OS HTTP stack, whatever the
-     * wallet's Tor setting. That stack cannot reach an onion service and
-     * would only send the onion address to the system's DNS resolver, so
-     * .onion identifiers are not looked up.
+     * With Tor enabled the request goes through doTorRequest. Otherwise
+     * nostr-tools sends it through the OS HTTP stack, which cannot reach an
+     * onion service and would only send the onion address to the system's
+     * DNS resolver, so .onion identifiers are not looked up.
      * @param identifier - The NIP-05 identifier to look up
+     * @param enableTor - Whether to send the request over Tor
      * @returns The profile pointer, or null if the lookup found nothing
      */
-    queryNip05Profile = async (identifier: string) => {
+    queryNip05Profile = async (
+        identifier: string,
+        enableTor: boolean = false
+    ): Promise<nip19.ProfilePointer | null> => {
         const normalized = identifier.toLowerCase();
         if (/\.onion\.?$/.test(normalized)) {
             return null;
         }
-        return nip05.queryProfile(normalized);
+        if (!enableTor) {
+            return nip05.queryProfile(normalized);
+        }
+
+        // Same lookup as nostr-tools' nip05.queryProfile, over Tor. TorUtils
+        // is loaded here so that importing NostrUtils (via AddressUtils)
+        // does not load the native Tor module.
+        const { doTorRequest, RequestMethod } = require('./TorUtils');
+        const match = normalized.match(nip05.NIP05_REGEX);
+        if (!match) return null;
+        const [, name = '_', domain] = match;
+        try {
+            const json = await doTorRequest(
+                `https://${domain}/.well-known/nostr.json?name=${encodeURIComponent(
+                    name
+                )}`,
+                RequestMethod.GET
+            );
+            return this.parseNip05Response(json, name);
+        } catch {
+            return null;
+        }
+    };
+
+    /**
+     * Reads the pubkey and relays for a name from a nostr.json response.
+     * @returns The profile pointer, or null if the response has no valid
+     * pubkey for the name
+     */
+    parseNip05Response = (
+        json: any,
+        name: string
+    ): nip19.ProfilePointer | null => {
+        const names = json?.names;
+        if (!names || typeof names !== 'object') return null;
+        const pubkey = Object.prototype.hasOwnProperty.call(names, name)
+            ? names[name]
+            : undefined;
+        if (typeof pubkey !== 'string' || !/^[0-9a-f]{64}$/.test(pubkey)) {
+            return null;
+        }
+        const relays = json.relays?.[pubkey];
+        return {
+            pubkey,
+            relays: Array.isArray(relays)
+                ? relays.filter((r: unknown) => typeof r === 'string')
+                : undefined
+        };
     };
 }
 
