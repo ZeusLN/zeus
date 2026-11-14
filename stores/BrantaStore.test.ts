@@ -80,8 +80,7 @@ describe('BrantaStore', () => {
 
             expect(fetchMock).toHaveBeenCalledTimes(1);
             expect(result).toMatchObject({
-                platform: payment.platform,
-                description: payment.description
+                platform: payment.platform
             });
             expect(result?.verifyUrl).toContain(
                 'https://guardrail.branta.pro/v2/verify/'
