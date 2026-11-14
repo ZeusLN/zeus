@@ -5,6 +5,7 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.Promise;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -130,6 +131,13 @@ public class ZipUtils extends ReactContextBaseJavaModule {
     private static final int PBKDF2_ITERATIONS = 100000;
     private static final int KEY_LEN_BITS = 256;
 
+    // Upper bound on the size of a file decryptFile reads. Its inputs are
+    // node-config exports (a few KB of JSON) and Olympus channel backups,
+    // which the Olympus server limits to 15 MiB of base64 in the upload
+    // body. The ciphertext and the plaintext are both held in memory, so
+    // the size is checked before anything is read.
+    static final long MAX_DECRYPT_INPUT_BYTES = 64L * 1024 * 1024;
+
     @ReactMethod
     public void encryptFile(String inputPath, String outputPath, String passphrase, Promise promise) {
         try {
@@ -181,28 +189,31 @@ public class ZipUtils extends ReactContextBaseJavaModule {
                 return;
             }
 
-            byte[] fileData = readAllBytes(inFile);
-            int minLen = 1 + SALT_LEN + IV_LEN + GCM_TAG_BITS / 8;
-            if (fileData.length < minLen) {
+            long fileLen = inFile.length();
+            int headerLen = 1 + SALT_LEN + IV_LEN;
+            if (fileLen < headerLen + GCM_TAG_BITS / 8) {
                 promise.reject("ERR_DECRYPT", "File too small to be a valid encrypted backup");
                 return;
             }
-
-            int version = fileData[0] & 0xFF;
-            if (version != VERSION) {
-                promise.reject("ERR_DECRYPT", "Unsupported encryption version: " + version);
+            if (fileLen > MAX_DECRYPT_INPUT_BYTES) {
+                promise.reject("ERR_DECRYPT", "File too large to be a valid encrypted backup");
                 return;
             }
 
             byte[] salt = new byte[SALT_LEN];
-            System.arraycopy(fileData, 1, salt, 0, SALT_LEN);
             byte[] iv = new byte[IV_LEN];
-            System.arraycopy(fileData, 1 + SALT_LEN, iv, 0, IV_LEN);
-
-            int headerLen = 1 + SALT_LEN + IV_LEN;
-            int ciphertextLen = fileData.length - headerLen;
-            byte[] ciphertext = new byte[ciphertextLen];
-            System.arraycopy(fileData, headerLen, ciphertext, 0, ciphertextLen);
+            byte[] ciphertext;
+            try (DataInputStream in = new DataInputStream(new FileInputStream(inFile))) {
+                int version = in.readUnsignedByte();
+                if (version != VERSION) {
+                    promise.reject("ERR_DECRYPT", "Unsupported encryption version: " + version);
+                    return;
+                }
+                in.readFully(salt);
+                in.readFully(iv);
+                ciphertext = new byte[(int) (fileLen - headerLen)];
+                in.readFully(ciphertext);
+            }
 
             SecretKeySpec key = deriveKey(passphrase, salt);
 

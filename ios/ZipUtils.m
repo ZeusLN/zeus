@@ -9,6 +9,12 @@
 #define ZIP_VERSION_NEEDED 20
 #define ZIP_COMPRESSION_DEFLATE 8
 #define ZIP_COMPRESSION_STORE 0
+// Upper bound on the size of one inflated entry, which unzipFile holds in
+// memory along with the whole archive. Channel backup entries are lnd's
+// channel.db or SQLite files, usually tens to a few hundred MB on a mobile
+// node. zipFolder holds a file and its compressed copy in memory together,
+// so an entry larger than this needs over 4 GiB of memory to write on iOS
+#define ZIP_MAX_INFLATE_BYTES (2ULL * 1024 * 1024 * 1024)
 
 @implementation ZipUtils
 
@@ -264,7 +270,8 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
 }
 
 - (NSData *)inflateData:(NSData *)data expectedSize:(uint32_t)expectedSize {
-    if (data.length == 0) return [NSData data];
+    if (data.length == 0) return expectedSize == 0 ? [NSData data] : nil;
+    if (expectedSize > ZIP_MAX_INFLATE_BYTES) return nil;
 
     z_stream stream;
     memset(&stream, 0, sizeof(stream));
@@ -276,28 +283,29 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
     stream.next_in = (Bytef *)data.bytes;
     stream.avail_in = (uInt)data.length;
 
-    NSMutableData *decompressed = [NSMutableData dataWithLength:expectedSize > 0 ? expectedSize : data.length * 4];
-    stream.next_out = (Bytef *)decompressed.mutableBytes;
-    stream.avail_out = (uInt)decompressed.length;
+    // expectedSize comes from the archive, so it is not allocated up front.
+    // The buffer grows with the output inflate produces, up to one byte past
+    // expectedSize so that an entry inflating to more than it declares is
+    // caught.
+    NSUInteger limit = (NSUInteger)expectedSize + 1;
+    NSMutableData *decompressed = [NSMutableData dataWithLength:MIN(limit, MAX(data.length * 4, (NSUInteger)65536))];
 
-    int status = inflate(&stream, Z_FINISH);
-
-    if (status != Z_STREAM_END && status != Z_OK) {
-        // Try with more buffer
-        if (status == Z_BUF_ERROR) {
-            decompressed.length = decompressed.length * 2;
-            stream.next_out = (Bytef *)decompressed.mutableBytes + stream.total_out;
-            stream.avail_out = (uInt)(decompressed.length - stream.total_out);
-            status = inflate(&stream, Z_FINISH);
+    int status = Z_OK;
+    while (status == Z_OK) {
+        if (stream.total_out == decompressed.length) {
+            if (decompressed.length == limit) break;
+            decompressed.length = MIN(limit, decompressed.length * 2);
         }
-        if (status != Z_STREAM_END && status != Z_OK) {
-            inflateEnd(&stream);
-            return nil;
-        }
+        stream.next_out = (Bytef *)decompressed.mutableBytes + stream.total_out;
+        stream.avail_out = (uInt)(decompressed.length - stream.total_out);
+        status = inflate(&stream, Z_NO_FLUSH);
     }
 
-    decompressed.length = stream.total_out;
+    uLong total = stream.total_out;
     inflateEnd(&stream);
+    if (status != Z_STREAM_END || total != expectedSize) return nil;
+
+    decompressed.length = total;
     return decompressed;
 }
 
