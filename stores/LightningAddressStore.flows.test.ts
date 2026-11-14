@@ -1248,6 +1248,54 @@ describe('LightningAddressStore flows', () => {
         });
     });
 
+    describe('setMintUrl', () => {
+        const NEW_MINT = 'https://other.mint.test';
+
+        it('sends the mint to ZEUS Pay, then records it locally', async () => {
+            settingsStore.settings = {
+                lightningAddress: { enabled: true, mintUrl: MINT }
+            };
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/update', ok({}));
+
+            await expect(store.setMintUrl(NEW_MINT)).resolves.toEqual({
+                success: true
+            });
+
+            expect(bodyOf('/api/lnurl/update').updates).toEqual({
+                mint_url: NEW_MINT
+            });
+            expect(settingsStore.updateSettingsGroup).toHaveBeenCalledWith(
+                'lightningAddress',
+                { mintUrl: NEW_MINT }
+            );
+            expect(settingsStore.settings.lightningAddress).toEqual({
+                enabled: true,
+                mintUrl: NEW_MINT
+            });
+        });
+
+        it('keeps the local mint when ZEUS Pay rejects the change', async () => {
+            settingsStore.settings = { lightningAddress: { mintUrl: MINT } };
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/update', {
+                status: 400,
+                body: { success: false, error: 'mint not supported' }
+            });
+
+            await expect(store.setMintUrl(NEW_MINT)).rejects.toBe(
+                'mint not supported'
+            );
+
+            expect(settingsStore.updateSettingsGroup).not.toHaveBeenCalled();
+            expect(settingsStore.settings.lightningAddress.mintUrl).toBe(MINT);
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('mint not supported');
+        });
+    });
+
     describe('deleteAddress', () => {
         it('deletes the account, clears local flags and resets the store', async () => {
             const store = newStore();

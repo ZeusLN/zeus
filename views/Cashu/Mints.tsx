@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     FlatList,
     Text,
     View,
@@ -19,10 +20,16 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import { Row } from '../../components/layout/Row';
 
+import {
+    getLightningAddressMintUrl,
+    isSameMintUrl,
+    offerLightningAddressMintSwitch
+} from '../../utils/LightningAddressMintUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import CashuStore from '../../stores/CashuStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
@@ -30,6 +37,7 @@ import Add from '../../assets/images/SVG/Add.svg';
 interface MintsProps {
     navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
+    LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
     route: Route<
         'Mints',
@@ -37,6 +45,9 @@ interface MintsProps {
             disableRandom?: boolean;
             forceSingleMint?: boolean;
             isMultiMintView?: boolean;
+            // Pick the mint the Lightning address pays into, not the
+            // wallet's selected mint
+            lightningAddressMint?: boolean;
         }
     >;
 }
@@ -45,7 +56,7 @@ interface MintsState {
     mints: any;
 }
 
-@inject('CashuStore', 'SettingsStore')
+@inject('CashuStore', 'LightningAddressStore', 'SettingsStore')
 @observer
 export default class Mints extends React.Component<MintsProps, MintsState> {
     state = {
@@ -123,7 +134,13 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
     );
 
     render() {
-        const { navigation, CashuStore, SettingsStore, route } = this.props;
+        const {
+            navigation,
+            CashuStore,
+            LightningAddressStore,
+            SettingsStore,
+            route
+        } = this.props;
         const { mints } = this.state;
         const disableRandom = route?.params?.disableRandom;
         const {
@@ -139,9 +156,15 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         } = CashuStore;
         const forceSingleMint = !!route.params?.forceSingleMint;
         const isMultiMintView = !!route.params?.isMultiMintView;
+        const lightningAddressMint = !!route.params?.lightningAddressMint;
+        const lightningAddressMintUrl = getLightningAddressMintUrl(
+            LightningAddressStore,
+            SettingsStore
+        );
         const multiMintEnabled =
             !!SettingsStore.settings?.ecash?.enableMultiMint &&
             !forceSingleMint &&
+            !lightningAddressMint &&
             isMultiMintView;
 
         const AddMintButton = () => (
@@ -163,12 +186,13 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text:
-                            mints.length > 0
-                                ? `${localeString('cashu.mints')} (${
-                                      mints.length
-                                  })`
-                                : localeString('cashu.mints'),
+                        text: lightningAddressMint
+                            ? localeString(
+                                  'views.Cashu.LightningAddress.receivingMint'
+                              )
+                            : mints.length > 0
+                            ? `${localeString('cashu.mints')} (${mints.length})`
+                            : localeString('cashu.mints'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -177,7 +201,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                     rightComponent={<AddMintButton />}
                     navigation={navigation}
                     onBack={() => {
-                        clearInvoice();
+                        // the wallet mint, and so any open invoice, is
+                        // unchanged when picking the address mint
+                        if (!lightningAddressMint) clearInvoice();
                     }}
                 />
                 {!!mints &&
@@ -227,7 +253,12 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             index: number;
                         }) => {
                             const mintInfo = item._mintInfo || item;
-                            const isSelectedMint = multiMintEnabled
+                            const isSelectedMint = lightningAddressMint
+                                ? isSameMintUrl(
+                                      lightningAddressMintUrl,
+                                      mintInfo?.mintUrl
+                                  )
+                                : multiMintEnabled
                                 ? !!mintInfo?.mintUrl &&
                                   multiMintSelectedUrls.includes(
                                       mintInfo?.mintUrl
@@ -261,6 +292,23 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                 : isSelectedMint && !multiMintEnabled
                                 ? localeString('general.selected')
                                 : '';
+
+                            // In the wallet list, name the mint the Lightning
+                            // address pays into, which can differ from the
+                            // selected one
+                            if (
+                                !lightningAddressMint &&
+                                isSameMintUrl(
+                                    lightningAddressMintUrl,
+                                    mintInfo?.mintUrl
+                                )
+                            ) {
+                                subTitle = subTitle
+                                    ? `${localeString(
+                                          'general.lightningAddress'
+                                      )} | ${subTitle}`
+                                    : localeString('general.lightningAddress');
+                            }
 
                             if (errorConnecting) {
                                 subTitle = subTitle
@@ -297,6 +345,35 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                 return;
                                             }
 
+                                            if (lightningAddressMint) {
+                                                // a change is already on its
+                                                // way to ZEUS Pay
+                                                if (
+                                                    LightningAddressStore.loading
+                                                ) {
+                                                    return;
+                                                }
+                                                if (isSelectedMint) {
+                                                    navigation.goBack();
+                                                    return;
+                                                }
+                                                try {
+                                                    await LightningAddressStore.setMintUrl(
+                                                        mintInfo?.mintUrl
+                                                    );
+                                                    navigation.goBack();
+                                                } catch (e: any) {
+                                                    Alert.alert(
+                                                        localeString(
+                                                            'general.error'
+                                                        ),
+                                                        LightningAddressStore.error_msg ||
+                                                            e?.toString()
+                                                    );
+                                                }
+                                                return;
+                                            }
+
                                             if (forceSingleMint) {
                                                 await setReceiveMint(
                                                     mintInfo?.mintUrl
@@ -326,6 +403,13 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                     mintInfo?.mintUrl
                                                 ]);
                                             }
+                                            offerLightningAddressMintSwitch({
+                                                lightningAddressStore:
+                                                    LightningAddressStore,
+                                                settingsStore: SettingsStore,
+                                                cashuStore: CashuStore,
+                                                newMintUrl: mintInfo?.mintUrl
+                                            });
                                             navigation.goBack();
                                         }}
                                     >
