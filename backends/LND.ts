@@ -1211,6 +1211,8 @@ export default class LND {
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
     supportsOnchainSendFeeRate = () => true;
+    supportsOnchainSendAutoFeeRate = () => false;
+    supportsOnchainSendSubSatFeeRate = () => false;
     supportsChannelOpenFeeRate = () => true;
     supportsChannelOpenMinConfs = () => true;
     supportsFlowLSP = () => true;
