@@ -27,6 +27,7 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import PrivacyUtils from '../../../utils/PrivacyUtils';
 import dateTimeUtils from '../../../utils/DateTimeUtils';
+import NostrConnectUtils from '../../../utils/NostrConnectUtils';
 
 import Filter from '../../../assets/images/SVG/Filter On.svg';
 
@@ -383,9 +384,67 @@ export default class NWCConnectionActivity extends React.Component<
         }
     };
 
+    openReleaseHoldModal = (item: ConnectionActivity) => {
+        const { ModalStore } = this.props;
+        ModalStore.toggleInfoModal({
+            title: localeString(
+                'views.Settings.NostrWalletConnect.releaseHold.title'
+            ),
+            text: [
+                localeString(
+                    'views.Settings.NostrWalletConnect.releaseHold.text'
+                ),
+                localeString(
+                    'views.Settings.NostrWalletConnect.releaseHold.warning'
+                )
+            ],
+            buttons: [
+                {
+                    title: localeString(
+                        'views.Settings.NostrWalletConnect.releaseHold.button'
+                    ),
+                    callback: () => this.releaseHold(item)
+                },
+                ...(item.payment
+                    ? [
+                          {
+                              title: localeString('views.Payment.title'),
+                              callback: () =>
+                                  this.navigateToPaymentDetails(item)
+                          }
+                      ]
+                    : [])
+            ]
+        });
+    };
+
+    releaseHold = (item: ConnectionActivity) => {
+        const { NostrWalletConnectStore, route } = this.props;
+        const released = NostrWalletConnectStore.releasePayInvoiceHold(
+            route.params.connectionId,
+            item.id,
+            item.paymentHash
+        );
+        if (!released) return;
+        // the store changed the row in place, so render the list again
+        const activity = [...this.state.activity];
+        this.setState({
+            activity,
+            filteredActivity: this.applyFilters(
+                activity,
+                this.state.activeFilters
+            )
+        });
+    };
+
     handleActivityPress = (item: ConnectionActivity) => {
         if (item.status === 'failed') {
             this.openFailedPaymentModal(item);
+            return;
+        }
+
+        if (NostrConnectUtils.canReleasePayInvoiceHold(item)) {
+            this.openReleaseHoldModal(item);
             return;
         }
 
@@ -540,6 +599,24 @@ export default class NWCConnectionActivity extends React.Component<
                                 <Text textBreakStrategy="highQuality">
                                     {item.invoice?.formattedTimeUntilExpiry}
                                 </Text>
+                            </ListItem.Subtitle>
+                        </View>
+                    )}
+
+                    {item.isHoldReleased && item.status === 'pending' && (
+                        <View style={styles.row}>
+                            <ListItem.Subtitle
+                                style={[
+                                    styles.leftCellSecondary,
+                                    {
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }
+                                ]}
+                            >
+                                {localeString(
+                                    'views.Settings.NostrWalletConnect.releaseHold.released'
+                                )}
                             </ListItem.Subtitle>
                         </View>
                     )}
