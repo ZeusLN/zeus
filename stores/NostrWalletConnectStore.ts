@@ -1683,6 +1683,38 @@ export default class NostrWalletConnectStore {
         return { name: connection.name, activity: connection.activity };
     };
 
+    /**
+     * Releases the budget hold of a pay_invoice that has been pending for
+     * a while (NostrConnectUtils.canReleasePayInvoiceHold), e.g. one the
+     * node never lists because it failed after the client stopped waiting
+     * (LndHub). The payment is still reconciled: if the node later lists
+     * it as settled, it is debited then, even past the budget. Returns
+     * whether the hold was released.
+     */
+    @action
+    public releasePayInvoiceHold = (
+        connectionId: string,
+        activityId: string,
+        paymentHash?: string
+    ): boolean => {
+        const { connection } = this.getConnection({ connectionId });
+        if (!connection) return false;
+        const activity = connection.findPayInvoiceActivity(
+            activityId,
+            paymentHash
+        );
+        if (
+            !activity ||
+            !NostrConnectUtils.canReleasePayInvoiceHold(activity)
+        ) {
+            return false;
+        }
+        activity.isHoldReleased = true;
+        this.scheduleMaxBudgetRefresh();
+        this.findAndUpdateConnection(connection);
+        return true;
+    };
+
     public refreshActivityInvoiceForNavigation = async (
         activity: ConnectionActivity
     ): Promise<Invoice | CashuInvoice | undefined> => {
