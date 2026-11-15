@@ -21,6 +21,7 @@ import LightningSvg from '../../components/SVG/LightningSvg';
 import EcashSvg from '../../components/SVG/EcashSvg';
 
 import { nodeInfoStore, settingsStore } from '../../stores/Stores';
+import { BrantaVerification } from '../../stores/BrantaStore';
 
 interface PaymentMethodListProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -33,6 +34,7 @@ interface PaymentMethodListProps {
     offer?: string;
     clinkNoffer?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
+    brantaVerification?: BrantaVerification | null;
     lightningBalance?: number | string;
     lightningBalanceLabel?: string;
     // Balance the lightning rows are judged against, when it differs from the
@@ -202,7 +204,8 @@ const SwipeableRow = ({
     lightningAddress,
     offer,
     clinkNoffer,
-    lnurlParams
+    lnurlParams,
+    brantaVerification
 }: {
     item: DataRow;
     index: number;
@@ -215,6 +218,7 @@ const SwipeableRow = ({
     offer?: string;
     clinkNoffer?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
+    brantaVerification?: BrantaVerification | null;
 }) => {
     const insufficient = isRowInsufficient(item);
     const rowDisabled = item.disabled || insufficient;
@@ -226,6 +230,7 @@ const SwipeableRow = ({
                 locked={true}
                 lnurlParams={lnurlParams}
                 disabled={rowDisabled}
+                brantaVerification={brantaVerification}
             >
                 <Row item={item} />
             </LightningSwipeableRow>
@@ -301,6 +306,7 @@ const SwipeableRow = ({
                 hidden={item.hidden}
                 disabled={rowDisabled}
                 account={item.account}
+                brantaVerification={brantaVerification}
             >
                 <Row item={item} />
             </OnchainSwipeableRow>
@@ -480,7 +486,8 @@ export default class PaymentMethodList extends Component<
             lightningAddress,
             offer,
             clinkNoffer,
-            lnurlParams
+            lnurlParams,
+            brantaVerification
         } = this.props;
         const satAmountNum =
             satAmount !== undefined && !isNaN(Number(satAmount))
@@ -509,6 +516,7 @@ export default class PaymentMethodList extends Component<
                             offer={offer}
                             clinkNoffer={clinkNoffer}
                             lnurlParams={lnurlParams}
+                            brantaVerification={brantaVerification}
                         />
                     )}
                     keyExtractor={(item) =>

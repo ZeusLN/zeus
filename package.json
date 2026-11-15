@@ -11,13 +11,14 @@
       "<rootDir>/utils/BigNumberConfig.ts"
     ],
     "moduleNameMapper": {
-      "^@react-native/assets-registry/registry$": "react-native/src/asset-registry"
+      "^@react-native/assets-registry/registry$": "react-native/src/asset-registry",
+      "^@branta-ops/branta$": "<rootDir>/node_modules/@branta-ops/branta/dist/index.js"
     },
     "watchPathIgnorePatterns": [
       "<rootDir>/node_modules"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|@react-navigation|dateformat|nostr-tools|@noble|@scure|uuid|uint8array-tools|query-string|decode-uri-component|filter-obj|split-on-first|@react-native-vector-icons)/)"
+      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|@react-navigation|dateformat|nostr-tools|@branta-ops|@nostr|@noble|@scure|uuid|uint8array-tools|query-string|decode-uri-component|filter-obj|split-on-first|@react-native-vector-icons)/)"
     ],
     "testPathIgnorePatterns": [
       "zeus_modules"
@@ -58,10 +59,12 @@
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "1.2.0",
+    "@branta-ops/branta": "4.3.0",
     "@getalby/sdk": "9.0.0",
     "@keystonehq/bc-ur-registry": "0.8.1",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",
     "@ngraveio/bc-ur": "1.1.13",
+    "@noble/ciphers": "0.5.3",
     "@noble/curves": "2.4.0",
     "@noble/hashes": "2.4.0",
     "@noble/secp256k1": "1.6.3",
