@@ -30,6 +30,10 @@ import BackendUtils from '../../utils/BackendUtils';
 
 import MessageSignStore from '../../stores/MessageSignStore';
 
+// The Bitcoin genesis block headline, a historical quote that must stay in English.
+const GENESIS_BLOCK_HEADLINE =
+    'The Times 03/Jan/2009 Chancellor on brink of second bailout for banks';
+
 interface SignVerifyMessageProps {
     navigation: NativeStackNavigationProp<any, any>;
     route: RouteProp<any, any>;
@@ -879,9 +883,7 @@ export default class SignVerifyMessage extends React.Component<
                                     )}
                                 </Text>
                                 <TextInput
-                                    placeholder={localeString(
-                                        'views.Settings.SignMessage.placeHolder'
-                                    )}
+                                    placeholder={GENESIS_BLOCK_HEADLINE}
                                     value={messageToSign}
                                     onChangeText={(text: string) => {
                                         this.handleTextInputChange(
@@ -955,9 +957,7 @@ export default class SignVerifyMessage extends React.Component<
                                     )}
                                 </Text>
                                 <TextInput
-                                    placeholder={localeString(
-                                        'views.Settings.SignMessage.placeHolder'
-                                    )}
+                                    placeholder={GENESIS_BLOCK_HEADLINE}
                                     value={messageToVerify}
                                     onChangeText={(text: string) => {
                                         this.handleTextInputChange(
