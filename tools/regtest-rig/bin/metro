@@ -31,6 +31,8 @@ while [ $# -gt 0 ]; do
         *) [ "$cmd" = check ] && break; die "unknown arg $1" ;;
     esac
 done
+# C:/... on Windows: node reads /c/... as C:\c\...
+DIR="$(host_path "$DIR")"
 
 case "$cmd" in
     start)
@@ -38,12 +40,13 @@ case "$cmd" in
         if proc_running metro; then
             log "metro already running for $(cat "$STATE/metro.dir" 2>/dev/null)"; exit 0
         fi
-        lsof -nP -iTCP:"$METRO_PORT" -sTCP:LISTEN >/dev/null 2>&1 && die "port $METRO_PORT already in use"
+        if port_listening "$METRO_PORT"; then die "port $METRO_PORT already in use"; fi
         echo "$DIR" >"$STATE/metro.dir"
         cat >"$STATE/metro.config.js" <<EOF
 const fs = require('fs');
 const path = require('path');
-const root = $(printf "%s" "$DIR" | jq -Rs .);
+// path.resolve: on Windows Metro needs C:\\..., not C:/...
+const root = path.resolve($(printf "%s" "$DIR" | jq -Rs .));
 const base = require(path.join(root, 'metro.config.js'));
 const nmLink = path.join(root, 'node_modules');
 const nm = fs.realpathSync(nmLink);
@@ -59,8 +62,9 @@ module.exports = {
     }
 };
 EOF
-        # start_proc needs the cwd to be the checkout
-        ( cd "$DIR" && start_proc metro node "$DIR/node_modules/.bin/react-native" start \
+        # start_proc needs the cwd to be the checkout. cli.js is the
+        # react-native bin; on Windows .bin/react-native is a sh script.
+        ( cd "$DIR" && start_proc metro node "$DIR/node_modules/react-native/cli.js" start \
             --port "$METRO_PORT" --config "$STATE/metro.config.js" ${RESET[@]+"${RESET[@]}"} )
         wait_until 90 curl -fs "localhost:$METRO_PORT/status" || die "metro did not come up; see $STATE/logs/metro.log"
         log "metro up on :$METRO_PORT serving $DIR" ;;

@@ -28,7 +28,8 @@ is one env file; all state for a rig lives in `state/<RIG_NAME>/`
 - Node in the repo's `engines` range (`^22.13.0 || ^24.3.0 || >= 26.0.0`)
   and `yarn install` done in the checkout Metro serves. The host helpers load
   `ws`, `bech32` and `@getalby/sdk` from that checkout's `node_modules`.
-- `jq`, `xxd`, `openssl`, `curl`, `lsof`.
+- `jq`, `xxd`, `openssl`, `curl`, and `lsof` or `netstat` for the port
+  checks.
 - A Zeus debug APK (`android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk`
   after `cd android && ./gradlew assembleDebug`).
 
@@ -36,6 +37,25 @@ macOS notes: the scripts are written for macOS and its BSD userland.
 `bin/shot` uses `sips` for the preview image (skipped if missing), and the
 quickstart's `cp -cR` is an APFS clone. Nothing else depends on GNU-only
 flags, but Linux is not tested.
+
+Windows notes (Git Bash with Docker Desktop, not yet verified on this
+branch): `env.sh` detects Git Bash / MSYS2 from `uname -s` and then
+- adds the container and device path prefixes the scripts pass (`/CN=`,
+  `/data`, `/home`, `/tls`, `/sdcard`, `--tlscertpath=`, `--macaroonpath=`)
+  to `MSYS2_ARG_CONV_EXCL`, so MSYS does not rewrite them into Windows
+  paths;
+- turns `RIG_DIR`, `ZEUS_DIR`, the state directory and `bin/metro --dir`
+  into `C:/...` form with `cygpath -m`, because node reads `/c/...` as
+  `C:\c\...`;
+- uses `avdmanager.bat`, and defaults `ANDROID_HOME` to
+  `%LOCALAPPDATA%/Android/Sdk`;
+- stops host processes with `taskkill /T`, since Git Bash has no `pkill`.
+
+The port checks use `netstat` when `lsof` is missing. On Windows a refused
+connection to localhost takes about 2 s, so a `wait_until` on a service
+that never comes up takes about 3 times its try count in seconds. Set
+`AVD_IMAGE` to an x86_64 image; `bin/avd install-ca` needs a `google_apis`
+image there too.
 
 ## Relationship to the app code
 

@@ -3,8 +3,26 @@
 # file and exports every derived setting. Pick the file with RIG_ENV;
 # without it, $RIG_DIR/.env is used when present, else the defaults below.
 
-RIG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export RIG_DIR
+# Windows (Git Bash / MSYS2): MSYS rewrites arguments that start with / into
+# Windows paths before it runs a native program (docker, openssl, adb, node).
+# That breaks container and device paths, so they are excluded below. Host
+# paths go the other way: node and Metro read /c/Users/x as C:\c\Users\x,
+# so host_path turns them into C:/Users/x, which both bash and native
+# programs accept.
+case "$(uname -s)" in
+    MINGW* | MSYS*) RIG_WINDOWS=1 ;;
+    *) RIG_WINDOWS=0 ;;
+esac
+host_path() {
+    if [ "$RIG_WINDOWS" = 1 ]; then cygpath -m "$1"; else printf '%s\n' "$1"; fi
+}
+if [ "$RIG_WINDOWS" = 1 ]; then
+    MSYS2_ARG_CONV_EXCL="${MSYS2_ARG_CONV_EXCL:+$MSYS2_ARG_CONV_EXCL;}/CN=;/data;/home;/tls;/sdcard;--tlscertpath=;--macaroonpath="
+    export MSYS2_ARG_CONV_EXCL
+fi
+
+RIG_DIR="$(host_path "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+export RIG_DIR RIG_WINDOWS
 
 if [ -n "${RIG_ENV:-}" ]; then
     [ -f "$RIG_ENV" ] || { echo "RIG_ENV=$RIG_ENV not found" >&2; exit 1; }
@@ -48,19 +66,29 @@ unset -f p
 : "${AVD_DEVICE:=pixel_7}"
 # Default: the Zeus checkout this rig lives in (tools/regtest-rig/../..).
 : "${ZEUS_DIR:=$(cd "$RIG_DIR/../.." && pwd)}"
+ZEUS_DIR="$(host_path "$ZEUS_DIR")"
 : "${APK:=}"
 : "${PROFILES:=}"
 # Android SDK: ANDROID_HOME, else ANDROID_SDK_ROOT, else the Android Studio
-# default on macOS.
-: "${ANDROID_HOME:=${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
+# default (macOS, or %LOCALAPPDATA% on Windows).
+if [ "$RIG_WINDOWS" = 1 ]; then
+    : "${ANDROID_HOME:=${ANDROID_SDK_ROOT:-$(host_path "${LOCALAPPDATA:-$HOME/AppData/Local}")/Android/Sdk}}"
+else
+    : "${ANDROID_HOME:=${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
+fi
 
 # RIG_STATE overrides the state directory (rig.test.js uses a temp dir)
-STATE="${RIG_STATE:-$RIG_DIR/state/$RIG_NAME}"
+STATE="$(host_path "${RIG_STATE:-$RIG_DIR/state/$RIG_NAME}")"
 mkdir -p "$STATE/logs" "$STATE/run"
 
 ADB="$ANDROID_HOME/platform-tools/adb"
 EMULATOR="$ANDROID_HOME/emulator/emulator"
 AVDMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+# The Windows SDK ships avdmanager.bat, which bash does not find without
+# the extension (adb.exe and emulator.exe it does).
+if [ "$RIG_WINDOWS" = 1 ] && [ -f "$AVDMANAGER.bat" ]; then
+    AVDMANAGER="$AVDMANAGER.bat"
+fi
 # Private adb server and fixed serial: adb/emulator read these from the env.
 ANDROID_ADB_SERVER_PORT="$ADB_SERVER_PORT"
 ANDROID_SERIAL="emulator-$EMU_PORT"
