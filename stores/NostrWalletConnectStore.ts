@@ -2614,14 +2614,16 @@ export default class NostrWalletConnectStore {
         }
     }
 
-    // loadConnections replaces the stored connection objects without
-    // resubscribing, and runs on every focus of the connections list. A
-    // handler that kept the object it was subscribed with would read a
-    // stale budget, and its next write would put that object back over the
-    // stored one, dropping every debit made since the reload. Handlers and
-    // the activity writers that run after an await use this to get the
-    // stored connection with the same id. If there is none, `connection`
-    // is returned, and the request gate or payRequestRejection rejects it.
+    // loadConnections keeps the object of a connection that is already in
+    // memory, so this normally returns the object it is given. A load that
+    // fails, or that runs while the wallet identity is unknown, empties
+    // the list, and the next load then builds new objects without
+    // resubscribing. A handler that kept the object it was subscribed
+    // with would read a stale budget and debit an object that is never
+    // saved. Handlers and the activity writers that run after an await
+    // use this to get the stored connection with the same id. If there is
+    // none, `connection` is returned, and the request gate or
+    // payRequestRejection rejects it.
     private storedConnection(connection: NWCConnection): NWCConnection {
         const { connection: stored } = this.getConnection({
             connectionId: connection.id
@@ -2666,11 +2668,16 @@ export default class NostrWalletConnectStore {
     // for its admitted requests to finish, so a payment that was queued
     // when the user deleted the connection or removed its pay permission
     // would still be sent. The stored connection with the same id must
-    // also still have the same client pubkey, the current wallet and the
-    // pay_invoice permission. It is compared by these rather than by
-    // object, since loadConnections replaces the stored objects on every
-    // focus of the connections list; callers then use the stored one,
-    // whose budget is debited and saved.
+    // also still have the current wallet and the pay_invoice permission.
+    //
+    // The client pubkey comparison is a safeguard. loadConnections keeps
+    // the objects in memory, so `stored` is normally `connection` itself,
+    // and a relay change, the only thing that gives a connection a new
+    // pubkey, is refused by its pending 'rotate'. The pubkeys can only
+    // differ when the list was emptied and built again from storage while
+    // the request waited (see storedConnection), and the stored record
+    // has another pubkey. Callers then use the stored connection, whose
+    // budget is debited and saved.
     private payRequestRejection(
         isCurrent: () => boolean,
         connection: NWCConnection

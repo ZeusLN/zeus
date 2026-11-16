@@ -2850,13 +2850,15 @@ describe('NostrWalletConnectStore payment notifications', () => {
             };
 
             it('keeps the settlement from getActivities and publishes payment_received once', async () => {
-                const { store, connection, reloaded, relay } =
+                const { store, connection, reloaded, relay, result } =
                     await settleDuringReload((store, connection) =>
                         store.getActivities(connection.id)
                     );
 
                 expect(reloaded).toBe(connection);
                 expect(reloaded.activity[0].status).toBe('success');
+                // the rows the Activity screen shows
+                expect((result as any).activity[0].status).toBe('success');
 
                 await store.getActivities(connection.id);
                 await jest.advanceTimersByTimeAsync(1000);
@@ -6876,13 +6878,17 @@ describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
         // Pays a second invoice and reloads the connections while the
         // request waits on `hold`. `editStored` then changes the stored
         // connection, as updateConnection does, and may return the edit to
-        // wait for once the request has settled.
+        // wait for once the request has settled. `reload` replaces the
+        // plain reload.
         const reloadWhilePaying = async (
             hold: (harness: any) => jest.Mock,
             editStored: (
                 stored: NWCConnection,
                 store: NostrWalletConnectStore
-            ) => Promise<unknown> | void = () => undefined
+            ) => Promise<unknown> | void = () => undefined,
+            reload: (store: NostrWalletConnectStore) => Promise<unknown> = (
+                store
+            ) => store.loadConnections()
         ) => {
             const harness = await payAfterReload(['pay_invoice']);
             const { store, subscribed } = harness;
@@ -6913,7 +6919,7 @@ describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
                 invoice: 'lnbc1second-payment'
             });
             await settle(waiting.entered);
-            await store.loadConnections();
+            await reload(store);
             const [reloadedAgain] = store.connections;
             const editing = runInAction(() => editStored(reloadedAgain, store));
             waiting.release(undefined);
@@ -6976,6 +6982,41 @@ describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
             expect(sends).toBe(0);
             expect(reloadedAgain.relayUrl).toBe(NEW_RELAY);
             expect(reloadedAgain.totalSpendSats).toBe(PAID_SATS);
+        });
+
+        // A load that fails empties the list, and the next load builds
+        // the objects again from storage. The request then holds an
+        // object the store no longer has, and is checked against the
+        // stored one by id and client pubkey
+        it('does not pay when the connections are built again from a record with another client pubkey', async () => {
+            silence('error');
+            const { paid, reloadedAgain, subscribed, sends } =
+                await reloadWhilePaying(
+                    ({ balanceStore }) => balanceStore.getLightningBalance,
+                    undefined,
+                    async (store) => {
+                        storedItems.set(
+                            NWC_CONNECTIONS_KEY,
+                            JSON.stringify(
+                                persistedConnections().map((stored) => ({
+                                    ...stored,
+                                    pubkey: hex64('f')
+                                }))
+                            )
+                        );
+                        (Storage.getItem as jest.Mock).mockRejectedValueOnce(
+                            new Error('storage read failed')
+                        );
+                        await store.loadConnections();
+                        expect(store.connections.length).toBe(0);
+                        await store.loadConnections();
+                    }
+                );
+
+            expect(reloadedAgain === subscribed).toBe(false);
+            expect(reloadedAgain.pubkey).toBe(hex64('f'));
+            expect(paid).toEqual(UNAUTHORIZED);
+            expect(sends).toBe(0);
         });
 
         it('does not pay when the reloaded connection belongs to another node', async () => {
@@ -8898,6 +8939,44 @@ describe('NostrWalletConnectStore wallet deletion', () => {
             expect(storedClientKeys()[B_CONNECTION.pubkey]).toBe(B_KEY);
             expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
         });
+
+        // A wallet switch does not clear the loaded connections, so the
+        // next load finds their objects in memory and keeps them
+        it.each([
+            ['no wallet config id', { implementation: 'lnd' }],
+            ['the id of another config for the same node', WALLET_B]
+        ])(
+            'stamps a connection kept in memory whose stored record has %s, and saves it',
+            async (_case, loadedWith) => {
+                storedItems.set(
+                    NWC_CONNECTIONS_KEY,
+                    JSON.stringify([
+                        connectionData({
+                            ...B_CONNECTION,
+                            nodePubkey: NODE_PUBKEY,
+                            walletConfigId:
+                                NostrConnectUtils.getWalletConfigId(loadedWith)
+                        })
+                    ])
+                );
+                const settingsStore: any = { ...loadedWith, settings: {} };
+                const { store } = createStore({ settingsStore });
+                await store.loadConnections();
+                await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+                const [kept] = store.connections;
+                const idA = NostrConnectUtils.getWalletConfigId(WALLET_A);
+                expect(kept.walletConfigId).not.toBe(idA);
+
+                // Wallet A, which reaches the same node, becomes current
+                Object.assign(settingsStore, WALLET_A);
+                await store.loadConnections();
+
+                expect(store.connections[0] === kept).toBe(true);
+                expect(kept.walletConfigId).toBe(idA);
+                await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+                expect(persistedConnections()[0].walletConfigId).toBe(idA);
+            }
+        );
 
         it('leaves connections that were never loaded with a wallet config id', async () => {
             storedItems.set(
