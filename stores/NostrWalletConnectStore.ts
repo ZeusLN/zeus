@@ -653,7 +653,10 @@ export default class NostrWalletConnectStore {
                 console.log('NWC: resetting service');
                 this.cancelScheduledMaxBudgetRefresh();
                 this.maxBudgetRefreshNeeded = false;
-                await this.flushScheduledSave();
+                // no retry: after a wallet switch it would save this
+                // wallet's connections as the next wallet's, removing that
+                // wallet's stored connections
+                await this.flushScheduledSave({ retry: false });
                 if (Platform.OS === 'ios') {
                     this.teardownIOSAppStateMonitor();
                     await this.stopIOSAudioKeepAlive();
@@ -1450,13 +1453,16 @@ export default class NostrWalletConnectStore {
             );
         }, SAVE_CONNECTIONS_DEBOUNCE_MS);
     }
-    private async flushScheduledSave(): Promise<void> {
+    private async flushScheduledSave({ retry = true } = {}): Promise<void> {
         if (this._scheduledSave === null) return;
         this.cancelScheduledSave();
         try {
             await this.saveConnections();
         } catch (err) {
             console.error('NWC: flushScheduledSave failed:', err);
+            // the changes are still only in memory, so write them on the
+            // timer
+            if (retry) this.scheduleSave();
         }
     }
 

@@ -11814,4 +11814,86 @@ describe('NostrWalletConnectStore scheduled save', () => {
 
         expect(storedConnection().totalSpendSats).toBe(10_000);
     });
+
+    describe('when a write fails', () => {
+        const finalize = (store: NostrWalletConnectStore) =>
+            (store as any).finalizePayment({
+                rawInvoice: 'lnbc1scheduledsave',
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                decoded: null,
+                connection: store.connections[0],
+                amountSats: 10_000
+            });
+
+        beforeEach(() => silence('error'));
+
+        it('writes a settled payment again on the timer', async () => {
+            const { store } = await buildStore();
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+
+            await finalize(store);
+            expect(storedConnection().totalSpendSats).toBe(0);
+
+            await jest.advanceTimersByTimeAsync(500);
+            expect(storedConnection().totalSpendSats).toBe(10_000);
+        });
+
+        it('writes a pending hold again on the timer', async () => {
+            const { store } = await buildStore();
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+
+            await (store as any).recordPendingPayment({
+                rawInvoice: 'lnbc1scheduledsave',
+                connection: store.connections[0],
+                amountSats: 10_000,
+                payment_source: 'lightning'
+            });
+            expect(storedConnection().activity).toEqual([]);
+
+            await jest.advanceTimersByTimeAsync(500);
+            expect(storedConnection().activity[0].status).toBe('pending');
+        });
+
+        it('writes a settled payment again before a reload', async () => {
+            const { store } = await buildStore();
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+            await finalize(store);
+
+            await store.loadConnections();
+
+            expect(store.connections[0].totalSpendSats).toBe(10_000);
+            expect(storedConnection().totalSpendSats).toBe(10_000);
+        });
+
+        // A write after the switch would save the first wallet's
+        // connections as the second wallet's and drop conn-b from storage
+        it('does not write again after a reset and a wallet switch', async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storedItems.set(
+                NWC_CONNECTIONS_KEY,
+                JSON.stringify([
+                    ...persistedConnections(),
+                    connectionData({
+                        id: 'conn-b',
+                        pubkey: hex64('b'),
+                        nodePubkey: 'node-b'
+                    })
+                ])
+            );
+            debit(store, 10_000);
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+
+            await store.reset(true);
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+            await jest.advanceTimersByTimeAsync(500);
+            await store.loadConnections();
+
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
+            expect(persistedConnections().map((c) => c.id)).toEqual([
+                'conn-1',
+                'conn-b'
+            ]);
+        });
+    });
 });
