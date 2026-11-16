@@ -59,6 +59,10 @@ jest.mock('./SleepUtils', () => ({
 jest.mock('../stores/ChannelBackupStore', () => ({
     BACKUPS_HOST: 'https://backups.example.com'
 }));
+const mockLoginRequired = jest.fn().mockReturnValue(false);
+jest.mock('../stores/Stores', () => ({
+    settingsStore: { loginRequired: () => mockLoginRequired() }
+}));
 jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(undefined),
     getItem: jest.fn().mockResolvedValue(null)
@@ -69,8 +73,9 @@ jest.mock('react-native', () => ({
     Platform: { OS: 'android', select: (opts: any) => opts.android }
 }));
 
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import Share from 'react-native-share';
 import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import { LNURLAUTH_CANONICAL_PHRASE } from './LnurlAuthUtils';
@@ -83,9 +88,12 @@ import {
     handleExportChannels,
     importChannelDb,
     uploadChannelBackupToOlympus,
+    exportChannelDb,
     restoreChannelBackupFromOlympus
 } from './ChannelMigrationUtils';
 import { sourceMethods } from '../backends/lncTestUtils';
+
+import Storage from '../storage';
 
 const mockFetch = ReactNativeBlobUtil.fetch as jest.Mock;
 const mockSignNodePubkey = signMessageNodePubkey as jest.Mock;
@@ -478,6 +486,90 @@ describe('ChannelMigrationUtils', () => {
             await expect(
                 importChannelDb('/path/to/backup.db', 'backup.db', 'lnd', false)
             ).rejects.toThrow();
+        });
+    });
+
+    describe('exportChannelDb and the app lock', () => {
+        const STAGED = expect.stringMatching(/\/zeus-lnd-mainnet-\d+\.zip$/);
+
+        // stopping lnd and zipping take a while; the app can lock meanwhile
+        const locksWhileZipping = async () => {
+            mockLoginRequired.mockReturnValue(true);
+        };
+
+        beforeEach(() => {
+            Platform.OS = 'ios';
+            (Share.open as jest.Mock).mockResolvedValue({ success: true });
+        });
+
+        afterEach(() => {
+            mockLoginRequired.mockReturnValue(false);
+            Platform.OS = 'android';
+        });
+
+        it('opens the share sheet while the app is unlocked', async () => {
+            await exportChannelDb('lnd', false);
+
+            expect(Share.open).toHaveBeenCalledTimes(1);
+            expect(Storage.setItem).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not open the share sheet if the app locked meanwhile', async () => {
+            mockZipFolder.mockImplementationOnce(locksWhileZipping);
+            const setStatus = jest.fn();
+
+            await exportChannelDb('lnd', false, setStatus);
+
+            expect(Share.open).not.toHaveBeenCalled();
+            expect(mockUnlink).toHaveBeenCalledWith(STAGED);
+            expect(Storage.setItem).not.toHaveBeenCalled();
+            expect(setStatus).toHaveBeenLastCalledWith(null);
+            expect(Alert.alert).toHaveBeenCalledWith(
+                'views.Tools.migration.export.cancelled',
+                'views.Tools.migration.export.cancelled.text',
+                expect.anything(),
+                { cancelable: false }
+            );
+        });
+
+        it('shows the cancellation notice when the staged file cannot be deleted', async () => {
+            // reject the delete that follows the zip, not the one of a
+            // leftover archive before it
+            mockZipFolder.mockImplementationOnce(async () => {
+                await locksWhileZipping();
+                mockUnlink.mockRejectedValueOnce(new Error('ENOENT'));
+            });
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => undefined);
+            const setStatus = jest.fn();
+
+            await exportChannelDb('lnd', false, setStatus);
+
+            expect(mockUnlink).toHaveBeenCalledWith(STAGED);
+            expect(Share.open).not.toHaveBeenCalled();
+            expect(setStatus).toHaveBeenLastCalledWith(null);
+            expect(Alert.alert).toHaveBeenCalledTimes(1);
+            expect(Alert.alert).toHaveBeenCalledWith(
+                'views.Tools.migration.export.cancelled',
+                'views.Tools.migration.export.cancelled.text',
+                expect.anything(),
+                { cancelable: false }
+            );
+            consoleError.mockRestore();
+        });
+
+        it('still saves to Downloads on Android', async () => {
+            Platform.OS = 'android';
+
+            await exportChannelDb('lnd', false);
+
+            expect(mockCopyFile).toHaveBeenCalledWith(
+                STAGED,
+                expect.stringMatching(/^\/downloads\/zeus-lnd-mainnet-/)
+            );
+            expect(Share.open).not.toHaveBeenCalled();
+            expect(Storage.setItem).toHaveBeenCalledTimes(1);
         });
     });
 

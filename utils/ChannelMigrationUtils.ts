@@ -16,6 +16,7 @@ import { sleep } from './SleepUtils';
 import { zipFolder, unzipFile, encryptFile, decryptFile } from './ZipUtils';
 
 import { BACKUPS_HOST } from '../stores/ChannelBackupStore';
+import { settingsStore } from '../stores/Stores';
 
 import Storage from '../storage';
 
@@ -761,6 +762,34 @@ export const exportChannelDb = async (
             await RNFS.copyFile(stagingPath, downloadPath);
             await RNFS.unlink(stagingPath);
             await finishExport();
+            return;
+        }
+
+        // Stopping lnd and zipping take long enough for the user to leave
+        // the app and for it to lock in the meantime (or to be suspended
+        // and only get here once reopened). The share sheet is presented on
+        // top of the Lockscreen, so the archive must not be offered to a
+        // locked app.
+        if (settingsStore.loginRequired()) {
+            // A failed delete must not replace the cancellation notice
+            // with the generic export error
+            try {
+                await RNFS.unlink(stagingPath);
+            } catch (e) {
+                console.error('Failed to delete the staged export:', e);
+            }
+            if (setStatus) setStatus(null);
+            Alert.alert(
+                localeString('views.Tools.migration.export.cancelled'),
+                localeString('views.Tools.migration.export.cancelled.text'),
+                [
+                    {
+                        text: localeString('views.Wallet.restart'),
+                        onPress: () => RNRestart.Restart(IN_APP_RESTART)
+                    }
+                ],
+                { cancelable: false }
+            );
             return;
         }
 
