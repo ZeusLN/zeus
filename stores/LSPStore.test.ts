@@ -41,6 +41,7 @@ import { observable } from 'mobx';
 
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
+import * as LocaleUtils from '../utils/LocaleUtils';
 import LndMobileInjection from '../lndmobile/LndMobileInjection';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 
@@ -321,6 +322,61 @@ describe('LSPStore custom-message request timeouts', () => {
             );
             expect(store.error).toBe(false);
             expect(store.error_msg).toBe('');
+        });
+
+        describe('when the language changed since the timeout', () => {
+            let localeSpy: jest.SpyInstance;
+
+            // the timeout text was set in the old language
+            const changeLanguage = () => {
+                localeSpy = jest
+                    .spyOn(LocaleUtils, 'localeString')
+                    .mockImplementation((key: string) => `translated ${key}`);
+            };
+
+            afterEach(() => localeSpy.mockRestore());
+
+            it('a late get_info reply still clears the timeout error', () => {
+                const store = makeStore();
+                store.lsps1GetInfoCustomMessage();
+                const id = store.getInfoId;
+                jest.advanceTimersByTime(TIMEOUT_MS);
+                expect(store.error_msg).toBe('views.LSPS1.timeoutError');
+                changeLanguage();
+
+                reply(store, { id, result: { min_channel_size: 1 } });
+
+                expect(store.error).toBe(false);
+                expect(store.error_msg).toBe('');
+            });
+
+            it('a late create_order reply still clears the timeout error', () => {
+                const store = makeStore();
+                createOrder(store);
+                const id = store.createOrderId;
+                jest.advanceTimersByTime(TIMEOUT_MS);
+                expect(store.error_msg).toBe('views.LSPS1.timeoutError');
+                changeLanguage();
+
+                reply(store, { id, result: { order_id: 'late' } });
+
+                expect(store.error).toBe(false);
+                expect(store.error_msg).toBe('');
+            });
+
+            it('a late lsps7 create_order reply still clears the timeout error', async () => {
+                const store = makeStore();
+                store.lsps7CreateOrderCustomMessage({});
+                const id = store.createExtensionOrderId;
+                await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+                expect(store.error_msg).toBe('views.LSPS1.timeoutError');
+                changeLanguage();
+
+                reply(store, { id, result: { order_id: 'late7' } });
+
+                expect(store.error).toBe(false);
+                expect(store.error_msg).toBe('');
+            });
         });
 
         it('a late create_order error reply replaces the timeout error', () => {

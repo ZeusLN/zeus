@@ -105,6 +105,9 @@ export default class LSPStore {
     // that error so it is not shown over the order or info. Another error
     // set since then is left alone.
     private timedOutRequestId = '';
+    // The error text that timeout set. Kept so the check for "still shown"
+    // does not depend on the language being the same when the reply lands.
+    private timedOutErrorMsg = '';
 
     // Free orders have no payment step, so they never pass through the LSPPaymentAwait polling screen.
     // Without this poll the post-creation view would stay on the
@@ -1036,9 +1039,7 @@ export default class LSPStore {
     private clearTimeoutError = (requestId: string) => {
         if (!requestId || this.timedOutRequestId !== requestId) return;
         this.timedOutRequestId = '';
-        if (this.error_msg !== localeString('views.LSPS1.timeoutError')) {
-            return;
-        }
+        if (this.error_msg !== this.timedOutErrorMsg) return;
         this.error = false;
         this.error_msg = '';
     };
@@ -1207,6 +1208,7 @@ export default class LSPStore {
                             'views.LSPS1.timeoutError'
                         );
                         this.timedOutRequestId = requestId;
+                        this.timedOutErrorMsg = this.error_msg;
                         this.loadingLSPS1 = false;
                     });
                 }
@@ -1342,6 +1344,7 @@ export default class LSPStore {
                             'views.LSPS1.timeoutError'
                         );
                         this.timedOutRequestId = requestId;
+                        this.timedOutErrorMsg = this.error_msg;
                         this.loadingLSPS1 = false;
                     });
                 }
@@ -1783,6 +1786,7 @@ export default class LSPStore {
                             'views.LSPS1.timeoutError'
                         );
                         this.timedOutRequestId = requestId;
+                        this.timedOutErrorMsg = this.error_msg;
                         this.loadingLSPS7 = false;
                     });
                 }
