@@ -1035,6 +1035,92 @@ describe('CashuStore offline token claims', () => {
         expect(store.loading).toBe(false);
     });
 
+    it('refuses a plain receive from a mint that is not configured while offline', async () => {
+        const store = storeWith(true);
+        const token = tokenFrom(unknownMint);
+
+        await expect(
+            store.claimToken(token.encodedToken!, token)
+        ).resolves.toEqual({
+            success: false,
+            errorMessage: 'cashu.offlinePending.mintNotAdded'
+        });
+        expect(store.offlinePendingTokens).toHaveLength(0);
+        expect(store.loading).toBe(false);
+    });
+
+    it('queues a token whose mint is configured with another trailing slash while offline', async () => {
+        const store = storeWith(true);
+        store.mintUrls = [`${knownMint}/`];
+        const token = tokenFrom(knownMint);
+        const tokenWithSlash = tokenFrom(`${knownMint}//`);
+
+        await store.claimToken(token.encodedToken!, token);
+        await store.claimToken(tokenWithSlash.encodedToken!, tokenWithSlash);
+
+        expect(store.offlinePendingTokens).toHaveLength(2);
+    });
+
+    it('queues a token that names no mint while offline', async () => {
+        const store = storeWith(true);
+        const token = new CashuToken({
+            encodedToken: 'cashuA-no-mint',
+            value: 21
+        } as any);
+
+        await expect(
+            store.claimToken(token.encodedToken!, token)
+        ).resolves.toMatchObject({ success: true });
+        expect(store.offlinePendingTokens).toHaveLength(1);
+    });
+
+    it('sweeps a queued token whose mint is configured with another trailing slash', async () => {
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const store = storeWith(false);
+        store.cdkInitialized = true;
+        store.mintUrls = [`${knownMint}/`];
+        store.offlinePendingTokens = [
+            tokenFrom(knownMint),
+            tokenFrom(`${knownMint}//`)
+        ];
+        jest.spyOn(store as any, 'ensureMintAdded').mockResolvedValue(
+            undefined
+        );
+        const receiveTokenCDK = jest
+            .spyOn(store, 'receiveTokenCDK')
+            .mockResolvedValue(21);
+        jest.spyOn(store, 'syncCDKBalances').mockResolvedValue(undefined);
+
+        await store.sweepOfflinePendingTokens();
+
+        expect(receiveTokenCDK).toHaveBeenCalledTimes(2);
+        expect(store.offlinePendingTokens).toEqual([]);
+    });
+
+    it('sweeps a queued token that names no mint', async () => {
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const store = storeWith(false);
+        store.cdkInitialized = true;
+        store.offlinePendingTokens = [
+            new CashuToken({ encodedToken: 'cashuA-no-mint', value: 21 } as any)
+        ];
+        const receiveTokenCDK = jest
+            .spyOn(store, 'receiveTokenCDK')
+            .mockResolvedValue(21);
+        jest.spyOn(store, 'syncCDKBalances').mockResolvedValue(undefined);
+
+        await store.sweepOfflinePendingTokens();
+
+        expect(receiveTokenCDK).toHaveBeenCalledWith(
+            'cashuA-no-mint',
+            undefined,
+            undefined
+        );
+        expect(store.offlinePendingTokens).toEqual([]);
+    });
+
     it('only sweeps queued tokens whose mint is configured', async () => {
         jest.spyOn(console, 'log').mockImplementation(() => {});
         jest.spyOn(Alert, 'alert').mockImplementation(() => {});

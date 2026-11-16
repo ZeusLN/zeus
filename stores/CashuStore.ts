@@ -6564,6 +6564,23 @@ export default class CashuStore {
                     )
                 };
             }
+            // The sweep skips tokens whose mint is not configured, so one
+            // queued here would stay pending
+            if (
+                decoded.mint &&
+                !this.mintUrls.some(
+                    (url) =>
+                        this.normalizeMintUrl(url) ===
+                        this.normalizeMintUrl(decoded.mint)
+                )
+            ) {
+                return {
+                    success: false,
+                    errorMessage: localeString(
+                        'cashu.offlinePending.mintNotAdded'
+                    )
+                };
+            }
             return await this.claimTokenOffline(encodedToken, decoded);
         }
 
