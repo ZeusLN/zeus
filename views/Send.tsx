@@ -223,6 +223,22 @@ export default class Send extends React.Component<SendProps, SendState> {
                 contactName
             };
 
+            // Whatever was entered here was entered for the request under
+            // review. When another one takes its place, start over and reset
+            // the slider, so none of it ends up paid to the new destination.
+            if (
+                this.state.transactionType &&
+                this.state.destination &&
+                destination !== this.state.destination
+            ) {
+                stateUpdate.amount = '';
+                stateUpdate.satAmount = '0';
+                stateUpdate.fundMax = false;
+                stateUpdate.additionalOutputs = [];
+                stateUpdate.message = '';
+                stateUpdate.swipeButtonKey = this.state.swipeButtonKey + 1;
+            }
+
             if (satAmount) {
                 // must be the raw, unformatted value in the input's unit -
                 // AmountInput's `amount` prop is parsed back into sats, so a
@@ -235,6 +251,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                 );
                 stateUpdate.amount = amount;
                 stateUpdate.satAmount = satAmount;
+                // the request names its amount: send max would send the
+                // balance instead, while VerifyOnChain shows satAmount
+                stateUpdate.fundMax = false;
                 if (error) {
                     stateUpdate.fiatError = error;
                 }
