@@ -509,7 +509,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                         }}
                         keyExtractor={(_, index) => `mint-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
-                        ListFooterComponent={this.renderUnlistedMints}
+                        // An element, so that render() reads the balances
+                        // and this screen follows them
+                        ListFooterComponent={this.renderUnlistedMints()}
                         onEndReachedThreshold={50}
                     />
                 ) : (
