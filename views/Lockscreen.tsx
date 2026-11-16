@@ -368,6 +368,11 @@ export default class Lockscreen extends React.Component<
         // overlay.
         if (this.state.verifying) return;
 
+        // An empty password is not an attempt. verifySecret rejects it, so
+        // counting it would use up one of the attempts before the wipe on a
+        // submit with nothing entered. The PIN pad submits only a full PIN.
+        if (authMethod === 'passphrase' && passphraseAttempt === '') return;
+
         this.setState({
             error: false,
             attemptNotSaved: false,

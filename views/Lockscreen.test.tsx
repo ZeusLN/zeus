@@ -665,6 +665,69 @@ describe('Lockscreen with a passphrase', () => {
         expect(clearAllData).not.toHaveBeenCalled();
     });
 
+    // An empty submit, from the button or the keyboard, would otherwise use
+    // up one of the attempts before the wipe
+    it.each([
+        ['in plaintext', async () => ({ passphrase: PASSPHRASE })],
+        [
+            'stored as a verifier',
+            async () => ({
+                passphraseVerifier: await deriveVerifier(PASSPHRASE)
+            })
+        ]
+    ])('does not count an empty passphrase %s', async (_, makeSettings) => {
+        const saved: any = await makeSettings();
+        const updateSettings = makeUpdateSettings(saved);
+        const verify = jest.spyOn(LockVerifierUtils, 'verifySecret');
+        const { navigation, lockscreen } = await renderLockscreen(
+            updateSettings,
+            { settings: saved }
+        );
+
+        await submitPassphrase(lockscreen, '');
+
+        expect(verify).not.toHaveBeenCalled();
+        expect(updateSettings).not.toHaveBeenCalled();
+        expect(saved.authenticationAttempts).toBeUndefined();
+        expect(
+            screen.queryByText(/views\.Lockscreen\.incorrectPassword/)
+        ).toBeNull();
+        expect(navigation.pop).not.toHaveBeenCalled();
+        verify.mockRestore();
+    });
+
+    it('does not count an empty passphrase when deleting the password', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier(PASSPHRASE)
+        };
+        const updateSettings = makeUpdateSettings(saved);
+        const { navigation, lockscreen } = await renderLockscreen(
+            updateSettings,
+            { settings: saved, params: { deletePassword: true } }
+        );
+
+        await submitPassphrase(lockscreen, '');
+
+        expect(updateSettings).not.toHaveBeenCalled();
+        expect(saved.passphraseVerifier).toBeDefined();
+        expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+
+    it('counts the next wrong passphrase as the first attempt', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier(PASSPHRASE)
+        };
+        const { lockscreen } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        await submitPassphrase(lockscreen, '');
+        await submitPassphrase(lockscreen, 'wrong');
+
+        expect(saved.authenticationAttempts).toBe(1);
+    });
+
     it.each([
         [
             'in plaintext',
