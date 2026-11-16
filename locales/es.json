@@ -1812,6 +1812,7 @@
     "stores.ChannelsStore.openOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this channel was opened. Check your pending channels before opening another.",
     "stores.ChannelsStore.openStreamTimeout": "Your node did not start funding this channel in time, so ZEUS stopped the open before spending anything. You can try again.",
     "stores.ChannelBackupStore.invalidBackup": "The backup received from the server is not valid",
+    "stores.TransactionsStore.wholeSats": "Amount must be a whole number of sats",
     "stores.InvoicesStore.errorCreatingInvoice": "Error al crear Invoice",
     "stores.InvoicesStore.errorGeneratingAddress": "Error generando nueva dirección",
     "stores.InvoicesStore.zeroAmountLndhub": "La instancia de lndhub podría no admitir facturas de cantidad cero",
