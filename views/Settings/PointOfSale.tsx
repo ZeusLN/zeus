@@ -280,8 +280,11 @@ export default class PointOfSale extends React.Component<
                                             }
                                             // The toggle does not blur the
                                             // field, so hiding a focused token
-                                            // ends the edit and locks it
-                                            Keyboard.dismiss();
+                                            // ends the edit and locks it. The
+                                            // keyboard of another focused field
+                                            // stays open.
+                                            if (squareAccessTokenFocused)
+                                                Keyboard.dismiss();
                                             this.setState({
                                                 hidden: true,
                                                 squareAccessTokenFocused: false

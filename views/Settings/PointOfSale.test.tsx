@@ -193,16 +193,55 @@ describe('PointOfSale Square access token', () => {
         expect(input.props.secureTextEntry).toBe(true);
     });
 
-    it('dismisses the keyboard when the Square access token is hidden, not when it is shown', async () => {
+    it('leaves the keyboard open when a Square access token that is not focused is hidden', async () => {
         const dismiss = jest.spyOn(Keyboard, 'dismiss');
         await renderView();
         const toggle = screen.getByTestId('show-hide-toggle');
 
         await fireEvent.press(toggle);
+        await fireEvent.press(toggle);
+
+        const input = screen.getByDisplayValue(SQUARE_ACCESS_TOKEN);
+        expect(dismiss).not.toHaveBeenCalled();
+        expect(input.props.editable).toBe(false);
+        expect(input.props.secureTextEntry).toBe(true);
+
+        dismiss.mockRestore();
+    });
+
+    it('leaves the keyboard open when the Square access token lost focus before it is hidden', async () => {
+        const dismiss = jest.spyOn(Keyboard, 'dismiss');
+        await renderView();
+        const toggle = screen.getByTestId('show-hide-toggle');
+
+        await fireEvent.press(toggle);
+        await fireEvent(screen.getByDisplayValue(SQUARE_ACCESS_TOKEN), 'focus');
+        await fireEvent(screen.getByDisplayValue(SQUARE_ACCESS_TOKEN), 'blur');
+        await fireEvent.press(toggle);
+
+        expect(dismiss).not.toHaveBeenCalled();
+        expect(
+            screen.getByDisplayValue(SQUARE_ACCESS_TOKEN).props.editable
+        ).toBe(false);
+
+        dismiss.mockRestore();
+    });
+
+    it('dismisses the keyboard when a focused Square access token is hidden, not when it is shown', async () => {
+        const dismiss = jest.spyOn(Keyboard, 'dismiss');
+        await renderView();
+        const toggle = screen.getByTestId('show-hide-toggle');
+
+        await fireEvent.press(toggle);
+        await fireEvent(screen.getByDisplayValue(SQUARE_ACCESS_TOKEN), 'focus');
         expect(dismiss).not.toHaveBeenCalled();
 
         await fireEvent.press(toggle);
+
+        const input = screen.getByDisplayValue(SQUARE_ACCESS_TOKEN);
         expect(dismiss).toHaveBeenCalledTimes(1);
+        expect(input.props.editable).toBe(false);
+        expect(input.props.secureTextEntry).toBe(true);
 
         dismiss.mockRestore();
     });
