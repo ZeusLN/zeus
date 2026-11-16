@@ -61,7 +61,11 @@ jest.mock('../../components/SuccessErrorMessage', () => {
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: jest.fn((key: string) => `theme:${key}`)
 }));
-jest.mock('../../utils/LocaleUtils');
+// returns the key, followed by any substitutions
+jest.mock('../../utils/LocaleUtils', () => ({
+    localeString: (key: string, substitutions?: { [key: string]: string }) =>
+        substitutions ? `${key} ${JSON.stringify(substitutions)}` : key
+}));
 
 import CreateNWCLightningAddress from './CreateNWCLightningAddress';
 
@@ -73,6 +77,11 @@ const NWC_URL =
 
 const TEST_TITLE = 'views.Settings.LightningAddress.testConnectionString';
 const CONTINUE_TITLE = 'views.LightningAddress.NWC.continueUnchecked';
+const CREATE_TITLE = 'views.Settings.LightningAddress.create';
+const CHANGE_TITLE = 'views.Settings.LightningAddress.changeConnectionString';
+const SWITCH_TITLE = 'views.Settings.LightningAddress.switchToNWC';
+const TEST_SUCCESS = 'views.Settings.LightningAddress.connectionTestSuccess';
+const SCOPE_UNKNOWN = 'views.LightningAddress.NWC.scopeUnknown';
 
 const makeStore = () => ({
     loading: false,
@@ -82,11 +91,15 @@ const makeStore = () => ({
     update: jest.fn(() => Promise.resolve({ success: true }))
 });
 
-const renderView = async (store: any) => {
+const renderView = async (
+    store: any,
+    params: any = {},
+    navigation: any = { navigate: jest.fn(), popTo: jest.fn() }
+) => {
     const view = await render(
         <CreateNWCLightningAddress
-            navigation={{ navigate: jest.fn(), popTo: jest.fn() } as any}
-            route={{ params: {} } as any}
+            navigation={navigation}
+            route={{ params } as any}
             LightningAddressStore={store}
             SettingsStore={{} as any}
         />
@@ -120,7 +133,10 @@ describe('CreateNWCLightningAddress connection permission check', () => {
         expect(mockClose).toHaveBeenCalledTimes(1);
         expect(store.testNWCConnectionString).not.toHaveBeenCalled();
         expect(
-            screen.getByText('views.LightningAddress.NWC.scopeCanSpend')
+            screen.getByText(
+                'views.LightningAddress.NWC.scopeCanSpend ' +
+                    '{"methods":"pay_invoice, pay_keysend"}'
+            )
         ).toBeTruthy();
     });
 
@@ -177,7 +193,10 @@ describe('CreateNWCLightningAddress connection permission check', () => {
 
         expect(store.testNWCConnectionString).not.toHaveBeenCalled();
         expect(
-            screen.getByText('views.LightningAddress.NWC.scopeUnrecognized')
+            screen.getByText(
+                'views.LightningAddress.NWC.scopeUnrecognized ' +
+                    '{"methods":"sign_psbt"}'
+            )
         ).toBeTruthy();
 
         await press(CONTINUE_TITLE);
@@ -226,5 +245,64 @@ describe('CreateNWCLightningAddress connection permission check', () => {
 
         expect(mockGetInfo).toHaveBeenCalledTimes(2);
         expect(store.testNWCConnectionString).not.toHaveBeenCalled();
+    });
+
+    it('hides the warning and offers create once the server test passes', async () => {
+        mockGetInfo.mockRejectedValue(new Error('RESTRICTED'));
+        const store = makeStore();
+        const navigation = { navigate: jest.fn(), popTo: jest.fn() };
+        await renderView(store, {}, navigation);
+        await press(TEST_TITLE);
+        expect(screen.getByText(SCOPE_UNKNOWN)).toBeTruthy();
+
+        await press(CONTINUE_TITLE);
+        expect(await screen.findByText(TEST_SUCCESS)).toBeTruthy();
+        expect(screen.queryByText(SCOPE_UNKNOWN)).toBeNull();
+        expect(
+            screen.queryByRole('button', { name: CONTINUE_TITLE })
+        ).toBeNull();
+
+        await press(CREATE_TITLE);
+        expect(store.createNWC).toHaveBeenCalledWith(NWC_URL);
+        expect(store.update).not.toHaveBeenCalled();
+        await waitFor(() =>
+            expect(navigation.popTo).toHaveBeenCalledWith('LightningAddress')
+        );
+    });
+
+    it('updates the connection of an existing address after the test', async () => {
+        mockGetInfo.mockResolvedValue({
+            methods: ['get_info', 'make_invoice', 'lookup_invoice']
+        });
+        const store = makeStore();
+        const navigation = { navigate: jest.fn(), popTo: jest.fn() };
+        await renderView(store, { updateConnection: true }, navigation);
+        await press(TEST_TITLE);
+        expect(await screen.findByText(TEST_SUCCESS)).toBeTruthy();
+
+        await press(CHANGE_TITLE);
+        expect(store.update).toHaveBeenCalledWith({
+            nwc_string: NWC_URL,
+            address_type: 'nwc'
+        });
+        expect(store.createNWC).not.toHaveBeenCalled();
+        expect(navigation.popTo).toHaveBeenCalledWith('LightningAddress');
+    });
+
+    it('switches an existing address to NWC after the test', async () => {
+        mockGetInfo.mockResolvedValue({
+            methods: ['get_info', 'make_invoice', 'lookup_invoice']
+        });
+        const store = makeStore();
+        await renderView(store, { switchTo: true });
+        await press(TEST_TITLE);
+        expect(await screen.findByText(TEST_SUCCESS)).toBeTruthy();
+
+        await press(SWITCH_TITLE);
+        expect(store.update).toHaveBeenCalledWith({
+            nwc_string: NWC_URL,
+            address_type: 'nwc'
+        });
+        expect(store.createNWC).not.toHaveBeenCalled();
     });
 });

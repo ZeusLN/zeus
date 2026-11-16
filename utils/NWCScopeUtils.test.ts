@@ -227,6 +227,20 @@ describe('checkNWCConnectionScope', () => {
         expect(mockClose).toHaveBeenCalledTimes(1);
     });
 
+    it('leaves no timer pending once get_info has answered', async () => {
+        jest.useFakeTimers();
+        mockGetInfo.mockResolvedValue({ methods: ['make_invoice'] });
+        await checkNWCConnectionScope(NWC_URL);
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('leaves no timer pending once get_info has failed', async () => {
+        jest.useFakeTimers();
+        mockGetInfo.mockRejectedValue(new Error('RESTRICTED'));
+        await checkNWCConnectionScope(NWC_URL);
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
     it('returns unknown when the connection string cannot be parsed', async () => {
         mockConstructor.mockImplementationOnce(() => {
             throw new Error('invalid connection string');
