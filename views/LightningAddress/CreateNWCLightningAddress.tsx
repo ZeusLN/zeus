@@ -86,8 +86,9 @@ export default class CreateNWCLightningAddress extends React.Component<
         if (status === 'canSpend') {
             this.setState({
                 scopeError: localeString(
-                    'views.LightningAddress.NWC.scopeCanSpend'
-                ).replace('{methods}', methods.join(', '))
+                    'views.LightningAddress.NWC.scopeCanSpend',
+                    { methods: methods.join(', ') }
+                )
             });
         } else if (status === 'missingMakeInvoice') {
             this.setState({
@@ -98,8 +99,9 @@ export default class CreateNWCLightningAddress extends React.Component<
         } else if (status === 'unrecognized') {
             this.setState({
                 scopeWarning: localeString(
-                    'views.LightningAddress.NWC.scopeUnrecognized'
-                ).replace('{methods}', methods.join(', '))
+                    'views.LightningAddress.NWC.scopeUnrecognized',
+                    { methods: methods.join(', ') }
+                )
             });
         } else {
             this.setState({
