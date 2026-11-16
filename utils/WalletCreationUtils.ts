@@ -155,6 +155,10 @@ export async function createOnboardingWallet(params: WalletCreationParams) {
                     ...commonSettings(current)
                 }));
             } catch (e) {
+                console.error(
+                    'createOnboardingWallet: settings write failed',
+                    e
+                );
                 onError();
                 return;
             }

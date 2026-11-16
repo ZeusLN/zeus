@@ -329,8 +329,12 @@ describe('createOnboardingWallet', () => {
         // Both onboarding callers await createOnboardingWallet without a
         // catch, so a rejection that escaped it left the spinner up (#5024)
         it('reports an error, not success, when the embedded LND settings write fails', async () => {
+            const writeError = new Error('disk');
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
             const settingsStore = makeSettingsStore();
-            settingsStore.updateSettings.mockRejectedValue(new Error('disk'));
+            settingsStore.updateSettings.mockRejectedValue(writeError);
             const params = makeParams(settingsStore);
 
             await expect(createOnboardingWallet(params)).resolves.toBe(
@@ -340,6 +344,12 @@ describe('createOnboardingWallet', () => {
             expect(params.onError).toHaveBeenCalledTimes(1);
             expect(params.onSuccess).not.toHaveBeenCalled();
             expect(settingsStore.setConnectingStatus).not.toHaveBeenCalled();
+            // The banner is generic, so the log is the only record of the cause
+            expect(consoleError).toHaveBeenCalledWith(
+                'createOnboardingWallet: settings write failed',
+                writeError
+            );
+            consoleError.mockRestore();
         });
     });
 });
