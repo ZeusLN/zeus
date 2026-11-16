@@ -100,6 +100,15 @@ export default class LSPStore {
     private createExtensionOrderResponseResolver: (() => void) | null = null;
     private getExtensionOrderResponseResolver: (() => void) | null = null;
 
+    // Id of the custom-message request whose timeout set the error. The LSP
+    // can still answer after the timeout, and a successful late reply clears
+    // that error so it is not shown over the order or info. Another error
+    // set since then is left alone.
+    private timedOutRequestId = '';
+    // The error text that timeout set. Kept so the check for "still shown"
+    // does not depend on the language being the same when the reply lands.
+    private timedOutErrorMsg = '';
+
     // Free orders have no payment step, so they never pass through the LSPPaymentAwait polling screen.
     // Without this poll the post-creation view would stay on the
     // "opening now…" message forever, even after the channel open fails.
@@ -942,6 +951,7 @@ export default class LSPStore {
                     : localeString('stores.LSPStore.getInfoResponseError');
             } else {
                 this.getInfoData = data;
+                this.clearTimeoutError(data.id);
             }
             this.loadingLSPS1 = false;
             this.getInfoResponseResolver?.();
@@ -954,6 +964,7 @@ export default class LSPStore {
                     : '';
             } else {
                 this.createOrderResponse = data;
+                this.clearTimeoutError(data.id);
             }
             this.loadingLSPS1 = false;
             this.createOrderResponseResolver?.();
@@ -1004,6 +1015,7 @@ export default class LSPStore {
                     : '';
             } else {
                 this.createExtensionOrderResponse = data;
+                this.clearTimeoutError(data.id);
             }
             this.loadingLSPS7 = false;
             this.createExtensionOrderResponseResolver?.();
@@ -1022,6 +1034,14 @@ export default class LSPStore {
             return true;
         }
         return false;
+    };
+
+    private clearTimeoutError = (requestId: string) => {
+        if (!requestId || this.timedOutRequestId !== requestId) return;
+        this.timedOutRequestId = '';
+        if (this.error_msg !== this.timedOutErrorMsg) return;
+        this.error = false;
+        this.error_msg = '';
     };
 
     // Establishes the long-lived custom-message listener for the app session.
@@ -1187,6 +1207,8 @@ export default class LSPStore {
                         this.error_msg = localeString(
                             'views.LSPS1.timeoutError'
                         );
+                        this.timedOutRequestId = requestId;
+                        this.timedOutErrorMsg = this.error_msg;
                         this.loadingLSPS1 = false;
                     });
                 }
@@ -1321,6 +1343,8 @@ export default class LSPStore {
                         this.error_msg = localeString(
                             'views.LSPS1.timeoutError'
                         );
+                        this.timedOutRequestId = requestId;
+                        this.timedOutErrorMsg = this.error_msg;
                         this.loadingLSPS1 = false;
                     });
                 }
@@ -1761,6 +1785,8 @@ export default class LSPStore {
                         this.error_msg = localeString(
                             'views.LSPS1.timeoutError'
                         );
+                        this.timedOutRequestId = requestId;
+                        this.timedOutErrorMsg = this.error_msg;
                         this.loadingLSPS7 = false;
                     });
                 }
