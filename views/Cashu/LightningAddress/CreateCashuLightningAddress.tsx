@@ -49,6 +49,8 @@ export default class CreateCashuLightningAddress extends React.Component<
 > {
     isInitialFocus = true;
     focusListener: any = null;
+    // set when a save succeeds while another screen is on top
+    leaveOnFocus = false;
 
     state = {
         mintList: [],
@@ -92,10 +94,40 @@ export default class CreateCashuLightningAddress extends React.Component<
     };
 
     handleFocus = () => {
+        if (this.leaveOnFocus) {
+            // the address was saved while the screen was covered
+            this.leaveOnFocus = false;
+            this.leaveScreen();
+            return;
+        }
         if (this.isInitialFocus) {
             this.isInitialFocus = false;
         } else {
             this.loadMints();
+        }
+    };
+
+    // After a successful save. goBack() and popTo() have no target and act
+    // on the top route, so leave only while this screen is on top. When
+    // another screen covers it (the Lockscreen, the wallet list), leave on
+    // the next focus. Returns true if the screen left now
+    onSaved = () => {
+        if (!this.props.navigation.isFocused()) {
+            this.leaveOnFocus = true;
+            return false;
+        }
+        this.leaveScreen();
+        return true;
+    };
+
+    leaveScreen = () => {
+        const { navigation, route } = this.props;
+        if (route.params?.switchTo) {
+            navigation.popTo('LightningAddress');
+        } else {
+            // Opened only from ReceiveEcash and Get started on the ZEUS Pay
+            // screen, so go back to whichever opened it
+            navigation.goBack();
         }
     };
 
@@ -231,17 +263,10 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                                 mintUrl
                                                             }
                                                         );
-                                                        // popTo() has no target and acts on the top
-                                                        // route, so only while this screen is on
-                                                        // top; otherwise turn the spinner off below
-                                                        if (
-                                                            navigation.isFocused()
-                                                        ) {
-                                                            navigation.popTo(
-                                                                'LightningAddress'
-                                                            );
+                                                        if (this.onSaved()) {
                                                             return;
                                                         }
+                                                        // covered: turn the spinner off below
                                                     }
                                                 } catch (e) {
                                                     console.error(e);
@@ -252,17 +277,8 @@ export default class CreateCashuLightningAddress extends React.Component<
                                             } else {
                                                 createCashu(mintUrl)
                                                     .then((response) => {
-                                                        if (
-                                                            response.success &&
-                                                            navigation.isFocused()
-                                                        ) {
-                                                            // Opened only from ReceiveEcash and
-                                                            // Get started on the ZEUS Pay screen,
-                                                            // so go back to whichever opened it.
-                                                            // goBack() has no target and pops the
-                                                            // top route, so only while this screen
-                                                            // is on top
-                                                            navigation.goBack();
+                                                        if (response.success) {
+                                                            this.onSaved();
                                                         }
                                                     })
                                                     .catch((e) =>
