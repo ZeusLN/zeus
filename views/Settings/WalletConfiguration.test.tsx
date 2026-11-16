@@ -463,7 +463,10 @@ describe('WalletConfiguration', () => {
         const saveWithPhrase = async (
             nodes: any[],
             index: number,
-            phrase: string
+            phrase: string,
+            // What the settings update resolves with; the saved nodes by
+            // default
+            resolveWith: (saved: any) => any = (saved) => saved
         ) => {
             const SettingsStore = {
                 settings: {
@@ -472,18 +475,19 @@ describe('WalletConfiguration', () => {
                     selectedNode: 0
                 },
                 updateSettings: jest.fn((update: any) =>
-                    Promise.resolve(update({ nodes }))
+                    Promise.resolve(resolveWith(update({ nodes })))
                 ),
                 setConnectingStatus: jest.fn()
+            };
+            const navigation = {
+                goBack: jest.fn(),
+                navigate: jest.fn(),
+                reset: jest.fn()
             };
             await render(
                 <WalletConfiguration
                     {...({
-                        navigation: {
-                            goBack: jest.fn(),
-                            navigate: jest.fn(),
-                            reset: jest.fn()
-                        },
+                        navigation,
                         route: {
                             params: { node: nodes[index], index, saved: true }
                         },
@@ -499,10 +503,12 @@ describe('WalletConfiguration', () => {
                 )
             );
             await save();
+            return { navigation, SettingsStore };
         };
 
         beforeEach(() => {
-            (clearNodeKeychainData as jest.Mock).mockClear();
+            (clearNodeKeychainData as jest.Mock).mockReset();
+            (clearNodeKeychainData as jest.Mock).mockResolvedValue(undefined);
             (BackendUtils.disconnect as jest.Mock).mockClear();
         });
 
@@ -540,6 +546,74 @@ describe('WalletConfiguration', () => {
             await saveWithPhrase([copy, LNC_NODE], 1, NEW_PHRASE);
 
             expect(clearNodeKeychainData).not.toHaveBeenCalled();
+        });
+
+        it('keeps the credentials when the save does not return the nodes', async () => {
+            const { navigation } = await saveWithPhrase(
+                [{}, LNC_NODE],
+                1,
+                NEW_PHRASE,
+                () => undefined
+            );
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+            expect(navigation.goBack).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps them when the saved nodes are not a list', async () => {
+            await saveWithPhrase([{}, LNC_NODE], 1, NEW_PHRASE, () => ({
+                nodes: undefined
+            }));
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+        });
+
+        describe('when clearing the credentials fails', () => {
+            let consoleError: jest.SpyInstance;
+
+            beforeEach(() => {
+                (clearNodeKeychainData as jest.Mock).mockRejectedValue(
+                    new Error('keychain unavailable')
+                );
+                consoleError = jest
+                    .spyOn(console, 'error')
+                    .mockImplementation(() => undefined);
+            });
+
+            afterEach(() => {
+                consoleError.mockRestore();
+                (clearNodeKeychainData as jest.Mock).mockResolvedValue(
+                    undefined
+                );
+            });
+
+            it('still reconnects the active wallet', async () => {
+                const { navigation, SettingsStore } = await saveWithPhrase(
+                    [LNC_NODE],
+                    0,
+                    NEW_PHRASE
+                );
+
+                expect(clearNodeKeychainData).toHaveBeenCalledTimes(1);
+                expect(SettingsStore.setConnectingStatus).toHaveBeenCalledWith(
+                    true
+                );
+                expect(navigation.reset).toHaveBeenCalledWith({
+                    index: 0,
+                    routes: [{ name: 'Wallet' }]
+                });
+            });
+
+            it('still leaves the screen of an inactive wallet', async () => {
+                const { navigation } = await saveWithPhrase(
+                    [{}, LNC_NODE],
+                    1,
+                    NEW_PHRASE
+                );
+
+                expect(clearNodeKeychainData).toHaveBeenCalledTimes(1);
+                expect(navigation.goBack).toHaveBeenCalledTimes(1);
+            });
         });
     });
 

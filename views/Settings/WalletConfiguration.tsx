@@ -779,9 +779,18 @@ export default class WalletConfiguration extends React.Component<
         const clearReplacedLncCredentials = async (savedNodes?: Node[]) => {
             const replacedPhrase = originalNode?.pairingPhrase;
             if (!replacedPhrase) return;
-            if (savedNodes?.some((n) => n.pairingPhrase === replacedPhrase))
+            // Without the saved nodes there is no telling whether a config
+            // still uses the phrase, so the credentials are kept
+            if (!Array.isArray(savedNodes)) return;
+            if (savedNodes.some((n) => n.pairingPhrase === replacedPhrase))
                 return;
-            await clearNodeKeychainData({ pairingPhrase: replacedPhrase });
+            // Best effort: the settings are already saved, so a failed
+            // cleanup must not stop the reconnect and navigation below
+            try {
+                await clearNodeKeychainData({ pairingPhrase: replacedPhrase });
+            } catch (error) {
+                console.error('Error clearing replaced LNC keys:', error);
+            }
         };
 
         updateSettings(update)
