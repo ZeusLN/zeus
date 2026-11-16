@@ -2313,7 +2313,7 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
                     }
                 ]
             });
-            const retriedAt = new Date();
+            const retriedAt = new Date(Date.now() - 60 * 1000);
 
             (store as any).upsertPayInvoiceActivity(connection, {
                 id: normalizedInvoice,
@@ -2342,6 +2342,98 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
             ).toBe(true);
         }
     );
+
+    it.each([
+        ['pending', undefined],
+        ['failed', 'views.SendingLightning.paymentTimedOut'],
+        ['success', undefined]
+    ])(
+        'upsertPayInvoiceActivity keeps createdAt on a %s write over a timed-out row',
+        async (status, error) => {
+            const { store } = createStore({
+                paymentsStore: {
+                    payments: [],
+                    getPayments: jest.fn(async () => [])
+                }
+            });
+            const firstAttemptAt = new Date(
+                Date.now() -
+                    NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS -
+                    1000
+            );
+            const connection = addConnection(store, {
+                activity: [
+                    {
+                        id: normalizedInvoice,
+                        type: 'pay_invoice',
+                        payment_source: 'lightning',
+                        status: 'failed',
+                        satAmount: 100,
+                        error: 'views.SendingLightning.paymentTimedOut',
+                        createdAt: firstAttemptAt
+                    }
+                ]
+            });
+
+            // The timed-out attempt may still be in flight, so the row is
+            // not a new attempt and its hold keeps its age.
+            (store as any).upsertPayInvoiceActivity(connection, {
+                id: normalizedInvoice,
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                status,
+                satAmount: 100,
+                error,
+                createdAt: new Date()
+            });
+
+            expect(connection.activity).toHaveLength(1);
+            expect(connection.activity[0].status).toBe(status);
+            expect(connection.activity[0].createdAt).toEqual(firstAttemptAt);
+
+            // The write must not restart the hold's clock: an unlisted
+            // hold this old is released by the next reconciliation.
+            await (store as any).reconcilePendingPayInvoiceActivities(
+                connection
+            );
+
+            expect(
+                connection.isUnresolvedPayInvoiceActivity(
+                    connection.activity[0]
+                )
+            ).toBe(false);
+        }
+    );
+
+    it('upsertPayInvoiceActivity keeps createdAt on a success write over a settled row', () => {
+        const { store } = createStore();
+        const settledAt = new Date(Date.now() - 60 * 60 * 1000);
+        const connection = addConnection(store, {
+            activity: [
+                {
+                    id: normalizedInvoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 100,
+                    isBudgetDebited: true,
+                    createdAt: settledAt
+                }
+            ]
+        });
+
+        (store as any).upsertPayInvoiceActivity(connection, {
+            id: normalizedInvoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'success',
+            satAmount: 100,
+            isBudgetDebited: true
+        });
+
+        expect(connection.activity).toHaveLength(1);
+        expect(connection.activity[0].createdAt).toEqual(settledAt);
+    });
 
     it('upsertPayInvoiceActivity clears error when promoting to success', () => {
         const { store } = createStore();
