@@ -1812,6 +1812,7 @@
     "stores.ChannelsStore.openOutcomeUnknown": "Váš uzel neodpověděl včas, ZEUS proto nedokáže určit, zda byl tento kanál otevřen. Zkontrolujte své probíhající kanály dříve, než otevřete další.",
     "stores.ChannelsStore.openStreamTimeout": "Váš uzel nezačal tento kanál financovat včas, ZEUS proto jeho otevření zastavil dříve, než bylo cokoliv utraceno. Můžete to zkusit znovu.",
     "stores.ChannelBackupStore.invalidBackup": "Záloha přijatá ze serveru není platná",
+    "stores.TransactionsStore.wholeSats": "Amount must be a whole number of sats",
     "stores.InvoicesStore.errorCreatingInvoice": "Při vytváření faktury došlo k chybě",
     "stores.InvoicesStore.errorGeneratingAddress": "Chyba při generování nové adresy",
     "stores.InvoicesStore.zeroAmountLndhub": "Instance služby LNDHub nemusí podporovat faktury s nulovou částkou",
