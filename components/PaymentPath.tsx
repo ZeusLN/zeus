@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
 
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -296,8 +297,12 @@ export default class PaymentPath extends React.Component<
                     />
                 );
             }
+            // Both amounts are sats with millisat decimals. Adding them as
+            // floats can give 24781.933999999997 for 24778.456 + 3.478
             const origin = {
-                sent: Number(path[0].forwarded) + Number(path[0].fee),
+                sent: new BigNumber(path[0].forwarded)
+                    .plus(path[0].fee)
+                    .toNumber(),
                 pubKey: ourPubKey
             };
             if (expanded.get(index) || enhancedPath.length === 1) {
