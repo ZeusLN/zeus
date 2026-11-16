@@ -423,13 +423,13 @@ export default class PosStore {
                 this.currentOrder.total_tax_money.amount =
                     totalTaxCents.toNumber();
 
-                if (this.fiatStore.fiatRates) {
-                    const fiatEntry = this.fiatStore.fiatRates.filter(
-                        (entry: any) =>
-                            entry.code === this.settingsStore.settings.fiat
-                    )[0];
-                    const { code } = fiatEntry;
-                    this.currentOrder.total_tax_money.currency = code;
+                const fiatEntry = this.fiatStore.fiatRates?.filter(
+                    (entry: any) =>
+                        entry.code === this.settingsStore.settings.fiat
+                )[0];
+                // With no rate for the currency, keep the order's currency
+                if (fiatEntry) {
+                    this.currentOrder.total_tax_money.currency = fiatEntry.code;
                 }
             } else {
                 this.currentOrder.total_tax_money.amount = 0;
