@@ -1812,6 +1812,7 @@
     "stores.ChannelsStore.openOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this channel was opened. Check your pending channels before opening another.",
     "stores.ChannelsStore.openStreamTimeout": "Your node did not start funding this channel in time, so ZEUS stopped the open before spending anything. You can try again.",
     "stores.ChannelBackupStore.invalidBackup": "The backup received from the server is not valid",
+    "stores.TransactionsStore.wholeSats": "Amount must be a whole number of sats",
     "stores.InvoicesStore.errorCreatingInvoice": "인보이스 생성 오류",
     "stores.InvoicesStore.errorGeneratingAddress": "새 주소 생성 오류",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub 인스턴스가 수량 미기입 인보이스를 지원하지 않을 수 있습니다.",
