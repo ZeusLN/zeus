@@ -1812,6 +1812,7 @@
     "stores.ChannelsStore.openOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this channel was opened. Check your pending channels before opening another.",
     "stores.ChannelsStore.openStreamTimeout": "Your node did not start funding this channel in time, so ZEUS stopped the open before spending anything. You can try again.",
     "stores.ChannelBackupStore.invalidBackup": "The backup received from the server is not valid",
+    "stores.TransactionsStore.wholeSats": "Amount must be a whole number of sats",
     "stores.InvoicesStore.errorCreatingInvoice": "创建发票失败",
     "stores.InvoicesStore.errorGeneratingAddress": "生成新地址时出错",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub 实例可能不支持 0 金额的发票",
