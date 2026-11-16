@@ -35,6 +35,7 @@ import {
     toWalletrpcAddressTypeName
 } from '../utils/LndUtils';
 import {
+    deferred,
     isEventForRequest,
     newStreamRequestId
 } from '../utils/StreamRequestUtils';
@@ -646,14 +647,11 @@ export default class LightningNodeConnect {
         // peer has signed the commitment), or with the error or end that
         // ends the stream first. Resolved along with psbt_fund as
         // chanPending, so the listener stays until then
-        let resolvePending: (data: any) => void = () => {};
-        let rejectPending: (error: any) => void = () => {};
-        const chanPending = new Promise((res, rej) => {
-            resolvePending = res;
-            rejectPending = rej;
-        });
-        // nothing may wait on it
-        chanPending.catch(() => {});
+        const {
+            promise: chanPending,
+            resolve: resolvePending,
+            reject: rejectPending
+        } = deferred();
 
         const { LncModule } = NativeModules;
         const eventEmitter = new NativeEventEmitter(LncModule);

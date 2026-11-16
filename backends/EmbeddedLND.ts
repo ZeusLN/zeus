@@ -13,6 +13,7 @@ import {
     LndMobileEventEmitter
 } from '../utils/LndMobileUtils';
 import {
+    deferred,
     isEventForRequest,
     newStreamRequestId
 } from '../utils/StreamRequestUtils';
@@ -176,14 +177,11 @@ export default class EmbeddedLND extends LND {
         // peer has signed the commitment), or with the error or end that
         // ends the stream first. Resolved along with psbt_fund as
         // chanPending
-        let resolvePending: (data: any) => void = () => {};
-        let rejectPending: (error: any) => void = () => {};
-        const chanPending = new Promise((res, rej) => {
-            resolvePending = res;
-            rejectPending = rej;
-        });
-        // nothing may wait on it
-        chanPending.catch(() => {});
+        const {
+            promise: chanPending,
+            resolve: resolvePending,
+            reject: rejectPending
+        } = deferred();
         return await new Promise((resolve, reject) => {
             LndMobileEventEmitter.addListener('OpenChannel', (e: any) => {
                 if (!isEventForRequest(e, requestId)) return;

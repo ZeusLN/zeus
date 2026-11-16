@@ -27,6 +27,7 @@ import {
 } from './../utils/OnchainTransactionUtils';
 import { sha256Bytes } from './../utils/HashingUtils';
 import { inFlightRequestKey } from './../utils/InFlightRequestUtils';
+import { deferred } from './../utils/StreamRequestUtils';
 import BigNumber from 'bignumber.js';
 
 interface Headers {
@@ -579,14 +580,11 @@ export default class LND {
             // (the peer has signed the commitment), or with the error or
             // close that ends the stream first. Resolved along with
             // psbt_fund as chanPending
-            let resolvePending: (data: any) => void = () => {};
-            let rejectPending: (error: any) => void = () => {};
-            const chanPending = new Promise((res, rej) => {
-                resolvePending = res;
-                rejectPending = rej;
-            });
-            // nothing may wait on it
-            chanPending.catch(() => {});
+            const {
+                promise: chanPending,
+                resolve: resolvePending,
+                reject: rejectPending
+            } = deferred();
 
             ws.addEventListener('open', () => {
                 // connection opened
