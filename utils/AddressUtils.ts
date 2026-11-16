@@ -146,17 +146,21 @@ class AddressUtils {
         // payment requests prefixed with 'lightning:'
 
         // handle BTCPay invoices with amounts embedded
-        if (input.includes('bitcoin:') || input.includes('BITCOIN:')) {
+        // the scheme must start the input and is case-insensitive (RFC 3986).
+        // Leading whitespace is skipped, since some QR scanners pass the raw
+        // scan without trimming it. A zeusln: deep link can wrap a whole
+        // URI (zeusln:bitcoin:... or zeusln://bitcoin:...), so that prefix,
+        // in any case, is skipped as well.
+        const trimmed = input.trimStart().replace(/^zeusln:(\/\/)?/i, '');
+        const scheme = trimmed.slice(0, 'bitcoin:'.length);
+        if (scheme.toLowerCase() === 'bitcoin:') {
             const [
                 parsedValue,
                 parsedSatAmount,
                 parsedLightning,
                 parsedOffer,
                 parsedClinkNoffer
-            ] = bitcoinQrParser(
-                input,
-                input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
-            );
+            ] = bitcoinQrParser(trimmed, scheme);
             value = parsedValue;
 
             if (parsedSatAmount) {

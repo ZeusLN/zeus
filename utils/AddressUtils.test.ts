@@ -100,6 +100,18 @@ describe('AddressUtils', () => {
     });
 
     describe('processBIP21Uri', () => {
+        it('ignores whitespace before the bitcoin: scheme', () => {
+            // the swap QR scanners pass the raw scan without trimming
+            expect(
+                AddressUtils.processBIP21Uri(
+                    '\n bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            });
+        });
+
         it('processes all BIP-21 URI variations', () => {
             // with fee
             expect(
@@ -265,6 +277,80 @@ describe('AddressUtils', () => {
                 value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
                 clinkNoffer:
                     'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
+            });
+        });
+    });
+
+    describe('processBIP21Uri scheme handling', () => {
+        it('accepts the bitcoin: scheme in any case', () => {
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'Bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            });
+        });
+
+        it('only treats bitcoin: as a scheme at the start of the input', () => {
+            const embedded =
+                'https://example.com/pay?uri=bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003';
+            expect(AddressUtils.processBIP21Uri(embedded)).toEqual({
+                value: embedded
+            });
+
+            const prefixed =
+                'note bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu';
+            expect(AddressUtils.processBIP21Uri(prefixed)).toEqual({
+                value: prefixed
+            });
+        });
+
+        it('parses a bitcoin: URI wrapped in a zeusln: deep link', () => {
+            const expected = {
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            };
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln:bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln:Bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
+            // the wrapper is a scheme too, so its case does not matter
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'ZEUSLN:bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
+            // nor does a // after it
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln://bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
+            // a bare value behind zeusln: is still returned as is
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                )
+            ).toEqual({ value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu' });
+        });
+
+        it('splits on the scheme the input starts with, not one in a parameter', () => {
+            // 'BITCOIN:' in the label used to be taken as the scheme
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003&label=BITCOIN:SALE'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
             });
         });
     });
