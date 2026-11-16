@@ -65,3 +65,12 @@ export const buildPaymentAwaitParams = (
         payment?.fee_total_sat,
     service
 });
+
+/**
+ * Returns the amount to send for an order's on-chain payment option. The
+ * client must pay order_total_sat, which for LSPS1 includes the requested
+ * client balance on top of fee_total_sat. fee_total_sat is only used when
+ * the LSP omits order_total_sat.
+ */
+export const getOnchainPaymentAmount = (payment: any) =>
+    payment?.onchain?.order_total_sat || payment?.onchain?.fee_total_sat;
