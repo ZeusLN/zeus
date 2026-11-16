@@ -15,12 +15,18 @@ const cancelPending = () => {
     pendingResume = undefined;
 };
 
+// Clears the clipboard if it still holds value and no newer secret was copied
+// while the read was in progress: the read can return the older value after a
+// newer copy has replaced it, and that copy has its own timer.
 // Returns true when Android refused the read because ZEUS did not have window
 // focus. Android then returns an empty string instead of failing.
-const clearIfUnchanged = async (value: string): Promise<boolean> => {
+const clearIfUnchanged = async (
+    value: string,
+    copy: number
+): Promise<boolean> => {
     try {
         const current = await Clipboard.getString();
-        if (current === value) Clipboard.setString('');
+        if (current === value && copy === latestCopy) Clipboard.setString('');
         return current === '' && Platform.OS === 'android';
     } catch (e) {
         // reading the clipboard failed; leave it as it is
@@ -31,17 +37,17 @@ const clearIfUnchanged = async (value: string): Promise<boolean> => {
 // Android 10+ only lets the app with window focus read the clipboard, and
 // AppState turns 'active' before the window gets focus, so Android waits for
 // the 'focus' event instead
-const waitForResume = (value: string) => {
+const waitForResume = (value: string, copy: number) => {
     pendingResume =
         Platform.OS === 'android'
             ? AppState.addEventListener('focus', () => {
                   cancelPending();
-                  clearIfUnchanged(value);
+                  clearIfUnchanged(value, copy);
               })
             : AppState.addEventListener('change', (state) => {
                   if (state !== 'active') return;
                   cancelPending();
-                  clearIfUnchanged(value);
+                  clearIfUnchanged(value, copy);
               });
 };
 
@@ -72,12 +78,12 @@ export const copySensitive = (
     pendingTimer = setTimeout(async () => {
         pendingTimer = undefined;
         if (AppState.currentState !== 'active') {
-            waitForResume(value);
+            waitForResume(value, copy);
             return;
         }
-        const denied = await clearIfUnchanged(value);
+        const denied = await clearIfUnchanged(value, copy);
         // a newer copy has its own timer
-        if (denied && copy === latestCopy) waitForResume(value);
+        if (denied && copy === latestCopy) waitForResume(value, copy);
     }, clearAfterMs);
 };
 

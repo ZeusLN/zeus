@@ -157,6 +157,103 @@ describe('copySensitive', () => {
         expect(AppState.addEventListener).not.toHaveBeenCalled();
     });
 
+    describe('when a newer secret is copied during the clipboard read', () => {
+        let resolveRead: (value: string) => void;
+
+        // The next read stays pending until the test resolves it
+        const deferNextRead = () => {
+            clipboard.getString.mockReturnValueOnce(
+                new Promise<string>((resolve) => (resolveRead = resolve))
+            );
+        };
+
+        it('does not clear the newer secret when the read returns the older one', async () => {
+            deferNextRead();
+            copySensitive('first', 1000);
+            jest.advanceTimersByTime(1000);
+            expect(clipboard.getString).toHaveBeenCalledTimes(1);
+
+            copySensitive('second', 1000);
+            resolveRead('first');
+            await flush();
+
+            expect(clipboard.setString).not.toHaveBeenCalledWith('');
+            expect(systemClipboard).toBe('second');
+        });
+
+        it('does not clear the same secret copied again before its own timeout', async () => {
+            deferNextRead();
+            copySensitive('seed words', 1000);
+            jest.advanceTimersByTime(1000);
+            expect(clipboard.getString).toHaveBeenCalledTimes(1);
+
+            copySensitive('seed words', 1000);
+            resolveRead('seed words');
+            await flush();
+
+            expect(clipboard.setString).not.toHaveBeenCalledWith('');
+            expect(systemClipboard).toBe('seed words');
+        });
+
+        it('does not clear the newer secret when the read started on resume', async () => {
+            copySensitive('first', 1000);
+            setAppState('background');
+            jest.advanceTimersByTime(1000);
+            expect(clipboard.getString).not.toHaveBeenCalled();
+
+            deferNextRead();
+            setAppState('active');
+            handlers.change('active');
+            expect(clipboard.getString).toHaveBeenCalledTimes(1);
+
+            copySensitive('second', 1000);
+            resolveRead('first');
+            await flush();
+
+            expect(clipboard.setString).not.toHaveBeenCalledWith('');
+            expect(systemClipboard).toBe('second');
+        });
+
+        it('does not clear the newer secret when the read started on focus on Android', async () => {
+            jest.replaceProperty(Platform, 'OS', 'android');
+            copySensitive('first', 1000);
+            setAppState('background');
+            jest.advanceTimersByTime(1000);
+            expect(clipboard.getString).not.toHaveBeenCalled();
+
+            deferNextRead();
+            setAppState('active');
+            handlers.focus();
+            expect(clipboard.getString).toHaveBeenCalledTimes(1);
+
+            copySensitive('second', 1000);
+            resolveRead('first');
+            await flush();
+
+            expect(clipboard.setString).not.toHaveBeenCalledWith('');
+            expect(systemClipboard).toBe('second');
+        });
+
+        it('still clears the newer secret after its own timeout', async () => {
+            deferNextRead();
+            copySensitive('first', 1000);
+            jest.advanceTimersByTime(1000);
+
+            copySensitive('second', 1000);
+            resolveRead('first');
+            await flush();
+
+            jest.advanceTimersByTime(999);
+            await flush();
+            expect(systemClipboard).toBe('second');
+
+            jest.advanceTimersByTime(1);
+            await flush();
+            expect(systemClipboard).toBe('');
+            expect(clipboard.getString).toHaveBeenCalledTimes(2);
+        });
+    });
+
     describe('on Android', () => {
         beforeEach(() => {
             jest.replaceProperty(Platform, 'OS', 'android');
