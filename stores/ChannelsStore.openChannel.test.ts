@@ -1862,6 +1862,33 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
             ]);
         });
 
+        it("shows an earlier peer's error when another channel is not pending at the timeout", async () => {
+            const pendingB = held();
+            const store = startBatch(
+                Promise.reject(new Error('peer a went away')),
+                pendingB.promise
+            );
+            await flush();
+            expect(store.syncOpensInFlight).toBe(1);
+
+            await jest.advanceTimersByTimeAsync(PENDING_TIMEOUT_MS);
+            await flush();
+            expect(finalizes()).toEqual([]);
+            expect(released()).toEqual(LOCKED);
+            expect(abandonedFor()).toEqual([['bc1qchan-a', 'bc1qchan-b']]);
+            expect(store.errorMsgChannel).toBe('peer a went away');
+            expect(store.syncOpensInFlight).toBe(0);
+
+            // B is still abandoned when it turns pending later
+            pendingB.resolve({});
+            await flush();
+            expect(finalizes()).toEqual([]);
+            expect(abandonedFor()).toEqual([
+                ['bc1qchan-a', 'bc1qchan-b'],
+                ['bc1qchan-b']
+            ]);
+        });
+
         it('publishes nothing when the backend cannot report chan_pending', async () => {
             const store = startBatch(Promise.resolve({}), undefined);
             await flush();

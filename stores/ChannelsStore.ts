@@ -127,8 +127,9 @@ const abandonVerifiedChannels = (
 // once the stream of every channel in chanPending has reported
 // chan_pending. It rejects once they have all settled if any failed, at
 // once if a backend gave no way to tell, and after
-// CHAN_PENDING_TIMEOUT_MS. onLatePending gets each channel that turns
-// pending after the timeout.
+// CHAN_PENDING_TIMEOUT_MS, with the first failure if there was one by
+// then. onLatePending gets each channel that turns pending after the
+// timeout.
 const waitForChanPending = (
     chanPending: { [pendingChanId: string]: Promise<any> | undefined },
     onLatePending: (pendingChanId: string) => void
@@ -141,13 +142,15 @@ const waitForChanPending = (
             reject(notPending());
             return;
         }
+        let failed = false;
+        let failure: any;
         let timedOut = false;
         const timeoutId = setTimeout(() => {
             timedOut = true;
-            reject(notPending());
+            // a peer that already failed tells the user more than the
+            // timeout of another one
+            reject(failed ? failure : notPending());
         }, CHAN_PENDING_TIMEOUT_MS);
-        let failed = false;
-        let failure: any;
         Promise.all(
             ids.map((id) =>
                 (chanPending[id] as Promise<any>).then(
