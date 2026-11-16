@@ -8626,7 +8626,7 @@ describe('NostrWalletConnectStore cashu pay_invoice in-flight melt', () => {
 
     // CashuStore records the melt the mint took but has not settled and
     // reports it as a paymentError, with the payment in inFlightPayment
-    const payInFlight = async () => {
+    const payInFlight = async (overrides: Record<string, unknown> = {}) => {
         const recorded = inFlightPayment();
         const cashuStore: any = {
             selectedMintUrl: 'https://mint.example',
@@ -8645,7 +8645,8 @@ describe('NostrWalletConnectStore cashu pay_invoice in-flight melt', () => {
             isProperlyConfigured: () => true,
             cdkInitialized: true,
             payments: [recorded],
-            pendingMelts: [{ quote: 'quote-1' }]
+            pendingMelts: [{ quote: 'quote-1' }],
+            ...overrides
         };
         const { store, paymentsStore } = createStore({ cashuStore });
         store.cashuEnabled = true;
@@ -8897,6 +8898,193 @@ describe('NostrWalletConnectStore cashu pay_invoice in-flight melt', () => {
 
         expect(connection.activity[0].status).toBe('pending');
         expect(connection.pendingSpendSats).toBe(103);
+    });
+
+    it('answers a retry as in flight without melting again', async () => {
+        const { store, connection, cashuStore } = await payInFlight();
+        // What the second melt would report if it were attempted
+        cashuStore.payLnInvoiceFromEcash.mockImplementation(async () => {
+            cashuStore.inFlightPayment = undefined;
+            cashuStore.paymentErrorMsg = 'quote is pending';
+            return undefined;
+        });
+
+        const retry = await (store as any).handleCashuPayInvoice(
+            connection,
+            { invoice },
+            () => true
+        );
+
+        expect(retry.error).toBeUndefined();
+        expect(retry.result).toEqual({ preimage: '', fees_paid: 0 });
+        expect(cashuStore.getPayReq).toHaveBeenCalledTimes(1);
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
+        expect(connection.activity).toHaveLength(1);
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(103);
+    });
+
+    it('pays a retry again once CashuStore has dropped the melt', async () => {
+        const { store, connection, cashuStore } = await payInFlight();
+        cashuStore.payments = [];
+        cashuStore.pendingMelts = [];
+        cashuStore.payLnInvoiceFromEcash.mockImplementation(async () => {
+            cashuStore.inFlightPayment = undefined;
+            cashuStore.paymentErrorMsg = 'melt failed';
+            return undefined;
+        });
+
+        const retry = await (store as any).handleCashuPayInvoice(
+            connection,
+            { invoice },
+            () => true
+        );
+
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(2);
+        expect(retry.error?.code).toBe('FAILED_TO_PAY_INVOICE');
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.pendingSpendSats).toBe(0);
+    });
+
+    // inFlightPayment is shared with the send screens
+    it('treats an in-flight payment for another invoice as a failure', async () => {
+        const other = new CashuPayment({
+            bolt11: 'lnbc1someotherinvoice',
+            amount: 500,
+            fee: 0,
+            status: 'IN_FLIGHT',
+            payment_preimage: '',
+            meltResponse: {
+                quote: { quote: 'quote-other', amount: 500, fee_reserve: 9 }
+            }
+        });
+        const { connection, response } = await payInFlight({
+            paymentErrorMsg: 'melt failed',
+            inFlightPayment: other,
+            meltQuote: { quote: 'quote-1' },
+            payments: [other],
+            pendingMelts: [{ quote: 'quote-other' }]
+        });
+
+        expect(response.result).toBeUndefined();
+        expect(response.error?.code).toBe('FAILED_TO_PAY_INVOICE');
+        expect(connection.activity).toHaveLength(1);
+        expect(connection.activity[0]).toMatchObject({
+            id: invoice,
+            status: 'failed',
+            payment_source: 'cashu'
+        });
+        expect(connection.pendingSpendSats).toBe(0);
+    });
+
+    // A send screen can reset the shared payment state while
+    // payLnInvoiceFromEcash syncs balances before it returns
+    it('holds from the recorded payment when inFlightPayment was cleared', async () => {
+        const { connection, response } = await payInFlight({
+            paymentError: false,
+            paymentErrorMsg: '',
+            inFlightPayment: undefined,
+            meltQuote: { quote: 'quote-1' }
+        });
+
+        expect(response.error).toBeUndefined();
+        expect(response.result).toEqual({ preimage: '', fees_paid: 0 });
+        expect(connection.activity[0]).toMatchObject({
+            id: invoice,
+            status: 'pending',
+            payment_source: 'cashu',
+            feeLimitSats: 3
+        });
+        expect(connection.pendingSpendSats).toBe(103);
+    });
+
+    it('does not hold for an in-flight payment of another melt quote', async () => {
+        const { connection, response } = await payInFlight({
+            paymentErrorMsg: 'melt failed',
+            inFlightPayment: undefined,
+            meltQuote: { quote: 'quote-2' }
+        });
+
+        expect(response.error?.code).toBe('FAILED_TO_PAY_INVOICE');
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.pendingSpendSats).toBe(0);
+    });
+
+    // Wallet startup sets payments before pendingMelts and initializes
+    // CDK last
+    it('keeps the hold while CDK is not initialized', async () => {
+        const { store, connection, cashuStore } = await payInFlight();
+        cashuStore.cdkInitialized = false;
+        cashuStore.payments = [];
+        cashuStore.pendingMelts = [];
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(103);
+    });
+
+    // CashuStore.reset() on a wallet switch clears payments and leaves
+    // cdkInitialized set
+    it('keeps the hold while the payments are not loaded', async () => {
+        const { store, connection, cashuStore } = await payInFlight();
+        cashuStore.cdkInitialized = true;
+        cashuStore.payments = undefined;
+        cashuStore.pendingMelts = [];
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(103);
+    });
+
+    it('releases the hold without a debit when the payment is marked failed', async () => {
+        const { store, connection, cashuStore } = await payInFlight();
+        cashuStore.payments = [
+            new CashuPayment({ ...inFlightPayment(), status: 'FAILED' })
+        ];
+        cashuStore.pendingMelts = [];
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity[0].isBudgetDebited).toBeFalsy();
+        expect(connection.totalSpendSats).toBe(0);
+        expect(connection.pendingSpendSats).toBe(0);
+    });
+
+    it('does not fetch the node payments when only cashu holds are pending', async () => {
+        const { store, connection } = await payInFlight();
+        const fetchNodePayments = jest.spyOn(
+            store as any,
+            'getPaymentsForPendingPayInvoiceRefresh'
+        );
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(fetchNodePayments).not.toHaveBeenCalled();
+    });
+
+    it('settles the hold when the activity is refreshed for lookup_invoice', async () => {
+        const { store, connection, cashuStore } = await payInFlight();
+        cashuStore.payments = [
+            new CashuPayment({
+                ...inFlightPayment(),
+                status: 'SUCCEEDED',
+                fee: 2,
+                payment_preimage: preimage
+            })
+        ];
+        cashuStore.pendingMelts = [];
+
+        const { changed, current } = await (
+            store as any
+        ).refreshActivityForLookup(connection, connection.activity[0]);
+
+        expect(changed).toBe(true);
+        expect(current).toBe(connection.activity[0]);
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.totalSpendSats).toBe(102);
     });
 });
 

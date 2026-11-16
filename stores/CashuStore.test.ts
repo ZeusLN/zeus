@@ -1501,6 +1501,68 @@ describe('CashuStore single-mint melt state', () => {
         expect(store.pendingMelts).toEqual([]);
     });
 
+    // A donation is paid after the payment the caller asked about, so its
+    // melt must not be reported as that payment's
+    it('does not set inFlightPayment for a donation melt left Pending', async () => {
+        const store = payingStore();
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+            state: 'Pending',
+            amount: 1000,
+            fee_paid: 0
+        });
+
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice',
+            isDonationPayment: true
+        });
+
+        expect(store.payments).toHaveLength(1);
+        expect(store.payments[0].isInTransit).toBe(true);
+        expect(store.inFlightPayment).toBeUndefined();
+    });
+
+    it('does not set inFlightPayment for a donation melt that threw while CDK holds the quote', async () => {
+        const store = payingStore();
+        (CashuDevKit.melt as jest.Mock).mockRejectedValue(new Error('lost'));
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+            state: 'Pending'
+        });
+
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice',
+            isDonationPayment: true
+        });
+
+        expect(store.payments).toHaveLength(1);
+        expect(store.payments[0].isInTransit).toBe(true);
+        expect(store.inFlightPayment).toBeUndefined();
+    });
+
+    it.each(['resetPaymentState', 'clearPayReq'])(
+        '%s clears the in-flight payment',
+        async (method) => {
+            const store = payingStore();
+            (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+                state: 'Pending',
+                amount: 1000,
+                fee_paid: 0
+            });
+            await store.payLnInvoiceFromEcash({
+                amount: '1000',
+                paymentRequest: 'lnbc10n1ptestinvoice'
+            });
+            expect(store.inFlightPayment).toBeDefined();
+
+            store[method]();
+
+            expect(store.inFlightPayment).toBeUndefined();
+            // the recorded payment is what NWC falls back to
+            expect(store.payments[0].isInTransit).toBe(true);
+        }
+    );
+
     it('clears the in-flight payment from a previous attempt', async () => {
         const store = payingStore();
         (CashuDevKit.melt as jest.Mock).mockResolvedValueOnce({

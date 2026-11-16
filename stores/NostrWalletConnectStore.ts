@@ -3922,6 +3922,36 @@ export default class NostrWalletConnectStore {
             );
         }
 
+        // Settle or release the holds CashuStore has resolved, as in
+        // handleLightningPayInvoice. Without it a melt CashuStore dropped
+        // would keep answering as in flight below.
+        try {
+            await this.reconcilePendingPayInvoiceActivities(connection);
+        } catch (error) {
+            console.error('NWC: pay_invoice reconcile failed:', error);
+        }
+
+        // A retry of an invoice that is still in flight gets the in-flight
+        // reply. Asking the mint to melt it again would fail and report a
+        // failure for a payment that may still settle.
+        const { paymentRequest, paymentHash: decodedPaymentHash } =
+            await NostrConnectUtils.decodeInvoiceTags(request.invoice);
+        // The connections may have been reloaded during the awaits above
+        connection = this.storedConnection(connection);
+        const existing = connection.findPayInvoiceActivity(
+            paymentRequest || request.invoice,
+            decodedPaymentHash
+        );
+        if (existing && connection.isUnresolvedPayInvoiceActivity(existing)) {
+            return {
+                result: {
+                    preimage: '',
+                    fees_paid: 0
+                },
+                error: undefined
+            };
+        }
+
         await this.cashuStore.getPayReq(request.invoice);
         // The send screens call getPayReq on the same store, outside the
         // payment queue. A superseded getPayReq returns without an error and
@@ -4021,6 +4051,9 @@ export default class NostrWalletConnectStore {
         );
         if (rejectedAfterDecode) return rejectedAfterDecode;
 
+        // The quote payLnInvoiceFromEcash melts: it reads the store before
+        // its first await, as this does
+        const meltQuoteId = this.cashuStore.meltQuote?.quote;
         const cashuInvoice = await this.cashuStore.payLnInvoiceFromEcash({
             amount: amountSats.toString(),
             paymentRequest: request.invoice
@@ -4029,8 +4062,22 @@ export default class NostrWalletConnectStore {
         // The mint took the melt but has not settled it. Hold the amount
         // plus the fee reserve, as the lightning leg holds an in-transit
         // payment, until reconcile sees CashuStore settle or drop it.
-        const inFlightPayment = this.cashuStore.inFlightPayment;
-        if (inFlightPayment && inFlightPayment.bolt11 === request.invoice) {
+        //
+        // inFlightPayment is shared with the send screens, which can clear
+        // it while payLnInvoiceFromEcash syncs balances before returning.
+        // The payment recorded for this melt quote is not cleared.
+        const storeInFlightPayment = this.cashuStore.inFlightPayment;
+        const inFlightPayment =
+            storeInFlightPayment?.bolt11 === request.invoice
+                ? storeInFlightPayment
+                : !cashuInvoice && meltQuoteId
+                ? this.cashuStore.payments?.find(
+                      (p) =>
+                          p.isInTransit &&
+                          p.meltResponse?.quote?.quote === meltQuoteId
+                  )
+                : undefined;
+        if (inFlightPayment) {
             await this.recordPendingPayment({
                 rawInvoice: request.invoice,
                 connection,
