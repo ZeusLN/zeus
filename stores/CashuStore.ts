@@ -494,10 +494,14 @@ export default class CashuStore {
                 );
             }
 
-            // On Android initializeWallet destroys the open wallet's
-            // database. A receive the mint has already answered would then
-            // fail to store the new proofs, and the token would later show
-            // as spent by its sender
+            // A receive is several native calls (addMint, then receive,
+            // which can first wait for saga recovery on the mint), and each
+            // one runs on the wallet that is open when it arrives. Opening
+            // the next wallet now would send the rest of a running receive
+            // to it, on both platforms. On Android initializeWallet also
+            // destroys the open wallet's database: a receive the mint has
+            // already answered would fail to store the new proofs, and the
+            // token would later show as spent by its sender
             await this.waitForReceivesInFlight();
             await CashuDevKit.initializeWallet(mnemonic, 'sat');
 
@@ -6616,6 +6620,9 @@ export default class CashuStore {
         }
 
         const mintUrl = decoded.mint;
+        // reset() runs when the wallet is switched. From then on the CDK
+        // wallet and the node that creates invoices are the next wallet's
+        const session = this.walletSession;
 
         try {
             // Ensure CDK is initialized
@@ -6715,6 +6722,19 @@ export default class CashuStore {
 
                 // Pass signing key only when token is P2PK-locked (decoded has proofs)
 
+                // The invoice and the fee probe above each wait on the
+                // network. After a wallet switch during them the receive
+                // would claim the token into the next wallet
+                if (session !== this.walletSession) {
+                    this.loading = false;
+                    return {
+                        success: false,
+                        errorMessage: localeString(
+                            'stores.CashuStore.claimError'
+                        )
+                    };
+                }
+
                 // Point of no return: this consumes the token and credits
                 // the wallet's own balance at the mint
                 const receivedAmt = await this.receiveTokenCDK(
@@ -6722,6 +6742,19 @@ export default class CashuStore {
                     signingKey,
                     mintUrl
                 );
+                // After a wallet switch during the receive the token is in
+                // the wallet it was claimed from, and the sweep below would
+                // pay the next wallet's invoice from the next wallet's ecash
+                if (session !== this.walletSession) {
+                    this.loading = false;
+                    return {
+                        success: true,
+                        errorMessage: '',
+                        warningMessage: localeString(
+                            'stores.CashuStore.claimedButNotSwept'
+                        )
+                    };
+                }
                 await this.syncCDKBalances();
 
                 let melted: CDKMelted | undefined;
