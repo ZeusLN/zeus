@@ -554,3 +554,124 @@ describe('Payment status from backends without htlcs', () => {
         expect(payment.isFailed).toBe(false);
     });
 });
+
+describe('Payment.enhancedPath', () => {
+    const hop = (
+        pub_key: string,
+        amt_to_forward_msat: string,
+        fee_msat = '0'
+    ) => ({
+        pub_key,
+        amt_to_forward_msat,
+        fee_msat
+    });
+    const attempt = (status: any, ...hops: any[]) => ({
+        status,
+        route: { hops }
+    });
+
+    it('gives one path per succeeded HTLC with its hops in sats', () => {
+        const payment = new Payment({
+            htlcs: [
+                attempt(
+                    'SUCCEEDED',
+                    hop('bob', '1000100', '100'),
+                    hop('carol', '1000000')
+                )
+            ]
+        });
+
+        expect(payment.enhancedPath).toEqual([
+            [
+                {
+                    alias: undefined,
+                    pubKey: 'bob',
+                    node: 'bob',
+                    forwarded: 1000.1,
+                    fee: 0.1
+                },
+                {
+                    alias: undefined,
+                    pubKey: 'carol',
+                    node: 'carol',
+                    forwarded: 1000,
+                    fee: 0
+                }
+            ]
+        ]);
+    });
+
+    it('leaves out a failed attempt that follows a succeeded one', () => {
+        // PaymentPath reads the first hop of every path, so an empty path
+        // for the failed attempt crashed the Path view
+        const payment = new Payment({
+            htlcs: [
+                attempt('SUCCEEDED', hop('bob', '500000')),
+                attempt('FAILED', hop('dave', '500000')),
+                attempt('SUCCEEDED', hop('carol', '500000'))
+            ]
+        });
+
+        const paths = payment.enhancedPath;
+        expect(paths).toHaveLength(2);
+        expect(paths.map((path) => path[0].pubKey)).toEqual(['bob', 'carol']);
+    });
+
+    it('puts the succeeded path first when an earlier attempt failed', () => {
+        // The Payment view only offers the Path button when the first path
+        // has a hop
+        const payment = new Payment({
+            htlcs: [
+                attempt('FAILED', hop('dave', '500000')),
+                attempt('SUCCEEDED', hop('bob', '500000'))
+            ]
+        });
+
+        const paths = payment.enhancedPath;
+        expect(paths).toHaveLength(1);
+        expect(paths[0][0].pubKey).toBe('bob');
+    });
+
+    it('leaves out in-flight attempts and reads the lnrpc enum status', () => {
+        const payment = new Payment({
+            htlcs: [
+                attempt(
+                    lnrpc.HTLCAttempt.HTLCStatus.IN_FLIGHT,
+                    hop('dave', '1000')
+                ),
+                attempt(
+                    lnrpc.HTLCAttempt.HTLCStatus.SUCCEEDED,
+                    hop('bob', '1000')
+                )
+            ]
+        });
+
+        expect(payment.enhancedPath.map((path) => path[0].pubKey)).toEqual([
+            'bob'
+        ]);
+    });
+
+    it('has no paths when no attempt succeeded or a route has no hops', () => {
+        expect(
+            new Payment({ htlcs: [attempt('FAILED', hop('dave', '1000'))] })
+                .enhancedPath
+        ).toEqual([]);
+        expect(
+            new Payment({ htlcs: [{ status: 'SUCCEEDED', route: {} }] })
+                .enhancedPath
+        ).toEqual([]);
+    });
+
+    it('uses the node alias when it is known', () => {
+        const payment = new Payment(
+            { htlcs: [attempt('SUCCEEDED', hop('bob-pubkey', '1000'))] },
+            { 'bob-pubkey': { alias: 'bob' } }
+        );
+
+        expect(payment.enhancedPath[0][0]).toMatchObject({
+            alias: 'bob',
+            node: 'bob',
+            pubKey: 'bob-pubkey'
+        });
+    });
+});

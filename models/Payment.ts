@@ -421,7 +421,10 @@ export default class Payment extends BaseModel {
                             route.push(enhancedHop);
                         });
                 }
-                enhancedPath.push(route);
+                // Only attempts that succeeded and have hops are paths. An
+                // empty path for a failed or in-flight attempt crashed
+                // PaymentPath, and one in first place hid the Path button.
+                if (route.length > 0) enhancedPath.push(route);
             });
 
         return enhancedPath;
