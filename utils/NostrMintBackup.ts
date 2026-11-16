@@ -175,7 +175,8 @@ export async function restoreMintsFromNostr(
         )
     );
 
-    if (results.every((result) => result === undefined)) {
+    // With no relay to ask, none was unreachable
+    if (results.length > 0 && results.every((result) => result === undefined)) {
         throw new MintBackupRelaysUnreachableError();
     }
 

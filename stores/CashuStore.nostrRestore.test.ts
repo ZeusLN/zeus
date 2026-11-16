@@ -176,6 +176,143 @@ describe('CashuStore startup restore of the mint list from Nostr', () => {
         });
     });
 
+    describe('while the relays are being asked', () => {
+        // A restore that stays unanswered until the test settles it
+        const deferRestore = () => {
+            let resolve!: (value: any) => void;
+            let reject!: (reason: any) => void;
+            (restoreMintsFromNostr as jest.Mock).mockReturnValueOnce(
+                new Promise((res, rej) => {
+                    resolve = res;
+                    reject = rej;
+                })
+            );
+            return { resolve, reject };
+        };
+
+        // Lets initializeWallets run up to the pending restore
+        const untilRestoreStarted = async (calls: number) => {
+            for (let i = 0; i < 50; i++) {
+                if (
+                    (restoreMintsFromNostr as jest.Mock).mock.calls.length ===
+                    calls
+                ) {
+                    return;
+                }
+                await new Promise((resolve) => setImmediate(resolve));
+            }
+            throw new Error('restore was not started');
+        };
+
+        it('does not publish a backup during a retry of a restore that reached no relay', async () => {
+            (restoreMintsFromNostr as jest.Mock).mockRejectedValueOnce(
+                new MintBackupRelaysUnreachableError()
+            );
+            const store = newStore();
+            await store.initializeWallets();
+
+            const restore = deferRestore();
+            const init = store.initializeWallets();
+            await untilRestoreStarted(2);
+
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).not.toHaveBeenCalled();
+
+            restore.resolve({ mints: [SAVED_MINT], timestamp: 1768435200 });
+            await init;
+
+            expect(storedMintLists()[0]).toEqual(JSON.stringify([SAVED_MINT]));
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not publish a backup while CDK starts for a retry', async () => {
+            (restoreMintsFromNostr as jest.Mock).mockRejectedValueOnce(
+                new MintBackupRelaysUnreachableError()
+            );
+            const store = newStore();
+            await store.initializeWallets();
+
+            (restoreMintsFromNostr as jest.Mock).mockResolvedValue(null);
+            (store as any).initializeCDK = jest.fn(async () => {
+                await store.nostrBackupMints();
+                return true;
+            });
+            await store.initializeWallets();
+
+            expect((store as any).initializeCDK).toHaveBeenCalledTimes(1);
+            expect(backupMintsToNostr).not.toHaveBeenCalled();
+        });
+
+        it('does not publish a backup during the first restore', async () => {
+            const restore = deferRestore();
+            const store = newStore();
+            const init = store.initializeWallets();
+            await untilRestoreStarted(1);
+
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).not.toHaveBeenCalled();
+
+            restore.resolve(null);
+            await init;
+
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).toHaveBeenCalledTimes(1);
+        });
+
+        it('allows backups again after a restore that failed for another reason', async () => {
+            const store = newStore();
+            (store as any).getNostrBackupSeed.mockImplementationOnce(() => {
+                throw new Error('no seed');
+            });
+
+            await store.initializeWallets();
+
+            expect(restoreMintsFromNostr).not.toHaveBeenCalled();
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps backups held back when the retry reaches no relay either', async () => {
+            (restoreMintsFromNostr as jest.Mock).mockRejectedValue(
+                new MintBackupRelaysUnreachableError()
+            );
+            const store = newStore();
+            await store.initializeWallets();
+            await store.initializeWallets();
+
+            await store.nostrBackupMints();
+
+            expect(restoreMintsFromNostr).toHaveBeenCalledTimes(2);
+            expect(backupMintsToNostr).not.toHaveBeenCalled();
+        });
+    });
+
+    it('allows a backup at once when a mint list is stored', async () => {
+        (restoreMintsFromNostr as jest.Mock).mockRejectedValueOnce(
+            new MintBackupRelaysUnreachableError()
+        );
+        const store = newStore();
+        await store.initializeWallets();
+
+        // The list is stored by the time of the next start
+        (Storage.getItem as jest.Mock).mockImplementation(async (key) =>
+            key === MINT_URLS_KEY ? '[]' : null
+        );
+        const s: any = store;
+        let publishedDuringInit = 0;
+        s.initializeCDK = jest.fn(async () => {
+            await store.nostrBackupMints();
+            publishedDuringInit = (backupMintsToNostr as jest.Mock).mock.calls
+                .length;
+            return true;
+        });
+        await store.initializeWallets();
+
+        expect(publishedDuringInit).toBe(1);
+        expect(restoreMintsFromNostr).toHaveBeenCalledTimes(1);
+    });
+
     it('stores the empty mint list when a relay answered with no backup', async () => {
         (restoreMintsFromNostr as jest.Mock).mockResolvedValue(null);
         const store = newStore();

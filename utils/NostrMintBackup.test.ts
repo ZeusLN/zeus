@@ -586,6 +586,12 @@ describe('NostrMintBackup', () => {
             expect(result).toBeNull();
         });
 
+        it('returns null for an empty relay list', async () => {
+            await expect(
+                restoreMintsFromNostr(privateKeyHex, publicKeyHex, [])
+            ).resolves.toBeNull();
+        });
+
         // "No relay answered" must not read as "no backup": the caller
         // stores an empty mint list for the latter and never asks again
         it('throws when no relay can be reached', async () => {

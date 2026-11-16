@@ -347,9 +347,10 @@ export default class CashuStore {
     @observable dismissedUpgradeThreshold: number = 0;
     @observable public nostrMintBackupTimestamp?: number;
     // Set while this wallet's mint list has never been stored and the
-    // restore from Nostr reached no relay. The mint list is then not
-    // stored, so the next initializeWallets() tries the restore again, and
-    // no backup is published over the one that could not be read.
+    // restore from Nostr is running or reached no relay. After a restore
+    // that reached no relay the mint list is not stored, so the next
+    // initializeWallets() tries the restore again. No backup is published
+    // over the one that has not been read.
     private nostrMintRestorePending = false;
 
     // CDK integration state
@@ -4110,7 +4111,6 @@ export default class CashuStore {
 
         const lndDir = this.getNodeDir();
         this.walletNodeDir = lndDir;
-        this.nostrMintRestorePending = false;
 
         // Load app-specific data from local storage (activity, preferences, seed)
         const [
@@ -4140,6 +4140,11 @@ export default class CashuStore {
             Storage.getItem(`${lndDir}-cashu-randomizeMintSelection`),
             Storage.getItem(`${lndDir}-cashu-multiMintSelectedUrls`)
         ]);
+
+        // A stored mint list means no restore is owed. Without one the flag
+        // keeps its value from the last attempt until the restore below
+        // has run again
+        if (storedMintUrls) this.nostrMintRestorePending = false;
 
         // Parse app-specific stored data
         this.selectedMintUrl = storedselectedMintUrl || '';
@@ -4265,8 +4270,11 @@ export default class CashuStore {
                 // mints from a relay that never received the empty backup
                 // that removeMint publishes
                 if (!storedMintUrls) {
+                    // Hold back backups while the relays are being asked
+                    this.nostrMintRestorePending = true;
                     try {
                         const nostrMints = await this.nostrRestoreMints();
+                        this.nostrMintRestorePending = false;
                         if (nostrMints && nostrMints.length > 0) {
                             localMintUrls = nostrMints;
                             console.log(
@@ -4280,9 +4288,8 @@ export default class CashuStore {
                         }
                     } catch (e) {
                         console.warn('Failed to restore mints from Nostr:', e);
-                        if (e instanceof MintBackupRelaysUnreachableError) {
-                            this.nostrMintRestorePending = true;
-                        }
+                        this.nostrMintRestorePending =
+                            e instanceof MintBackupRelaysUnreachableError;
                     }
                 }
 
