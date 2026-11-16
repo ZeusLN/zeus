@@ -15,6 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { getSupportedActivityFilters } from '../../utils/ActivityFilterSupportUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -24,6 +25,7 @@ import ActivityStore, {
     SERVICES_CONFIG
 } from '../../stores/ActivityStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
 
 import Header from '../../components/Header';
@@ -42,6 +44,7 @@ interface ActivityFilterProps {
     ActivityStore: ActivityStore;
     SettingsStore: SettingsStore;
     SwapStore: SwapStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface ActivityFilterState {
@@ -59,7 +62,7 @@ interface ActivityFilterState {
     };
 }
 
-@inject('ActivityStore', 'SettingsStore', 'SwapStore')
+@inject('ActivityStore', 'SettingsStore', 'SwapStore', 'NodeInfoStore')
 @observer
 export default class ActivityFilter extends React.Component<
     ActivityFilterProps,
@@ -111,6 +114,33 @@ export default class ActivityFilter extends React.Component<
             });
         }
         return newState;
+    };
+
+    getSupported = () =>
+        getSupportedActivityFilters({
+            testnet: !!this.props.NodeInfoStore?.testnet,
+            lightningAddressEnabled:
+                !!this.props.SettingsStore?.settings?.lightningAddress?.enabled,
+            cashuEnabled:
+                !!this.props.SettingsStore?.settings?.ecash?.enableCashu
+        });
+
+    // The state of each service, from its children (what the switches show)
+    getServiceStates = (filters: Filter) => ({
+        swaps: this.getCombinedState([
+            this.getParentState(Object.values(filters.swapFilter.submarine)),
+            this.getParentState(Object.values(filters.swapFilter.reverse))
+        ]),
+        lsps1: this.getParentState(Object.values(filters.lsps1State)),
+        lsps7: this.getParentState(Object.values(filters.lsps7State))
+    });
+
+    // The services whose filters are shown for the connected node
+    getShownServices = () => {
+        const supported = this.getSupported();
+        return (
+            Object.keys(SERVICES_CONFIG) as (keyof typeof SERVICES_CONFIG)[]
+        ).filter((service) => supported[service]);
     };
 
     handleToggle = async (path: string | (string | SwapState)[]) => {
@@ -166,6 +196,9 @@ export default class ActivityFilter extends React.Component<
                     ).every((c) => c === false);
                     if (allChildrenOff) {
                         newFilters[group] = false;
+                        const other =
+                            group === 'submarine' ? 'reverse' : 'submarine';
+                        if (!newFilters[other]) newFilters.swaps = false;
                     }
                 }
             } else {
@@ -195,31 +228,35 @@ export default class ActivityFilter extends React.Component<
             const key = path;
             switch (key) {
                 case 'services': {
-                    const parentKeys = Object.keys(SERVICES_CONFIG);
-                    const parentStates = parentKeys.map(
-                        (k) => filters[k as keyof Filter]
-                    );
+                    // Only the shown services count and change: the switch
+                    // shows their state, and the others keep their values
+                    const shown = this.getShownServices();
+                    const states = this.getServiceStates(filters);
                     const isTurningOn =
-                        this.getParentState(parentStates) === 'off';
+                        this.getCombinedState(
+                            shown.map((service) => states[service])
+                        ) === 'off';
 
-                    toggleAllSwapFilters(isTurningOn);
+                    if (shown.includes('swaps')) {
+                        toggleAllSwapFilters(isTurningOn);
+                    }
 
-                    ['lsps1', 'lsps7'].forEach((serviceKey) => {
-                        newFilters[serviceKey] = isTurningOn;
-                        const stateKey =
-                            SERVICES_CONFIG[
-                                serviceKey as keyof typeof SERVICES_CONFIG
-                            ];
-                        newFilters[stateKey] = this.updateAllChildStates(
-                            newFilters[stateKey],
-                            isTurningOn
-                        );
-                    });
+                    shown
+                        .filter((service) => service !== 'swaps')
+                        .forEach((serviceKey) => {
+                            newFilters[serviceKey] = isTurningOn;
+                            const stateKey = SERVICES_CONFIG[serviceKey];
+                            newFilters[stateKey] = this.updateAllChildStates(
+                                newFilters[stateKey],
+                                isTurningOn
+                            );
+                        });
                     break;
                 }
 
                 case 'swaps': {
-                    const isTurningOn = !filters.swaps;
+                    const isTurningOn =
+                        this.getServiceStates(filters).swaps === 'off';
                     toggleAllSwapFilters(isTurningOn);
                     break;
                 }
@@ -302,6 +339,7 @@ export default class ActivityFilter extends React.Component<
     render() {
         const { navigation, ActivityStore, SettingsStore, SwapStore } =
             this.props;
+        const supported = this.getSupported();
         const {
             setStartDate,
             setEndDate,
@@ -345,27 +383,15 @@ export default class ActivityFilter extends React.Component<
             circularRebalance
         } = filters;
 
-        const submarineState = this.getParentState(
-            Object.values(filters.swapFilter.submarine)
+        const serviceStates = this.getServiceStates(filters);
+        const {
+            swaps: swapsState,
+            lsps1: lsps1State,
+            lsps7: lsps7State
+        } = serviceStates;
+        const servicesState = this.getCombinedState(
+            this.getShownServices().map((service) => serviceStates[service])
         );
-        const reverseState = this.getParentState(
-            Object.values(filters.swapFilter.reverse)
-        );
-        const swapsState = this.getCombinedState([
-            submarineState,
-            reverseState
-        ]);
-        const lsps1State = this.getParentState(
-            Object.values(filters.lsps1State)
-        );
-        const lsps7State = this.getParentState(
-            Object.values(filters.lsps7State)
-        );
-        const servicesState = this.getCombinedState([
-            swapsState,
-            lsps1State,
-            lsps7State
-        ]);
 
         const DateFilter = (props: { type: 'startDate' | 'endDate' }) => (
             <View
@@ -459,21 +485,19 @@ export default class ActivityFilter extends React.Component<
                 value: onChain,
                 var: 'onChain',
                 type: 'Toggle',
-                condition:
-                    BackendUtils.supportsOnchainReceiving() ||
-                    BackendUtils.supportsOnchainSends()
+                condition: supported.onChain
             },
             {
                 label: localeString('views.ActivityFilter.cashuPayments'),
                 value: cashu,
                 var: 'cashu',
                 type: 'Toggle',
-                condition: BackendUtils.supportsCashuWallet()
+                condition: supported.cashu
             },
             {
                 label: localeString('views.ActivityFilter.services'),
                 type: 'Services',
-                condition: true,
+                condition: this.getShownServices().length > 0,
                 section: 'services',
                 children: [
                     {
@@ -481,6 +505,7 @@ export default class ActivityFilter extends React.Component<
                         value: swaps,
                         var: 'swaps',
                         section: 'swaps',
+                        condition: supported.swaps,
                         children: [
                             {
                                 label: localeString('views.Swaps.submarine'),
@@ -520,6 +545,7 @@ export default class ActivityFilter extends React.Component<
                         value: lsps1,
                         var: 'lsps1',
                         section: 'lsps1',
+                        condition: supported.lsps1,
                         children: [
                             {
                                 label: localeString(
@@ -547,6 +573,7 @@ export default class ActivityFilter extends React.Component<
                         value: lsps7,
                         var: 'lsps7',
                         section: 'lsps7',
+                        condition: supported.lsps7,
                         children: [
                             {
                                 label: localeString(
@@ -569,7 +596,7 @@ export default class ActivityFilter extends React.Component<
                             }
                         ]
                     }
-                ]
+                ].filter((child) => child.condition)
             },
             {
                 label: localeString('general.sent'),
@@ -611,42 +638,42 @@ export default class ActivityFilter extends React.Component<
                 value: standardInvoices,
                 var: 'standardInvoices',
                 type: 'Toggle',
-                condition: BackendUtils.isLNDBased()
+                condition: supported.standardInvoices
             },
             {
                 label: localeString('views.ActivityFilter.ampInvoices'),
                 value: ampInvoices,
                 var: 'ampInvoices',
                 type: 'Toggle',
-                condition: BackendUtils.isLNDBased()
+                condition: supported.ampInvoices
             },
             {
                 label: 'ZEUS Pay',
                 value: zeusPay,
                 var: 'zeusPay',
                 type: 'Toggle',
-                condition: SettingsStore.settings.lightningAddress.enabled
+                condition: supported.zeusPay
             },
             {
                 label: localeString('views.Channel.keysend'),
                 value: keysend,
                 var: 'keysend',
                 type: 'Toggle',
-                condition: BackendUtils.supportsKeysend()
+                condition: supported.keysend
             },
             {
                 label: localeString('views.Activity.circularRebalance'),
                 value: circularRebalance,
                 var: 'circularRebalance',
                 type: 'Toggle',
-                condition: true
+                condition: supported.circularRebalance
             },
             {
                 label: localeString('general.unconfirmed'),
                 value: unconfirmed,
                 var: 'unconfirmed',
                 type: 'Toggle',
-                condition: BackendUtils.supportsOnchainReceiving()
+                condition: supported.unconfirmed
             },
             {
                 label: localeString('views.ActivityFilter.minimumAmount'),

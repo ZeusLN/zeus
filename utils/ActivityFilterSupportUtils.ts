@@ -18,8 +18,8 @@ export interface SupportedActivityFilters {
  * Which activity filters apply to the connected node. A filter that does
  * not apply is hidden on the filter screen.
  *
- * The In transit and Failed filters are not listed: they stay tied to
- * isLNDBased() on the filter screen, as before.
+ * The In transit and Failed filters are not listed: their toggles are
+ * gated on the filter screen, as before.
  */
 export const getSupportedActivityFilters = ({
     testnet,
@@ -51,7 +51,10 @@ export const getSupportedActivityFilters = ({
         // Standard invoices exist with or without AMP
         standardInvoices: lndBased,
         ampInvoices: lndBased && !!BackendUtils.supportsAMP(),
+        // The menu hides Lightning address on testnet, and the setting is
+        // global, so it can still be on after switching to a testnet wallet
         zeusPay:
+            !testnet &&
             lightningAddressEnabled &&
             !!BackendUtils.supportsLightningAddress(),
         keysend: !!BackendUtils.supportsKeysend(),

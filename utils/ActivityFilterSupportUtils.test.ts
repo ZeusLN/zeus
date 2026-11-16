@@ -194,6 +194,26 @@ describe('getSupportedActivityFilters', () => {
         ).toBe(false);
     });
 
+    it('hides ZEUS Pay on testnet, where the menu has no Lightning address', () => {
+        expect(
+            supportedFor('ldk-node', {
+                testnet: true,
+                lightningAddressEnabled: true
+            }).zeusPay
+        ).toBe(false);
+    });
+
+    it('needs an LND based node for the AMP filter, whatever supportsAMP says', () => {
+        // every backend but the LND ones reports supportsAMP false today, so
+        // this pins the clause rather than a real combination
+        expect(
+            supportedFor('ldk-node', {}, { supportsAMP: true }).ampInvoices
+        ).toBe(false);
+        expect(supportedFor('lnd', {}, { supportsAMP: true }).ampInvoices).toBe(
+            true
+        );
+    });
+
     it('needs both the ecash setting and backend support for Cashu', () => {
         expect(supportedFor('ldk-node', { cashuEnabled: true }).cashu).toBe(
             true
