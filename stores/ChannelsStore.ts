@@ -167,22 +167,34 @@ const fixedAliases: aliases = {
         'Olympus by ZEUS'
 };
 
-// Sorted "txid:vout" keys of the outpoints a PSBT or raw transaction spends,
-// or null if it does not parse
-const outpointKeys = (
+// Keys for what a PSBT or raw transaction spends and pays, or null if it does
+// not parse: a sorted "txid:vout" per outpoint spent, then an
+// "out:script:value" per output. Outputs stay in transaction order, since the
+// output index is part of the channel's funding outpoint.
+const fundingTxKeys = (
     tx: { psbt: string } | { txHex: string }
 ): Array<string> | null => {
     try {
-        const inputs: Array<{ hash: Uint8Array; index: number }> =
-            'psbt' in tx
-                ? bitcoin.Psbt.fromBase64(tx.psbt).txInputs
-                : bitcoin.Transaction.fromHex(tx.txHex).ins;
-        return inputs
-            .map(
-                (input) =>
-                    `${Buffer.from(input.hash).toString('hex')}:${input.index}`
+        let inputs: Array<{ hash: Uint8Array; index: number }>;
+        let outputs: Array<{ script: Uint8Array; value: number }>;
+        if ('psbt' in tx) {
+            const psbt = bitcoin.Psbt.fromBase64(tx.psbt);
+            inputs = psbt.txInputs;
+            outputs = psbt.txOutputs;
+        } else {
+            const transaction = bitcoin.Transaction.fromHex(tx.txHex);
+            inputs = transaction.ins;
+            outputs = transaction.outs;
+        }
+        const hex = (bytes: Uint8Array) => Buffer.from(bytes).toString('hex');
+        return [
+            ...inputs
+                .map((input) => `${hex(input.hash)}:${input.index}`)
+                .sort(),
+            ...outputs.map(
+                (output) => `out:${hex(output.script)}:${output.value}`
             )
-            .sort();
+        ];
     } catch (e) {
         return null;
     }
@@ -268,8 +280,8 @@ export default class ChannelsStore {
     // external account funding
     @observable public funded_psbt: string = '';
     @observable public pending_chan_ids: Array<string> = [];
-    // outpoints of the funding PSBT handed to the user for signing
-    @observable public pending_funding_outpoints: Array<string> = [];
+    // inputs and outputs of the funding PSBT handed to the user for signing
+    @observable public pending_funding_tx_keys: Array<string> = [];
     // pending HTLCs
     @observable public pendingHTLCs: Array<PendingHTLC> = [];
     @observable public haveAnnouncedChannels = false;
@@ -357,24 +369,22 @@ export default class ChannelsStore {
     @action
     public resetPendingChannels = () => {
         this.pending_chan_ids = [];
-        this.pending_funding_outpoints = [];
+        this.pending_funding_tx_keys = [];
     };
 
     // The pending channels a signed PSBT or raw transaction funds, or none.
     // The PSBT and TxHex screens also show unrelated transactions (a send
     // from an external account, a scanned PSBT, a sweep), and an abandoned
-    // funding flow leaves its IDs behind. Only a transaction that spends
-    // the outpoints of the PSBT we handed out goes back to LND's funding
-    // flow; LND requires the signed transaction to be that one.
+    // funding flow leaves its IDs behind. Only a transaction with the inputs
+    // and outputs of the PSBT we handed out goes back to LND's funding
+    // flow; LND requires the signed transaction to be that one. A send can
+    // spend the same inputs, so the outputs are compared too.
     public pendingChanIdsFor = (
         tx: { psbt: string } | { txHex: string }
     ): Array<string> => {
-        if (this.pending_funding_outpoints.length === 0) return [];
-        const outpoints = outpointKeys(tx);
-        if (
-            !outpoints ||
-            outpoints.join() !== this.pending_funding_outpoints.join()
-        ) {
+        if (this.pending_funding_tx_keys.length === 0) return [];
+        const keys = fundingTxKeys(tx);
+        if (!keys || keys.join() !== this.pending_funding_tx_keys.join()) {
             return [];
         }
         return this.pending_chan_ids;
@@ -1393,12 +1403,12 @@ export default class ChannelsStore {
             });
     };
 
-    // The PSBT goes to the user for signing: remember what it spends so the
-    // signed transaction can be matched to the pending channels
+    // The PSBT goes to the user for signing: remember what it spends and
+    // pays so the signed transaction can be matched to the pending channels
     @action
     private setFundedPsbt = (psbt: string) => {
         this.funded_psbt = psbt;
-        this.pending_funding_outpoints = outpointKeys({ psbt }) || [];
+        this.pending_funding_tx_keys = fundingTxKeys({ psbt }) || [];
     };
 
     @action

@@ -46,10 +46,20 @@ const FUNDING_INPUTS = [
     { txid: 'bb'.repeat(32), vout: 0 }
 ];
 const OTHER_INPUTS = [{ txid: 'cc'.repeat(32), vout: 0 }];
+// the channel's 2-of-2 output, then the change
+const P2WSH = Buffer.from(`0020${'22'.repeat(32)}`, 'hex');
+const FUNDING_OUTPUTS = [
+    { script: P2WSH, value: 100000 },
+    { script: P2WPKH, value: 49000 }
+];
+const OTHER_P2WPKH = Buffer.from(`0014${'33'.repeat(20)}`, 'hex');
+
+type Output = { script: Buffer; value: number };
 
 const psbtSpending = (
     inputs: Array<{ txid: string; vout: number }>,
-    signed = false
+    signed = false,
+    outputs: Array<Output> = FUNDING_OUTPUTS
 ) => {
     const psbt = new bitcoin.Psbt();
     inputs.forEach(({ txid, vout }, index) => {
@@ -64,18 +74,30 @@ const psbtSpending = (
             });
         }
     });
-    psbt.addOutput({ script: P2WPKH, value: 150000 });
+    outputs.forEach((output) => psbt.addOutput(output));
     return psbt.toBase64();
 };
 
-const txSpending = (inputs: Array<{ txid: string; vout: number }>) => {
+const txSpending = (
+    inputs: Array<{ txid: string; vout: number }>,
+    outputs: Array<Output> = FUNDING_OUTPUTS
+) => {
     const tx = new bitcoin.Transaction();
     inputs.forEach(({ txid, vout }) =>
         tx.addInput(Buffer.from(txid, 'hex').reverse(), vout)
     );
-    tx.addOutput(P2WPKH, 150000);
+    outputs.forEach(({ script, value }) => tx.addOutput(script, value));
     return tx.toHex();
 };
+
+// what the PSBT and TxHex screens are given for the same transaction
+const bothForms = (
+    inputs: Array<{ txid: string; vout: number }>,
+    outputs: Array<Output>
+) => [
+    { psbt: psbtSpending(inputs, true, outputs) },
+    { txHex: txSpending(inputs, outputs) }
+];
 
 const PSBT = psbtSpending(FUNDING_INPUTS);
 
@@ -312,6 +334,79 @@ describe('ChannelsStore PSBT funding flow', () => {
         );
         expect(channelsStore.pendingChanIdsFor({ txHex: 'zz' })).toEqual([]);
         expect(channelsStore.pending_chan_ids).toEqual(['chan-1']);
+    });
+
+    it('matches the transaction extracted from the signed funding PSBT', () => {
+        channelsStore.resetOpenChannel();
+        const txHex = bitcoin.Psbt.fromBase64(
+            psbtSpending(FUNDING_INPUTS, true)
+        )
+            .extractTransaction(true)
+            .toHex();
+
+        expect(channelsStore.pendingChanIdsFor({ txHex })).toEqual(['chan-1']);
+    });
+
+    // A send from the same external account can be funded with the inputs
+    // an abandoned funding flow left behind. LND would refuse it as the
+    // funding transaction on every try.
+    it.each([
+        [
+            'pays another address',
+            [FUNDING_OUTPUTS[0], { script: OTHER_P2WPKH, value: 49000 }]
+        ],
+        [
+            'pays another amount',
+            [FUNDING_OUTPUTS[0], { script: P2WPKH, value: 49001 }]
+        ],
+        [
+            'has its outputs in another order',
+            [FUNDING_OUTPUTS[1], FUNDING_OUTPUTS[0]]
+        ],
+        ['leaves an output out', [FUNDING_OUTPUTS[0]]],
+        [
+            'adds an output',
+            [...FUNDING_OUTPUTS, { script: OTHER_P2WPKH, value: 1000 }]
+        ]
+    ])(
+        'matches no channel to a transaction that spends the funding inputs but %s',
+        (_, outputs) => {
+            channelsStore.resetOpenChannel();
+
+            bothForms(FUNDING_INPUTS, outputs).forEach((tx) =>
+                expect(channelsStore.pendingChanIdsFor(tx)).toEqual([])
+            );
+
+            // the channel is still waiting for its own transaction
+            expect(channelsStore.pending_chan_ids).toEqual(['chan-1']);
+            expect(channelsStore.pendingChanIdsFor({ psbt: PSBT })).toEqual([
+                'chan-1'
+            ]);
+            expect(
+                channelsStore.pendingChanIdsFor({
+                    txHex: txSpending(FUNDING_INPUTS)
+                })
+            ).toEqual(['chan-1']);
+        }
+    );
+
+    it('does not take an output for a spent outpoint', () => {
+        // an output whose script and value read like the second funding
+        // input, in a transaction that spends only the first
+        const [first, second] = FUNDING_INPUTS;
+        const outputs = [
+            {
+                script: Buffer.from(second.txid, 'hex').reverse(),
+                value: second.vout
+            },
+            ...FUNDING_OUTPUTS
+        ];
+
+        expect(
+            channelsStore.pendingChanIdsFor({
+                txHex: txSpending([first], outputs)
+            })
+        ).toEqual([]);
     });
 
     it('matches no channel once LND has finalized it', async () => {
