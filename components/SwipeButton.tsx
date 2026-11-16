@@ -7,7 +7,9 @@ import {
     PanResponder,
     PanResponderGestureState,
     GestureResponderEvent,
-    LayoutChangeEvent
+    LayoutChangeEvent,
+    AccessibilityActionEvent,
+    Platform
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -39,6 +41,10 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
 
     // the responder is created once, so its handlers only ever see refs
     const completed = useRef(false);
+    // The same, as state, for screen readers: a completed button can't be
+    // used again until the screen regains focus, so it is announced as
+    // disabled. It does not fade like a disabled one.
+    const [isCompleted, setIsCompleted] = useState(false);
     const onSwipeSuccessRef = useRef(onSwipeSuccess);
     onSwipeSuccessRef.current = onSwipeSuccess;
     // the drag in progress, if any; 'cancelled' once the track's width
@@ -60,6 +66,18 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
             toValue: 0,
             useNativeDriver: false
         }).start();
+
+    // A completed swipe, from a drag or from the accessibility action. Lock
+    // the button in the completed position before kicking off any work, so
+    // it can't be dragged again or left hanging mid-track while navigation
+    // is pending. Before the first layout the knob stays at the start, and
+    // onLayout moves the locked knob to the end.
+    const complete = () => {
+        completed.current = true;
+        setIsCompleted(true);
+        pan.setValue(maxTranslationRef.current ?? 0);
+        onSwipeSuccessRef.current();
+    };
 
     const onLayout = (e: LayoutChangeEvent) => {
         const travel = Math.max(
@@ -96,6 +114,7 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
         useCallback(() => {
             if (completed.current) {
                 completed.current = false;
+                setIsCompleted(false);
                 pan.setValue(0);
             }
         }, [])
@@ -135,12 +154,7 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
                     gesture.dx > maxTranslation * 0.95 &&
                     !disabledRef.current
                 ) {
-                    // lock the button in the completed position before
-                    // kicking off any work, so it can't be dragged again or
-                    // left hanging mid-track while navigation is pending
-                    completed.current = true;
-                    pan.setValue(maxTranslation);
-                    onSwipeSuccessRef.current();
+                    complete();
                 } else {
                     springBack();
                 }
@@ -152,6 +166,27 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
         })
     ).current;
 
+    // A screen reader can't drag the knob, so the track is a button that a
+    // double tap completes the way a full swipe does. TalkBack sends the
+    // activate action. VoiceOver on the New Architecture sends
+    // onAccessibilityTap: the Fabric view does not turn a double tap into
+    // the activate action. Like a drag, it does nothing while disabled or
+    // once completed. It also does nothing while a finger is down, even on
+    // a cancelled drag, because the release would complete or spring back.
+    const activate = () => {
+        if (
+            completed.current ||
+            disabledRef.current ||
+            drag.current !== 'idle'
+        ) {
+            return;
+        }
+        complete();
+    };
+    const onAccessibilityAction = (event: AccessibilityActionEvent) => {
+        if (event.nativeEvent.actionName === 'activate') activate();
+    };
+
     return (
         <View
             style={[
@@ -161,6 +196,17 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
             ]}
             onLayout={onLayout}
             testID="swipe-button-track"
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={instructionText}
+            accessibilityState={{ disabled: disabled || isCompleted }}
+            // Android only: iOS would list the untranslated "activate" in
+            // the VoiceOver actions rotor
+            accessibilityActions={
+                Platform.OS === 'android' ? ACTIVATE_ACTION : undefined
+            }
+            onAccessibilityAction={onAccessibilityAction}
+            onAccessibilityTap={activate}
         >
             <Animated.View
                 style={[
@@ -191,6 +237,7 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
 };
 
 const SWIPE_BUTTON_WIDTH = 50;
+const ACTIVATE_ACTION = [{ name: 'activate' }];
 
 const styles = StyleSheet.create({
     container: {
