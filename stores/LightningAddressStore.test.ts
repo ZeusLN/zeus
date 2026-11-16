@@ -171,6 +171,63 @@ describe('LightningAddressStore', () => {
             expect(store.redeemingAll).toBe(false);
         });
 
+        const quotePayment = {
+            quote_id: 'q1',
+            mint_url: 'https://mint.test',
+            amount_msat: 1000
+        };
+
+        it.each([
+            ['no fields', {}],
+            [
+                'no quote id',
+                { mint_url: 'https://mint.test', amount_msat: 1000 }
+            ],
+            [
+                'a number as quote id',
+                {
+                    quote_id: 5,
+                    mint_url: 'https://mint.test',
+                    amount_msat: 1000
+                }
+            ],
+            [
+                'an empty quote id',
+                {
+                    quote_id: '',
+                    mint_url: 'https://mint.test',
+                    amount_msat: 1000
+                }
+            ]
+        ])(
+            'drops a Cashu paid entry with %s',
+            async (_name: string, entry: any) => {
+                const store = statusStore();
+                mockStatusResponse({
+                    addressType: 'cashu',
+                    paid: [entry, quotePayment]
+                });
+
+                await store.status();
+
+                expect(store.paid).toEqual([quotePayment]);
+            }
+        );
+
+        // the lower limit of the rule: an entry with a quote id stays even
+        // with no other field, because the user can still delete it
+        it('keeps a Cashu paid entry that has only a quote id', async () => {
+            const store = statusStore();
+            mockStatusResponse({
+                addressType: 'cashu',
+                paid: [{ quote_id: 'q2' }]
+            });
+
+            await store.status();
+
+            expect(store.paid).toEqual([{ quote_id: 'q2' }]);
+        });
+
         it('records the error and rethrows when the server rejects the call', async () => {
             const store = statusStore();
             (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
