@@ -17,12 +17,35 @@ jest.mock('../utils/BackendUtils', () => ({
     isLNDBased: () => false
 }));
 jest.mock('../utils/LocaleUtils');
+// the real BackendUtils, loaded below with jest.requireActual, reads the
+// implementation from Stores and constructs every backend
+jest.mock('./Stores');
+const mockLdkCloseChannel = jest.fn();
+function mockBackend() {
+    return {
+        __esModule: true,
+        default: class {
+            closeChannel = (...args: any[]) => mockLdkCloseChannel(...args);
+        }
+    };
+}
+jest.mock('../backends/LND', () => mockBackend());
+jest.mock('../backends/LightningNodeConnect', () => mockBackend());
+jest.mock('../backends/EmbeddedLND', () => mockBackend());
+jest.mock('../backends/LdkNode', () => mockBackend());
+jest.mock('../backends/CLNRest', () => mockBackend());
+jest.mock('../backends/LndHub', () => mockBackend());
+jest.mock('../backends/NostrWalletConnect', () => mockBackend());
 
 import { autorun } from 'mobx';
 
 import ChannelsStore from './ChannelsStore';
 import BackendUtils from '../utils/BackendUtils';
 import ChannelInfo from '../models/ChannelInfo';
+import { settingsStore } from './Stores';
+import { parseLdkNodeError } from '../utils/ErrorUtils';
+
+const RealBackendUtils = jest.requireActual('../utils/BackendUtils').default;
 
 const channel = (
     localBalance: number,
@@ -460,6 +483,32 @@ describe('ChannelsStore.closeChannel', () => {
             expect(store.closeChannelErr).toBeNull();
             expectOneRefresh();
         });
+
+        it('does not send a second close request when the error passes through BackendUtils.call', async () => {
+            settingsStore.implementation = 'ldk-node';
+            // only the first request should reach the backend
+            jest.mocked(BackendUtils.closeChannel).mockImplementationOnce(
+                (...args: any[]) => RealBackendUtils.closeChannel(...args)
+            );
+            mockLdkCloseChannel.mockRejectedValueOnce(channelClosedError());
+
+            await store.closeChannel(CHANNEL_POINT);
+
+            expect(mockLdkCloseChannel).toHaveBeenCalledWith([
+                'txid',
+                '1',
+                undefined,
+                undefined,
+                undefined
+            ]);
+            expect(store.closedByFailedCloseChannelPoint).toBe('txid:1');
+            expect(store.closeChannelErr).toBe('force closed instead');
+
+            await store.closeChannel(CHANNEL_POINT);
+
+            expect(mockLdkCloseChannel).toHaveBeenCalledTimes(1);
+            expect(store.closeChannelErr).toBe('force closed instead');
+        });
     });
 
     describe('on LNC', () => {
@@ -878,5 +927,78 @@ describe('ChannelsStore batch channel open', () => {
         expect(store.channelSuccess).toBe(false);
         expect(store.errorOpenChannel).toBe(true);
         expect(store.errorMsgChannel).toBe('Request timeout');
+    });
+});
+
+describe('BackendUtils.call on LDK Node', () => {
+    const ANDROID_ERROR =
+        'org.lightningdevkit.ldknode.NodeException$ChannelClosingFailed: Failed to close channel.';
+
+    beforeEach(() => {
+        mockLdkCloseChannel.mockReset();
+        settingsStore.implementation = 'ldk-node';
+    });
+
+    const closeError = async () => {
+        let caught: any;
+        await RealBackendUtils.closeChannel(['txid', '1']).catch(
+            (error: any) => {
+                caught = error;
+            }
+        );
+        return caught;
+    };
+
+    it('keeps channelClosed on the wrapped error', async () => {
+        const original = Object.assign(new Error(`Error: ${ANDROID_ERROR}`), {
+            channelClosed: true
+        });
+        mockLdkCloseChannel.mockRejectedValue(original);
+
+        const error = await closeError();
+
+        expect(error).not.toBe(original);
+        expect(error).toBeInstanceOf(Error);
+        expect(error.channelClosed).toBe(true);
+        expect(error.message).toBe(parseLdkNodeError(original));
+        expect(error.message).toBe('Failed to close channel.');
+    });
+
+    it('wraps an ordinary error as before', async () => {
+        const original = new Error(ANDROID_ERROR);
+        original.name = 'NodeException';
+        mockLdkCloseChannel.mockRejectedValue(original);
+
+        const error = await closeError();
+
+        expect(error).not.toBe(original);
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe('Failed to close channel.');
+        expect(error.name).toBe('NodeException');
+        expect(Object.keys(error)).toEqual(['name']);
+    });
+
+    it('wraps a string rejection without copying its characters', async () => {
+        mockLdkCloseChannel.mockRejectedValue(ANDROID_ERROR);
+
+        const error = await closeError();
+
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe('Failed to close channel.');
+        expect(error.name).toBe('Error');
+        expect(Object.keys(error)).toEqual(['name']);
+    });
+
+    it('keeps the parsed message when the rejection has an enumerable message', async () => {
+        mockLdkCloseChannel.mockRejectedValue({
+            message: ANDROID_ERROR,
+            channelClosed: true
+        });
+
+        const error = await closeError();
+
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe('Failed to close channel.');
+        expect(error.channelClosed).toBe(true);
     });
 });
