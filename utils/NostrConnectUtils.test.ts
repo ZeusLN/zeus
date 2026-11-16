@@ -58,6 +58,7 @@ type PaymentStateSnapshot = {
     status: string | number | null;
     isIncomplete: boolean | null;
     error: boolean;
+    mayHaveBeenSent?: boolean;
     payment_error: string | null;
     loading: boolean;
 };
@@ -192,12 +193,23 @@ const storeState = {
         payment_error: 'route not found',
         loading: false
     }),
-    // TransactionsStore.handlePaymentError: the send request itself was
-    // rejected (e.g. a proxy closed the idle response), nothing else is set
+    // the send request was rejected without the node's answer (e.g. a proxy
+    // closed the idle response), so it may have reached the node
     requestRejected: (): PaymentStateSnapshot => ({
         status: null,
         isIncomplete: null,
         error: true,
+        mayHaveBeenSent: true,
+        payment_error: null,
+        loading: false
+    }),
+    // the node itself refused the send (e.g. LND's "payment is in
+    // transition"), so this request sent nothing
+    refusedByNode: (): PaymentStateSnapshot => ({
+        status: null,
+        isIncomplete: null,
+        error: true,
+        mayHaveBeenSent: false,
         payment_error: null,
         loading: false
     })
@@ -1194,6 +1206,17 @@ describe('NostrConnectUtils', () => {
                     const result = resolve({
                         payments: [paymentFixtures.otherInvoiceInFlight()],
                         paymentState: storeState.requestRejected()
+                    });
+
+                    expect(result).toEqual({ inTransit: false });
+                });
+            });
+
+            describe('when the node refused the send', () => {
+                it('does not hold budget for a payment the node lists in flight', () => {
+                    const result = resolve({
+                        payments: [paymentFixtures.inFlightStatus()],
+                        paymentState: storeState.refusedByNode()
                     });
 
                     expect(result).toEqual({ inTransit: false });
