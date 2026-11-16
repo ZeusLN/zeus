@@ -292,6 +292,41 @@ describe('AddressUtils', () => {
                 value: prefixed
             });
         });
+
+        it('parses a bitcoin: URI wrapped in a zeusln: deep link', () => {
+            const expected = {
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            };
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln:bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln:Bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
+            // a bare value behind zeusln: is still returned as is
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                )
+            ).toEqual({ value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu' });
+        });
+
+        it('splits on the scheme the input starts with, not one in a parameter', () => {
+            // 'BITCOIN:' in the label used to be taken as the scheme
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003&label=BITCOIN:SALE'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            });
+        });
     });
 
     describe('extractBolt12Offer', () => {
