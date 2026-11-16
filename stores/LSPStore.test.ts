@@ -1791,6 +1791,24 @@ describe('LSPStore.updateOrderInStorage', () => {
         expect(storedOrders()).toEqual([[{ ...storedOrder, order: reply }]]);
     });
 
+    it('stores a reply with an object field the readers do not use', async () => {
+        const reply = {
+            jsonrpc: '2.0',
+            id: 'req-1',
+            result: {
+                order_id: 'order-1',
+                order_state: 'COMPLETED',
+                lsp_balance_sat: '1000000',
+                metadata: { a: 1 }
+            }
+        };
+
+        makeStore().updateOrderInStorage(reply);
+        await flush();
+
+        expect(storedOrders()).toEqual([[{ ...storedOrder, order: reply }]]);
+    });
+
     it('keeps the stored order when the reply is malformed', async () => {
         const store = makeStore();
         const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});

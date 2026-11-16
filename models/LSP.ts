@@ -53,44 +53,105 @@ const isScalar = (value: any): boolean =>
 const isPlainObject = (value: any): boolean =>
     typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const isScalarRecord = (value: any): boolean =>
-    isPlainObject(value) && Object.values(value).every(isScalar);
+// true if each of the named fields is missing or a scalar
+const hasScalarFields = (value: any, keys: string[]): boolean =>
+    keys.every((key) => isScalar(value[key]));
 
-// payment options that are objects; every other payment field is a scalar
-const PAYMENT_OPTION_KEYS = ['bolt11', 'bolt12', 'onchain', 'onchain_payment'];
+// The fields the order screens, the orders list and the Activity list read.
+// No reader iterates over the keys of an order, so a field that is not
+// named here is never read and is not checked.
+const ORDER_FIELDS = [
+    'order_state',
+    'lsp_balance_sat',
+    'client_balance_sat',
+    'announce_channel',
+    'channel_expiry_blocks',
+    'funding_confirms_within_blocks',
+    'created_at',
+    'expires_at',
+    'channel_extension_expiry_blocks',
+    'new_channel_expiry_block'
+];
+const PAYMENT_FIELDS = [
+    'state',
+    'order_total_sat',
+    'fee_total_sat',
+    'lightning_invoice',
+    'bolt11_invoice',
+    'min_fee_for_0conf',
+    'min_onchain_payment_confirmations',
+    'onchain_address'
+];
+// payment options that are objects, with the fields read from each
+const PAYMENT_OPTION_FIELDS: { [option: string]: string[] } = {
+    bolt11: [
+        'state',
+        'order_total_sat',
+        'fee_total_sat',
+        'expires_at',
+        'invoice'
+    ],
+    bolt12: [],
+    onchain: [
+        'order_total_sat',
+        'fee_total_sat',
+        'expires_at',
+        'address',
+        'min_fee_for_0conf',
+        'min_onchain_payment_confirmations'
+    ],
+    onchain_payment: []
+};
+const CHANNEL_FIELDS = [
+    'funding_outpoint',
+    'funded_at',
+    'expires_at',
+    'short_channel_id',
+    'max_channel_extension_expiry_blocks',
+    'expiration_block'
+];
+const ORIGINAL_ORDER_FIELDS = ['id', 'service'];
 
 /**
  * Returns true if an LSPS1/LSPS7 order response (with or without the
  * JSON-RPC `result` wrapper) has the shape the order screens and the
- * Activity list read: a non-empty order_id string and scalar fields,
- * except `payment` (scalars, plus the payment options as objects of
- * scalars) and `channel` (scalars, plus `original_order` as an object of
- * scalars and `extension_order_ids` as a list of scalars).
+ * Activity list read: a non-empty order_id string, and scalars in the
+ * fields they read from the order, from `payment` and its payment options
+ * (which are objects) and from `channel` (plus `original_order` as an
+ * object and `extension_order_ids` as a list of scalars). Fields they do
+ * not read are ignored, so an LSP can add fields of any type.
  */
 export const isValidOrderResponse = (order: any): boolean => {
     const result = order?.result || order;
     if (!isPlainObject(result)) return false;
     if (typeof result.order_id !== 'string' || !result.order_id) return false;
+    if (!hasScalarFields(result, ORDER_FIELDS)) return false;
 
-    const { payment, channel, ...fields } = result;
-    if (!Object.values(fields).every(isScalar)) return false;
+    const { payment, channel } = result;
 
     if (payment != null) {
         if (!isPlainObject(payment)) return false;
-        const paymentValid = Object.entries(payment).every(([key, value]) =>
-            PAYMENT_OPTION_KEYS.includes(key)
-                ? value == null || isScalarRecord(value)
-                : isScalar(value)
+        if (!hasScalarFields(payment, PAYMENT_FIELDS)) return false;
+        const optionsValid = Object.entries(PAYMENT_OPTION_FIELDS).every(
+            ([option, fields]) =>
+                payment[option] == null ||
+                (isPlainObject(payment[option]) &&
+                    hasScalarFields(payment[option], fields))
         );
-        if (!paymentValid) return false;
+        if (!optionsValid) return false;
     }
 
     if (channel != null) {
         if (!isPlainObject(channel)) return false;
-        const { original_order, extension_order_ids, ...channelFields } =
-            channel;
-        if (!Object.values(channelFields).every(isScalar)) return false;
-        if (original_order != null && !isScalarRecord(original_order)) {
+        if (!hasScalarFields(channel, CHANNEL_FIELDS)) return false;
+        const { original_order, extension_order_ids } = channel;
+        if (
+            original_order != null &&
+            !(
+                isPlainObject(original_order) &&
+                hasScalarFields(original_order, ORIGINAL_ORDER_FIELDS)
+            )
+        ) {
             return false;
         }
         if (
