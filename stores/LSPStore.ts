@@ -109,6 +109,14 @@ export default class LSPStore {
     // does not depend on the language being the same when the reply lands.
     private timedOutErrorMsg = '';
 
+    // The peer each in-flight custom-message request was sent to, keyed by
+    // request id. handleCustomMessages drops a reply whose id matches a
+    // request but whose sender does not, so a connected peer that is not
+    // the LSP can't answer in the LSP's place. Entries are removed when a
+    // reply is consumed, when a new request replaces the id, and when a
+    // reset invalidates the id.
+    private customMessageRequestPeers: { [requestId: string]: string } = {};
+
     // Free orders have no payment step, so they never pass through the LSPPaymentAwait polling screen.
     // Without this poll the post-creation view would stay on the
     // "opening now…" message forever, even after the channel open fails.
@@ -218,6 +226,7 @@ export default class LSPStore {
             // reply still in flight must not land on the next one
             this.getExtendableChannelsNativeRequestId++;
             this.getExtendableChannelsResponseResolver?.();
+            delete this.customMessageRequestPeers[this.getExtendableChannelsId];
             this.getExtendableChannelsId = '';
             this.getExtendableChannelsData = [];
             this.getExtendableChannelsError = false;
@@ -268,6 +277,9 @@ export default class LSPStore {
         this.createOrderResponseResolver?.();
         // Invalidate in-flight request ids so a late response or send failure
         // can't write into the next screen's state.
+        delete this.customMessageRequestPeers[this.getInfoId];
+        delete this.customMessageRequestPeers[this.createOrderId];
+        delete this.customMessageRequestPeers[this.getOrderId];
         this.getInfoId = '';
         this.createOrderId = '';
         this.createOrderResponse = {};
@@ -281,6 +293,8 @@ export default class LSPStore {
     public resetLSPS7Data = () => {
         this.stopFreeOrderStatusPolling();
         this.createExtensionOrderResponseResolver?.();
+        delete this.customMessageRequestPeers[this.createExtensionOrderId];
+        delete this.customMessageRequestPeers[this.getExtensionOrderId];
         this.createExtensionOrderId = '';
         this.createExtensionOrderResponse = {};
         this.loadingLSPS7 = false;
@@ -374,6 +388,20 @@ export default class LSPStore {
     private getFlowHost = () => this.getLspConfig().flowHost;
 
     public getLSPSPubkey = () => this.getLspConfig().lsps1Pubkey;
+
+    // Returns a new request id bound to the peer it is sent to, and drops
+    // the binding of the id it replaces so timed-out requests don't pile up.
+    // The peer is lowercased because handleCustomMessages decodes the
+    // sender to lowercase hex, while the configured pubkey is kept as typed.
+    private newCustomMessageRequestId = (
+        previousId: string,
+        peer: string
+    ): string => {
+        delete this.customMessageRequestPeers[previousId];
+        const requestId = uuidv4();
+        this.customMessageRequestPeers[requestId] = (peer || '').toLowerCase();
+        return requestId;
+    };
 
     public getLSPSHost = () => this.getLspConfig().lsps1Host;
 
@@ -941,6 +969,10 @@ export default class LSPStore {
 
         console.log('Received custom message', { peer, data });
 
+        // a reply is only accepted from the peer its request was sent to
+        if (this.customMessageRequestPeers[data.id] !== peer) return false;
+        delete this.customMessageRequestPeers[data.id];
+
         if (data.id === this.getInfoId) {
             if (data.error) {
                 const message =
@@ -1185,7 +1217,10 @@ export default class LSPStore {
         this.error = false;
         this.error_msg = '';
 
-        this.getInfoId = uuidv4();
+        this.getInfoId = this.newCustomMessageRequestId(
+            this.getInfoId,
+            this.getLSPSPubkey()
+        );
         const requestId = this.getInfoId;
         const method = 'lsps1.get_info';
 
@@ -1321,7 +1356,10 @@ export default class LSPStore {
         this.error = false;
         this.error_msg = '';
 
-        this.createOrderId = uuidv4();
+        this.createOrderId = this.newCustomMessageRequestId(
+            this.createOrderId,
+            this.getLSPSPubkey()
+        );
         const requestId = this.createOrderId;
         const method = 'lsps1.create_order';
 
@@ -1440,7 +1478,7 @@ export default class LSPStore {
     ): Promise<void> {
         this.loadingLSPS1 = true;
 
-        this.getOrderId = uuidv4();
+        this.getOrderId = this.newCustomMessageRequestId(this.getOrderId, peer);
         const method = 'lsps1.get_order';
 
         return new Promise<void>((resolve) => {
@@ -1678,7 +1716,10 @@ export default class LSPStore {
         // probe settles the previous one without marking it failed.
         this.getExtendableChannelsResponseResolver?.();
 
-        this.getExtendableChannelsId = uuidv4();
+        this.getExtendableChannelsId = this.newCustomMessageRequestId(
+            this.getExtendableChannelsId,
+            this.getLSPSPubkey()
+        );
         const method = 'lsps7.get_extendable_channels';
 
         await new Promise<void>((resolve) => {
@@ -1763,7 +1804,10 @@ export default class LSPStore {
         // can't fire a stale timeout after this newer request completes.
         this.createExtensionOrderResponseResolver?.();
 
-        this.createExtensionOrderId = uuidv4();
+        this.createExtensionOrderId = this.newCustomMessageRequestId(
+            this.createExtensionOrderId,
+            this.getLSPSPubkey()
+        );
         const requestId = this.createExtensionOrderId;
         const method = 'lsps7.create_order';
 
@@ -1865,7 +1909,10 @@ export default class LSPStore {
         }
 
         // Fall back to custom message for other backends
-        this.getExtensionOrderId = uuidv4();
+        this.getExtensionOrderId = this.newCustomMessageRequestId(
+            this.getExtensionOrderId,
+            peer
+        );
         const method = 'lsps7.get_order';
 
         await new Promise<void>((resolve) => {
