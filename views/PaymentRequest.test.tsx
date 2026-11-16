@@ -276,6 +276,38 @@ describe('PaymentRequest embedded LND readiness', () => {
     });
 });
 
+describe('PaymentRequest slide to pay', () => {
+    // at or above the slide-to-pay threshold the screen shows SwipeButton
+    const getSettings = jest.fn(async () => ({
+        payments: { slideToPayThreshold: 10000 }
+    }));
+    const swipeButton = () =>
+        screen.container.queryAll((n) => n.type === 'SwipeButton')[0];
+
+    it('disables slide to pay while Lightning is not ready to send', async () => {
+        await renderView({
+            getSettings,
+            payReqOverrides: { getRequestAmount: 10000 },
+            isLightningReadyToSend: jest.fn().mockResolvedValue(false)
+        });
+        await flush();
+
+        expect(screen.getByText(GETTING_READY)).toBeOnTheScreen();
+        expect(swipeButton().props.disabled).toBe(true);
+    });
+
+    it('enables slide to pay once Lightning is ready to send', async () => {
+        await renderView({
+            getSettings,
+            payReqOverrides: { getRequestAmount: 10000 }
+        });
+        await flush();
+
+        expect(screen.queryByText(GETTING_READY)).not.toBeOnTheScreen();
+        expect(swipeButton().props.disabled).toBe(false);
+    });
+});
+
 describe('PaymentRequest no-amount invoice', () => {
     it('disables Pay until an amount is entered', async () => {
         await renderView({
