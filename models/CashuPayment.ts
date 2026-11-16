@@ -57,12 +57,15 @@ export default class CashuPayment extends Payment {
             fee: tx.fee || 0,
             mintUrl: tx.mint_url,
             timestamp: tx.timestamp,
+            // state is absent before CDK 0.18, when every recorded
+            // transaction is completed. An unrecognised state stays in
+            // transit so it cannot show as paid.
             status:
-                tx.state === 'Pending'
-                    ? 'IN_FLIGHT'
+                tx.state === undefined || tx.state === 'Completed'
+                    ? undefined
                     : tx.state === 'Failed'
                     ? 'FAILED'
-                    : undefined,
+                    : 'IN_FLIGHT',
             fromCDK: true,
             cdkTransactionId: tx.id,
             cdkQuoteId: tx.quote_id

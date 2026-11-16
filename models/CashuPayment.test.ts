@@ -106,6 +106,16 @@ describe('CashuPayment.fromCDKTransaction', () => {
         expect(payment.isFailed).toBe(false);
     });
 
+    it('keeps a melt with an unrecognised state in transit', () => {
+        const payment = CashuPayment.fromCDKTransaction({
+            ...cdkMelt,
+            state: 'Unknown'
+        });
+
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.isFailed).toBe(false);
+    });
+
     it('treats a failed melt as failed', () => {
         const payment = CashuPayment.fromCDKTransaction({
             ...cdkMelt,
