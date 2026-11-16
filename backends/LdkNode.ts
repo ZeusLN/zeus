@@ -1410,18 +1410,21 @@ export default class LdkNode {
 
         // sendBolt11UsingAmount pays the given amount whenever it is at least
         // the invoice amount, so an explicit amount is only used for an
-        // invoice without one. For a fixed-amount invoice it is dropped and
-        // the invoice amount, which is what the payment screen shows, is paid.
-        let invoiceHasAmount = false;
+        // invoice known to have none. For a fixed-amount invoice it is
+        // dropped and the invoice amount, which is what the payment screen
+        // shows, is paid. An invoice that cannot be decoded here is sent
+        // without the amount too, so it can never be overpaid: ldk-node pays
+        // its own amount or rejects it.
+        let invoiceHasNoAmount = false;
         try {
             const decoded = Bolt11Utils.decode(data.payment_request);
-            invoiceHasAmount =
-                decoded.satoshis != null || decoded.millisatoshis != null;
+            invoiceHasNoAmount =
+                decoded.satoshis == null && decoded.millisatoshis == null;
         } catch (e) {
             // undecodable: leave the invoice for ldk-node to validate
         }
 
-        if (data.amt && !invoiceHasAmount) {
+        if (data.amt && invoiceHasNoAmount) {
             paymentId = await LdkNodeInjection.bolt11.sendBolt11UsingAmount({
                 invoice: data.payment_request,
                 amountMsat: Number(data.amt) * 1000,

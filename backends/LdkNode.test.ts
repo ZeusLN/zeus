@@ -52,6 +52,8 @@ jest.mock('../utils/LocaleUtils');
 
 import { bech32 } from 'bech32';
 
+import Bolt11Utils from '../utils/Bolt11Utils';
+
 import LdkNode from './LdkNode';
 import Payment from '../models/Payment';
 
@@ -180,17 +182,34 @@ describe('LdkNode.payLightningInvoice with an explicit amount', () => {
         );
     });
 
-    it('leaves an invoice it cannot decode to ldk-node', async () => {
+    it('ignores amt when only the sat amount of the invoice decodes', async () => {
+        const decode = jest
+            .spyOn(Bolt11Utils, 'decode')
+            .mockReturnValue({ satoshis: 250000, millisatoshis: null } as any);
+
+        await ldk.payLightningInvoice({
+            payment_request: FIXED_AMOUNT_INVOICE,
+            amt: '500000'
+        });
+        decode.mockRestore();
+
+        expect(mockSendBolt11UsingAmount).not.toHaveBeenCalled();
+        expect(mockSendBolt11).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends an invoice it cannot decode without amt', async () => {
         await ldk.payLightningInvoice({
             payment_request: 'lnbcrt1...',
             amt: '5000'
         });
 
-        expect(mockSendBolt11UsingAmount).toHaveBeenCalledWith(
-            expect.objectContaining({
-                invoice: 'lnbcrt1...',
-                amountMsat: 5_000_000
-            })
+        expect(mockSendBolt11UsingAmount).not.toHaveBeenCalled();
+        expect(mockSendBolt11).toHaveBeenCalledTimes(1);
+        expect(mockSendBolt11.mock.calls[0][0]).toMatchObject({
+            invoice: 'lnbcrt1...'
+        });
+        expect(mockSendBolt11.mock.calls[0][0]).not.toHaveProperty(
+            'amountMsat'
         );
     });
 });
