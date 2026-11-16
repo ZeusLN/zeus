@@ -5940,6 +5940,57 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(connection.activity[0].status).toBe('failed');
         expect(connection.totalSpendSats).toBe(0);
     });
+
+    // a failed outcome that has a payment hash but no error message.
+    // Embedded LND keeps the numeric status (3 = FAILED).
+    it.each([
+        { status: 'FAILED', listed: false },
+        { status: 'FAILED', listed: true },
+        { status: 3, listed: true }
+    ])(
+        'does not assume a failed payment succeeded from its payment hash (status $status, listed $listed)',
+        async ({ status, listed }) => {
+            const failed = new Payment({
+                payment_request: invoice,
+                payment_hash: paymentHash,
+                status: 'FAILED',
+                failure_reason: 'FAILURE_REASON_NO_ROUTE',
+                value_sat: 5000,
+                payment_preimage: hex64('0')
+            });
+            const { store, transactionsStore } = buildHandlerStore(
+                listed ? [failed] : []
+            );
+            transactionsStore.getPaymentOutcome.mockReturnValue({
+                payment_hash: paymentHash,
+                payment_preimage: hex64('0'),
+                error: true,
+                status,
+                isIncomplete: true
+            });
+            const connection = addConnection(store, {
+                permissions: ['pay_invoice'],
+                maxAmountSats: 100000
+            });
+
+            const response = await (store as any).handleLightningPayInvoice(
+                connection,
+                { invoice },
+                () => true
+            );
+
+            expect(response.result).toBeUndefined();
+            expect(response.error).toEqual({
+                code: 'FAILED_TO_PAY_INVOICE',
+                message:
+                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
+            });
+            expect(connection.activity).toHaveLength(1);
+            expect(connection.activity[0].status).toBe('failed');
+            expect(connection.activity[0].isBudgetDebited).toBeFalsy();
+            expect(connection.totalSpendSats).toBe(0);
+        }
+    );
 });
 
 // Backend calls go to whichever wallet is active when they are made, so a

@@ -4577,6 +4577,7 @@ export default class NostrWalletConnectStore {
 
         const canAssumeSuccess =
             paymentCompleted &&
+            !paymentState.error &&
             (hasPaymentHash || hasSuccessStatus || hasInFlightStatus);
 
         if (!preimage && noPreimageMessage && !canAssumeSuccess) {
