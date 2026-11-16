@@ -753,7 +753,13 @@ export const exportChannelDb = async (
         // top of the Lockscreen, so the archive must not be offered to a
         // locked app.
         if (settingsStore.loginRequired()) {
-            await RNFS.unlink(stagingPath);
+            // A failed delete must not replace the cancellation notice
+            // with the generic export error
+            try {
+                await RNFS.unlink(stagingPath);
+            } catch (e) {
+                console.error('Failed to delete the staged export:', e);
+            }
             if (setStatus) setStatus(null);
             Alert.alert(
                 localeString('views.Tools.migration.export.cancelled'),

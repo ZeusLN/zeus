@@ -418,6 +418,33 @@ describe('ChannelMigrationUtils', () => {
             );
         });
 
+        it('shows the cancellation notice when the staged file cannot be deleted', async () => {
+            // reject the delete that follows the zip, not the one of a
+            // leftover archive before it
+            mockZipFolder.mockImplementationOnce(async () => {
+                await locksWhileZipping();
+                mockUnlink.mockRejectedValueOnce(new Error('ENOENT'));
+            });
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => undefined);
+            const setStatus = jest.fn();
+
+            await exportChannelDb('lnd', false, setStatus);
+
+            expect(mockUnlink).toHaveBeenCalledWith(STAGED);
+            expect(Share.open).not.toHaveBeenCalled();
+            expect(setStatus).toHaveBeenLastCalledWith(null);
+            expect(Alert.alert).toHaveBeenCalledTimes(1);
+            expect(Alert.alert).toHaveBeenCalledWith(
+                'views.Tools.migration.export.cancelled',
+                'views.Tools.migration.export.cancelled.text',
+                expect.anything(),
+                { cancelable: false }
+            );
+            consoleError.mockRestore();
+        });
+
         it('still saves to Downloads on Android', async () => {
             Platform.OS = 'android';
 
