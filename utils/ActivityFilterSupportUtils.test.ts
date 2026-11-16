@@ -18,7 +18,11 @@ jest.mock('./BackendUtils', () => ({
 
 import BackendUtils from './BackendUtils';
 import { BACKEND_CAPABILITIES } from './backendCapabilityFixtures';
-import { getSupportedActivityFilters } from './ActivityFilterSupportUtils';
+import {
+    getSupportedActivityFilters,
+    neutralizeUnsupportedFilters,
+    SupportedActivityFilters
+} from './ActivityFilterSupportUtils';
 
 const setBackend = (flags: Record<string, boolean>) => {
     Object.keys(BackendUtils).forEach((key) =>
@@ -222,5 +226,151 @@ describe('getSupportedActivityFilters', () => {
             false
         );
         expect(supportedFor('lnd', { cashuEnabled: true }).cashu).toBe(false);
+    });
+});
+
+describe('neutralizeUnsupportedFilters', () => {
+    const defaults: any = {
+        sent: true,
+        inTransit: false,
+        keysend: true,
+        circularRebalance: true,
+        zeusPay: true,
+        swaps: true,
+        submarine: true,
+        reverse: true,
+        swapFilter: {
+            submarine: { created: true },
+            reverse: { created: true }
+        },
+        lsps1: true,
+        lsps1State: { created: true },
+        lsps7: true,
+        lsps7State: { created: true },
+        minimumAmount: 0
+    };
+    const allSupported: SupportedActivityFilters = {
+        onChain: true,
+        cashu: true,
+        swaps: true,
+        lsps1: true,
+        lsps7: true,
+        unconfirmed: true,
+        standardInvoices: true,
+        ampInvoices: true,
+        zeusPay: true,
+        keysend: true,
+        circularRebalance: true
+    };
+    const userFilters = (): any => ({
+        ...defaults,
+        sent: false,
+        inTransit: true,
+        keysend: false,
+        circularRebalance: false,
+        zeusPay: false,
+        swaps: false,
+        submarine: false,
+        reverse: false,
+        swapFilter: {
+            submarine: { created: false },
+            reverse: { created: false }
+        },
+        lsps1: false,
+        lsps1State: { created: false },
+        lsps7: false,
+        lsps7State: { created: false },
+        minimumAmount: 100
+    });
+
+    it('resets the toggles the node does not support', () => {
+        const out: any = neutralizeUnsupportedFilters(userFilters(), defaults, {
+            ...allSupported,
+            keysend: false,
+            circularRebalance: false,
+            zeusPay: false
+        });
+
+        expect(out.keysend).toBe(true);
+        expect(out.circularRebalance).toBe(true);
+        expect(out.zeusPay).toBe(true);
+    });
+
+    it('keeps the toggles the node supports', () => {
+        const out: any = neutralizeUnsupportedFilters(
+            userFilters(),
+            defaults,
+            allSupported
+        );
+
+        expect(out).toEqual(userFilters());
+    });
+
+    it('does not touch filters that are not in the map', () => {
+        const out: any = neutralizeUnsupportedFilters(userFilters(), defaults, {
+            ...allSupported,
+            keysend: false
+        });
+
+        expect(out.sent).toBe(false);
+        expect(out.inTransit).toBe(true);
+        expect(out.minimumAmount).toBe(100);
+    });
+
+    it('resets the swap filters together when swaps are not supported', () => {
+        const out: any = neutralizeUnsupportedFilters(userFilters(), defaults, {
+            ...allSupported,
+            swaps: false
+        });
+
+        expect(out.swaps).toBe(true);
+        expect(out.submarine).toBe(true);
+        expect(out.reverse).toBe(true);
+        expect(out.swapFilter).toEqual(defaults.swapFilter);
+    });
+
+    it('resets the LSPS order states with their toggles', () => {
+        const out: any = neutralizeUnsupportedFilters(userFilters(), defaults, {
+            ...allSupported,
+            lsps1: false,
+            lsps7: false
+        });
+
+        expect(out.lsps1).toBe(true);
+        expect(out.lsps1State).toEqual({ created: true });
+        expect(out.lsps7).toBe(true);
+        expect(out.lsps7State).toEqual({ created: true });
+    });
+
+    it('keeps the LSPS states of a service that is supported', () => {
+        const out: any = neutralizeUnsupportedFilters(userFilters(), defaults, {
+            ...allSupported,
+            lsps7: false
+        });
+
+        expect(out.lsps1State).toEqual({ created: false });
+        expect(out.lsps7State).toEqual({ created: true });
+    });
+
+    it('keeps the LSPS7 states when only LSPS1 is not supported', () => {
+        const out: any = neutralizeUnsupportedFilters(userFilters(), defaults, {
+            ...allSupported,
+            lsps1: false
+        });
+
+        expect(out.lsps1State).toEqual({ created: true });
+        expect(out.lsps7State).toEqual({ created: false });
+    });
+
+    it('returns a copy and leaves the saved filters as they are', () => {
+        const filters = userFilters();
+        const out = neutralizeUnsupportedFilters(filters, defaults, {
+            ...allSupported,
+            keysend: false,
+            swaps: false
+        });
+
+        expect(out).not.toBe(filters);
+        expect(filters).toEqual(userFilters());
     });
 });

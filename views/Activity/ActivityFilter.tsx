@@ -728,7 +728,10 @@ export default class ActivityFilter extends React.Component<
                         }
                     }}
                     rightComponent={
-                        isEqual(filters, DEFAULT_FILTERS) ? (
+                        isEqual(
+                            ActivityStore.getEffectiveFilters(),
+                            DEFAULT_FILTERS
+                        ) ? (
                             <></>
                         ) : (
                             <ClearButton />

@@ -75,13 +75,15 @@ import { DEFAULT_FILTERS } from '../../stores/ActivityStore';
 import ActivityFilter from './ActivityFilter';
 
 const renderFilter = async () => {
+    const filters = {
+        ...DEFAULT_FILTERS,
+        startDate: new Date(2026, 9, 2),
+        endDate: new Date(2026, 9, 4)
+    };
     const ActivityStore = {
-        filters: {
-            ...DEFAULT_FILTERS,
-            startDate: new Date(2026, 9, 2),
-            endDate: new Date(2026, 9, 4)
-        },
+        filters,
         getFilters: jest.fn(),
+        getEffectiveFilters: jest.fn(() => filters),
         resetFilters: jest.fn(),
         setFilters: jest.fn(),
         setAmountFilter: jest.fn(),

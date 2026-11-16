@@ -28,7 +28,10 @@ jest.mock('@rneui/themed', () => {
     const ListItem: any = ({ children }: any) => <View>{children}</View>;
     ListItem.Content = ({ children }: any) => <View>{children}</View>;
     ListItem.Title = ({ children }: any) => <Text>{children}</Text>;
-    return { Button: () => null, Icon: () => null, ListItem };
+    const Icon = ({ accessibilityLabel }: any) => (
+        <Text>{`icon:${accessibilityLabel}`}</Text>
+    );
+    return { Button: () => null, Icon, ListItem };
 });
 // Renders the title, the header and the children, which the real accordion
 // hides until it is opened
@@ -50,7 +53,10 @@ jest.mock('../../components/Screen', () => {
     const { View } = require('react-native');
     return ({ children }: any) => <View>{children}</View>;
 });
-jest.mock('../../components/Header', () => () => null);
+jest.mock('../../components/Header', () => {
+    const { View } = require('react-native');
+    return ({ rightComponent }: any) => <View>{rightComponent}</View>;
+});
 // Shows what each switch is given, so a test can read the Services switch:
 // the secondaryText track means partial
 jest.mock('../../components/Switch', () => {
@@ -124,16 +130,19 @@ const renderFilter = async ({
     testnet = false,
     lightningAddressEnabled = false,
     cashuEnabled = false,
-    filters = filtersWith()
+    filters = filtersWith(),
+    effectiveFilters = filters
 }: {
     testnet?: boolean;
     lightningAddressEnabled?: boolean;
     cashuEnabled?: boolean;
     filters?: any;
+    effectiveFilters?: any;
 } = {}) => {
     const ActivityStore = {
         filters,
         getFilters: jest.fn(),
+        getEffectiveFilters: jest.fn(() => effectiveFilters),
         resetFilters: jest.fn(),
         setFilters: jest.fn(),
         setAmountFilter: jest.fn(),
@@ -523,5 +532,28 @@ describe('ActivityFilter swap states', () => {
         expect(applied.swaps).toBe(true);
         expect(applied.submarine).toBe(true);
         expect(applied.reverse).toBe(true);
+    });
+});
+
+describe('ActivityFilter clear button', () => {
+    const CLEAR = 'icon:general.clearChanges';
+
+    it('is hidden while the applied filters are the defaults', async () => {
+        setBackend(LDK_NODE);
+        // a toggle hidden on this node is saved off, but it is not applied
+        await renderFilter({
+            filters: filtersWith({ circularRebalance: false }),
+            effectiveFilters: filtersWith()
+        });
+
+        expect(screen.queryByText(CLEAR)).toBeNull();
+    });
+
+    it('is shown when an applied filter differs from the defaults', async () => {
+        setBackend(LDK_NODE);
+        const filters = filtersWith({ keysend: false });
+        await renderFilter({ filters, effectiveFilters: filters });
+
+        expect(screen.queryByText(CLEAR)).not.toBeNull();
     });
 });

@@ -1,4 +1,5 @@
 import BackendUtils from './BackendUtils';
+import type { Filter } from '../stores/ActivityStore';
 
 export interface SupportedActivityFilters {
     onChain: boolean;
@@ -60,4 +61,31 @@ export const getSupportedActivityFilters = ({
         keysend: !!BackendUtils.supportsKeysend(),
         circularRebalance: !!BackendUtils.supportsCircularRebalancing()
     };
+};
+
+/**
+ * Returns a copy of `filters` where every toggle the node does not support
+ * is reset to its default, so a toggle the user cannot see never filters
+ * activity. Every toggle listed in SupportedActivityFilters is on by
+ * default, so the reset can only show more activity.
+ */
+export const neutralizeUnsupportedFilters = (
+    filters: Filter,
+    defaults: Filter,
+    supported: SupportedActivityFilters
+): Filter => {
+    const result: Filter = { ...filters };
+    (Object.keys(supported) as (keyof SupportedActivityFilters)[]).forEach(
+        (key) => {
+            if (!supported[key]) result[key] = defaults[key];
+        }
+    );
+    if (!supported.swaps) {
+        result.swapFilter = defaults.swapFilter;
+        result.submarine = defaults.submarine;
+        result.reverse = defaults.reverse;
+    }
+    if (!supported.lsps1) result.lsps1State = defaults.lsps1State;
+    if (!supported.lsps7) result.lsps7State = defaults.lsps7State;
+    return result;
 };

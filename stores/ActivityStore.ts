@@ -25,6 +25,10 @@ import SwapStore from './SwapStore';
 import NodeInfoStore from './NodeInfoStore';
 
 import BackendUtils from './../utils/BackendUtils';
+import {
+    getSupportedActivityFilters,
+    neutralizeUnsupportedFilters
+} from '../utils/ActivityFilterSupportUtils';
 import ActivityFilterUtils from '../utils/ActivityFilterUtils';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import {
@@ -503,6 +507,22 @@ export default class ActivityStore {
         return this.filters;
     }
 
+    // The filters that are applied. A toggle the connected node does not
+    // support is hidden on the filter screen, so it is reset to its default
+    // here instead of filtering activity with a value the user cannot see.
+    // The saved filters are not changed.
+    public getEffectiveFilters = (): Filter =>
+        neutralizeUnsupportedFilters(
+            this.filters,
+            DEFAULT_FILTERS as Filter,
+            getSupportedActivityFilters({
+                testnet: !!this.nodeInfoStore.testnet,
+                lightningAddressEnabled:
+                    !!this.settingsStore.settings?.lightningAddress?.enabled,
+                cashuEnabled: !!this.settingsStore.settings?.ecash?.enableCashu
+            })
+        );
+
     @action
     public setFilters = async (filters: Filter, locale?: string) => {
         this.filters = {
@@ -529,7 +549,7 @@ export default class ActivityStore {
         };
         this.filteredActivity = ActivityFilterUtils.filterActivities(
             this.activity,
-            this.filters
+            this.getEffectiveFilters()
         );
         this.filteredActivity.forEach((activity) => {
             if (activity instanceof Invoice) {
