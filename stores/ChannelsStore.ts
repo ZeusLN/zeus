@@ -372,6 +372,17 @@ export default class ChannelsStore {
         this.pending_funding_tx_keys = [];
     };
 
+    // Ends the funding flow of the pending channels LND has finalized.
+    // Another open can start while psbt_finalize is pending. Then the store
+    // holds that open's channels, or none yet, and nothing is reset: a reset
+    // would drop the newer open or the funding PSBT it handed out.
+    @action
+    public resetFinalizedChannels = (pending_chan_ids: Array<string>) => {
+        if (pending_chan_ids.join() !== this.pending_chan_ids.join()) return;
+        this.resetOpenChannel();
+        this.resetPendingChannels();
+    };
+
     // The pending channels a signed PSBT or raw transaction funds, or none.
     // The PSBT and TxHex screens also show unrelated transactions (a send
     // from an external account, a scanned PSBT, a sweep), and an abandoned

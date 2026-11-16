@@ -491,8 +491,9 @@ export default class TransactionsStore {
                         } catch (e) {}
                         this.publishSuccess = true;
                         this.loading = false;
-                        this.channelsStore.resetOpenChannel();
-                        this.channelsStore.resetPendingChannels();
+                        this.channelsStore.resetFinalizedChannels(
+                            pending_chan_ids
+                        );
                     });
                 }
             })
@@ -538,8 +539,9 @@ export default class TransactionsStore {
                         } catch (e) {}
                         this.publishSuccess = true;
                         this.loading = false;
-                        this.channelsStore.resetOpenChannel();
-                        this.channelsStore.resetPendingChannels();
+                        this.channelsStore.resetFinalizedChannels(
+                            pending_chan_ids
+                        );
                     });
                 }
             })

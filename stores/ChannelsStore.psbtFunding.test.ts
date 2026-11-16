@@ -237,6 +237,186 @@ describe('ChannelsStore PSBT funding flow', () => {
         expect(channelsStore.pending_chan_ids).toEqual([]);
     });
 
+    // The PSBT and TxHex screens call these with the transaction the user
+    // signed and the channels it was matched to
+    const finalizers: Array<[string, (ids: Array<string>) => Promise<void>]> = [
+        [
+            'PSBT',
+            (ids) =>
+                transactionsStore.finalizePsbtAndBroadcastChannel(PSBT, ids)
+        ],
+        [
+            'transaction',
+            (ids) =>
+                transactionsStore.finalizeTxHexAndBroadcastChannel(
+                    txSpending(FUNDING_INPUTS),
+                    ids
+                )
+        ]
+    ];
+
+    // LND holds the user's psbt_finalize for chan-1 until the returned
+    // function is called. Its own attempt to finalize any other channel
+    // fails, so that channel's PSBT is left for the user to sign.
+    const deferFinalizeOfFirstChannel = () => {
+        let settle: (data: any) => void = () => {};
+        jest.mocked(BackendUtils.fundingStateStep).mockImplementation(
+            (step: any) => {
+                if (!step.psbt_finalize) return Promise.resolve({});
+                if (step.psbt_finalize.pending_chan_id !== 'chan-1') {
+                    return Promise.reject(new Error('not signed'));
+                }
+                return new Promise((resolve) => {
+                    settle = resolve;
+                });
+            }
+        );
+        return (data: any) => settle(data);
+    };
+
+    describe.each(finalizers)('with a signed %s', (_, finalize) => {
+        it('keeps a newer channel whose PSBT is out for signing when the older one is finalized', async () => {
+            const otherPsbt = psbtSpending(OTHER_INPUTS);
+            const settle = deferFinalizeOfFirstChannel();
+            const finalized = finalize(
+                channelsStore.pendingChanIdsFor({ psbt: PSBT })
+            );
+
+            jest.mocked(BackendUtils.fundPsbt).mockResolvedValue({
+                funded_psbt: otherPsbt
+            });
+            jest.mocked(BackendUtils.openChannelStream).mockResolvedValue({
+                result: {
+                    pending_chan_id: 'chan-2',
+                    psbt_fund: {
+                        funding_address: 'bc1qfunding',
+                        funding_amount: 1
+                    }
+                }
+            });
+            await channelsStore.connectPeer(openRequest('signer'));
+            await flushPromises();
+            expect(channelsStore.funded_psbt).toBe(otherPsbt);
+
+            settle({});
+            await finalized;
+
+            expect(transactionsStore.publishSuccess).toBe(true);
+            expect(channelsStore.funded_psbt).toBe(otherPsbt);
+            expect(channelsStore.pending_chan_ids).toEqual(['chan-2']);
+            expect(
+                channelsStore.pendingChanIdsFor({ psbt: otherPsbt })
+            ).toEqual(['chan-2']);
+            expect(
+                channelsStore.pendingChanIdsFor({
+                    txHex: txSpending(OTHER_INPUTS)
+                })
+            ).toEqual(['chan-2']);
+        });
+
+        it('keeps a newer open that is still in progress when the older channel is finalized', async () => {
+            const otherPsbt = psbtSpending(OTHER_INPUTS);
+            const settle = deferFinalizeOfFirstChannel();
+            const finalized = finalize(
+                channelsStore.pendingChanIdsFor({ psbt: PSBT })
+            );
+
+            jest.mocked(BackendUtils.fundPsbt).mockResolvedValue({
+                funded_psbt: otherPsbt
+            });
+            let answerOpen: (data: any) => void = () => {};
+            jest.mocked(BackendUtils.openChannelStream).mockReturnValue(
+                new Promise((resolve) => {
+                    answerOpen = resolve;
+                })
+            );
+            await channelsStore.connectPeer(openRequest('signer'));
+            await flushPromises();
+            expect(channelsStore.openingChannel).toBe(true);
+            expect(channelsStore.pending_chan_ids).toEqual([]);
+
+            settle({});
+            await finalized;
+
+            expect(transactionsStore.publishSuccess).toBe(true);
+            expect(channelsStore.openingChannel).toBe(true);
+
+            // the newer open is still the current one: its PSBT is handed
+            // to the user and matched to its channel
+            answerOpen({
+                result: {
+                    pending_chan_id: 'chan-2',
+                    psbt_fund: {
+                        funding_address: 'bc1qfunding',
+                        funding_amount: 1
+                    }
+                }
+            });
+            await flushPromises();
+
+            expect(channelsStore.funded_psbt).toBe(otherPsbt);
+            expect(channelsStore.pending_chan_ids).toEqual(['chan-2']);
+            expect(
+                channelsStore.pendingChanIdsFor({ psbt: otherPsbt })
+            ).toEqual(['chan-2']);
+        });
+
+        it('drops the channel, its PSBT and its match when no other open started', async () => {
+            const settle = deferFinalizeOfFirstChannel();
+            // a copy: the channels are compared by ID
+            const finalized = finalize([
+                ...channelsStore.pendingChanIdsFor({ psbt: PSBT })
+            ]);
+
+            settle({});
+            await finalized;
+
+            expect(transactionsStore.publishSuccess).toBe(true);
+            expect(channelsStore.funded_psbt).toBe('');
+            expect(channelsStore.pending_chan_ids).toEqual([]);
+            expect(channelsStore.pending_funding_tx_keys).toEqual([]);
+            expect(channelsStore.pendingChanIdsFor({ psbt: PSBT })).toEqual([]);
+        });
+
+        it.each([
+            ['reports a publish error', { publish_error: 'bad-txns' }],
+            ['rejects the call', undefined]
+        ])('keeps the channel and its PSBT when LND %s', async (_, data) => {
+            jest.mocked(BackendUtils.fundingStateStep).mockImplementation(() =>
+                data
+                    ? Promise.resolve(data)
+                    : Promise.reject(new Error('not signed'))
+            );
+
+            await finalize(channelsStore.pendingChanIdsFor({ psbt: PSBT }));
+
+            expect(transactionsStore.error).toBe(true);
+            expect(transactionsStore.publishSuccess).toBe(false);
+            expect(channelsStore.funded_psbt).toBe(PSBT);
+            expect(channelsStore.pending_chan_ids).toEqual(['chan-1']);
+            expect(channelsStore.pendingChanIdsFor({ psbt: PSBT })).toEqual([
+                'chan-1'
+            ]);
+        });
+    });
+
+    // A batch is finalized with the ID of its last channel, and every one of
+    // its channels has to be the store's for the flow to be the same one
+    it.each([
+        ['another channel', ['chan-2']],
+        ['a batch that ends with the channel', ['chan-0', 'chan-1']],
+        ['a batch that starts with the channel', ['chan-1', 'chan-2']],
+        ['no channel', []]
+    ])('keeps the channel when %s was finalized', (_, ids) => {
+        channelsStore.resetFinalizedChannels(ids);
+
+        expect(channelsStore.funded_psbt).toBe(PSBT);
+        expect(channelsStore.pending_chan_ids).toEqual(['chan-1']);
+        expect(channelsStore.pendingChanIdsFor({ psbt: PSBT })).toEqual([
+            'chan-1'
+        ]);
+    });
+
     it('replaces the channel when another one is opened', async () => {
         lndWaitsForSigner('chan-2');
 
