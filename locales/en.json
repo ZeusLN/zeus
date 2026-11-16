@@ -2360,6 +2360,8 @@
     "views.Cashu.AddMint.tapToCollapse": "Tap to collapse",
     "views.Mints.noMints": "No mints added yet",
     "views.Cashu.Mints.nut15Required": "NUT-15 required",
+    "views.Cashu.Mints.unlistedMints": "Ecash at mints you have not added",
+    "views.Cashu.Mints.unlistedMintsExplainer": "These mints hold ecash from tokens you claimed, but they are not in your mint list, so it cannot be spent. Tap a mint to review and add it.",
     "views.Cashu.Mint.supportedNuts": "Supported Nuts",
     "views.Cashu.Mint.removeMint": "Remove mint",
     "views.Cashu.Mint.selectedMint": "This is your selected mint",

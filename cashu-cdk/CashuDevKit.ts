@@ -23,6 +23,7 @@ import {
     CDKReceiveOptions,
     CDKProofState,
     CDKRecoveryReport,
+    CDKOnDemandMintRecovery,
     CDKTransaction,
     CDKTransactionDirection,
     CDKErrorType,
@@ -31,7 +32,7 @@ import {
 } from './types';
 import { sha256StringToHex } from '../utils/HashingUtils';
 import { parseCashuDevKitError } from '../utils/ErrorUtils';
-import MintOperationGate from './MintOperationGate';
+import MintOperationGate, { normalizeMintKey } from './MintOperationGate';
 
 const { CashuDevKitModule } = NativeModules as unknown as {
     CashuDevKitModule: CashuDevKitNativeModule;
@@ -746,6 +747,62 @@ class CashuDevKit {
                     mintUrl
                 );
                 return JSON.parse(json) as CDKRecoveryReport;
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
+        return outcome.ran ? outcome.result : null;
+    }
+
+    /**
+     * Recover a mint the wallet added on demand (see
+     * CashuStore.onDemandMintUrls), then remove it from CDK if nothing is
+     * left on it. Removing the mint drops its wallet and keysets but not
+     * its proofs or sagas, so it is only removed once recovery has settled
+     * every saga and the wallet holds no balance there.
+     *
+     * Recovery, the balance read and the removal run as one recovery on the
+     * gate, so an operation that starts on the mint meanwhile waits for all
+     * three. One that outlasts the wait keeps the mint.
+     * @param mintUrl - The mint's URL
+     * @param canRemove - Asked right before the removal, after the awaits
+     * @returns null when an operation or another recovery was in flight on
+     * the mint. Otherwise the recovery counts, whether the mint was removed,
+     * and its balance when that was read (recovery settled everything)
+     */
+    async recoverOnDemandMint(
+        mintUrl: string,
+        canRemove: () => boolean = () => true
+    ): Promise<CDKOnDemandMintRecovery | null> {
+        const gate = this.gate;
+        const outcome = await gate.tryRunRecovery(mintUrl, async () => {
+            try {
+                const report = JSON.parse(
+                    await CashuDevKitModule.recoverIncompleteSagas(mintUrl)
+                ) as CDKRecoveryReport;
+                if (report.failed > 0 || report.skipped > 0) {
+                    return { report, removed: false };
+                }
+
+                const key = normalizeMintKey(mintUrl);
+                const balances = Object.entries(await this.getBalances())
+                    .filter(([url]) => normalizeMintKey(url) === key)
+                    .map(([, amount]) => amount);
+                // Recovery loaded the mint's wallet, so CDK reports a
+                // balance for it. No entry means the balance is unknown
+                if (balances.length === 0) return { report, removed: false };
+                const balance = balances.reduce((sum, n) => sum + n, 0);
+
+                // Not zero also covers NaN
+                if (
+                    balance !== 0 ||
+                    gate.hasOperations(mintUrl) ||
+                    !canRemove()
+                ) {
+                    return { report, removed: false, balance };
+                }
+                await CashuDevKitModule.removeMint(mintUrl);
+                return { report, removed: true, balance };
             } catch (error) {
                 throw mapCDKError(error);
             }

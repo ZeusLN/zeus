@@ -41,6 +41,34 @@ describe('MintOperationGate', () => {
         await expect(Promise.all([a, b])).resolves.toEqual(['a', 'b']);
     });
 
+    it('reports operations running or waiting on a mint', async () => {
+        const gate = new MintOperationGate();
+        const recovery = deferred();
+        const operation = deferred();
+        expect(gate.hasOperations(MINT)).toBe(false);
+
+        const recovering = gate.tryRunRecovery(MINT, () => recovery.promise);
+        // Recovery itself is not an operation
+        expect(gate.hasOperations(MINT)).toBe(false);
+
+        const running = gate.runOperation(
+            `${MINT.toUpperCase()}/`,
+            () => operation.promise
+        );
+        // Waiting for recovery
+        expect(gate.hasOperations(MINT)).toBe(true);
+        expect(gate.hasOperations('https://other.mint')).toBe(false);
+
+        recovery.resolve();
+        await recovering;
+        await flush();
+        expect(gate.hasOperations(MINT)).toBe(true);
+
+        operation.resolve();
+        await running;
+        expect(gate.hasOperations(MINT)).toBe(false);
+    });
+
     it('does not start recovery while an operation is in flight', async () => {
         const gate = new MintOperationGate();
         const melt = deferred();
