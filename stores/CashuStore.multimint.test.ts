@@ -1449,6 +1449,89 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         );
     });
 
+    // Exits of payLnInvoiceFromEcash that a donation reaches after its
+    // getPayReq failed: the store still holds the donation invoice, but no
+    // usable amount or quote for it
+    const failedQuoteStores = {
+        // the donation invoice is not for a whole number of sats
+        'stores.CashuStore.invalidMultimintPaymentAmount': async (
+            isDonationPayment: boolean
+        ) => {
+            const store = newStore({
+                balances: { [A]: 600, [B]: 500 },
+                selected: [A, B]
+            });
+            mintApi({});
+            invoiceFor({ millisatoshis: '21500' });
+            await store.getPayReq(INVOICE, isDonationPayment);
+            expect(store.getPayReqError).toBe(
+                'stores.CashuStore.invalidMultimintPaymentAmount'
+            );
+            return store;
+        },
+        // the only selected mint refused to quote the donation invoice
+        'stores.CashuStore.noMeltQuoteAvailable': async (
+            isDonationPayment: boolean
+        ) => {
+            const store = newStore({
+                balances: { [A]: 600, [B]: 500 },
+                selected: [A]
+            });
+            cdk.createMeltQuote.mockRejectedValueOnce(new Error('mint down'));
+            await store.getPayReq(INVOICE, isDonationPayment);
+            expect(store.getPayReqError).toBe('mint down');
+            expect(store.meltQuote).toBeUndefined();
+            return store;
+        }
+    };
+    const failedQuoteExits = Object.keys(
+        failedQuoteStores
+    ) as (keyof typeof failedQuoteStores)[];
+
+    it.each(failedQuoteExits)(
+        'leaves the payment result and loading alone when a donation fails with %s',
+        async (exit) => {
+            const store = await failedQuoteStores[exit](true);
+            // the main payment already succeeded on this screen
+            store.paymentSuccess = true;
+            store.paymentError = false;
+            store.paymentErrorMsg = '';
+            store.loading = true;
+
+            const result = await store.payLnInvoiceFromEcash({
+                paymentRequest: INVOICE,
+                amount: '21',
+                isDonationPayment: true
+            });
+
+            expect(result).toBeUndefined();
+            expect(cdk.melt).not.toHaveBeenCalled();
+            expect(store.paymentSuccess).toBe(true);
+            expect(store.paymentError).toBe(false);
+            expect(store.paymentErrorMsg).toBe('');
+            expect(store.loading).toBe(true);
+        }
+    );
+
+    it.each(failedQuoteExits)(
+        'sets the payment error when a payment fails with %s',
+        async (exit) => {
+            const store = await failedQuoteStores[exit](false);
+            store.loading = true;
+
+            const result = await store.payLnInvoiceFromEcash({
+                paymentRequest: INVOICE,
+                amount: '21'
+            });
+
+            expect(result).toBeUndefined();
+            expect(cdk.melt).not.toHaveBeenCalled();
+            expect(store.paymentError).toBe(true);
+            expect(store.paymentErrorMsg).toBe(exit);
+            expect(store.loading).toBe(false);
+        }
+    );
+
     // An absent state is ambiguous, so it must not be reported as paid
     it('does not treat a part with no melt state as paid', async () => {
         const store = await plannedStore();
