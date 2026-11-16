@@ -81,9 +81,13 @@ export const copySensitive = (
             waitForResume(value, copy);
             return;
         }
+        // Android can refuse this read. The listener for the retry is added
+        // before the read, so focus that returns during the read is not missed
+        if (Platform.OS === 'android') waitForResume(value, copy);
         const denied = await clearIfUnchanged(value, copy);
-        // a newer copy has its own timer
-        if (denied && copy === latestCopy) waitForResume(value, copy);
+        // The read was allowed, so no retry is needed. A newer copy has
+        // removed this listener already and has its own timer
+        if (!denied && copy === latestCopy) cancelPending();
     }, clearAfterMs);
 };
 

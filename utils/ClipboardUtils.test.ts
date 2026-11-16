@@ -43,7 +43,12 @@ describe('copySensitive', () => {
         jest.spyOn(AppState, 'addEventListener').mockImplementation(
             (type: any, handler: any) => {
                 handlers[type] = handler;
-                return { remove } as any;
+                return {
+                    remove: () => {
+                        remove();
+                        if (handlers[type] === handler) delete handlers[type];
+                    }
+                } as any;
             }
         );
     });
@@ -317,7 +322,96 @@ describe('copySensitive', () => {
             resolveRead('');
             await flush();
 
-            expect(AppState.addEventListener).not.toHaveBeenCalled();
+            expect(AppState.addEventListener).toHaveBeenCalledTimes(1);
+            expect(remove).toHaveBeenCalledTimes(1);
+            expect(handlers.focus).toBeUndefined();
+        });
+
+        describe('when the first read is still in progress', () => {
+            let resolveRead: (value: string) => void;
+
+            beforeEach(() => {
+                clipboard.getString.mockReturnValueOnce(
+                    new Promise<string>((resolve) => (resolveRead = resolve))
+                );
+            });
+
+            it('clears on focus that returns before the refused read ends', async () => {
+                copySensitive('seed words', 1000);
+                jest.advanceTimersByTime(1000);
+                expect(clipboard.getString).toHaveBeenCalledTimes(1);
+
+                // focus returns while the first read is still pending
+                handlers.focus();
+                resolveRead('');
+                await flush();
+
+                expect(clipboard.getString).toHaveBeenCalledTimes(2);
+                expect(clipboard.setString).toHaveBeenCalledWith('');
+                expect(systemClipboard).toBe('');
+                expect(AppState.addEventListener).toHaveBeenCalledTimes(1);
+                expect(handlers.focus).toBeUndefined();
+            });
+
+            it('removes the focus listener when the read was allowed', async () => {
+                copySensitive('seed words', 1000);
+                jest.advanceTimersByTime(1000);
+                expect(handlers.focus).toBeDefined();
+
+                resolveRead('seed words');
+                await flush();
+
+                expect(systemClipboard).toBe('');
+                expect(remove).toHaveBeenCalledTimes(1);
+                expect(handlers.focus).toBeUndefined();
+                expect(clipboard.getString).toHaveBeenCalledTimes(1);
+            });
+
+            it('removes the focus listener when the user copied other text', async () => {
+                copySensitive('seed words', 1000);
+                jest.advanceTimersByTime(1000);
+
+                resolveRead('an address');
+                await flush();
+
+                expect(clipboard.setString).not.toHaveBeenCalledWith('');
+                expect(handlers.focus).toBeUndefined();
+            });
+
+            it('keeps the timer of a newer copy made during the read', async () => {
+                copySensitive('first', 1000);
+                jest.advanceTimersByTime(1000);
+
+                copySensitive('second', 1000);
+                resolveRead('second');
+                await flush();
+                expect(systemClipboard).toBe('second');
+
+                jest.advanceTimersByTime(1000);
+                await flush();
+                expect(systemClipboard).toBe('');
+                expect(clipboard.getString).toHaveBeenCalledTimes(2);
+            });
+
+            it('keeps the focus listener of a newer copy made during the read', async () => {
+                copySensitive('first', 1000);
+                jest.advanceTimersByTime(1000);
+
+                // the newer copy's read is refused, so it waits for focus
+                copySensitive('second', 1);
+                clipboard.getString.mockResolvedValueOnce('');
+                jest.advanceTimersByTime(1);
+                await flush();
+                expect(handlers.focus).toBeDefined();
+
+                resolveRead('second');
+                await flush();
+                expect(handlers.focus).toBeDefined();
+
+                handlers.focus();
+                await flush();
+                expect(systemClipboard).toBe('');
+            });
         });
 
         it('does not clear text the user copied afterwards on focus', async () => {
