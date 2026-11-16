@@ -138,6 +138,7 @@ export const openChannel = async (
     fund_max?: boolean,
     utxos?: Array<string>,
     funding_shim?: any,
+    close_address?: string,
     requestId?: string
 ): Promise<string> => {
     let options: any = {
@@ -149,6 +150,7 @@ export const openChannel = async (
         min_confs,
         spend_unconfirmed,
         fund_max,
+        close_address,
         outpoints: utxos
             ? utxos.map((utxo: string) => {
                   const [txid_str, output_index] = utxo.split(':');

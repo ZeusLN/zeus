@@ -207,6 +207,7 @@ export default class EmbeddedLND extends LND {
                 data.fundMax,
                 data.utxos,
                 data.funding_shim,
+                data.close_address,
                 requestId
             );
         });
