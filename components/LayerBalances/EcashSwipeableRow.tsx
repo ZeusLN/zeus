@@ -11,7 +11,6 @@ import { getLnurlParams } from '../../utils/LnurlResolveUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import { cashuStore } from '../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 
 import SwipeableRowAction from './SwipeableRowAction';
@@ -190,8 +189,9 @@ export default class EcashSwipeableRow extends Component<
             }
             return;
         } else {
-            cashuStore.getPayReq(lightning ?? '');
-            this.props.navigation.navigate('CashuPaymentRequest', {});
+            this.props.navigation.navigate('CashuPaymentRequest', {
+                paymentRequest: lightning
+            });
         }
     };
 

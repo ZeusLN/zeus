@@ -25,7 +25,7 @@ import PaymentSuccessView from '../../components/PaymentSuccessView';
 import Screen from '../../components/Screen';
 import { sendingStyles } from '../../components/sendingStyles';
 
-import CashuStore from '../../stores/CashuStore';
+import CashuStore, { CashuPaymentPlan } from '../../stores/CashuStore';
 
 import {
     MintPaymentStatus,
@@ -50,7 +50,9 @@ interface MultimintPaymentProps {
         'MultimintPayment',
         {
             paymentAmount?: string;
-            paymentRequest?: string;
+            // what CashuPaymentRequest reviewed: the invoice and the
+            // quotes to pay it with
+            paymentPlan?: CashuPaymentPlan;
             donationAmount?: string;
         }
     >;
@@ -92,7 +94,10 @@ export default class MultimintPayment extends React.Component<
         const { CashuStore, route } = props;
         const selectedMintUrls = CashuStore?.multiMintSelectedUrls || [];
         const selectedMintSet = new Set(selectedMintUrls);
-        const availableMints = CashuStore?.getMultimintInfo() || [];
+        // the plan CashuPaymentRequest reviewed and handed over
+        const plan = route.params?.paymentPlan;
+        const availableMints =
+            CashuStore?.getMultimintInfo(plan?.meltQuotes) || [];
 
         const selectedMints =
             selectedMintUrls.length > 0
@@ -109,9 +114,9 @@ export default class MultimintPayment extends React.Component<
         );
 
         const requestAmount =
-            CashuStore?.payReq?.getRequestAmount ||
+            plan?.payReq?.getRequestAmount ||
             Number(route.params?.paymentAmount || 0);
-        const feeEstimate = Number(CashuStore?.feeEstimate) || 0;
+        const feeEstimate = Number(plan?.feeEstimate) || 0;
         // The donation is drawn from the same mints right after the invoice
         // is paid, so it has to be covered before the payment starts. It is
         // resolved once here and executePayment sends that same number, so
@@ -127,14 +132,14 @@ export default class MultimintPayment extends React.Component<
         // the planner stops once the invoice is covered. getPayReq counted
         // every mint the invoice and the donation can be drawn from.
         const spendableBalance =
-            Number(CashuStore?.payReqMintBalance) || totalSelectedBalance;
+            Number(plan?.mintBalance) || totalSelectedBalance;
 
         const hasNoMintsSelected = effectiveMints.length === 0;
         const hasInsufficientBalance =
             totalNeeded > spendableBalance && spendableBalance > 0;
 
         this.paymentAmountSat = requestAmount;
-        this.paymentHash = CashuStore?.payReq?.payment_hash;
+        this.paymentHash = plan?.payReq?.payment_hash;
 
         this.state = {
             mints: effectiveMints,
@@ -149,7 +154,7 @@ export default class MultimintPayment extends React.Component<
                 ? localeString('views.Cashu.MultimintPayment.noMintsSelected')
                 : hasInsufficientBalance
                 ? (() => {
-                      const selfSend = CashuStore?.multiMintPlannerSkips?.find(
+                      const selfSend = plan?.plannerSkips?.find(
                           (s) => s.reason === 'selfSend'
                       );
                       if (selfSend) {
@@ -267,7 +272,7 @@ export default class MultimintPayment extends React.Component<
 
             const payment = await CashuStore!!.payLnInvoiceFromEcash({
                 amount: route.params?.paymentAmount,
-                paymentRequest: route.params?.paymentRequest,
+                plan: route.params?.paymentPlan,
                 onProgress: this.onProgressUpdate
             });
 
@@ -322,10 +327,10 @@ export default class MultimintPayment extends React.Component<
             }
 
             const isDonationPayment = true;
-            await CashuStore?.getPayReq(paymentRequest, isDonationPayment);
+            const plan = await CashuStore?.getPayReq(paymentRequest);
             const donationPayment = await CashuStore?.payLnInvoiceFromEcash({
                 amount: donationAmount,
-                paymentRequest,
+                plan,
                 isDonationPayment
             });
 

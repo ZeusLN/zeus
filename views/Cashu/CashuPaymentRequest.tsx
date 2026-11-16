@@ -7,8 +7,8 @@ import {
     View,
     TouchableOpacity
 } from 'react-native';
-import { reaction } from 'mobx';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Slider from '@react-native-community/slider';
 import { ButtonGroup } from '@rneui/themed';
@@ -29,10 +29,8 @@ import {
 } from '../../components/SuccessErrorMessage';
 
 import BalanceStore from '../../stores/BalanceStore';
-import CashuStore from '../../stores/CashuStore';
-import TransactionsStore, {
-    SendPaymentReq
-} from '../../stores/TransactionsStore';
+import CashuStore, { CashuPaymentPlan } from '../../stores/CashuStore';
+import TransactionsStore from '../../stores/TransactionsStore';
 import UnitsStore from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -57,6 +55,8 @@ import QR from '../../assets/images/SVG/QR.svg';
 interface CashuPaymentRequestProps {
     exitSetup: any;
     navigation: NativeStackNavigationProp<any, any>;
+    // paymentRequest: the invoice this screen quotes, shows and pays
+    route: Route<'CashuPaymentRequest', { paymentRequest: string }>;
     BalanceStore: BalanceStore;
     CashuStore: CashuStore;
     TransactionsStore: TransactionsStore;
@@ -73,7 +73,11 @@ interface CashuPaymentRequestState {
     selectedIndex: number | null;
     swipeButtonKey: number;
     multiMintEnabled: boolean;
-    reviewedPaymentRequest: string;
+    // What CashuStore.getPayReq prepared for this screen's invoice: its
+    // decode and melt quotes. Held here, not in CashuStore, so nothing
+    // outside this screen can change the invoice or quotes under review
+    plan: CashuPaymentPlan | null;
+    loading: boolean;
 }
 
 @inject(
@@ -85,17 +89,27 @@ interface CashuPaymentRequestState {
     'NodeInfoStore'
 )
 @observer
-export default class CashuPaymentRequest extends React.Component<
+export class CashuPaymentRequestView extends React.Component<
     CashuPaymentRequestProps,
     CashuPaymentRequestState
 > {
     listener: any;
     isComponentMounted: boolean = false;
     focusListener: any = null;
-    donationDisposer: any;
-    swipeResetDisposer: any;
-    donationLockRequest?: string;
-    state = {
+    // The invoice this instance reviews, read once: what is quoted, shown
+    // and paid can't differ, whatever happens to the route params or to
+    // any store afterwards. A new invoice gets a new instance, see
+    // CashuPaymentRequest below
+    private readonly paymentRequest: string | undefined =
+        this.props.route?.params?.paymentRequest;
+    // bumped by every loadPlan, so an answer can tell whether a newer
+    // quote was started
+    private planRequestId = 0;
+    private settingsLoading?: Promise<any>;
+    // the donation is derived from the invoice once; later quotes of the
+    // same invoice keep what the user chose
+    private donationDerived = false;
+    state: CashuPaymentRequestState = {
         slideToPayThreshold: 10000,
         donationsToggle: false,
         donationPercentage: 0,
@@ -103,53 +117,18 @@ export default class CashuPaymentRequest extends React.Component<
         selectedIndex: null,
         swipeButtonKey: 0,
         multiMintEnabled: false,
-        reviewedPaymentRequest: ''
+        plan: null,
+        loading: !!this.paymentRequest
     };
 
     async componentDidMount() {
         this.isComponentMounted = true;
         const { SettingsStore, CashuStore } = this.props;
-        const settings = await SettingsStore.getSettings();
-        const { defaultDonationPercentage } = settings.payments;
+        // the quote doesn't need the settings, so don't make it wait
+        this.settingsLoading = SettingsStore.getSettings();
+        this.loadPlan();
+        const settings = await this.settingsLoading;
 
-        this.donationDisposer = reaction(
-            () => CashuStore.payReq,
-            (payReq) => {
-                if (payReq?.getRequestAmount) {
-                    const currentRequest = CashuStore.paymentRequest;
-
-                    if (
-                        currentRequest &&
-                        this.donationLockRequest === currentRequest
-                    ) {
-                        return;
-                    }
-
-                    const defaultPct = Number(defaultDonationPercentage) || 0;
-
-                    const requestAmount = payReq.getRequestAmount;
-                    const donationAmount = calculateDonationAmount(
-                        requestAmount,
-                        defaultPct
-                    );
-                    const index = findDonationPercentageIndex(
-                        defaultPct,
-                        [5, 10, 20]
-                    );
-
-                    this.setState({
-                        donationAmount,
-                        selectedIndex: index,
-                        donationPercentage: defaultPct
-                    });
-
-                    this.donationLockRequest = currentRequest;
-                }
-            },
-            { fireImmediately: true }
-        );
-
-        const { paymentRequest, getPayReq } = CashuStore;
         const enabledBySetting = !!settings?.ecash?.enableMultiMint;
         const hasMultipleSelectedMints =
             Array.isArray(CashuStore.multiMintSelectedUrls) &&
@@ -157,43 +136,14 @@ export default class CashuPaymentRequest extends React.Component<
 
         this.setState({
             slideToPayThreshold: settings?.payments?.slideToPayThreshold,
-            multiMintEnabled: enabledBySetting && hasMultipleSelectedMints,
-            // Pin the invoice the user is reviewing. The view otherwise reads
-            // the invoice straight off the shared CashuStore singleton, so if
-            // a second payment string is injected while this screen is open
-            // the store's paymentRequest / payReq get swapped out from under
-            // the review. triggerPayment refuses to proceed when the store no
-            // longer matches the pin ("review A, pay B").
-            reviewedPaymentRequest: CashuStore.paymentRequest || ''
+            multiMintEnabled: enabledBySetting && hasMultipleSelectedMints
         });
 
-        // If the invoice under review changes while this screen is mounted,
-        // invalidate any in-progress slide-to-pay gesture so it cannot
-        // complete against the swapped-in invoice. The render path notices
-        // the mismatch and replaces the pay controls with a warning; the pin
-        // is only advanced when the user explicitly accepts the new request.
-        // If no invoice was loaded at mount, pin the first one that
-        // arrives: the swipe is reset here, so it can only be paid after it
-        // has been on screen.
-        this.swipeResetDisposer = reaction(
-            () => CashuStore.paymentRequest,
-            (current) => {
-                if (!this.isComponentMounted) return;
-                this.setState((prevState) => ({
-                    swipeButtonKey: prevState.swipeButtonKey + 1,
-                    reviewedPaymentRequest:
-                        prevState.reviewedPaymentRequest || current || ''
-                }));
-            }
-        );
-
-        // Reset state when screen comes into focus (e.g., after navigating
-        // back). Re-decode the reviewed (pinned) invoice, not whatever is in
-        // the store: a focus event also fires when returning from a screen
-        // pushed on top of this one (e.g. the QR view), so an invoice
-        // injected while the user was away must not get silently adopted.
+        // Quote the invoice again when the screen comes back into focus
+        // (e.g. after the mint picker or a failed payment), and reset the
+        // slide to pay slider
         this.focusListener = this.props.navigation.addListener('focus', () => {
-            getPayReq(this.state.reviewedPaymentRequest || paymentRequest!!);
+            this.loadPlan();
             this.setState((prevState) => ({
                 swipeButtonKey: prevState.swipeButtonKey + 1,
                 multiMintEnabled:
@@ -207,18 +157,45 @@ export default class CashuPaymentRequest extends React.Component<
     componentWillUnmount(): void {
         this.isComponentMounted = false;
 
-        if (this.donationDisposer) {
-            this.donationDisposer();
-        }
-
-        if (this.swipeResetDisposer) {
-            this.swipeResetDisposer();
-        }
-
         if (this.focusListener) {
             this.focusListener();
         }
     }
+
+    // Decodes and quotes this screen's invoice. The pay controls are hidden
+    // while a quote is loading, and the plan on screen is replaced only by
+    // the latest one asked for
+    loadPlan = async () => {
+        const { CashuStore } = this.props;
+        if (!this.paymentRequest) return;
+        const requestId = ++this.planRequestId;
+        this.setState({ loading: true });
+
+        const [plan, settings] = await Promise.all([
+            CashuStore.getPayReq(this.paymentRequest),
+            this.settingsLoading
+        ]);
+        if (requestId !== this.planRequestId) return;
+
+        const requestAmount = plan.payReq?.getRequestAmount;
+        if (requestAmount && !this.donationDerived) {
+            this.donationDerived = true;
+            const defaultPct =
+                Number(settings?.payments?.defaultDonationPercentage) || 0;
+            this.setState({
+                donationAmount: calculateDonationAmount(
+                    requestAmount,
+                    defaultPct
+                ),
+                selectedIndex: findDonationPercentageIndex(
+                    defaultPct,
+                    [5, 10, 20]
+                ),
+                donationPercentage: defaultPct
+            });
+        }
+        this.setState({ plan, loading: false });
+    };
 
     // The donation that will actually be sent with this payment. Resolved in
     // one place so the coverage check below and the amount handed to the
@@ -226,12 +203,12 @@ export default class CashuPaymentRequest extends React.Component<
     // than re-reading the store, which is what stops a donation the check
     // never counted from going out once nodeInfo arrives mid-payment.
     resolveDonationToSend = () => {
-        const { CashuStore, SettingsStore, NodeInfoStore } = this.props;
-        const { donationAmount } = this.state;
+        const { SettingsStore, NodeInfoStore } = this.props;
+        const { donationAmount, plan } = this.state;
 
         const donationsAllowed =
             Platform.OS !== 'ios' &&
-            !!CashuStore.payReq?.getRequestAmount &&
+            !!plan?.payReq?.getRequestAmount &&
             SettingsStore.settings?.payments?.enableDonations;
 
         return getDonationToSend(
@@ -241,81 +218,52 @@ export default class CashuPaymentRequest extends React.Component<
         );
     };
 
-    sendPayment = ({ payment_request, amount }: SendPaymentReq) => {
-        const { navigation } = this.props;
-        const donationToSend = this.resolveDonationToSend();
-
-        navigation.navigate('CashuSendingLightning', {
-            ...(donationToSend > 0 && {
-                donationAmount: donationToSend.toString()
-            }),
-            paymentAmount: amount ? amount : undefined,
-            paymentRequest: payment_request
-        });
-    };
-
     triggerPayment = () => {
         const { CashuStore, navigation } = this.props;
-        const { multiMintEnabled, reviewedPaymentRequest } = this.state;
+        const { multiMintEnabled, plan, loading } = this.state;
 
-        // Fail closed: if the invoice in the store no longer matches the one
-        // the user reviewed, it was swapped out from under the review screen.
-        // Both payment paths below (multimint and single mint) read the
-        // invoice off CashuStore at their own mount, so refuse to proceed
-        // rather than paying a different invoice than the one that was on
-        // screen when this confirmation began. Reset the swipe knob so the
-        // gesture doesn't stick; the render path shows the
-        // payment-request-changed warning in place of the pay controls.
-        // With nothing pinned there is nothing the user reviewed, so refuse
-        // as well. The payment screens are handed the reviewed invoice, so
-        // that they refuse one swapped in between here and their mount.
-        if (
-            !reviewedPaymentRequest ||
-            CashuStore.paymentRequest !== reviewedPaymentRequest
-        ) {
-            this.setState({
-                swipeButtonKey: this.state.swipeButtonKey + 1
-            });
-            return;
-        }
+        // A slide to pay can still complete after its screen was replaced
+        // by the review of another invoice. This one is no longer on
+        // screen, so don't pay it
+        if (!this.isComponentMounted) return;
+
+        // Pay only a plan that is on screen. While a new quote is loading
+        // the pay controls are hidden and the plan is about to be replaced
+        if (!plan || loading) return;
 
         // Fail closed if the invoice has expired since it was reviewed:
         // the invoice can lapse while this screen is open, and expiry is
         // otherwise only enforced by the mint and recipient
-        if (CashuStore.payReq?.isExpiredNow()) {
+        if (plan.payReq?.isExpiredNow()) {
             // re-render so the expired notice appears and the pay
             // controls are removed
             this.forceUpdate();
             return;
         }
 
-        const requestAmount = CashuStore.payReq?.getRequestAmount;
+        const requestAmount = plan.payReq?.getRequestAmount;
         const paymentAmount = requestAmount
             ? requestAmount.toString()
             : undefined;
+        const donationToSend = this.resolveDonationToSend();
 
         const isMultiMint =
             multiMintEnabled &&
             Array.isArray(CashuStore?.multiMintSelectedUrls) &&
             CashuStore!.multiMintSelectedUrls.length > 1;
 
-        if (isMultiMint) {
-            const donationToSend = this.resolveDonationToSend();
-            navigation.navigate('MultimintPayment', {
+        // The sending screens are handed the plan that was reviewed: its
+        // invoice is paid with its quotes
+        navigation.navigate(
+            isMultiMint ? 'MultimintPayment' : 'CashuSendingLightning',
+            {
                 paymentAmount,
-                paymentRequest: reviewedPaymentRequest,
+                paymentPlan: plan,
                 ...(donationToSend > 0 && {
                     donationAmount: donationToSend.toString()
                 })
-            });
-            return;
-        }
-
-        // Call sendPayment with the freshest values
-        this.sendPayment({
-            payment_request: reviewedPaymentRequest,
-            amount: paymentAmount
-        });
+            }
+        );
     };
 
     handleMultiMintToggle = async (enabled: boolean) => {
@@ -358,9 +306,8 @@ export default class CashuPaymentRequest extends React.Component<
             );
         }
 
-        if (CashuStore.paymentRequest) {
-            await CashuStore.getPayReq(CashuStore.paymentRequest);
-        }
+        // the mints changed, so the quotes on screen no longer apply
+        await this.loadPlan();
     };
 
     render() {
@@ -371,20 +318,17 @@ export default class CashuPaymentRequest extends React.Component<
             donationsToggle,
             donationAmount,
             donationPercentage,
-            multiMintEnabled
+            multiMintEnabled,
+            plan,
+            loading
         } = this.state;
-        const {
-            payReq,
-            paymentRequest,
-            getPayReqError,
-            loading,
-            loadingFeeEstimate,
-            feeEstimate,
-            clearPayReq,
-            totalBalanceSats,
-            payReqMintBalance,
-            payReqAmount
-        } = CashuStore;
+        const { totalBalanceSats } = CashuStore;
+        const paymentRequest = this.paymentRequest;
+        const payReq = plan?.payReq;
+        const getPayReqError = plan?.error;
+        const feeEstimate = plan?.feeEstimate;
+        const payReqMintBalance = plan?.mintBalance ?? 0;
+        const payReqAmount = plan?.amount ?? 0;
 
         const isPayReqExpired = !!payReq && payReq.isExpiredNow();
 
@@ -410,17 +354,6 @@ export default class CashuPaymentRequest extends React.Component<
         const showMultiMintToggle = !!settings?.ecash?.enableMultiMint;
 
         const noBalance = totalBalanceSats === 0;
-
-        // The screen renders whatever invoice is in the shared CashuStore, so
-        // when the store no longer matches the pinned invoice the user has a
-        // different payment request in front of them than the one they were
-        // reviewing. Surface that instead of paying (or silently refusing):
-        // the pay controls are replaced below with a warning and an explicit
-        // button to review the new request, which re-pins it.
-        const payReqChanged =
-            this.state.reviewedPaymentRequest !== '' &&
-            !!paymentRequest &&
-            paymentRequest !== this.state.reviewedPaymentRequest;
 
         const enableDonations =
             Platform.OS !== 'ios' &&
@@ -473,7 +406,6 @@ export default class CashuPaymentRequest extends React.Component<
                 requestAmount ?? 0,
                 percentage
             );
-            this.donationLockRequest = paymentRequest;
             this.setState({
                 donationPercentage: percentage,
                 donationAmount,
@@ -490,7 +422,6 @@ export default class CashuPaymentRequest extends React.Component<
                 value,
                 donationPercentageOptions
             );
-            this.donationLockRequest = paymentRequest;
             this.setState({
                 donationPercentage: value,
                 donationAmount,
@@ -523,9 +454,6 @@ export default class CashuPaymentRequest extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={() => {
-                        clearPayReq();
-                    }}
                     centerComponent={{
                         text: localeString('views.PaymentRequest.title'),
                         style: {
@@ -533,11 +461,11 @@ export default class CashuPaymentRequest extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={<QRButton />}
+                    rightComponent={paymentRequest ? <QRButton /> : undefined}
                     navigation={navigation}
                 />
 
-                {(loading || loadingFeeEstimate) && (
+                {loading && (
                     <View style={{ marginTop: 40 }}>
                         <LoadingIndicator />
                     </View>
@@ -545,26 +473,31 @@ export default class CashuPaymentRequest extends React.Component<
 
                 <View style={{ flex: 1 }}>
                     <ScrollView keyboardShouldPersistTaps="handled">
-                        {!loading &&
-                            !loadingFeeEstimate &&
-                            !payReq &&
-                            !!getPayReqError && (
-                                <View style={styles.content}>
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.PaymentRequest.error'
-                                        )}
-                                        : {getPayReqError}
-                                    </Text>
-                                </View>
-                            )}
+                        {!paymentRequest && (
+                            <View style={styles.content}>
+                                <ErrorMessage
+                                    message={localeString(
+                                        'views.PaymentRequest.noPayReq'
+                                    )}
+                                />
+                            </View>
+                        )}
 
-                        {!loading && !loadingFeeEstimate && !!payReq && (
+                        {!loading && !payReq && !!getPayReqError && (
+                            <View style={styles.content}>
+                                <Text
+                                    style={{
+                                        ...styles.label,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.PaymentRequest.error')}
+                                    : {getPayReqError}
+                                </Text>
+                            </View>
+                        )}
+
+                        {!loading && !!payReq && (
                             <View style={styles.content}>
                                 <>
                                     {isPayReqExpired && (
@@ -907,40 +840,6 @@ export default class CashuPaymentRequest extends React.Component<
                 {!!payReq &&
                     !isPayReqExpired &&
                     !loading &&
-                    !loadingFeeEstimate &&
-                    payReqChanged &&
-                    BackendUtils.supportsLightningSends() && (
-                        <View style={{ bottom: 10, top: 6 }}>
-                            <View style={styles.content}>
-                                <WarningMessage
-                                    message={localeString(
-                                        'views.PaymentRequest.payReqChanged'
-                                    )}
-                                />
-                            </View>
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.PaymentRequest.reviewNewPayReq'
-                                    )}
-                                    onPress={() =>
-                                        this.setState({
-                                            reviewedPaymentRequest:
-                                                CashuStore.paymentRequest || '',
-                                            swipeButtonKey:
-                                                this.state.swipeButtonKey + 1
-                                        })
-                                    }
-                                />
-                            </View>
-                        </View>
-                    )}
-
-                {!!payReq &&
-                    !isPayReqExpired &&
-                    !loading &&
-                    !loadingFeeEstimate &&
-                    !payReqChanged &&
                     !isNoAmountInvoice &&
                     BackendUtils.supportsLightningSends() && (
                         <View style={{ bottom: 10, top: 6 }}>
@@ -1057,6 +956,22 @@ export default class CashuPaymentRequest extends React.Component<
             </Screen>
         );
     }
+}
+
+// navigate() and popTo() to an open CashuPaymentRequest only swap its route
+// params. Keying the screen by its invoice turns that into a new instance:
+// the review of the old invoice is unmounted, with its donation choice and
+// any slide to pay still in progress, and the new invoice is quoted and
+// shown from scratch.
+export default function CashuPaymentRequest(
+    props: Pick<CashuPaymentRequestProps, 'navigation' | 'route'>
+) {
+    return (
+        <CashuPaymentRequestView
+            key={props.route?.params?.paymentRequest}
+            {...(props as CashuPaymentRequestProps)}
+        />
+    );
 }
 
 const styles = StyleSheet.create({

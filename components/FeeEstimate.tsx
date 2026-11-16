@@ -7,7 +7,6 @@ import {
     View
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { inject, observer } from 'mobx-react';
 import { LNURLWithdrawParams } from 'js-lnurl';
 
 import Amount from './Amount';
@@ -18,7 +17,6 @@ import OnchainFeeInput from './OnchainFeeInput';
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretUp from '../assets/images/SVG/Caret Up.svg';
 
-import CashuStore from '../stores/CashuStore';
 import { feeStore, settingsStore } from '../stores/Stores';
 
 import { localeString } from '../utils/LocaleUtils';
@@ -38,7 +36,9 @@ interface FeeEstimateProps {
     // that decoded it
     lightningFee?: number;
     lightningFeeLoading?: boolean;
-    CashuStore?: CashuStore;
+    // the ecash melt fee for the payment, from the same screen
+    ecashFee?: number;
+    ecashFeeLoading?: boolean;
 }
 
 interface FeeEstimateState {
@@ -72,8 +72,6 @@ const FeeCell = ({
     </View>
 );
 
-@inject('CashuStore')
-@observer
 export default class FeeEstimate extends React.PureComponent<
     FeeEstimateProps,
     FeeEstimateState
@@ -139,16 +137,15 @@ export default class FeeEstimate extends React.PureComponent<
             navigation,
             lightningFee,
             lightningFeeLoading,
-            CashuStore
+            ecashFee,
+            ecashFeeLoading
         } = this.props;
 
         const isLightningPayment = !!(lightning || lnurlParams);
-        const ecashFee = CashuStore?.feeEstimate ?? undefined;
         const lightningLoading = isLightningPayment && !!lightningFeeLoading;
-        const ecashLoading =
-            isLightningPayment &&
-            BackendUtils.supportsCashuWallet() &&
-            !!CashuStore?.loading;
+        // the ecash row is only shown for a Lightning payment on a backend
+        // with a Cashu wallet
+        const ecashLoading = !!ecashFeeLoading;
 
         const satNum = Number(satAmount);
 

@@ -397,14 +397,31 @@ describe('LnurlPay ecash payment', () => {
         mockFetchLnurlUrl.mockImplementation(() => new Promise(() => {}));
     });
 
-    // Confirms an ecash payment while another caller of the shared
-    // CashuStore loads OTHER_INVOICE during the mint quote round trip
-    const confirmWhileStoreIsReplaced = async () => {
+    const planFor = (overrides: any = {}) => ({
+        paymentRequest: SERVICE_INVOICE,
+        payReq: { payment_hash: SERVICE_PAYMENT_HASH },
+        meltQuotes: [],
+        mintBalance: 300,
+        amount: 250,
+        ...overrides
+    });
+
+    // Confirms an ecash payment whose quote resolves with plan. With
+    // storeDecoys, another caller loads OTHER_INVOICE into the shared
+    // CashuStore during the mint quote round trip, in the fields the store
+    // had before plans
+    const confirmEcash = async (
+        plan: any = planFor(),
+        { storeDecoys = false } = {}
+    ) => {
         const CashuStore: any = {};
         CashuStore.getPayReq = jest.fn(async () => {
-            CashuStore.paymentRequest = OTHER_INVOICE;
-            CashuStore.payReq = { payment_hash: 'other-payment-hash' };
-            CashuStore.getPayReqError = 'error of the other invoice';
+            if (storeDecoys) {
+                CashuStore.paymentRequest = OTHER_INVOICE;
+                CashuStore.payReq = { payment_hash: 'other-payment-hash' };
+                CashuStore.getPayReqError = 'error of the other invoice';
+            }
+            return plan;
         });
         const navigation = {
             addListener: jest.fn(),
@@ -436,12 +453,15 @@ describe('LnurlPay ecash payment', () => {
         await act(async () => {
             await new Promise(setImmediate);
         });
-        return { navigation, LnurlPayStore, InvoicesStore };
+        return { navigation, LnurlPayStore, InvoicesStore, CashuStore };
     };
 
     it('passes the invoice it checked to ChoosePaymentMethod', async () => {
-        const { navigation } = await confirmWhileStoreIsReplaced();
+        const { navigation, CashuStore } = await confirmEcash();
 
+        expect(CashuStore.getPayReq).toHaveBeenCalledWith(SERVICE_INVOICE);
+        expect(Alert.alert).not.toHaveBeenCalled();
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
         expect(navigation.navigate).toHaveBeenCalledWith(
             'ChoosePaymentMethod',
             { lightning: SERVICE_INVOICE, locked: true }
@@ -449,21 +469,59 @@ describe('LnurlPay ecash payment', () => {
     });
 
     it('records the payment under the checked invoice payment hash', async () => {
-        const { LnurlPayStore } = await confirmWhileStoreIsReplaced();
+        const { LnurlPayStore } = await confirmEcash();
 
         expect(LnurlPayStore.keep).toHaveBeenCalledTimes(1);
         expect(LnurlPayStore.keep.mock.calls[0][0]).toBe(SERVICE_PAYMENT_HASH);
     });
 
-    it('ignores the error of an invoice another caller loaded', async () => {
-        await confirmWhileStoreIsReplaced();
+    it('shows the error of its own plan and stays on the screen', async () => {
+        const { navigation, LnurlPayStore } = await confirmEcash(
+            planFor({ error: 'mint is offline' })
+        );
+
+        expect(Alert.alert).toHaveBeenCalledTimes(1);
+        expect(Alert.alert).toHaveBeenCalledWith(
+            'views.LnurlPay.LnurlPay.invalidInvoice',
+            'mint is offline',
+            expect.any(Array),
+            expect.any(Object)
+        );
+        expect(LnurlPayStore.keep).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(hostOfType('LoadingIndicator')).toBeUndefined();
+    });
+
+    // ChoosePaymentMethod offers the other payment methods
+    it('carries on to ChoosePaymentMethod when its plan is short of ecash', async () => {
+        const { navigation, LnurlPayStore } = await confirmEcash(
+            planFor({ error: 'Stores.CashuStore.notEnoughFunds: 250 sats' })
+        );
 
         expect(Alert.alert).not.toHaveBeenCalled();
+        expect(LnurlPayStore.keep).toHaveBeenCalledTimes(1);
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'ChoosePaymentMethod',
+            { lightning: SERVICE_INVOICE, locked: true }
+        );
+    });
+
+    it('ignores the error and invoice another caller left on CashuStore', async () => {
+        const { navigation, LnurlPayStore } = await confirmEcash(planFor(), {
+            storeDecoys: true
+        });
+
+        expect(Alert.alert).not.toHaveBeenCalled();
+        expect(LnurlPayStore.keep.mock.calls[0][0]).toBe(SERVICE_PAYMENT_HASH);
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'ChoosePaymentMethod',
+            { lightning: SERVICE_INVOICE, locked: true }
+        );
     });
 
     // ChoosePaymentMethod decodes the invoice for its own Lightning fee row
     it('leaves the Lightning decode to ChoosePaymentMethod', async () => {
-        const { InvoicesStore } = await confirmWhileStoreIsReplaced();
+        const { InvoicesStore } = await confirmEcash();
 
         expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
     });

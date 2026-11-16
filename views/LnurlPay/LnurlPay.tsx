@@ -395,16 +395,10 @@ export default class LnurlPay extends React.Component<
                 if (ecash) {
                     // load the ecash payment route. ChoosePaymentMethod
                     // decodes the invoice itself for the Lightning one
-                    CashuStore.getPayReq(pr).then(() => {
+                    CashuStore.getPayReq(pr).then((plan) => {
                         this.setState({ loading: false });
 
-                        // CashuStore is shared with the NWC service and a
-                        // superseded getPayReq resolves silently, so the store
-                        // may hold another invoice by now. Use pr from here on.
-                        const payReqError =
-                            CashuStore.paymentRequest === pr
-                                ? CashuStore.getPayReqError
-                                : undefined;
+                        const payReqError = plan.error;
                         const isInsufficientFunds =
                             typeof payReqError === 'string' &&
                             payReqError
