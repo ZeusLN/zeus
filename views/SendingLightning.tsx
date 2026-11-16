@@ -7,6 +7,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { reaction } from 'mobx';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
@@ -121,6 +122,8 @@ export default class SendingLightning extends React.Component<
 
     private pendingExitTimer: ReturnType<typeof setTimeout> | undefined;
 
+    private pendingExitDisposer: (() => void) | undefined;
+
     constructor(props: SendingLightningProps) {
         super(props);
         this.paymentSequence = props.route.params?.paymentSequence ?? null;
@@ -166,9 +169,24 @@ export default class SendingLightning extends React.Component<
             this.handleBackPress.bind(this)
         );
 
-        this.pendingExitTimer = setTimeout(
-            () => this.setState({ pendingExitOffered: true }),
-            PENDING_EXIT_DELAY_MS
+        // The delay counts from when the payment takes the send guard,
+        // which can be after this screen opens: a payment held back by the
+        // graph sync prompt is not dispatched until the prompt is answered.
+        this.pendingExitDisposer = reaction(
+            () => TransactionsStore.paymentInFlight,
+            (paymentInFlight) => {
+                clearTimeout(this.pendingExitTimer);
+                if (this.state.pendingExitOffered) {
+                    this.setState({ pendingExitOffered: false });
+                }
+                if (paymentInFlight) {
+                    this.pendingExitTimer = setTimeout(
+                        () => this.setState({ pendingExitOffered: true }),
+                        PENDING_EXIT_DELAY_MS
+                    );
+                }
+            },
+            { fireImmediately: true }
         );
     }
 
@@ -358,10 +376,13 @@ export default class SendingLightning extends React.Component<
             this.focusListener();
         }
         this.backPressSubscription?.remove();
+        if (this.pendingExitDisposer) {
+            this.pendingExitDisposer();
+        }
         clearTimeout(this.pendingExitTimer);
     }
 
-    // The payment is still sending after PENDING_EXIT_DELAY_MS. Leaving
+    // The payment has held the send guard for PENDING_EXIT_DELAY_MS. Leaving
     // this screen leaves the send guard and the payment's result handling
     // in TransactionsStore as they are.
     private offersPendingExit(transactionStore: TransactionsStore): boolean {

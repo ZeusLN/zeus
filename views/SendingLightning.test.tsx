@@ -71,6 +71,7 @@ import {
     screen,
     waitFor
 } from '@testing-library/react-native';
+import { observable } from 'mobx';
 import BackendUtils from '../utils/BackendUtils';
 import { loadDonationLnurl } from '../utils/DonationUtils';
 import { getFeePercentage } from '../utils/AmountUtils';
@@ -82,9 +83,11 @@ const GO_TO_WALLET = 'views.SendingLightning.goToWallet';
 
 const renderView = async (
     transactionsState: Record<string, any>,
-    LnurlPayStore: Record<string, any> = {}
+    LnurlPayStore: Record<string, any> = {},
+    wrapStore: (store: Record<string, any>) => Record<string, any> = (store) =>
+        store
 ) => {
-    const TransactionsStore = {
+    const TransactionsStore = wrapStore({
         loading: false,
         error: false,
         error_msg: null,
@@ -96,7 +99,7 @@ const renderView = async (
         paymentDuration: null,
         status: null,
         ...transactionsState
-    };
+    });
     const navigation = {
         goBack: jest.fn(),
         popTo: jest.fn(),
@@ -344,6 +347,107 @@ describe('SendingLightning payment still pending', () => {
         expect(
             screen.queryByRole('button', { name: GO_TO_WALLET })
         ).not.toBeOnTheScreen();
+    });
+
+    describe('when the send guard changes while the screen is open', () => {
+        // TransactionsStore.paymentInFlight is observable in the app
+        let store: Record<string, any>;
+        const renderObserved = (state: Record<string, any>) =>
+            renderView(state, {}, (plain) => (store = observable(plain)));
+
+        const advance = (ms: number) =>
+            act(async () => {
+                jest.advanceTimersByTime(ms);
+            });
+        const setInFlight = (paymentInFlight: boolean) =>
+            act(async () => {
+                store.paymentInFlight = paymentInFlight;
+            });
+
+        const expectExitOffered = (offered: boolean) => {
+            expect(screen.queryAllByText(STILL_PENDING)).toHaveLength(
+                offered ? 1 : 0
+            );
+            expect(
+                screen.queryAllByRole('button', { name: GO_TO_WALLET })
+            ).toHaveLength(offered ? 1 : 0);
+        };
+
+        it('counts the delay from when the payment is sent, not from when the screen opens', async () => {
+            // held back by the graph sync prompt, answered after 15 s
+            const navigation = await renderObserved({
+                loading: true,
+                paymentInFlight: false
+            });
+            await advance(15000);
+            await setInFlight(true);
+            expectExitOffered(false);
+            // hardware back reads the same condition as the button
+            expect(onBack()).toBe(true);
+            expect(navigation.popTo).not.toHaveBeenCalled();
+
+            await advance(9999);
+            expectExitOffered(false);
+            expect(onBack()).toBe(true);
+            expect(navigation.popTo).not.toHaveBeenCalled();
+
+            await advance(1);
+            expectExitOffered(true);
+        });
+
+        it('starts the delay again when the send guard is released and taken again', async () => {
+            await renderObserved(sending);
+            await advance(5000);
+            await setInFlight(false);
+            await setInFlight(true);
+
+            await advance(5000);
+            expectExitOffered(false);
+
+            await advance(5000);
+            expectExitOffered(true);
+        });
+
+        it('withdraws the exit when the send guard is taken again after it was offered', async () => {
+            const navigation = await renderObserved(sending);
+            await advance(10000);
+            expectExitOffered(true);
+
+            await setInFlight(false);
+            await setInFlight(true);
+            expectExitOffered(false);
+            expect(onBack()).toBe(true);
+            expect(navigation.popTo).not.toHaveBeenCalled();
+
+            await advance(9999);
+            expectExitOffered(false);
+
+            await advance(1);
+            expectExitOffered(true);
+        });
+
+        it('does not run the delay while no payment holds the send guard', async () => {
+            await renderObserved({ loading: true, paymentInFlight: false });
+            const setState = jest.spyOn(SendingLightning.prototype, 'setState');
+
+            await advance(15000);
+
+            expect(setState).not.toHaveBeenCalled();
+        });
+
+        it('does not update the screen after it is unmounted', async () => {
+            await renderObserved(sending);
+            await advance(5000);
+            const setState = jest.spyOn(SendingLightning.prototype, 'setState');
+
+            await screen.unmount();
+            await advance(10000);
+            await setInFlight(false);
+            await setInFlight(true);
+            await advance(10000);
+
+            expect(setState).not.toHaveBeenCalled();
+        });
     });
 });
 
