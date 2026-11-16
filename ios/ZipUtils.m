@@ -227,13 +227,21 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
     uint64_t length = zipData.length;
 
     // The end of central directory record is the last thing in the file,
-    // followed only by its comment (at most 65535 bytes)
+    // followed only by its comment (at most 65535 bytes). A candidate
+    // counts only if its comment ends exactly at the end of the file and
+    // its central directory lies before it, so the same signature inside a
+    // comment is not taken for the record.
     uint64_t eocd = UINT64_MAX;
     uint64_t lowest = length > 22 + 65535 ? length - 22 - 65535 : 0;
     for (uint64_t i = length - 22;; i--) {
-        if (ZipRead32(bytes + i) == ZIP_END_CENTRAL_DIR_SIGNATURE && i + 22 + ZipRead16(bytes + i + 20) <= length) {
-            eocd = i;
-            break;
+        if (ZipRead32(bytes + i) == ZIP_END_CENTRAL_DIR_SIGNATURE && i + 22 + ZipRead16(bytes + i + 20) == length) {
+            uint32_t size = ZipRead32(bytes + i + 12);
+            uint32_t start = ZipRead32(bytes + i + 16);
+            // Zip64 markers are let through here and rejected below
+            if (size == 0xFFFFFFFF || start == 0xFFFFFFFF || (uint64_t)start + size <= i) {
+                eocd = i;
+                break;
+            }
         }
         if (i == lowest) break;
     }
@@ -250,9 +258,6 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
     }
     if (entryCount == 0xFFFF || cdSize == 0xFFFFFFFF || cdOffset == 0xFFFFFFFF) {
         return @"Zip64 files are not supported";
-    }
-    if ((uint64_t)cdOffset + cdSize > eocd) {
-        return @"Truncated zip file";
     }
     if (entryCount == 0) {
         return @"Zip file has no entries";
