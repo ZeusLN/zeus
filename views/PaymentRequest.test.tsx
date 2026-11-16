@@ -357,6 +357,50 @@ describe('PaymentRequest no-amount invoice', () => {
             expect.objectContaining({ amount: '500' })
         );
     });
+
+    it('clears the typed amount when a newly pinned request replaces it', async () => {
+        const ref = React.createRef<any>();
+        const InvoicesStore = observable(
+            {
+                pay_req: { ...payReq, getRequestAmount: 0 },
+                paymentRequest: 'lnbc1noamount'
+            },
+            {},
+            { deep: false }
+        );
+        await renderView({ implementation: 'ldk-node', InvoicesStore, ref });
+        const view = ref.current;
+        view.sendPayment = jest.fn();
+
+        const amountInput = screen.getByTestId('AmountInput');
+        await act(async () =>
+            amountInput.props.onAmountChange('100000', 100000)
+        );
+
+        // a 10 sat invoice replaces the no-amount one on the open screen
+        await act(async () =>
+            runInAction(() => {
+                InvoicesStore.paymentRequest = 'lnbc100n1tensats';
+                InvoicesStore.pay_req = { ...payReq, getRequestAmount: 10 };
+            })
+        );
+        await fireEvent.press(
+            screen.getByRole('button', {
+                name: 'views.PaymentRequest.reviewNewPayReq'
+            })
+        );
+
+        expect(view.state.reviewedPaymentRequest).toBe('lnbc100n1tensats');
+        expect(view.state.customAmount).toBe('');
+        expect(view.state.satAmount).toBe('');
+
+        await act(async () => view.triggerPayment());
+        expect(view.sendPayment).toHaveBeenCalledTimes(1);
+        expect(view.sendPayment.mock.calls[0][0]).toMatchObject({
+            payment_request: 'lnbc100n1tensats',
+            amount: undefined
+        });
+    });
 });
 
 describe('PaymentRequest sub-sat invoice', () => {
