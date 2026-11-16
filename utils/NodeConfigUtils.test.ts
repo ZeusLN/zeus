@@ -7,6 +7,7 @@ import {
     decryptExportDataV2,
     getImportableNodes,
     isValidExportPassword,
+    isLegacyNodeConfigExport,
     EXPORT_FORMAT_VERSION,
     MIN_EXPORT_PASSWORD_LENGTH
 } from './NodeConfigUtils';
@@ -373,6 +374,30 @@ describe('NodeConfigUtils', () => {
             ).toString();
 
             expect(() => decryptExportData(v1Blob, 'nope')).toThrow();
+        });
+    });
+
+    describe('isLegacyNodeConfigExport', () => {
+        it.each([
+            [{ version: 1, encrypted: true }],
+            [{ version: 1, encrypted: false }],
+            [{ version: 2, encrypted: false }],
+            [{ encrypted: true }]
+        ])('flags %j', (importData) => {
+            expect(isLegacyNodeConfigExport(importData)).toBe(true);
+        });
+
+        it('does not flag a v2 encrypted file', () => {
+            expect(
+                isLegacyNodeConfigExport({
+                    version: EXPORT_FORMAT_VERSION,
+                    encrypted: true
+                })
+            ).toBe(false);
+        });
+
+        it('does not flag a missing file', () => {
+            expect(isLegacyNodeConfigExport(undefined)).toBe(false);
         });
     });
 
