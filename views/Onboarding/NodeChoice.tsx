@@ -132,7 +132,7 @@ export default class NodeChoice extends React.Component<
         const returnTo = route.params?.returnTo;
 
         if (returnTo) {
-            navigation.navigate(returnTo, { enableCashu, implementation });
+            navigation.popTo(returnTo, { enableCashu, implementation });
         } else {
             navigation.navigate('RecommendedSettings', {
                 enableCashu,

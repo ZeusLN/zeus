@@ -81,14 +81,13 @@ export default class RecommendedSettings extends React.Component<
     };
 
     componentDidMount() {
-        const { navigation, CashuStore, SettingsStore, route } = this.props;
+        const { navigation, SettingsStore, route } = this.props;
 
         this.syncFromRouteParams();
 
         // Mint discovery is only needed for ecash (Cashu); skip fetch for self-custody onboarding
-        const prefetchMints = route.params?.enableCashu ?? true;
-        if (prefetchMints && !CashuStore.restoreCachedRecommendations('zeus')) {
-            CashuStore.fetchMintsFromFollows();
+        if (route.params?.enableCashu ?? true) {
+            this.prefetchMints();
         }
 
         // Listen for updates when returning from questionnaire steps
@@ -106,6 +105,30 @@ export default class RecommendedSettings extends React.Component<
             });
         });
     }
+
+    componentDidUpdate(
+        _prevProps: RecommendedSettingsProps,
+        prevState: RecommendedSettingsState
+    ) {
+        // A mounted summary switches from self-custody to ecash when
+        // WalletType returns to it, so the mints are fetched then too, not
+        // only on mount. Only for ZEUS' follows: the fetch fills the same
+        // list that "Your follows" reads, so it would show ZEUS' mints there.
+        if (
+            this.state.enableCashu &&
+            !prevState.enableCashu &&
+            this.state.discoverMode === 'zeus'
+        ) {
+            this.prefetchMints();
+        }
+    }
+
+    prefetchMints = () => {
+        const { CashuStore } = this.props;
+        if (!CashuStore.restoreCachedRecommendations('zeus')) {
+            CashuStore.fetchMintsFromFollows();
+        }
+    };
 
     syncFromRouteParams = () => {
         const { route, CashuStore } = this.props;
