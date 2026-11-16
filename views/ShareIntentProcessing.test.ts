@@ -53,8 +53,13 @@ jest.mock('../components/Screen', () => 'Screen');
 import ShareIntentProcessing from './ShareIntentProcessing';
 import handleAnything from '../utils/handleAnything';
 
+let mockRoutes = ['Wallet', 'ShareIntentProcessing'];
 const makeNavigation = () => ({
     replace: jest.fn(),
+    popTo: jest.fn(),
+    getState: jest.fn(() => ({
+        routes: mockRoutes.map((name) => ({ name }))
+    })),
     navigate: jest.fn(),
     goBack: jest.fn(),
     canGoBack: jest.fn(() => false)
@@ -199,6 +204,7 @@ describe('ShareIntentProcessing intent clearing', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockExternalInputAuthRequired = false;
+        mockRoutes = ['Wallet', 'ShareIntentProcessing'];
         jest.spyOn(console, 'log').mockImplementation(() => {});
         jest.spyOn(console, 'error').mockImplementation(() => {});
     });
@@ -252,5 +258,124 @@ describe('ShareIntentProcessing intent clearing', () => {
         expect(
             NativeModules.MobileTools.clearSharedIntent
         ).not.toHaveBeenCalled();
+    });
+});
+
+// handleAnything puts a shared invoice into InvoicesStore before this screen
+// navigates. A PaymentRequest that is already open then shows it with the
+// payment-request-changed warning; a second PaymentRequest stacked on top
+// would review the shared invoice with no warning.
+describe('ShareIntentProcessing navigation', () => {
+    const sharedInvoice = () =>
+        (handleAnything as jest.Mock).mockResolvedValueOnce([
+            'PaymentRequest',
+            {}
+        ]);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockExternalInputAuthRequired = false;
+        mockRoutes = ['Wallet', 'ShareIntentProcessing'];
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('pops back to an open PaymentRequest instead of stacking another', async () => {
+        sharedInvoice();
+        mockRoutes = ['Wallet', 'PaymentRequest', 'ShareIntentProcessing'];
+
+        const { navigation } = await mount({
+            base64Image: 'QRIMAGE',
+            requiresAuth: false
+        });
+
+        expect(navigation.popTo).toHaveBeenCalledWith('PaymentRequest', {});
+        expect(navigation.replace).not.toHaveBeenCalled();
+    });
+
+    it('pops past screens opened over the PaymentRequest', async () => {
+        sharedInvoice();
+        mockRoutes = [
+            'Wallet',
+            'PaymentRequest',
+            'Contacts',
+            'ShareIntentProcessing'
+        ];
+
+        const { navigation } = await mount({
+            base64Image: 'QRIMAGE',
+            requiresAuth: false
+        });
+
+        expect(navigation.popTo).toHaveBeenCalledWith('PaymentRequest', {});
+    });
+
+    it('replaces itself with PaymentRequest when none is open', async () => {
+        sharedInvoice();
+
+        const { navigation } = await mount({
+            base64Image: 'QRIMAGE',
+            requiresAuth: false
+        });
+
+        expect(navigation.replace).toHaveBeenCalledWith('PaymentRequest', {});
+        expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+
+    it('replaces itself for other routes with a PaymentRequest open', async () => {
+        mockRoutes = ['Wallet', 'PaymentRequest', 'ShareIntentProcessing'];
+
+        const { navigation } = await mount({
+            base64Image: 'QRIMAGE',
+            requiresAuth: false
+        });
+
+        expect(navigation.replace).toHaveBeenCalledWith('Send', {
+            invoice: 'lnbc1invoice'
+        });
+        expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+
+    it.each(['SendingLightning', 'SendingOnChain', 'CashuSendingLightning'])(
+        'does not pop through %s',
+        async (sendingScreen) => {
+            sharedInvoice();
+            mockRoutes = [
+                'Wallet',
+                'PaymentRequest',
+                sendingScreen,
+                'ShareIntentProcessing'
+            ];
+
+            const { navigation } = await mount({
+                base64Image: 'QRIMAGE',
+                requiresAuth: false
+            });
+
+            expect(navigation.replace).toHaveBeenCalledWith(
+                'PaymentRequest',
+                {}
+            );
+            expect(navigation.popTo).not.toHaveBeenCalled();
+        }
+    );
+
+    it('pops to a PaymentRequest opened after an earlier payment', async () => {
+        sharedInvoice();
+        mockRoutes = [
+            'Wallet',
+            'SendingLightning',
+            'PaymentRequest',
+            'ShareIntentProcessing'
+        ];
+
+        const { navigation } = await mount({
+            base64Image: 'QRIMAGE',
+            requiresAuth: false
+        });
+
+        expect(navigation.popTo).toHaveBeenCalledWith('PaymentRequest', {});
     });
 });
