@@ -93,8 +93,6 @@ import {
 } from './ChannelMigrationUtils';
 import { sourceMethods } from '../backends/lncTestUtils';
 
-import Storage from '../storage';
-
 const mockFetch = ReactNativeBlobUtil.fetch as jest.Mock;
 const mockSignNodePubkey = signMessageNodePubkey as jest.Mock;
 const mockAlert = Alert.alert as jest.Mock;
