@@ -2092,9 +2092,17 @@ export default class LdkNode {
         // Inbound + their reserve, mirroring outbound + our reserve above.
         // Subtracting local from the capacity would count in-flight HTLCs,
         // the commit fee and anchors as theirs.
-        const remoteBalanceSats = new BigNumber(channel.inboundCapacityMsat)
-            .dividedBy(1000)
-            .plus(channel.counterpartyUnspendablePunishmentReserve || 0);
+        // LDK reports inbound 0 while the peer is at or below its reserve,
+        // which includes a peer that holds nothing, so the reserve is only
+        // added when there is inbound capacity.
+        const inboundSats = new BigNumber(
+            channel.inboundCapacityMsat
+        ).dividedBy(1000);
+        const remoteBalanceSats = inboundSats.gt(0)
+            ? inboundSats.plus(
+                  channel.counterpartyUnspendablePunishmentReserve || 0
+              )
+            : new BigNumber(0);
 
         return {
             active: channel.isUsable,
