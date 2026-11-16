@@ -55,6 +55,7 @@ const FUNDING_OUTPUTS = [
 const OTHER_P2WPKH = Buffer.from(`0014${'33'.repeat(20)}`, 'hex');
 
 type Output = { script: Buffer; value: number };
+type Inputs = Array<{ txid: string; vout: number }>;
 
 const psbtSpending = (
     inputs: Array<{ txid: string; vout: number }>,
@@ -239,7 +240,9 @@ describe('ChannelsStore PSBT funding flow', () => {
 
     // The PSBT and TxHex screens call these with the transaction the user
     // signed and the channels it was matched to
-    const finalizers: Array<[string, (ids: Array<string>) => Promise<void>]> = [
+    const finalizers: Array<
+        [string, (ids: Array<string>) => Promise<boolean>]
+    > = [
         [
             'PSBT',
             (ids) =>
@@ -275,6 +278,15 @@ describe('ChannelsStore PSBT funding flow', () => {
     };
 
     describe.each(finalizers)('with a signed %s', (_, finalize) => {
+        beforeEach(() => {
+            // a dropped result is logged
+            jest.spyOn(console, 'warn').mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            jest.mocked(console.warn).mockRestore();
+        });
+
         it('keeps a newer channel whose PSBT is out for signing when the older one is finalized', async () => {
             const otherPsbt = psbtSpending(OTHER_INPUTS);
             const settle = deferFinalizeOfFirstChannel();
@@ -299,9 +311,9 @@ describe('ChannelsStore PSBT funding flow', () => {
             expect(channelsStore.funded_psbt).toBe(otherPsbt);
 
             settle({});
-            await finalized;
 
-            expect(transactionsStore.publishSuccess).toBe(true);
+            expect(await finalized).toBe(false);
+            expect(transactionsStore.publishSuccess).toBe(false);
             expect(channelsStore.funded_psbt).toBe(otherPsbt);
             expect(channelsStore.pending_chan_ids).toEqual(['chan-2']);
             expect(
@@ -336,9 +348,10 @@ describe('ChannelsStore PSBT funding flow', () => {
             expect(channelsStore.pending_chan_ids).toEqual([]);
 
             settle({});
-            await finalized;
 
-            expect(transactionsStore.publishSuccess).toBe(true);
+            expect(await finalized).toBe(false);
+            expect(transactionsStore.publishSuccess).toBe(false);
+            expect(transactionsStore.loading).toBe(false);
             expect(channelsStore.openingChannel).toBe(true);
 
             // the newer open is still the current one: its PSBT is handed
@@ -398,6 +411,286 @@ describe('ChannelsStore PSBT funding flow', () => {
                 'chan-1'
             ]);
         });
+    });
+
+    // SendingOnChain shows the store's loading, publishSuccess, txid, error
+    // and error_msg, and the PSBT and TxHex screens open it when a finalize
+    // resolves to true. A finalize whose result belongs to an earlier flow
+    // must leave all of them alone.
+    describe.each([
+        [
+            'PSBT',
+            (inputs: Inputs, outputs: Array<Output>, ids: Array<string>) =>
+                transactionsStore.finalizePsbtAndBroadcastChannel(
+                    psbtSpending(inputs, true, outputs),
+                    ids
+                ),
+            (inputs: Inputs, outputs: Array<Output>): string =>
+                bitcoin.Psbt.fromBase64(psbtSpending(inputs, true, outputs))
+                    .extractTransaction()
+                    .getId()
+        ],
+        [
+            'transaction',
+            (inputs: Inputs, outputs: Array<Output>, ids: Array<string>) =>
+                transactionsStore.finalizeTxHexAndBroadcastChannel(
+                    txSpending(inputs, outputs),
+                    ids
+                ),
+            (inputs: Inputs, outputs: Array<Output>): string =>
+                bitcoin.Transaction.fromHex(txSpending(inputs, outputs)).getId()
+        ]
+    ])('the result of finalizing a signed %s', (_, finalizeSigned, txidOf) => {
+        const OTHER_OUTPUTS = [{ script: P2WSH, value: 90000 }];
+        const FIRST_TXID = txidOf(FUNDING_INPUTS, FUNDING_OUTPUTS);
+        const SECOND_TXID = txidOf(OTHER_INPUTS, OTHER_OUTPUTS);
+
+        const finalizeFirst = () =>
+            finalizeSigned(FUNDING_INPUTS, FUNDING_OUTPUTS, ['chan-1']);
+        const finalizeSecond = () =>
+            finalizeSigned(OTHER_INPUTS, OTHER_OUTPUTS, ['chan-2']);
+
+        // LND holds every psbt_finalize from here on. The returned list has
+        // one function per call, in call order, that answers it: with an
+        // Error to reject, with anything else to resolve.
+        const holdFinalizes = () => {
+            const held: Array<(answer: any) => void> = [];
+            jest.mocked(BackendUtils.fundingStateStep).mockImplementation(
+                (step: any) =>
+                    step.psbt_finalize
+                        ? new Promise((resolve, reject) => {
+                              held.push((answer: any) =>
+                                  answer instanceof Error
+                                      ? reject(answer)
+                                      : resolve(answer)
+                              );
+                          })
+                        : Promise.resolve({})
+            );
+            return held;
+        };
+
+        // Another open replaces chan-1 with chan-2, whose PSBT is left for
+        // the user to sign
+        const openSecondChannel = async () => {
+            jest.mocked(BackendUtils.fundPsbt).mockResolvedValue({
+                funded_psbt: psbtSpending(OTHER_INPUTS)
+            });
+            lndWaitsForSigner('chan-2');
+            await channelsStore.connectPeer(openRequest('signer'));
+            await flushPromises();
+            expect(channelsStore.pending_chan_ids).toEqual(['chan-2']);
+        };
+
+        const expectNoResult = () => {
+            expect(transactionsStore.publishSuccess).toBe(false);
+            expect(transactionsStore.txid).toBeNull();
+            expect(transactionsStore.error).toBe(false);
+            expect(transactionsStore.error_msg).toBeNull();
+        };
+
+        const outcomes: Array<[string, any, string]> = [
+            ['publishes', {}, `published, txid: ${FIRST_TXID}`],
+            [
+                'reports a publish error',
+                { publish_error: 'bad-txns' },
+                'publish error: bad-txns'
+            ],
+            ['rejects the call', new Error('not signed'), 'error: not signed']
+        ];
+
+        beforeEach(() => {
+            jest.spyOn(console, 'warn').mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            jest.mocked(console.warn).mockRestore();
+        });
+
+        it('shows only the failure when a finalize fails after an earlier one succeeded', async () => {
+            jest.mocked(BackendUtils.fundingStateStep).mockResolvedValue({});
+            expect(await finalizeFirst()).toBe(true);
+            expect(transactionsStore.publishSuccess).toBe(true);
+            expect(transactionsStore.txid).toBe(FIRST_TXID);
+
+            await openSecondChannel();
+            expect(await finalizeSecond()).toBe(true);
+
+            expect(transactionsStore.error).toBe(true);
+            expect(transactionsStore.error_msg).toBe('not signed');
+            expect(transactionsStore.publishSuccess).toBe(false);
+            expect(transactionsStore.txid).toBeNull();
+            expect(transactionsStore.loading).toBe(false);
+        });
+
+        it('shows only the success when a finalize succeeds after an earlier one failed', async () => {
+            transactionsStore.sendOutcomeUnknown = true;
+            expect(await finalizeFirst()).toBe(true);
+            expect(transactionsStore.error).toBe(true);
+            expect(transactionsStore.error_msg).toBe('not signed');
+            expect(transactionsStore.sendOutcomeUnknown).toBe(false);
+
+            jest.mocked(BackendUtils.fundingStateStep).mockResolvedValue({});
+            expect(await finalizeFirst()).toBe(true);
+
+            expect(transactionsStore.publishSuccess).toBe(true);
+            expect(transactionsStore.txid).toBe(FIRST_TXID);
+            expect(transactionsStore.error).toBe(false);
+            expect(transactionsStore.error_msg).toBeNull();
+            expect(transactionsStore.loading).toBe(false);
+        });
+
+        it('has no result and shows the spinner while LND finalizes', async () => {
+            jest.mocked(BackendUtils.fundingStateStep).mockResolvedValue({});
+            await finalizeFirst();
+            await openSecondChannel();
+            const held = holdFinalizes();
+
+            const finalized = finalizeSecond();
+
+            expectNoResult();
+            expect(transactionsStore.loading).toBe(true);
+
+            held[0]({});
+            expect(await finalized).toBe(true);
+            expect(transactionsStore.txid).toBe(SECOND_TXID);
+        });
+
+        it.each(outcomes)(
+            'is dropped and logged when LND %s after another open replaced the channel',
+            async (_, answer, logged) => {
+                const held = holdFinalizes();
+                const finalized = finalizeFirst();
+                await openSecondChannel();
+
+                held[0](answer);
+
+                expect(await finalized).toBe(false);
+                expectNoResult();
+                // no later finalize is running: the spinner is this call's
+                expect(transactionsStore.loading).toBe(false);
+                expect(console.warn).toHaveBeenCalledTimes(1);
+                expect(console.warn).toHaveBeenCalledWith(
+                    expect.stringContaining(logged)
+                );
+                expect(channelsStore.pending_chan_ids).toEqual(['chan-2']);
+            }
+        );
+
+        it.each(outcomes)(
+            'leaves the spinner of a later finalize alone when LND %s after another open replaced the channel',
+            async (_, answer) => {
+                let held = holdFinalizes();
+                const first = finalizeFirst();
+                const answerFirst = held[0];
+                await openSecondChannel();
+                held = holdFinalizes();
+                const second = finalizeSecond();
+
+                answerFirst(answer);
+
+                expect(await first).toBe(false);
+                expectNoResult();
+                expect(transactionsStore.loading).toBe(true);
+
+                held[0]({});
+
+                expect(await second).toBe(true);
+                expect(transactionsStore.publishSuccess).toBe(true);
+                expect(transactionsStore.txid).toBe(SECOND_TXID);
+                expect(transactionsStore.error).toBe(false);
+                expect(transactionsStore.loading).toBe(false);
+                expect(channelsStore.pending_chan_ids).toEqual([]);
+            }
+        );
+
+        // the same channel finalized twice: the IDs match for both calls
+        it.each(outcomes)(
+            'is dropped when LND %s after a later finalize of the same channel started',
+            async (_, answer, logged) => {
+                const held = holdFinalizes();
+                const first = finalizeFirst();
+                const second = finalizeFirst();
+
+                held[0](answer);
+
+                expect(await first).toBe(false);
+                expectNoResult();
+                expect(transactionsStore.loading).toBe(true);
+                expect(console.warn).toHaveBeenCalledWith(
+                    expect.stringContaining(logged)
+                );
+
+                held[1](new Error('second failed'));
+
+                // with the channel finalized by the first call, the second
+                // call's channel is gone and its result is dropped too
+                const firstPublished =
+                    !(answer instanceof Error) && !answer.publish_error;
+                expect(await second).toBe(!firstPublished);
+                expect(transactionsStore.error).toBe(!firstPublished);
+                expect(transactionsStore.error_msg).toBe(
+                    firstPublished ? null : 'second failed'
+                );
+                expect(transactionsStore.loading).toBe(false);
+            }
+        );
+
+        it.each(outcomes)(
+            'is dropped when LND %s after the store was reset',
+            async (_, answer) => {
+                const held = holdFinalizes();
+                const finalized = finalizeFirst();
+                // a wallet switch; the channels are still loaded here
+                transactionsStore.reset();
+                transactionsStore.loading = true;
+
+                held[0](answer);
+
+                expect(await finalized).toBe(false);
+                expectNoResult();
+                expect(transactionsStore.loading).toBe(true);
+            }
+        );
+
+        it('is applied when LND publishes and no other open or finalize started', async () => {
+            const held = holdFinalizes();
+            const finalized = finalizeFirst();
+
+            held[0]({});
+
+            expect(await finalized).toBe(true);
+            expect(transactionsStore.publishSuccess).toBe(true);
+            expect(transactionsStore.txid).toBe(FIRST_TXID);
+            expect(transactionsStore.error).toBe(false);
+            expect(transactionsStore.loading).toBe(false);
+            expect(console.warn).not.toHaveBeenCalled();
+            expect(channelsStore.pending_chan_ids).toEqual([]);
+        });
+
+        it.each([
+            ['reports a publish error', { publish_error: 'bad-txns' }],
+            ['rejects the call', new Error('not signed')]
+        ])(
+            'is applied when LND %s and no other open or finalize started',
+            async (_, answer: any) => {
+                const held = holdFinalizes();
+                const finalized = finalizeFirst();
+
+                held[0](answer);
+
+                expect(await finalized).toBe(true);
+                expect(transactionsStore.error).toBe(true);
+                expect(transactionsStore.error_msg).toBe(
+                    answer.publish_error || 'not signed'
+                );
+                expect(transactionsStore.publishSuccess).toBe(false);
+                expect(transactionsStore.txid).toBeNull();
+                expect(transactionsStore.loading).toBe(false);
+                expect(console.warn).not.toHaveBeenCalled();
+                expect(channelsStore.pending_chan_ids).toEqual(['chan-1']);
+            }
+        );
     });
 
     // A batch is finalized with the ID of its last channel, and every one of

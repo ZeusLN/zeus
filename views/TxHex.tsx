@@ -83,11 +83,13 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
 
         try {
             if (pending_chan_ids.length > 0) {
-                await TransactionsStore.finalizeTxHexAndBroadcastChannel(
-                    txHex,
-                    pending_chan_ids
-                );
-                navigation.navigate('SendingOnChain');
+                const applied =
+                    await TransactionsStore.finalizeTxHexAndBroadcastChannel(
+                        txHex,
+                        pending_chan_ids
+                    );
+                // a result dropped as superseded is not on SendingOnChain
+                if (applied) navigation.navigate('SendingOnChain');
                 return;
             }
 
