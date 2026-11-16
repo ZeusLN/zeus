@@ -147,11 +147,9 @@ class AddressUtils {
         // the scheme must start the input and is case-insensitive (RFC 3986).
         // Leading whitespace is skipped, since some QR scanners pass the raw
         // scan without trimming it. A zeusln: deep link can wrap a whole
-        // URI (zeusln:bitcoin:...), so that prefix is skipped as well.
-        const unwrapped = input.trimStart();
-        const trimmed = unwrapped.startsWith('zeusln:')
-            ? unwrapped.slice('zeusln:'.length)
-            : unwrapped;
+        // URI (zeusln:bitcoin:... or zeusln://bitcoin:...), so that prefix,
+        // in any case, is skipped as well.
+        const trimmed = input.trimStart().replace(/^zeusln:(\/\/)?/i, '');
         const scheme = trimmed.slice(0, 'bitcoin:'.length);
         if (scheme.toLowerCase() === 'bitcoin:') {
             const [

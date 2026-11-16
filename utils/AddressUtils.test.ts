@@ -308,6 +308,18 @@ describe('AddressUtils', () => {
                     'zeusln:Bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
                 )
             ).toEqual(expected);
+            // the wrapper is a scheme too, so its case does not matter
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'ZEUSLN:bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
+            // nor does a // after it
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln://bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
             // a bare value behind zeusln: is still returned as is
             expect(
                 AddressUtils.processBIP21Uri(
