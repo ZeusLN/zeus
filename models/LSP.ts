@@ -61,7 +61,6 @@ const hasScalarFields = (value: any, keys: string[]): boolean =>
 // No reader iterates over the keys of an order, so a field that is not
 // named here is never read and is not checked.
 const ORDER_FIELDS = [
-    'order_state',
     'lsp_balance_sat',
     'client_balance_sat',
     'announce_channel',
@@ -115,16 +114,21 @@ const ORIGINAL_ORDER_FIELDS = ['id', 'service'];
 /**
  * Returns true if an LSPS1/LSPS7 order response (with or without the
  * JSON-RPC `result` wrapper) has the shape the order screens and the
- * Activity list read: a non-empty order_id string, and scalars in the
- * fields they read from the order, from `payment` and its payment options
- * (which are objects) and from `channel` (plus `original_order` as an
- * object and `extension_order_ids` as a list of scalars). Fields they do
- * not read are ignored, so an LSP can add fields of any type.
+ * Activity list read: a non-empty order_id string, a string order_state
+ * if there is one, and scalars in the other fields they read from the
+ * order, from `payment` and its payment options (which are objects) and
+ * from `channel` (plus `original_order` as an object and
+ * `extension_order_ids` as a list of scalars). Fields they do not read are
+ * ignored, so an LSP can add fields of any type.
  */
 export const isValidOrderResponse = (order: any): boolean => {
     const result = order?.result || order;
     if (!isPlainObject(result)) return false;
     if (typeof result.order_id !== 'string' || !result.order_id) return false;
+    // the Activity list calls string methods on the order state
+    if (result.order_state != null && typeof result.order_state !== 'string') {
+        return false;
+    }
     if (!hasScalarFields(result, ORDER_FIELDS)) return false;
 
     const { payment, channel } = result;

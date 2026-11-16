@@ -39,12 +39,64 @@ const lsps7Order = {
     }
 };
 
+// every field of an lsps1.get_order response in the LSPS1 spec (bLIP-51),
+// with the value types the spec gives them
+const lsps1SpecOrder = {
+    order_id: 'bb4b5d0a-8334-49d8-9463-90a6d413af7c',
+    lsp_balance_sat: '5000000',
+    client_balance_sat: '2000000',
+    required_channel_confirmations: 0,
+    funding_confirms_within_blocks: 1,
+    channel_expiry_blocks: 12,
+    token: '',
+    created_at: '2012-04-23T18:25:43.511Z',
+    announce_channel: true,
+    order_state: 'CREATED',
+    payment: {
+        bolt11: {
+            state: 'EXPECT_PAYMENT',
+            expires_at: '2025-01-01T00:00:00Z',
+            fee_total_sat: '8888',
+            order_total_sat: '2008888',
+            invoice:
+                'lnbc252u1p3aht9ysp580g4633gd2x9lc5al0wd8wx0mpn9748jeyz46kqjrpxn52uhfpjqpp5qgf67tcqmuqehzgjm8mzya90h73deafvr4m5705l5u5l4r05l8cqdpud3h8ymm4w3jhytnpwpczqmt0de6xsmre2pkxzm3qydmkzdjrdev9s7zhgfaqxqyjw5qcqpjrzjqt6xptnd85lpqnu2lefq4cx070v5cdwzh2u4zynj2uagr86uhjpqqfhfnfcwuaaqqqqqqqqqqqqqqpy9qyysgqd9w3wzxdzvh0c8ezxd9v5vfr7cj4jkz3z6t8t4ynu3tyfuzjvqd9w3wzxdzvh0c8ezxd9v5vfr7cj4jkz3z6t8t4ynu3tyfuzjvq'
+        },
+        onchain: {
+            state: 'EXPECT_PAYMENT',
+            expires_at: '2025-01-01T00:00:00Z',
+            fee_total_sat: '9999',
+            order_total_sat: '2009999',
+            address:
+                'bc1p5uvtaxzkjwvey2tfy49k5vtqfpjmrgm09cvs88ezyy8h2zv7jhas9tu4yr',
+            min_onchain_payment_confirmations: 1,
+            min_fee_for_0conf: 253,
+            refund_onchain_address:
+                'bc1qvmsy0f3yyes6z9jvddk8xqwznndmdwapvrc0xrmhd3vqj5rhdrrq6hz49h'
+        }
+    },
+    channel: {
+        funded_at: '2012-04-23T18:25:43.511Z',
+        funding_outpoint:
+            '0301e0480b374b32851a9462db29dc19fe830a7f7d7a88b81612b9d42099c0ae:0',
+        expires_at: '2012-04-23T18:25:43.511Z'
+    }
+};
+
 describe('isValidOrderResponse', () => {
     it.each([
         ['an LSPS1 order', lsps1Order],
         ['an LSPS1 order in a JSON-RPC reply', { id: '1', result: lsps1Order }],
         ['an LSPS7 order', lsps7Order],
         ['a free order', { ...lsps1Order, payment: {} }],
+        [
+            'an order with every lsps1.get_order field in the LSPS1 spec',
+            lsps1SpecOrder
+        ],
+        [
+            'an order with a state the app does not know',
+            { ...lsps1Order, order_state: 'REFUNDED' }
+        ],
+        ['an order with a null state', { ...lsps1Order, order_state: null }],
         [
             'an order as the LDK Node backend builds it',
             {
@@ -129,6 +181,9 @@ describe('isValidOrderResponse', () => {
             { ...lsps1Order, funding_confirms_within_blocks: { blocks: 6 } }
         ],
         ['an object order_state', { ...lsps1Order, order_state: { a: 1 } }],
+        ['a number order_state', { ...lsps1Order, order_state: 7 }],
+        ['a zero order_state', { ...lsps1Order, order_state: 0 }],
+        ['a boolean order_state', { ...lsps1Order, order_state: true }],
         ['a list as a field', { ...lsps1Order, channel_expiry_blocks: ['a'] }],
         ['an object created_at', { ...lsps1Order, created_at: { a: 1 } }],
         ['a string payment', { ...lsps1Order, payment: 'lnbc1' }],
