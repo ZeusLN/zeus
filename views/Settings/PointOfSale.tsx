@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Keyboard,
     Platform,
     ScrollView,
     StyleSheet,
@@ -270,11 +271,22 @@ export default class PointOfSale extends React.Component<
                                         }}
                                     />
                                     <ShowHideToggle
-                                        onPress={() =>
+                                        onPress={() => {
+                                            if (hidden) {
+                                                this.setState({
+                                                    hidden: false
+                                                });
+                                                return;
+                                            }
+                                            // The toggle does not blur the
+                                            // field, so hiding a focused token
+                                            // ends the edit and locks it
+                                            Keyboard.dismiss();
                                             this.setState({
-                                                hidden: !hidden
-                                            })
-                                        }
+                                                hidden: true,
+                                                squareAccessTokenFocused: false
+                                            });
+                                        }}
                                     />
                                 </View>
 

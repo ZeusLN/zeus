@@ -49,6 +49,7 @@ jest.mock('../../components/SuccessErrorMessage', () => {
 });
 
 import * as React from 'react';
+import { Keyboard } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import PointOfSale from './PointOfSale';
@@ -168,6 +169,85 @@ describe('PointOfSale Square access token', () => {
         expect(
             SettingsStore.updateSettingsGroupDebounced
         ).toHaveBeenLastCalledWith('pos', { squareAccessToken: 'EA' });
+        expect(screen.getByDisplayValue('EA').props.editable).toBe(true);
+        expect(screen.getByDisplayValue('EA').props.secureTextEntry).toBe(true);
+    });
+
+    it('locks the Square access token when it is hidden again while focused', async () => {
+        const SettingsStore = await renderView();
+        const toggle = screen.getByTestId('show-hide-toggle');
+
+        await fireEvent.press(toggle);
+        await fireEvent(screen.getByDisplayValue(SQUARE_ACCESS_TOKEN), 'focus');
+        await fireEvent.press(toggle);
+        await fireEvent.changeText(
+            screen.getByDisplayValue(SQUARE_ACCESS_TOKEN),
+            'X'
+        );
+
+        const input = screen.getByDisplayValue(SQUARE_ACCESS_TOKEN);
+        expect(
+            SettingsStore.updateSettingsGroupDebounced
+        ).not.toHaveBeenCalled();
+        expect(input.props.editable).toBe(false);
+        expect(input.props.secureTextEntry).toBe(true);
+    });
+
+    it('dismisses the keyboard when the Square access token is hidden, not when it is shown', async () => {
+        const dismiss = jest.spyOn(Keyboard, 'dismiss');
+        await renderView();
+        const toggle = screen.getByTestId('show-hide-toggle');
+
+        await fireEvent.press(toggle);
+        expect(dismiss).not.toHaveBeenCalled();
+
+        await fireEvent.press(toggle);
+        expect(dismiss).toHaveBeenCalledTimes(1);
+
+        dismiss.mockRestore();
+    });
+
+    it('saves Square access token edits again after it is hidden and shown again', async () => {
+        const SettingsStore = await renderView();
+        const toggle = screen.getByTestId('show-hide-toggle');
+
+        await fireEvent.press(toggle);
+        await fireEvent(screen.getByDisplayValue(SQUARE_ACCESS_TOKEN), 'focus');
+        await fireEvent.press(toggle);
+        await fireEvent.press(toggle);
+        await fireEvent.changeText(
+            screen.getByDisplayValue(SQUARE_ACCESS_TOKEN),
+            'EAAAl-second-token'
+        );
+
+        const input = screen.getByDisplayValue('EAAAl-second-token');
+        expect(SettingsStore.updateSettingsGroupDebounced).toHaveBeenCalledWith(
+            'pos',
+            { squareAccessToken: 'EAAAl-second-token' }
+        );
+        expect(input.props.editable).toBe(true);
+        expect(input.props.secureTextEntry).toBe(false);
+    });
+
+    it('locks a first Square access token once it is shown and hidden again', async () => {
+        const SettingsStore = await renderView('');
+        const toggle = screen.getByTestId('show-hide-toggle');
+        const input = screen
+            .getAllByDisplayValue('')
+            .find((element) => element.props.secureTextEntry)!;
+
+        await fireEvent(input, 'focus');
+        await fireEvent.changeText(input, 'EA');
+        await fireEvent.press(toggle);
+        await fireEvent.press(toggle);
+        await fireEvent.changeText(screen.getByDisplayValue('EA'), 'EAX');
+
+        const stored = screen.getByDisplayValue('EA');
+        expect(
+            SettingsStore.updateSettingsGroupDebounced
+        ).toHaveBeenLastCalledWith('pos', { squareAccessToken: 'EA' });
+        expect(stored.props.editable).toBe(false);
+        expect(stored.props.secureTextEntry).toBe(true);
     });
 
     it('still saves an edited Square access token once it is shown', async () => {
