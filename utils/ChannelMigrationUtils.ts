@@ -63,6 +63,16 @@ const stopLndSafely = async (): Promise<void> => {
     }
 };
 
+// Best-effort removal of temporary files a flow created in the cache
+// dir. Errors are ignored so they never replace the flow's own error.
+const removeStagingFiles = async (paths: string[]): Promise<void> => {
+    for (const path of paths) {
+        try {
+            if (await RNFS.exists(path)) await RNFS.unlink(path);
+        } catch (e) {}
+    }
+};
+
 const resolveToLocalPath = async (uri: string): Promise<string> => {
     const ext = uri.toLowerCase().endsWith('.db') ? '.db' : '.zip';
     const tempPath = `${RNFS.CachesDirectoryPath}/zeus-import-temp${ext}`;
@@ -215,6 +225,7 @@ export const uploadChannelBackupToOlympus = async (
         const last_backup_at = statusJson.last_backup_at;
 
         const proceedToUpload = async () => {
+            const stagingPaths: string[] = [];
             try {
                 if (setStatus)
                     setStatus(
@@ -275,6 +286,7 @@ export const uploadChannelBackupToOlympus = async (
                 const timestamp = Date.now();
                 const tempZipPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-backup-${timestamp}.zip`;
                 const tempEncPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-backup-${timestamp}.enc`;
+                stagingPaths.push(tempZipPath, tempEncPath);
                 await zipFolder(graphDir, tempZipPath);
 
                 if (setStatus)
@@ -374,6 +386,8 @@ export const uploadChannelBackupToOlympus = async (
                     ],
                     { cancelable: false }
                 );
+            } finally {
+                await removeStagingFiles(stagingPaths);
             }
         };
 
@@ -440,6 +454,7 @@ export const restoreChannelBackupFromOlympus = async (
     pubkey: string,
     seedArray: string
 ): Promise<boolean> => {
+    const stagingPaths: string[] = [];
     try {
         // 1. Authentication for status to check for existing backup
         console.log('Authenticating for status check...');
@@ -596,6 +611,7 @@ export const restoreChannelBackupFromOlympus = async (
         // (it was uploaded as base64 inside a JSON body). Decode it
         // back to raw binary before decrypting.
         const encryptedBase64Response = await restoreResponse.text();
+        stagingPaths.push(tempEncPath, tempZipPath);
         await ReactNativeBlobUtil.fs.writeFile(
             tempEncPath,
             encryptedBase64Response,
@@ -655,6 +671,8 @@ export const restoreChannelBackupFromOlympus = async (
     } catch (error: any) {
         console.error('Restore Flow Failed', error);
         throw error;
+    } finally {
+        await removeStagingFiles(stagingPaths);
     }
 };
 
