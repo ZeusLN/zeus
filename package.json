@@ -27,7 +27,8 @@
       "{backends,cashu-cdk,components,hooks,ldknode,lndmobile,models,storage,stores,utils,views}/**/*.{ts,tsx}",
       "!**/*.test.{ts,tsx}",
       "!**/*.d.ts",
-      "!backends/lncTestUtils.ts"
+      "!backends/lncTestUtils.ts",
+      "!utils/backendCapabilityFixtures.ts"
     ],
     "coveragePathIgnorePatterns": [
       "/node_modules/",
