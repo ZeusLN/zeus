@@ -1156,11 +1156,15 @@ export default class LdkNode {
         // Events without a reason keep the previous behavior of reporting
         // success, as there is nothing to say the close was not cooperative
         if (!forceClose && reason && !LdkNode.isCooperativeReason(reason)) {
-            throw new Error(
+            const error: any = new Error(
                 localeString('views.Channel.coopCloseBecameForceClose', {
                     reason: LdkNode.closureReasonToMessage(reason)
                 })
             );
+            // The channel is closed although the request failed, so callers
+            // should not offer to close it again
+            error.channelClosed = true;
+            throw error;
         }
 
         return { success: true };

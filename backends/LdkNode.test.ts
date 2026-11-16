@@ -585,6 +585,8 @@ describe('LdkNode.closeChannel', () => {
             expect(close.error?.message).toEqual(
                 'views.Channel.coopCloseBecameForceClose {"reason":"views.Channel.closureReason.processingError {\\"peerMessage\\":\\"remote wants something (4073 sat) higher than our max fee (1182 sat)\\"}"}'
             );
+            // tells callers the channel is gone despite the error
+            expect((close.error as any)?.channelClosed).toBe(true);
         });
 
         it.each([

@@ -79,6 +79,10 @@ export default class ChannelsStore {
     @observable public channelSuccess = false;
     @observable public closeChannelErr: string | null;
     @observable public closingChannel = false;
+    // channel point of a channel the node closed although the close request
+    // reported an error (LDK Node force closes when a cooperative close
+    // fails). The channel is gone, so it can't be closed again
+    @observable public closedByFailedCloseChannelPoint: string | null = null;
     @observable channelRequest: any;
     @observable public peers: Array<Peer> = [];
     // redesign
@@ -704,6 +708,18 @@ export default class ChannelsStore {
         forceClose?: boolean | string,
         deliveryAddress?: string
     ) => {
+        const closingChannelPoint = channelPoint
+            ? `${channelPoint.funding_txid_str}:${channelPoint.output_index}`
+            : null;
+        // Another request would replace the error that explains the force
+        // close with the backend's channel not found error
+        if (
+            closingChannelPoint &&
+            closingChannelPoint === this.closedByFailedCloseChannelPoint
+        ) {
+            return true;
+        }
+
         this.closeChannelErr = null;
         this.closingChannel = true;
 
@@ -740,7 +756,13 @@ export default class ChannelsStore {
                     this.handleChannelClose();
                     return true;
                 })
-                .catch((error: Error) => {
+                .catch((error: any) => {
+                    if (error?.channelClosed) {
+                        runInAction(() => {
+                            this.closedByFailedCloseChannelPoint =
+                                closingChannelPoint;
+                        });
+                    }
                     this.handleChannelCloseError(error);
                     return true;
                 });

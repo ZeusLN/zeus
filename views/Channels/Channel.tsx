@@ -224,7 +224,11 @@ export default class ChannelView extends React.Component<
         const { privacy } = settings;
         const lurkerMode = privacy && privacy.lurkerMode;
         const { testnet } = NodeInfoStore;
-        const { closeChannelErr, closingChannel } = ChannelsStore;
+        const {
+            closeChannelErr,
+            closingChannel,
+            closedByFailedCloseChannelPoint
+        } = ChannelsStore;
 
         const closeAddress: string | undefined = channel?.close_address;
 
@@ -275,6 +279,11 @@ export default class ChannelView extends React.Component<
             pending_htlcs,
             blocks_til_maturity
         } = channel as ClosedChannel;
+
+        // The node closed this channel although the close request reported
+        // an error. The view still holds the channel as it was when opened
+        const closedByFailedClose =
+            channel_point === closedByFailedCloseChannelPoint;
 
         // computed per render so lease data and the block height that
         // arrive after the view opens are shown
@@ -426,7 +435,7 @@ export default class ChannelView extends React.Component<
                                 ? localeString('views.Channel.pendingOpen')
                                 : pendingClose || closing
                                 ? localeString('views.Channel.pendingClose')
-                                : forceClose
+                                : forceClose || closedByFailedClose
                                 ? localeString('views.Channel.forceClose')
                                 : closeHeight || to_us_msat
                                 ? localeString('views.Channel.closed')
@@ -1321,6 +1330,7 @@ export default class ChannelView extends React.Component<
                                                 deliveryAddress
                                             )
                                         }
+                                        disabled={closedByFailedClose}
                                         warning
                                     />
                                 </View>
