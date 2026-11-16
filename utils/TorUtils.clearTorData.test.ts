@@ -219,6 +219,138 @@ describe('clearTorData', () => {
             await expectDeletedAfterTimeout(torUtils);
             expect(mockedShutdown).not.toHaveBeenCalled();
         });
+
+        const torDirs = [
+            '/docs/tor_data',
+            '/cache/sifir_sdk',
+            '/tmp/sifir_sdk'
+        ];
+        const unlinkedDirs = () =>
+            mockedUnlink.mock.calls.map((call) => call[0]);
+
+        it('deletes the directories again when the start finishes after the timeout', async () => {
+            let finishStart: (started: boolean) => void = () => {};
+            mockedStart.mockReturnValue(
+                new Promise((resolve, reject) => {
+                    finishStart = (started) =>
+                        started
+                            ? resolve(RUNNING)
+                            : reject(new Error('bootstrap failed'));
+                })
+            );
+            const torUtils = loadTorUtils();
+            const request = startTor(torUtils);
+
+            await expectDeletedAfterTimeout(torUtils);
+            expect(mockedShutdown).not.toHaveBeenCalled();
+
+            finishStart(true);
+            await request;
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(mockedShutdown).toHaveBeenCalledTimes(1);
+            expect(unlinkedDirs()).toEqual([...torDirs, ...torDirs]);
+            expect(mockedShutdown.mock.invocationCallOrder[0]).toBeLessThan(
+                mockedUnlink.mock.invocationCallOrder[3]
+            );
+        });
+
+        it('deletes the directories again when the start fails after the timeout', async () => {
+            let finishStart: (started: boolean) => void = () => {};
+            mockedStart.mockReturnValue(
+                new Promise((resolve, reject) => {
+                    finishStart = (started) =>
+                        started
+                            ? resolve(RUNNING)
+                            : reject(new Error('bootstrap failed'));
+                })
+            );
+            const torUtils = loadTorUtils();
+            const request = startTor(torUtils).catch(() => {});
+
+            await expectDeletedAfterTimeout(torUtils);
+
+            finishStart(false);
+            await request;
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(mockedShutdown).toHaveBeenCalledTimes(1);
+            expect(unlinkedDirs()).toEqual([...torDirs, ...torDirs]);
+        });
+
+        it('deletes the directories again when the shutdown finishes after the timeout', async () => {
+            let finishShutdown: () => void = () => {};
+            mockedShutdown.mockReturnValue(
+                new Promise<void>((resolve) => {
+                    finishShutdown = resolve;
+                })
+            );
+            const torUtils = loadTorUtils();
+            await startTor(torUtils);
+
+            await expectDeletedAfterTimeout(torUtils);
+
+            finishShutdown();
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(mockedShutdown).toHaveBeenCalledTimes(1);
+            expect(unlinkedDirs()).toEqual([...torDirs, ...torDirs]);
+        });
+
+        it('deletes the directories again when the shutdown fails after the timeout', async () => {
+            let failShutdown: (reason: Error) => void = () => {};
+            mockedShutdown.mockReturnValue(
+                new Promise((_resolve, reject) => {
+                    failShutdown = reject;
+                })
+            );
+            const torUtils = loadTorUtils();
+            await startTor(torUtils);
+
+            await expectDeletedAfterTimeout(torUtils);
+
+            failShutdown(new Error('not running'));
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(unlinkedDirs()).toEqual([...torDirs, ...torDirs]);
+        });
+
+        it('deletes the directories once when Tor stops before the timeout', async () => {
+            let finishStart: (started: boolean) => void = () => {};
+            mockedStart.mockReturnValue(
+                new Promise((resolve, reject) => {
+                    finishStart = (started) =>
+                        started
+                            ? resolve(RUNNING)
+                            : reject(new Error('bootstrap failed'));
+                })
+            );
+            const torUtils = loadTorUtils();
+            const request = startTor(torUtils);
+            const clearing = torUtils.clearTorData();
+
+            await jest.advanceTimersByTimeAsync(
+                torUtils.TOR_STOP_TIMEOUT_MS - 1
+            );
+            finishStart(true);
+            await clearing;
+            await request;
+            await jest.advanceTimersByTimeAsync(torUtils.TOR_STOP_TIMEOUT_MS);
+
+            expect(mockedShutdown).toHaveBeenCalledTimes(1);
+            expect(unlinkedDirs()).toEqual(torDirs);
+        });
+
+        it('deletes the directories once when stopping Tor fails before the timeout', async () => {
+            mockedShutdown.mockRejectedValue(new Error('not running'));
+            const torUtils = loadTorUtils();
+            await startTor(torUtils);
+
+            await torUtils.clearTorData();
+            await jest.advanceTimersByTimeAsync(torUtils.TOR_STOP_TIMEOUT_MS);
+
+            expect(unlinkedDirs()).toEqual(torDirs);
+        });
     });
 
     it('goes on to the next directory when one cannot be deleted', async () => {
