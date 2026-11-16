@@ -177,6 +177,9 @@ jest.mock('../stores/NostrWalletConnectStore', () => ({
     NWC_LUD16_ENABLED: 'zeus-nwc-lud16-enabled',
     NWC_PERSISTENT_SERVICE_ENABLED: 'persistentNWCServicesEnabled'
 }));
+jest.mock('../utils/SpliceUtils', () => ({
+    SPLICES_KEY: 'zeus-splices'
+}));
 jest.mock('../utils/RatingUtils', () => ({
     PAYMENT_COUNT_KEY: 'successfulPaymentCount',
     RATING_DISMISSED_KEY: 'ratingDismissedPermanently'

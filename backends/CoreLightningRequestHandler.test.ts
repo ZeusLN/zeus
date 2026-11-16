@@ -127,6 +127,19 @@ describe('CoreLightningRequestHandler.getOffchainBalance', () => {
         expect(result.balance).toBe(400_000);
     });
 
+    it('keeps the balance of a channel being spliced', () => {
+        const result: any = getOffchainBalance({
+            channels: [
+                channel('CHANNELD_AWAITING_SPLICE', 400_000_000),
+                channel('CHANNELD_AWAITING_SPLICE', 50_000_000, false)
+            ]
+        });
+
+        expect(result.balance).toBe(400_000);
+        expect(result.remote_balance).toBe(600_000);
+        expect(result.inactive_balance).toBe(50_000);
+    });
+
     it('reports 0 pending when no channel is awaiting lockin', () => {
         const result: any = getOffchainBalance({
             channels: [
@@ -324,6 +337,107 @@ describe('CoreLightningRequestHandler.listPeerChannels', () => {
 
         expect(channels).toHaveLength(1);
         expect(channels[0].active).toBe(true);
+    });
+
+    describe('a splice in progress', () => {
+        const splicing = (inflight: any[], overrides: any = {}) =>
+            channel({
+                state: 'CHANNELD_AWAITING_SPLICE',
+                funding_txid: 'old-funding',
+                total_msat: 300_000_000,
+                inflight,
+                ...overrides
+            });
+        const inflight = (
+            splice_amount: number,
+            total_funding_msat: number
+        ) => ({
+            funding_txid: 'splice-txid',
+            funding_outnum: 1,
+            total_funding_msat,
+            splice_amount
+        });
+
+        it('reports our splice-in with the capacity it locks at', async () => {
+            const { channels } = await listPeerChannels({
+                channels: [splicing([inflight(50000, 350_000_000)])]
+            });
+
+            expect(channels[0].channel_point).toBe('old-funding');
+            expect(channels[0].capacity).toBe('300000');
+            expect(channels[0].pending_splice).toEqual({
+                txid: 'splice-txid',
+                vout: 1,
+                initiator: 'local',
+                direction: 'in',
+                amountSats: 50000,
+                capacitySats: 350000
+            });
+        });
+
+        it('reports our splice-out', async () => {
+            const { channels } = await listPeerChannels({
+                channels: [splicing([inflight(-30188, 269_812_000)])]
+            });
+
+            expect(channels[0].pending_splice).toMatchObject({
+                initiator: 'local',
+                direction: 'out',
+                amountSats: 30188
+            });
+        });
+
+        it("reports the peer's splice, which adds nothing of ours", async () => {
+            const { channels } = await listPeerChannels({
+                channels: [splicing([inflight(0, 340_002_000)])]
+            });
+
+            expect(channels[0].pending_splice).toEqual({
+                txid: 'splice-txid',
+                vout: 1,
+                initiator: 'remote',
+                direction: 'in',
+                amountSats: undefined,
+                capacitySats: 340002
+            });
+        });
+
+        it('takes the newest candidate after a fee bump', async () => {
+            const { channels } = await listPeerChannels({
+                channels: [
+                    splicing([
+                        inflight(50000, 350_000_000),
+                        {
+                            ...inflight(50000, 350_000_000),
+                            funding_txid: 'bumped'
+                        }
+                    ])
+                ]
+            });
+
+            expect(channels[0].pending_splice.txid).toBe('bumped');
+        });
+
+        it('reports none without a candidate funding transaction', async () => {
+            const { channels } = await listPeerChannels({
+                channels: [splicing([]), channel()]
+            });
+
+            expect(channels[0].pending_splice).toBeUndefined();
+            expect(channels[1].pending_splice).toBeUndefined();
+        });
+
+        it('takes the candidates of a dual-funded open for no splice', async () => {
+            const { channels } = await listPeerChannels({
+                channels: [
+                    splicing([inflight(0, 350_000_000)], {
+                        state: 'DUALOPEND_AWAITING_LOCKIN'
+                    })
+                ]
+            });
+
+            expect(channels[0].pending_splice).toBeUndefined();
+        });
     });
 
     it('attaches the peer alias when the node is known', async () => {

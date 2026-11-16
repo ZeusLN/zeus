@@ -1,5 +1,7 @@
 import CLNRest from './CLNRest';
 import AddressUtils from '../utils/AddressUtils';
+import type { ReportedSplice } from '../utils/SpliceUtils';
+import type { SpliceRecord } from '../stores/SpliceStore';
 
 // Response shapes for the Core Lightning RPCs this module consumes.
 //
@@ -14,6 +16,19 @@ import AddressUtils from '../utils/AddressUtils';
 export interface IClnChannelType {
     bits: number[];
     names: string[];
+}
+
+// lightning-listpeerchannels: a candidate funding transaction, such as a
+// splice that hasn't locked yet
+export interface IClnInflight {
+    funding_txid: string;
+    funding_outnum: number;
+    // the channel's capacity with this funding
+    total_funding_msat: number;
+    // our side's share of the splice in sats, negative for a splice-out
+    // (v23.08+). 0 when the peer spliced: Core Lightning adds nothing to a
+    // peer's splice
+    splice_amount: number;
 }
 
 // lightning-listpeerchannels
@@ -39,6 +54,7 @@ export interface IClnPeerChannel {
     their_reserve_msat?: number;
     // only when a close address was negotiated
     close_to_addr?: string;
+    inflight?: IClnInflight[];
 }
 
 // lightning-listclosedchannels
@@ -111,6 +127,11 @@ export const getBalance = (data: any) => {
     };
 };
 
+// A channel being spliced keeps working, and keeps its balance, until the
+// splice locks
+const isChannelOpen = (state: string) =>
+    state === 'CHANNELD_NORMAL' || state === 'CHANNELD_AWAITING_SPLICE';
+
 // Returns offchain balances of core-lightning node
 export const getOffchainBalance = (data: any) => {
     const chanArray = data.channels;
@@ -121,7 +142,7 @@ export const getOffchainBalance = (data: any) => {
 
     for (let i = 0; i < chanArray.length; i++) {
         if (
-            chanArray[i].state === 'CHANNELD_NORMAL' &&
+            isChannelOpen(chanArray[i].state) &&
             chanArray[i].connected === true
         ) {
             localBalance = localBalance + chanArray[i].our_amount_msat;
@@ -131,7 +152,7 @@ export const getOffchainBalance = (data: any) => {
                 chanArray[i].amount_msat -
                 chanArray[i].our_amount_msat;
         } else if (
-            chanArray[i].state === 'CHANNELD_NORMAL' &&
+            isChannelOpen(chanArray[i].state) &&
             chanArray[i].connected === false
         ) {
             inactiveBalance = inactiveBalance + chanArray[i].our_amount_msat;
@@ -157,6 +178,29 @@ export const getOffchainBalance = (data: any) => {
     };
 };
 
+// A channel being spliced keeps its old funding txid and total until the
+// splice locks; the splice is its newest candidate funding transaction
+export const getReportedSplice = (
+    channel: IClnPeerChannel
+): ReportedSplice | undefined => {
+    const inflight = channel.inflight?.[channel.inflight.length - 1];
+    if (!inflight || !isChannelOpen(channel.state)) return undefined;
+
+    const capacitySats = Math.floor(inflight.total_funding_msat / 1000);
+    const ours = !!inflight.splice_amount;
+    const moved = ours
+        ? inflight.splice_amount
+        : capacitySats - Math.floor((channel.total_msat ?? 0) / 1000);
+    return {
+        txid: inflight.funding_txid,
+        vout: inflight.funding_outnum,
+        initiator: ours ? 'local' : 'remote',
+        direction: moved > 0 ? 'in' : moved < 0 ? 'out' : undefined,
+        amountSats: ours ? Math.abs(inflight.splice_amount) : undefined,
+        capacitySats
+    };
+};
+
 // Get your peers and the channel info for core lightning node
 export const listPeerChannels = async (data: {
     channels: IClnPeerChannel[];
@@ -171,6 +215,7 @@ export const listPeerChannels = async (data: {
                 return;
             }
 
+            const pendingSplice = getReportedSplice(peer);
             return {
                 active: peer.peer_connected,
                 remote_pubkey: peer.peer_id,
@@ -203,7 +248,8 @@ export const listPeerChannels = async (data: {
                 remote_chan_reserve_sat: Number(
                     (peer.their_reserve_msat ?? 0) / 1000
                 ).toString(),
-                close_address: peer.close_to_addr
+                close_address: peer.close_to_addr,
+                ...(pendingSplice && { pending_splice: pendingSplice })
             };
         })
         .filter((n: any) => !!n);
@@ -283,6 +329,135 @@ export const listPeers = async (data: { peers: IClnPeer[] }) => {
     return { peersWithAliases };
 };
 
+const outpointTxid = (outpoint?: string): string | null =>
+    outpoint ? outpoint.split(':')[0] : null;
+
+// A splice as Core Lightning's bookkeeper recorded it
+export interface IClnSplice {
+    txid: string;
+    // the channel's bookkeeper account, which is its channel_id
+    channelId: string;
+    capacityBeforeSats: number;
+    capacityAfterSats: number;
+    // what it moved into (positive) or out of the wallet, in msat; 0 for a
+    // peer's splice that left the wallet alone
+    walletNetMsat: number;
+    blockheight: number;
+    timestamp: number;
+}
+
+// A splice spends the channel's funding output and creates the new one in
+// the same transaction. Bookkeeper tags the spend channel_close (plus a
+// splice tag), keyed by the output spent with the splice as its txid, and
+// the new output channel_open. A close only spends and an open only
+// creates. Null when the node can't say
+export const findSplices = async (): Promise<IClnSplice[] | null> => {
+    if (!api.supportsSplicing()) return null;
+    let rows: any[];
+    let transactions: any[];
+    try {
+        const [events, listed] = await Promise.all([
+            api.postRequest('/v1/sql', {
+                query: "SELECT account, tag, outpoint, credit_msat, debit_msat, txid, blockheight, timestamp FROM bkpr_accountevents WHERE tag IN ('channel_open', 'channel_close') OR (account = 'wallet' AND tag IN ('deposit', 'withdrawal')) ORDER BY timestamp DESC LIMIT 500"
+            }),
+            api
+                .postRequest('/v1/listtransactions')
+                .catch(() => ({ transactions: [] }))
+        ]);
+        rows = events.rows;
+        transactions = listed?.transactions || [];
+    } catch (e) {
+        return null;
+    }
+
+    // Bookkeeper's channel amounts are our balance in the channel, so the
+    // capacity comes from the funding output itself, which listtransactions
+    // shows for the funding and splice transactions the node took part in
+    const outputSats = (outpoint: string): number | undefined => {
+        const [txid, vout] = outpoint.split(':');
+        const output = transactions
+            .find((tx: any) => tx.hash === txid)
+            ?.outputs?.find((out: any) => out.index === Number(vout));
+        return output?.amount_msat != null
+            ? Math.floor(Number(output.amount_msat) / 1000)
+            : undefined;
+    };
+
+    const fundingSpentBy = new Map<string, any>();
+    rows.forEach((row: any) => {
+        if (row[1] === 'channel_close' && row[5]) {
+            fundingSpentBy.set(row[5], row);
+        }
+    });
+
+    return rows.flatMap((row: any): IClnSplice[] => {
+        const txid = outpointTxid(row[2]);
+        const spent = txid && fundingSpentBy.get(txid);
+        if (row[1] !== 'channel_open' || !spent || spent[0] !== row[0]) {
+            return [];
+        }
+        const walletNetMsat = rows.reduce((sum: number, wallet: any) => {
+            if (wallet[0] !== 'wallet') return sum;
+            if (wallet[1] === 'deposit' && outpointTxid(wallet[2]) === txid) {
+                return sum + Number(wallet[3]);
+            }
+            if (wallet[1] === 'withdrawal' && wallet[5] === txid) {
+                return sum - Number(wallet[4]);
+            }
+            return sum;
+        }, 0);
+        return [
+            {
+                txid: txid!,
+                channelId: row[0],
+                capacityBeforeSats:
+                    outputSats(spent[2]) ?? Math.floor(Number(spent[4]) / 1000),
+                capacityAfterSats:
+                    outputSats(row[2]) ?? Math.floor(Number(row[3]) / 1000),
+                walletNetMsat,
+                blockheight: row[6],
+                timestamp: row[7]
+            }
+        ];
+    });
+};
+
+// Finished splices, as records like the ones ZEUS tracks for LDK. A splice
+// that moved wallet funds is ours: CLN adds nothing to a peer's splice
+export const getSpliceHistory = async (): Promise<{
+    splices: SpliceRecord[];
+}> => {
+    const splices = await findSplices();
+    if (!splices) throw new Error('No splice history from the node');
+    return {
+        splices: splices.map((splice) => {
+            const change = splice.capacityAfterSats - splice.capacityBeforeSats;
+            const direction =
+                change > 0 ? 'in' : change < 0 ? 'out' : undefined;
+            const ours = splice.walletNetMsat !== 0;
+            return {
+                userChannelId: '',
+                channelId: splice.channelId,
+                txid: splice.txid,
+                initiator: ours ? 'local' : 'remote',
+                direction,
+                // what went into the channel, or what the wallet got out
+                amountSats: ours
+                    ? direction === 'out'
+                        ? Math.floor(splice.walletNetMsat / 1000)
+                        : Math.abs(change)
+                    : undefined,
+                startedAt: splice.timestamp * 1000,
+                status: 'locked',
+                lockedAt: splice.timestamp * 1000,
+                capacityBefore: splice.capacityBeforeSats,
+                capacityAfter: splice.capacityAfterSats,
+                confirmationHeight: splice.blockheight
+            };
+        })
+    };
+};
+
 // Get all chain transactions from your core-lightnig node
 export const getChainTransactions = async () => {
     const sqlQuery =
@@ -291,9 +466,13 @@ export const getChainTransactions = async () => {
     const results = await Promise.allSettled([
         api.postRequest('/v1/sql', { query: sqlQuery.trim() }),
         api.postRequest('/v1/listtransactions'),
-        api.postRequest('/v1/getinfo')
+        api.postRequest('/v1/getinfo'),
+        findSplices()
     ]);
-    const [sqlResult, listTxsResult, getinfoResult]: any = results;
+    const [sqlResult, listTxsResult, getinfoResult, splicesResult]: any =
+        results;
+    const splices: IClnSplice[] | null =
+        splicesResult.status === 'fulfilled' ? splicesResult.value : null;
 
     listTxsResult?.value?.transactions?.forEach((tx: any) => {
         const addresses: Array<string> = [];
@@ -334,6 +513,24 @@ export const getChainTransactions = async () => {
 
     const transactions = listTxs.transactions
         .map((tx: any) => {
+            const splice = splices?.find((n) => n.txid === tx.hash);
+            if (splice) {
+                // Listed by what it moved in or out of the wallet; a peer's
+                // splice that left the wallet alone is not an on-chain
+                // transaction of ours
+                if (!splice.walletNetMsat) return null;
+                return {
+                    amount: splice.walletNetMsat / 1000,
+                    block_height: splice.blockheight,
+                    num_confirmations: splice.blockheight
+                        ? getinfo.blockheight - splice.blockheight + 1
+                        : 0,
+                    time_stamp: splice.timestamp,
+                    txid: tx.hash,
+                    dest_addresses: tx.dest_addresses
+                };
+            }
+
             const withdrawal = externalTxs.find((n: any) => {
                 const txid = n[2] ? n[2].split(':')[0] : null;
 

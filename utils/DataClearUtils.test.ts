@@ -154,6 +154,9 @@ jest.mock('../stores/NostrWalletConnectStore', () => ({
     NWC_LUD16_ENABLED: 'zeus-nwc-lud16-enabled',
     NWC_PERSISTENT_SERVICE_ENABLED: 'persistentNWCServicesEnabled'
 }));
+jest.mock('../utils/SpliceUtils', () => ({
+    SPLICES_KEY: 'zeus-splices'
+}));
 jest.mock('../utils/RatingUtils', () => ({
     PAYMENT_COUNT_KEY: 'successfulPaymentCount',
     RATING_DISMISSED_KEY: 'ratingDismissedPermanently'
@@ -974,6 +977,12 @@ describe('clearAllData write latch (settings resurrection regression)', () => {
         expect(removedKeys()).toContain('zeus-nwc-processed-events');
         expect(removedKeys()).toContain('successfulPaymentCount');
         expect(removedKeys()).toContain('lnurlpay:');
+    });
+
+    it('clears saved splices', async () => {
+        await clearAllData();
+
+        expect(removedKeys()).toContain('zeus-splices');
     });
 
     // Observed on-device: an async updateSettings landed ~20ms after the wipe

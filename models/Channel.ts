@@ -4,6 +4,7 @@ import { observable, computed } from 'mobx';
 import BaseModel from './BaseModel';
 import { lnrpc } from '../proto/lightning';
 import { formatNonZeroScid, formatScid } from '../utils/ScidUtils';
+import type { ReportedSplice } from '../utils/SpliceUtils';
 
 interface HTLC {
     hash_lock: string;
@@ -77,6 +78,10 @@ export default class Channel extends BaseModel {
     // LDK: provides direct counts instead of height-based fields
     confirmations?: number;
     confirmations_required?: number;
+    // LDK: stable across splices, unlike chan_id (the SCID)
+    user_channel_id?: string;
+    // Core Lightning: the splice in progress, as the node reports it
+    pending_splice?: ReportedSplice;
 
     // enrichments
     displayName?: string;

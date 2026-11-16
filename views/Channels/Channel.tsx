@@ -30,6 +30,7 @@ import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import { ContactAvatar } from '../../components/ContactAvatar';
+import PendingSplice from '../../components/Channels/PendingSplice';
 import { SharedScreen, SharedText } from '../../components/SharedTransition';
 
 import PrivacyUtils from '../../utils/PrivacyUtils';
@@ -51,6 +52,8 @@ import LSPStore from '../../stores/LSPStore';
 import ModalStore from '../../stores/ModalStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
+import SpliceStore from '../../stores/SpliceStore';
+import TransactionsStore from '../../stores/TransactionsStore';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
@@ -65,6 +68,8 @@ interface ChannelProps {
     ModalStore: ModalStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
+    SpliceStore: SpliceStore;
+    TransactionsStore: TransactionsStore;
     route: Route<'Channel', { channel: Channel | ClosedChannel }>;
 }
 
@@ -83,7 +88,9 @@ interface ChannelState {
     'LSPStore',
     'ModalStore',
     'NodeInfoStore',
-    'SettingsStore'
+    'SettingsStore',
+    'SpliceStore',
+    'TransactionsStore'
 )
 @observer
 export default class ChannelView extends React.Component<
@@ -110,7 +117,13 @@ export default class ChannelView extends React.Component<
     }
 
     componentDidMount() {
+        const { SpliceStore, TransactionsStore } = this.props;
         const { channel } = this.state;
+
+        // the splice transaction's confirmations come from the on-chain list
+        if (SpliceStore.getPendingSplice(channel)) {
+            TransactionsStore.getTransactions();
+        }
 
         const closeAddress: string | undefined = channel?.close_address;
 
@@ -210,10 +223,11 @@ export default class ChannelView extends React.Component<
             LSPStore,
             ModalStore,
             NodeInfoStore,
-            ChannelsStore
+            ChannelsStore,
+            SpliceStore
         } = this.props;
         const {
-            channel,
+            channel: openedChannel,
             confirmCloseChannel,
             satPerByte,
             forceCloseChannel,
@@ -225,6 +239,21 @@ export default class ChannelView extends React.Component<
         const lurkerMode = privacy && privacy.lurkerMode;
         const { testnet } = NodeInfoStore;
         const { closeChannelErr, closingChannel } = ChannelsStore;
+
+        // A splice changes the channel's funding and capacity when it locks,
+        // so show the channel as listed now rather than as it was opened.
+        // LDK keeps user_channel_id across splices, Core Lightning its
+        // channel id
+        const channel =
+            ChannelsStore.enrichedChannels.find((c) =>
+                openedChannel.user_channel_id
+                    ? c.user_channel_id === openedChannel.user_channel_id
+                    : BackendUtils.supportsSplicing() &&
+                      !!openedChannel.chan_id &&
+                      c.chan_id === openedChannel.chan_id
+            ) || openedChannel;
+
+        const pendingSplice = SpliceStore.getPendingSplice(channel);
 
         const closeAddress: string | undefined = channel?.close_address;
 
@@ -459,6 +488,23 @@ export default class ChannelView extends React.Component<
                             >
                                 {localeString('views.Channel.waitingForPeer')}
                             </Text>
+                        )}
+                        {pendingSplice && (
+                            <PendingSplice
+                                splice={pendingSplice}
+                                capacity={capacity}
+                                confirmations={SpliceStore.getSpliceConfirmations(
+                                    pendingSplice
+                                )}
+                                testnet={testnet}
+                            />
+                        )}
+                        {SpliceStore.hasFailedSplice(channel) && (
+                            <WarningMessage
+                                message={localeString(
+                                    'views.Splice.failedLate'
+                                )}
+                            />
                         )}
                         {leaseDisplay.showFetchError && (
                             <WarningMessage

@@ -17,6 +17,7 @@ import ActivityToCsv from './ActivityToCsv';
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 import {
     SATS_PER_BTC,
     numberWithCommas,
@@ -24,22 +25,29 @@ import {
 } from '../../utils/UnitsUtils';
 
 import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
+import ChannelsStore from '../../stores/ChannelsStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import SpliceStore from '../../stores/SpliceStore';
 import SwapStore from '../../stores/SwapStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 
 import { LSPOrderState } from '../../models/LSP';
+import Splice from '../../models/Splice';
 
 interface ActivityProps {
     navigation: NativeStackNavigationProp<any, any>;
     ActivityStore: ActivityStore;
+    ChannelsStore: ChannelsStore;
     FiatStore: FiatStore;
+    NodeInfoStore: NodeInfoStore;
     PosStore: PosStore;
     SettingsStore: SettingsStore;
     SwapStore: SwapStore;
+    SpliceStore: SpliceStore;
     route: Route<'Activity', { order: any }>;
 }
 
@@ -51,11 +59,14 @@ interface ActivityState {
 
 @inject(
     'ActivityStore',
+    'ChannelsStore',
     'FiatStore',
+    'NodeInfoStore',
     'PosStore',
     'SettingsStore',
     'InvoicesStore',
-    'SwapStore'
+    'SwapStore',
+    'SpliceStore'
 )
 @observer
 export default class Activity extends React.PureComponent<
@@ -154,6 +165,26 @@ export default class Activity extends React.PureComponent<
             });
         }
 
+        if (item instanceof Splice) {
+            // LDK names the channel by user_channel_id, Core Lightning by
+            // its channel id
+            const channel = this.props.ChannelsStore.enrichedChannels.find(
+                (c) =>
+                    item.userChannelId
+                        ? c.user_channel_id === item.userChannelId
+                        : c.chan_id === item.channelId
+            );
+            if (channel) {
+                navigation.navigate('Channel', { channel });
+            } else {
+                UrlUtils.goToBlockExplorerTXID(
+                    item.txid,
+                    this.props.NodeInfoStore.testnet
+                );
+            }
+            return;
+        }
+
         if (item.model === 'LSPS1Order') {
             const orderShouldUpdate =
                 item.state === LSPOrderState.FAILED ||
@@ -204,6 +235,7 @@ export default class Activity extends React.PureComponent<
             PosStore,
             SettingsStore,
             SwapStore,
+            SpliceStore,
             route
         } = this.props;
         const { loading, selectedPaymentForOrder, isCsvModalVisible } =
@@ -385,6 +417,7 @@ export default class Activity extends React.PureComponent<
                                 onItemPress={this.handleItemPress}
                                 order={route.params?.order}
                                 swapStore={SwapStore}
+                                spliceStore={SpliceStore}
                             />
                         )}
                         keyExtractor={(item, index) => `${item.model}-${index}`}
