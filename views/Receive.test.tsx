@@ -600,7 +600,12 @@ describe('Receive after its params change', () => {
     // Receive navigating to itself, as the NFC paths in validateAddress do
     const changeParams = async (view: any, params: any) => {
         const prevProps = view.props;
-        view.props = { ...view.props, route: { params } };
+        view.props = {
+            ...view.props,
+            // componentDidUpdate resets the units for a withdraw request
+            UnitsStore: { resetUnits: jest.fn() },
+            route: { params }
+        };
         jest.spyOn(view, 'setState').mockImplementation((update: any) => {
             view.state = { ...view.state, ...update };
         });
