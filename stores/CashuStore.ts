@@ -347,7 +347,8 @@ export default class CashuStore {
     @observable dismissedUpgradeThreshold: number = 0;
     @observable public nostrMintBackupTimestamp?: number;
     // Set while this wallet's mint list has never been stored and the
-    // restore from Nostr is running or reached no relay. After a restore
+    // restore from Nostr has not started, is running, has mints that are
+    // not in mintUrls yet, or reached no relay. After a restore
     // that reached no relay the mint list is not stored, so the next
     // initializeWallets() tries the restore again. No backup is published
     // over the one that has not been read.
@@ -4141,10 +4142,10 @@ export default class CashuStore {
             Storage.getItem(`${lndDir}-cashu-multiMintSelectedUrls`)
         ]);
 
-        // A stored mint list means no restore is owed. Without one the flag
-        // keeps its value from the last attempt until the restore below
-        // has run again
-        if (storedMintUrls) this.nostrMintRestorePending = false;
+        // A stored mint list means no restore is owed. Without one, backups
+        // are held back from here on, so none is published while CDK starts
+        let restoreOwed = !storedMintUrls;
+        this.nostrMintRestorePending = restoreOwed;
 
         // Parse app-specific stored data
         this.selectedMintUrl = storedselectedMintUrl || '';
@@ -4270,11 +4271,11 @@ export default class CashuStore {
                 // mints from a relay that never received the empty backup
                 // that removeMint publishes
                 if (!storedMintUrls) {
-                    // Hold back backups while the relays are being asked
-                    this.nostrMintRestorePending = true;
+                    // Backups stay held back after the relays answer, until
+                    // the restored mints are in this.mintUrls below
                     try {
                         const nostrMints = await this.nostrRestoreMints();
-                        this.nostrMintRestorePending = false;
+                        restoreOwed = false;
                         if (nostrMints && nostrMints.length > 0) {
                             localMintUrls = nostrMints;
                             console.log(
@@ -4288,7 +4289,7 @@ export default class CashuStore {
                         }
                     } catch (e) {
                         console.warn('Failed to restore mints from Nostr:', e);
-                        this.nostrMintRestorePending =
+                        restoreOwed =
                             e instanceof MintBackupRelaysUnreachableError;
                     }
                 }
@@ -4384,6 +4385,9 @@ export default class CashuStore {
                 runInAction(() => {
                     this.mintUrls = cdkMints;
                 });
+                // The list a backup publishes now includes the restored
+                // mints. Backups stay held back if no relay could be reached
+                this.nostrMintRestorePending = restoreOwed;
                 this.mintUrls.forEach((url) =>
                     this.addedMintsCache.add(this.normalizeMintUrl(url))
                 );
@@ -4520,6 +4524,9 @@ export default class CashuStore {
                 }
             } catch (e) {
                 console.warn('CDK initialization failed:', e);
+                // A failure after the relays answered must not hold back
+                // backups for the rest of the session
+                this.nostrMintRestorePending = restoreOwed;
                 // Fallback: use local storage mint URLs if CDK fails
                 const fallbackMints = storedMintUrls
                     ? JSON.parse(storedMintUrls)

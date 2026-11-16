@@ -93,6 +93,26 @@ const newStore = (initialMintUrls?: string[]) => {
     return store;
 };
 
+const OTHER_MINT = 'https://mint.spending.example';
+
+// A promise the test settles by hand
+const deferred = <T>() => {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((res) => {
+        resolve = res;
+    });
+    return { promise, resolve };
+};
+
+// Lets initializeWallets run until the mock has been called
+const untilCalled = async (mock: any) => {
+    for (let i = 0; i < 50; i++) {
+        if ((mock as jest.Mock).mock.calls.length > 0) return;
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+    throw new Error('mock was not called');
+};
+
 const storedMintLists = () =>
     (Storage.setItem as jest.Mock).mock.calls
         .filter(([key]) => key === MINT_URLS_KEY)
@@ -284,6 +304,103 @@ describe('CashuStore startup restore of the mint list from Nostr', () => {
             await store.nostrBackupMints();
 
             expect(restoreMintsFromNostr).toHaveBeenCalledTimes(2);
+            expect(backupMintsToNostr).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('while the restored mints are added', () => {
+        it('does not publish a backup until the restored mints are in the list', async () => {
+            (restoreMintsFromNostr as jest.Mock).mockResolvedValue({
+                mints: [SAVED_MINT, OTHER_MINT],
+                timestamp: 1768435200
+            });
+            // CDK lists the mints that were added to it
+            (CashuDevKit.getMintUrls as jest.Mock).mockImplementation(
+                async () =>
+                    (CashuDevKit.addMint as jest.Mock).mock.calls.map(
+                        ([url]) => url
+                    )
+            );
+            const firstAdd = deferred<void>();
+            (CashuDevKit.addMint as jest.Mock).mockReturnValueOnce(
+                firstAdd.promise
+            );
+            const store = newStore();
+            const init = store.initializeWallets();
+            await untilCalled(CashuDevKit.addMint);
+
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).not.toHaveBeenCalled();
+
+            firstAdd.resolve();
+            await init;
+
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).toHaveBeenCalledTimes(1);
+            expect((backupMintsToNostr as jest.Mock).mock.calls[0][2]).toEqual([
+                SAVED_MINT,
+                OTHER_MINT
+            ]);
+        });
+
+        it('allows backups again when a step after the answer fails', async () => {
+            (restoreMintsFromNostr as jest.Mock).mockResolvedValue(null);
+            (CashuDevKit.getMintUrls as jest.Mock).mockRejectedValue(
+                new Error('getMintUrls failed')
+            );
+            const store = newStore();
+
+            await store.initializeWallets();
+
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps backups held back when no relay answered and a later step fails', async () => {
+            (restoreMintsFromNostr as jest.Mock).mockRejectedValue(
+                new MintBackupRelaysUnreachableError()
+            );
+            (CashuDevKit.getMintUrls as jest.Mock).mockRejectedValue(
+                new Error('getMintUrls failed')
+            );
+            const store = newStore();
+
+            await store.initializeWallets();
+
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('on a first start', () => {
+        it('does not publish a backup while CDK starts', async () => {
+            (restoreMintsFromNostr as jest.Mock).mockResolvedValue(null);
+            const cdkStarted = deferred<boolean>();
+            const store = newStore();
+            const s: any = store;
+            s.initializeCDK = jest.fn(() => cdkStarted.promise);
+            const init = store.initializeWallets();
+            await untilCalled(s.initializeCDK);
+
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).not.toHaveBeenCalled();
+            expect(restoreMintsFromNostr).not.toHaveBeenCalled();
+
+            cdkStarted.resolve(true);
+            await init;
+
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps backups held back when CDK does not start', async () => {
+            const store = newStore();
+            (store as any).initializeCDK = jest.fn().mockResolvedValue(false);
+
+            await store.initializeWallets();
+
+            expect(restoreMintsFromNostr).not.toHaveBeenCalled();
+            await store.nostrBackupMints();
             expect(backupMintsToNostr).not.toHaveBeenCalled();
         });
     });
