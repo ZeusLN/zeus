@@ -1477,6 +1477,7 @@ export default class PaymentRequest extends React.Component<
                                     key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
                                     disabled={
+                                        !lightningReadyToSend ||
                                         TransactionsStore.paymentInFlight ||
                                         noBalance
                                     }
