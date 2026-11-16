@@ -34,6 +34,7 @@ import NostrConnectUtils, {
 } from '../../../utils/NostrConnectUtils';
 import { numberWithCommas } from '../../../utils/UnitsUtils';
 import BackendUtils from '../../../utils/BackendUtils';
+import ValidationUtils from '../../../utils/ValidationUtils';
 
 import NostrWalletConnectStore, {
     DEFAULT_NOSTR_RELAYS
@@ -284,11 +285,11 @@ export default class AddOrEditNWCConnection extends React.Component<
         }
     };
 
-    isValidRelayUrl = (url: string) => {
-        const pattern =
-            /^(wss?:\/\/)([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+(:\d+)?(\/.*)?$/;
-        return pattern.test(url);
-    };
+    // An existing connection keeps the relay it was saved with; only a new
+    // or edited relay URL has to pass the check.
+    isValidRelayUrl = (url: string) =>
+        url === this.state.originalConnection?.relayUrl ||
+        ValidationUtils.isValidNwcServiceRelayUrl(url);
 
     updateStateWithChangeTracking = (newState: any) => {
         this.setState(newState, () => {

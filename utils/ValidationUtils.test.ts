@@ -769,3 +769,98 @@ describe('validateNodeHost', () => {
         expect(ValidationUtils.validateNodeHost('')).toBe(false);
     });
 });
+
+describe('isValidNwcServiceRelayUrl', () => {
+    it('accepts wss:// relays', () => {
+        for (const relay of [
+            'wss://relay.damus.io',
+            'wss://relay.getalby.com/v1',
+            'wss://relay.example.com:7777/path',
+            'WSS://relay.example.com',
+            'wss://localhost:7777'
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(true);
+        }
+    });
+
+    it('rejects ws:// relays on clearnet hosts', () => {
+        for (const relay of [
+            'ws://relay.example.com',
+            'ws://relay.example.com:7777/path',
+            'ws://localhost:7777',
+            'ws://127.0.0.1:7777',
+            'ws://relay.onion.example.com',
+            'ws://relay.example.com/x.onion'
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(
+                false
+            );
+        }
+    });
+
+    it('accepts ws:// relays on .onion hosts', () => {
+        const onion =
+            '2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion';
+        expect(ValidationUtils.isValidNwcServiceRelayUrl(`ws://${onion}`)).toBe(
+            true
+        );
+        expect(
+            ValidationUtils.isValidNwcServiceRelayUrl(`ws://${onion}:8080/`)
+        ).toBe(true);
+    });
+
+    // URL accepts these and normalizes them to wss://relay.example.com/, but
+    // the raw string is what gets stored, and nostr-tools' normalizeURL turns
+    // wss:relay.example.com into an invalid URL and wss:/relay.example.com
+    // into a relay on host "wss".
+    it('rejects relays without exactly two slashes after the scheme', () => {
+        const onion =
+            '2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion';
+        for (const relay of [
+            'wss:relay.example.com',
+            'wss:/relay.example.com',
+            'wss:///relay.example.com',
+            'wss:\\\\relay.example.com',
+            'wss://\\relay.example.com',
+            `ws:${onion}`,
+            `ws:/${onion}`
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(
+                false
+            );
+        }
+    });
+
+    // These pass the "://" check above, so only the URL parse rejects them
+    it('rejects relays the URL parser cannot read', () => {
+        for (const relay of [
+            'wss://relay.example.com:99999',
+            'wss://relay.example.com:65536',
+            'wss://[::1'
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(
+                false
+            );
+        }
+    });
+
+    it('rejects anything that is not a relay URL', () => {
+        for (const relay of [
+            '',
+            'relay.example.com',
+            'not a url',
+            'https://relay.example.com',
+            'http://relay.example.onion',
+            'wss://',
+            'wss:// relay.example.com',
+            ' wss://relay.example.com',
+            'wss://relay.example.com\n',
+            undefined as any,
+            null as any
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(
+                false
+            );
+        }
+    });
+});

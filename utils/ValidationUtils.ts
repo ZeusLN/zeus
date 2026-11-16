@@ -114,6 +114,26 @@ const isValidNwcRelayUrl = (relay: string): boolean => {
     }
 };
 
+// Relay for a connection served by the wallet's own NWC service. Unlike the
+// client relays above, wss:// is required; ws:// is accepted only for .onion
+// hosts, where the onion address authenticates the relay.
+const isValidNwcServiceRelayUrl = (relay: string): boolean => {
+    if (typeof relay !== 'string' || /\s/.test(relay)) return false;
+    // URL normalizes wss:relay.example.com and wss:/relay.example.com, but the
+    // raw string is stored and nostr-tools only recognizes "://".
+    if (!/^wss?:\/\/[^/\\]/i.test(relay)) return false;
+    let parsed: URL;
+    try {
+        parsed = new URL(relay);
+    } catch {
+        return false;
+    }
+    const hostname = parsed.hostname.toLowerCase();
+    if (!hostname) return false;
+    if (parsed.protocol === 'wss:') return true;
+    return parsed.protocol === 'ws:' && /^[a-z0-9.-]+\.onion$/.test(hostname);
+};
+
 const isValidNostrWalletConnectUrl = (url: string): boolean => {
     if (!url || typeof url !== 'string') return false;
     const normalizedUrl = url.trim();
@@ -230,6 +250,7 @@ const ValidationUtils = {
     hasValidMacaroonChars,
     hasValidPairingPhraseCharsAndWordcount,
     isValidNostrWalletConnectUrl,
+    isValidNwcServiceRelayUrl,
     validateNodePubkey,
     validateNodeHost
 };
