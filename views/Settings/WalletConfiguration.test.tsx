@@ -20,7 +20,9 @@ jest.mock('../../stores/SettingsStore', () => ({
     MEMPOOL_INSTANCE_KEYS: [],
     getLspConfigForNetwork: jest.fn(() => ({}))
 }));
-jest.mock('../../utils/BackendUtils', () => ({}));
+jest.mock('../../utils/BackendUtils', () => ({
+    disconnect: jest.fn(() => Promise.resolve())
+}));
 jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: (color: string) => (color === 'error' ? '#ff0000' : '#000000')
@@ -94,6 +96,7 @@ import { createLdkNodeWallet } from '../../utils/LdkNodeUtils';
 import Storage from '../../storage';
 import { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
 import { clearNodeKeychainData } from '../../utils/DataClearUtils';
+import BackendUtils from '../../utils/BackendUtils';
 
 const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
 const LNDCONNECT_IMPORT =
@@ -440,6 +443,176 @@ describe('WalletConfiguration', () => {
 
             expect(clearNodeKeychainData).toHaveBeenCalledWith(other, {
                 keepLncCredentials: false
+            });
+        });
+    });
+
+    describe('replacing an LNC pairing phrase', () => {
+        const OLD_PHRASE =
+            'cherry truth mask employ box silver mass bunker fiscal vote';
+        const NEW_PHRASE =
+            'ozone ozone ozone ozone ozone ozone ozone ozone ozone ozone';
+        const LNC_NODE = {
+            implementation: 'lightning-node-connect',
+            nickname: 'Node at home',
+            pairingPhrase: OLD_PHRASE
+        };
+
+        // Opens the wallet at `index` of nodes, pastes `phrase` into the
+        // pairing phrase field and saves
+        const saveWithPhrase = async (
+            nodes: any[],
+            index: number,
+            phrase: string,
+            // What the settings update resolves with; the saved nodes by
+            // default
+            resolveWith: (saved: any) => any = (saved) => saved
+        ) => {
+            const SettingsStore = {
+                settings: {
+                    privacy: { clipboard: false },
+                    nodes,
+                    selectedNode: 0
+                },
+                updateSettings: jest.fn((update: any) =>
+                    Promise.resolve(resolveWith(update({ nodes })))
+                ),
+                setConnectingStatus: jest.fn()
+            };
+            const navigation = {
+                goBack: jest.fn(),
+                navigate: jest.fn(),
+                reset: jest.fn()
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation,
+                        route: {
+                            params: { node: nodes[index], index, saved: true }
+                        },
+                        SettingsStore
+                    } as any)}
+                />
+            );
+
+            await act(async () =>
+                fireEvent.changeText(
+                    screen.getByDisplayValue(OLD_PHRASE),
+                    phrase
+                )
+            );
+            await save();
+            return { navigation, SettingsStore };
+        };
+
+        beforeEach(() => {
+            (clearNodeKeychainData as jest.Mock).mockReset();
+            (clearNodeKeychainData as jest.Mock).mockResolvedValue(undefined);
+            (BackendUtils.disconnect as jest.Mock).mockClear();
+        });
+
+        it('clears the credentials of the replaced phrase', async () => {
+            await saveWithPhrase([{}, LNC_NODE], 1, NEW_PHRASE);
+
+            expect(clearNodeKeychainData).toHaveBeenCalledTimes(1);
+            expect(clearNodeKeychainData).toHaveBeenCalledWith({
+                pairingPhrase: OLD_PHRASE
+            });
+        });
+
+        it('clears them after the active wallet is disconnected', async () => {
+            await saveWithPhrase([LNC_NODE], 0, NEW_PHRASE);
+
+            expect(clearNodeKeychainData).toHaveBeenCalledWith({
+                pairingPhrase: OLD_PHRASE
+            });
+            expect(
+                (BackendUtils.disconnect as jest.Mock).mock
+                    .invocationCallOrder[0]
+            ).toBeLessThan(
+                (clearNodeKeychainData as jest.Mock).mock.invocationCallOrder[0]
+            );
+        });
+
+        it('keeps the credentials when the phrase is unchanged', async () => {
+            await saveWithPhrase([{}, LNC_NODE], 1, `  ${OLD_PHRASE}`);
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+        });
+
+        it('keeps the credentials while a copy uses the replaced phrase', async () => {
+            const copy = { ...LNC_NODE, nickname: 'Node at home copy' };
+            await saveWithPhrase([copy, LNC_NODE], 1, NEW_PHRASE);
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+        });
+
+        it('keeps the credentials when the save does not return the nodes', async () => {
+            const { navigation } = await saveWithPhrase(
+                [{}, LNC_NODE],
+                1,
+                NEW_PHRASE,
+                () => undefined
+            );
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+            expect(navigation.goBack).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps them when the saved nodes are not a list', async () => {
+            await saveWithPhrase([{}, LNC_NODE], 1, NEW_PHRASE, () => ({
+                nodes: undefined
+            }));
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+        });
+
+        describe('when clearing the credentials fails', () => {
+            let consoleError: jest.SpyInstance;
+
+            beforeEach(() => {
+                (clearNodeKeychainData as jest.Mock).mockRejectedValue(
+                    new Error('keychain unavailable')
+                );
+                consoleError = jest
+                    .spyOn(console, 'error')
+                    .mockImplementation(() => undefined);
+            });
+
+            afterEach(() => {
+                consoleError.mockRestore();
+                (clearNodeKeychainData as jest.Mock).mockResolvedValue(
+                    undefined
+                );
+            });
+
+            it('still reconnects the active wallet', async () => {
+                const { navigation, SettingsStore } = await saveWithPhrase(
+                    [LNC_NODE],
+                    0,
+                    NEW_PHRASE
+                );
+
+                expect(clearNodeKeychainData).toHaveBeenCalledTimes(1);
+                expect(SettingsStore.setConnectingStatus).toHaveBeenCalledWith(
+                    true
+                );
+                expect(navigation.reset).toHaveBeenCalledWith({
+                    index: 0,
+                    routes: [{ name: 'Wallet' }]
+                });
+            });
+
+            it('still leaves the screen of an inactive wallet', async () => {
+                const { navigation } = await saveWithPhrase(
+                    [{}, LNC_NODE],
+                    1,
+                    NEW_PHRASE
+                );
+
+                expect(clearNodeKeychainData).toHaveBeenCalledTimes(1);
+                expect(navigation.goBack).toHaveBeenCalledTimes(1);
             });
         });
     });
