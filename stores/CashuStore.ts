@@ -2143,12 +2143,13 @@ export default class CashuStore {
      * selected proofs from the CDK database (persist-before-destroy). At
      * startup, each leftover record is resolved by checking which of its
      * proofs are still in the database:
-     * - all present: the crash happened before removeProofs, so the token
-     *   was never returned or displayed. Drop the record; funds are intact.
-     * - any missing: proof deletion (at least partially) happened, so the
-     *   token may have been displayed or shared. Remove any leftover proofs
-     *   to restore consistency, then surface the token in sentTokens so the
-     *   user can reshare it or reclaim it once online.
+     * - any present: removeProofs deletes all of a send's proofs in one
+     *   transaction, so it never ran for this record and the token was
+     *   never returned or displayed. Drop the record and leave the proofs
+     *   alone (some may have been spent since by other paths).
+     * - all missing: removeProofs ran, so the token may have been displayed
+     *   or shared. Surface it in sentTokens so the user can reshare it or
+     *   reclaim it once online.
      * - lookup fails: keep the record and retry at next startup. Never drop
      *   (loses the token) and never promote without removing proofs (the
      *   amount would be counted in the balance and shareable at once).
@@ -2188,14 +2189,15 @@ export default class CashuStore {
                         .map((p) => p.y)
                         .filter((y) => presentYs.has(y));
 
-                    if (stillPresent.length === record.proofs.length) {
-                        // Crash before removeProofs: the token was never
-                        // returned, so no artifact is needed.
-                        continue;
-                    }
-
                     if (stillPresent.length > 0) {
-                        await CashuDevKit.removeProofs(stillPresent);
+                        // removeProofs deletes every y in one transaction,
+                        // so the send never got past it and the token was
+                        // never returned. With all proofs present the app
+                        // stopped before the delete. With only some, other
+                        // spends used the rest while this record waited;
+                        // the remainder is still the wallet's money, so
+                        // keep it and drop the record.
+                        continue;
                     }
 
                     await this.recordSentToken(

@@ -647,7 +647,10 @@ describe('CashuStore offline send safety', () => {
             expect(mockRemoveProofs).not.toHaveBeenCalled();
         });
 
-        it('removes leftover proofs before promoting on partial deletion', async () => {
+        it('keeps the remaining proofs and promotes nothing when only some are present', async () => {
+            // removeProofs is one transaction, so partial presence means
+            // the send never deleted anything and another spend (an online
+            // send or melt) used y-a while the record waited.
             const proofs = [proof(16, 'a'), proof(8, 'b')];
             mockProofPool.current = [proof(8, 'b')];
             seedPendingRecord(proofs);
@@ -655,8 +658,10 @@ describe('CashuStore offline send safety', () => {
 
             await store.reconcilePendingOfflineSends();
 
-            expect(mockRemoveProofs).toHaveBeenCalledWith(['y-b']);
-            expect(store.sentTokens).toHaveLength(1);
+            expect(mockRemoveProofs).not.toHaveBeenCalled();
+            expect(mockProofPool.current.map((p) => p.y)).toEqual(['y-b']);
+            expect(store.sentTokens).toHaveLength(0);
+            expect(getSentTokens()).toEqual([]);
             expect(getPendingRecords()).toEqual([]);
         });
 
