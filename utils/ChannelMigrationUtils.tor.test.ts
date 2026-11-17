@@ -123,7 +123,13 @@ const flows: Array<[string, string | null, () => Promise<any>, string[]]> = [
         'restoreChannelBackupFromOlympus',
         '2026-10-01T00:00:00Z',
         () =>
-            restoreChannelBackupFromOlympus('lnd', false, PUBKEY, 'seed words'),
+            restoreChannelBackupFromOlympus(
+                'lnd',
+                false,
+                PUBKEY,
+                'seed words',
+                false
+            ),
         ['/api/auth', '/api/status', '/api/auth', '/api/restore-channels']
     ]
 ];
