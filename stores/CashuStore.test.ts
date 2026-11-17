@@ -2612,6 +2612,33 @@ describe('CashuStore reconcilePendingMelts', () => {
 
             expect(jest.getTimerCount()).toBe(0);
         });
+
+        // pins the lower bound of MELT_QUOTE_CHECK_TIMEOUT_MS: a slow mint
+        // that answers within 10 s is still read
+        it("resolves with the mint's answer when it comes after 5 s", async () => {
+            const store = reconcilingStore(pendingMelt());
+            const answer = {
+                id: 'quote-1',
+                state: 'Paid',
+                payment_preimage: 'b'.repeat(64)
+            };
+            (CashuDevKit.checkMeltQuote as jest.Mock).mockImplementation(
+                () =>
+                    new Promise((resolve) =>
+                        setTimeout(() => resolve(answer), 5000)
+                    )
+            );
+
+            const check = store.checkMeltQuoteInTime(mintUrl, 'quote-1');
+            const outcome = check.then(
+                (quote: any) => ({ quote }),
+                (error: any) => ({ error })
+            );
+            await jest.advanceTimersByTimeAsync(5000);
+
+            expect(await outcome).toEqual({ quote: answer });
+            expect(jest.getTimerCount()).toBe(0);
+        });
     });
 
     describe('dropInFlightPayment', () => {
