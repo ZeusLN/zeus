@@ -62,7 +62,7 @@ const renderView = async (paymentHash: string, LnurlPayStore: any) => {
         payReq: { payment_hash: paymentHash, getRequestAmount: 21 },
         paymentPreimage: 'ab'.repeat(32),
         resetPaymentState: jest.fn(),
-        payLnInvoiceFromEcash: jest.fn()
+        payLnInvoiceFromEcash: jest.fn().mockResolvedValue(undefined)
     };
     await render(
         <CashuSendingLightning
@@ -107,6 +107,9 @@ const navigation = {
     navigate: jest.fn(),
     popTo: jest.fn()
 } as any;
+
+// what payLnInvoiceFromEcash returns for a paid invoice
+const PAID = { payment_preimage: 'ab'.repeat(32), amount: 100 };
 
 const buildCashuStore = () => ({
     resetPaymentState: jest.fn(),
@@ -158,6 +161,8 @@ describe('CashuSendingLightning', () => {
             donationAmount: '5'
         };
 
+        cashuStore.payLnInvoiceFromEcash.mockResolvedValueOnce(PAID);
+
         const { rerender } = await render(view(cashuStore, params));
         cashuStore.paymentSuccess = true;
         await rerender(view(cashuStore, params));
@@ -199,6 +204,7 @@ describe('CashuSendingLightning', () => {
     it('does not send the donation again on a later payment when its invoice could not be fetched', async () => {
         (loadDonationLnurl as jest.Mock).mockResolvedValue(null);
         const cashuStore = buildCashuStore();
+        cashuStore.payLnInvoiceFromEcash.mockResolvedValueOnce(PAID);
 
         const { rerender } = await render(view(cashuStore, donationParams));
         cashuStore.paymentSuccess = true;
@@ -216,6 +222,7 @@ describe('CashuSendingLightning', () => {
     it('does not send the donation again on a later payment when it was not paid', async () => {
         (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
         const cashuStore = buildCashuStore();
+        cashuStore.payLnInvoiceFromEcash.mockResolvedValueOnce(PAID);
 
         const { rerender } = await render(view(cashuStore, donationParams));
         cashuStore.paymentSuccess = true;
@@ -230,5 +237,95 @@ describe('CashuSendingLightning', () => {
         // the payment and one donation attempt
         expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(2);
         expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+    });
+
+    const flush = () => new Promise((r) => setImmediate(r));
+
+    const deferred = () => {
+        let resolve: (value: any) => void = () => {};
+        const promise = new Promise((r) => (resolve = r));
+        return { promise, resolve };
+    };
+
+    it('does not donate when its payment failed and paymentSuccess later turns true', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const cashuStore = buildCashuStore();
+
+        const { rerender } = await render(view(cashuStore, donationParams));
+        await flush();
+        // an NWC payment sets the shared flag after this one failed
+        cashuStore.paymentSuccess = true;
+        await rerender(view(cashuStore, donationParams));
+        await flush();
+
+        expect(loadDonationLnurl).not.toHaveBeenCalled();
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not donate when an NWC payment succeeds while its own is in flight', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const cashuStore = buildCashuStore();
+        const ownPayment = deferred();
+        cashuStore.payLnInvoiceFromEcash.mockReturnValueOnce(
+            ownPayment.promise
+        );
+
+        const { rerender } = await render(view(cashuStore, donationParams));
+        cashuStore.paymentSuccess = true;
+        await rerender(view(cashuStore, donationParams));
+        await flush();
+
+        expect(loadDonationLnurl).not.toHaveBeenCalled();
+
+        ownPayment.resolve(undefined);
+        await flush();
+
+        expect(loadDonationLnurl).not.toHaveBeenCalled();
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
+    });
+
+    it('donates once after its own payment succeeds', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const cashuStore = buildCashuStore();
+        const ownPayment = deferred();
+        cashuStore.payLnInvoiceFromEcash.mockReturnValueOnce(
+            ownPayment.promise
+        );
+
+        const { rerender } = await render(view(cashuStore, donationParams));
+        cashuStore.paymentSuccess = true;
+        await rerender(view(cashuStore, donationParams));
+        ownPayment.resolve(PAID);
+
+        await waitFor(() =>
+            expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(2)
+        );
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenLastCalledWith({
+            amount: '25',
+            paymentRequest: 'lnbc1donation',
+            isDonationPayment: true
+        });
+
+        await laterPaymentSucceeds(cashuStore, rerender, donationParams);
+        await flush();
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not donate when the screen is gone before its payment succeeds', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const cashuStore = buildCashuStore();
+        const ownPayment = deferred();
+        cashuStore.payLnInvoiceFromEcash.mockReturnValueOnce(
+            ownPayment.promise
+        );
+
+        const { unmount } = await render(view(cashuStore, donationParams));
+        await unmount();
+        ownPayment.resolve(PAID);
+        await flush();
+
+        expect(loadDonationLnurl).not.toHaveBeenCalled();
     });
 });
