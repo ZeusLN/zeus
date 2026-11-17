@@ -45,6 +45,10 @@ jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: { fetch: jest.fn() }
 }));
+jest.mock('../utils/ZipUtils', () => ({
+    encryptString: jest.fn().mockResolvedValue('encrypted'),
+    decryptString: jest.fn()
+}));
 
 import * as CryptoJS from 'crypto-js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -60,7 +64,7 @@ import {
 const blobFetch = ReactNativeBlobUtil.fetch as jest.Mock;
 const torFetch = doTorRequestRaw as jest.Mock;
 
-const SEED = 'abandon abandon about';
+const SEED = ['abandon', 'abandon', 'about'];
 const PUBKEY = `02${'11'.repeat(32)}`;
 
 // Answers for each server endpoint, keyed by path
@@ -69,7 +73,7 @@ const responses: { [path: string]: any } = {
     '/api/backup': { success: true },
     '/api/recover': {
         success: true,
-        backup: CryptoJS.AES.encrypt('multi', SEED).toString(),
+        backup: CryptoJS.AES.encrypt('multi', SEED.toString()).toString(),
         created_at: '2026-10-20'
     },
     '/api/recoverAdvanced': { backups: [{ created_at: '2026-10-20' }] }
