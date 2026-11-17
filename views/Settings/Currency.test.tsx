@@ -16,10 +16,12 @@ jest.mock('../../stores/SettingsStore', () => ({
     CURRENCY_KEYS: [],
     DEFAULT_FIAT: 'USD',
     DEFAULT_FIAT_RATES_SOURCE: 'Zeus',
-    FIAT_RATES_SOURCE_KEYS: []
+    FIAT_RATES_SOURCE_KEYS: [],
+    isCurrencySupportedBySource: jest.fn()
 }));
 jest.mock('../../stores/UnitsStore', () => ({}));
 jest.mock('../../utils/LocaleUtils');
+jest.mock('../../utils/UrlUtils', () => ({ isValidUrl: jest.fn() }));
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));
