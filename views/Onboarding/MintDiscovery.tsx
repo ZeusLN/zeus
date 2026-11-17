@@ -7,6 +7,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Icon } from '@rneui/themed';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 
@@ -17,10 +18,12 @@ import MintReviewsModal from '../../components/MintReviewsModal';
 import Screen from '../../components/Screen';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
+import { WarningMessage } from '../../components/SuccessErrorMessage';
 
 import CashuStore, { ScoredMint } from '../../stores/CashuStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { resolveSelectedMintUrls } from '../../utils/MintSelectionUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import MintAvatar from '../../components/MintAvatar';
@@ -48,6 +51,10 @@ interface MintDiscoveryState {
     hasFetched: boolean;
     showReviewsModal: boolean;
     reviewsMintUrl: string;
+    // null = user has not touched the selection yet (all recommended mints are
+    // selected by default). A non-null array is the explicit set the user chose,
+    // which may be empty (they deselected every mint).
+    selectedMintUrls: string[] | null;
 }
 
 @inject('CashuStore')
@@ -62,7 +69,8 @@ export default class MintDiscovery extends React.Component<
         npubError: '',
         hasFetched: false,
         showReviewsModal: false,
-        reviewsMintUrl: ''
+        reviewsMintUrl: '',
+        selectedMintUrls: null
     };
 
     componentDidMount() {
@@ -96,11 +104,28 @@ export default class MintDiscovery extends React.Component<
     };
 
     handleDiscoverSelect = (mode: DiscoverMode) => {
-        this.setState({ discoverMode: mode }, () => {
+        // Switching source resets the selection back to "all recommended", since
+        // the list of recommended mints is about to change.
+        this.setState({ discoverMode: mode, selectedMintUrls: null }, () => {
             if (mode !== 'custom' && mode !== 'later') {
                 this.handleFetchMints();
             }
         });
+    };
+
+    // A mint is selected when the user has not touched the selection yet
+    // (null => default all selected) or when it is present in the explicit set.
+    isMintSelected = (url: string) => {
+        const { selectedMintUrls } = this.state;
+        return selectedMintUrls === null || selectedMintUrls.includes(url);
+    };
+
+    toggleMintSelection = (url: string, allUrls: string[]) => {
+        const base = this.state.selectedMintUrls ?? allUrls;
+        const next = base.includes(url)
+            ? base.filter((u) => u !== url)
+            : [...base, url];
+        this.setState({ selectedMintUrls: next });
     };
 
     handleFetchMints = (forceRefresh?: boolean) => {
@@ -124,11 +149,11 @@ export default class MintDiscovery extends React.Component<
             !forceRefresh &&
             CashuStore.restoreCachedRecommendations(cacheKey)
         ) {
-            this.setState({ hasFetched: true });
+            this.setState({ hasFetched: true, selectedMintUrls: null });
             return;
         }
 
-        this.setState({ hasFetched: true });
+        this.setState({ hasFetched: true, selectedMintUrls: null });
 
         if (discoverMode === 'all') {
             CashuStore.fetchMints();
@@ -160,13 +185,23 @@ export default class MintDiscovery extends React.Component<
                 5,
                 discoverMode === 'all' ? 'all' : 'zeus'
             );
-            initialMintUrls = topMints.map((m: ScoredMint) => m.url);
+            const allUrls = topMints.map((m: ScoredMint) => m.url);
+            // Only add the mints the user actually left selected. Recommended
+            // mints are not trusted with funds unless kept ticked.
+            initialMintUrls = resolveSelectedMintUrls(
+                this.state.selectedMintUrls,
+                allUrls
+            );
         }
 
+        // Pressing Select is an explicit selection decision, even when the
+        // resulting set is empty. mintSelectionMade lets downstream screens
+        // distinguish "user chose no mints" from "user never opened discovery".
         if (returnTo) {
             navigation.popTo(returnTo, {
                 discoverMode,
-                initialMintUrls
+                initialMintUrls,
+                mintSelectionMade: true
             });
         } else {
             navigation.navigate('WalletSettings', {
@@ -388,9 +423,20 @@ export default class MintDiscovery extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.MintDiscovery.tapToReadReviews'
+                                    'views.MintDiscovery.tapToToggleSelection'
                                 )}
                             </Text>
+
+                            {!isLoading && topMints.length > 0 && (
+                                <View style={{ marginBottom: 10 }}>
+                                    <WarningMessage
+                                        message={localeString(
+                                            'views.MintDiscovery.custodyWarning'
+                                        )}
+                                        fontSize={13}
+                                    />
+                                </View>
+                            )}
 
                             {isLoading ? (
                                 <View style={{ padding: 20 }}>
@@ -402,6 +448,12 @@ export default class MintDiscovery extends React.Component<
                                         CashuStore.mintInfoCache.get(mint.url);
                                     const iconUrl = mintInfo?.icon_url;
                                     const mintName = mintInfo?.name;
+                                    const isSelected = this.isMintSelected(
+                                        mint.url
+                                    );
+                                    const allUrls = topMints.map(
+                                        (m: ScoredMint) => m.url
+                                    );
 
                                     return (
                                         <TouchableOpacity
@@ -416,13 +468,31 @@ export default class MintDiscovery extends React.Component<
                                                 }
                                             ]}
                                             onPress={() =>
-                                                this.setState({
-                                                    showReviewsModal: true,
-                                                    reviewsMintUrl: mint.url
-                                                })
+                                                this.toggleMintSelection(
+                                                    mint.url,
+                                                    allUrls
+                                                )
                                             }
                                             activeOpacity={0.7}
                                         >
+                                            <Icon
+                                                name={
+                                                    isSelected
+                                                        ? 'check-box'
+                                                        : 'check-box-outline-blank'
+                                                }
+                                                color={
+                                                    isSelected
+                                                        ? themeColor(
+                                                              'highlight'
+                                                          )
+                                                        : themeColor(
+                                                              'secondaryText'
+                                                          )
+                                                }
+                                                size={24}
+                                                style={{ marginRight: 10 }}
+                                            />
                                             <MintAvatar
                                                 iconUrl={iconUrl}
                                                 name={mintName || mint.url}
@@ -466,6 +536,29 @@ export default class MintDiscovery extends React.Component<
                                                     )}
                                                 </RNText>
                                             </View>
+                                            <TouchableOpacity
+                                                onPress={() =>
+                                                    this.setState({
+                                                        showReviewsModal: true,
+                                                        reviewsMintUrl: mint.url
+                                                    })
+                                                }
+                                                hitSlop={{
+                                                    top: 10,
+                                                    bottom: 10,
+                                                    left: 10,
+                                                    right: 10
+                                                }}
+                                                style={{ marginLeft: 8 }}
+                                            >
+                                                <Icon
+                                                    name="rate-review"
+                                                    color={themeColor(
+                                                        'secondaryText'
+                                                    )}
+                                                    size={22}
+                                                />
+                                            </TouchableOpacity>
                                         </TouchableOpacity>
                                     );
                                 })
