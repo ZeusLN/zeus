@@ -235,14 +235,17 @@ export default class LSPS1OrderResponse extends React.Component<
                                 showCopyIcon
                             />
                         )}
-                        {payment?.onchain_payment && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.onchainPayment'
-                                )}
-                                value={payment?.onchain_payment}
-                            />
-                        )}
+                        {/* the LDK Node backend sets an object here, and an
+                            object can't be rendered as text */}
+                        {!!payment?.onchain_payment &&
+                            typeof payment.onchain_payment !== 'object' && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.LSPS1.onchainPayment'
+                                    )}
+                                    value={payment?.onchain_payment}
+                                />
+                            )}
                     </>
                 )}
                 {/* BOLT11 */}
