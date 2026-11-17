@@ -6008,6 +6008,9 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
         expect(response.result).toBeUndefined();
         expect(response.error?.code).toBe(Nip47ErrorCode.INVALID_INVOICE);
+        expect(response.error?.message).toBe(
+            'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
+        );
         expect(JSON.stringify(response)).not.toContain(hex64('d'));
         expect(connection.activity).toHaveLength(0);
         expect(connection.totalSpendSats).toBe(0);
@@ -6050,6 +6053,9 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(transactionsStore.sendPaymentSilently).toHaveBeenCalled();
         expect(response.result).toBeUndefined();
         expect(response.error?.code).toBe(Nip47ErrorCode.INVALID_INVOICE);
+        expect(response.error?.message).toBe(
+            'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
+        );
         expect(JSON.stringify(response)).not.toContain(hex64('d'));
         expect(
             connection.activity.some(
@@ -6136,6 +6142,9 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(transactionsStore.sendPaymentSilently).toHaveBeenCalled();
         expect(response.result).toBeUndefined();
         expect(response.error?.code).toBe(Nip47ErrorCode.INVALID_INVOICE);
+        expect(response.error?.message).toBe(
+            'stores.NostrWalletConnectStore.error.paymentInProgress'
+        );
         expect(connection.activity).toHaveLength(0);
         expect(connection.pendingSpendSats).toBe(0);
         expect(connection.totalSpendSats).toBe(0);
@@ -6240,6 +6249,9 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
 
         expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
         expect(response.error?.code).toBe(Nip47ErrorCode.INVALID_INVOICE);
+        expect(response.error?.message).toBe(
+            'stores.NostrWalletConnectStore.error.paymentInProgress'
+        );
         expect(connection.activity).toHaveLength(0);
         expect(connection.pendingSpendSats).toBe(0);
     });

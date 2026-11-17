@@ -3695,14 +3695,20 @@ export default class NostrWalletConnectStore {
                     Nip47ErrorCode.INTERNAL_ERROR
                 );
             }
-            if (
-                listed &&
-                (NostrConnectUtils.isSettledPayment(listed) ||
-                    NostrConnectUtils.isListedPaymentInTransit(listed))
-            ) {
+            if (listed && NostrConnectUtils.isSettledPayment(listed)) {
                 return NostrConnectUtils.createNip47Error(
                     localeString(
                         'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
+                    ),
+                    Nip47ErrorCode.INVALID_INVOICE
+                );
+            }
+            // An in-flight payment can still fail, so don't tell the client
+            // the invoice is paid
+            if (listed && NostrConnectUtils.isListedPaymentInTransit(listed)) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.paymentInProgress'
                     ),
                     Nip47ErrorCode.INVALID_INVOICE
                 );
@@ -3823,9 +3829,17 @@ export default class NostrWalletConnectStore {
             refusedForAnotherPayment &&
             !existing
         ) {
+            const inTransition = [
+                paymentState.payment_error,
+                paymentState.error_msg
+            ].some((message) =>
+                NostrConnectUtils.isPaymentInTransitionError(message)
+            );
             return NostrConnectUtils.createNip47Error(
                 localeString(
-                    'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
+                    inTransition
+                        ? 'stores.NostrWalletConnectStore.error.paymentInProgress'
+                        : 'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
                 ),
                 Nip47ErrorCode.INVALID_INVOICE
             );
