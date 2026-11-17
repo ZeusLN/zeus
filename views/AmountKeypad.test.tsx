@@ -107,11 +107,21 @@ describe('AmountKeypad unit changes', () => {
         expect(onUnitsChange).toHaveBeenCalledTimes(1);
     });
 
-    it('does not tell the caller when the currency modal closes without a change', async () => {
+    it('keeps the digits when the currency modal closes without a change', async () => {
         const { onUnitsChange } = await renderKeypad();
 
         await pickInModal(() => undefined);
 
+        expect(screen.getByTestId('amount')).toHaveTextContent('25');
+        expect(onUnitsChange).not.toHaveBeenCalled();
+    });
+
+    it('keeps the digits when the unit already in use is picked again', async () => {
+        const { onUnitsChange, UnitsStore } = await renderKeypad();
+
+        await pickInModal(() => (UnitsStore.units = 'fiat'));
+
+        expect(screen.getByTestId('amount')).toHaveTextContent('25');
         expect(onUnitsChange).not.toHaveBeenCalled();
     });
 });

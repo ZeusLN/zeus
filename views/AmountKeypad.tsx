@@ -188,11 +188,11 @@ export default class AmountKeypad extends React.Component<
     };
 
     handleCurrencyModalClose = () => {
+        // CurrencyList stores the selection before it closes the modal. A
+        // dismissal, or picking the unit already in use, keeps the digits.
+        if (this.getUnitsKey() === this.unitsOnModalOpen) return;
         this.clearValue();
-        // CurrencyList stores the selection before it closes the modal
-        if (this.getUnitsKey() !== this.unitsOnModalOpen) {
-            this.props.route.params?.onUnitsChange?.();
-        }
+        this.props.route.params?.onUnitsChange?.();
     };
 
     handlePaste = async () => {
