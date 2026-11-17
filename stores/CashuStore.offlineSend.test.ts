@@ -446,6 +446,46 @@ describe('CashuStore offline send safety', () => {
             expect(mockRemoveProofs).not.toHaveBeenCalled();
         });
 
+        it('does not select proofs covered by an unresolved pending record', async () => {
+            mockProofPool.current = [proof(16, 'a'), proof(16, 'b')];
+            const store = buildStore();
+            // removeProofs rejects (nothing deleted) and the cleanup write
+            // fails too, so the record for y-a outlives the failed send.
+            mockRemoveProofs.mockRejectedValueOnce(new Error('db locked'));
+            mockSetItem
+                .mockImplementationOnce(defaultSetItem)
+                .mockImplementationOnce(async () => {
+                    throw new Error('keychain unavailable');
+                });
+
+            await expect(store.sendTokenCDK(MINT_URL, 16)).rejects.toThrow();
+            expect(getPendingRecords()).toHaveLength(1);
+            const staleYs = getPendingRecords()[0].proofs.map((p: any) => p.y);
+
+            const token = await store.sendTokenCDK(MINT_URL, 16);
+
+            const sentYs = mockRemoveProofs.mock.calls[1][0] as string[];
+            expect(sentYs).toHaveLength(1);
+            expect(staleYs).not.toContain(sentYs[0]);
+            expect(token.value).toBe(16);
+
+            // A send needing the locked proof is refused, not filled
+            // from it.
+            await expect(store.sendTokenCDK(MINT_URL, 16)).rejects.toThrow(
+                'Insufficient proofs'
+            );
+            expect(mockProofPool.current.map((p) => p.y)).toEqual(staleYs);
+
+            // Startup then drops the stale record and keeps its proof;
+            // only the real send is surfaced.
+            await store.reconcilePendingOfflineSends();
+            expect(mockProofPool.current.map((p) => p.y)).toEqual(staleYs);
+            expect(getSentTokens().map((t: any) => t.encodedToken)).toEqual([
+                token.encoded
+            ]);
+            expect(getPendingRecords()).toEqual([]);
+        });
+
         it('fails the second concurrent send when the pool is exhausted', async () => {
             mockProofPool.current = [proof(16, 'a')];
             const store = buildStore();
