@@ -6,6 +6,7 @@ import {
     decryptExportData,
     decryptExportDataV2,
     getImportableNodes,
+    isOnDeviceWalletPresent,
     isValidExportPassword,
     isLegacyNodeConfigExport,
     EXPORT_FORMAT_VERSION,
@@ -477,6 +478,110 @@ describe('NodeConfigUtils', () => {
             expect(
                 getImportableNodes([null, 'lnd', 1, [], remote, undefined])
             ).toEqual([remote]);
+        });
+    });
+
+    describe('isOnDeviceWalletPresent', () => {
+        const SEED = ['Abandon', ' ability ', 'able'];
+
+        it.each([
+            [
+                'an embedded LND wallet on the same lndDir',
+                { implementation: 'embedded-lnd', lndDir: 'a1' },
+                { implementation: 'embedded-lnd', lndDir: 'a1' }
+            ],
+            [
+                'the legacy embedded LND wallet without lndDir',
+                { implementation: 'embedded-lnd' },
+                { implementation: 'embedded-lnd', lndDir: 'lnd' }
+            ],
+            [
+                'an embedded LND wallet with the same seed in another dir',
+                {
+                    implementation: 'embedded-lnd',
+                    lndDir: 'a1',
+                    seedPhrase: SEED
+                },
+                {
+                    implementation: 'embedded-lnd',
+                    lndDir: 'b2',
+                    seedPhrase: ['abandon', 'ability', 'able']
+                }
+            ],
+            [
+                'an LDK Node wallet on the same ldkNodeDir',
+                { implementation: 'ldk-node', ldkNodeDir: 'c3' },
+                { implementation: 'ldk-node', ldkNodeDir: 'c3' }
+            ],
+            [
+                'an LDK Node wallet with the same mnemonic in another dir',
+                {
+                    implementation: 'ldk-node',
+                    ldkNodeDir: 'c3',
+                    ldkMnemonic: 'Abandon  ability able'
+                },
+                {
+                    implementation: 'ldk-node',
+                    ldkNodeDir: 'd4',
+                    ldkMnemonic: 'abandon ability able'
+                }
+            ]
+        ])('finds %s', (_, node, existing) => {
+            expect(isOnDeviceWalletPresent(node, [existing])).toBe(true);
+        });
+
+        it.each([
+            [
+                'an embedded LND wallet in another dir with another seed',
+                {
+                    implementation: 'embedded-lnd',
+                    lndDir: 'a1',
+                    seedPhrase: SEED
+                },
+                {
+                    implementation: 'embedded-lnd',
+                    lndDir: 'b2',
+                    seedPhrase: ['zoo']
+                }
+            ],
+            [
+                'LDK Node wallets in different dirs without mnemonics',
+                { implementation: 'ldk-node', ldkNodeDir: 'c3' },
+                { implementation: 'ldk-node', ldkNodeDir: 'd4' }
+            ],
+            [
+                'an LDK Node config without a dir next to one without a dir',
+                { implementation: 'ldk-node' },
+                { implementation: 'ldk-node' }
+            ],
+            [
+                'a dir of another implementation',
+                { implementation: 'ldk-node', ldkNodeDir: 'same' },
+                { implementation: 'embedded-lnd', lndDir: 'same' }
+            ],
+            [
+                'a remote config carrying the dir',
+                { implementation: 'embedded-lnd', lndDir: 'lnd' },
+                { implementation: 'lnd', host: 'x', lndDir: 'lnd' }
+            ],
+            [
+                'a remote config, which owns no on-device data',
+                { implementation: 'lnd', host: 'x', ldkNodeDir: 'c3' },
+                { implementation: 'lnd', host: 'x', ldkNodeDir: 'c3' }
+            ]
+        ])('does not match %s', (_, node, existing) => {
+            expect(isOnDeviceWalletPresent(node, [existing])).toBe(false);
+        });
+
+        it('is false with no existing configs', () => {
+            expect(
+                isOnDeviceWalletPresent({ implementation: 'embedded-lnd' })
+            ).toBe(false);
+            expect(
+                isOnDeviceWalletPresent({ implementation: 'embedded-lnd' }, [
+                    null
+                ])
+            ).toBe(false);
         });
     });
 

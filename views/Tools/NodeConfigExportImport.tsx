@@ -40,6 +40,7 @@ import {
     exportNodeConfigs,
     decryptExportData,
     decryptExportDataV2,
+    isOnDeviceWalletPresent,
     getImportableNodes,
     isValidExportPassword,
     isLegacyNodeConfigExport,
@@ -104,6 +105,8 @@ interface NodeConfigExportImportState {
     selectedRecoveryResult: RecoveryResult | null;
     recoveryNodes: Node[];
     selectedRecoveryNodes: Array<number>;
+    // Indexes of recoveryNodes whose wallet is already on this device
+    presentRecoveryNodes: Array<number>;
 }
 
 interface NodeConfigExport {
@@ -139,7 +142,8 @@ export default class NodeConfigExportImport extends React.Component<
         scanResult: null,
         selectedRecoveryResult: null,
         recoveryNodes: [],
-        selectedRecoveryNodes: []
+        selectedRecoveryNodes: [],
+        presentRecoveryNodes: []
     };
 
     private resetExportState = () => {
@@ -1006,10 +1010,23 @@ export default class NodeConfigExportImport extends React.Component<
         try {
             const settings = JSON.parse(result.data);
             const nodes = settings.nodes || [];
+            // A legacy snapshot also lists the wallets still on this
+            // device. Those can't be restored a second time; the rest are
+            // selected by default.
+            const existingNodes = this.props.SettingsStore.settings?.nodes;
+            const presentRecoveryNodes: number[] = [];
+            const selectedRecoveryNodes: number[] = [];
+            nodes.forEach((node: any, i: number) =>
+                (isOnDeviceWalletPresent(node, existingNodes)
+                    ? presentRecoveryNodes
+                    : selectedRecoveryNodes
+                ).push(i)
+            );
             this.setState({
                 selectedRecoveryResult: result,
                 recoveryNodes: nodes,
-                selectedRecoveryNodes: nodes.map((_: any, i: number) => i), // Select all by default
+                selectedRecoveryNodes,
+                presentRecoveryNodes,
                 activeModal: 'recoveryNodeSelection'
             });
         } catch (e) {
@@ -1073,7 +1090,8 @@ export default class NodeConfigExportImport extends React.Component<
             selectedRecoveryResult: null,
             isScanning: false,
             recoveryNodes: [],
-            selectedRecoveryNodes: []
+            selectedRecoveryNodes: [],
+            presentRecoveryNodes: []
         });
     };
 
@@ -1316,18 +1334,23 @@ export default class NodeConfigExportImport extends React.Component<
             activeModal,
             selectedRecoveryResult,
             recoveryNodes,
-            selectedRecoveryNodes
+            selectedRecoveryNodes,
+            presentRecoveryNodes
         } = this.state;
 
         if (!selectedRecoveryResult) return null;
+
+        const selectableRecoveryNodes = recoveryNodes
+            .map((_, i) => i)
+            .filter((i) => !presentRecoveryNodes.includes(i));
 
         const sourceName = KeychainRecoveryUtils.getSourceDisplayName(
             selectedRecoveryResult.source
         );
 
+        // Only the select-all box reads this, and it shows for two or more
         const allNodesSelected =
-            recoveryNodes.length > 0 &&
-            selectedRecoveryNodes.length === recoveryNodes.length;
+            selectedRecoveryNodes.length === selectableRecoveryNodes.length;
 
         return (
             <Modal
@@ -1371,7 +1394,7 @@ export default class NodeConfigExportImport extends React.Component<
                             style={{ maxHeight: 300 }}
                             showsVerticalScrollIndicator={false}
                         >
-                            {recoveryNodes.length > 1 && (
+                            {selectableRecoveryNodes.length > 1 && (
                                 <CheckBox
                                     title={localeString(
                                         'views.Tools.nodeConfigExportImport.selectAllConfigs'
@@ -1385,9 +1408,7 @@ export default class NodeConfigExportImport extends React.Component<
                                         } else {
                                             this.setState({
                                                 selectedRecoveryNodes:
-                                                    recoveryNodes.map(
-                                                        (_, i) => i
-                                                    )
+                                                    selectableRecoveryNodes
                                             });
                                         }
                                     }}
@@ -1407,6 +1428,8 @@ export default class NodeConfigExportImport extends React.Component<
                             {recoveryNodes.map((node: Node, index: number) => {
                                 const isSelected =
                                     selectedRecoveryNodes.includes(index);
+                                const isPresent =
+                                    presentRecoveryNodes.includes(index);
 
                                 return (
                                     <View key={index} style={styles.nodeItem}>
@@ -1445,11 +1468,27 @@ export default class NodeConfigExportImport extends React.Component<
                                                                 node.implementation
                                                             )}
                                                         </Text>
+                                                        {isPresent && (
+                                                            <Text
+                                                                style={{
+                                                                    color: themeColor(
+                                                                        'warning'
+                                                                    ),
+                                                                    fontSize: 12
+                                                                }}
+                                                            >
+                                                                {localeString(
+                                                                    'views.Tools.nodeConfigExportImport.recovery.alreadyOnDevice'
+                                                                )}
+                                                            </Text>
+                                                        )}
                                                     </View>
                                                 </View>
                                             }
                                             checked={isSelected}
+                                            disabled={isPresent}
                                             onPress={() => {
+                                                if (isPresent) return;
                                                 this.setState((prevState) => ({
                                                     selectedRecoveryNodes:
                                                         prevState.selectedRecoveryNodes.includes(
