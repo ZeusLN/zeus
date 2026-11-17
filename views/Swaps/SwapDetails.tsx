@@ -175,7 +175,11 @@ export default class SwapDetails extends React.Component<
                 SwapState.TransactionRefunded,
                 SwapState.SwapExpired
             ];
-            if (failedStatus.includes(swapData?.status)) {
+            // A stored claim that never went out may already have sent the
+            // preimage to the host, so it is sent again whatever the status
+            const storedClaimUnsent =
+                !!swapData?.claimTransactionHex && !swapData?.claimTxid;
+            if (failedStatus.includes(swapData?.status) && !storedClaimUnsent) {
                 this.setState({
                     updates: swapData.status,
                     socketConnected: false
@@ -802,13 +806,24 @@ export default class SwapDetails extends React.Component<
                 case SwapState.InvoiceExpired:
                 case SwapState.TransactionFailed:
                 case SwapState.SwapExpired:
-                    stopRechecks();
                     webSocket.close();
                     failureReason &&
                         this.setState({
                             error: failureReason,
                             socketConnected: false
                         });
+                    // The stored claim may have sent the preimage to the
+                    // host, which can refund itself after the timeout. Keep
+                    // sending it until it is broadcast or the lockup is
+                    // spent.
+                    if (
+                        !submitted &&
+                        this.state.swapData?.claimTransactionHex
+                    ) {
+                        await claimIfLockupVerified('');
+                    } else {
+                        stopRechecks();
+                    }
                     break;
 
                 case SwapState.InvoiceSettled:

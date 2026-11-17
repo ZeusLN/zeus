@@ -1350,6 +1350,127 @@ describe('SwapDetails lockup verification retry wiring', () => {
         });
     });
 
+    // The claim sent the preimage to the host while it was built, so an
+    // expired or failed status does not end it
+    describe('a failed status with a stored claim not yet broadcast', () => {
+        const FAILED = [
+            'swap.expired',
+            'invoice.expired',
+            'transaction.failed'
+        ];
+
+        it.each(FAILED)(
+            'sends the stored claim when a swap stored as %s is opened',
+            async (status) => {
+                const { store } = await renderView({
+                    status,
+                    claimTransactionHex: 'storedhex'
+                });
+                expect(global.WebSocket).toHaveBeenCalled();
+
+                await sendStatus(status);
+
+                expect(store.broadcastSwapTransaction).toHaveBeenCalledWith(
+                    'storedhex',
+                    'https://provider.test/v2'
+                );
+                expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                    'swap',
+                    'claim-txid'
+                );
+                expect(nativeClaim).not.toHaveBeenCalled();
+            }
+        );
+
+        it.each(FAILED)(
+            'sends the claim again on %s after every broadcast failed',
+            async (status) => {
+                const { store } = await renderView();
+                store.broadcastSwapTransaction.mockRejectedValue(
+                    new Error('mempool down')
+                );
+                await sendConfirmedLockup();
+                expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(
+                    11
+                );
+
+                store.broadcastSwapTransaction.mockReset();
+                store.broadcastSwapTransaction.mockResolvedValue('claim-txid');
+                await sendStatus(status);
+
+                expect(socket.close).toHaveBeenCalled();
+                expect(store.broadcastSwapTransaction).toHaveBeenCalledWith(
+                    'claimhex',
+                    'https://provider.test/v2'
+                );
+                expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                    'swap',
+                    'claim-txid'
+                );
+                expect(nativeClaim).toHaveBeenCalledTimes(1);
+                expect(errorShown()).toBeUndefined();
+            }
+        );
+
+        it('keeps sending it a minute apart while broadcasts fail', async () => {
+            const { store } = await renderView({
+                status: 'swap.expired',
+                claimTransactionHex: 'storedhex'
+            });
+            store.broadcastSwapTransaction.mockRejectedValue(
+                new Error('mempool down')
+            );
+
+            await sendStatus('swap.expired');
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(11);
+
+            store.broadcastSwapTransaction.mockResolvedValue('claim-txid');
+            await advance(61000);
+
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(12);
+            expect(store.saveClaimTxid).toHaveBeenCalled();
+        });
+
+        it("stops and reports the host's refund once it spends the lockup", async () => {
+            const { store } = await renderView({
+                status: 'swap.expired',
+                claimTransactionHex: 'storedhex'
+            });
+            store.checkStoredClaim.mockResolvedValue({
+                status: 'invalid',
+                reason: 'lockup-spent',
+                spendingTxid: 'refund',
+                spentBy: 'refund'
+            });
+
+            await sendStatus('swap.expired');
+            await advance(180000);
+
+            expect(store.checkStoredClaim).toHaveBeenCalledTimes(1);
+            expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+            expect(errorShown()).toBe('views.SwapDetails.lockupSpentElsewhere');
+        });
+
+        it.each([
+            ['no claim is stored', {}],
+            [
+                'the stored claim was broadcast',
+                { claimTransactionHex: 'storedhex', claimTxid: 'claim-txid' }
+            ]
+        ])(
+            'does not subscribe to an expired swap when %s',
+            async (_, swapData) => {
+                const { store } = await renderView({
+                    status: 'swap.expired',
+                    ...swapData
+                });
+
+                expect(global.WebSocket).not.toHaveBeenCalled();
+                expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+            }
+        );
+    });
+
     describe('a lockup amount nothing in the wallet vouches for', () => {
         const alertButtons = (alert: jest.SpyInstance) =>
             alert.mock.calls[alert.mock.calls.length - 1][2];
