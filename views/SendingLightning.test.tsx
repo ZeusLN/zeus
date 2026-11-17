@@ -54,7 +54,9 @@ jest.mock('../utils/ContactUtils', () => ({
 }));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({
-    themeColor: () => '#000000'
+    // a distinct value for the background color so tests can tell it apart
+    themeColor: (color: string) =>
+        color === 'background' ? '#0d1b2a' : '#000000'
 }));
 jest.mock('../storage', () => ({}));
 jest.mock('../stores/Stores');
@@ -63,13 +65,14 @@ jest.mock('../assets/images/SVG/wordmark-black.svg', () => 'Wordmark');
 jest.mock('../utils/AmountUtils', () => ({ getFeePercentage: jest.fn() }));
 
 import * as React from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, StyleSheet } from 'react-native';
 import {
     act,
     fireEvent,
     render,
     screen,
-    waitFor
+    waitFor,
+    within
 } from '@testing-library/react-native';
 import { observable } from 'mobx';
 import BackendUtils from '../utils/BackendUtils';
@@ -319,6 +322,41 @@ describe('SendingLightning payment still pending', () => {
         );
         expect(navigation.popTo).toHaveBeenCalledWith('Wallet');
         expect(navigation.goBack).not.toHaveBeenCalled();
+    });
+
+    it('shows the pending text and the button on an opaque panel at the bottom of the screen', async () => {
+        // themeColor('background') in the ThemeUtils mock
+        const BACKGROUND = '#0d1b2a';
+        const opaquePanels = () =>
+            screen.container.queryAll(
+                (n) =>
+                    typeof n.type === 'string' &&
+                    StyleSheet.flatten(n.props.style)?.backgroundColor ===
+                        BACKGROUND
+            );
+
+        await renderView(sending);
+        expect(opaquePanels()).toHaveLength(0);
+
+        await act(async () => {
+            jest.advanceTimersByTime(10000);
+        });
+
+        expect(opaquePanels()).toHaveLength(1);
+        const [panel] = opaquePanels();
+        expect(StyleSheet.flatten(panel.props.style)).toMatchObject({
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0
+        });
+        // the safe-area inset is padding inside the panel
+        expect(panel.type).toBe('SafeAreaView');
+        expect(panel.props.edges).toEqual(['bottom']);
+        expect(within(panel).getByText(STILL_PENDING)).toBeOnTheScreen();
+        expect(
+            within(panel).getByRole('button', { name: GO_TO_WALLET })
+        ).toBeOnTheScreen();
     });
 
     it('returns to the wallet on hardware back once the exit is offered', async () => {

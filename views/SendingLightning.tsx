@@ -474,13 +474,19 @@ export default class SendingLightning extends React.Component<
                 />
                 {loading && <SendingLoadingView />}
                 {this.offersPendingExit(TransactionsStore) && (
+                    // opaque so the loading animation does not run behind
+                    // the text and the button
                     <SafeAreaView
                         edges={['bottom']}
                         style={{
                             position: 'absolute',
-                            bottom: 15,
-                            width: '100%',
-                            alignItems: 'center'
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            alignItems: 'center',
+                            paddingTop: 10,
+                            paddingBottom: 15,
+                            backgroundColor: themeColor('background')
                         }}
                     >
                         <Text
