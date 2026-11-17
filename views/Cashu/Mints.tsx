@@ -113,6 +113,74 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         await CashuStore.setMultiMintSelectedUrls(nextSelection);
     };
 
+    // Balances at mints that are not in the mint list, each with a way to
+    // add its mint. Left out of the views that pick a mint to pay or
+    // receive with
+    renderUnlistedMints = () => {
+        const { navigation, CashuStore, route } = this.props;
+        const unlisted = CashuStore.unlistedMintBalances;
+        if (
+            unlisted.length === 0 ||
+            route.params?.forceSingleMint ||
+            route.params?.isMultiMintView
+        ) {
+            return null;
+        }
+
+        return (
+            <View style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
+                <Text
+                    style={{
+                        color: themeColor('text'),
+                        fontFamily: 'PPNeueMontreal-Book',
+                        fontSize: 16
+                    }}
+                >
+                    {localeString('views.Cashu.Mints.unlistedMints')}
+                </Text>
+                <Text
+                    style={{
+                        color: themeColor('secondaryText'),
+                        fontFamily: 'PPNeueMontreal-Book',
+                        fontSize: 12,
+                        marginTop: 5
+                    }}
+                >
+                    {localeString('views.Cashu.Mints.unlistedMintsExplainer')}
+                </Text>
+                {unlisted.map(({ mintUrl, balance }) => (
+                    <TouchableOpacity
+                        key={`unlisted-${mintUrl}`}
+                        accessibilityRole="button"
+                        accessibilityLabel={mintUrl}
+                        onPress={async () => {
+                            const mintInfo = await CashuStore.fetchMintInfo(
+                                mintUrl
+                            );
+                            navigation.navigate('Mint', {
+                                mint: { ...mintInfo, mintUrl },
+                                lookup: true
+                            });
+                        }}
+                        style={{ ...styles.row, marginTop: 15 }}
+                    >
+                        <Text
+                            style={{
+                                ...styles.leftCell,
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 16
+                            }}
+                        >
+                            {mintUrl}
+                        </Text>
+                        <Amount sats={balance} sensitive />
+                    </TouchableOpacity>
+                ))}
+            </View>
+        );
+    };
+
     renderSeparator = () => (
         <View
             style={{
@@ -441,25 +509,31 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                         }}
                         keyExtractor={(_, index) => `mint-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
+                        // An element, so that render() reads the balances
+                        // and this screen follows them
+                        ListFooterComponent={this.renderUnlistedMints()}
                         onEndReachedThreshold={50}
                     />
                 ) : (
-                    <Button
-                        title={localeString('views.Mints.noMints')}
-                        icon={{
-                            name: 'error-outline',
-                            size: 25,
-                            color: themeColor('text')
-                        }}
-                        buttonStyle={{
-                            backgroundColor: 'transparent',
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
-                        }}
-                    />
+                    <>
+                        <Button
+                            title={localeString('views.Mints.noMints')}
+                            icon={{
+                                name: 'error-outline',
+                                size: 25,
+                                color: themeColor('text')
+                            }}
+                            buttonStyle={{
+                                backgroundColor: 'transparent',
+                                borderRadius: 30
+                            }}
+                            titleStyle={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        />
+                        {this.renderUnlistedMints()}
+                    </>
                 )}
             </Screen>
         );

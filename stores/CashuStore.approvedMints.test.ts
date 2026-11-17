@@ -121,14 +121,12 @@ describe('CashuStore mintUrls holds only approved mints', () => {
 
     afterEach(() => jest.restoreAllMocks());
 
-    it('leaves out an orphan wallet that the boot cleanup fails to remove', async () => {
+    it('leaves out an on-demand wallet that is still in CDK after boot', async () => {
         stored.set('node1-cashu-mintUrls', JSON.stringify([APPROVED]));
         cdk.getMintUrls.mockResolvedValue([APPROVED, ON_DEMAND]);
-        cdk.removeMint.mockRejectedValue(new Error('removeMint failed'));
 
         await store.initializeWallets();
 
-        expect(cdk.removeMint).toHaveBeenCalledWith(ON_DEMAND);
         expect(store.mintUrls).toEqual([APPROVED]);
         expect(storedMintUrls()).toEqual([APPROVED]);
     });

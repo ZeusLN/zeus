@@ -36,7 +36,7 @@ interface MintGateState {
     recovery?: Promise<void>;
 }
 
-const normalizeKey = (mintUrl: string): string =>
+export const normalizeMintKey = (mintUrl: string): string =>
     mintUrl.trim().replace(/\/+$/, '').toLowerCase();
 
 export default class MintOperationGate {
@@ -45,7 +45,7 @@ export default class MintOperationGate {
     constructor(private readonly recoveryWaitMs: number = RECOVERY_WAIT_MS) {}
 
     private state(mintUrl: string): MintGateState {
-        const key = normalizeKey(mintUrl);
+        const key = normalizeMintKey(mintUrl);
         let state = this.mints.get(key);
         if (!state) {
             state = { operations: 0 };
@@ -80,6 +80,15 @@ export default class MintOperationGate {
         } finally {
             state.operations -= 1;
         }
+    }
+
+    /**
+     * Whether an operation is running on mintUrl or waiting there for
+     * recovery. Recovery can find one running: an operation that waited
+     * recoveryWaitMs starts without it.
+     */
+    hasOperations(mintUrl: string): boolean {
+        return (this.mints.get(normalizeMintKey(mintUrl))?.operations ?? 0) > 0;
     }
 
     /**

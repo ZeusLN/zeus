@@ -243,6 +243,13 @@ export default class CashuStore {
     private sagaRecoveryDone = new Set<string>();
     private sagaRecoveryAttempts = new Map<string, number>();
     private sagaRecoveryLastAttempt = new Map<string, number>();
+    // Mints CDK held when the wallet loaded that are not in mintUrls: added
+    // through ensureMintAdded to sweep a token (claimToken to self-custody,
+    // sweepOfflinePendingTokens), or re-added after the user removed them.
+    // recoverIncompleteSagas removes each from CDK once nothing is left on
+    // it. Removing one earlier strands its interrupted operations and hides
+    // its balance, because CDK only loads proofs and sagas for mints it has
+    private onDemandMintUrls: string[] = [];
     // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
     @observable public cdkInvoices: Array<CashuInvoice> = [];
     // Outgoing CDK transactions from the last loadTransactions
@@ -511,15 +518,38 @@ export default class CashuStore {
     private approvedCdkMintUrls = async (
         approvedMintUrls: string[]
     ): Promise<string[]> => {
-        const key = (url: string) =>
-            this.normalizeMintUrl(url).replace(
-                /^[a-z][a-z0-9+.-]*:\/\/[^/]*/i,
-                (schemeAndHost) => schemeAndHost.toLowerCase()
-            );
-        const approved = new Set(approvedMintUrls.map(key));
+        const approved = new Set(approvedMintUrls.map(this.mintUrlKey));
         const cdkMintUrls: string[] = (await CashuDevKit.getMintUrls()) || [];
-        return cdkMintUrls.filter((url) => approved.has(key(url)));
+        return cdkMintUrls.filter((url) => approved.has(this.mintUrlKey(url)));
     };
+
+    private mintUrlKey = (url: string): string =>
+        this.normalizeMintUrl(url).replace(
+            /^[a-z][a-z0-9+.-]*:\/\/[^/]*/i,
+            (schemeAndHost) => schemeAndHost.toLowerCase()
+        );
+
+    private isApprovedMint = (mintUrl: string): boolean => {
+        const key = this.mintUrlKey(mintUrl);
+        return this.mintUrls.some((url) => this.mintUrlKey(url) === key);
+    };
+
+    /**
+     * Balances CDK holds at mints that are not in mintUrls, which no send
+     * or pay flow draws from. They come from a token swept to self-custody
+     * whose melt did not complete. totalBalanceSats includes them.
+     */
+    public get unlistedMintBalances(): {
+        mintUrl: string;
+        balance: number;
+    }[] {
+        return Object.entries(this.mintBalances)
+            .filter(
+                ([mintUrl, balance]) =>
+                    balance > 0 && !this.isApprovedMint(mintUrl)
+            )
+            .map(([mintUrl, balance]) => ({ mintUrl, balance }));
+    }
 
     /**
      * Ensure a mint is added to CDK, using cache to avoid redundant calls.
@@ -2152,6 +2182,7 @@ export default class CashuStore {
         this.sagaRecoveryDone.clear();
         this.sagaRecoveryAttempts.clear();
         this.sagaRecoveryLastAttempt.clear();
+        this.onDemandMintUrls = [];
         this.seedVersion = undefined;
         this.seedPhrase = undefined;
         this.seed = undefined;
@@ -3012,6 +3043,12 @@ export default class CashuStore {
         this.errorAddingMint = false;
         this.error = false;
         this.error_msg = undefined;
+        // The user is approving the mint: recovery must not remove it from
+        // CDK while it is being added
+        const addedKey = this.mintUrlKey(mintUrl);
+        this.onDemandMintUrls = this.onDemandMintUrls.filter(
+            (url) => this.mintUrlKey(url) !== addedKey
+        );
 
         try {
             // Ensure CDK is initialized
@@ -3668,6 +3705,11 @@ export default class CashuStore {
      * that an app kill or crash left unfinished, once per mint each time the
      * wallet loads. Until this runs, their proofs stay reserved and their
      * transactions stay pending.
+     *
+     * Covers the mints in onDemandMintUrls too, and removes each of those
+     * from CDK once its operations are settled and it holds no balance. One
+     * that is not settled stays in CDK and is tried again, at the latest on
+     * the next load. One that holds a balance stays for good.
      */
     public recoverIncompleteSagas = async () => {
         if (!this.cdkInitialized || this.isOffline) return;
@@ -3676,7 +3718,9 @@ export default class CashuStore {
         // can use the same mint, so a run that outlives it records nothing
         const session = this.walletSession;
         const now = Date.now();
-        const mints = this.mintUrls.filter((url) => {
+        // addMint takes a mint out of this list before it joins mintUrls
+        const onDemand = this.onDemandMintUrls;
+        const mints = [...this.mintUrls, ...onDemand].filter((url) => {
             const key = this.normalizeMintUrl(url);
             const lastAttempt = this.sagaRecoveryLastAttempt.get(key);
             return (
@@ -3697,10 +3741,37 @@ export default class CashuStore {
             this.sagaRecoveryLastAttempt.set(key, Date.now());
         };
 
+        let removedMint = false;
         const reports = await Promise.all(
             mints.map(async (mintUrl) => {
                 const key = this.normalizeMintUrl(mintUrl);
                 try {
+                    if (onDemand.includes(mintUrl)) {
+                        // The user can add the mint, or the wallet can
+                        // change, while recovery waits on the mint
+                        const result = await CashuDevKit.recoverOnDemandMint(
+                            mintUrl,
+                            () =>
+                                session === this.walletSession &&
+                                this.onDemandMintUrls.includes(mintUrl) &&
+                                !this.isApprovedMint(mintUrl)
+                        );
+                        if (session !== this.walletSession) return null;
+                        if (!result) return null;
+
+                        countAttempt(key);
+                        if (result.removed) {
+                            removedMint = true;
+                            this.addedMintsCache.delete(key);
+                        }
+                        // Left in CDK with a balance. Anything else that
+                        // kept the mint is tried again
+                        if (result.removed || (result.balance ?? 0) > 0) {
+                            this.sagaRecoveryDone.add(key);
+                        }
+                        return result.report;
+                    }
+
                     const report = await CashuDevKit.recoverIncompleteSagas(
                         mintUrl
                     );
@@ -3729,6 +3800,7 @@ export default class CashuStore {
         );
 
         if (
+            removedMint ||
             reports.some(
                 (report) =>
                     report && (report.recovered > 0 || report.compensated > 0)
@@ -4197,20 +4269,14 @@ export default class CashuStore {
                 const localNorm = new Set(
                     localMintUrls.map((u: string) => this.normalizeMintUrl(u))
                 );
-                let cdkMintUrls = await CashuDevKit.getMintUrls();
-                for (const cdkKey of cdkMintUrls) {
-                    if (!localNorm.has(this.normalizeMintUrl(cdkKey))) {
-                        try {
-                            await CashuDevKit.removeMint(cdkKey);
-                        } catch (e) {
-                            console.warn(
-                                `CDK: Failed to remove orphan mint ${cdkKey}:`,
-                                e
-                            );
-                        }
-                    }
-                }
-                cdkMintUrls = await CashuDevKit.getMintUrls();
+                const cdkMintUrls: string[] =
+                    (await CashuDevKit.getMintUrls()) || [];
+                // Not removed here: recoverIncompleteSagas removes each
+                // once its interrupted operations are settled and it holds
+                // no balance
+                this.onDemandMintUrls = cdkMintUrls.filter(
+                    (cdkKey) => !localNorm.has(this.normalizeMintUrl(cdkKey))
+                );
 
                 for (const mintUrl of localMintUrls) {
                     const inCdk = cdkMintUrls.some(
@@ -4285,8 +4351,8 @@ export default class CashuStore {
                 }
 
                 // Get mint URLs from CDK (source of truth) and populate
-                // cache. A wallet the orphan cleanup above failed to remove
-                // stays out of the list and is retried on the next boot
+                // cache. The on-demand mints still in CDK stay out of the
+                // list
                 const cdkMints = await this.approvedCdkMintUrls(localMintUrls);
                 runInAction(() => {
                     this.mintUrls = cdkMints;

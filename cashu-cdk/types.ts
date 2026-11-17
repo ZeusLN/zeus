@@ -188,6 +188,13 @@ export interface CDKRecoveryReport {
     failed: number;
 }
 
+export interface CDKOnDemandMintRecovery {
+    report: CDKRecoveryReport;
+    removed: boolean;
+    // Unset when the balance was not read
+    balance?: number;
+}
+
 export interface CDKReceiveOptions {
     p2pk_signing_keys?: string[]; // hex-encoded secret keys
     preimages?: string[];

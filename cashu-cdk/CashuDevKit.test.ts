@@ -2,6 +2,8 @@ jest.mock('react-native', () => {
     const methods = [
         'initializeWallet',
         'recoverIncompleteSagas',
+        'getBalances',
+        'removeMint',
         'melt',
         'meltPartial',
         'checkMeltQuote',
@@ -235,4 +237,191 @@ describe('CashuDevKit saga recovery', () => {
         pending.resolve('{}');
         await melting;
     });
+});
+
+describe('CashuDevKit.recoverOnDemandMint', () => {
+    let cdk: CashuDevKit;
+    const SETTLED = { recovered: 1, compensated: 0, skipped: 0, failed: 0 };
+
+    beforeEach(() => {
+        Object.values(mockNative).forEach((fn) => fn.mockReset());
+        mockNative.recoverIncompleteSagas.mockResolvedValue(
+            JSON.stringify(SETTLED)
+        );
+        mockNative.getBalances.mockResolvedValue(JSON.stringify({ [MINT]: 0 }));
+        mockNative.removeMint.mockResolvedValue(null);
+        cdk = new CashuDevKit();
+    });
+
+    it('removes a mint whose sagas are settled and that holds no balance', async () => {
+        const order: string[] = [];
+        mockNative.recoverIncompleteSagas.mockImplementation(async () => {
+            order.push('recover');
+            return JSON.stringify(SETTLED);
+        });
+        mockNative.getBalances.mockImplementation(async () => {
+            order.push('balances');
+            return JSON.stringify({ [MINT]: 0, 'https://other.mint': 21 });
+        });
+        mockNative.removeMint.mockImplementation(async () => {
+            order.push('remove');
+        });
+
+        await expect(cdk.recoverOnDemandMint(MINT)).resolves.toEqual({
+            report: SETTLED,
+            removed: true,
+            balance: 0
+        });
+        expect(order).toEqual(['recover', 'balances', 'remove']);
+        expect(mockNative.recoverIncompleteSagas).toHaveBeenCalledWith(MINT);
+        expect(mockNative.removeMint).toHaveBeenCalledWith(MINT);
+    });
+
+    it.each([
+        ['skipped', { ...SETTLED, skipped: 1 }],
+        ['failed', { ...SETTLED, failed: 1 }]
+    ])('keeps a mint with a %s saga', async (_name, report) => {
+        mockNative.recoverIncompleteSagas.mockResolvedValue(
+            JSON.stringify(report)
+        );
+
+        await expect(cdk.recoverOnDemandMint(MINT)).resolves.toEqual({
+            report,
+            removed: false
+        });
+        expect(mockNative.removeMint).not.toHaveBeenCalled();
+    });
+
+    it('keeps a mint that holds a balance', async () => {
+        mockNative.getBalances.mockResolvedValue(
+            JSON.stringify({ [MINT]: '100' })
+        );
+
+        await expect(cdk.recoverOnDemandMint(MINT)).resolves.toEqual({
+            report: SETTLED,
+            removed: false,
+            balance: 100
+        });
+        expect(mockNative.removeMint).not.toHaveBeenCalled();
+    });
+
+    it("finds the balance under CDK's spelling of the mint", async () => {
+        mockNative.getBalances.mockResolvedValue(
+            JSON.stringify({ 'https://mint.example/': 7 })
+        );
+
+        await expect(
+            cdk.recoverOnDemandMint('HTTPS://Mint.Example')
+        ).resolves.toMatchObject({ removed: false, balance: 7 });
+        expect(mockNative.removeMint).not.toHaveBeenCalled();
+    });
+
+    it('keeps a mint CDK reports no balance for', async () => {
+        mockNative.getBalances.mockResolvedValue(
+            JSON.stringify({ 'https://other.mint': 0 })
+        );
+
+        await expect(cdk.recoverOnDemandMint(MINT)).resolves.toEqual({
+            report: SETTLED,
+            removed: false
+        });
+        expect(mockNative.removeMint).not.toHaveBeenCalled();
+    });
+
+    it('keeps a mint whose balance is not a number', async () => {
+        mockNative.getBalances.mockResolvedValue(
+            JSON.stringify({ [MINT]: 'unknown' })
+        );
+
+        await expect(cdk.recoverOnDemandMint(MINT)).resolves.toMatchObject({
+            removed: false
+        });
+        expect(mockNative.removeMint).not.toHaveBeenCalled();
+    });
+
+    it('asks the caller right before removing', async () => {
+        const order: string[] = [];
+        mockNative.getBalances.mockImplementation(async () => {
+            order.push('balances');
+            return JSON.stringify({ [MINT]: 0 });
+        });
+        const canRemove = jest.fn(() => {
+            order.push('canRemove');
+            return false;
+        });
+
+        await expect(cdk.recoverOnDemandMint(MINT, canRemove)).resolves.toEqual(
+            { report: SETTLED, removed: false, balance: 0 }
+        );
+        expect(order).toEqual(['balances', 'canRemove']);
+        expect(mockNative.removeMint).not.toHaveBeenCalled();
+    });
+
+    it('keeps a mint an operation started on while it recovered', async () => {
+        const recovery = deferred<string>();
+        mockNative.recoverIncompleteSagas.mockReturnValue(recovery.promise);
+        mockNative.melt.mockResolvedValue('{"state":"Paid"}');
+
+        const recovering = cdk.recoverOnDemandMint(MINT);
+        const melting = cdk.melt(MINT, 'q1');
+        await flush();
+
+        recovery.resolve(JSON.stringify(SETTLED));
+        await expect(recovering).resolves.toEqual({
+            report: SETTLED,
+            removed: false,
+            balance: 0
+        });
+        expect(mockNative.removeMint).not.toHaveBeenCalled();
+        await melting;
+    });
+
+    it('does not run while an operation is in flight on the mint', async () => {
+        const pending = deferred<string>();
+        mockNative.melt.mockReturnValue(pending.promise);
+        const melting = cdk.melt(MINT, 'q1');
+        await flush();
+
+        await expect(cdk.recoverOnDemandMint(MINT)).resolves.toBeNull();
+        expect(mockNative.recoverIncompleteSagas).not.toHaveBeenCalled();
+        expect(mockNative.removeMint).not.toHaveBeenCalled();
+
+        pending.resolve('{}');
+        await melting;
+    });
+
+    it('holds an operation on the mint until the removal finishes', async () => {
+        const removal = deferred<null>();
+        mockNative.removeMint.mockReturnValue(removal.promise);
+        mockNative.melt.mockResolvedValue('{"state":"Paid"}');
+
+        const recovering = cdk.recoverOnDemandMint(MINT);
+        await flush();
+        expect(mockNative.removeMint).toHaveBeenCalled();
+
+        const melting = cdk.melt(MINT, 'q1');
+        await flush();
+        expect(mockNative.melt).not.toHaveBeenCalled();
+
+        removal.resolve(null);
+        await expect(recovering).resolves.toMatchObject({ removed: true });
+        await melting;
+        expect(mockNative.melt).toHaveBeenCalled();
+    });
+
+    it.each(['recoverIncompleteSagas', 'getBalances', 'removeMint'])(
+        'maps an error from %s and frees the mint',
+        async (method) => {
+            mockNative[method].mockRejectedValueOnce(
+                new Error('database is locked')
+            );
+
+            await expect(cdk.recoverOnDemandMint(MINT)).rejects.toMatchObject({
+                type: 'Database'
+            });
+            await expect(cdk.recoverOnDemandMint(MINT)).resolves.toMatchObject({
+                removed: true
+            });
+        }
+    );
 });
