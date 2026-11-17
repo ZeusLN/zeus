@@ -80,6 +80,10 @@ export const TEST_IDS = {
         searchInput: 'selectCurrency.searchInput',
         option: (currency: string) => `selectCurrency.option.${currency}`
     },
+    amountKeypad: {
+        amount: 'amountKeypad.amount',
+        confirmButton: 'amountKeypad.confirmButton'
+    },
     pinPad: {
         key: (digit: string) => `pinPad.key.${digit}`,
         decimal: 'pinPad.decimal',
@@ -127,7 +131,27 @@ export const TEST_IDS = {
         privacyButton: 'settings.privacyButton',
         securityButton: 'settings.securityButton',
         currencyButton: 'settings.currencyButton',
-        displayButton: 'settings.displayButton'
+        displayButton: 'settings.displayButton',
+        paymentsButton: 'settings.paymentsButton',
+        invoicesButton: 'settings.invoicesButton'
+    },
+    payments: {
+        feeLimitInput: 'payments.feeLimitInput',
+        feePercentageInput: 'payments.feePercentageInput',
+        slideToPayThresholdInput: 'payments.slideToPayThresholdInput',
+        timeoutInput: 'payments.timeoutInput',
+        mempoolRatesSwitch: 'payments.mempoolRatesSwitch',
+        preferredMempoolRateDropdown: 'payments.preferredMempoolRateDropdown'
+    },
+    invoices: {
+        memoLabel: 'invoices.memoLabel',
+        memoInput: 'invoices.memoInput',
+        receiverNameLabel: 'invoices.receiverNameLabel',
+        receiverNameInput: 'invoices.receiverNameInput',
+        defaultInvoiceTypeLabel: 'invoices.defaultInvoiceTypeLabel',
+        defaultInvoiceTypeDropdown: 'invoices.defaultInvoiceTypeDropdown',
+        expiryInput: 'invoices.expiryInput',
+        timePeriodDropdown: 'invoices.timePeriodDropdown'
     },
     privacy: {
         blockExplorerDropdown: 'privacy.blockExplorerDropdown',

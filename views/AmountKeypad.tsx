@@ -30,6 +30,7 @@ import {
 } from '../utils/KeypadUtils';
 import { getDecimalPlaceholder } from '../utils/UnitsUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { TEST_IDS } from '../utils/TestIds';
 
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 
@@ -268,6 +269,7 @@ export default class AmountKeypad extends React.Component<
                             fontSize={fontSize}
                             forceUnit={forceUnit}
                             showConversion
+                            testID={TEST_IDS.amountKeypad.amount}
                         >
                             {!hideUnitChangeButton && !forceUnit && (
                                 <View style={styles.unitToggleContainer}>
@@ -299,6 +301,7 @@ export default class AmountKeypad extends React.Component<
                             title={localeString('general.confirm')}
                             onPress={this.handleConfirm}
                             containerStyle={styles.doneButton}
+                            testID={TEST_IDS.amountKeypad.confirmButton}
                         />
                     </View>
                 </View>

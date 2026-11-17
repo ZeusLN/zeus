@@ -22,6 +22,7 @@ import SettingsStore, {
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 import { TimePeriod, expirySecondsFromInput } from '../../utils/ExpiryUtils';
 
@@ -194,6 +195,7 @@ export default class InvoicesSettings extends React.Component<
                             infoModalText={localeString(
                                 'views.Settings.Invoices.memoExplainer'
                             )}
+                            testID={TEST_IDS.invoices.memoLabel}
                         >
                             {localeString('views.Receive.memo')}
                         </Text>
@@ -202,6 +204,7 @@ export default class InvoicesSettings extends React.Component<
                                 'views.Receive.memoPlaceholder'
                             )}
                             value={memo}
+                            testID={TEST_IDS.invoices.memoInput}
                             onChangeText={(text: string) => {
                                 this.setState({ memo: text });
                                 updateSettingsGroupDebounced('invoices', {
@@ -220,12 +223,14 @@ export default class InvoicesSettings extends React.Component<
                             infoModalText={localeString(
                                 'views.Settings.Invoices.receiverNameExplainer'
                             )}
+                            testID={TEST_IDS.invoices.receiverNameLabel}
                         >
                             {localeString('views.Invoice.receiverName')}
                         </Text>
                         <TextInput
                             placeholder="Satoshi"
                             value={receiverName}
+                            testID={TEST_IDS.invoices.receiverNameInput}
                             onChangeText={(text: string) => {
                                 this.setState({ receiverName: text });
                                 updateSettingsGroupDebounced('invoices', {
@@ -246,6 +251,9 @@ export default class InvoicesSettings extends React.Component<
                                 infoModalText={localeString(
                                     'views.Settings.Invoices.defaultInvoiceType.explainer'
                                 )}
+                                testID={
+                                    TEST_IDS.invoices.defaultInvoiceTypeLabel
+                                }
                             >
                                 {localeString(
                                     'views.Settings.Invoices.defaultInvoiceType'
@@ -254,6 +262,9 @@ export default class InvoicesSettings extends React.Component<
                             <DropdownSetting
                                 selectedValue={defaultInvoiceType}
                                 values={DEFAULT_INVOICE_TYPE_KEYS}
+                                testID={
+                                    TEST_IDS.invoices.defaultInvoiceTypeDropdown
+                                }
                                 onValueChange={async (value: string) => {
                                     this.setState({
                                         defaultInvoiceType:
@@ -283,6 +294,7 @@ export default class InvoicesSettings extends React.Component<
                                 <TextInput
                                     keyboardType="numeric"
                                     value={expiry}
+                                    testID={TEST_IDS.invoices.expiryInput}
                                     style={{
                                         width: '58%'
                                     }}
@@ -321,6 +333,9 @@ export default class InvoicesSettings extends React.Component<
                                     <DropdownSetting
                                         selectedValue={timePeriod}
                                         values={TIME_PERIOD_KEYS}
+                                        testID={
+                                            TEST_IDS.invoices.timePeriodDropdown
+                                        }
                                         onValueChange={async (
                                             value: string
                                         ) => {

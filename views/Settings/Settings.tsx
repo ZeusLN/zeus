@@ -248,6 +248,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 onPress={() =>
                                     navigation.navigate('PaymentsSettings')
                                 }
+                                testID={TEST_IDS.settings.paymentsButton}
                             >
                                 <View style={styles.icon}>
                                     <SendIcon
@@ -276,6 +277,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     onPress={() =>
                                         navigation.navigate('InvoicesSettings')
                                     }
+                                    testID={TEST_IDS.settings.invoicesButton}
                                 >
                                     <View style={styles.icon}>
                                         <ReceiveIcon
