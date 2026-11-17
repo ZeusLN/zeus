@@ -36,6 +36,7 @@ import { v4 as uuidv4 } from 'uuid';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { mayHaveBeenSent } from '../utils/OnchainSendUtils';
 import NostrConnectUtils, {
     DEFAULT_INVOICE_EXPIRY_SECONDS,
     Nip47ErrorCode,
@@ -168,6 +169,10 @@ interface LightningPaymentState {
     status: string | number | null;
     isIncomplete: boolean | null;
     error: boolean;
+    // set when the send request was rejected: whether it may still have
+    // reached the node (connection lost, a proxy's error), as opposed to
+    // the node's own refusal, which shows that it sent nothing
+    mayHaveBeenSent?: boolean;
     error_msg: string | null;
     payment_error: string | null;
     payment_hash: string | null;
@@ -3734,7 +3739,8 @@ export default class NostrWalletConnectStore {
                 error
             );
         }
-        const paymentHash = paymentState.payment_hash;
+        // a rejected send request leaves no hash in the payment state
+        const paymentHash = paymentState.payment_hash || decodedPaymentHash;
         const inTransitResult =
             NostrConnectUtils.resolveLightningPaymentInTransit({
                 invoice: request.invoice,
@@ -4595,6 +4601,9 @@ export default class NostrWalletConnectStore {
         amount: string | undefined,
         feeLimitSats: number
     ): Promise<LightningPaymentState> {
+        // the backend the payment is sent to; the wallet may be switched
+        // while the send is out
+        const { implementation } = this.settingsStore;
         const pending: LightningPaymentState = {
             loading: true,
             status: null,
@@ -4632,6 +4641,7 @@ export default class NostrWalletConnectStore {
                     ...pending,
                     loading: false,
                     error: true,
+                    mayHaveBeenSent: mayHaveBeenSent(err, implementation),
                     error_msg:
                         errorToUserFriendly(err) ||
                         localeString('error.sendingPayment')

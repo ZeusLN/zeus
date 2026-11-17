@@ -3,6 +3,9 @@ jest.mock('../stores/Stores');
 jest.mock('../utils/LocaleUtils');
 
 jest.mock('react-native-blob-util', () => ({}));
+jest.mock('react-native-randombytes', () => ({
+    randomBytes: (n: number) => require('crypto').randomBytes(n)
+}));
 // CashuStore is loaded for the Cashu make_invoice tests; these keep its
 // native and settings imports out of the test
 jest.mock('./SettingsStore', () => ({
@@ -109,6 +112,11 @@ import Payment from '../models/Payment';
 import CashuPayment from '../models/CashuPayment';
 import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
+import {
+    markHttpStatus,
+    markJsonRpcCode,
+    markRestErrorResponse
+} from '../utils/PaymentLookupUtils';
 import InvoicesStore from './InvoicesStore';
 import CashuStore from './CashuStore';
 import NostrWalletConnectStore, {
@@ -6022,6 +6030,190 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
             expect(connection.totalSpendSats).toBe(0);
         }
     );
+
+    it('holds the budget when the send request is rejected but the node lists the payment in flight', async () => {
+        // listed by hash only; the rejected request left no hash in the state
+        const inFlight = new Payment({
+            payment_hash: paymentHash,
+            value_sat: 5000,
+            status: 'IN_FLIGHT'
+        });
+        const { store, transactionsStore } = buildHandlerStore([inFlight]);
+        transactionsStore.sendPaymentSilently.mockRejectedValue(
+            new Error('unexpected end of stream')
+        );
+        const connection = addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 5000
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            () => true
+        );
+
+        expect(transactionsStore.sendPaymentSilently).toHaveBeenCalled();
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe('');
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(5000);
+        expect(connection.remainingBudget).toBe(0);
+    });
+
+    it('holds the budget when a proxy answers the send with its own error and the node lists the payment in flight', async () => {
+        const inFlight = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            value_sat: 5000,
+            status: 'IN_FLIGHT'
+        });
+        const { store, transactionsStore } = buildHandlerStore([inFlight]);
+        // no gRPC code in the body: not LND's answer
+        transactionsStore.sendPaymentSilently.mockRejectedValue(
+            markRestErrorResponse(new Error('Bad Gateway'), undefined, 502)
+        );
+        const connection = addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 100000
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            () => true
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe('');
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(6000);
+    });
+
+    // The invoice is in flight from the payment screen or another
+    // connection. LND refuses a second send for the hash with AlreadyExists,
+    // so this request sent nothing and the listed payment is not its own.
+    it('fails the request when the node refuses the send as in transition', async () => {
+        const inFlight = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            value_sat: 5000,
+            status: 'IN_FLIGHT'
+        });
+        const { store, transactionsStore } = buildHandlerStore([inFlight]);
+        transactionsStore.sendPaymentSilently.mockRejectedValue(
+            markRestErrorResponse(new Error('payment is in transition'), 6, 409)
+        );
+        const connection = addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 100000
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            () => true
+        );
+
+        expect(response.result).toBeUndefined();
+        expect(response.error?.code).toBe(Nip47ErrorCode.FAILED_TO_PAY_INVOICE);
+        expect(connection.activity).toHaveLength(1);
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.pendingSpendSats).toBe(0);
+        expect(connection.totalSpendSats).toBe(0);
+    });
+
+    // CLN answers a failed pay with a 500 and a JSON-RPC code, which only
+    // reads as the node's answer when the backend is known to be CLN
+    it('fails the request when Core Lightning answers the send with its own error', async () => {
+        const inFlight = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            value_sat: 5000,
+            status: 'IN_FLIGHT'
+        });
+        const { store, transactionsStore, settingsStore } = buildHandlerStore([
+            inFlight
+        ]);
+        settingsStore.implementation = 'cln-rest';
+        transactionsStore.sendPaymentSilently.mockRejectedValue(
+            markJsonRpcCode(markHttpStatus(new Error('pay failed'), 500), {
+                code: -1
+            })
+        );
+        const connection = addConnection(store, {
+            implementation: 'cln-rest',
+            permissions: ['pay_invoice'],
+            maxAmountSats: 100000
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            () => true
+        );
+
+        expect(response.error?.code).toBe(Nip47ErrorCode.FAILED_TO_PAY_INVOICE);
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.pendingSpendSats).toBe(0);
+    });
+
+    it('classifies a rejected send by the backend it was sent to', async () => {
+        const { store, transactionsStore, settingsStore } = buildHandlerStore();
+        // the wallet is switched while the send is out. A rejection on
+        // embedded LND is always the node's answer; on LND REST a dropped
+        // connection is not.
+        transactionsStore.sendPaymentSilently.mockImplementation(async () => {
+            settingsStore.implementation = 'embedded-lnd';
+            throw new Error('unexpected end of stream');
+        });
+
+        const paymentState = await (store as any).sendLightningPayment(
+            invoice,
+            undefined,
+            100
+        );
+
+        expect(paymentState.error).toBe(true);
+        expect(paymentState.mayHaveBeenSent).toBe(true);
+    });
+
+    it('looks the payment up by the hash in the payment state before the invoice hash', async () => {
+        // the node reports and lists the payment under a hash other than
+        // the one the invoice decodes to
+        const stateHash = hex64('9');
+        const settled = new Payment({
+            payment_hash: stateHash,
+            status: 'SUCCEEDED',
+            value_sat: 5000,
+            fee_sat: '10',
+            payment_preimage: hex64('d')
+        });
+        const { store, transactionsStore } = buildHandlerStore([settled]);
+        transactionsStore.getPaymentOutcome.mockReturnValue({
+            payment_hash: stateHash,
+            payment_error: 'views.SendingLightning.paymentTimedOut',
+            status: 'FAILED',
+            isIncomplete: true
+        });
+        const connection = addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 100000
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            () => true
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe(hex64('d'));
+        expect(connection.activity[0].status).toBe('success');
+        expect(connection.activity[0].paymentHash).toBe(stateHash);
+        expect(connection.totalSpendSats).toBe(5010);
+        expect(connection.pendingSpendSats).toBe(0);
+    });
 });
 
 // Backend calls go to whichever wallet is active when they are made, so a

@@ -1382,6 +1382,9 @@ export default class NostrConnectUtils {
             status: string | number | null;
             isIncomplete: boolean | null;
             error: boolean;
+            // the send request was rejected without the node's own answer,
+            // so it may have reached the node
+            mayHaveBeenSent?: boolean;
             payment_error: string | null;
             loading: boolean;
         };
@@ -1413,7 +1416,17 @@ export default class NostrConnectUtils {
                 paymentState.payment_error
             ) || paymentState.loading;
 
-        if (timedOutOrStillLoading || paymentState.isIncomplete) {
+        // A send request rejected without the node's own answer (connection
+        // dropped, response closed by a proxy) says nothing about an HTLC
+        // that is already out either, so the node's list decides there too.
+        // After the node's own refusal (e.g. LND's "payment is in
+        // transition") this request sent nothing, and a payment listed for
+        // the invoice was started by the wallet or by another connection.
+        if (
+            timedOutOrStillLoading ||
+            paymentState.isIncomplete ||
+            paymentState.mayHaveBeenSent
+        ) {
             const listed = NostrConnectUtils.findPaymentForInvoice(
                 invoice,
                 payments,

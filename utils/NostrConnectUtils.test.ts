@@ -58,6 +58,7 @@ type PaymentStateSnapshot = {
     status: string | number | null;
     isIncomplete: boolean | null;
     error: boolean;
+    mayHaveBeenSent?: boolean;
     payment_error: string | null;
     loading: boolean;
 };
@@ -190,6 +191,26 @@ const storeState = {
         isIncomplete: true,
         error: true,
         payment_error: 'route not found',
+        loading: false
+    }),
+    // the send request was rejected without the node's answer (e.g. a proxy
+    // closed the idle response), so it may have reached the node
+    requestRejected: (): PaymentStateSnapshot => ({
+        status: null,
+        isIncomplete: null,
+        error: true,
+        mayHaveBeenSent: true,
+        payment_error: null,
+        loading: false
+    }),
+    // the node itself refused the send (e.g. LND's "payment is in
+    // transition"), so this request sent nothing
+    refusedByNode: (): PaymentStateSnapshot => ({
+        status: null,
+        isIncomplete: null,
+        error: true,
+        mayHaveBeenSent: false,
+        payment_error: null,
         loading: false
     })
 };
@@ -1138,6 +1159,67 @@ describe('NostrConnectUtils', () => {
 
                     expect(result.inTransit).toBe(false);
                     expect(result.payment).toBe(failed);
+                });
+            });
+
+            describe('when the send request was rejected', () => {
+                it('holds budget when the node still lists the payment in flight', () => {
+                    const inFlight = paymentFixtures.inFlightStatus();
+                    const result = resolve({
+                        payments: [inFlight],
+                        paymentState: storeState.requestRejected()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: true,
+                        payment: inFlight
+                    });
+                });
+
+                it('returns settled payment when the list already shows success', () => {
+                    const settled = paymentFixtures.settled();
+                    const result = resolve({
+                        payments: [settled],
+                        paymentState: storeState.requestRejected()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: false,
+                        payment: settled
+                    });
+                });
+
+                it('returns not inTransit when the listed payment failed', () => {
+                    const failed = paymentFixtures.failed();
+                    const result = resolve({
+                        payments: [failed],
+                        paymentState: storeState.requestRejected()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: false,
+                        payment: failed
+                    });
+                });
+
+                it('returns not inTransit when the node never listed the payment', () => {
+                    const result = resolve({
+                        payments: [paymentFixtures.otherInvoiceInFlight()],
+                        paymentState: storeState.requestRejected()
+                    });
+
+                    expect(result).toEqual({ inTransit: false });
+                });
+            });
+
+            describe('when the node refused the send', () => {
+                it('does not hold budget for a payment the node lists in flight', () => {
+                    const result = resolve({
+                        payments: [paymentFixtures.inFlightStatus()],
+                        paymentState: storeState.refusedByNode()
+                    });
+
+                    expect(result).toEqual({ inTransit: false });
                 });
             });
 
