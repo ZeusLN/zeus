@@ -483,7 +483,11 @@ describe('LightningAddressStore', () => {
                 throw new TypeError('post failed');
             });
             const store = setup({
-                checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: true })
+                checkInvoicePaid: jest.fn().mockResolvedValue({
+                    isPaid: true,
+                    minted: true,
+                    amtSat: 21
+                })
             });
             mockRedeemResponse(200, { success: true });
 
