@@ -16,7 +16,12 @@ import Base64Utils from '../utils/Base64Utils';
 import { getClientInfo } from '../utils/ClientInfoUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { verifyWrappedInvoice } from '../utils/LspUtils';
+import {
+    OrderTerms,
+    OrderTermsCheck,
+    verifyOrderTerms,
+    verifyWrappedInvoice
+} from '../utils/LspUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 import Storage from '../storage';
@@ -77,6 +82,9 @@ export default class LSPStore {
     @observable public getInfoData: any = {};
     @observable public createOrderResponse: any = {};
     @observable public getOrderResponse: any = {};
+    // terms sent with the in-flight custom-message create_order, checked
+    // against the LSP's reply in handleCustomMessages
+    private createOrderRequestTerms: OrderTerms = {};
     // LSPS7
     @observable public getExtendableChannelsId: string;
     @observable public getExtendableChannelsData: any = [];
@@ -282,6 +290,7 @@ export default class LSPStore {
         delete this.customMessageRequestPeers[this.getOrderId];
         this.getInfoId = '';
         this.createOrderId = '';
+        this.createOrderRequestTerms = {};
         this.createOrderResponse = {};
         this.getInfoData = {};
         this.loadingLSPS1 = false;
@@ -995,8 +1004,17 @@ export default class LSPStore {
                     ? errorToUserFriendly(data?.error?.data?.message)
                     : '';
             } else {
-                this.createOrderResponse = data;
-                this.clearTimeoutError(data.id);
+                const check = verifyOrderTerms(
+                    this.createOrderRequestTerms,
+                    data
+                );
+                if (check.valid) {
+                    this.createOrderResponse = data;
+                    this.clearTimeoutError(data.id);
+                } else {
+                    this.error = true;
+                    this.error_msg = this.orderTermsMismatchMessage(check);
+                }
             }
             this.loadingLSPS1 = false;
             this.createOrderResponseResolver?.();
@@ -1285,10 +1303,16 @@ export default class LSPStore {
         });
     };
 
+    private orderTermsMismatchMessage = (check: OrderTermsCheck) =>
+        localeString('stores.LSPStore.orderTermsMismatch').replace(
+            '{{fields}}',
+            check.mismatches.join(', ')
+        );
+
     @action
     public lsps1CreateOrderREST = (state: any) => {
         this.loadingLSPS1 = true;
-        const data = JSON.stringify({
+        const terms = {
             lsp_balance_sat: state.lspBalanceSat.toString(),
             client_balance_sat: state.clientBalanceSat.toString(),
             required_channel_confirmations: parseInt(
@@ -1298,9 +1322,12 @@ export default class LSPStore {
                 state.confirmsWithinBlocks
             ),
             channel_expiry_blocks: parseInt(state.channelExpiryBlocks),
+            announce_channel: state.announceChannel
+        };
+        const data = JSON.stringify({
+            ...terms,
             token: state.token,
             refund_onchain_address: state.refundOnchainAddress,
-            announce_channel: state.announceChannel,
             public_key: this.nodeInfoStore.nodeInfo.nodeId,
             client_info: this.getClientInfo()
         });
@@ -1325,8 +1352,15 @@ export default class LSPStore {
                         this.loadingLSPS1 = false;
                     });
                 } else {
+                    const check = verifyOrderTerms(terms, responseData);
                     runInAction(() => {
-                        this.createOrderResponse = responseData;
+                        if (check.valid) {
+                            this.createOrderResponse = responseData;
+                        } else {
+                            this.error = true;
+                            this.error_msg =
+                                this.orderTermsMismatchMessage(check);
+                        }
                         this.loadingLSPS1 = false;
                         console.log('Response received:', responseData);
                     });
@@ -1362,6 +1396,19 @@ export default class LSPStore {
         );
         const requestId = this.createOrderId;
         const method = 'lsps1.create_order';
+        const terms = {
+            lsp_balance_sat: state.lspBalanceSat.toString(),
+            client_balance_sat: state.clientBalanceSat.toString(),
+            required_channel_confirmations: parseInt(
+                state.requiredChannelConfirmations
+            ),
+            funding_confirms_within_blocks: parseInt(
+                state.confirmsWithinBlocks
+            ),
+            channel_expiry_blocks: state.channelExpiryBlocks,
+            announce_channel: state.announceChannel
+        };
+        this.createOrderRequestTerms = terms;
 
         return new Promise<void>((resolve) => {
             let settled = false;
@@ -1398,18 +1445,9 @@ export default class LSPStore {
                     jsonrpc: JSON_RPC_VERSION,
                     method,
                     params: {
-                        lsp_balance_sat: state.lspBalanceSat.toString(),
-                        client_balance_sat: state.clientBalanceSat.toString(),
-                        required_channel_confirmations: parseInt(
-                            state.requiredChannelConfirmations
-                        ),
-                        funding_confirms_within_blocks: parseInt(
-                            state.confirmsWithinBlocks
-                        ),
-                        channel_expiry_blocks: state.channelExpiryBlocks,
+                        ...terms,
                         token: state.token,
                         refund_onchain_address: state.refundOnchainAddress,
-                        announce_channel: state.announceChannel,
                         client_info: this.getClientInfo()
                     },
                     id: this.createOrderId
@@ -1563,12 +1601,34 @@ export default class LSPStore {
         this.error_msg = '';
 
         try {
-            const response = await BackendUtils.requestLsps1Liquidity({
+            const request = {
                 amount_sat: parseInt(state.lspBalanceSat),
                 client_balance_sat: parseInt(state.clientBalanceSat) || 0,
                 expiry_blocks: parseInt(state.channelExpiryBlocks),
                 announce_channel: state.announceChannel || false
-            });
+            };
+            const response = await BackendUtils.requestLsps1Liquidity(request);
+
+            // LDK Node does not take confirmation targets, and falls back to
+            // its own expiry when expiry_blocks is not a number, so those
+            // terms are not checked
+            const check = verifyOrderTerms(
+                {
+                    lsp_balance_sat: request.amount_sat,
+                    client_balance_sat: request.client_balance_sat,
+                    channel_expiry_blocks: request.expiry_blocks || undefined,
+                    announce_channel: request.announce_channel
+                },
+                response
+            );
+            if (!check.valid) {
+                runInAction(() => {
+                    this.error = true;
+                    this.error_msg = this.orderTermsMismatchMessage(check);
+                    this.loadingLSPS1 = false;
+                });
+                return;
+            }
 
             runInAction(() => {
                 // Transform response to match expected format
@@ -1581,6 +1641,7 @@ export default class LSPStore {
                         funding_confirms_within_blocks:
                             response.funding_confirms_within_blocks,
                         channel_expiry_blocks: response.channel_expiry_blocks,
+                        announce_channel: response.announce_channel,
                         payment: {
                             state: response.payment?.state,
                             fee_total_sat:
