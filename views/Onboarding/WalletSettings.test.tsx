@@ -14,7 +14,12 @@ jest.mock('@rneui/themed', () => {
     };
 });
 jest.mock('../../stores/SettingsStore', () => ({
-    CURRENCY_KEYS: [],
+    // CHF stands in for a currency that only ZEUS rates support
+    CURRENCY_KEYS: [
+        { value: 'USD', supportedSources: ['Zeus', 'Yadio'] },
+        { value: 'EUR', supportedSources: ['Zeus', 'Yadio'] },
+        { value: 'CHF', supportedSources: ['Zeus'] }
+    ],
     DEFAULT_FIAT: 'USD',
     DEFAULT_FIAT_RATES_SOURCE: 'Zeus',
     FIAT_RATES_SOURCE_KEYS: []
@@ -35,7 +40,10 @@ jest.mock('../../components/Button', () => {
         </Pressable>
     );
 });
-jest.mock('../../components/DropdownSetting', () => 'DropdownSetting');
+jest.mock('../../components/DropdownSetting', () => {
+    const { View } = require('react-native');
+    return (props: any) => <View testID="ratesSource" {...props} />;
+});
 jest.mock('../../components/Header', () => 'Header');
 jest.mock('../../components/LoadingIndicator', () => 'LoadingIndicator');
 jest.mock('../../components/Screen', () => {
@@ -85,6 +93,12 @@ const switches = () => {
 
 const flip = (sw: any, value: boolean) =>
     fireEvent(sw, 'change', { nativeEvent: { value } });
+
+const pickRatesSource = (value: string) =>
+    fireEvent(screen.getByTestId('ratesSource'), 'valueChange', value);
+
+const currencyRow = () =>
+    screen.getByText(/views\.Settings\.Currency\.selectCurrency/);
 
 describe('onboarding WalletSettings', () => {
     beforeEach(() => {
@@ -145,12 +159,49 @@ describe('onboarding WalletSettings', () => {
         expect(switches().fiat).toBeChecked();
     });
 
+    it('saves the rates source, keeping a currency it supports', async () => {
+        const { SettingsStore } = await renderView({
+            fiatEnabled: true,
+            fiat: 'EUR',
+            fiatRatesSource: 'Zeus'
+        });
+
+        await pickRatesSource('Yadio');
+
+        // The summary and the currency picker read the saved settings
+        expect(SettingsStore.updateSettings).toHaveBeenCalledWith({
+            fiatRatesSource: 'Yadio'
+        });
+        expect(screen.getByTestId('ratesSource')).toHaveProp(
+            'selectedValue',
+            'Yadio'
+        );
+        expect(currencyRow()).toHaveTextContent(/\(EUR\)/);
+    });
+
+    it('saves the default currency when the source does not support the current one', async () => {
+        const { SettingsStore } = await renderView({
+            fiatEnabled: true,
+            fiat: 'CHF',
+            fiatRatesSource: 'Zeus'
+        });
+
+        await pickRatesSource('Yadio');
+
+        expect(SettingsStore.updateSettings).toHaveBeenCalledWith({
+            fiatRatesSource: 'Yadio',
+            fiat: 'USD'
+        });
+        expect(currencyRow()).toHaveTextContent(/\(USD\)/);
+    });
+
     it('creates the wallet with the choices on screen', async () => {
         const { SettingsStore } = await renderView(
             { privacy: { clipboard: true }, fiatEnabled: true, fiat: 'EUR' },
             { enableCashu: true, implementation: 'embedded-lnd' }
         );
         await flip(switches().clipboard, false);
+        await pickRatesSource('Yadio');
 
         await fireEvent.press(
             screen.getByRole('button', {
@@ -166,7 +217,7 @@ describe('onboarding WalletSettings', () => {
                 clipboard: false,
                 fiatEnabled: true,
                 selectedCurrency: 'EUR',
-                fiatRatesSource: 'Zeus'
+                fiatRatesSource: 'Yadio'
             })
         );
     });
