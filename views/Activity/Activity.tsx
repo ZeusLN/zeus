@@ -12,6 +12,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import { Row } from '../../components/layout/Row';
 import ActivityListItem from './ActivityListItem';
+import { ActivityImageCache } from './ActivityIcon';
 import ActivityToCsv from './ActivityToCsv';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -64,6 +65,7 @@ export default class Activity extends React.PureComponent<
 > {
     private unsubscribeActivityUpdates?: () => void;
     private focusListener?: () => void;
+    private activityImageCache: ActivityImageCache = new Map();
 
     state = {
         loading: false,
@@ -385,6 +387,7 @@ export default class Activity extends React.PureComponent<
                                 onItemPress={this.handleItemPress}
                                 order={route.params?.order}
                                 swapStore={SwapStore}
+                                imageCache={this.activityImageCache}
                             />
                         )}
                         keyExtractor={(item, index) => `${item.model}-${index}`}

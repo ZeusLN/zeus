@@ -4,6 +4,7 @@ import { ListItem } from '@rneui/themed';
 import { observer } from 'mobx-react';
 
 import Amount from '../../components/Amount';
+import ActivityIcon, { ActivityImageCache } from './ActivityIcon';
 
 import {
     getRightTitleTheme,
@@ -39,6 +40,7 @@ export interface ActivityListItemProps {
     onItemPress: (item: any) => void;
     order?: Order;
     swapStore: SwapStore;
+    imageCache: ActivityImageCache;
 }
 
 const ActivityListItem = observer(
@@ -47,9 +49,11 @@ const ActivityListItem = observer(
         selectedPaymentForOrder,
         onItemPress,
         order,
-        swapStore
+        swapStore,
+        imageCache
     }: ActivityListItemProps) => {
         const note = item.getNote;
+        const amountColor = getRightTitleTheme(item);
         let displayName = item.model;
         let subTitle = item.model;
 
@@ -233,6 +237,11 @@ const ActivityListItem = observer(
                 }}
                 onPress={() => onItemPress(item)}
             >
+                <ActivityIcon
+                    item={item}
+                    imageCache={imageCache}
+                    colorTheme={amountColor}
+                />
                 <ListItem.Content>
                     <View style={styles.row}>
                         <ListItem.Title
@@ -269,7 +278,7 @@ const ActivityListItem = observer(
                                         : item.getAmount
                                 }
                                 sensitive
-                                color={getRightTitleTheme(item)}
+                                color={amountColor}
                             />
                             {!!item.getFee && item.getFee != 0 && (
                                 <>
@@ -284,7 +293,7 @@ const ActivityListItem = observer(
                                     <Amount
                                         sats={item.getFee}
                                         sensitive
-                                        color={getRightTitleTheme(item)}
+                                        color={amountColor}
                                         fee
                                         roundAmount
                                     />
