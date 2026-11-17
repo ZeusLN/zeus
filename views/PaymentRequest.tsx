@@ -7,7 +7,6 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { reaction } from 'mobx';
 import Slider from '@react-native-community/slider';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -35,6 +34,8 @@ import {
     WarningMessage
 } from '../components/SuccessErrorMessage';
 
+import Invoice from '../models/Invoice';
+
 import BalanceStore from '../stores/BalanceStore';
 import ChannelsStore from '../stores/ChannelsStore';
 import InvoicesStore from '../stores/InvoicesStore';
@@ -43,6 +44,7 @@ import UnitsStore from '../stores/UnitsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
 
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 import FeeUtils from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
@@ -59,10 +61,16 @@ import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import QR from '../assets/images/SVG/QR.svg';
 
+interface PaymentRequestRouteParams {
+    // the payment request this screen decodes, shows and pays
+    paymentRequest: string;
+    fromGraphSync?: boolean;
+}
+
 interface InvoiceProps {
     exitSetup: any;
     navigation: NativeStackNavigationProp<any, any>;
-    route: Route<'PaymentRequest', { fromGraphSync?: boolean }>;
+    route: Route<'PaymentRequest', PaymentRequestRouteParams>;
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     TransactionsStore: TransactionsStore;
@@ -92,7 +100,14 @@ interface InvoiceState {
     donationAmount: any;
     selectedIndex: number | null;
     swipeButtonKey: number;
-    reviewedPaymentRequest: string;
+    // the decode of this screen's payment request and what goes with it.
+    // Held here, not in InvoicesStore, so nothing outside this screen can
+    // change the invoice under review
+    pay_req: Invoice | null;
+    loading: boolean;
+    getPayReqError: string | null;
+    feeEstimate: number | null;
+    successProbability: number | null;
 }
 
 @inject(
@@ -105,18 +120,20 @@ interface InvoiceState {
     'SettingsStore'
 )
 @observer
-export default class PaymentRequest extends React.Component<
+export class PaymentRequestView extends React.Component<
     InvoiceProps,
     InvoiceState
 > {
     focusListener: any;
-    beforeRemoveListener: any;
-    donationDisposer: any;
-    swipeResetDisposer: any;
-    donationLockRequest?: string;
     isComponentMounted: boolean = false;
     private scrollViewRef = React.createRef<ScrollView>();
-    state = {
+    // The request this instance reviews, read once: what is decoded, shown
+    // and paid can't differ, whatever happens to the route params or to any
+    // store afterwards. A new request gets a new instance, see PaymentRequest
+    // below
+    private readonly paymentRequest: string | undefined =
+        this.props.route?.params?.paymentRequest;
+    state: InvoiceState = {
         customAmount: '',
         satAmount: '',
         enableMultiPathPayment: true,
@@ -136,28 +153,24 @@ export default class PaymentRequest extends React.Component<
         donationAmount: 0,
         selectedIndex: null,
         swipeButtonKey: 0,
-        reviewedPaymentRequest: ''
+        pay_req: null,
+        loading: !!this.paymentRequest,
+        getPayReqError: null,
+        feeEstimate: null,
+        successProbability: null
     };
 
     async componentDidMount() {
         this.isComponentMounted = true;
-        const { SettingsStore, InvoicesStore, BalanceStore, route } =
-            this.props;
-
-        // Clear the decode on every way of leaving (header Back, Android
-        // hardware back, iOS swipe, popTo after a payment), not only the
-        // header Back: a decode still in flight would otherwise land after
-        // the user left and start route queries or LDK probes. Registered
-        // before the first await so an early back is not missed
-        this.beforeRemoveListener = this.props.navigation.addListener(
-            'beforeRemove',
-            () => InvoicesStore.clearPayReq()
-        );
+        const { SettingsStore, BalanceStore, route } = this.props;
         const { getSettings, implementation } = SettingsStore;
         // balance is not refreshed elsewhere after channel changes, so
         // the no-balance warning could otherwise be stale
         BalanceStore.getLightningBalance(true);
-        const settings = await getSettings();
+        // the decode doesn't need the settings, so don't make it wait
+        const settingsLoading = getSettings();
+        this.loadPayReq(settingsLoading);
+        const settings = await settingsLoading;
 
         if (route?.params?.fromGraphSync) {
             clearPendingPaymentData().catch((error) => {
@@ -167,55 +180,6 @@ export default class PaymentRequest extends React.Component<
                 );
             });
         }
-
-        const { defaultDonationPercentage } = settings.payments;
-
-        // Derive donation and fee-mode state from the decoded invoice, and
-        // re-derive whenever a different invoice lands in the store: the
-        // screen live-renders whatever InvoicesStore holds, so state computed
-        // from the invoice must track it or a swapped-in payment request
-        // would be shown (and paid) with the old invoice's donation amount
-        // and fee mode. Guarded by donationLockRequest so a re-decode of the
-        // same request doesn't clobber a donation the user customized.
-        this.donationDisposer = reaction(
-            () => InvoicesStore.pay_req,
-            (pay_req) => {
-                if (!this.isComponentMounted) return;
-                // getPayReq nulls pay_req before decoding a replacement
-                // invoice; wait for the decoded result
-                if (!pay_req) return;
-
-                const currentRequest = InvoicesStore.paymentRequest;
-                if (
-                    currentRequest &&
-                    this.donationLockRequest === currentRequest
-                ) {
-                    return;
-                }
-
-                const defaultPct = Number(defaultDonationPercentage) || 0;
-                const requestAmount = pay_req.getRequestAmount ?? 0;
-
-                this.setState({
-                    feeOption:
-                        requestAmount && requestAmount > 1000
-                            ? 'percent'
-                            : 'fixed',
-                    donationAmount: calculateDonationAmount(
-                        requestAmount,
-                        defaultPct
-                    ),
-                    selectedIndex: findDonationPercentageIndex(
-                        defaultPct,
-                        [5, 10, 20]
-                    ),
-                    donationPercentage: defaultPct
-                });
-
-                this.donationLockRequest = currentRequest;
-            },
-            { fireImmediately: true }
-        );
 
         this.setState({
             feeLimitSat: settings?.payments?.defaultFeeFixed || '100',
@@ -232,37 +196,7 @@ export default class PaymentRequest extends React.Component<
             });
         }
 
-        // Pin the invoice the user is reviewing. The view otherwise reads the
-        // invoice straight off the shared InvoicesStore singleton, so if a
-        // second payment string is injected while this screen is open (deep
-        // link, NFC tap, clipboard handler, etc.) the store's pay_req /
-        // paymentRequest get swapped out from under the review. We record what
-        // was reviewed so triggerPayment can refuse to pay a different invoice
-        // than the one on screen when the confirmation began ("review A, pay B").
-        this.setState({
-            reviewedPaymentRequest: InvoicesStore.paymentRequest
-        });
-
-        // If the invoice under review changes while this screen is mounted,
-        // invalidate any in-progress slide-to-pay gesture so it cannot
-        // complete against the swapped-in invoice. The render path notices the
-        // mismatch and replaces the pay controls with a warning; the pin is
-        // only advanced when the user explicitly accepts the new request.
-        this.swipeResetDisposer = reaction(
-            () => InvoicesStore.paymentRequest,
-            () => {
-                if (!this.isComponentMounted) return;
-                this.setState({
-                    swipeButtonKey: this.state.swipeButtonKey + 1
-                });
-            }
-        );
-
-        // Reset slide to pay slider position when screen comes into focus.
-        // Deliberately do NOT re-pin here: a focus event also fires when
-        // returning from a screen pushed on top of this one (e.g. the QR
-        // view), so an invoice injected while the user was away would get
-        // silently re-pinned and paid.
+        // Reset slide to pay slider position when screen comes into focus
         const { navigation } = this.props;
         this.focusListener = navigation.addListener('focus', () => {
             this.setState({
@@ -276,16 +210,51 @@ export default class PaymentRequest extends React.Component<
         if (this.focusListener) {
             this.focusListener();
         }
-        if (this.beforeRemoveListener) {
-            this.beforeRemoveListener();
-        }
-        if (this.donationDisposer) {
-            this.donationDisposer();
-        }
-        if (this.swipeResetDisposer) {
-            this.swipeResetDisposer();
-        }
     }
+
+    // Decodes this screen's payment request and shows it. Nothing is shown
+    // until the decode, the route estimate and the settings are all in, so
+    // the donation and fee mode on screen always belong to the invoice next
+    // to them. No route query is started once the screen is gone
+    loadPayReq = async (settingsLoading: Promise<any>) => {
+        const { InvoicesStore } = this.props;
+        if (!this.paymentRequest) return;
+
+        let pay_req: Invoice;
+        try {
+            pay_req = await InvoicesStore.getPayReq(this.paymentRequest);
+        } catch (error: any) {
+            this.setState({
+                loading: false,
+                getPayReqError: errorToUserFriendly(error)
+            });
+            return;
+        }
+        // the user left during the decode
+        if (!this.isComponentMounted) return;
+
+        const [settings, { feeEstimate, successProbability }] =
+            await Promise.all([
+                settingsLoading,
+                InvoicesStore.getRouteEstimate(pay_req)
+            ]);
+
+        const defaultPct =
+            Number(settings?.payments?.defaultDonationPercentage) || 0;
+        const requestAmount = pay_req.getRequestAmount ?? 0;
+
+        this.setState({
+            pay_req,
+            loading: false,
+            feeEstimate,
+            successProbability,
+            feeOption:
+                requestAmount && requestAmount > 1000 ? 'percent' : 'fixed',
+            donationAmount: calculateDonationAmount(requestAmount, defaultPct),
+            selectedIndex: findDonationPercentageIndex(defaultPct, [5, 10, 20]),
+            donationPercentage: defaultPct
+        });
+    };
 
     checkIfLndReady = async () => {
         const { BalanceStore, NodeInfoStore } = this.props;
@@ -310,31 +279,6 @@ export default class PaymentRequest extends React.Component<
         }
     };
 
-    displayFeeRecommendation = () => {
-        const { feeLimitSat } = this.state;
-        const { InvoicesStore } = this.props;
-        const { feeEstimate } = InvoicesStore;
-
-        if (
-            feeEstimate &&
-            feeLimitSat &&
-            Number(feeEstimate) > Number(feeLimitSat)
-        ) {
-            return (
-                <Text
-                    style={{
-                        color: themeColor('error')
-                    }}
-                >
-                    {localeString(
-                        'views.PaymentRequest.feeEstimateExceedsLimit'
-                    )}
-                </Text>
-            );
-        }
-        return null;
-    };
-
     sendPayment = ({
         payment_request,
         amount, // used only for no-amount invoices
@@ -347,8 +291,7 @@ export default class PaymentRequest extends React.Component<
         amp,
         timeout_seconds
     }: SendPaymentReq) => {
-        const { InvoicesStore, TransactionsStore, SettingsStore, navigation } =
-            this.props;
+        const { TransactionsStore, SettingsStore, navigation } = this.props;
 
         const { settings } = SettingsStore;
 
@@ -358,7 +301,7 @@ export default class PaymentRequest extends React.Component<
         let feeLimitSat = fee_limit_sat;
 
         if (!fee_limit_sat) {
-            const { pay_req } = InvoicesStore;
+            const { pay_req } = this.state;
             const requestAmount = pay_req && pay_req.getRequestAmount;
             const invoiceAmount = amount || requestAmount;
             feeLimitSat = FeeUtils.calculateDefaultRoutingFee(
@@ -391,17 +334,27 @@ export default class PaymentRequest extends React.Component<
 
     // true when the invoice carries no amount and none has been entered
     isMissingAmount = () => {
-        const requestAmount =
-            this.props.InvoicesStore.pay_req?.getRequestAmount;
+        const requestAmount = this.state.pay_req?.getRequestAmount;
         return !requestAmount && !(Number(this.state.satAmount) > 0);
     };
 
     triggerPayment = () => {
-        const { InvoicesStore, SettingsStore, TransactionsStore } = this.props;
+        const { SettingsStore, TransactionsStore } = this.props;
+
+        // A slide to pay can still complete after its screen was replaced
+        // by the review of another request. This one is no longer on
+        // screen, so don't pay it
+        if (!this.isComponentMounted) return;
 
         // Guard against double-submission: bail if a payment is already in
         // flight so a rapid double-tap or re-fired swipe can't dispatch twice.
         if (TransactionsStore.paymentInFlight) return;
+
+        // Pay only what was decoded and shown. Both belong to this screen:
+        // the request it was opened with and its own decode of it
+        const paymentRequest = this.paymentRequest;
+        const { pay_req } = this.state;
+        if (!paymentRequest || !pay_req) return;
 
         // a no-amount invoice can't be paid without an amount: the node
         // would only reject it after the send guard was taken
@@ -421,30 +374,12 @@ export default class PaymentRequest extends React.Component<
             enableAtomicMultiPathPayment
         } = this.state;
 
-        const { paymentRequest, pay_req } = InvoicesStore;
-
-        // Fail closed: if the invoice in the store no longer matches the one
-        // the user reviewed, it was swapped out from under the review screen.
-        // Refuse to pay rather than paying a different invoice than the one
-        // that was on screen when this confirmation began. Reset the swipe
-        // knob so the gesture doesn't stick; the render path shows the
-        // payment-request-changed warning in place of the pay controls.
-        if (
-            this.state.reviewedPaymentRequest !== '' &&
-            paymentRequest !== this.state.reviewedPaymentRequest
-        ) {
-            this.setState({
-                swipeButtonKey: this.state.swipeButtonKey + 1
-            });
-            return;
-        }
-
         const { implementation } = SettingsStore;
 
         // Fail closed if the invoice has expired since it was reviewed:
         // the invoice can lapse while this screen is open, and expiry is
         // otherwise only enforced by the recipient
-        if (pay_req?.isExpiredNow()) {
+        if (pay_req.isExpiredNow()) {
             // re-render so the expired notice appears and the pay
             // controls are removed
             this.forceUpdate();
@@ -458,7 +393,6 @@ export default class PaymentRequest extends React.Component<
 
         let lockAtomicMultiPathPayment = false;
         if (
-            pay_req &&
             pay_req.features &&
             pay_req.features['30'] &&
             pay_req.features['30'].is_required
@@ -473,7 +407,7 @@ export default class PaymentRequest extends React.Component<
         this.sendPayment({
             payment_request: paymentRequest,
             amount:
-                !pay_req?.getRequestAmount && satAmount
+                !pay_req.getRequestAmount && satAmount
                     ? satAmount.toString()
                     : undefined,
             max_parts: enableMultiPathPayment ? maxParts : '16',
@@ -494,7 +428,6 @@ export default class PaymentRequest extends React.Component<
 
     render() {
         const {
-            InvoicesStore,
             UnitsStore,
             ChannelsStore,
             SettingsStore,
@@ -514,26 +447,21 @@ export default class PaymentRequest extends React.Component<
             slideToPayThreshold,
             donationsToggle,
             donationAmount,
-            donationPercentage
-        } = this.state;
-        const {
+            donationPercentage,
             pay_req,
-            paymentRequest,
             getPayReqError,
             loading,
-            loadingFeeEstimate,
             successProbability,
             feeEstimate
-        } = InvoicesStore;
+        } = this.state;
+        const paymentRequest = this.paymentRequest;
 
         const locale = SettingsStore.settings.locale;
         if (pay_req) pay_req.determineFormattedOriginalTimeUntilExpiry(locale);
 
         const isPayReqExpired = !!pay_req && pay_req.isExpiredNow();
 
-        // variables cannot be destructured traditionally here
-        // due to how we clear the pay_req from the store upon
-        // navigating back
+        // pay_req is null until the decode is in, and when it failed
         const requestAmount =
             pay_req && pay_req.getRequestAmount
                 ? pay_req.getRequestAmount
@@ -554,7 +482,6 @@ export default class PaymentRequest extends React.Component<
                 requestAmount ?? 0,
                 percentage
             );
-            this.donationLockRequest = paymentRequest;
             this.setState({
                 donationPercentage: percentage,
                 donationAmount,
@@ -572,7 +499,6 @@ export default class PaymentRequest extends React.Component<
                 donationPercentageOptions
             );
 
-            this.donationLockRequest = paymentRequest;
             this.setState({
                 donationPercentage: value,
                 donationAmount,
@@ -631,17 +557,6 @@ export default class PaymentRequest extends React.Component<
         const noBalance = this.props.BalanceStore.lightningBalance === 0;
         const missingAmount = this.isMissingAmount();
 
-        // The screen renders whatever invoice is in the shared InvoicesStore,
-        // so when the store no longer matches the pinned invoice the user has
-        // a different payment request in front of them than the one they were
-        // reviewing. Surface that instead of paying (or silently refusing):
-        // the pay controls are replaced below with a warning and an explicit
-        // button to review the new request, which re-pins it.
-        const payReqChanged =
-            this.state.reviewedPaymentRequest !== '' &&
-            !!paymentRequest &&
-            paymentRequest !== this.state.reviewedPaymentRequest;
-
         const QRButton = () => (
             <TouchableOpacity
                 onPress={() =>
@@ -667,14 +582,16 @@ export default class PaymentRequest extends React.Component<
                         }
                     }}
                     rightComponent={
-                        <Row>
-                            <QRButton />
-                        </Row>
+                        paymentRequest ? (
+                            <Row>
+                                <QRButton />
+                            </Row>
+                        ) : undefined
                     }
                     navigation={navigation}
                 />
 
-                {(loading || loadingFeeEstimate) && (
+                {loading && (
                     <View style={{ marginTop: 40 }}>
                         <LoadingIndicator />
                     </View>
@@ -685,6 +602,16 @@ export default class PaymentRequest extends React.Component<
                         ref={this.scrollViewRef}
                         keyboardShouldPersistTaps="handled"
                     >
+                        {!paymentRequest && (
+                            <View style={styles.content}>
+                                <ErrorMessage
+                                    message={localeString(
+                                        'views.PaymentRequest.noPayReq'
+                                    )}
+                                />
+                            </View>
+                        )}
+
                         {!!getPayReqError && (
                             <View style={styles.content}>
                                 <Text
@@ -700,7 +627,7 @@ export default class PaymentRequest extends React.Component<
                             </View>
                         )}
 
-                        {!loading && !loadingFeeEstimate && !!pay_req && (
+                        {!loading && !!pay_req && (
                             <View style={styles.content}>
                                 <>
                                     {isPayReqExpired && (
@@ -913,7 +840,7 @@ export default class PaymentRequest extends React.Component<
                                             }
                                             feeOption={feeOption}
                                             SettingsStore={SettingsStore}
-                                            InvoicesStore={InvoicesStore}
+                                            feeEstimate={feeEstimate}
                                             displayFeeRecommendation
                                             hide={false}
                                         />
@@ -1207,7 +1134,7 @@ export default class PaymentRequest extends React.Component<
                                         }
                                         feeOption={feeOption}
                                         SettingsStore={SettingsStore}
-                                        InvoicesStore={InvoicesStore}
+                                        feeEstimate={feeEstimate}
                                         displayFeeRecommendation
                                         hide
                                     />
@@ -1413,44 +1340,6 @@ export default class PaymentRequest extends React.Component<
                 {!!pay_req &&
                     !isPayReqExpired &&
                     !loading &&
-                    !loadingFeeEstimate &&
-                    payReqChanged &&
-                    BackendUtils.supportsLightningSends() && (
-                        <View style={{ bottom: 10 }}>
-                            <View style={styles.content}>
-                                <WarningMessage
-                                    message={localeString(
-                                        'views.PaymentRequest.payReqChanged'
-                                    )}
-                                />
-                            </View>
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.PaymentRequest.reviewNewPayReq'
-                                    )}
-                                    onPress={() =>
-                                        this.setState({
-                                            reviewedPaymentRequest:
-                                                InvoicesStore.paymentRequest,
-                                            // the typed amount was for the
-                                            // previous request
-                                            customAmount: '',
-                                            satAmount: '',
-                                            swipeButtonKey:
-                                                this.state.swipeButtonKey + 1
-                                        })
-                                    }
-                                />
-                            </View>
-                        </View>
-                    )}
-
-                {!!pay_req &&
-                    !isPayReqExpired &&
-                    !loading &&
-                    !loadingFeeEstimate &&
-                    !payReqChanged &&
                     BackendUtils.supportsLightningSends() && (
                         <View style={{ bottom: 10 }}>
                             {!!pay_req && !lightningReadyToSend && !noBalance && (
@@ -1537,6 +1426,22 @@ export default class PaymentRequest extends React.Component<
             </Screen>
         );
     }
+}
+
+// navigate() and popTo() to an open PaymentRequest only swap its route
+// params. Keying the screen by its payment request turns that into a new
+// instance: the review of the old request is unmounted, with its typed
+// amount, fee and donation choices and any slide to pay still in progress,
+// and the new request is decoded and shown from scratch.
+export default function PaymentRequest(
+    props: Pick<InvoiceProps, 'navigation' | 'route'>
+) {
+    return (
+        <PaymentRequestView
+            key={props.route?.params?.paymentRequest}
+            {...(props as InvoiceProps)}
+        />
+    );
 }
 
 const styles = StyleSheet.create({

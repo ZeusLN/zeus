@@ -26,6 +26,7 @@ import Contact from '../../models/Contact';
 
 import LnurlPayMetadata from './Metadata';
 
+import { errorToUserFriendly } from '../../utils/ErrorUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getRawAmountFromSats, getSatAmount } from '../../utils/AmountUtils';
@@ -392,8 +393,8 @@ export default class LnurlPay extends React.Component<
                 };
 
                 if (ecash) {
-                    // load up both the payment routes
-                    InvoicesStore.getPayReq(pr);
+                    // load the ecash payment route. ChoosePaymentMethod
+                    // decodes the invoice itself for the Lightning one
                     CashuStore.getPayReq(pr).then(() => {
                         this.setState({ loading: false });
 
@@ -452,29 +453,40 @@ export default class LnurlPay extends React.Component<
                         });
                     });
                 } else {
-                    InvoicesStore.getPayReq(pr).then(() => {
-                        this.setState({ loading: false });
+                    // Decode pr here for its payment and description
+                    // hashes. PaymentRequest is opened with pr and decodes
+                    // it again for itself, so the LNURL's metadata and
+                    // success action are bound to the invoice it pays
+                    InvoicesStore.getPayReq(pr).then(
+                        (pay_req) => {
+                            this.setState({ loading: false });
 
-                        // a newer decode (deep link, NFC tap) replaced this
-                        // one: getPayReq dropped our answer, so pay_req and
-                        // getPayReqError are unset or belong to the other
-                        // invoice. Don't bind this LNURL's metadata and
-                        // success action to it; the newer request has its
-                        // own PaymentRequest
-                        if (
-                            InvoicesStore.paymentRequest !== pr ||
-                            (!InvoicesStore.pay_req &&
-                                !InvoicesStore.getPayReqError)
-                        ) {
-                            return;
-                        }
+                            const payment_hash: string =
+                                pay_req.payment_hash || '';
+                            const description_hash: string =
+                                pay_req.description_hash || '';
 
-                        if (InvoicesStore.getPayReqError) {
+                            LnurlPayStore.keep(
+                                payment_hash,
+                                domain,
+                                lnurl.lnurlText,
+                                lnurl.metadata,
+                                description_hash,
+                                successAction,
+                                lightningAddress
+                            );
+                            navigation.navigate('PaymentRequest', {
+                                paymentRequest: pr
+                            });
+                        },
+                        (error: any) => {
+                            this.setState({ loading: false });
+
                             Alert.alert(
                                 localeString(
                                     'views.LnurlPay.LnurlPay.invalidInvoice'
                                 ),
-                                InvoicesStore.getPayReqError,
+                                errorToUserFriendly(error),
                                 [
                                     {
                                         text: localeString('general.ok'),
@@ -483,29 +495,8 @@ export default class LnurlPay extends React.Component<
                                 ],
                                 { cancelable: false }
                             );
-                            return;
                         }
-
-                        const payment_hash: string =
-                            (InvoicesStore.pay_req &&
-                                InvoicesStore.pay_req.payment_hash) ||
-                            '';
-                        const description_hash: string =
-                            (InvoicesStore.pay_req &&
-                                InvoicesStore.pay_req.description_hash) ||
-                            '';
-
-                        LnurlPayStore.keep(
-                            payment_hash,
-                            domain,
-                            lnurl.lnurlText,
-                            lnurl.metadata,
-                            description_hash,
-                            successAction,
-                            lightningAddress
-                        );
-                        navigation.navigate('PaymentRequest');
-                    });
+                    );
                 }
             });
     }

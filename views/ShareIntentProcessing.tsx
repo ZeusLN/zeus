@@ -159,14 +159,12 @@ class ShareIntentProcessing extends React.Component<
                 if (response) {
                     const [route, params] = response;
 
-                    // Same rule as LinkingUtils.handleDeepLink. handleAnything
-                    // has put the shared invoice in InvoicesStore, so a
-                    // PaymentRequest already open shows it with the
-                    // payment-request-changed warning. Replacing this screen
-                    // with a second PaymentRequest would review the shared
-                    // invoice as if the user had opened it, so pop back to
-                    // the open one, unless a payment status screen sits
-                    // above it.
+                    // Same rule as LinkingUtils.handleDeepLink. Replacing this
+                    // screen with a second PaymentRequest would leave the
+                    // review of the earlier request in the stack, so pop
+                    // back to the open one, which then reviews the shared
+                    // invoice from its route params, unless a payment status
+                    // screen sits above it.
                     const routes = navigation.getState()?.routes ?? [];
                     const openRequest = routes
                         .map((r) => r.name)

@@ -28,7 +28,6 @@ jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({ themeColor: () => '#ffffff' }));
 jest.mock('../../stores/Stores', () => ({
     modalStore: {},
-    invoicesStore: {},
     nodeInfoStore: {},
     settingsStore: {}
 }));
@@ -82,6 +81,18 @@ const tapRowWith = async (destination: any) => {
     await new Promise(setImmediate);
     return navigation;
 };
+
+describe('LightningSwipeableRow payment request', () => {
+    // PaymentRequest decodes the request in its route params itself
+    it('opens PaymentRequest with the invoice', async () => {
+        const navigation = await tapRowWith({ lightning: 'lnbc1invoice' });
+
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {
+            paymentRequest: 'lnbc1invoice'
+        });
+    });
+});
 
 describe('LightningSwipeableRow Lightning Address lookup', () => {
     beforeEach(() => {

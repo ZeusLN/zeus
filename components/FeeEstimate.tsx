@@ -18,7 +18,6 @@ import OnchainFeeInput from './OnchainFeeInput';
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretUp from '../assets/images/SVG/Caret Up.svg';
 
-import InvoicesStore from '../stores/InvoicesStore';
 import CashuStore from '../stores/CashuStore';
 import { feeStore, settingsStore } from '../stores/Stores';
 
@@ -35,7 +34,10 @@ interface FeeEstimateProps {
     onFeeChange?: (fee: string) => void;
     feeRate?: string;
     navigation?: NativeStackNavigationProp<any, any>;
-    InvoicesStore?: InvoicesStore;
+    // the Lightning route fee estimate for the payment, from the screen
+    // that decoded it
+    lightningFee?: number;
+    lightningFeeLoading?: boolean;
     CashuStore?: CashuStore;
 }
 
@@ -70,7 +72,7 @@ const FeeCell = ({
     </View>
 );
 
-@inject('InvoicesStore', 'CashuStore')
+@inject('CashuStore')
 @observer
 export default class FeeEstimate extends React.PureComponent<
     FeeEstimateProps,
@@ -135,16 +137,14 @@ export default class FeeEstimate extends React.PureComponent<
             showOnchainFeeInput,
             onFeeChange,
             navigation,
-            InvoicesStore,
+            lightningFee,
+            lightningFeeLoading,
             CashuStore
         } = this.props;
 
         const isLightningPayment = !!(lightning || lnurlParams);
-        const lightningFee = InvoicesStore?.feeEstimate ?? undefined;
         const ecashFee = CashuStore?.feeEstimate ?? undefined;
-        const lightningLoading =
-            isLightningPayment &&
-            !!(InvoicesStore?.loading || InvoicesStore?.loadingFeeEstimate);
+        const lightningLoading = isLightningPayment && !!lightningFeeLoading;
         const ecashLoading =
             isLightningPayment &&
             BackendUtils.supportsCashuWallet() &&
