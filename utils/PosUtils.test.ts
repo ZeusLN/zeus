@@ -1,6 +1,7 @@
 import BigNumber from 'bignumber.js';
 import {
     calculateFiatAmountsWithoutRate,
+    calculateSubTotalSats,
     calculateTaxSats,
     calculateTotalSats,
     isPayableSatsAmount
@@ -139,6 +140,74 @@ describe('calculateTaxSats', () => {
         const subTotalSats = '2000';
         const result = calculateTaxSats(lineItems, subTotalSats, rate);
         expect(result).toBe('0');
+    });
+});
+
+describe('calculateSubTotalSats', () => {
+    const item = (amount: number, sats: number, quantity = 1) => ({
+        name: 'item',
+        quantity,
+        base_price_money: { amount, sats }
+    });
+
+    it('adds sats-priced items at their sats price', () => {
+        expect(calculateSubTotalSats([item(0, 1000, 2), item(0, 250)], 0)).toBe(
+            '2250'
+        );
+    });
+
+    it('converts fiat-priced items at the rate', () => {
+        expect(calculateSubTotalSats([item(5, 0, 3)], 100000)).toBe('15000');
+        expect(calculateSubTotalSats([item(5, 0)], '100000.00')).toBe('5000');
+    });
+
+    it('adds a sats item and a fiat item together', () => {
+        expect(calculateSubTotalSats([item(0, 1000), item(5, 0)], 100000)).toBe(
+            '6000'
+        );
+    });
+
+    it('rounds the sum half up, not each item', () => {
+        // each item is 0.5 sats at this rate
+        expect(
+            calculateSubTotalSats([item(0.01, 0), item(0.01, 0)], 2000000)
+        ).toBe('1');
+        expect(calculateSubTotalSats([item(0.01, 0)], 2000000)).toBe('1');
+    });
+
+    it.each([
+        ['a zero rate', 0],
+        ['a zero rate string', '0.00'],
+        ['no rate', undefined as any]
+    ])(
+        "isn't payable with a fiat item and %s, even with a sats item",
+        (_, rate) => {
+            const sats = calculateSubTotalSats(
+                [item(0, 1000), item(5, 0)],
+                rate
+            );
+            expect(isPayableSatsAmount(sats)).toBe(false);
+        }
+    );
+
+    it("doesn't need a rate for sats-priced items", () => {
+        expect(calculateSubTotalSats([item(0, 1000)], 0)).toBe('1000');
+    });
+
+    it('counts an item with no price as 0', () => {
+        const unpriced = {
+            name: 'item',
+            quantity: 1,
+            base_price_money: { amount: 0 }
+        };
+        expect(calculateSubTotalSats([unpriced, item(0, 1000)], 0)).toBe(
+            '1000'
+        );
+    });
+
+    it('is 0 for no items', () => {
+        expect(calculateSubTotalSats([], 100000)).toBe('0');
+        expect(calculateSubTotalSats(undefined as any, 100000)).toBe('0');
     });
 });
 

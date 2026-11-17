@@ -129,8 +129,11 @@ describe('Order screen for a keyed order with 10% tax', () => {
         amount = '5',
         payment,
         squareOrder,
+        items,
+        openWithRates,
         onScreen,
-        print = false
+        print = false,
+        pressProceed = false
     }: {
         fiatRates: any[];
         disableTips?: boolean;
@@ -138,8 +141,14 @@ describe('Order screen for a keyed order with 10% tax', () => {
         amount?: string;
         payment?: any;
         squareOrder?: any;
+        // products added to the cart instead of a keyed amount
+        items?: any[];
+        // rates that load after the order is saved, before it's opened
+        openWithRates?: any[];
         onScreen?: () => Promise<void>;
         print?: boolean;
+        // taps PROCEED and returns the route and params it opens
+        pressProceed?: boolean;
     }) => {
         const settingsStore: any = {
             settings: {
@@ -171,18 +180,28 @@ describe('Order screen for a keyed order with 10% tax', () => {
         pane.state = { amount };
         let order = squareOrder;
         if (!order) {
-            await pane.addItemAndCheckout();
+            if (items) {
+                // what the products pane does for each product, then REQUEST
+                posStore.createCurrentOrder('USD');
+                posStore.currentOrder!.line_items.push(...items);
+                posStore.recalculateCurrentOrder();
+                await posStore.processCheckout({ navigate } as any, false);
+            } else {
+                await pane.addItemAndCheckout();
+            }
             const [route, params] = navigate.mock.calls[0];
             expect(route).toBe('Order');
             order = params.order;
         }
         if (payment) order.payment = payment;
+        if (openWithRates) fiatStore.fiatRates = openWithRates;
 
         const orderView = React.createRef<any>();
+        const orderNavigate = jest.fn();
         await render(
             <OrderView
                 ref={orderView}
-                navigation={{ navigate: jest.fn() } as any}
+                navigation={{ navigate: orderNavigate } as any}
                 route={{ params: { order } } as any}
                 FiatStore={fiatStore}
                 SettingsStore={settingsStore}
@@ -233,6 +252,9 @@ describe('Order screen for a keyed order with 10% tax', () => {
             if (node.type === 'Button') return node;
             return findButton(node.children);
         };
+        const button = findButton(screen.toJSON());
+        if (pressProceed && !button?.props.disabled) button.props.onPress();
+        const proceededTo = orderNavigate.mock.calls[0];
         return {
             subTotalFiat: line('pos.views.Order.subtotalFiat'),
             subTotalBitcoin: line('pos.views.Order.subtotalBitcoin'),
@@ -242,7 +264,8 @@ describe('Order screen for a keyed order with 10% tax', () => {
             taxBitcoin: line('pos.views.Order.tax (10%)'),
             totalFiat: line('pos.views.Order.totalFiat'),
             totalBitcoin: line('pos.views.Order.totalBitcoin'),
-            proceedDisabled: findButton(screen.toJSON())?.props.disabled,
+            proceedDisabled: button?.props.disabled,
+            proceededTo,
             receipt,
             receiptHtml
         };
@@ -575,6 +598,87 @@ describe('Order screen for a keyed order with 10% tax', () => {
                 taxFiat: '$0.40',
                 totalFiat: '$4.45',
                 totalBitcoin: '8900 sats'
+            });
+        });
+    });
+
+    describe('for a cart with a sats product and a USD product', () => {
+        const items = [
+            {
+                name: 'Sticker',
+                quantity: 1,
+                taxPercentage: '',
+                base_price_money: { amount: 0, sats: 1000 }
+            },
+            {
+                name: 'Coffee',
+                quantity: 1,
+                taxPercentage: '',
+                base_price_money: { amount: 5, sats: 0 }
+            }
+        ];
+        const RATES = [{ code: 'USD', rate: 100000 }];
+
+        it.each(['fiat', 'sats', 'BTC'])(
+            "doesn't invoice the sats product alone without a rate (%s)",
+            async (units) => {
+                const shown = await showOrder({
+                    fiatRates: [],
+                    units,
+                    items,
+                    pressProceed: true
+                });
+
+                expect(shown.subTotalBitcoin).toBe('general.notAvailable');
+                expect(shown.totalBitcoin).toBe('general.notAvailable');
+                expect(shown.proceedDisabled).toBe(true);
+                expect(shown.proceededTo).toBeUndefined();
+            }
+        );
+
+        it.each([
+            ['fiat', '6.60'],
+            ['sats', '6600'],
+            ['BTC', '0.00006600']
+        ])(
+            'invoices both products once rates load after the order was saved (%s)',
+            async (units, amount) => {
+                const shown = await showOrder({
+                    fiatRates: [],
+                    openWithRates: RATES,
+                    units,
+                    items,
+                    pressProceed: true
+                });
+
+                expect(shown.subTotalBitcoin).toBe('6000 sats');
+                expect(shown.taxBitcoin).toBe('600 sats');
+                expect(shown.totalBitcoin).toBe('6600 sats');
+                expect(shown.totalFiat).toBe('$6.60');
+                expect(shown.proceedDisabled).toBe(false);
+                expect(shown.proceededTo).toEqual([
+                    'Receive',
+                    expect.objectContaining({ amount, orderTotal: '6600' })
+                ]);
+            }
+        );
+
+        it('prints both products once rates load after the order was saved', async () => {
+            const shown = await showOrder({
+                fiatRates: [],
+                openWithRates: RATES,
+                items,
+                print: true
+            });
+
+            expect(shown.receipt).toEqual({
+                subTotalFiat: '$6.00',
+                subTotalBitcoin: '6000 sats',
+                tipFiat: undefined,
+                tipBitcoin: undefined,
+                taxFiat: '$0.60',
+                totalFiat: '$6.60',
+                totalBitcoin: '6600 sats'
             });
         });
     });

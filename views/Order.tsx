@@ -28,6 +28,7 @@ import { getFormattedAmount } from '../utils/AmountUtils';
 
 import BackendUtils from '../utils/BackendUtils';
 import {
+    calculateSubTotalSats,
     calculateTaxSats,
     calculateTotalSats,
     calculateFiatAmountsWithoutRate,
@@ -177,14 +178,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                 .multipliedBy(SATS_PER_BTC)
                 .toFixed(0);
         } else {
-            subTotalSats =
-                order.total_money.sats > 0
-                    ? order.total_money.sats
-                    : new BigNumber(order.total_money.amount)
-                          .div(100)
-                          .div(rate)
-                          .multipliedBy(SATS_PER_BTC)
-                          .toFixed(0);
+            // from the line items, as total_money.sats leaves out
+            // fiat-priced items added without a rate
+            subTotalSats = calculateSubTotalSats(lineItems, rate);
         }
 
         const subTotalFiat: string = new BigNumber(subTotalSats)
@@ -199,8 +195,11 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             );
 
             // the order's fiat tax needs a rate to convert to sats, so
-            // without one use the tax percentage, as the order screen does
+            // without one use the tax percentage, as the order screen does.
+            // A standalone order's fiat tax leaves out sats-priced items
+            // added without a rate, so it's only used for Square orders.
             if (
+                settings.pos.posEnabled === PosEnabled.Square &&
                 fiatEnabled &&
                 !hasIndividualTaxRatesForReceipt &&
                 Number(rate) > 0
@@ -652,15 +651,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                 .integerValue(BigNumber.ROUND_HALF_UP)
                 .toFixed(0);
         } else {
-            subTotalSats =
-                order?.total_money?.sats > 0
-                    ? order.total_money.sats
-                    : new BigNumber(order?.total_money.amount)
-                          .div(100)
-                          .div(rate)
-                          .multipliedBy(SATS_PER_BTC)
-                          .integerValue(BigNumber.ROUND_HALF_UP)
-                          .toFixed(0);
+            // from the line items, as total_money.sats leaves out
+            // fiat-priced items added without a rate
+            subTotalSats = calculateSubTotalSats(lineItems, rate);
         }
 
         const subTotalFiat: string = new BigNumber(subTotalSats)
