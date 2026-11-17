@@ -378,6 +378,7 @@ describe('ChannelMigrationUtils', () => {
                 '/path/to/backup.zip',
                 'backup.zip',
                 'lnd',
+                false,
                 false
             );
 
@@ -391,7 +392,8 @@ describe('ChannelMigrationUtils', () => {
                 '/path/to/backup.zip',
                 'backup.zip',
                 'lnd',
-                true
+                true,
+                false
             );
 
             const destDir = mockUnzipFile.mock.calls[0][1];
@@ -408,6 +410,7 @@ describe('ChannelMigrationUtils', () => {
                 '/path/to/backup.zip',
                 'backup.zip',
                 'lnd',
+                false,
                 false
             );
 
@@ -421,7 +424,7 @@ describe('ChannelMigrationUtils', () => {
 
         it('creates graph directory if it does not exist', async () => {
             mockExists.mockImplementation(async (path: string) => {
-                if (path.includes('graph')) return false;
+                if (path.endsWith('graph/mainnet')) return false;
                 return true;
             });
 
@@ -429,6 +432,7 @@ describe('ChannelMigrationUtils', () => {
                 '/path/to/backup.zip',
                 'backup.zip',
                 'lnd',
+                false,
                 false
             );
 
@@ -440,6 +444,7 @@ describe('ChannelMigrationUtils', () => {
                 'content://downloads/backup.zip',
                 'backup.zip',
                 'lnd',
+                false,
                 false
             );
 
@@ -460,6 +465,7 @@ describe('ChannelMigrationUtils', () => {
                     'content://downloads/backup.zip',
                     'backup.zip',
                     'lnd',
+                    false,
                     false
                 )
             ).rejects.toThrow('ERR_UNZIP');
@@ -474,6 +480,7 @@ describe('ChannelMigrationUtils', () => {
                 '/path/to/backup.zip',
                 'backup.zip',
                 'lnd',
+                false,
                 false
             );
 
@@ -482,8 +489,152 @@ describe('ChannelMigrationUtils', () => {
 
         it('rejects invalid file types', async () => {
             await expect(
-                importChannelDb('/path/to/backup.db', 'backup.db', 'lnd', false)
+                importChannelDb(
+                    '/path/to/backup.db',
+                    'backup.db',
+                    'lnd',
+                    false,
+                    false
+                )
             ).rejects.toThrow();
+        });
+
+        it.each([
+            [false, 'channel.sqlite'],
+            [true, 'channel.db']
+        ])(
+            'rejects a backup of the other database type (isSqlite %p, backup has %s)',
+            async (isSqlite, backupFile) => {
+                mockExists.mockImplementation(
+                    async (path: string) =>
+                        !path.includes('/channel.') ||
+                        path.endsWith(`/${backupFile}`)
+                );
+
+                await expect(
+                    importChannelDb(
+                        '/path/to/backup.zip',
+                        'backup.zip',
+                        'lnd',
+                        false,
+                        isSqlite
+                    )
+                ).rejects.toThrow(
+                    'views.Tools.migration.import.databaseMismatch'
+                );
+            }
+        );
+
+        it.each([false, true])(
+            'accepts a backup with the database of the selected type (isSqlite %p)',
+            async (isSqlite) => {
+                const file = isSqlite ? 'channel.sqlite' : 'channel.db';
+                mockExists.mockImplementation(
+                    async (path: string) =>
+                        !path.includes('/channel.') || path.endsWith(`/${file}`)
+                );
+
+                await expect(
+                    importChannelDb(
+                        '/path/to/backup.zip',
+                        'backup.zip',
+                        'lnd',
+                        false,
+                        isSqlite
+                    )
+                ).resolves.toBeUndefined();
+            }
+        );
+
+        it('fails when an existing file cannot be removed', async () => {
+            mockReadDir.mockResolvedValue([
+                { path: '/graph/mainnet/channel.db', isFile: () => true }
+            ]);
+            mockUnlink.mockImplementation(async (path: string) => {
+                if (path === '/graph/mainnet/channel.db') {
+                    throw new Error('unlink failed');
+                }
+            });
+
+            await expect(
+                importChannelDb(
+                    '/path/to/backup.zip',
+                    'backup.zip',
+                    'lnd',
+                    false,
+                    false
+                )
+            ).rejects.toThrow('unlink failed');
+            expect(mockUnzipFile).not.toHaveBeenCalled();
+        });
+
+        it.each([false, true])(
+            'rejects a backup that unpacks to no channel database (isSqlite %p)',
+            async (isSqlite) => {
+                mockExists.mockImplementation(
+                    async (path: string) => !path.includes('/channel.')
+                );
+
+                await expect(
+                    importChannelDb(
+                        '/path/to/backup.zip',
+                        'backup.zip',
+                        'lnd',
+                        false,
+                        isSqlite
+                    )
+                ).rejects.toThrow(
+                    'views.Tools.migration.import.databaseMissing'
+                );
+            }
+        );
+    });
+
+    describe('restoreChannelBackupFromOlympus clearing the graph directory', () => {
+        const { Alert } = require('react-native');
+        const ReactNativeBlobUtil = require('react-native-blob-util');
+
+        beforeEach(() => {
+            ReactNativeBlobUtil.fetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({
+                    success: true,
+                    verification: CHALLENGE,
+                    last_backup_at: 1700000000000
+                }),
+                text: async () => 'encrypted'
+            });
+            // Confirm the restore prompt
+            Alert.alert.mockImplementation(
+                (_title: string, _message: string, buttons: any[]) =>
+                    buttons[buttons.length - 1].onPress()
+            );
+        });
+
+        afterEach(() => {
+            Alert.alert.mockReset();
+        });
+
+        it('fails when an existing file cannot be removed', async () => {
+            mockReadDir.mockResolvedValue([
+                { path: '/graph/mainnet/channel.db', isFile: () => true }
+            ]);
+            mockUnlink.mockImplementation(async (path: string) => {
+                if (path === '/graph/mainnet/channel.db') {
+                    throw new Error('unlink failed');
+                }
+            });
+
+            await expect(
+                restoreChannelBackupFromOlympus(
+                    'lnd',
+                    false,
+                    'pubkey',
+                    'seed',
+                    false
+                )
+            ).rejects.toThrow('unlink failed');
+            expect(mockUnzipFile).not.toHaveBeenCalled();
         });
     });
 
@@ -598,7 +749,13 @@ describe('ChannelMigrationUtils', () => {
 
     describe('restoreChannelBackupFromOlympus', () => {
         const restore = () =>
-            restoreChannelBackupFromOlympus('lnd', false, 'pubkey', 'seed');
+            restoreChannelBackupFromOlympus(
+                'lnd',
+                false,
+                'pubkey',
+                'seed',
+                false
+            );
 
         let consoleLog: jest.SpyInstance;
         let consoleError: jest.SpyInstance;
@@ -767,7 +924,8 @@ describe('ChannelMigrationUtils', () => {
                         'lnd',
                         false,
                         '03cd',
-                        'seed'
+                        'seed',
+                        false
                     )
                 ).rejects.toThrow('Invalid auth response');
 
@@ -789,7 +947,8 @@ describe('ChannelMigrationUtils', () => {
                         'lnd',
                         false,
                         '03cd',
-                        'seed'
+                        'seed',
+                        false
                     )
                 ).rejects.toThrow('Invalid auth response');
 
@@ -924,7 +1083,13 @@ describe('ChannelMigrationUtils', () => {
         });
 
         const restore = () =>
-            restoreChannelBackupFromOlympus('lnd', false, 'pubkey', 'seed');
+            restoreChannelBackupFromOlympus(
+                'lnd',
+                false,
+                'pubkey',
+                'seed',
+                false
+            );
 
         it('restores and removes the staging .enc and zip on success', async () => {
             await expect(restore()).resolves.toBe(true);
