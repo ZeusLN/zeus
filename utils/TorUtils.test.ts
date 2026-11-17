@@ -265,10 +265,7 @@ describe('doTorRequest errors', () => {
         ['a non-JSON body', 'Bad Gateway', 'Bad Gateway'],
         ['an empty body', '', 'HTTP 500']
     ])('throws the right message for %s', async (_label, body, expected) => {
-        (RnTor.httpPost as jest.Mock).mockResolvedValue({
-            status_code: 500,
-            body
-        });
+        respond(500, body);
 
         const error = await doTorRequest(
             'https://node.onion:8080/v1/pay',
