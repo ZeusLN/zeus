@@ -1,6 +1,7 @@
 // TransactionsStore.sendPayment wired to the real NostrWalletConnect backend
 // (only the SDK's NIP-47 client is stubbed), so these cover what the send
-// screen sees for each wallet reply
+// screen sees for each wallet reply, including the lookup_invoice polling
+// that follows a payment left in flight
 import {
     Nip47PublishTimeoutError,
     Nip47ReplyTimeoutError,
@@ -27,9 +28,11 @@ jest.mock('../utils/BackendUtils', () => ({
     default: {
         payLightningInvoice: (...args: any[]) =>
             mockBackend.current.payLightningInvoice(...args),
+        lookupPayment: (...args: any[]) =>
+            mockBackend.current.lookupPayment(...args),
         supportsOffersDirectPay: () => false,
-        // as on the NWC backend
-        supportsPaymentLookup: () => false,
+        supportsPaymentLookup: () =>
+            mockBackend.current.supportsPaymentLookup(),
         isLNDBased: () => false
     }
 }));
@@ -49,7 +52,11 @@ import Base64Utils from '../utils/Base64Utils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { sha256Hex } from '../utils/HashingUtils';
 import NostrWalletConnect from '../backends/NostrWalletConnect';
-import TransactionsStore from './TransactionsStore';
+import TransactionsStore, {
+    PAYMENT_TRACK_MAX_FAILURES,
+    PAYMENT_TRACK_MAX_NOT_FOUND,
+    PAYMENT_TRACK_POLL_MS
+} from './TransactionsStore';
 
 // BOLT11 spec reference vector; its decoded payment hash is bound below to
 // a preimage the tests control
@@ -66,12 +73,25 @@ const NWC_URL = `nostr+walletconnect://${WALLET_PUBKEY}?relay=${encodeURICompone
 const flushPromises = () =>
     new Promise(jest.requireActual('timers').setImmediate);
 
+// runs the payment tracker's polls (one lookup every
+// PAYMENT_TRACK_POLL_MS)
+const runPolls = async (polls: number) => {
+    for (let i = 0; i < polls; i++) {
+        jest.advanceTimersByTime(PAYMENT_TRACK_POLL_MS);
+        await flushPromises();
+    }
+};
+
 const setup = async () => {
     mockSettingsStore.nostrWalletConnectUrl = NWC_URL;
     const backend = new NostrWalletConnect();
     await backend.initNWC();
     await backend.connect();
     backend.nwc.client.payInvoice = jest.fn();
+    // a wallet with no record of the payment, unless a test says otherwise
+    backend.nwc.client.lookupInvoice = jest
+        .fn()
+        .mockRejectedValue(new Nip47WalletError('not found', 'NOT_FOUND'));
     mockBackend.current = backend;
 
     const store = new TransactionsStore(
@@ -81,7 +101,11 @@ const setup = async () => {
         {} as any,
         { checkAndTriggerRatingModal: jest.fn() } as any
     );
-    return { store, payInvoice: backend.nwc.client.payInvoice as jest.Mock };
+    return {
+        store,
+        payInvoice: backend.nwc.client.payInvoice as jest.Mock,
+        lookupInvoice: backend.nwc.client.lookupInvoice as jest.Mock
+    };
 };
 
 describe('TransactionsStore.sendPayment on Nostr Wallet Connect', () => {
@@ -134,9 +158,8 @@ describe('TransactionsStore.sendPayment on Nostr Wallet Connect', () => {
         expect(store.loading).toBe(false);
         expect(store.error).toBe(false);
         expect(store.status).toBe('IN_FLIGHT');
-        expect(store.payment_preimage).toBe('');
-        expect(store.payment_hash).toBe(PAYMENT_HASH);
-        expect(store.noteKey).toBe(`note-${PAYMENT_HASH}`);
+        // the guard holds while the wallet is asked for the payment
+        expect(store.paymentInFlight).toBe(true);
     });
 
     it.each([
@@ -159,7 +182,7 @@ describe('TransactionsStore.sendPayment on Nostr Wallet Connect', () => {
         expect(store.error).toBe(false);
         expect(store.error_msg).toBeNull();
         expect(store.status).toBe('IN_FLIGHT');
-        expect(store.noteKey).toBe(`note-${PAYMENT_HASH}`);
+        expect(store.paymentInFlight).toBe(true);
     });
 
     it('surfaces a wallet error as a failed payment', async () => {
@@ -176,17 +199,114 @@ describe('TransactionsStore.sendPayment on Nostr Wallet Connect', () => {
         expect(store.status).toBeNull();
     });
 
-    it('surfaces a preimage that does not match the invoice as an error', async () => {
+    it('records a preimage that does not match the invoice as in transit, not an error', async () => {
         const { store, payInvoice } = await setup();
         payInvoice.mockResolvedValue({ preimage: 'c'.repeat(64) });
 
         store.sendPayment({ payment_request: SPEC_INVOICE });
         await flushPromises();
 
-        expect(store.error).toBe(true);
-        expect(store.error_msg).toBe(
-            'The wallet reported this payment as sent, but the preimage it returned does not match the invoice'
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBeNull();
+        expect(store.status).toBe('IN_FLIGHT');
+        expect(store.paymentInFlight).toBe(true);
+    });
+
+    describe('after a payment is left in flight', () => {
+        it('shows the settled record the wallet reports for a reply timeout', async () => {
+            const { store, payInvoice, lookupInvoice } = await setup();
+            payInvoice.mockRejectedValue(
+                new Nip47ReplyTimeoutError(
+                    'reply timeout: event abc',
+                    'INTERNAL'
+                )
+            );
+            lookupInvoice.mockResolvedValue({
+                payment_hash: PAYMENT_HASH,
+                state: 'settled',
+                preimage: PREIMAGE,
+                amount: 250_000_000
+            });
+
+            store.sendPayment({ payment_request: SPEC_INVOICE });
+            await flushPromises();
+
+            expect(lookupInvoice).toHaveBeenCalledWith({
+                payment_hash: PAYMENT_HASH
+            });
+            expect(store.error).toBe(false);
+            expect(store.status).toBe('SUCCEEDED');
+            expect(store.payment_preimage).toBe(PREIMAGE);
+            expect(store.paymentInFlight).toBe(false);
+            // same key Payment.getNoteKey gives the payment in the
+            // activity list
+            expect(store.noteKey).toBe(`note-${PAYMENT_HASH}`);
+        });
+
+        it('does not show a wrong preimage as proof when the wallet reports the payment settled', async () => {
+            const wrong = 'c'.repeat(64);
+            const { store, payInvoice, lookupInvoice } = await setup();
+            payInvoice.mockResolvedValue({ preimage: wrong });
+            lookupInvoice.mockResolvedValue({
+                payment_hash: PAYMENT_HASH,
+                state: 'settled',
+                preimage: wrong,
+                amount: 250_000_000
+            });
+
+            store.sendPayment({ payment_request: SPEC_INVOICE });
+            await flushPromises();
+
+            expect(store.error).toBe(false);
+            expect(store.status).toBe('SUCCEEDED');
+            expect(store.payment_preimage).toBe('');
+            expect(store.paymentInFlight).toBe(false);
+        });
+
+        // the send screen then shows the payment in transit with the
+        // "stopped checking" notice and no Try Again (which needs error)
+        it.each([
+            [
+                'a publish timeout the wallet has no record of',
+                PAYMENT_TRACK_MAX_NOT_FOUND,
+                () =>
+                    Promise.reject(
+                        new Nip47PublishTimeoutError(
+                            'publish timeout: abc',
+                            'INTERNAL'
+                        )
+                    ),
+                () =>
+                    Promise.reject(
+                        new Nip47WalletError('not found', 'NOT_FOUND')
+                    )
+            ],
+            [
+                'a wrong preimage from a wallet without lookup_invoice',
+                PAYMENT_TRACK_MAX_FAILURES,
+                () => Promise.resolve({ preimage: 'c'.repeat(64) }),
+                () =>
+                    Promise.reject(
+                        new Nip47WalletError('not supported', 'NOT_IMPLEMENTED')
+                    )
+            ]
+        ])(
+            'stops checking %s without offering a retry',
+            async (_, lookups, pay, lookup) => {
+                const { store, payInvoice, lookupInvoice } = await setup();
+                payInvoice.mockImplementation(pay);
+                lookupInvoice.mockImplementation(lookup);
+
+                store.sendPayment({ payment_request: SPEC_INVOICE });
+                await flushPromises();
+                await runPolls(lookups);
+
+                expect(lookupInvoice).toHaveBeenCalledTimes(lookups);
+                expect(store.paymentInFlight).toBe(false);
+                expect(store.paymentOutcomeUnverified).toBe(true);
+                expect(store.error).toBe(false);
+                expect(store.status).toBe('IN_FLIGHT');
+            }
         );
-        expect(store.status).toBeNull();
     });
 });

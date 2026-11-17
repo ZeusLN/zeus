@@ -76,6 +76,22 @@ const isSdkError = (error: any): boolean => {
     );
 };
 
+// The preimage as lowercase hex when it proves payment of `payment_hash`
+// (lowercase hex, as Bolt11Utils.decode and the payment tracker give it),
+// else undefined. The hex check comes first because Base64Utils.hexToBytes
+// uses parseInt, which reads 'dz' as 0x0d.
+const verifiedPreimage = (
+    preimage: unknown,
+    payment_hash: string
+): string | undefined => {
+    if (typeof preimage !== 'string') return undefined;
+    const normalized = preimage.toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(normalized)) return undefined;
+    return sha256Hex(Base64Utils.hexToBytes(normalized)) === payment_hash
+        ? normalized
+        : undefined;
+};
+
 export default class NostrWalletConnect {
     nwc: any;
 
@@ -224,29 +240,31 @@ export default class NostrWalletConnect {
             throw error;
         }
 
-        // A reply with no preimage is not proof of payment. Zeus's own NWC
-        // service answers with an empty preimage while the HTLC is still out
+        // Only a preimage that hashes to the invoice's payment hash proves
+        // the payment. Zeus's own NWC service answers with an empty
+        // preimage while the HTLC is still out, and a wrong one leaves the
+        // outcome unknown: the wallet may or may not have paid. Both are in
+        // flight, so the send screen offers no Try Again and
+        // TransactionsStore asks the wallet for the payment by its hash.
         if (!preimage) {
             return { status: 'IN_FLIGHT', payment_hash };
         }
 
-        const normalizedPreimage = preimage.toLowerCase();
-        if (
-            payment_hash &&
-            (!/^[0-9a-f]{64}$/.test(normalizedPreimage) ||
-                sha256Hex(Base64Utils.hexToBytes(normalizedPreimage)) !==
-                    payment_hash.toLowerCase())
-        ) {
-            throw new Error(
-                localeString('backends.NWC.payLightningInvoice.wrongPreimage')
-            );
+        // the invoice did not decode: there is nothing to check against
+        if (!payment_hash) {
+            return {
+                status: 'SUCCEEDED',
+                payment_hash,
+                preimage: preimage.toLowerCase()
+            };
         }
 
-        return {
-            status: 'SUCCEEDED',
-            payment_hash,
-            preimage: normalizedPreimage
-        };
+        const verified = verifiedPreimage(preimage, payment_hash);
+        if (!verified) {
+            return { status: 'IN_FLIGHT', payment_hash };
+        }
+
+        return { status: 'SUCCEEDED', payment_hash, preimage: verified };
     };
     decodePaymentRequest = (urlParams?: Array<string>) =>
         Promise.resolve().then(() =>
@@ -279,7 +297,9 @@ export default class NostrWalletConnect {
         const state = tx.state || (tx.settled_at ? 'settled' : 'pending');
         return {
             payment_hash: tx.payment_hash,
-            payment_preimage: tx.preimage,
+            // the wallet's state decides the status, but a preimage that
+            // does not hash to the payment hash is not shown as proof
+            payment_preimage: verifiedPreimage(tx.preimage, data.payment_hash),
             invoice: tx.invoice,
             creation_date: tx.created_at?.toString(),
             amount: Math.floor((tx.amount || 0) / 1000),

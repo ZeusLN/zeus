@@ -227,8 +227,8 @@ export default class SendingLightning extends React.Component<
                 return;
             }
 
-            // A payment still pending (NWC timeout or no preimage yet) has
-            // not settled: record no amount or preimage for it
+            // A payment still pending has not settled: record no amount or
+            // preimage for it
             if (typeof status === 'string' && status === 'IN_FLIGHT') {
                 this.setState({ payingDonation: false });
                 return;

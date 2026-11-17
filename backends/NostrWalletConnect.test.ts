@@ -495,22 +495,22 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         });
     });
 
+    // the wallet said it paid but sent no proof: the payment may or may
+    // not have gone out, so it is in flight, not failed
     it.each([
         ['a preimage for another hash', PREIMAGE],
         ['a short preimage', 'dd'],
         ['a non-hex preimage', 'z'.repeat(64)]
-    ])('rejects %s', async (_, preimage) => {
+    ])('reports %s as in flight', async (_, preimage) => {
         const { backend, client } = await setup();
         client.payInvoice.mockResolvedValue({ preimage });
 
         await expect(
             backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
-        ).rejects.toThrow(
-            localeString('backends.NWC.payLightningInvoice.wrongPreimage')
-        );
+        ).resolves.toEqual({ status: 'IN_FLIGHT', payment_hash: PAY_HASH });
     });
 
-    it('rejects a non-hex preimage even when it parses to the right bytes', async () => {
+    it('reports a non-hex preimage as in flight even when it parses to the right bytes', async () => {
         // parseInt('dz', 16) is 0x0d, so 'dz' repeated hashes like '0d'
         // repeated; only the hex check catches it
         const realPreimage = '0d'.repeat(32);
@@ -528,9 +528,10 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
 
         await expect(
             backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
-        ).rejects.toThrow(
-            localeString('backends.NWC.payLightningInvoice.wrongPreimage')
-        );
+        ).resolves.toEqual({
+            status: 'IN_FLIGHT',
+            payment_hash: sha256Hex(Base64Utils.hexToBytes(realPreimage))
+        });
     });
 
     it('reports success without checking when the invoice does not decode', async () => {
@@ -539,7 +540,9 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
             throw new Error('bad invoice');
         });
         const { backend, client } = await setup();
-        client.payInvoice.mockResolvedValue({ preimage: PREIMAGE });
+        client.payInvoice.mockResolvedValue({
+            preimage: PREIMAGE.toUpperCase()
+        });
 
         await expect(
             backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
@@ -548,6 +551,18 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
             payment_hash: undefined,
             preimage: PREIMAGE
         });
+    });
+
+    it('reports a reply without a preimage as in flight when the invoice does not decode', async () => {
+        jest.spyOn(Bolt11Utils, 'decode').mockImplementation(() => {
+            throw new Error('bad invoice');
+        });
+        const { backend, client } = await setup();
+        client.payInvoice.mockResolvedValue({ preimage: '' });
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).resolves.toEqual({ status: 'IN_FLIGHT', payment_hash: undefined });
     });
 
     it('sends only the invoice, dropping amount and fee limit', async () => {
@@ -1053,8 +1068,14 @@ describe('NostrWalletConnect.lookupInvoice', () => {
 });
 
 describe('NostrWalletConnect.lookupPayment', () => {
+    // the payment hash PREIMAGE proves
+    const PREIMAGE_HASH = sha256Hex(Base64Utils.hexToBytes(PREIMAGE));
     const outgoing = (overrides: any = {}) =>
-        nip47Tx({ type: 'outgoing', ...overrides });
+        nip47Tx({
+            type: 'outgoing',
+            payment_hash: PREIMAGE_HASH,
+            ...overrides
+        });
 
     it('sends the payment hash to lookup_invoice on the raw client', async () => {
         const { backend, client } = await setup();
@@ -1075,9 +1096,9 @@ describe('NostrWalletConnect.lookupPayment', () => {
         );
 
         await expect(
-            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+            backend.lookupPayment({ payment_hash: PREIMAGE_HASH })
         ).resolves.toEqual({
-            payment_hash: SPEC_PAYMENT_HASH,
+            payment_hash: PREIMAGE_HASH,
             payment_preimage: PREIMAGE,
             invoice: SPEC_INVOICE,
             creation_date: '1700000000',
@@ -1085,6 +1106,38 @@ describe('NostrWalletConnect.lookupPayment', () => {
             fees_paid: 2,
             status: 'SUCCEEDED'
         });
+    });
+
+    it('returns an uppercase preimage that proves the payment lowercased', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(
+            outgoing({ preimage: PREIMAGE.toUpperCase() })
+        );
+
+        await expect(
+            backend.lookupPayment({ payment_hash: PREIMAGE_HASH })
+        ).resolves.toMatchObject({
+            payment_preimage: PREIMAGE,
+            status: 'SUCCEEDED'
+        });
+    });
+
+    // the wallet's state still decides the status; only the proof is dropped
+    it.each([
+        ['for another hash', 'd'.repeat(64)],
+        ['that is not hex', 'z'.repeat(64)],
+        ['that is short', 'cc'],
+        ['that is not a string', 123]
+    ])('drops a preimage %s', async (_, preimage) => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(outgoing({ preimage }));
+
+        const payment = await backend.lookupPayment({
+            payment_hash: PREIMAGE_HASH
+        });
+
+        expect(payment?.payment_preimage).toBeUndefined();
+        expect(payment?.status).toBe('SUCCEEDED');
     });
 
     it.each([
