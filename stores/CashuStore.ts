@@ -2090,18 +2090,21 @@ export default class CashuStore {
     private pendingOfflineSendsKey = (lndDir?: string) =>
         `${lndDir ?? this.getNodeDir()}-cashu-pending-offline-sends`;
 
+    /**
+     * Throws when the stored records can't be read or parsed. Treating that
+     * as an empty list would let the next save overwrite records that still
+     * hold the only copy of a token whose proofs are already deleted.
+     */
     private loadPendingOfflineSends = async (
         key: string
     ): Promise<PendingOfflineSend[]> => {
-        try {
-            const stored = await Storage.getItem(key);
-            if (!stored) return [];
-            const parsed = JSON.parse(stored);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch (e) {
-            console.warn('Failed to load pending offline sends:', e);
-            return [];
+        const stored = await Storage.getItem(key);
+        if (!stored) return [];
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) {
+            throw new Error('Stored pending offline sends are not a list');
         }
+        return parsed;
     };
 
     private savePendingOfflineSends = async (
@@ -2159,7 +2162,18 @@ export default class CashuStore {
             const nodeDir = this.cdkNodeDir;
             if (!nodeDir || nodeDir !== this.getNodeDir()) return;
             const key = this.pendingOfflineSendsKey(nodeDir);
-            const records = await this.loadPendingOfflineSends(key);
+            let records: PendingOfflineSend[];
+            try {
+                records = await this.loadPendingOfflineSends(key);
+            } catch (e) {
+                // Leave the records on disk for the next startup; offline
+                // sends refuse to run until they can be read.
+                console.warn(
+                    'Failed to load pending offline sends, will retry at next startup:',
+                    e
+                );
+                return;
+            }
             if (records.length === 0) return;
 
             const keep: PendingOfflineSend[] = [];
