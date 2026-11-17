@@ -152,10 +152,11 @@ export default class AmountInput extends React.Component<
                 }
             }
         } else if (unitsChanged && amount) {
-            // The unit was changed elsewhere (in the keypad before leaving
-            // it without confirming, or by a toggleable Amount). The digits
-            // are now shown in the new unit, so convert the sat amount into
-            // it, or the field no longer matches what the parent will use.
+            // The unit was changed elsewhere, such as by a toggleable
+            // Amount. The digits are now shown in the new unit, so convert
+            // the sat amount into it, or the field no longer matches what
+            // the parent will use. A change made in the keypad has already
+            // cleared the amount through onUnitsChange.
             const converted = getRawAmountFromSats(
                 this.unitChangeSats,
                 forceUnit
@@ -219,6 +220,13 @@ export default class AmountInput extends React.Component<
                     const satAmount = getSatAmount(newAmount, forceUnit);
                     onAmountChange(newAmount, satAmount);
                     this.setSatAmount(satAmount);
+                },
+                // the keypad clears its digits when its unit changes, so
+                // clear the field too: leaving the keypad with the back
+                // arrow then shows the 0 the keypad showed
+                onUnitsChange: () => {
+                    this.props.onAmountChange('0', 0);
+                    this.setSatAmount(0);
                 }
             });
         }

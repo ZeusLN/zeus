@@ -263,6 +263,18 @@ describe('AmountInput keypad', () => {
         expect(conversions()).toEqual({ fiat: 50000, sats: 50000 });
     });
 
+    it('reports 0 sats when the unit is changed in the keypad', async () => {
+        unitsStore.units = 'fiat';
+        const { onAmountChange } = await renderInput({ amount: '25' });
+        await openKeypad('$25');
+        onAmountChange.mockClear();
+
+        await act(() => keypadParams().onUnitsChange());
+
+        expect(onAmountChange).toHaveBeenCalledWith('0', 0);
+        expect(conversions()).toEqual({ BTC: 0, sats: 0 });
+    });
+
     it('does not open when locked', async () => {
         await renderInput({ amount: '21', locked: true });
 
@@ -340,7 +352,43 @@ describe('AmountInput units changed outside of the input', () => {
         return { parent, onAmountChange, storeChanged };
     };
 
-    it('converts the amount when the unit is switched in the keypad and the keypad is left without confirming', async () => {
+    it('clears the amount when the unit is toggled in the keypad and the keypad is left without confirming', async () => {
+        unitsStore.units = 'fiat';
+        const { parent, storeChanged } = await renderWithParent('25');
+        expect(parent.satAmount).toBe('50000');
+        await openKeypad('$25');
+
+        // UnitToggle calls onToggle before it changes the unit
+        await storeChanged(() => {
+            keypadParams().onUnitsChange();
+            unitsStore.units = 'sats';
+        });
+
+        expect(parent).toEqual({ amount: '0', satAmount: 0 });
+        expect(screen.getByText('0 sats')).toBeOnTheScreen();
+        expect(conversions()).toEqual({ fiat: 0, BTC: 0 });
+    });
+
+    it('clears the amount when the fiat currency is picked in the keypad and the keypad is left without confirming', async () => {
+        unitsStore.units = 'fiat';
+        fiatStore.fiatRates = [
+            { code: 'USD', rate: 50_000 },
+            { code: 'EUR', rate: 40_000 }
+        ];
+        const { parent, storeChanged } = await renderWithParent('25');
+        await openKeypad('$25');
+
+        // the selection is stored before the modal closes and the keypad
+        // reports it
+        await storeChanged(() => (settingsStore.settings.fiat = 'EUR'));
+        await storeChanged(() => keypadParams().onUnitsChange());
+
+        expect(parent).toEqual({ amount: '0', satAmount: 0 });
+        expect(screen.getByText('$0')).toBeOnTheScreen();
+        expect(conversions()).toEqual({ BTC: 0, sats: 0 });
+    });
+
+    it('converts a fiat amount when a toggleable Amount changes the unit to sats', async () => {
         unitsStore.units = 'fiat';
         const { parent, storeChanged } = await renderWithParent('25');
         expect(parent.satAmount).toBe('50000');
