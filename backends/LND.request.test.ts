@@ -452,6 +452,70 @@ describe('LND request core', () => {
             await expect(b).resolves.toEqual({ wallet: 'b' });
         });
 
+        it('does not share a request made after the pin changed', async () => {
+            settings.certVerification = true;
+            settings.pinnedCerts = ['MIIBold'];
+            const pending: Array<(v: any) => void> = [];
+            mockFetch.mockImplementation(
+                () => new Promise((res) => pending.push(res))
+            );
+
+            const a = lnd.getChannels();
+            settings.pinnedCerts = ['MIIBnew'];
+            const b = lnd.getChannels();
+
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            expect(mockConfig.mock.calls[0][0].pinnedCerts).toEqual([
+                'MIIBold'
+            ]);
+            expect(mockConfig.mock.calls[1][0].pinnedCerts).toEqual([
+                'MIIBnew'
+            ]);
+            pending[0](response(200, '{"pin":"old"}'));
+            pending[1](response(200, '{"pin":"new"}'));
+            await expect(a).resolves.toEqual({ pin: 'old' });
+            await expect(b).resolves.toEqual({ pin: 'new' });
+        });
+
+        it('does not share a request made after certVerification changed', async () => {
+            const pending: Array<(v: any) => void> = [];
+            mockFetch.mockImplementation(
+                () => new Promise((res) => pending.push(res))
+            );
+
+            const a = lnd.getChannels();
+            settings.certVerification = true;
+            const b = lnd.getChannels();
+
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+            expect(mockConfig.mock.calls[0][0].trusty).toBe(true);
+            expect(mockConfig.mock.calls[1][0].trusty).toBe(false);
+            pending[0](response(200, '{"n":1}'));
+            pending[1](response(200, '{"n":2}'));
+            await expect(a).resolves.toEqual({ n: 1 });
+            await expect(b).resolves.toEqual({ n: 2 });
+        });
+
+        it('shares one fetch between identical concurrent pinned requests', async () => {
+            settings.certVerification = true;
+            settings.pinnedCerts = ['MIIBpin'];
+            let resolveFetch: (v: any) => void = () => {};
+            mockFetch.mockReturnValue(
+                new Promise((res) => {
+                    resolveFetch = res;
+                })
+            );
+
+            const a = lnd.getChannels();
+            settings.pinnedCerts = ['MIIBpin'];
+            const b = lnd.getChannels();
+            resolveFetch(response(200, '{"channels":[]}'));
+
+            await expect(a).resolves.toEqual({ channels: [] });
+            await expect(b).resolves.toEqual({ channels: [] });
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+        });
+
         it('issues a fresh request once the previous one resolved', async () => {
             mockFetch
                 .mockResolvedValueOnce(response(200, '{"n":1}'))

@@ -182,6 +182,62 @@ describe('CLNRest.request', () => {
         await expect(second).resolves.toEqual({ wallet: 'b' });
     });
 
+    it('does not share a request made after the pin changed', async () => {
+        mockSettingsStore.certVerification = true;
+        mockSettingsStore.pinnedCerts = ['MIIBold'];
+        const pending: Array<(v: any) => void> = [];
+        mockFetch.mockImplementation(() => new Promise((r) => pending.push(r)));
+
+        const first = cln.postRequest('/v1/listfunds');
+        mockSettingsStore.pinnedCerts = ['MIIBnew'];
+        const second = cln.postRequest('/v1/listfunds');
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect((mockConfig.mock.calls[0] as any)[0].pinnedCerts).toEqual([
+            'MIIBold'
+        ]);
+        expect((mockConfig.mock.calls[1] as any)[0].pinnedCerts).toEqual([
+            'MIIBnew'
+        ]);
+        pending[0](blobResponse(200, '{"pin":"old"}'));
+        pending[1](blobResponse(200, '{"pin":"new"}'));
+        await expect(first).resolves.toEqual({ pin: 'old' });
+        await expect(second).resolves.toEqual({ pin: 'new' });
+    });
+
+    it('does not share a request made after certVerification changed', async () => {
+        const pending: Array<(v: any) => void> = [];
+        mockFetch.mockImplementation(() => new Promise((r) => pending.push(r)));
+
+        const first = cln.postRequest('/v1/listfunds');
+        mockSettingsStore.certVerification = true;
+        const second = cln.postRequest('/v1/listfunds');
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect((mockConfig.mock.calls[0] as any)[0].trusty).toBe(true);
+        expect((mockConfig.mock.calls[1] as any)[0].trusty).toBe(false);
+        pending[0](blobResponse(200, '{"n":1}'));
+        pending[1](blobResponse(200, '{"n":2}'));
+        await expect(first).resolves.toEqual({ n: 1 });
+        await expect(second).resolves.toEqual({ n: 2 });
+    });
+
+    it('shares one in-flight request between identical pinned calls', async () => {
+        mockSettingsStore.certVerification = true;
+        mockSettingsStore.pinnedCerts = ['MIIBpin'];
+        let resolve: (v: any) => void = () => {};
+        mockFetch.mockReturnValue(new Promise((r) => (resolve = r)));
+
+        const first = cln.postRequest('/v1/listfunds');
+        mockSettingsStore.pinnedCerts = ['MIIBpin'];
+        const second = cln.postRequest('/v1/listfunds');
+        resolve(blobResponse(200, '{"ok":true}'));
+
+        await expect(first).resolves.toEqual({ ok: true });
+        await expect(second).resolves.toEqual({ ok: true });
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
     it('does not share Tor requests made with different runes', async () => {
         mockSettingsStore.enableTor = true;
         mockDoTorRequest

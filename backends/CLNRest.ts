@@ -78,7 +78,10 @@ export default class CLNRest {
         timeout?: number,
         pinnedCerts?: string[]
     ) => {
-        const id = inFlightRequestKey(headers, url, data);
+        const id = inFlightRequestKey(headers, url, data, {
+            certVerification,
+            pinnedCerts
+        });
         if (calls.has(id)) {
             return calls.get(id);
         }
