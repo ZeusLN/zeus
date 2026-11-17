@@ -6,6 +6,7 @@ import {
     View,
     TouchableOpacity
 } from 'react-native';
+import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -222,6 +223,49 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                         }}
                                     >
                                         {localeString('general.ecash')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                    {BackendUtils.isLNDBased() &&
+                        selectedNode &&
+                        !isChannelMigrating && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('Notifications')
+                                    }
+                                >
+                                    <View style={styles.icon}>
+                                        <Icon
+                                            name="notifications"
+                                            color={themeColor('text')}
+                                            underlayColor="transparent"
+                                            size={23}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('general.notifications')}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
