@@ -3,6 +3,7 @@ jest.mock('mobx-react', () => ({
     observer: (component: any) => component
 }));
 jest.mock('@rneui/themed', () => ({ ButtonGroup: 'ButtonGroup' }));
+jest.mock('../components/Amount', () => 'Amount');
 jest.mock('../components/AnimatedQRDisplay', () => 'AnimatedQRDisplay');
 jest.mock('../components/Button', () => 'Button');
 jest.mock('../components/Header', () => 'Header');
@@ -13,6 +14,7 @@ jest.mock('../components/SuccessErrorMessage', () => ({
     WarningMessage: 'WarningMessage'
 }));
 jest.mock('../stores/ChannelsStore', () => ({}));
+jest.mock('../stores/NodeInfoStore', () => ({}));
 jest.mock('../stores/TransactionsStore', () => ({}));
 jest.mock('../utils/Base64Utils', () => ({
     __esModule: true,
@@ -24,9 +26,12 @@ jest.mock('../utils/buttonGroupStyles', () => ({
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
+jest.mock('../utils/PrivacyUtils', () => ({}));
+jest.mock('../utils/PsbtUtils', () => ({}));
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));
+jest.mock('../utils/UrlUtils', () => ({}));
 
 import * as React from 'react';
 import PSBT from './PSBT';
@@ -63,6 +68,7 @@ const makeView = (psbt: string, applied = true) => {
     const view = new PSBT({
         navigation,
         ChannelsStore,
+        NodeInfoStore: {},
         TransactionsStore,
         route: { params: { psbt } }
     } as unknown as React.ComponentProps<typeof PSBT>);
