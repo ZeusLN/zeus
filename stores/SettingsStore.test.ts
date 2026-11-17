@@ -1859,6 +1859,42 @@ describe('getLdkNodeLspConfig', () => {
         ]);
     });
 
+    it('trims and lowercases the LSPS1 node the user typed', () => {
+        const config = getLdkNodeLspConfig(
+            {
+                lsps1PubkeyMutinynet: ` ${customPubkey.toUpperCase()} `,
+                lsps1HostMutinynet: ' 127.0.0.1:9735 '
+            } as any,
+            'mutinynet'
+        );
+
+        expect(config.lsps1Config?.nodeId).toEqual(customPubkey);
+        expect(config.lsps1Config?.address).toEqual('127.0.0.1:9735');
+    });
+
+    it.each([
+        ['a half-typed pubkey', customPubkey.slice(0, 40), '127.0.0.1:9735'],
+        ['a pubkey off the curve', `02${'f'.repeat(64)}`, '127.0.0.1:9735'],
+        ['a host without a port', customPubkey, '127.0.0.1'],
+        ['a v2 onion host', customPubkey, 'expyuzz4wqqyqhjn.onion:9735']
+    ])(
+        'neither registers nor trusts an LSPS1 node with %s',
+        (_, pubkey, host) => {
+            const config = getLdkNodeLspConfig(
+                {
+                    lsps1PubkeyMutinynet: pubkey,
+                    lsps1HostMutinynet: host
+                } as any,
+                'mutinynet'
+            );
+
+            expect(config.lsps1Config).toBeUndefined();
+            expect(config.trustedPeers0conf).toEqual([
+                DEFAULT_LSPS1_PUBKEY_MUTINYNET
+            ]);
+        }
+    );
+
     it('resolves signet to the testnet LSP', () => {
         expect(
             getLdkNodeLspConfig({} as any, 'signet').trustedPeers0conf
