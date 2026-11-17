@@ -2302,7 +2302,22 @@ export default class CashuStore {
                         'Active wallet changed during offline send'
                     );
                 }
-                const allProofs = await CashuDevKit.getUnspentProofs(mintUrl);
+                // Throws on an unreadable list, refusing the send: saving
+                // over it could drop a record that holds the only copy of
+                // an earlier token.
+                const records = await this.loadPendingOfflineSends(pendingKey);
+                // A record that outlived a failed send (its cleanup write
+                // failed too, or the app stopped before removeProofs) still
+                // covers proofs that are present. Selecting them would let
+                // reconciliation later promote that record as a sent token
+                // over proofs this send hands out, so keep them out of
+                // selection until reconciliation resolves the record.
+                const pendingYs = new Set(
+                    records.flatMap((r) => r.proofs.map((p) => p.y))
+                );
+                const allProofs = (
+                    await CashuDevKit.getUnspentProofs(mintUrl)
+                ).filter((p) => !pendingYs.has(p.y));
                 const { selected, total } = this.selectProofsForAmount(
                     allProofs,
                     amount
@@ -2312,7 +2327,6 @@ export default class CashuStore {
                 // Persist-before-destroy: record the token before deleting
                 // its proofs so a crash between the two is recoverable by
                 // reconcilePendingOfflineSends at next startup.
-                const records = await this.loadPendingOfflineSends(pendingKey);
                 records.push({
                     id: `${Date.now()}-${Math.random()
                         .toString(36)
