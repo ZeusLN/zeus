@@ -242,6 +242,32 @@ describe('SwapStore.createReverseSwap response verification', () => {
         }
     );
 
+    it('does not log the swap request or the provider response', async () => {
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        try {
+            const { stored } = await create();
+
+            expect(stored).toHaveLength(1);
+            expect(logSpy).toHaveBeenCalledWith('Created reverse swap');
+
+            const request = fetchMock.mock.calls.find(([, url]) =>
+                /\/swap\/reverse$/.test(url)
+            );
+            const { claimPublicKey, preimageHash } = JSON.parse(request![3]);
+            const logged = JSON.stringify(logSpy.mock.calls);
+            for (const value of [
+                claimPublicKey,
+                preimageHash,
+                'lnbc-provider-invoice',
+                VALID.lockupAddress
+            ]) {
+                expect(logged).not.toContain(value);
+            }
+        } finally {
+            logSpy.mockRestore();
+        }
+    });
+
     it('fails closed before payment when the explorer height is unusable', async () => {
         const { store, navigation, stored } = await create({}, 'not a height');
         expect(store.apiError).toBe('views.Swaps.tipHeightUnavailable');

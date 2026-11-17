@@ -513,6 +513,24 @@ describe('LND.subscribeCustomMessages', () => {
         expect(ws).toBe(sockets[0]);
     });
 
+    it('passes a message on without logging its payload', () => {
+        const onResponse = jest.fn();
+        new LND().subscribeCustomMessages(onResponse, jest.fn());
+        const message = {
+            result: { peer: 'cGVlcg==', type: 37913, data: 'b3JkZXItc2VjcmV0' }
+        };
+
+        sockets[0].emit('message', { data: JSON.stringify(message) });
+
+        expect(onResponse).toHaveBeenCalledWith(message);
+        expect(console.log).toHaveBeenCalledWith(
+            'subscribeCustomMessages ws message'
+        );
+        expect(
+            JSON.stringify(jest.mocked(console.log).mock.calls)
+        ).not.toContain(message.result.data);
+    });
+
     // LSPStore's error handler relies on these shapes: a string for a
     // socket error, the stream's error object for a server error
     describe('error callback', () => {

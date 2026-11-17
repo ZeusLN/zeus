@@ -134,6 +134,44 @@ describe('LSPStore custom-message request timeouts', () => {
         return expect(promise).resolves.toBeUndefined();
     });
 
+    it('logs neither the send response nor the reply payload', async () => {
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({
+            note: 'send-response-123'
+        });
+        const store = makeStore();
+
+        try {
+            const promise = store.lsps1GetInfoCustomMessage();
+            await jest.advanceTimersByTimeAsync(0);
+            const id = store.getInfoId;
+            store.handleCustomMessages({
+                peer: Buffer.from('aa', 'hex').toString('base64'),
+                data: Buffer.from(
+                    JSON.stringify({
+                        jsonrpc: '2.0',
+                        id,
+                        result: { note: 'reply-payload-123' }
+                    })
+                ).toString('base64')
+            });
+            await promise;
+
+            expect(logSpy).toHaveBeenCalledWith(
+                'Response for custom message (lsps1.get_info) received'
+            );
+            expect(logSpy).toHaveBeenCalledWith('Received custom message', {
+                peer: 'aa',
+                id
+            });
+            const logged = JSON.stringify(logSpy.mock.calls);
+            expect(logged).not.toContain('send-response-123');
+            expect(logged).not.toContain('reply-payload-123');
+        } finally {
+            logSpy.mockRestore();
+        }
+    });
+
     it('background get_extendable_channels probe timeout only sets the lease error', async () => {
         const store = makeStore();
         store.loadingLSPS7 = true;
