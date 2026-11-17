@@ -12,6 +12,32 @@ jest.mock('../utils/TorUtils', () => ({
     isOnionHttpsUrl: jest.fn(),
     RequestMethod: {}
 }));
+// stands in for the native Tor transport; records each socket it opens
+const mockTorSockets: any[] = [];
+jest.mock('../utils/TorWebSocket', () => ({
+    __esModule: true,
+    default: class {
+        url: string;
+        headers: any;
+        listeners: { [event: string]: Array<(e: any) => void> } = {};
+        sent: string[] = [];
+        constructor(url: string, headers: any) {
+            this.url = url;
+            this.headers = headers;
+            mockTorSockets.push(this);
+        }
+        addEventListener(event: string, fn: (e: any) => void) {
+            (this.listeners[event] ||= []).push(fn);
+        }
+        send(data: string) {
+            this.sent.push(data);
+        }
+        close() {}
+        emit(event: string, e: any = {}) {
+            (this.listeners[event] || []).forEach((fn) => fn(e));
+        }
+    }
+}));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import LND from './LND';
@@ -523,6 +549,111 @@ describe('LND.subscribeCustomMessages', () => {
             expect(onError).toHaveBeenCalledWith(error);
             expect(onResponse).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('LND streams with Use Tor on', () => {
+    const realWebSocket = global.WebSocket;
+    const certWarning = localeString('backends.LND.wsReq.warning');
+    // what TorWebSocketModule reports when the node answers the
+    // handshake with a redirect, which it refuses to follow
+    const redirectError = "Expected HTTP 101 response but was '302 Found'";
+    let directSockets: number;
+
+    beforeEach(() => {
+        mockTorSockets.length = 0;
+        directSockets = 0;
+        (global as any).WebSocket = class {
+            constructor() {
+                directSockets++;
+            }
+            addEventListener() {}
+            send() {}
+        };
+        Object.assign(settingsStore as any, {
+            host: 'https://abc.onion',
+            port: 9443,
+            macaroonHex: 'mac',
+            enableTor: true
+        });
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        (global as any).WebSocket = realWebSocket;
+        (settingsStore as any).enableTor = false;
+        jest.mocked(console.log).mockRestore();
+    });
+
+    const streams: [string, string, (lnd: LND) => any][] = [
+        [
+            'subscribeCustomMessages',
+            'wss://abc.onion:9443/v1/custommessage/subscribe?method=GET',
+            (lnd) => lnd.subscribeCustomMessages(jest.fn(), jest.fn())
+        ],
+        [
+            'initChanAcceptor',
+            'wss://abc.onion:9443/v1/channels/acceptor?method=POST',
+            (lnd) =>
+                lnd.initChanAcceptor({
+                    getZeroConfPeers: () => [],
+                    getLspPubkey: () => ''
+                })
+        ],
+        [
+            'openChannelStream',
+            'wss://abc.onion:9443/v1/channels/stream?method=POST',
+            (lnd) =>
+                lnd
+                    .openChannelStream({ node_pubkey_string: '02ab' } as any)
+                    .catch(() => {})
+        ]
+    ];
+
+    it.each(streams)(
+        '%s opens the socket through Tor, never directly',
+        (_name, url, open) => {
+            open(new LND());
+
+            expect(directSockets).toBe(0);
+            expect(mockTorSockets).toHaveLength(1);
+            expect(mockTorSockets[0].url).toBe(url);
+            expect(mockTorSockets[0].headers).toEqual({
+                'Grpc-Metadata-Macaroon': 'mac'
+            });
+        }
+    );
+
+    it('opens the socket directly with Use Tor off', () => {
+        (settingsStore as any).enableTor = false;
+
+        new LND().subscribeCustomMessages(jest.fn(), jest.fn());
+
+        expect(directSockets).toBe(1);
+        expect(mockTorSockets).toHaveLength(0);
+    });
+
+    it('passes a refused redirect to the custom message error callback', () => {
+        const onError = jest.fn();
+        new LND().subscribeCustomMessages(jest.fn(), onError);
+
+        mockTorSockets[0].emit('error', { message: redirectError });
+        mockTorSockets[0].emit('close');
+
+        expect(onError).toHaveBeenCalledWith(
+            `${certWarning} (${redirectError})`
+        );
+    });
+
+    it('rejects openChannelStream with a refused redirect', async () => {
+        const outcome = new LND()
+            .openChannelStream({ node_pubkey_string: '02ab' } as any)
+            .catch((error: any) => error);
+
+        mockTorSockets[0].emit('error', { message: redirectError });
+        mockTorSockets[0].emit('close');
+
+        expect(await outcome).toBe(`${certWarning} (${redirectError})`);
     });
 });
 

@@ -19,6 +19,8 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
 
     private var tasks = [String: URLSessionWebSocketTask]()
     private var idsByTask = [Int: String]()
+    // status of a refused handshake redirect, by task identifier
+    private var redirectStatusByTask = [Int: Int]()
     private var session: URLSession?
     private var sessionSocksPort: Int = -1
     private let lock = NSLock()
@@ -116,10 +118,16 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
                 }
                 self.receiveLoop(id: id, task: task)
             case .failure(let error):
+                let redirectStatus = self.takeRedirectStatus(task: task)
                 if self.removeTask(id: id) != nil {
+                    // a refused redirect fails the task with a generic "bad
+                    // response" error, so name the cause
+                    let message = redirectStatus.map {
+                        "Expected HTTP 101 response but was \($0) (redirect not followed)"
+                    } ?? error.localizedDescription
                     self.sendEvent(
                         withName: "TorWebSocketError",
-                        body: ["id": id, "message": error.localizedDescription]
+                        body: ["id": id, "message": message]
                     )
                     // mirror React Native's WebSocket, which emits close
                     // after error
@@ -137,13 +145,38 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
         defer { lock.unlock() }
         guard let task = tasks.removeValue(forKey: id) else { return nil }
         idsByTask.removeValue(forKey: task.taskIdentifier)
+        redirectStatusByTask.removeValue(forKey: task.taskIdentifier)
         return task
+    }
+
+    private func takeRedirectStatus(task: URLSessionWebSocketTask) -> Int? {
+        lock.lock()
+        defer { lock.unlock() }
+        return redirectStatusByTask.removeValue(forKey: task.taskIdentifier)
     }
 
     private func idFor(task: URLSessionWebSocketTask) -> String? {
         lock.lock()
         defer { lock.unlock() }
         return idsByTask[task.taskIdentifier]
+    }
+
+    // URLSessionWebSocketTask follows a 3xx on the handshake and sends the
+    // request's headers, including Grpc-Metadata-Macaroon, to the new
+    // host. Refusing the redirect fails the task instead (NSURLErrorDomain
+    // -1011), as doTorRequest refuses redirects for REST and Android's
+    // TorWebSocketModule does for its streams.
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        lock.lock()
+        redirectStatusByTask[task.taskIdentifier] = response.statusCode
+        lock.unlock()
+        completionHandler(nil)
     }
 
     func urlSession(

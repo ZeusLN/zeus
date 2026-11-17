@@ -52,6 +52,14 @@ class TorWebSocketModule(private val reactContext: ReactApplicationContext) :
             // streams stay open indefinitely
             .readTimeout(0, TimeUnit.MILLISECONDS)
             .pingInterval(30, TimeUnit.SECONDS)
+            // OkHttp follows a 3xx on the handshake and drops only the
+            // Authorization header when the host changes, so the stream's
+            // Grpc-Metadata-Macaroon header would go to whatever host the
+            // node redirects to. Without redirects a 3xx fails the
+            // handshake (onFailure), as MainApplication.kt does for React
+            // Native's WebSocket and doTorRequest does for REST.
+            .followRedirects(false)
+            .followSslRedirects(false)
             .build()
         client = created
         clientSocksPort = socksPort
