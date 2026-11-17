@@ -1109,6 +1109,7 @@ describe('CLNRest capability flags', () => {
         supportsSweep: true,
         supportsOnchainSendMax: true,
         supportsOnchainBatching: false,
+        supportsOnchainFeeEstimation: false,
         supportsChannelBatching: false,
         supportsChannelFundMax: true,
         supportsLSPScustomMessage: false,

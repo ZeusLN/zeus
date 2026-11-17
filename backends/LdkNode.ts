@@ -2358,6 +2358,7 @@ export default class LdkNode {
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;
+    supportsOnchainFeeEstimation = () => false;
     supportsOnchainReceiving = () => true;
     supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => true;
