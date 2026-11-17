@@ -962,7 +962,7 @@
     "views.Bolt12OfferReview.issuer": "Creador",
     "views.Bolt12OfferReview.issuerId": "Creador ID",
     "views.Bolt12OfferReview.offerAmount": "Oferta mínima",
-    "views.Bolt12OfferReview.payOffer": "Oferta de pago",
+    "views.Bolt12OfferReview.payOffer": "Pagar oferta",
     "views.Bolt12OfferReview.expired": "Esta oferta ha caducado.",
     "views.Bolt12OfferReview.expectsQuantity": "Esta oferta requiere una cantidad, la cual ZEUS no puede establecer. ZEUS no enviará este pago.",
     "views.Bolt12OfferReview.currencyDenominated": "ZEUS no puede pagar ofertas denominadas en una moneda fiduciaria.",
