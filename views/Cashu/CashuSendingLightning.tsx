@@ -84,9 +84,10 @@ export default class CashuSendingLightning extends React.Component<
     // later payments made while this screen stays mounted.
     private donationAttempted = false;
 
-    // The main payment's invoice. The donation's getPayReq replaces
-    // CashuStore.payReq, and the success details must not show the
-    // donation's hash and memo.
+    // The main payment's invoice, the one reviewed on CashuPaymentRequest.
+    // Saved on mount because every later getPayReq on the store (the
+    // donation's, the NWC service's) replaces CashuStore.payReq, and the
+    // success details must not show that invoice's hash and memo.
     private mainPayReq: CashuStore['payReq'];
 
     constructor(props: CashuSendingLightningProps) {
@@ -107,6 +108,8 @@ export default class CashuSendingLightning extends React.Component<
     componentDidMount() {
         const { CashuStore, navigation, route } = this.props;
         const { paymentAmount, paymentRequest } = route.params || {};
+
+        this.mainPayReq = CashuStore.payReq;
 
         // Reset payment state and start the payment once the JS thread is
         // free, so the melt does not jank the navigation transition. The
@@ -172,7 +175,6 @@ export default class CashuSendingLightning extends React.Component<
 
     handleDonationPayment = async (donationAmount: string) => {
         const { CashuStore } = this.props;
-        this.mainPayReq = CashuStore.payReq;
         this.setState({ payingDonation: true, paymentType: 'donation' });
 
         try {

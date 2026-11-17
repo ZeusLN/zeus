@@ -298,4 +298,37 @@ describe('CashuSendingLightning', () => {
             screen.container.queryAll((n) => n.type === 'LnurlPaySuccess')
         ).toHaveLength(1);
     });
+
+    // Any getPayReq on the shared store (the NWC service, a link) replaces
+    // CashuStore.payReq, also on a payment with no donation
+    it('keeps showing the main payment when another invoice is loaded while it is paid', async () => {
+        const mainHash = 'aa'.repeat(32);
+        const cashuStore: any = {
+            ...buildCashuStore(),
+            payReq: {
+                payment_hash: mainHash,
+                getMemo: 'coffee',
+                getRequestAmount: 100
+            }
+        };
+        const params = {
+            paymentAmount: '100',
+            paymentRequest: 'lnbc1reviewed'
+        };
+
+        const { rerender } = await render(view(cashuStore, params));
+        cashuStore.payReq = {
+            payment_hash: 'bb'.repeat(32),
+            getMemo: 'someone else',
+            getRequestAmount: 7
+        };
+        cashuStore.paymentSuccess = true;
+        await rerender(view(cashuStore, params));
+
+        const details = screen.container.queryAll(
+            (n) => n.type === 'PaymentDetailsSheet'
+        )[0].props;
+        expect(details.paymentHash).toBe(mainHash);
+        expect(details.memo).toBe('coffee');
+    });
 });
