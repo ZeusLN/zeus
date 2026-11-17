@@ -710,6 +710,9 @@ describe('CashuStore sweepOfflinePendingTokens', () => {
             {} as any
         );
         store.cdkInitialized = true;
+        // initializeWallets() records the node dir it loaded the queue
+        // from; the sweep skips while it differs from getNodeDir()
+        (store as any).walletNodeDir = store.getNodeDir();
         // Queued while offline: the native decoder only resolves proofs of
         // a mint that is already in the wallet
         store.offlinePendingTokens = [
