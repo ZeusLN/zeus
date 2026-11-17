@@ -2348,7 +2348,12 @@ export default class CashuStore {
             // Capture the storage key before queueing so a wallet switch
             // can't redirect a queued send to another node's namespace.
             // mintToken passes the dir it pinned before its first await;
-            // fall back to the current dir for direct callers.
+            // fall back to the current dir for direct callers. The caller
+            // owns finalizePendingOfflineSend once it has recorded the
+            // token (mintToken is the only one). An unfinalized record is
+            // promoted into sentTokens at next startup, deduped by
+            // encodedToken, since the token is then the only handle on
+            // the deleted proofs.
             const sendNodeDir = nodeDir ?? this.getNodeDir();
             const pendingKey = this.pendingOfflineSendsKey(sendNodeDir);
             // The critical section is serialized so overlapping sends can't
