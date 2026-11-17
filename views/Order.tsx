@@ -30,6 +30,7 @@ import BackendUtils from '../utils/BackendUtils';
 import {
     calculateTaxSats,
     calculateTotalSats,
+    calculateFiatAmountsWithoutRate,
     isPayableSatsAmount
 } from '../utils/PosUtils';
 import FiatStore from '../stores/FiatStore';
@@ -715,9 +716,12 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         // total amount is subtotal + tip + tax
         let totalSats = '0';
         let tipSats = '0';
+        // the tip as chosen, for showing fiat amounts without a rate
+        let tip: { percentage?: string; fiat?: string } = {};
         if (!isPaid) {
             switch (selectedIndex) {
                 case 0:
+                    tip = { percentage: '20' };
                     totalSats = new BigNumber(subTotalSats)
                         .multipliedBy(1.2)
                         .plus(taxSats)
@@ -727,6 +731,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         .toFixed(0);
                     break;
                 case 1:
+                    tip = { percentage: '25' };
                     totalSats = new BigNumber(subTotalSats)
                         .multipliedBy(1.25)
                         .plus(taxSats)
@@ -736,6 +741,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         .toFixed(0);
                     break;
                 case 2:
+                    tip = { percentage: '30' };
                     totalSats = new BigNumber(subTotalSats)
                         .multipliedBy(1.3)
                         .plus(taxSats)
@@ -750,6 +756,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             customPercentage === ''
                                 ? DEFAULT_CUSTOM_TIP_PERCENTAGE
                                 : customPercentage;
+                        tip = { percentage: effectivePercentage };
                         totalSats = calculateTotalSats(
                             subTotalSats,
                             effectivePercentage,
@@ -771,6 +778,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                       .toFixed(0)
                                 : customAmount;
                         if (units === 'fiat') {
+                            tip = { fiat: effectiveAmount };
                             const customSats = new BigNumber(effectiveAmount)
                                 .div(rate)
                                 .multipliedBy(SATS_PER_BTC)
@@ -813,6 +821,38 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             .multipliedBy(rate)
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
+
+        const taxFiat: string = new BigNumber(taxSats)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
+
+        // Without a usable rate the sats amounts above can be Infinity or
+        // NaN and the fiat amounts NaN or 0, so show the order's own fiat
+        // amounts, or N/A where a value needs a rate
+        const fiatWithoutRate = !(Number(rate) > 0)
+            ? calculateFiatAmountsWithoutRate(
+                  order,
+                  settings.pos.posEnabled === PosEnabled.Square,
+                  tip
+              )
+            : undefined;
+
+        // N/A for a value that needs a rate that isn't available
+        const fiatDisplay = (fiatAmount: string, withoutRate?: string) => {
+            const amount = fiatWithoutRate ? withoutRate : fiatAmount;
+            return amount !== undefined
+                ? FiatStore.formatAmountForDisplay(amount)
+                : localeString('general.notAvailable');
+        };
+        const satsDisplay = (sats: string) =>
+            !new BigNumber(sats).isFinite() ? (
+                localeString('general.notAvailable')
+            ) : bitcoinUnits === 'sats' ? (
+                <Amount fixedUnits="sats" sats={sats} />
+            ) : (
+                <Amount fixedUnits="BTC" sats={sats} />
+            );
 
         return (
             <Screen>
@@ -941,8 +981,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 keyValue={localeString(
                                     'pos.views.Order.subtotalFiat'
                                 )}
-                                value={FiatStore.formatAmountForDisplay(
-                                    subTotalFiat
+                                value={fiatDisplay(
+                                    subTotalFiat,
+                                    fiatWithoutRate?.subTotalFiat
                                 )}
                             />
                         </>
@@ -962,19 +1003,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             keyValue={localeString(
                                 'pos.views.Order.subtotalBitcoin'
                             )}
-                            value={
-                                bitcoinUnits === 'sats' ? (
-                                    <Amount
-                                        fixedUnits="sats"
-                                        sats={subTotalSats}
-                                    />
-                                ) : (
-                                    <Amount
-                                        fixedUnits="BTC"
-                                        sats={subTotalSats}
-                                    />
-                                )
-                            }
+                            value={satsDisplay(subTotalSats)}
                         />
                     </TouchableOpacity>
 
@@ -1056,12 +1085,19 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     />
                                     <TextInput
                                         keyboardType="numeric"
-                                        placeholder={new BigNumber(subTotalSats)
-                                            .multipliedBy(0.21)
-                                            .integerValue(
-                                                BigNumber.ROUND_HALF_UP
-                                            )
-                                            .toFixed(0)}
+                                        placeholder={
+                                            // no suggestion without a rate
+                                            new BigNumber(
+                                                subTotalSats
+                                            ).isFinite()
+                                                ? new BigNumber(subTotalSats)
+                                                      .multipliedBy(0.21)
+                                                      .integerValue(
+                                                          BigNumber.ROUND_HALF_UP
+                                                      )
+                                                      .toFixed(0)
+                                                : undefined
+                                        }
                                         value={customAmount}
                                         onChangeText={(text: string) => {
                                             if (text.includes('-')) return;
@@ -1131,8 +1167,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     keyValue={localeString(
                                         'pos.views.Order.tipFiat'
                                     )}
-                                    value={FiatStore.formatAmountForDisplay(
-                                        tipFiat
+                                    value={fiatDisplay(
+                                        tipFiat,
+                                        fiatWithoutRate?.tipFiat
                                     )}
                                 />
                             )}
@@ -1151,19 +1188,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     keyValue={localeString(
                                         'pos.views.Order.tipBitcoin'
                                     )}
-                                    value={
-                                        bitcoinUnits === 'sats' ? (
-                                            <Amount
-                                                fixedUnits="sats"
-                                                sats={tipSats}
-                                            />
-                                        ) : (
-                                            <Amount
-                                                fixedUnits="BTC"
-                                                sats={tipSats}
-                                            />
-                                        )
-                                    }
+                                    value={satsDisplay(tipSats)}
                                 />
                             </TouchableOpacity>
 
@@ -1177,8 +1202,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 keyValue={localeString(
                                     'pos.views.Order.tipFiat'
                                 )}
-                                value={FiatStore.formatAmountForDisplay(
-                                    tipFiat
+                                value={fiatDisplay(
+                                    tipFiat,
+                                    fiatWithoutRate?.tipFiat
                                 )}
                             />
 
@@ -1239,11 +1265,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     {fiatEnabled && (
                         <KeyValue
                             keyValue={localeString('pos.views.Order.taxFiat')}
-                            value={FiatStore.formatAmountForDisplay(
-                                new BigNumber(taxSats)
-                                    .multipliedBy(rate)
-                                    .dividedBy(SATS_PER_BTC)
-                                    .toFixed(2)
+                            value={fiatDisplay(
+                                taxFiat,
+                                fiatWithoutRate?.taxFiat
                             )}
                         />
                     )}
@@ -1268,20 +1292,17 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                           'pos.views.Order.tax'
                                       )} (${taxPercentage || '0'}%)`
                             }
-                            value={
-                                bitcoinUnits === 'sats' ? (
-                                    <Amount fixedUnits="sats" sats={taxSats} />
-                                ) : (
-                                    <Amount fixedUnits="BTC" sats={taxSats} />
-                                )
-                            }
+                            value={satsDisplay(taxSats)}
                         />
                     </TouchableOpacity>
 
                     {fiatEnabled && (
                         <KeyValue
                             keyValue={localeString('pos.views.Order.totalFiat')}
-                            value={FiatStore.formatAmountForDisplay(totalFiat)}
+                            value={fiatDisplay(
+                                totalFiat,
+                                fiatWithoutRate?.totalFiat
+                            )}
                         />
                     )}
 
@@ -1299,16 +1320,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             keyValue={localeString(
                                 'pos.views.Order.totalBitcoin'
                             )}
-                            value={
-                                bitcoinUnits === 'sats' ? (
-                                    <Amount
-                                        fixedUnits="sats"
-                                        sats={totalSats}
-                                    />
-                                ) : (
-                                    <Amount fixedUnits="BTC" sats={totalSats} />
-                                )
-                            }
+                            value={satsDisplay(totalSats)}
                         />
                     </TouchableOpacity>
 
