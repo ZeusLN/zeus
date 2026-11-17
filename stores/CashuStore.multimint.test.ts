@@ -1426,24 +1426,29 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.paymentErrorMsg).toBeUndefined();
     });
 
-    it('leaves the payment result alone when every part of a donation fails', async () => {
+    it('leaves the payment result and loading alone when every part of a donation fails', async () => {
         const store = await plannedStore();
         // the main payment already succeeded on this screen
         store.paymentSuccess = true;
         store.paymentError = false;
         store.paymentErrorMsg = '';
+        store.loading = true;
         cdk.melt.mockRejectedValue(new Error('refused'));
         const onProgress = jest.fn();
 
-        await store.payLnInvoiceFromEcash({
+        const result = await store.payLnInvoiceFromEcash({
             paymentRequest: INVOICE,
             isDonationPayment: true,
             onProgress
         });
 
+        // MultimintPayment reads only the result: no payment means the
+        // donation was not made
+        expect(result).toBeUndefined();
         expect(store.paymentSuccess).toBe(true);
         expect(store.paymentError).toBe(false);
         expect(store.paymentErrorMsg).toBe('');
+        expect(store.loading).toBe(true);
         expect(onProgress).toHaveBeenLastCalledWith(
             expect.objectContaining({ step: MultinutPaymentStep.FAILED })
         );
