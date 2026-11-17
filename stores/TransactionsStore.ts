@@ -185,6 +185,9 @@ export default class TransactionsStore {
     // id of the current on-chain send; reset() and the next send change it,
     // so a late result (e.g. a timeout lookup) for an earlier send is dropped
     private sendCoinsSeq = 0;
+    // id of the latest channel funding finalize; reset() and the next
+    // finalize change it, so an earlier finalize can tell it was superseded
+    private channelFinalizeSeq = 0;
     // id of the latest dispatched payment, whose result this store holds.
     // A result for any other payment is late (its guard was cleared by the
     // backstop, the tracking ceiling or reset()) and is dropped. reset()
@@ -247,6 +250,7 @@ export default class TransactionsStore {
     @action
     public reset = () => {
         this.sendCoinsSeq++;
+        this.channelFinalizeSeq++;
         this.dispatchedPaymentSequence = 0;
         // every earlier payment is now stale, and a stale result doesn't
         // touch `loading`, so an earlier send left in here would keep a
@@ -495,11 +499,53 @@ export default class TransactionsStore {
         }
     };
 
+    // Starts a channel funding finalize. The result of an earlier send or
+    // finalize is cleared, since SendingOnChain would show it next to this
+    // one's.
+    @action
+    private startChannelFinalize = (): number => {
+        this.error = false;
+        this.sendOutcomeUnknown = false;
+        this.error_msg = null;
+        this.txid = null;
+        this.publishSuccess = false;
+        this.loading = true;
+        return ++this.channelFinalizeSeq;
+    };
+
+    // Whether a channel funding finalize may write its result. It may not
+    // once a later finalize or reset() has superseded it, or once another
+    // open has replaced the channels it finalized: the result would show up
+    // as that flow's. A dropped result is only logged. The spinner is
+    // cleared for the latest finalize alone, so that a dropped call neither
+    // leaves its own spinner running nor stops a later call's.
+    @action
+    private channelFinalizeApplies = (
+        seq: number,
+        pending_chan_ids: Array<string>,
+        outcome: string
+    ): boolean => {
+        const isLatest = seq === this.channelFinalizeSeq;
+        const isCurrentOpen =
+            pending_chan_ids.join() ===
+            this.channelsStore.pending_chan_ids.join();
+        if (isLatest && isCurrentOpen) return true;
+        console.warn(
+            `Dropped the result of a superseded channel funding finalize: ${outcome}`
+        );
+        if (isLatest) this.loading = false;
+        return false;
+    };
+
+    // Resolves to whether the result was written to the store, see
+    // channelFinalizeApplies
     public finalizePsbtAndBroadcastChannel = async (
         signed_psbt: string,
         pending_chan_ids: Array<string>
-    ) => {
-        this.loading = true;
+    ): Promise<boolean> => {
+        const seq = this.startChannelFinalize();
+        const applies = (outcome: string) =>
+            this.channelFinalizeApplies(seq, pending_chan_ids, outcome);
 
         return BackendUtils.fundingStateStep({
             psbt_finalize: {
@@ -510,13 +556,18 @@ export default class TransactionsStore {
             .then((data: any) => {
                 if (data.publish_error) {
                     const errorMsg = errorToUserFriendly(data.publish_error);
-                    runInAction(() => {
+                    return runInAction(() => {
+                        if (!applies(`publish error: ${errorMsg}`)) {
+                            return false;
+                        }
                         this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
+                        return true;
                     });
                 } else {
-                    runInAction(() => {
+                    return runInAction(() => {
+                        let txid: string | null = null;
                         try {
                             // Parse the PSBT
                             const psbt = bitcoin.Psbt.fromBase64(signed_psbt);
@@ -525,30 +576,43 @@ export default class TransactionsStore {
                             const finalizedTx = psbt.extractTransaction();
 
                             // Serialize the transaction and calculate its hash to obtain the txid
-                            const txid = finalizedTx.getId();
-                            this.txid = txid;
+                            txid = finalizedTx.getId();
                         } catch (e) {}
-                        this.publishSuccess = true;
-                        this.loading = false;
-                        this.channelsStore.resetOpenChannel();
+                        // asked before the reset below drops the channels
+                        const applied = applies(`published, txid: ${txid}`);
+                        if (applied) {
+                            this.txid = txid;
+                            this.publishSuccess = true;
+                            this.loading = false;
+                        }
+                        this.channelsStore.resetFinalizedChannels(
+                            pending_chan_ids
+                        );
+                        return applied;
                     });
                 }
             })
             .catch((error: any) => {
                 const errorMsg = errorToUserFriendly(error.message);
-                runInAction(() => {
+                return runInAction(() => {
+                    if (!applies(`error: ${errorMsg}`)) return false;
                     this.error_msg = errorMsg;
                     this.error = true;
                     this.loading = false;
+                    return true;
                 });
             });
     };
 
+    // Resolves to whether the result was written to the store, see
+    // channelFinalizeApplies
     public finalizeTxHexAndBroadcastChannel = async (
         tx_hex: string,
         pending_chan_ids: Array<string>
-    ) => {
-        this.loading = true;
+    ): Promise<boolean> => {
+        const seq = this.startChannelFinalize();
+        const applies = (outcome: string) =>
+            this.channelFinalizeApplies(seq, pending_chan_ids, outcome);
 
         return BackendUtils.fundingStateStep({
             psbt_finalize: {
@@ -559,33 +623,47 @@ export default class TransactionsStore {
             .then((data: any) => {
                 if (data.publish_error) {
                     const errorMsg = errorToUserFriendly(data.publish_error);
-                    runInAction(() => {
+                    return runInAction(() => {
+                        if (!applies(`publish error: ${errorMsg}`)) {
+                            return false;
+                        }
                         this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
+                        return true;
                     });
                 } else {
-                    runInAction(() => {
+                    return runInAction(() => {
+                        let txid: string | null = null;
                         try {
                             // Parse the tx
                             const tx = bitcoin.Transaction.fromHex(tx_hex);
 
                             // Serialize the transaction and calculate its hash
-                            const txid = tx.getId();
-                            this.txid = txid;
+                            txid = tx.getId();
                         } catch (e) {}
-                        this.publishSuccess = true;
-                        this.loading = false;
-                        this.channelsStore.resetOpenChannel();
+                        // asked before the reset below drops the channels
+                        const applied = applies(`published, txid: ${txid}`);
+                        if (applied) {
+                            this.txid = txid;
+                            this.publishSuccess = true;
+                            this.loading = false;
+                        }
+                        this.channelsStore.resetFinalizedChannels(
+                            pending_chan_ids
+                        );
+                        return applied;
                     });
                 }
             })
             .catch((error: any) => {
                 const errorMsg = errorToUserFriendly(error.message);
-                runInAction(() => {
+                return runInAction(() => {
+                    if (!applies(`error: ${errorMsg}`)) return false;
                     this.error_msg = errorMsg;
                     this.error = true;
                     this.loading = false;
+                    return true;
                 });
             });
     };

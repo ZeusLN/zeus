@@ -80,9 +80,11 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
 
     render() {
         const { ChannelsStore, TransactionsStore, navigation } = this.props;
-        const { pending_chan_ids } = ChannelsStore;
         const { loading } = TransactionsStore;
         const { infoIndex, fundedPsbt, psbtDecoded } = this.state;
+        const pending_chan_ids = ChannelsStore.pendingChanIdsFor({
+            psbt: fundedPsbt
+        });
 
         const qrButton = () => (
             <Text
@@ -235,7 +237,10 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                     TransactionsStore.finalizePsbtAndBroadcastChannel(
                                                         fundedPsbt,
                                                         pending_chan_ids
-                                                    ).then(() => {
+                                                    ).then((applied) => {
+                                                        // a result dropped as superseded is
+                                                        // not on SendingOnChain
+                                                        if (!applied) return;
                                                         navigation.navigate(
                                                             'SendingOnChain'
                                                         );
