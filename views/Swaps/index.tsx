@@ -285,7 +285,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         if (invoice && invoice.trim() !== '') {
             if (reverse) {
                 invoiceAddressValid =
-                    AddressUtils.isValidBitcoinAddressForNode(invoice);
+                    AddressUtils.isAddressForNodeNetwork(invoice);
             } else {
                 invoiceAddressValid =
                     AddressUtils.isValidLightningPaymentRequest(invoice);
