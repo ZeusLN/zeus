@@ -378,6 +378,46 @@ describe('CashuStore offline send safety', () => {
             expect(mockProofPool.current.map((p) => p.y)).toEqual(['y-b']);
         });
 
+        it('refuses the send when the pending records cannot be read', async () => {
+            // An earlier send deleted its proofs; its record holds the
+            // only copy of that token.
+            const earlier = JSON.stringify([
+                {
+                    id: 'r0',
+                    mintUrl: MINT_URL,
+                    encodedToken: 'cashuAearlier',
+                    value: 8,
+                    createdAt: 1754900000000,
+                    proofs: [proof(8, 'gone')]
+                }
+            ]);
+            mockBacking[PENDING_KEY] = earlier;
+            mockProofPool.current = [proof(16, 'a')];
+            const store = buildStore();
+            failReadsOf(PENDING_KEY);
+
+            await expect(store.sendTokenCDK(MINT_URL, 16)).rejects.toThrow(
+                'keychain unavailable'
+            );
+
+            expect(mockBacking[PENDING_KEY]).toBe(earlier);
+            expect(mockRemoveProofs).not.toHaveBeenCalled();
+            expect(mockProofPool.current).toHaveLength(1);
+        });
+
+        it('refuses the send when the stored pending records are not a list', async () => {
+            mockBacking[PENDING_KEY] = JSON.stringify({ id: 'r0' });
+            mockProofPool.current = [proof(16, 'a')];
+            const store = buildStore();
+
+            await expect(store.sendTokenCDK(MINT_URL, 16)).rejects.toThrow(
+                'not a list'
+            );
+
+            expect(mockBacking[PENDING_KEY]).toBe(JSON.stringify({ id: 'r0' }));
+            expect(mockRemoveProofs).not.toHaveBeenCalled();
+        });
+
         it('fails the second concurrent send when the pool is exhausted', async () => {
             mockProofPool.current = [proof(16, 'a')];
             const store = buildStore();
@@ -590,6 +630,21 @@ describe('CashuStore offline send safety', () => {
             expect(mockRemoveProofs).toHaveBeenCalledWith(['y-b']);
             expect(store.sentTokens).toHaveLength(1);
             expect(getPendingRecords()).toEqual([]);
+        });
+
+        it('leaves the records for the next startup when they cannot be read', async () => {
+            seedPendingRecord([proof(16, 'a')]);
+            const seeded = mockBacking[PENDING_KEY];
+            const store = buildStore();
+            failReadsOf(PENDING_KEY);
+
+            await expect(
+                store.reconcilePendingOfflineSends()
+            ).resolves.toBeUndefined();
+
+            expect(mockGetUnspentProofs).not.toHaveBeenCalled();
+            expect(mockBacking[PENDING_KEY]).toBe(seeded);
+            expect(store.sentTokens).toHaveLength(0);
         });
 
         it('does not duplicate a token already recorded in sentTokens', async () => {
