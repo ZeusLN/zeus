@@ -6619,10 +6619,11 @@ export default class CashuStore {
                 };
             }
 
-            const isLocked = CashuUtils.isTokenP2PKLocked(decoded);
-            const signingKey = isLocked
-                ? this.deriveCashuSecretKey() ?? undefined
-                : undefined;
+            // A token from a mint that is not in the wallet is decoded
+            // without proofs, so isTokenP2PKLocked can't tell if it is
+            // locked. Always offer our key: CDK only uses it for proofs
+            // locked to it.
+            const signingKey = this.deriveCashuSecretKey() ?? undefined;
 
             if (toSelfCustody) {
                 // Prepare the sweep invoice and fee probe BEFORE receiving
@@ -6695,8 +6696,6 @@ export default class CashuStore {
                         )
                     };
                 }
-
-                // Pass signing key only when token is P2PK-locked (decoded has proofs)
 
                 // Point of no return: this consumes the token and credits
                 // the wallet's own balance at the mint

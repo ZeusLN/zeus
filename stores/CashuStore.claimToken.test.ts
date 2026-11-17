@@ -575,3 +575,93 @@ describe('CashuStore.sweepMint on a mint with input fees', () => {
         expect(CashuDevKit.melt).toHaveBeenCalledWith(MINT_URL, 'q2');
     });
 });
+
+describe('CashuStore.claimToken signing key', () => {
+    const SECRET_KEY = 'ab'.repeat(32);
+
+    // a token from a mint that is not in the wallet decodes without proofs,
+    // so it can't be checked for a P2PK lock
+    const makeDecodedWithoutProofs = () =>
+        new CashuToken({
+            mint: MINT_URL,
+            unit: 'sat',
+            proofs: [],
+            value: TOKEN_AMT
+        });
+
+    const makeKeyedStore = () => {
+        const { store, invoicesStore } = makeStore();
+        store.deriveCashuSecretKey = jest.fn(() => SECRET_KEY);
+        (store as any).checkAndSweepMints = jest.fn();
+        return { store, invoicesStore };
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('offers our key for a token decoded without proofs', async () => {
+        const { store } = makeKeyedStore();
+
+        const result = await store.claimToken(
+            ENCODED_TOKEN,
+            makeDecodedWithoutProofs()
+        );
+
+        expect(store.receiveTokenCDK).toHaveBeenCalledWith(
+            ENCODED_TOKEN,
+            SECRET_KEY,
+            MINT_URL
+        );
+        expect(result).toEqual({ success: true, errorMessage: '' });
+    });
+
+    it('offers our key for an unlocked token', async () => {
+        const { store } = makeKeyedStore();
+
+        await store.claimToken(ENCODED_TOKEN, makeDecoded());
+
+        expect(store.receiveTokenCDK).toHaveBeenCalledWith(
+            ENCODED_TOKEN,
+            SECRET_KEY,
+            MINT_URL
+        );
+    });
+
+    it('offers our key when sweeping a token decoded without proofs to self-custody', async () => {
+        const { store, invoicesStore } = makeKeyedStore();
+        invoicesStore.createInvoice.mockResolvedValue({
+            paymentRequest: 'lnbc1invoice'
+        });
+        (store.createMeltQuoteCDK as jest.Mock).mockResolvedValue({
+            fee_reserve: 0
+        });
+        (store.receiveTokenCDK as jest.Mock).mockResolvedValue(TOKEN_AMT);
+
+        const result = await store.claimToken(
+            ENCODED_TOKEN,
+            makeDecodedWithoutProofs(),
+            true
+        );
+
+        expect(store.receiveTokenCDK).toHaveBeenCalledWith(
+            ENCODED_TOKEN,
+            SECRET_KEY,
+            MINT_URL
+        );
+        expect(result).toEqual({ success: true, errorMessage: '' });
+    });
+
+    it('passes no key when none can be derived', async () => {
+        const { store } = makeKeyedStore();
+        store.deriveCashuSecretKey = jest.fn(() => null);
+
+        await store.claimToken(ENCODED_TOKEN, makeDecodedWithoutProofs());
+
+        expect(store.receiveTokenCDK).toHaveBeenCalledWith(
+            ENCODED_TOKEN,
+            undefined,
+            MINT_URL
+        );
+    });
+});
