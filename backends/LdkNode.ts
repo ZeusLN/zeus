@@ -1074,6 +1074,12 @@ export default class LdkNode {
      * close the channel stays listed, no longer ready, until the shutdown
      * negotiation ends. Resolve on the channelClosed event instead, so
      * callers that refresh afterwards see the channel as closing.
+     *
+     * When the shutdown negotiation fails (e.g. the peer asks for a
+     * closing fee above our maximum), LDK force closes the channel and
+     * reports a non-cooperative closure reason. A cooperative close
+     * request then rejects, since the funds are now subject to the force
+     * close timelock.
      */
     closeChannel = async (urlParams?: Array<string>): Promise<any> => {
         const fundingTxid = (urlParams && urlParams[0]) || '';
@@ -1089,8 +1095,10 @@ export default class LdkNode {
         }
 
         const CHANNEL_CLOSE_TIMEOUT_MS = 60000;
-        let stopWaiting = () => {};
-        const closed = new Promise<void>((resolve) => {
+        let stopWaiting = (_reason?: ClosureReason) => {};
+        // Resolves with the closure reason from the channelClosed event,
+        // or undefined if there is none
+        const closed = new Promise<ClosureReason | undefined>((resolve) => {
             // Timeout: resolve optimistically since the local node
             // accepted the close request
             const timeout = setTimeout(
@@ -1103,14 +1111,14 @@ export default class LdkNode {
                         event.type === 'channelClosed' &&
                         event.userChannelId === channel.userChannelId
                     ) {
-                        stopWaiting();
+                        stopWaiting(event.reason);
                     }
                 }
             );
-            stopWaiting = () => {
+            stopWaiting = (reason?: ClosureReason) => {
                 clearTimeout(timeout);
                 unsubscribe();
-                resolve();
+                resolve(reason);
             };
         });
 
@@ -1131,7 +1139,21 @@ export default class LdkNode {
             throw error;
         }
 
-        await closed;
+        const reason = await closed;
+
+        // Events without a reason keep the previous behavior of reporting
+        // success, as there is nothing to say the close was not cooperative
+        if (!forceClose && reason && !LdkNode.isCooperativeReason(reason)) {
+            const error: any = new Error(
+                localeString('views.Channel.coopCloseBecameForceClose', {
+                    reason: LdkNode.closureReasonToMessage(reason)
+                })
+            );
+            // The channel is closed although the request failed, so callers
+            // should not offer to close it again
+            error.channelClosed = true;
+            throw error;
+        }
 
         return { success: true };
     };

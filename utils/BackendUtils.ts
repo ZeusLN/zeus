@@ -66,7 +66,13 @@ class BackendUtils {
         ) {
             return result.catch((error: any) => {
                 const parsed = parseLdkNodeError(error);
-                const cleanError = new Error(parsed);
+                const cleanError: any = new Error(parsed);
+                // Keep properties the backend set on the error, such as
+                // channelClosed, which callers check after a failed close
+                if (typeof error === 'object') {
+                    Object.assign(cleanError, error);
+                }
+                cleanError.message = parsed;
                 cleanError.name = error?.name || 'Error';
                 throw cleanError;
             });

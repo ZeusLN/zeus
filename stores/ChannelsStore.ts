@@ -238,6 +238,10 @@ export default class ChannelsStore {
     @observable public syncOpensInFlight = 0;
     @observable public closeChannelErr: string | null;
     @observable public closingChannel = false;
+    // channel point of a channel the node closed although the close request
+    // reported an error (LDK Node force closes when a cooperative close
+    // fails). The channel is gone, so it can't be closed again
+    @observable public closedByFailedCloseChannelPoint: string | null = null;
     @observable channelRequest: any;
     @observable public peers: Array<Peer> = [];
     // redesign
@@ -903,6 +907,18 @@ export default class ChannelsStore {
         forceClose?: boolean | string,
         deliveryAddress?: string
     ) => {
+        const closingChannelPoint = channelPoint
+            ? `${channelPoint.funding_txid_str}:${channelPoint.output_index}`
+            : null;
+        // Another request would replace the error that explains the force
+        // close with the backend's channel not found error
+        if (
+            closingChannelPoint &&
+            closingChannelPoint === this.closedByFailedCloseChannelPoint
+        ) {
+            return true;
+        }
+
         this.closeChannelErr = null;
         this.closingChannel = true;
 
@@ -925,15 +941,27 @@ export default class ChannelsStore {
             ];
         }
 
-        if (implementation === 'lightning-node-connect') {
+        if (
+            implementation === 'lightning-node-connect' ||
+            implementation === 'ldk-node'
+        ) {
             // the LNC backend settles on close_pending, on an error, or after
-            // its own timeout, so no forced resolution is needed here
+            // its own timeout, and the LDK Node backend on the channelClosed
+            // event or after its own timeout, so no forced resolution is
+            // needed here. Forcing one would drop a cooperative close that
+            // LDK turned into a force close after six seconds
             return await BackendUtils.closeChannel(urlParams)
                 .then(() => {
                     this.handleChannelClose();
                     return true;
                 })
-                .catch((error: Error) => {
+                .catch((error: any) => {
+                    if (error?.channelClosed) {
+                        runInAction(() => {
+                            this.closedByFailedCloseChannelPoint =
+                                closingChannelPoint;
+                        });
+                    }
                     this.handleChannelCloseError(error);
                     return true;
                 });
