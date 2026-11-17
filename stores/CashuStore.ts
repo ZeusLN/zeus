@@ -45,7 +45,7 @@ import CashuToken from '../models/CashuToken';
 
 import Storage, { getRawItem, removeRawItem, KEY_PREFIX } from '../storage';
 
-import { activityStore, connectivityStore } from './Stores';
+import { activityStore, connectivityStore, nodeInfoStore } from './Stores';
 import InvoicesStore from './InvoicesStore';
 import ChannelsStore from './ChannelsStore';
 import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
@@ -851,11 +851,14 @@ export default class CashuStore {
 
     // CDK melts, settled or in flight, not in locally persisted payments.
     // Derived on each read so a payment recorded locally after the last
-    // loadTransactions does not also show as its CDK copy.
+    // loadTransactions does not also show as its CDK copy. Sweeps and
+    // self-custody claims, which pay an invoice from the own node, are left
+    // out.
     @computed public get cdkPayments(): Array<CashuPayment> {
         return selectUntrackedCdkMelts(
             this.cdkTransactions,
-            this.payments || []
+            this.payments || [],
+            nodeInfoStore?.nodeInfo?.nodeId
         ).map((tx) => CashuPayment.fromCDKTransaction(tx));
     }
 
