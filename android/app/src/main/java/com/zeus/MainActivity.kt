@@ -50,6 +50,7 @@ class MainActivity : ReactActivity() {
             setIntent(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER))
         }
         createdInProcess = true
+        NfcIntentGuard.dropUntrustedNfcPayload(this, intent)
 
         super.onCreate(null)
         
@@ -84,8 +85,12 @@ class MainActivity : ReactActivity() {
     }
 
     override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
+        // Before super: react-native-nfc-manager reads the tag in its
+        // onNewIntent listener. setIntent first, since getReferrer() reads
+        // the activity's intent.
         setIntent(intent)
+        NfcIntentGuard.dropUntrustedNfcPayload(this, intent)
+        super.onNewIntent(intent)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
