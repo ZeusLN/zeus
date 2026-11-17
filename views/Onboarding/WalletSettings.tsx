@@ -322,16 +322,27 @@ export default class WalletSettings extends React.Component<
                                         this.setState({
                                             fiatRatesSource: value
                                         });
+                                        const newSettings: {
+                                            fiatRatesSource: string;
+                                            fiat?: string;
+                                        } = { fiatRatesSource: value };
                                         if (
                                             !CURRENCY_KEYS.find(
                                                 (c) =>
                                                     c.value === selectedCurrency
                                             )?.supportedSources.includes(value)
                                         ) {
+                                            newSettings.fiat = DEFAULT_FIAT;
                                             this.setState({
                                                 selectedCurrency: DEFAULT_FIAT
                                             });
                                         }
+                                        // Save it, as the fiat switch does:
+                                        // the summary and the currency picker
+                                        // read the saved settings
+                                        this.props.SettingsStore.updateSettings(
+                                            newSettings
+                                        );
                                     }}
                                     values={FIAT_RATES_SOURCE_KEYS}
                                 />
