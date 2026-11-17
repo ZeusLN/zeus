@@ -20,6 +20,15 @@ class SettingsScreen {
         return byId(IDS.displayButton);
     }
 
+    // Payments and Invoices are listed only once a wallet exists.
+    get paymentsButton() {
+        return byId(IDS.paymentsButton);
+    }
+
+    get invoicesButton() {
+        return byId(IDS.invoicesButton);
+    }
+
     async waitUntilDisplayed(): Promise<void> {
         await waitForVisible(this.securityButton);
     }

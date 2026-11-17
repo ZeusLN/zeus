@@ -1,7 +1,11 @@
 import { launchFreshApp, relaunchApp } from '../helpers/app';
+import { waitForVisible } from '../helpers/elements';
+import { withoutSynchronization } from '../helpers/synchronization';
 import IntroSplashScreen from '../screens/IntroSplashScreen';
 import MenuScreen from '../screens/MenuScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import WalletScreen from '../screens/WalletScreen';
+import { WALLET_START_TIMEOUT_MS } from './wallet';
 
 // Settings is reachable before any wallet exists, from the splash's advanced
 // set-up menu, so the settings specs need no wallet.
@@ -22,4 +26,23 @@ export const openSettings = async (): Promise<void> => {
 export const reopenSettings = async (): Promise<void> => {
     await relaunchApp();
     await openSettingsFromSplash();
+};
+
+// Settings for an open wallet, through the wallet's menu. Payments, Invoices
+// and the other wallet settings are listed only once a wallet exists.
+export const openSettingsFromWallet = async (): Promise<void> => {
+    await WalletScreen.menuButton.tap();
+    await MenuScreen.waitUntilDisplayedWithWallet();
+    await MenuScreen.settingsButton.tap();
+    await SettingsScreen.waitUntilDisplayed();
+};
+
+// Restarts the app, keeping its wallet and settings, and returns to Settings
+// once the wallet has started again.
+export const reopenSettingsFromWallet = async (): Promise<void> => {
+    await relaunchApp();
+    await withoutSynchronization(() =>
+        waitForVisible(WalletScreen.menuButton, WALLET_START_TIMEOUT_MS)
+    );
+    await openSettingsFromWallet();
 };
