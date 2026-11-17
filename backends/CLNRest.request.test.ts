@@ -625,6 +625,68 @@ describe('CLNRest payment timeout race', () => {
 
         expect(result).toEqual({ status: 'failed' });
     });
+
+    // pay and keysend answer 'pending' when retry_for ends with parts out
+    it.each([
+        ['payLightningInvoice', 'v24.08', '/v1/pay'],
+        ['sendKeysend', 'v25.02', '/v1/keysend']
+    ] as const)(
+        'reports a pending %s result on %s as IN_FLIGHT',
+        async (method, version, route) => {
+            mockNodeInfoStore.nodeInfo = { version };
+            mockFetch.mockResolvedValue(
+                blobResponse(
+                    200,
+                    JSON.stringify({
+                        status: 'pending',
+                        payment_hash: PREIMAGE_HASH,
+                        amount_msat: 1000,
+                        parts: 1
+                    })
+                )
+            );
+
+            const result = await cln[method]({
+                payment_request: 'lnbc1',
+                pubkey: '02ab',
+                amt: 1,
+                timeout_seconds: 30
+            });
+
+            expect(fetchArgs()[1]).toBe(
+                `https://node.example.com:3010${route}`
+            );
+            expect(result).toEqual({
+                status: 'IN_FLIGHT',
+                payment_hash: PREIMAGE_HASH,
+                amount_msat: 1000,
+                parts: 1
+            });
+        }
+    );
+
+    it('leaves a complete legacy pay result as it is', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+        mockFetch.mockResolvedValue(
+            blobResponse(
+                200,
+                JSON.stringify({
+                    status: 'complete',
+                    payment_preimage: PREIMAGE
+                })
+            )
+        );
+
+        const result = await cln.payLightningInvoice({
+            payment_request: 'lnbc1',
+            timeout_seconds: 30
+        });
+
+        expect(result).toEqual({
+            status: 'complete',
+            payment_preimage: PREIMAGE
+        });
+    });
 });
 
 describe('CLNRest payment request bodies', () => {
