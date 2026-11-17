@@ -640,7 +640,7 @@
     "views.Channel.lease.purchaseLease": "Zakoupit pronájem kanálu",
     "views.Channel.lease.extendLease": "Prodloužit pronájem kanálu",
     "views.Channel.lease.fetchError": "Nezdařilo se načíst informace o pronájmu kanálu od vašeho LSP",
-    "views.Channel.coopCloseBecameForceClose": "The cooperative close failed and the channel was force closed instead ({{reason}}). Funds from a force close can stay locked on-chain until a timelock expires.",
+    "views.Channel.coopCloseBecameForceClose": "Kooperativní uzavření selhalo a kanál byl nuceně uzavřen ({{reason}}). Prostředky z nuceného uzavření mohou zůstat uzamčené on-chain, dokud neexpiruje časový zámek.",
     "views.Channel.closureReason.unknown": "Kanál byl uzavřen: důvod neznámý",
     "views.Channel.closureReason.counterpartyForceClosed": "Kanál byl odmítnut protistranou: {{peerMessage}}",
     "views.Channel.closureReason.counterpartyForceClosedDefault": "Kanál byl odmítnut: protistrana jej vynuceně uzavřela",
