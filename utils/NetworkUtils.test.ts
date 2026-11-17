@@ -7,12 +7,14 @@ jest.mock('react-native-blob-util', () => ({
 }));
 
 jest.mock('react-native-nitro-tor', () => ({
-    RnTor: {
-        startTorIfNotRunning: jest.fn().mockResolvedValue({ is_success: true }),
-        shutdownService: jest.fn(),
-        httpGet: jest.fn(),
-        httpPost: jest.fn(),
-        httpDelete: jest.fn()
+    Tor: {
+        daemon: {
+            start: jest.fn(),
+            stop: jest.fn()
+        },
+        http: {
+            request: jest.fn()
+        }
     }
 }));
 
@@ -20,14 +22,22 @@ jest.mock('react-native-fs', () => ({
     DocumentDirectoryPath: '/tmp'
 }));
 
-import { RnTor } from 'react-native-nitro-tor';
+import { Tor } from 'react-native-nitro-tor';
 import { isOnionUrl, networkFetch } from './NetworkUtils';
+
+const startMock = Tor.daemon.start as jest.Mock;
+const requestMock = Tor.http.request as jest.Mock;
+const respond = (statusCode: number, body: string) =>
+    requestMock.mockResolvedValue({ statusCode, headers: {}, body });
 
 describe('networkFetch', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        (RnTor.startTorIfNotRunning as jest.Mock).mockResolvedValue({
-            is_success: true
+        startMock.mockResolvedValue({
+            state: 'running',
+            socksAddress: '127.0.0.1:9056',
+            controlAddress: '127.0.0.1:9051',
+            connectivity: { network: 'up', circuitEstablished: true }
         });
     });
 
@@ -50,8 +60,7 @@ describe('networkFetch', () => {
                 { 'Content-Type': 'application/json' },
                 '{"a":1}'
             );
-            expect(RnTor.httpGet).not.toHaveBeenCalled();
-            expect(RnTor.httpPost).not.toHaveBeenCalled();
+            expect(requestMock).not.toHaveBeenCalled();
             expect(response).toBe(blobResponse);
         });
 
@@ -78,11 +87,7 @@ describe('networkFetch', () => {
             'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
 
         it('go over Tor even when Tor is disabled', async () => {
-            (RnTor.httpGet as jest.Mock).mockResolvedValue({
-                status_code: 200,
-                body: '{"fastestFee":3}',
-                error: null
-            });
+            respond(200, '{"fastestFee":3}');
 
             const response = await networkFetch({
                 method: 'GET',
@@ -90,8 +95,8 @@ describe('networkFetch', () => {
                 enableTor: false
             });
 
-            expect(RnTor.httpGet).toHaveBeenCalledTimes(1);
-            expect((RnTor.httpGet as jest.Mock).mock.calls[0][0].url).toBe(
+            expect(requestMock).toHaveBeenCalledTimes(1);
+            expect(requestMock.mock.calls[0][0].url).toBe(
                 `http://${ONION}/api/v1/fees/recommended`
             );
             expect(mockFetch).not.toHaveBeenCalled();
@@ -103,11 +108,8 @@ describe('networkFetch', () => {
             let freshFetch: typeof networkFetch = networkFetch;
             jest.isolateModules(() => {
                 freshFetch = require('./NetworkUtils').networkFetch;
-                require('react-native-nitro-tor').RnTor.startTorIfNotRunning.mockResolvedValue(
-                    {
-                        is_success: false,
-                        error_message: 'tor down'
-                    }
+                require('react-native-nitro-tor').Tor.daemon.start.mockRejectedValue(
+                    new Error('tor down')
                 );
             });
 
@@ -123,9 +125,7 @@ describe('networkFetch', () => {
         });
 
         it('fail instead of falling back to clearnet when the Tor request fails', async () => {
-            (RnTor.httpGet as jest.Mock).mockResolvedValue({
-                error: 'connection refused'
-            });
+            requestMock.mockRejectedValue(new Error('connection refused'));
 
             await expect(
                 networkFetch({
@@ -178,7 +178,7 @@ describe('networkFetch', () => {
                     undefined,
                     undefined
                 );
-                expect(RnTor.httpGet).not.toHaveBeenCalled();
+                expect(requestMock).not.toHaveBeenCalled();
                 expect(response).toBe(blobResponse);
             }
         );
@@ -190,24 +190,16 @@ describe('networkFetch', () => {
             'https://local.example.com/api/tx',
             'https://[2001:db8::1]/api/tx'
         ])('sends public host %s over Tor', async (url) => {
-            (RnTor.httpGet as jest.Mock).mockResolvedValue({
-                status_code: 200,
-                body: '{}',
-                error: null
-            });
+            respond(200, '{}');
 
             await networkFetch({ method: 'GET', url, enableTor: true });
 
-            expect(RnTor.httpGet).toHaveBeenCalledTimes(1);
+            expect(requestMock).toHaveBeenCalledTimes(1);
             expect(mockFetch).not.toHaveBeenCalled();
         });
 
         it('routes a GET through the Tor daemon and exposes a blob-util-compatible response', async () => {
-            (RnTor.httpGet as jest.Mock).mockResolvedValue({
-                status_code: 200,
-                body: '{"rate":42}',
-                error: null
-            });
+            respond(200, '{"rate":42}');
 
             const response = await networkFetch({
                 method: 'GET',
@@ -215,7 +207,7 @@ describe('networkFetch', () => {
                 enableTor: true
             });
 
-            expect(RnTor.httpGet).toHaveBeenCalledTimes(1);
+            expect(requestMock).toHaveBeenCalledTimes(1);
             expect(mockFetch).not.toHaveBeenCalled();
             expect(response.info().status).toBe(200);
             expect(response.json()).toEqual({ rate: 42 });
@@ -224,11 +216,7 @@ describe('networkFetch', () => {
         });
 
         it('routes a POST body through the Tor daemon', async () => {
-            (RnTor.httpPost as jest.Mock).mockResolvedValue({
-                status_code: 201,
-                body: '{"success":true}',
-                error: null
-            });
+            respond(201, '{"success":true}');
 
             const response = await networkFetch({
                 method: 'POST',
@@ -238,8 +226,9 @@ describe('networkFetch', () => {
                 enableTor: true
             });
 
-            expect(RnTor.httpPost).toHaveBeenCalledTimes(1);
-            const postArgs = (RnTor.httpPost as jest.Mock).mock.calls[0][0];
+            expect(requestMock).toHaveBeenCalledTimes(1);
+            const postArgs = requestMock.mock.calls[0][0];
+            expect(postArgs.method).toBe('POST');
             expect(postArgs.url).toBe('https://example.com/create');
             expect(postArgs.body).toBe('{"pubkey":"abc"}');
             expect(response.info().status).toBe(201);
@@ -247,11 +236,7 @@ describe('networkFetch', () => {
         });
 
         it('passes a request timeout to the Tor daemon, 60 s by default', async () => {
-            (RnTor.httpPost as jest.Mock).mockResolvedValue({
-                status_code: 200,
-                body: '{}',
-                error: null
-            });
+            respond(200, '{}');
 
             await networkFetch({
                 method: 'POST',
@@ -267,18 +252,14 @@ describe('networkFetch', () => {
                 enableTor: true
             });
 
-            const timeouts = (RnTor.httpPost as jest.Mock).mock.calls.map(
-                ([args]) => args.timeout_ms
+            const timeouts = requestMock.mock.calls.map(
+                ([args]) => args.timeoutMs
             );
             expect(timeouts).toEqual([900000, 60000]);
         });
 
         it('surfaces a non-2xx status instead of throwing (parity with blob-util)', async () => {
-            (RnTor.httpGet as jest.Mock).mockResolvedValue({
-                status_code: 404,
-                body: '{"error":"not found"}',
-                error: null
-            });
+            respond(404, '{"error":"not found"}');
 
             const response = await networkFetch({
                 method: 'GET',
