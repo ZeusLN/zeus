@@ -1821,6 +1821,8 @@
     "stores.ChannelsStore.openOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this channel was opened. Check your pending channels before opening another.",
     "stores.ChannelsStore.openStreamTimeout": "Your node did not start funding this channel in time, so ZEUS stopped the open before spending anything. You can try again.",
     "stores.ChannelBackupStore.invalidBackup": "The backup received from the server is not valid",
+    "stores.ChannelBackupStore.seedUnavailable": "Cannot encrypt channel backup: wallet seed is unavailable",
+    "stores.ChannelBackupStore.unrecognizedBackupFormat": "Unrecognized channel backup format. It may have been created by a newer version of ZEUS.",
     "stores.TransactionsStore.wholeSats": "Amount must be a whole number of sats",
     "stores.InvoicesStore.errorCreatingInvoice": "Error creating invoice",
     "stores.InvoicesStore.errorGeneratingAddress": "Error generating new address",
