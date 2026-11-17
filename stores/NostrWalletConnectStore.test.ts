@@ -3,6 +3,10 @@ jest.mock('../stores/Stores');
 jest.mock('../utils/LocaleUtils');
 
 jest.mock('react-native-blob-util', () => ({}));
+// TransactionsStore is loaded for one pay_invoice test
+jest.mock('react-native-randombytes', () => ({
+    randomBytes: (n: number) => require('crypto').randomBytes(n)
+}));
 // CashuStore is loaded for the Cashu make_invoice tests; these keep its
 // native and settings imports out of the test
 jest.mock('./SettingsStore', () => ({
@@ -35,7 +39,10 @@ jest.mock('../utils/BackendUtils', () => ({
         decodePaymentRequest: jest.fn(),
         createInvoice: jest.fn(),
         supportsFlowLSP: jest.fn(() => false),
-        supportsOnchainReceiving: jest.fn(() => false)
+        supportsOnchainReceiving: jest.fn(() => false),
+        // reached through a real TransactionsStore in one pay_invoice test
+        isLNDBased: jest.fn(() => false),
+        payLightningInvoice: jest.fn()
     }
 }));
 
@@ -111,6 +118,7 @@ import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
 import InvoicesStore from './InvoicesStore';
 import CashuStore from './CashuStore';
+import TransactionsStore from './TransactionsStore';
 import NostrWalletConnectStore, {
     NWC_CLIENT_KEYS,
     NWC_CONNECTIONS_KEY,
@@ -5844,6 +5852,59 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         } finally {
             jest.useRealTimers();
         }
+    });
+
+    // LdkNode.payLightningInvoice resolves a BOLT 11 payment still pending
+    // at its timeout as IN_FLIGHT with an empty preimage instead of
+    // throwing. Runs that result through the real TransactionsStore.
+    it('holds the budget and answers in transit when LDK Node reports a BOLT 11 payment in flight', async () => {
+        const { store } = buildHandlerStore();
+        const transactionsStore = new TransactionsStore(
+            { implementation: 'ldk-node', enableTor: false } as any,
+            {} as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        (store as any).transactionsStore = transactionsStore;
+        const outcome = jest.spyOn(transactionsStore, 'getPaymentOutcome');
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValueOnce({
+            payment_hash: paymentHash,
+            payment_preimage: '',
+            fee_msat: '0',
+            status: 'IN_FLIGHT'
+        });
+        const connection = addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 100000
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            () => true
+        );
+
+        expect(BackendUtils.payLightningInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({
+                payment_request: invoice,
+                fee_limit_sat: 1000,
+                timeout_seconds: 120
+            })
+        );
+        // in flight is not an error
+        expect(outcome.mock.results[0].value).toMatchObject({
+            status: 'IN_FLIGHT'
+        });
+        expect(outcome.mock.results[0].value.error).toBeUndefined();
+        expect(response.error).toBeUndefined();
+        expect(response.result).toEqual({ preimage: '', fees_paid: 0 });
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.activity[0].paymentHash).toBe(paymentHash);
+        // the amount plus the 1000 sat fee cap held, nothing debited
+        expect(connection.pendingSpendSats).toBe(6000);
+        expect(connection.totalSpendSats).toBe(0);
+        expect(connection.activity[0].isBudgetDebited).not.toBe(true);
     });
 
     it('fails the request when its own payment is rejected', async () => {
