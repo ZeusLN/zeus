@@ -2045,11 +2045,18 @@ export default class CashuStore {
      * recorded. If the active wallet changed since nodeDir was pinned,
      * this.sentTokens holds the other wallet's history, so append to
      * nodeDir's stored list instead of pushing to (and persisting) the
-     * wrong one.
+     * wrong one. The same applies when nodeDir is active again but its
+     * history is not loaded yet (switched away and back before
+     * initializeWallets ran): persisting the unloaded list would delete it.
+     *
+     * Throws when the stored list can't be read or parsed: writing then
+     * would replace the wallet's whole history with this one token. An
+     * offline send's pending record survives the throw and is promoted at
+     * next startup.
      */
     private recordSentToken = async (nodeDir: string, token: CashuToken) => {
         const sentKey = `${nodeDir}-cashu-sent-tokens`;
-        if (this.getNodeDir() === nodeDir) {
+        if (this.getNodeDir() === nodeDir && this.sentTokens) {
             if (
                 this.sentTokens?.some(
                     (t) => t.encodedToken === token.encodedToken
@@ -2065,14 +2072,13 @@ export default class CashuStore {
         }
 
         let storedTokens: any[] = [];
-        try {
-            const stored = await Storage.getItem(sentKey);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                if (Array.isArray(parsed)) storedTokens = parsed;
+        const stored = await Storage.getItem(sentKey);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (!Array.isArray(parsed)) {
+                throw new Error('Stored sent tokens are not a list');
             }
-        } catch (e) {
-            console.warn('Failed to load sent tokens:', e);
+            storedTokens = parsed;
         }
         if (storedTokens.some((t) => t?.encodedToken === token.encodedToken)) {
             return;

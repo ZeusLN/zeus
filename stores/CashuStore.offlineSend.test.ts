@@ -116,6 +116,17 @@ const mockGetUnspentProofs = CashuDevKit.getUnspentProofs as jest.Mock;
 const mockRemoveProofs = CashuDevKit.removeProofs as jest.Mock;
 const mockGetMintBalance = CashuDevKit.getMintBalance as jest.Mock;
 const mockInitializeWallet = CashuDevKit.initializeWallet as jest.Mock;
+const mockGetItem = Storage.getItem as jest.Mock;
+const mockSetItem = Storage.setItem as jest.Mock;
+const defaultGetItem = mockGetItem.getMockImplementation()!;
+const defaultSetItem = mockSetItem.getMockImplementation()!;
+
+// Keychain reads of `key` reject, as on a transient keychain error.
+const failReadsOf = (key: string) =>
+    mockGetItem.mockImplementation(async (k: string) => {
+        if (k === key) throw new Error('keychain unavailable');
+        return defaultGetItem(k);
+    });
 
 const NODE_DIR = 'testnode';
 const OTHER_DIR = 'othernode';
@@ -163,6 +174,8 @@ const getSentTokens = () =>
 describe('CashuStore offline send safety', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockGetItem.mockImplementation(defaultGetItem);
+        mockSetItem.mockImplementation(defaultSetItem);
         mockCallLog.length = 0;
         for (const key of Object.keys(mockBacking)) delete mockBacking[key];
         mockProofPool.current = [];
@@ -464,6 +477,84 @@ describe('CashuStore offline send safety', () => {
             expect(result).toBeUndefined();
             expect(mockGetMintBalance).not.toHaveBeenCalled();
             expect(mockRemoveProofs).not.toHaveBeenCalled();
+        });
+
+        // Wallet switches inside removeProofs, after the pending record is
+        // written, so the sent-token write goes through the stored list.
+        const switchDuringRemoval = (store: CashuStore) =>
+            mockRemoveProofs.mockImplementationOnce(async (ys: string[]) => {
+                mockProofPool.current = mockProofPool.current.filter(
+                    (p) => !ys.includes(p.y)
+                );
+                (store as any).settingsStore.lndDir = OTHER_DIR;
+            });
+
+        it('keeps the switched-away history when it cannot be read', async () => {
+            const history = JSON.stringify([{ encodedToken: 'cashuAold' }]);
+            mockBacking[SENT_KEY] = history;
+            mockProofPool.current = [proof(16, 'a')];
+            const store = buildStore();
+            switchDuringRemoval(store);
+            failReadsOf(SENT_KEY);
+
+            const result = await store.mintToken({ memo: '', value: '16' });
+
+            expect(result).toBeUndefined();
+            expect(store.mintingTokenError).toBe(true);
+            expect(mockBacking[SENT_KEY]).toBe(history);
+            // The pending record stays so startup can surface the token.
+            expect(getPendingRecords()).toHaveLength(1);
+        });
+
+        it('keeps the switched-away history when it is not a list', async () => {
+            const history = JSON.stringify({ encodedToken: 'cashuAold' });
+            mockBacking[SENT_KEY] = history;
+            mockProofPool.current = [proof(16, 'a')];
+            const store = buildStore();
+            switchDuringRemoval(store);
+
+            const result = await store.mintToken({ memo: '', value: '16' });
+
+            expect(result).toBeUndefined();
+            expect(console.error).toHaveBeenCalledWith(
+                'CDK mintToken error:',
+                new Error('Stored sent tokens are not a list')
+            );
+            expect(mockBacking[SENT_KEY]).toBe(history);
+            expect(getPendingRecords()).toHaveLength(1);
+        });
+
+        it('keeps the switched-away history when it is corrupt', async () => {
+            mockBacking[SENT_KEY] = '[{"encodedToken":';
+            mockProofPool.current = [proof(16, 'a')];
+            const store = buildStore();
+            switchDuringRemoval(store);
+
+            const result = await store.mintToken({ memo: '', value: '16' });
+
+            expect(result).toBeUndefined();
+            expect(mockBacking[SENT_KEY]).toBe('[{"encodedToken":');
+            expect(getPendingRecords()).toHaveLength(1);
+        });
+
+        it('appends to the stored history when this wallet is active but not loaded yet', async () => {
+            // Switched away (reset cleared sentTokens) and back before
+            // initializeWallets reloaded the history.
+            mockBacking[SENT_KEY] = JSON.stringify([
+                { encodedToken: 'cashuAold' }
+            ]);
+            mockProofPool.current = [proof(16, 'a')];
+            const store = buildStore();
+            store.sentTokens = undefined;
+
+            const result = await store.mintToken({ memo: '', value: '16' });
+
+            expect(result).toBeDefined();
+            expect(getSentTokens().map((t: any) => t.encodedToken)).toEqual([
+                'cashuAold',
+                result!.token
+            ]);
+            expect(getPendingRecords()).toEqual([]);
         });
     });
 
