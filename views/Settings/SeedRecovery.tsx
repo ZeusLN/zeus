@@ -90,6 +90,9 @@ import { addRecoveryWallet } from '../../utils/WalletRecoveryUtils';
 
 import Storage from '../../storage';
 
+import EyeClosed from '../../assets/images/SVG/eye_closed.svg';
+import EyeOpened from '../../assets/images/SVG/eye_opened.svg';
+
 interface SeedRecoveryProps {
     navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
@@ -139,6 +142,8 @@ interface SeedRecoveryState {
     showClipboardPrompt: boolean;
     clipboardSeedArray: string[];
     showValidation: boolean;
+    // Filled grid fields show ******** unless this is on
+    revealWords: boolean;
     // LDK Node specific
     implementation: string;
     ldkMnemonic: string;
@@ -192,6 +197,7 @@ export default class SeedRecovery extends React.PureComponent<
             showClipboardPrompt: false,
             clipboardSeedArray: [],
             showValidation: false,
+            revealWords: false,
             // LDK Node defaults
             implementation: 'embedded-lnd',
             ldkMnemonic: '',
@@ -515,6 +521,7 @@ export default class SeedRecovery extends React.PureComponent<
             rescueHost,
             customRescueHost,
             showValidation,
+            revealWords,
             implementation
         } = this.state;
 
@@ -674,7 +681,8 @@ export default class SeedRecovery extends React.PureComponent<
                             padding: 0
                         }}
                     >
-                        {index != null &&
+                        {!revealWords &&
+                        index != null &&
                         text &&
                         !(
                             selectedInputType === 'word' &&
@@ -1206,6 +1214,44 @@ export default class SeedRecovery extends React.PureComponent<
                         {!showSuggestions && (
                             <>
                                 {selectedInputType !== 'scb' && (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            this.setState({
+                                                revealWords: !revealWords
+                                            })
+                                        }
+                                        accessibilityRole="button"
+                                        hitSlop={10}
+                                        style={styles.revealToggle}
+                                    >
+                                        {revealWords ? (
+                                            <EyeClosed
+                                                height="18"
+                                                width="20"
+                                                fill={themeColor('text')}
+                                            />
+                                        ) : (
+                                            <EyeOpened
+                                                height="18"
+                                                width="20"
+                                                fill={themeColor('text')}
+                                            />
+                                        )}
+                                        <Text
+                                            style={{
+                                                ...styles.revealToggleText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                revealWords
+                                                    ? 'general.hide'
+                                                    : 'general.show'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                {selectedInputType !== 'scb' && (
                                     <ScrollView
                                         contentContainerStyle={{
                                             flexGrow: 1,
@@ -1615,6 +1661,16 @@ export default class SeedRecovery extends React.PureComponent<
                                     'views.Settings.SeedRecovery.clipboardSeedWordsPrompt'
                                 )}
                             </ZeusText>
+                            <ZeusText
+                                style={{
+                                    ...styles.modalBody,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.SeedRecovery.clipboardSeedWordsWarning'
+                                )}
+                            </ZeusText>
                             <View style={{ marginBottom: 12 }}>
                                 <Button
                                     title={localeString('general.yes')}
@@ -1629,7 +1685,10 @@ export default class SeedRecovery extends React.PureComponent<
                                             ),
                                             showClipboardPrompt: false,
                                             clipboardSeedArray: [],
-                                            showValidation: true
+                                            showValidation: true,
+                                            // Show the pasted words so they
+                                            // can be checked before restoring
+                                            revealWords: true
                                         });
                                         if (implementation === 'ldk-node') {
                                             this.setState({
@@ -1726,5 +1785,17 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 16,
         marginBottom: 24
+    },
+    revealToggle: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-end',
+        marginTop: 8,
+        marginRight: 12
+    },
+    revealToggleText: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 16,
+        marginLeft: 6
     }
 });
