@@ -54,6 +54,9 @@ import { getFeePercentage } from '../utils/AmountUtils';
 // pending for minutes or longer, well past the payment timeout.
 export const PENDING_EXIT_DELAY_MS = 10000;
 
+// the most a donation may pay in routing fees, whatever the payment allowed
+const DONATION_FEE_LIMIT_SAT = 100;
+
 interface SendingLightningProps {
     navigation: NativeStackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
@@ -245,7 +248,8 @@ export default class SendingLightning extends React.Component<
             }
 
             // The donation has no confirmation screen of its own, so it gets
-            // the fee limit approved for the payment, at most 100 sats
+            // the fee limit approved for the payment, at most
+            // DONATION_FEE_LIMIT_SAT
             const approvedFeeLimit = route.params?.donationFeeLimitSat;
             const feeLimitSat = approvedFeeLimit
                 ? Number(approvedFeeLimit)
@@ -253,16 +257,14 @@ export default class SendingLightning extends React.Component<
             const result = await TransactionsStore.sendPaymentSilently({
                 payment_request: paymentRequest,
                 fee_limit_sat:
-                    feeLimitSat >= 0 ? Math.min(feeLimitSat, 100) : 100
+                    feeLimitSat >= 0
+                        ? Math.min(feeLimitSat, DONATION_FEE_LIMIT_SAT)
+                        : DONATION_FEE_LIMIT_SAT
             });
-            const { payment_error, status } = result || {};
 
-            if (
-                status === 'FAILED' ||
-                // embedded LND reports the lnrpc.Payment.PaymentStatus number
-                status === 3 ||
-                (typeof payment_error === 'string' && payment_error !== '')
-            ) {
+            // the same check as for the payment: it reads embedded LND's
+            // numeric status and LndHub's { error: true } answer
+            if (TransactionsStore.getPaymentOutcome(result || {}).error) {
                 this.setState({
                     payingDonation: false,
                     amountDonated: parseFloat(donationAmount ?? '')

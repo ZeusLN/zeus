@@ -1999,6 +1999,20 @@ describe('TransactionsStore.getPaymentOutcome', () => {
         expect(outcome.status).toBe(lnrpc.Payment.PaymentStatus.FAILED);
     });
 
+    // SendingLightning reads a donation's result through getPaymentOutcome
+    it("does not mark embedded LND's numeric succeeded status as an error", () => {
+        const store = newStore('embedded-lnd');
+
+        const outcome = store.getPaymentOutcome({
+            payment_hash: 'ab'.repeat(32),
+            payment_preimage: 'cd'.repeat(32),
+            status: lnrpc.Payment.PaymentStatus.SUCCEEDED
+        });
+
+        expect(outcome.error).toBeUndefined();
+        expect(outcome.status).toBe(lnrpc.Payment.PaymentStatus.SUCCEEDED);
+    });
+
     it('does not mark an embedded LND payment error without a status as complete', () => {
         const store = newStore('embedded-lnd');
 

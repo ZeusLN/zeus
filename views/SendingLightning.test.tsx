@@ -81,6 +81,13 @@ import { getFeePercentage } from '../utils/AmountUtils';
 import Payment from '../models/Payment';
 import SendingLightning from './SendingLightning';
 
+// Stands in for TransactionsStore.getPaymentOutcome, whose classification of
+// each backend's result is tested in stores/TransactionsStore.test.ts. The
+// screen only reads `error` from it.
+const getPaymentOutcome = jest.fn((result: any) =>
+    result.status === 'FAILED' || result.payment_error ? { error: true } : {}
+);
+
 const TRY_AGAIN = 'views.SendingLightning.tryAgain';
 const GO_TO_WALLET = 'views.SendingLightning.goToWallet';
 
@@ -102,6 +109,7 @@ const renderView = async (
         noteKey: null,
         paymentDuration: null,
         status: null,
+        getPaymentOutcome,
         ...transactionsState
     });
     const navigation = {
@@ -578,7 +586,8 @@ describe('SendingLightning donation', () => {
             lastPaymentSequence: 1,
             sendPaymentSilently: jest
                 .fn()
-                .mockResolvedValue({ status: 'FAILED' })
+                .mockResolvedValue({ status: 'FAILED' }),
+            getPaymentOutcome
         };
 
         const { rerender } = await render(donationView(TransactionsStore));
@@ -605,7 +614,8 @@ describe('SendingLightning donation', () => {
             error: false,
             status: null,
             lastPaymentSequence: 1,
-            sendPaymentSilently: jest.fn()
+            sendPaymentSilently: jest.fn(),
+            getPaymentOutcome
         };
 
         const { rerender } = await render(donationView(TransactionsStore));
@@ -640,7 +650,8 @@ describe('SendingLightning donation', () => {
                 .mockImplementationOnce(
                     () => new Promise((r) => (payEarlierDonation = r))
                 )
-                .mockResolvedValueOnce({ status: 'FAILED' })
+                .mockResolvedValueOnce({ status: 'FAILED' }),
+            getPaymentOutcome
         };
 
         const earlier = await render(donationView(TransactionsStore));
@@ -683,7 +694,8 @@ describe('SendingLightning donation', () => {
             error: false,
             status: null,
             lastPaymentSequence: 1,
-            sendPaymentSilently
+            sendPaymentSilently,
+            getPaymentOutcome
         };
         const { rerender } = await render(
             donationView(TransactionsStore, payments)
@@ -841,7 +853,8 @@ describe('SendingLightning refreshes when the payment resolves', () => {
             error: false,
             status: null,
             lastPaymentSequence: 1,
-            sendPaymentSilently: jest.fn()
+            sendPaymentSilently: jest.fn(),
+            getPaymentOutcome
         };
         const props: any = {
             navigation: {
@@ -990,6 +1003,7 @@ describe('SendingLightning donation payment sequence', () => {
             status: null,
             pendingPaymentData: null,
             sendPaymentSilently: jest.fn(),
+            getPaymentOutcome,
             ...transactionsState
         };
         const props: any = {
@@ -1180,15 +1194,15 @@ describe('SendingLightning donation fee limit and result', () => {
         }
     );
 
-    it('does not mark a donation paid when embedded LND reports it failed', async () => {
+    it('does not mark a donation paid when its outcome is an error', async () => {
         // lnrpc.Payment as decoded on embedded LND: numeric status, no
-        // payment_error
-        const { sendPaymentSilently } = await donate({
-            status: 3,
-            failure_reason: 2
-        });
+        // payment_error. getPaymentOutcome reads status 3 as FAILED there.
+        const result = { status: 3, failure_reason: 2 };
+        getPaymentOutcome.mockReturnValueOnce({ error: true });
+        const { sendPaymentSilently } = await donate(result);
 
         expect(sendPaymentSilently).toHaveBeenCalled();
+        expect(getPaymentOutcome).toHaveBeenCalledWith(result);
         expect(hostProps('DonationGiftIcon').donationHandled).toBe(false);
     });
 
