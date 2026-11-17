@@ -1542,11 +1542,16 @@ export function getLdkNodeLspConfig(
 ): LdkNodeLspConfig {
     const lspConfig = getLspConfigForNetwork(settings, network);
 
+    // ldk-node aborts the app on iOS if it can't parse a peer, and the
+    // settings screens save as the user types, so only valid values pass
+    const lsps1Pubkey = lspConfig.lsps1Pubkey.trim().toLowerCase();
+    const lsps1Host = lspConfig.lsps1Host.trim();
     const lsps1Config =
-        lspConfig.lsps1Pubkey && lspConfig.lsps1Host
+        ValidationUtils.isValidPeerPubkey(lsps1Pubkey) &&
+        ValidationUtils.isValidPeerAddress(lsps1Host)
             ? {
-                  nodeId: lspConfig.lsps1Pubkey,
-                  address: lspConfig.lsps1Host,
+                  nodeId: lsps1Pubkey,
+                  address: lsps1Host,
                   token: settings.lsps1Token || null
               }
             : undefined;
@@ -1559,8 +1564,6 @@ export function getLdkNodeLspConfig(
     // With Flow chosen the LSPS2 LSP is left out, so the LSPS1 node stays the
     // LSPS2 source: ldk-node lets only that source's channels carry a full
     // HTLC in flight, and Flow sends most of a new channel in one HTLC.
-    // ldk-node aborts the app on iOS if it can't parse a peer, and the
-    // settings screen saves as the user types, so only valid values pass
     const lsps2Pubkey = lspConfig.lsps2Pubkey.trim().toLowerCase();
     const lsps2Host = lspConfig.lsps2Host.trim();
     const lsps2Config =
