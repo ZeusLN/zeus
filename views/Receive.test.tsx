@@ -83,6 +83,10 @@ jest.mock('../components/Text', () => 'Text');
 jest.mock('../components/TextInput', () => 'TextInput');
 jest.mock('../components/layout/Spacer', () => ({ Spacer: 'Spacer' }));
 jest.mock('../components/Accordion', () => 'Accordion');
+jest.mock(
+    '../components/AnimatedGradientBorder',
+    () => 'AnimatedGradientBorder'
+);
 jest.mock('../components/SVG/UnifiedSvg', () => 'UnifiedSvg');
 jest.mock('../components/SVG/LightningSvg', () => 'LightningSvg');
 jest.mock('../components/SVG/OnChainSvg', () => 'OnChainSvg');
