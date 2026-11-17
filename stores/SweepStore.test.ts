@@ -21,6 +21,10 @@ afterEach(() => jest.restoreAllMocks());
 // networks. The node's network decides which addresses are derived.
 const MAINNET_WIF = 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
 const WIF = 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA';
+// The same private key as an uncompressed WIF
+const MAINNET_UNCOMPRESSED_WIF =
+    '5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf';
+const UNCOMPRESSED_WIF = '91avARGdfge8E4tZfYLoxeJ5sGBdNJQH4kvjJoQFacbgwmaKkrx';
 
 const queriedAddresses = (fetchMock: jest.Mock) =>
     fetchMock.mock.calls.map(
@@ -84,6 +88,11 @@ describe('SweepStore.prepareSweepInputs network selection', () => {
         // LDK Node reports Mutinynet as both signet and mutinynet
         const { store } = await prepare({ isSigNet: true, isMutinynet: true });
         expect(store.network.bech32).toBe('tb');
+    });
+
+    it('derives only the legacy address of an uncompressed key', async () => {
+        const { addresses } = await prepare({}, MAINNET_UNCOMPRESSED_WIF);
+        expect(addresses).toEqual(['1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm']);
     });
 
     it('reports no UTXOs found when every derived address is empty', async () => {
@@ -325,6 +334,64 @@ describe('SweepStore end-to-end sweep', () => {
         expect(store.sweepError).toBe(false);
         expect(store.psbt.inputCount).toBe(1);
         expect(store.onChainBalance).toBe(UTXO_VALUE);
+    });
+
+    it('sweeps the p2pkh UTXO of an uncompressed key', async () => {
+        const uncompressedPubkey = Buffer.from(
+            ecc.pointFromScalar(privateKey, false)!
+        );
+        const payment = bitcoin.payments.p2pkh({
+            pubkey: uncompressedPubkey,
+            network
+        });
+        const funding = fundingTx(payment.output!);
+        mockMempool(payment.address!, funding);
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+
+        await store.prepareSweepInputs(UNCOMPRESSED_WIF);
+        expect(store.sweepError).toBe(false);
+        expect(store.addressType).toBe('p2pkh');
+
+        store.destination = DESTINATION;
+        await store.finalizeSweepTransaction('2');
+        expect(store.sweepError).toBe(false);
+
+        const tx = bitcoin.Transaction.fromHex(store.txHex!);
+        expect(tx.ins).toHaveLength(1);
+        expect(Buffer.from(tx.ins[0].hash).reverse().toString('hex')).toBe(
+            funding.getId()
+        );
+        expect(bitcoin.script.decompile(tx.ins[0].script)![1]).toEqual(
+            uncompressedPubkey
+        );
+        expect(tx.outs[0].value).toBe(UTXO_VALUE - store.fee);
+    });
+
+    it('does not sweep the compressed key addresses of an uncompressed WIF', async () => {
+        const payment = cases[0].payment;
+        mockMempool(payment.address!, fundingTx(payment.output!));
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+
+        await store.prepareSweepInputs(UNCOMPRESSED_WIF);
+
+        expect(store.sweepError).toBe(true);
+        expect(store.sweepErrorMsg).toBe('views.Wif.noUtxosFound');
+    });
+
+    it('signs with the compressed key again after an uncompressed one', async () => {
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        mockMempool('', fundingTx(cases[0].payment.output!));
+        await store.prepareSweepInputs(UNCOMPRESSED_WIF);
+        store.resetSweepError();
+
+        const payment = cases[0].payment;
+        mockMempool(payment.address!, fundingTx(payment.output!));
+        await store.prepareSweepInputs(WIF);
+        store.destination = DESTINATION;
+        await store.finalizeSweepTransaction('2');
+
+        expect(store.sweepError).toBe(false);
+        expect(store.txHex).not.toBeNull();
     });
 
     it('refuses taproot UTXOs, which sweeps do not support yet', async () => {
