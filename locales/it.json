@@ -962,7 +962,7 @@
     "views.Bolt12OfferReview.issuer": "Emittente",
     "views.Bolt12OfferReview.issuerId": "Emittente ID",
     "views.Bolt12OfferReview.offerAmount": "Offerta minima",
-    "views.Bolt12OfferReview.payOffer": "Offerta di pagamento",
+    "views.Bolt12OfferReview.payOffer": "Paga l'offerta",
     "views.Bolt12OfferReview.expired": "Questa offerta è scaduta",
     "views.Bolt12OfferReview.expectsQuantity": "Questa offerta richiede una quantità che ZEUS non è in grado di impostare. ZEUS non effettuerà questo pagamento.",
     "views.Bolt12OfferReview.currencyDenominated": "ZEUS non può effettuare pagamenti denominati in una valuta fiat.",
