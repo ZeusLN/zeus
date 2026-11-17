@@ -7,6 +7,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { reaction } from 'mobx';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
@@ -48,6 +49,11 @@ import PaymentDetailsSheet from '../components/PaymentDetailsSheet';
 
 import { getFeePercentage } from '../utils/AmountUtils';
 
+// how long a payment may stay on the sending screen before the user is
+// offered a way back to the wallet. A hold invoice can keep a payment
+// pending for minutes or longer, well past the payment timeout.
+export const PENDING_EXIT_DELAY_MS = 10000;
+
 interface SendingLightningProps {
     navigation: NativeStackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
@@ -83,6 +89,7 @@ interface SendingLightningState {
     donationFee: string;
     donationFeePercentage: string;
     showPaymentDetails: boolean;
+    pendingExitOffered: boolean;
 }
 
 @inject(
@@ -113,6 +120,10 @@ export default class SendingLightning extends React.Component<
     // screen is still mounted underneath.
     private readonly paymentSequence: number | null;
 
+    private pendingExitTimer: ReturnType<typeof setTimeout> | undefined;
+
+    private pendingExitDisposer: (() => void) | undefined;
+
     constructor(props: SendingLightningProps) {
         super(props);
         this.paymentSequence = props.route.params?.paymentSequence ?? null;
@@ -130,7 +141,8 @@ export default class SendingLightning extends React.Component<
             donationPathExists: false,
             donationFee: '',
             donationFeePercentage: '',
-            showPaymentDetails: false
+            showPaymentDetails: false,
+            pendingExitOffered: false
         };
     }
 
@@ -155,6 +167,26 @@ export default class SendingLightning extends React.Component<
         this.backPressSubscription = BackHandler.addEventListener(
             'hardwareBackPress',
             this.handleBackPress.bind(this)
+        );
+
+        // The delay counts from when the payment takes the send guard,
+        // which can be after this screen opens: a payment held back by the
+        // graph sync prompt is not dispatched until the prompt is answered.
+        this.pendingExitDisposer = reaction(
+            () => TransactionsStore.paymentInFlight,
+            (paymentInFlight) => {
+                clearTimeout(this.pendingExitTimer);
+                if (this.state.pendingExitOffered) {
+                    this.setState({ pendingExitOffered: false });
+                }
+                if (paymentInFlight) {
+                    this.pendingExitTimer = setTimeout(
+                        () => this.setState({ pendingExitOffered: true }),
+                        PENDING_EXIT_DELAY_MS
+                    );
+                }
+            },
+            { fireImmediately: true }
         );
     }
 
@@ -321,6 +353,10 @@ export default class SendingLightning extends React.Component<
 
     private handleBackPress(): boolean {
         const { TransactionsStore, navigation } = this.props;
+        if (this.offersPendingExit(TransactionsStore)) {
+            navigation.popTo('Wallet');
+            return true;
+        }
         // Stay here until the payment has a result: going back to the
         // payment screen while it is pending allows a second payment
         if (TransactionsStore.loading) return true;
@@ -340,6 +376,21 @@ export default class SendingLightning extends React.Component<
             this.focusListener();
         }
         this.backPressSubscription?.remove();
+        if (this.pendingExitDisposer) {
+            this.pendingExitDisposer();
+        }
+        clearTimeout(this.pendingExitTimer);
+    }
+
+    // The payment has held the send guard for PENDING_EXIT_DELAY_MS. Leaving
+    // this screen leaves the send guard and the payment's result handling
+    // in TransactionsStore as they are.
+    private offersPendingExit(transactionStore: TransactionsStore): boolean {
+        return (
+            this.state.pendingExitOffered &&
+            transactionStore.loading &&
+            transactionStore.paymentInFlight
+        );
     }
 
     private successfullySent(transactionStore: TransactionsStore): boolean {
@@ -422,6 +473,46 @@ export default class SendingLightning extends React.Component<
                     navigation={navigation}
                 />
                 {loading && <SendingLoadingView />}
+                {this.offersPendingExit(TransactionsStore) && (
+                    // opaque so the loading animation does not run behind
+                    // the text and the button
+                    <SafeAreaView
+                        edges={['bottom']}
+                        style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            alignItems: 'center',
+                            paddingTop: 10,
+                            paddingBottom: 15,
+                            backgroundColor: themeColor('background')
+                        }}
+                    >
+                        <Text
+                            style={{
+                                textAlign: 'center',
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                padding: 20,
+                                fontSize: 14
+                            }}
+                        >
+                            {localeString(
+                                'views.SendingLightning.stillPending'
+                            )}
+                        </Text>
+                        <Button
+                            title={localeString(
+                                'views.SendingLightning.goToWallet'
+                            )}
+                            onPress={() => navigation.popTo('Wallet')}
+                            buttonStyle={{ height: 40, width: '100%' }}
+                            titleStyle={{ color: themeColor('background') }}
+                            containerStyle={{ width: '100%', margin: 3 }}
+                        />
+                    </SafeAreaView>
+                )}
                 {paymentType === 'donation' && (
                     <DonationGiftIcon
                         payingDonation={payingDonation}

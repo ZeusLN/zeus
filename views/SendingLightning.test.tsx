@@ -54,7 +54,9 @@ jest.mock('../utils/ContactUtils', () => ({
 }));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({
-    themeColor: () => '#000000'
+    // a distinct value for the background color so tests can tell it apart
+    themeColor: (color: string) =>
+        color === 'background' ? '#0d1b2a' : '#000000'
 }));
 jest.mock('../storage', () => ({}));
 jest.mock('../stores/Stores');
@@ -63,14 +65,16 @@ jest.mock('../assets/images/SVG/wordmark-black.svg', () => 'Wordmark');
 jest.mock('../utils/AmountUtils', () => ({ getFeePercentage: jest.fn() }));
 
 import * as React from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, StyleSheet } from 'react-native';
 import {
     act,
     fireEvent,
     render,
     screen,
-    waitFor
+    waitFor,
+    within
 } from '@testing-library/react-native';
+import { observable } from 'mobx';
 import BackendUtils from '../utils/BackendUtils';
 import { loadDonationLnurl } from '../utils/DonationUtils';
 import { getFeePercentage } from '../utils/AmountUtils';
@@ -82,9 +86,11 @@ const GO_TO_WALLET = 'views.SendingLightning.goToWallet';
 
 const renderView = async (
     transactionsState: Record<string, any>,
-    LnurlPayStore: Record<string, any> = {}
+    LnurlPayStore: Record<string, any> = {},
+    wrapStore: (store: Record<string, any>) => Record<string, any> = (store) =>
+        store
 ) => {
-    const TransactionsStore = {
+    const TransactionsStore = wrapStore({
         loading: false,
         error: false,
         error_msg: null,
@@ -96,7 +102,7 @@ const renderView = async (
         paymentDuration: null,
         status: null,
         ...transactionsState
-    };
+    });
     const navigation = {
         goBack: jest.fn(),
         popTo: jest.fn(),
@@ -272,6 +278,214 @@ describe('SendingLightning hardware back', () => {
         expect(onBack()).toBe(false);
 
         expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+});
+
+describe('SendingLightning payment still pending', () => {
+    const STILL_PENDING = 'views.SendingLightning.stillPending';
+    let onBack: () => boolean;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.spyOn(BackHandler, 'addEventListener').mockImplementation(
+            (_event: any, listener: any) => {
+                onBack = listener;
+                return { remove: jest.fn() } as any;
+            }
+        );
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+        jest.restoreAllMocks();
+    });
+
+    // the send request is open and the send guard is held, e.g. a hold
+    // invoice the recipient has not settled yet
+    const sending = { loading: true, paymentInFlight: true };
+
+    it('offers a way back to the wallet once the payment has been pending a while', async () => {
+        const navigation = await renderView(sending);
+
+        expect(screen.queryByText(STILL_PENDING)).not.toBeOnTheScreen();
+        expect(
+            screen.queryByRole('button', { name: GO_TO_WALLET })
+        ).not.toBeOnTheScreen();
+
+        await act(async () => {
+            jest.advanceTimersByTime(10000);
+        });
+
+        expect(screen.getByText(STILL_PENDING)).toBeOnTheScreen();
+        await fireEvent.press(
+            screen.getByRole('button', { name: GO_TO_WALLET })
+        );
+        expect(navigation.popTo).toHaveBeenCalledWith('Wallet');
+        expect(navigation.goBack).not.toHaveBeenCalled();
+    });
+
+    it('shows the pending text and the button on an opaque panel at the bottom of the screen', async () => {
+        // themeColor('background') in the ThemeUtils mock
+        const BACKGROUND = '#0d1b2a';
+        const opaquePanels = () =>
+            screen.container.queryAll(
+                (n) =>
+                    typeof n.type === 'string' &&
+                    StyleSheet.flatten(n.props.style)?.backgroundColor ===
+                        BACKGROUND
+            );
+
+        await renderView(sending);
+        expect(opaquePanels()).toHaveLength(0);
+
+        await act(async () => {
+            jest.advanceTimersByTime(10000);
+        });
+
+        expect(opaquePanels()).toHaveLength(1);
+        const [panel] = opaquePanels();
+        expect(StyleSheet.flatten(panel.props.style)).toMatchObject({
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0
+        });
+        // the safe-area inset is padding inside the panel
+        expect(panel.type).toBe('SafeAreaView');
+        expect(panel.props.edges).toEqual(['bottom']);
+        expect(within(panel).getByText(STILL_PENDING)).toBeOnTheScreen();
+        expect(
+            within(panel).getByRole('button', { name: GO_TO_WALLET })
+        ).toBeOnTheScreen();
+    });
+
+    it('returns to the wallet on hardware back once the exit is offered', async () => {
+        const navigation = await renderView(sending);
+
+        expect(onBack()).toBe(true);
+        expect(navigation.popTo).not.toHaveBeenCalled();
+
+        await act(async () => {
+            jest.advanceTimersByTime(10000);
+        });
+
+        expect(onBack()).toBe(true);
+        expect(navigation.popTo).toHaveBeenCalledWith('Wallet');
+        expect(navigation.goBack).not.toHaveBeenCalled();
+    });
+
+    it('does not offer it when no payment holds the send guard', async () => {
+        await renderView({ loading: true, paymentInFlight: false });
+
+        await act(async () => {
+            jest.advanceTimersByTime(10000);
+        });
+
+        expect(screen.queryByText(STILL_PENDING)).not.toBeOnTheScreen();
+        expect(
+            screen.queryByRole('button', { name: GO_TO_WALLET })
+        ).not.toBeOnTheScreen();
+    });
+
+    describe('when the send guard changes while the screen is open', () => {
+        // TransactionsStore.paymentInFlight is observable in the app
+        let store: Record<string, any>;
+        const renderObserved = (state: Record<string, any>) =>
+            renderView(state, {}, (plain) => (store = observable(plain)));
+
+        const advance = (ms: number) =>
+            act(async () => {
+                jest.advanceTimersByTime(ms);
+            });
+        const setInFlight = (paymentInFlight: boolean) =>
+            act(async () => {
+                store.paymentInFlight = paymentInFlight;
+            });
+
+        const expectExitOffered = (offered: boolean) => {
+            expect(screen.queryAllByText(STILL_PENDING)).toHaveLength(
+                offered ? 1 : 0
+            );
+            expect(
+                screen.queryAllByRole('button', { name: GO_TO_WALLET })
+            ).toHaveLength(offered ? 1 : 0);
+        };
+
+        it('counts the delay from when the payment is sent, not from when the screen opens', async () => {
+            // held back by the graph sync prompt, answered after 15 s
+            const navigation = await renderObserved({
+                loading: true,
+                paymentInFlight: false
+            });
+            await advance(15000);
+            await setInFlight(true);
+            expectExitOffered(false);
+            // hardware back reads the same condition as the button
+            expect(onBack()).toBe(true);
+            expect(navigation.popTo).not.toHaveBeenCalled();
+
+            await advance(9999);
+            expectExitOffered(false);
+            expect(onBack()).toBe(true);
+            expect(navigation.popTo).not.toHaveBeenCalled();
+
+            await advance(1);
+            expectExitOffered(true);
+        });
+
+        it('starts the delay again when the send guard is released and taken again', async () => {
+            await renderObserved(sending);
+            await advance(5000);
+            await setInFlight(false);
+            await setInFlight(true);
+
+            await advance(5000);
+            expectExitOffered(false);
+
+            await advance(5000);
+            expectExitOffered(true);
+        });
+
+        it('withdraws the exit when the send guard is taken again after it was offered', async () => {
+            const navigation = await renderObserved(sending);
+            await advance(10000);
+            expectExitOffered(true);
+
+            await setInFlight(false);
+            await setInFlight(true);
+            expectExitOffered(false);
+            expect(onBack()).toBe(true);
+            expect(navigation.popTo).not.toHaveBeenCalled();
+
+            await advance(9999);
+            expectExitOffered(false);
+
+            await advance(1);
+            expectExitOffered(true);
+        });
+
+        it('does not run the delay while no payment holds the send guard', async () => {
+            await renderObserved({ loading: true, paymentInFlight: false });
+            const setState = jest.spyOn(SendingLightning.prototype, 'setState');
+
+            await advance(15000);
+
+            expect(setState).not.toHaveBeenCalled();
+        });
+
+        it('does not update the screen after it is unmounted', async () => {
+            await renderObserved(sending);
+            await advance(5000);
+            const setState = jest.spyOn(SendingLightning.prototype, 'setState');
+
+            await screen.unmount();
+            await advance(10000);
+            await setInFlight(false);
+            await setInFlight(true);
+            await advance(10000);
+
+            expect(setState).not.toHaveBeenCalled();
+        });
     });
 });
 
