@@ -12,6 +12,7 @@ import {
 import { LNURLPaySuccessAction } from 'js-lnurl';
 import { decipherAES } from 'js-lnurl/lib/helpers';
 import { localeString } from '../../utils/LocaleUtils';
+import { isSuccessActionUrlAllowed } from '../../utils/LnurlPayUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface LnurlPaySuccessProps {
@@ -28,6 +29,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
         const { successAction } = this.props;
         const { url } = successAction;
         const urlString: string = url || '';
+        if (!isSuccessActionUrlAllowed(urlString)) return;
 
         Linking.canOpenURL(urlString).then((supported: boolean) => {
             if (supported) {
@@ -70,8 +72,13 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                     );
                     break;
                 case 'url':
+                    // only https links are opened, anything else is shown
+                    // as plain text
                     body = (
-                        <TouchableOpacity onPress={() => this.URLClicked()}>
+                        <TouchableOpacity
+                            onPress={() => this.URLClicked()}
+                            disabled={!isSuccessActionUrlAllowed(url || '')}
+                        >
                             <Text
                                 style={{
                                     fontFamily: 'PPNeueMontreal-Book',
