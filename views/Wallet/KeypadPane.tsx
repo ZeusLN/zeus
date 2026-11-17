@@ -294,12 +294,24 @@ export default class KeypadPane extends React.PureComponent<
 
     private modalBoxRef = React.createRef<ModalBox>();
     private currencySelectorModalRef = React.createRef<CurrencySelectorModal>();
+    // The unit and fiat currency when the currency modal was opened, to tell
+    // a selection from a dismissal when it closes
+    private unitsOnModalOpen = '';
+
+    getUnitsKey = (): string =>
+        `${this.props.UnitsStore!.units}-${
+            this.props.SettingsStore!.settings.fiat
+        }`;
 
     handleOpenCurrencyModal = () => {
+        this.unitsOnModalOpen = this.getUnitsKey();
         this.currencySelectorModalRef.current?.open();
     };
 
     handleCurrencyModalClose = () => {
+        // CurrencyList stores the selection before it closes the modal. A
+        // dismissal, or picking the unit already in use, keeps the digits.
+        if (this.getUnitsKey() === this.unitsOnModalOpen) return;
         this.clearValue();
     };
 

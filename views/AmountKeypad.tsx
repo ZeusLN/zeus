@@ -42,6 +42,11 @@ interface AmountKeypadProps {
             hideUnitChangeButton?: boolean;
             forceUnit?: 'sats' | 'BTC' | 'fiat';
             onConfirm?: (amount: string) => void;
+            // Called when the unit or fiat currency is changed here. The
+            // keypad clears its digits then, so the caller should clear its
+            // amount too: leaving with the back arrow must not keep the old
+            // digits, which the keypad no longer shows.
+            onUnitsChange?: () => void;
         }
     >;
     FiatStore?: FiatStore;
@@ -71,6 +76,9 @@ export default class AmountKeypad extends React.Component<
     */
     amountInput = '0';
     private currencySelectorModalRef = React.createRef<CurrencySelectorModal>();
+    // The unit and fiat currency when the currency modal was opened, to tell
+    // a selection from a dismissal when it closes
+    private unitsOnModalOpen = '';
 
     constructor(props: AmountKeypadProps) {
         super(props);
@@ -164,16 +172,27 @@ export default class AmountKeypad extends React.Component<
         navigation.goBack();
     };
 
+    getUnitsKey = (): string =>
+        `${this.props.UnitsStore!.units}-${
+            this.props.SettingsStore!.settings.fiat
+        }`;
+
     handleUnitToggle = () => {
         this.clearValue();
+        this.props.route.params?.onUnitsChange?.();
     };
 
     handleOpenCurrencyModal = () => {
+        this.unitsOnModalOpen = this.getUnitsKey();
         this.currencySelectorModalRef.current?.open();
     };
 
     handleCurrencyModalClose = () => {
+        // CurrencyList stores the selection before it closes the modal. A
+        // dismissal, or picking the unit already in use, keeps the digits.
+        if (this.getUnitsKey() === this.unitsOnModalOpen) return;
         this.clearValue();
+        this.props.route.params?.onUnitsChange?.();
     };
 
     handlePaste = async () => {
