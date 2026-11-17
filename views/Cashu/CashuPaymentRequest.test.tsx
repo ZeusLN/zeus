@@ -10,6 +10,7 @@ jest.mock('../../utils/ThemeUtils', () => ({
 }));
 jest.mock('../../components/Amount', () => 'Amount');
 jest.mock('../../components/Button', () => 'Button');
+jest.mock('../../components/GlassButtonGroup', () => 'ButtonGroup');
 jest.mock('../../components/EcashMintPicker', () => 'EcashMintPicker');
 jest.mock('../../components/SwipeButton', () => 'SwipeButton');
 jest.mock('../../components/Conversion', () => 'Conversion');

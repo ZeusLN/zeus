@@ -3,7 +3,7 @@ import { Alert, StyleSheet, ScrollView, View, Share } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ButtonGroup } from '@rneui/themed';
+import ButtonGroup from '../../components/GlassButtonGroup';
 
 import CashuStore from '../../stores/CashuStore';
 import ChannelsStore from '../../stores/ChannelsStore';

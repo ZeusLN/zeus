@@ -15,6 +15,7 @@ jest.mock('../../assets/images/SVG/History.svg', () => 'History');
 jest.mock('../../assets/images/SVG/Olympus.svg', () => 'Olympus');
 jest.mock('../../components/Accordion', () => 'Accordion');
 jest.mock('../../components/Button', () => 'Button');
+jest.mock('../../components/GlassButtonGroup', () => 'ButtonGroup');
 jest.mock('../../components/Header', () => 'Header');
 jest.mock('../../components/KeyValue', () => {
     const { Text } = require('react-native');

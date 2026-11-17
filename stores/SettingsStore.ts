@@ -104,6 +104,8 @@ interface DisplaySettings {
     dateFormat?: string;
     timeFormat?: string;
     showSeconds?: boolean;
+    // iOS only; undefined counts as on
+    liquidGlass?: boolean;
 }
 
 export enum PosEnabled {
@@ -1607,7 +1609,8 @@ export const DEFAULT_SETTINGS: Settings = {
         showMillisatoshiAmounts: false,
         dateFormat: 'default',
         timeFormat: '24h',
-        showSeconds: false
+        showSeconds: false,
+        liquidGlass: true
     },
     pos: {
         posEnabled: PosEnabled.Disabled,

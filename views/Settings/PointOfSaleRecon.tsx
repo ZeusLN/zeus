@@ -6,7 +6,7 @@ import {
     TouchableHighlight,
     TouchableOpacity
 } from 'react-native';
-import { ButtonGroup } from '@rneui/themed';
+import ButtonGroup from '../../components/GlassButtonGroup';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';

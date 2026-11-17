@@ -34,6 +34,7 @@ jest.mock('../../components/AmountInput', () => ({
     getSatAmount: (amount: string) => Number(amount || 0)
 }));
 jest.mock('../../components/Button', () => 'Button');
+jest.mock('../../components/GlassButtonGroup', () => 'ButtonGroup');
 jest.mock('../../components/CollapsedQR', () => 'CollapsedQR');
 jest.mock('../../components/EcashMintPicker', () => 'EcashMintPicker');
 jest.mock('../../components/Header', () => 'Header');

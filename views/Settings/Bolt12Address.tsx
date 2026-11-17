@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Platform, Text, View, StyleSheet, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { ButtonGroup } from '@rneui/themed';
+import ButtonGroup from '../../components/GlassButtonGroup';
 import NfcManager from 'react-native-nfc-manager';
 
 import { themeColor } from '../../utils/ThemeUtils';

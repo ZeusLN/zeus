@@ -8,7 +8,7 @@ import {
     Alert
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { ButtonGroup } from '@rneui/themed';
+import ButtonGroup from '../components/GlassButtonGroup';
 import clone from 'lodash/clone';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
