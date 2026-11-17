@@ -497,6 +497,58 @@ describe('LdkNode.formatChannel', () => {
         );
     });
 
+    it('does not count an unclaimed inbound HTLC on either side', () => {
+        // 1,000,000 sat channel opened by the peer: 200,000 ours, 100,000
+        // in an inbound HTLC, 1,000 in commit fee and anchors, 699,000 theirs
+        const channel = formatChannel({
+            channelValueSats: 1_000_000,
+            outboundCapacityMsat: 190_000_000,
+            inboundCapacityMsat: 689_000_000,
+            unspendablePunishmentReserve: 10_000,
+            counterpartyUnspendablePunishmentReserve: 10_000,
+            isOutbound: false
+        });
+
+        expect(channel.local_balance).toEqual('200000');
+        expect(channel.remote_balance).toEqual('699000');
+    });
+
+    it('reports no remote balance while the peer has no inbound capacity', () => {
+        // 1,000,000 sat channel we opened and have not used: the peer holds
+        // nothing, 2,000 is in commit fee and anchors
+        const channel = formatChannel({
+            channelValueSats: 1_000_000,
+            outboundCapacityMsat: 988_000_000,
+            inboundCapacityMsat: 0,
+            unspendablePunishmentReserve: 10_000,
+            counterpartyUnspendablePunishmentReserve: 10_000,
+            isOutbound: true
+        });
+
+        expect(channel.remote_balance).toEqual('0');
+        expect(channel.local_balance).toEqual('998000');
+    });
+
+    it('adds the peer reserve as soon as there is inbound capacity', () => {
+        const channel = formatChannel({
+            channelValueSats: 1_000_000,
+            inboundCapacityMsat: 1000,
+            unspendablePunishmentReserve: 10_000,
+            counterpartyUnspendablePunishmentReserve: 10_000
+        });
+
+        expect(channel.remote_balance).toEqual('10001');
+    });
+
+    it('reports the inbound capacity when the peer reserve is not set', () => {
+        const channel = formatChannel({
+            inboundCapacityMsat: 59_000_000,
+            counterpartyUnspendablePunishmentReserve: undefined
+        });
+
+        expect(channel.remote_balance).toEqual('59000');
+    });
+
     it('reports 0 before the counterparty has accepted the channel', () => {
         // LDK leaves forceCloseSpendDelay unset on an outbound channel
         // until the counterparty accepts it
