@@ -87,6 +87,34 @@ export const calculateTaxSats = (
 };
 
 /**
+ * Calculates the subtotal of a standalone order in sats from its line items:
+ * sats-priced items at their sats price and fiat-priced items converted at
+ * the given rate. The order's stored total_money.sats leaves out fiat-priced
+ * items that were added without a rate, so it can't be used for an order
+ * that mixes the two. Without a usable rate a fiat-priced item makes the
+ * subtotal Infinity or NaN, so the order can't be invoiced.
+ *
+ * @param lineItems - Array of items in the order, with fiat prices in major units
+ * @param rate - The current fiat conversion rate
+ * @returns - The subtotal in sats as a string
+ */
+export const calculateSubTotalSats = (
+    lineItems: Array<LineItem>,
+    rate: number | string
+): string =>
+    (lineItems || [])
+        .reduce((subTotal: BigNumber, item: LineItem) => {
+            const itemSats =
+                item.base_price_money.amount > 0
+                    ? new BigNumber(item.base_price_money.amount)
+                          .div(rate)
+                          .multipliedBy(SATS_PER_BTC)
+                    : new BigNumber(item.base_price_money.sats || 0);
+            return subTotal.plus(itemSats.multipliedBy(item.quantity));
+        }, new BigNumber(0))
+        .toFixed(0);
+
+/**
  * Whether an order total can be invoiced: a finite, positive whole number
  * of sats. A missing or zero fiat rate yields 0, NaN or Infinity here.
  *

@@ -330,6 +330,56 @@ describe('PosStore.processCheckout', () => {
         expect(navigate).toHaveBeenCalledWith('Order', { order });
     });
 
+    describe('for a sats-priced item and a fiat-priced item', () => {
+        const mixedStore = (fiatRates: any, units: string) => {
+            const fiatStore: any = { fiatRates, getRate: () => '$N/A' };
+            const store = new PosStore(
+                { settings: { fiat: 'USD', pos: {} } } as any,
+                fiatStore,
+                { units } as any
+            );
+            store.currentOrder = makeOrder([satsItem(1000), fiatItem(5)]);
+            store.recalculateCurrentOrder();
+            return { store, fiatStore };
+        };
+
+        it.each(['sats', 'BTC', 'fiat'])(
+            'shows the order instead of invoicing only the sats item without a rate (%s)',
+            async (units) => {
+                const { store } = mixedStore(undefined, units);
+                const order = store.currentOrder;
+                // the fiat item adds no sats without a rate
+                expect(order!.total_money.sats).toBe(1000);
+
+                const navigate = jest.fn();
+                await store.processCheckout({ navigate } as any, true);
+
+                expect(navigate).toHaveBeenCalledTimes(1);
+                expect(navigate).toHaveBeenCalledWith('Order', { order });
+            }
+        );
+
+        it.each([
+            ['fiat', '6.00'],
+            ['sats', '6000'],
+            ['BTC', '0.00006000']
+        ])(
+            'invoices both items when rates load after they were added (%s)',
+            async (units, amount) => {
+                const { store, fiatStore } = mixedStore(undefined, units);
+                fiatStore.fiatRates = [{ code: 'USD', rate: RATE }];
+
+                const navigate = jest.fn();
+                await store.processCheckout({ navigate } as any, true);
+
+                expect(navigate).toHaveBeenCalledWith(
+                    'Receive',
+                    expect.objectContaining({ amount, orderTotal: '6000' })
+                );
+            }
+        );
+    });
+
     it('clears the current order once checked out', async () => {
         const store = makeStore('0');
         store.currentOrder = makeOrder([fiatItem(10, '8')]);

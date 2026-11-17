@@ -10,7 +10,11 @@ import UnitsStore from './UnitsStore';
 import Order from '../models/Order';
 
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
-import { calculateTaxSats, isPayableSatsAmount } from '../utils/PosUtils';
+import {
+    calculateSubTotalSats,
+    calculateTaxSats,
+    isPayableSatsAmount
+} from '../utils/PosUtils';
 import { toCsvRow } from '../utils/CsvUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -147,16 +151,9 @@ export default class PosStore {
                 : null;
         const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
-        const subTotalSats =
-            (currentOrder?.total_money?.sats ?? 0) > 0
-                ? currentOrder.total_money.sats
-                : rate > 0
-                ? new BigNumber(currentOrder?.total_money?.amount)
-                      .div(100)
-                      .div(rate)
-                      .multipliedBy(SATS_PER_BTC)
-                      .toFixed(0)
-                : '0';
+        // from the line items, as total_money.sats leaves out fiat-priced
+        // items added without a rate
+        const subTotalSats = calculateSubTotalSats(lineItems, rate);
 
         const taxSats = Number(
             calculateTaxSats(lineItems, subTotalSats, rate, taxPercentage)
@@ -171,7 +168,8 @@ export default class PosStore {
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
 
-        // Without a usable fiat rate the total can't be converted, and
+        // Without a usable fiat rate the total can't be converted: a
+        // fiat-priced item makes it Infinity or NaN, and in fiat units
         // Receive would create an invoice with no amount. Show the order
         // instead, where paying stays disabled until a rate is available.
         if (
