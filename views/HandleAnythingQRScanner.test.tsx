@@ -15,6 +15,7 @@ import { UREncoder } from '@ngraveio/bc-ur';
 import { CryptoPSBT } from '@keystonehq/bc-ur-registry';
 import HandleAnythingQRScanner from './HandleAnythingQRScanner';
 import handleAnything from '../utils/handleAnything';
+import { walletrpc } from '../proto/lightning';
 
 const mockHandleAnything = handleAnything as jest.Mock;
 
@@ -95,14 +96,15 @@ beforeEach(() => {
 afterEach(() => jest.restoreAllMocks());
 
 describe('HandleAnythingQRScanner BC-UR', () => {
-    it('turns a crypto-account UR into the fingerprint and zpub', async () => {
+    it('turns a crypto-account UR into the fingerprint, zpub and address type', async () => {
         const navigation = await mount();
         await scan(CRYPTO_ACCOUNT_UR);
 
         expect(mockHandleAnything).toHaveBeenCalledTimes(1);
         expect(JSON.parse(mockHandleAnything.mock.calls[0][0])).toEqual({
             MasterFingerprint: '73C5DA0A',
-            ExtPubKey: ZPUB
+            ExtPubKey: ZPUB,
+            AddressType: walletrpc.AddressType.WITNESS_PUBKEY_HASH
         });
         expect(navigation.navigate).toHaveBeenCalledWith('Route', {
             from: 'scan'
