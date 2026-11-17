@@ -6597,7 +6597,16 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
             value_sat: 5000,
             status: 'IN_FLIGHT'
         });
-        const { store, transactionsStore } = buildHandlerStore([inFlight]);
+        const { store, transactionsStore, paymentsStore } = buildHandlerStore([
+            inFlight
+        ]);
+        // listed once this request has sent: a payment the lookup before
+        // the send finds was made elsewhere and is refused
+        paymentsStore.getPayments = jest.fn(async () =>
+            transactionsStore.sendPaymentSilently.mock.calls.length > 0
+                ? [inFlight]
+                : []
+        );
         transactionsStore.sendPaymentSilently.mockRejectedValue(
             new Error('unexpected end of stream')
         );
@@ -6627,7 +6636,16 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
             value_sat: 5000,
             status: 'IN_FLIGHT'
         });
-        const { store, transactionsStore } = buildHandlerStore([inFlight]);
+        const { store, transactionsStore, paymentsStore } = buildHandlerStore([
+            inFlight
+        ]);
+        // listed once this request has sent: a payment the lookup before
+        // the send finds was made elsewhere and is refused
+        paymentsStore.getPayments = jest.fn(async () =>
+            transactionsStore.sendPaymentSilently.mock.calls.length > 0
+                ? [inFlight]
+                : []
+        );
         // no gRPC code in the body: not LND's answer
         transactionsStore.sendPaymentSilently.mockRejectedValue(
             markRestErrorResponse(new Error('Bad Gateway'), undefined, 502)
@@ -6649,17 +6667,25 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(connection.pendingSpendSats).toBe(6000);
     });
 
-    // The invoice is in flight from the payment screen or another
-    // connection. LND refuses a second send for the hash with AlreadyExists,
-    // so this request sent nothing and the listed payment is not its own.
-    it('fails the request when the node refuses the send as in transition', async () => {
+    // The invoice went in flight from the payment screen or another
+    // connection after the lookup. LND refuses a second send for the hash
+    // with AlreadyExists, so this request sent nothing and the listed
+    // payment is not its own.
+    it('refuses the request when the node refuses the send as in transition', async () => {
         const inFlight = new Payment({
             payment_request: invoice,
             payment_hash: paymentHash,
             value_sat: 5000,
             status: 'IN_FLIGHT'
         });
-        const { store, transactionsStore } = buildHandlerStore([inFlight]);
+        const { store, transactionsStore, paymentsStore } = buildHandlerStore([
+            inFlight
+        ]);
+        paymentsStore.getPayments = jest.fn(async () =>
+            transactionsStore.sendPaymentSilently.mock.calls.length > 0
+                ? [inFlight]
+                : []
+        );
         transactionsStore.sendPaymentSilently.mockRejectedValue(
             markRestErrorResponse(new Error('payment is in transition'), 6, 409)
         );
@@ -6674,10 +6700,61 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
             () => true
         );
 
+        expect(transactionsStore.sendPaymentSilently).toHaveBeenCalled();
+        expect(response.result).toBeUndefined();
+        expect(response.error).toEqual({
+            code: Nip47ErrorCode.INVALID_INVOICE,
+            message: 'stores.NostrWalletConnectStore.error.paymentInProgress'
+        });
+        expect(connection.activity).toHaveLength(0);
+        expect(connection.pendingSpendSats).toBe(0);
+        expect(connection.totalSpendSats).toBe(0);
+    });
+
+    // After an own failed attempt the in-flight payment may be this
+    // connection's, so the refusal is not read as another payment's. It is
+    // the node's own answer, which shows this send went nowhere: the request
+    // fails and nothing is held.
+    it('fails the request when the node refuses the send as in transition after an own failed attempt', async () => {
+        const inFlight = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            value_sat: 5000,
+            status: 'IN_FLIGHT'
+        });
+        const { store, transactionsStore } = buildHandlerStore([inFlight]);
+        transactionsStore.sendPaymentSilently.mockRejectedValue(
+            markRestErrorResponse(new Error('payment is in transition'), 6, 409)
+        );
+        const connection = addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 100000,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    error: 'Connection reset',
+                    satAmount: 5000,
+                    paymentHash,
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            () => true
+        );
+
+        expect(transactionsStore.sendPaymentSilently).toHaveBeenCalled();
         expect(response.result).toBeUndefined();
         expect(response.error?.code).toBe(Nip47ErrorCode.FAILED_TO_PAY_INVOICE);
-        expect(connection.activity).toHaveLength(1);
-        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity.map((a: any) => a.status)).toEqual([
+            'failed'
+        ]);
         expect(connection.pendingSpendSats).toBe(0);
         expect(connection.totalSpendSats).toBe(0);
     });
@@ -6691,9 +6768,15 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
             value_sat: 5000,
             status: 'IN_FLIGHT'
         });
-        const { store, transactionsStore, settingsStore } = buildHandlerStore([
-            inFlight
-        ]);
+        const { store, transactionsStore, settingsStore, paymentsStore } =
+            buildHandlerStore([inFlight]);
+        // listed once this request has sent: a payment the lookup before
+        // the send finds was made elsewhere and is refused
+        paymentsStore.getPayments = jest.fn(async () =>
+            transactionsStore.sendPaymentSilently.mock.calls.length > 0
+                ? [inFlight]
+                : []
+        );
         settingsStore.implementation = 'cln-rest';
         transactionsStore.sendPaymentSilently.mockRejectedValue(
             markJsonRpcCode(markHttpStatus(new Error('pay failed'), 500), {
@@ -6793,7 +6876,14 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
             cln.getPaymentOutcome
         );
         jest.spyOn(console, 'warn').mockImplementation(() => {});
-        paymentsStore.getPayments.mockRejectedValue(new Error('offline'));
+        // the lookup before the send finds nothing; once the request has
+        // sent, the payments list cannot be read
+        paymentsStore.getPayments = jest.fn(async () => {
+            if (transactionsStore.sendPaymentSilently.mock.calls.length > 0) {
+                throw new Error('offline');
+            }
+            return [];
+        });
         const connection = addConnection(store, {
             permissions: ['pay_invoice'],
             maxAmountSats: 100000
@@ -7717,7 +7807,9 @@ describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
         it('does not pay past the budget a reload spent while the node payments are listed', async () => {
             const { paid, reloadedAgain, sends } = await reloadWhilePaying(
                 ({ paymentsStore }) => paymentsStore.getPayments,
-                (stored) => ({ ...stored, totalSpendSats: BUDGET_SATS })
+                (stored) => {
+                    stored.totalSpendSats = BUDGET_SATS;
+                }
             );
 
             expect(paid.error).toEqual({
@@ -8951,7 +9043,16 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
             fee_msat: '500',
             payment_preimage: hex64('f')
         });
-        const { store } = buildHandlerStore([settled]);
+        const { store, transactionsStore, paymentsStore } = buildHandlerStore([
+            settled
+        ]);
+        // listed once this request has sent: a payment the lookup before
+        // the send finds was made elsewhere and is refused
+        paymentsStore.getPayments = jest.fn(async () =>
+            transactionsStore.sendPaymentSilently.mock.calls.length > 0
+                ? [settled]
+                : []
+        );
         const connection = addConnection(store, {
             permissions: ['pay_invoice'],
             maxAmountSats: 100000
@@ -9040,7 +9141,9 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
         expect(connection.totalSpendSats).toBe(0);
     });
 
-    it('debits a fractional amount the wallet already paid rounded up', async () => {
+    // An invoice paid elsewhere is only adopted after an own failed attempt,
+    // which may be the payment the node lists
+    it('debits a fractional amount rounded up when it adopts a payment after an own failed attempt', async () => {
         mockInvoiceAmount(0);
         // CLN lists the exact amount: 2999 msat paid with a 2000 msat fee
         const alreadyPaid = new Payment({
@@ -9063,7 +9166,19 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
         });
         const connection = addConnection(store, {
             permissions: ['pay_invoice'],
-            maxAmountSats: 100000
+            maxAmountSats: 100000,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    error: 'Connection reset',
+                    satAmount: 7000,
+                    paymentHash,
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
         });
 
         await (store as any).handleLightningPayInvoice(
