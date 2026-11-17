@@ -597,7 +597,10 @@ export default class ActivityFilter extends React.Component<
                 value: inTransit,
                 var: 'inTransit',
                 type: 'Toggle',
-                condition: BackendUtils.isLNDBased()
+                // Cashu melts can be in flight on any Cashu-capable backend
+                condition:
+                    BackendUtils.isLNDBased() ||
+                    BackendUtils.supportsCashuWallet()
             },
             {
                 label: localeString('views.ActivityFilter.isFailed'),

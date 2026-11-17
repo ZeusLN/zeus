@@ -1,4 +1,4 @@
-import { action, observable, runInAction } from 'mobx';
+import { action, computed, observable, runInAction } from 'mobx';
 import { Alert, Platform } from 'react-native';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import url from 'url';
@@ -11,6 +11,7 @@ import CashuDevKit, {
     CDKMeltQuote,
     CDKMelted,
     CDKToken,
+    CDKTransaction,
     CDKSendKind,
     CDKSpendingConditions,
     CDKP2PKCondition,
@@ -61,7 +62,8 @@ import CashuUtils, {
     MultimintProgressCallback,
     MultinutPaymentStep,
     normalizeMeltState,
-    PendingMelt
+    PendingMelt,
+    selectUntrackedCdkMelts
 } from '../utils/CashuUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
 import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
@@ -243,6 +245,8 @@ export default class CashuStore {
     private sagaRecoveryLastAttempt = new Map<string, number>();
     // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
     @observable public cdkInvoices: Array<CashuInvoice> = [];
+    // Outgoing CDK transactions from the last loadTransactions
+    @observable public cdkTransactions: Array<CDKTransaction> = [];
     @observable public seedVersion?: string;
     @observable public seedPhrase?: Array<string>;
     @observable public seed?: Uint8Array;
@@ -806,11 +810,24 @@ export default class CashuStore {
                 this.cdkInvoices = cdkTransactions
                     .filter((tx) => tx.direction === 'incoming')
                     .map((tx) => CashuInvoice.fromCDKTransaction(tx));
+                this.cdkTransactions = cdkTransactions.filter(
+                    (tx) => tx.direction === 'outgoing'
+                );
             });
         } catch (e) {
             console.error('CDK: Failed to load transactions:', e);
         }
     };
+
+    // CDK melts, settled or in flight, not in locally persisted payments.
+    // Derived on each read so a payment recorded locally after the last
+    // loadTransactions does not also show as its CDK copy.
+    @computed public get cdkPayments(): Array<CashuPayment> {
+        return selectUntrackedCdkMelts(
+            this.cdkTransactions,
+            this.payments || []
+        ).map((tx) => CashuPayment.fromCDKTransaction(tx));
+    }
 
     /**
      * Fetch mint info from CDK for a specific mint
@@ -2128,6 +2145,7 @@ export default class CashuStore {
         this.multiMintSelectedUrls = [];
         this.invoices = undefined;
         this.payments = undefined;
+        this.cdkTransactions = [];
         this.receivedTokens = undefined;
         this.sentTokens = undefined;
         this.pendingMelts = [];

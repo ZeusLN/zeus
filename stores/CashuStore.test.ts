@@ -2537,6 +2537,127 @@ describe('CashuStore reconcilePendingMelts', () => {
     });
 });
 
+describe('CashuStore cdkPayments', () => {
+    const mintUrl = 'https://mint.example.com';
+
+    const pendingCdkMelt = (overrides: any = {}) => ({
+        id: 'a'.repeat(64),
+        direction: 'outgoing',
+        amount: 21000,
+        fee: 0,
+        mint_url: mintUrl,
+        timestamp: 1756200000,
+        quote_id: 'q1',
+        payment_request: 'lnbc210u1invoice',
+        state: 'Pending',
+        ...overrides
+    });
+
+    const loadedStore = async (transactions: any[]) => {
+        const store: any = new CashuStore(
+            { implementation: 'lnd', settings: {}, lndDir: 'lnd' } as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        store.cdkInitialized = true;
+        (CashuDevKit as any).listTransactions = jest
+            .fn()
+            .mockResolvedValue(transactions);
+        await store.loadTransactions();
+        return store;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+        delete (CashuDevKit as any).listTransactions;
+    });
+
+    it('drops a CDK melt once a local payment with its quote id is recorded, without a reload', async () => {
+        const store = await loadedStore([pendingCdkMelt()]);
+
+        expect(store.cdkPayments).toHaveLength(1);
+        expect(store.cdkPayments[0].cdkQuoteId).toBe('q1');
+        expect(store.cdkPayments[0].isInTransit).toBe(true);
+
+        store.payments = [
+            new CashuPayment({
+                meltResponse: { quote: { quote: 'q1', amount: 21000 } },
+                amount: 21000,
+                status: 'IN_FLIGHT',
+                payment_preimage: '',
+                mintUrl
+            })
+        ];
+
+        expect(store.cdkPayments).toHaveLength(0);
+        expect(CashuDevKit.listTransactions).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops a CDK melt once a local payment with its preimage and amount is recorded, without a reload', async () => {
+        const store = await loadedStore([
+            pendingCdkMelt({ state: 'Completed', payment_proof: 'deadbeef' })
+        ]);
+
+        expect(store.cdkPayments).toHaveLength(1);
+
+        // a different quote id, as an MPP part is recorded locally
+        store.payments = [
+            new CashuPayment({
+                meltResponse: { quote: { quote: 'planner-quote' } },
+                amount: 21000,
+                payment_preimage: 'deadbeef',
+                mintUrl
+            })
+        ];
+
+        expect(store.cdkPayments).toHaveLength(0);
+        expect(CashuDevKit.listTransactions).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps a CDK melt that no local payment matches', async () => {
+        const store = await loadedStore([pendingCdkMelt()]);
+
+        store.payments = [
+            new CashuPayment({
+                meltResponse: { quote: { quote: 'q2' } },
+                amount: 21000,
+                payment_preimage: '',
+                mintUrl
+            })
+        ];
+
+        expect(store.cdkPayments).toHaveLength(1);
+    });
+
+    it('leaves incoming CDK transactions out', async () => {
+        const store = await loadedStore([
+            pendingCdkMelt({ direction: 'incoming' }),
+            pendingCdkMelt({ quote_id: 'q3' })
+        ]);
+
+        expect(store.cdkTransactions.map((tx: any) => tx.quote_id)).toEqual([
+            'q3'
+        ]);
+        expect(store.cdkPayments.map((p: any) => p.cdkQuoteId)).toEqual(['q3']);
+    });
+
+    it('clears the CDK melts on reset', async () => {
+        const store = await loadedStore([pendingCdkMelt()]);
+        expect(store.cdkPayments).toHaveLength(1);
+
+        store.reset();
+
+        expect(store.cdkTransactions).toEqual([]);
+        expect(store.cdkPayments).toEqual([]);
+    });
+});
+
 describe('CashuStore deleteCashuData', () => {
     beforeEach(() => {
         jest.clearAllMocks();
