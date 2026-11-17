@@ -139,7 +139,7 @@ If binding source and binary versions diverge you get runtime symbol/checksum er
 
 ### Tor
 
-Tor support is `react-native-nitro-tor` (version in `package.json`, **0.6.1** as of 2026-10-24; normal npm dependency, autolinked; used via `import { RnTor } from 'react-native-nitro-tor'` in `utils/TorUtils.ts`). The old `react-native-tor` ZeusLN fork is **retired**, replaced in PR #3971 (commit `a58b4cefc`, merge `c512ea687`). Ignore any older notes about building/patching the Sifir react-native-tor fork; there is nothing to build.
+Tor support is `react-native-nitro-tor` (version in `package.json`, **1.1.0** as of 2026-10-29; normal npm dependency, autolinked; used via `import { Tor } from 'react-native-nitro-tor'` in `utils/TorUtils.ts`: `Tor.daemon.start`/`stop` and `Tor.http.request`. The 1.x API replaced the 0.6.x `RnTor` methods). The old `react-native-tor` ZeusLN fork is **retired**, replaced in PR #3971 (commit `a58b4cefc`, merge `c512ea687`). Ignore any older notes about building/patching the Sifir react-native-tor fork; there is nothing to build.
 
 ## 5) Known traps
 
