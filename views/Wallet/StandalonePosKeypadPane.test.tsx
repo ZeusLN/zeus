@@ -67,10 +67,11 @@ jest.mock('@rneui/themed', () => {
         )
     };
 });
-jest.mock('react-native-print', () => ({}));
+jest.mock('react-native-print', () => ({ print: jest.fn() }));
 
 import * as React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import RNPrint from 'react-native-print';
 import PosKeypadPane from './StandalonePosKeypadPane';
 import OrderView from '../Order';
 import PosStore from '../../stores/PosStore';
@@ -128,7 +129,8 @@ describe('Order screen for a keyed order with 10% tax', () => {
         amount = '5',
         payment,
         squareOrder,
-        onScreen
+        onScreen,
+        print = false
     }: {
         fiatRates: any[];
         disableTips?: boolean;
@@ -137,6 +139,7 @@ describe('Order screen for a keyed order with 10% tax', () => {
         payment?: any;
         squareOrder?: any;
         onScreen?: () => Promise<void>;
+        print?: boolean;
     }) => {
         const settingsStore: any = {
             settings: {
@@ -175,8 +178,10 @@ describe('Order screen for a keyed order with 10% tax', () => {
         }
         if (payment) order.payment = payment;
 
+        const orderView = React.createRef<any>();
         await render(
             <OrderView
+                ref={orderView}
                 navigation={{ navigate: jest.fn() } as any}
                 route={{ params: { order } } as any}
                 FiatStore={fiatStore}
@@ -186,6 +191,32 @@ describe('Order screen for a keyed order with 10% tax', () => {
             />
         );
         if (onScreen) await onScreen();
+
+        // Prints the receipt for the order as shown and reads its rows
+        let receipt: { [key: string]: string | undefined } | undefined;
+        let receiptHtml: string | undefined;
+        if (print) {
+            const printMock = (RNPrint as any).print as jest.Mock;
+            printMock.mockClear();
+            orderView.current.printReceipt();
+            expect(printMock).toHaveBeenCalledTimes(1);
+            receiptHtml = printMock.mock.calls[0][0].html as string;
+            const rows: { [key: string]: string } = {};
+            const rowPattern =
+                /<tr>\s*<td[^>]*>([^<]*)<\/td>\s*<td[^>]*>([^<]*)<\/td>\s*<\/tr>/g;
+            for (const [, key, value] of receiptHtml.matchAll(rowPattern)) {
+                rows[key] = value;
+            }
+            receipt = {
+                subTotalFiat: rows['pos.views.Order.subtotalFiat'],
+                subTotalBitcoin: rows['pos.views.Order.subtotalBitcoin'],
+                tipFiat: rows['pos.views.Order.tipFiat'],
+                tipBitcoin: rows['pos.views.Order.tipBitcoin'],
+                taxFiat: rows['pos.views.Order.tax (10%)'],
+                totalFiat: rows['pos.views.Order.totalFiat'],
+                totalBitcoin: rows['pos.views.Order.totalBitcoin']
+            };
+        }
 
         const textOf = (node: any): string =>
             typeof node === 'string'
@@ -211,7 +242,9 @@ describe('Order screen for a keyed order with 10% tax', () => {
             taxBitcoin: line('pos.views.Order.tax (10%)'),
             totalFiat: line('pos.views.Order.totalFiat'),
             totalBitcoin: line('pos.views.Order.totalBitcoin'),
-            proceedDisabled: findButton(screen.toJSON())?.props.disabled
+            proceedDisabled: findButton(screen.toJSON())?.props.disabled,
+            receipt,
+            receiptHtml
         };
     };
 
@@ -353,6 +386,196 @@ describe('Order screen for a keyed order with 10% tax', () => {
             totalFiat: 'general.notAvailable',
             totalBitcoin: '8800 sats',
             proceedDisabled: undefined
+        });
+    });
+
+    describe('receipt', () => {
+        const pressTip = (index: number) => async () => {
+            await fireEvent(screen.getByTestId('tipButtons'), 'press', index);
+        };
+        const typeTip =
+            (index: number, input: string, text: string) => async () => {
+                await pressTip(index)();
+                await fireEvent(screen.getByTestId(input), 'pressIn');
+                await fireEvent.changeText(screen.getByTestId(input), text);
+            };
+        // the screen lines that the receipt also prints
+        const printedLines = ({
+            subTotalFiat,
+            subTotalBitcoin,
+            tipFiat,
+            tipBitcoin,
+            taxFiat,
+            totalFiat,
+            totalBitcoin
+        }: any) => ({
+            subTotalFiat,
+            subTotalBitcoin,
+            tipFiat,
+            tipBitcoin,
+            taxFiat,
+            totalFiat,
+            totalBitcoin
+        });
+        const NA = 'general.notAvailable';
+
+        it.each([
+            ['the default 20% tip', undefined, '$1.00', '$6.50'],
+            ['a 25% tip', pressTip(1), '$1.25', '$6.75'],
+            ['a 30% tip', pressTip(2), '$1.50', '$7.00'],
+            ['the default custom 21% tip', pressTip(3), '$1.05', '$6.55'],
+            [
+                'a custom 15% tip',
+                typeTip(3, 'tipPercent', '15'),
+                '$0.75',
+                '$6.25'
+            ],
+            ['a custom fiat tip', typeTip(3, 'tip', '2'), '$2.00', '$7.50']
+        ])(
+            'prints the screen amounts with %s and no rate',
+            async (_, onScreen, tipFiat, totalFiat) => {
+                const shown = await showOrder({
+                    fiatRates: [],
+                    disableTips: false,
+                    onScreen,
+                    print: true
+                });
+
+                expect(shown.receipt).toEqual({
+                    subTotalFiat: '$5.00',
+                    subTotalBitcoin: NA,
+                    tipFiat,
+                    tipBitcoin: NA,
+                    taxFiat: '$0.50',
+                    totalFiat,
+                    totalBitcoin: NA
+                });
+                expect(shown.receipt).toEqual(printedLines(shown));
+                expect(shown.receiptHtml).not.toMatch(/NaN|Infinity/);
+            }
+        );
+
+        it('prints the screen amounts for a sats order with a sats tip and no rate', async () => {
+            const shown = await showOrder({
+                fiatRates: [],
+                disableTips: false,
+                units: 'sats',
+                amount: '8000',
+                onScreen: typeTip(3, 'tip', '100'),
+                print: true
+            });
+
+            expect(shown.receipt).toEqual({
+                subTotalFiat: NA,
+                subTotalBitcoin: '8000 sats',
+                tipFiat: NA,
+                tipBitcoin: '100 sats',
+                taxFiat: NA,
+                totalFiat: NA,
+                totalBitcoin: '8900 sats'
+            });
+            expect(shown.receipt).toEqual(printedLines(shown));
+            expect(shown.receiptHtml).not.toMatch(/NaN|Infinity/);
+        });
+
+        it('prints a Square order with the tax taken out and no rate', async () => {
+            const shown = await showOrder({
+                fiatRates: [],
+                squareOrder: {
+                    id: 'square-1',
+                    line_items: [
+                        {
+                            name: 'Coffee',
+                            quantity: 1,
+                            base_price_money: { amount: 1100 }
+                        }
+                    ],
+                    total_money: { amount: 1100, currency: 'USD' },
+                    total_tax_money: { amount: 100, currency: 'USD' }
+                },
+                print: true
+            });
+
+            expect(shown.receipt).toEqual({
+                subTotalFiat: '$10.00',
+                subTotalBitcoin: NA,
+                tipFiat: undefined,
+                tipBitcoin: undefined,
+                taxFiat: '$1.00',
+                totalFiat: '$11.00',
+                totalBitcoin: NA
+            });
+            expect(shown.receipt).toEqual(printedLines(shown));
+            expect(shown.receiptHtml).not.toMatch(/NaN|Infinity/);
+        });
+
+        it('prints N/A for fiat on a sats order paid without a rate', async () => {
+            const shown = await showOrder({
+                fiatRates: [],
+                disableTips: false,
+                units: 'sats',
+                amount: '8000',
+                payment: {
+                    orderTotal: '8800',
+                    orderTip: '0',
+                    exchangeRate: 'N/A',
+                    rate: 0,
+                    type: 'ln',
+                    tx: 'lnbcrt1'
+                },
+                print: true
+            });
+
+            expect(shown.receipt).toEqual({
+                subTotalFiat: NA,
+                subTotalBitcoin: '8000 sats',
+                tipFiat: NA,
+                tipBitcoin: '0 sats',
+                taxFiat: NA,
+                totalFiat: NA,
+                totalBitcoin: '8800 sats'
+            });
+            expect(shown.receipt).toEqual(printedLines(shown));
+            expect(shown.receiptHtml).not.toMatch(/NaN|Infinity/);
+        });
+
+        it('prints the same amounts as before with a valid rate', async () => {
+            const shown = await showOrder({
+                fiatRates: [{ code: 'USD', rate: 100000 }],
+                disableTips: false,
+                print: true
+            });
+
+            expect(shown.receipt).toEqual({
+                subTotalFiat: '$5.00',
+                subTotalBitcoin: '5000 sats',
+                tipFiat: '$1.00',
+                tipBitcoin: '1000 sats',
+                taxFiat: '$0.50',
+                totalFiat: '$6.50',
+                totalBitcoin: '6500 sats'
+            });
+        });
+
+        it('prints the same amounts as before for a sats order with a valid rate', async () => {
+            const shown = await showOrder({
+                fiatRates: [{ code: 'USD', rate: 50000 }],
+                disableTips: false,
+                units: 'sats',
+                amount: '8000',
+                onScreen: typeTip(3, 'tip', '100'),
+                print: true
+            });
+
+            expect(shown.receipt).toEqual({
+                subTotalFiat: '$4.00',
+                subTotalBitcoin: '8000 sats',
+                tipFiat: '$0.05',
+                tipBitcoin: '100 sats',
+                taxFiat: '$0.40',
+                totalFiat: '$4.45',
+                totalBitcoin: '8900 sats'
+            });
         });
     });
 });
