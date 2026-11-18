@@ -69,8 +69,9 @@ const scheduleClear = (value: string, copy: number, clearAfterMs: number) => {
         if (Platform.OS === 'android') waitForResume(value, copy);
         const denied = await clearIfUnchanged(value, copy);
         // The read was allowed, so no retry is needed. A newer copy has
-        // removed this listener already and has its own timer
-        if (!denied && copy === latestCopy) cancelPending();
+        // removed this listener already and has its own timer, and so has a
+        // fallback copy of this secret made during the read
+        if (!denied && copy === latestCopy && !pendingTimer) cancelPending();
     }, clearAfterMs);
 };
 
@@ -120,8 +121,11 @@ export const copySensitive = (
     ).catch(() => {
         // A newer copy has replaced this one
         if (copy !== latestCopy) return;
+        // On Android the timer above may have fired already while the native
+        // call was pending, so the fallback copy gets a clear of its own
+        cancelPending();
         Clipboard.setString(value);
-        if (Platform.OS === 'ios') scheduleClear(value, copy, clearAfterMs);
+        scheduleClear(value, copy, clearAfterMs);
     });
 };
 

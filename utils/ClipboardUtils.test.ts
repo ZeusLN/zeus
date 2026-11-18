@@ -558,6 +558,95 @@ describe('copySensitive', () => {
                 await flush();
                 expect(systemClipboard).toBe('');
             });
+
+            describe('when the native call fails after a delay', () => {
+                let rejectNative: (e: Error) => void;
+
+                beforeEach(() => {
+                    nativeSetString.mockImplementationOnce(
+                        () =>
+                            new Promise<void>((_resolve, reject) => {
+                                rejectNative = reject;
+                            })
+                    );
+                });
+
+                it('clears the fallback copy when the timer fired first', async () => {
+                    const copied = copySensitive('seed words', 1000);
+                    jest.advanceTimersByTime(1000);
+                    await flush();
+                    expect(jest.getTimerCount()).toBe(0);
+
+                    rejectNative(new Error('denied'));
+                    await copied;
+                    expect(systemClipboard).toBe('seed words');
+
+                    jest.advanceTimersByTime(1000);
+                    await flush();
+                    expect(systemClipboard).toBe('');
+                });
+
+                it('keeps a single timer when it fails before the timer fires', async () => {
+                    const copied = copySensitive('seed words', 1000);
+                    jest.advanceTimersByTime(400);
+
+                    rejectNative(new Error('denied'));
+                    await copied;
+                    expect(jest.getTimerCount()).toBe(1);
+
+                    // the clear runs 1000 ms after the fallback copy
+                    jest.advanceTimersByTime(999);
+                    await flush();
+                    expect(systemClipboard).toBe('seed words');
+                    jest.advanceTimersByTime(1);
+                    await flush();
+                    expect(systemClipboard).toBe('');
+                    expect(clipboard.getString).toHaveBeenCalledTimes(1);
+                });
+
+                it('keeps the fresh clear when the timed read ends after the fallback copy', async () => {
+                    systemClipboard = 'an address';
+                    let finishRead: (value: string) => void = () => {};
+                    clipboard.getString.mockImplementationOnce(
+                        () =>
+                            new Promise<string>((resolve) => {
+                                finishRead = resolve;
+                            })
+                    );
+
+                    const copied = copySensitive('seed words', 1000);
+                    jest.advanceTimersByTime(1000);
+                    rejectNative(new Error('denied'));
+                    await copied;
+                    // the read started before the fallback copy
+                    finishRead('an address');
+                    await flush();
+                    expect(systemClipboard).toBe('seed words');
+
+                    jest.advanceTimersByTime(1000);
+                    await flush();
+                    expect(systemClipboard).toBe('');
+                });
+
+                it('does not fall back when a newer secret was copied first', async () => {
+                    const first = copySensitive('first', 1000);
+                    jest.advanceTimersByTime(1000);
+                    await flush();
+                    await copySensitive('second', 1000);
+
+                    rejectNative(new Error('denied'));
+                    await first;
+                    expect(clipboard.setString).not.toHaveBeenCalledWith(
+                        'first'
+                    );
+                    expect(systemClipboard).toBe('second');
+                    expect(jest.getTimerCount()).toBe(1);
+
+                    jest.advanceTimersByTime(1000);
+                    await flush();
+                    expect(systemClipboard).toBe('');
+                });
+            });
         });
     });
 });
