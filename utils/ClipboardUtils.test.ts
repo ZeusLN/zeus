@@ -3,7 +3,7 @@ jest.mock('@react-native-clipboard/clipboard', () => ({
     default: { setString: jest.fn(), getString: jest.fn() }
 }));
 
-import { AppState, Platform } from 'react-native';
+import { AppState, NativeModules, Platform } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 
 import { copySensitive, SENSITIVE_CLIPBOARD_CLEAR_MS } from './ClipboardUtils';
@@ -425,6 +425,139 @@ describe('copySensitive', () => {
             await flush();
 
             expect(systemClipboard).toBe('an address');
+        });
+    });
+
+    // The tests above run without the native module, as on a build that
+    // does not have it: plain copy plus the timed clear
+    describe('with the SensitiveClipboard native module', () => {
+        let nativeSetString: jest.Mock;
+
+        beforeEach(() => {
+            nativeSetString = jest.fn(async (value: string) => {
+                systemClipboard = value;
+            });
+            NativeModules.SensitiveClipboard = { setString: nativeSetString };
+        });
+
+        afterEach(() => {
+            delete NativeModules.SensitiveClipboard;
+        });
+
+        it('copies through the native module with the default expiry', async () => {
+            await copySensitive('seed words');
+
+            expect(nativeSetString).toHaveBeenCalledWith(
+                'seed words',
+                SENSITIVE_CLIPBOARD_CLEAR_MS
+            );
+            expect(clipboard.setString).not.toHaveBeenCalled();
+            expect(systemClipboard).toBe('seed words');
+        });
+
+        it('passes a custom timeout as the expiry', async () => {
+            await copySensitive('seed words', 1000);
+
+            expect(nativeSetString).toHaveBeenCalledWith('seed words', 1000);
+        });
+
+        it('on iOS schedules no clear and does not read the clipboard back', async () => {
+            await copySensitive('seed words');
+
+            expect(jest.getTimerCount()).toBe(0);
+            jest.advanceTimersByTime(SENSITIVE_CLIPBOARD_CLEAR_MS);
+            await flush();
+
+            expect(clipboard.getString).not.toHaveBeenCalled();
+            expect(clipboard.setString).not.toHaveBeenCalled();
+        });
+
+        it('on iOS drops the timed clear of an earlier fallback copy', async () => {
+            delete NativeModules.SensitiveClipboard;
+            copySensitive('first', 1000);
+            NativeModules.SensitiveClipboard = { setString: nativeSetString };
+
+            await copySensitive('second', 1000);
+            jest.advanceTimersByTime(1000);
+            await flush();
+
+            expect(clipboard.getString).not.toHaveBeenCalled();
+            expect(systemClipboard).toBe('second');
+        });
+
+        it('falls back to a plain copy and the timed clear when the native call fails', async () => {
+            nativeSetString.mockRejectedValueOnce(new Error('no pasteboard'));
+
+            await copySensitive('seed words', 1000);
+            expect(clipboard.setString).toHaveBeenCalledWith('seed words');
+            expect(systemClipboard).toBe('seed words');
+
+            jest.advanceTimersByTime(1000);
+            await flush();
+            expect(systemClipboard).toBe('');
+        });
+
+        it('does not fall back when a newer secret was copied before the native call failed', async () => {
+            let rejectFirst: (e: Error) => void = () => {};
+            nativeSetString.mockImplementationOnce(
+                () =>
+                    new Promise<void>((_resolve, reject) => {
+                        rejectFirst = reject;
+                    })
+            );
+
+            const first = copySensitive('first');
+            await copySensitive('second');
+            rejectFirst(new Error('no pasteboard'));
+            await first;
+
+            expect(clipboard.setString).not.toHaveBeenCalled();
+            expect(systemClipboard).toBe('second');
+        });
+
+        describe('on Android', () => {
+            beforeEach(() => {
+                jest.replaceProperty(Platform, 'OS', 'android');
+            });
+
+            it('copies through the native module and clears after the timeout', async () => {
+                await copySensitive('seed words', 1000);
+
+                expect(nativeSetString).toHaveBeenCalledWith(
+                    'seed words',
+                    1000
+                );
+                expect(clipboard.setString).not.toHaveBeenCalled();
+
+                jest.advanceTimersByTime(999);
+                await flush();
+                expect(systemClipboard).toBe('seed words');
+
+                jest.advanceTimersByTime(1);
+                await flush();
+                expect(systemClipboard).toBe('');
+            });
+
+            it('does not clear text the user copied afterwards', async () => {
+                await copySensitive('seed words', 1000);
+                systemClipboard = 'an address';
+
+                jest.advanceTimersByTime(1000);
+                await flush();
+
+                expect(systemClipboard).toBe('an address');
+            });
+
+            it('falls back to a plain copy when the native call fails', async () => {
+                nativeSetString.mockRejectedValueOnce(new Error('denied'));
+
+                await copySensitive('seed words', 1000);
+                expect(clipboard.setString).toHaveBeenCalledWith('seed words');
+
+                jest.advanceTimersByTime(1000);
+                await flush();
+                expect(systemClipboard).toBe('');
+            });
         });
     });
 });

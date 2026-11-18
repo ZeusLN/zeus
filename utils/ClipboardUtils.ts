@@ -1,4 +1,9 @@
-import { AppState, NativeEventSubscription, Platform } from 'react-native';
+import {
+    AppState,
+    NativeEventSubscription,
+    NativeModules,
+    Platform
+} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 
 // How long a secret (seed phrase, channel backup) stays on the clipboard
@@ -51,30 +56,8 @@ const waitForResume = (value: string, copy: number) => {
               });
 };
 
-/**
- * Copies a secret and clears it from the clipboard after clearAfterMs, but
- * only if the clipboard still holds the same value, so text the user copied
- * in the meantime is kept. Only the most recent secret copy is cleared.
- *
- * Android 10+ only lets the app with window focus read the clipboard, so if
- * the timer fires while ZEUS is in the background the check waits until the
- * app is active again (on Android, until it has focus again). If Android
- * refuses the read while ZEUS is active, for example with the notification
- * shade open, the check runs once more when ZEUS next gets focus.
- *
- * @react-native-clipboard/clipboard 1.16.3 cannot mark a clip as sensitive
- * (Android ClipDescription.EXTRA_IS_SENSITIVE) or local-only with an expiry
- * (iOS UIPasteboard options), so the timed clear is all this can do from JS.
- */
-export const copySensitive = (
-    value: string,
-    clearAfterMs: number = SENSITIVE_CLIPBOARD_CLEAR_MS
-) => {
-    cancelPending();
-    Clipboard.setString(value);
-
-    const copy = ++latestCopy;
-
+// Clears value after clearAfterMs if it is still on the clipboard
+const scheduleClear = (value: string, copy: number, clearAfterMs: number) => {
     pendingTimer = setTimeout(async () => {
         pendingTimer = undefined;
         if (AppState.currentState !== 'active') {
@@ -89,6 +72,57 @@ export const copySensitive = (
         // removed this listener already and has its own timer
         if (!denied && copy === latestCopy) cancelPending();
     }, clearAfterMs);
+};
+
+/**
+ * Copies a secret (seed phrase, channel backup) to the clipboard and removes
+ * it again after clearAfterMs.
+ *
+ * With the SensitiveClipboard native module (android
+ * SensitiveClipboardModule.kt, ios SensitiveClipboard.m):
+ * - iOS writes a local-only item that expires after clearAfterMs, so it does
+ *   not sync through Universal Clipboard and iOS removes it. No timer runs
+ *   and the clipboard is not read back.
+ * - Android marks the clip sensitive (ClipDescription.EXTRA_IS_SENSITIVE),
+ *   which hides its text in the Android 13+ clipboard preview, and the timed
+ *   clear below removes it.
+ * If the module is missing or fails, the value is copied with
+ * @react-native-clipboard/clipboard and the timed clear removes it.
+ *
+ * The timed clear only clears the clipboard if it still holds the same value,
+ * so text the user copied in the meantime is kept. Only the most recent
+ * secret copy is cleared. Android 10+ only lets the app with window focus
+ * read the clipboard, so if the timer fires while ZEUS is in the background
+ * the check waits until the app is active again (on Android, until it has
+ * focus again). If Android refuses the read while ZEUS is active, for
+ * example with the notification shade open, the check runs once more when
+ * ZEUS next gets focus.
+ */
+export const copySensitive = (
+    value: string,
+    clearAfterMs: number = SENSITIVE_CLIPBOARD_CLEAR_MS
+): Promise<void> => {
+    cancelPending();
+    const copy = ++latestCopy;
+
+    const { SensitiveClipboard } = NativeModules;
+    if (!SensitiveClipboard?.setString) {
+        Clipboard.setString(value);
+        scheduleClear(value, copy, clearAfterMs);
+        return Promise.resolve();
+    }
+
+    // iOS removes the item itself at its expiration date
+    if (Platform.OS !== 'ios') scheduleClear(value, copy, clearAfterMs);
+
+    return new Promise<void>((resolve) =>
+        resolve(SensitiveClipboard.setString(value, clearAfterMs))
+    ).catch(() => {
+        // A newer copy has replaced this one
+        if (copy !== latestCopy) return;
+        Clipboard.setString(value);
+        if (Platform.OS === 'ios') scheduleClear(value, copy, clearAfterMs);
+    });
 };
 
 export default { copySensitive, SENSITIVE_CLIPBOARD_CLEAR_MS };
