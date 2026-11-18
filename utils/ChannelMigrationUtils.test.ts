@@ -1737,16 +1737,26 @@ describe('ChannelMigrationUtils', () => {
             });
 
             it.each([
-                ['an unknown version', { version: 2, created_at: SEALED_DATE }],
+                [
+                    'an unknown version',
+                    JSON.stringify({ version: 2, created_at: SEALED_DATE })
+                ],
                 [
                     'a date that is not a number',
-                    { version: 1, created_at: '2026' }
+                    JSON.stringify({ version: 1, created_at: '2026' })
                 ],
-                ['no date', { version: 1 }]
+                ['no date', JSON.stringify({ version: 1 })],
+                // JSON.parse reads 1e999 as Infinity
+                ['an infinite date', '{"version":1,"created_at":1e999}'],
+                ['a date of 0', JSON.stringify({ version: 1, created_at: 0 })],
+                [
+                    'a negative date',
+                    JSON.stringify({ version: 1, created_at: -1 })
+                ]
             ])(
                 'treats metadata with %s as unverified',
                 async (_case, metadata) => {
-                    sealMetadata(JSON.stringify(metadata));
+                    sealMetadata(metadata);
 
                     expect(await restore()).toBe(true);
 
