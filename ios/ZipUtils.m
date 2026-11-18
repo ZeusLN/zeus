@@ -441,6 +441,12 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
         total += actualSize;
     }
 
+    // An entry count smaller than the number of headers would otherwise
+    // extract part of the archive and report success
+    if (!failure && pos != cdEnd) {
+        failure = @"Invalid zip file: bad central directory";
+    }
+
     free(buffer);
 
     if (failure) {
