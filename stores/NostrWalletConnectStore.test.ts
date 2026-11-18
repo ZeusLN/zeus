@@ -6020,6 +6020,26 @@ describe('NostrWalletConnectStore pay_invoice hold release', () => {
         expect(persistedConnections()[0].activity[0].isHoldReleased).toBe(true);
     });
 
+    it('refreshes the budget limits when a hold is released, and not when it is kept', () => {
+        const { store } = createStore();
+        const refresh = jest.spyOn(store as any, 'scheduleMaxBudgetRefresh');
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [
+                pendingPayInvoice('lnbc1stuck'),
+                pendingPayInvoice('lnbc1recent', {
+                    createdAt: new Date(Date.now() - hour + 60_000)
+                })
+            ]
+        });
+
+        store.releasePayInvoiceHold(connection.id, 'lnbc1recent');
+        expect(refresh).not.toHaveBeenCalled();
+
+        store.releasePayInvoiceHold(connection.id, 'lnbc1stuck');
+        expect(refresh).toHaveBeenCalledTimes(1);
+    });
+
     it('keeps the hold of a pay_invoice pending for less than an hour', () => {
         const { store } = createStore();
         const connection = addConnection(store, {
@@ -6881,6 +6901,40 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(response.result?.preimage).toBe('');
         expect(connection.activity[0].status).toBe('pending');
         expect(connection.pendingSpendSats).toBe(5000);
+    });
+
+    it('still refuses to replay pay_invoice after the hold is released', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = addConnection(store, {
+            permissions: ['pay_invoice'],
+            maxAmountSats: 100000,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 5000,
+                    paymentHash,
+                    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
+                }
+            ]
+        });
+        expect(store.releasePayInvoiceHold(connection.id, invoice)).toBe(true);
+        expect(connection.pendingSpendSats).toBe(0);
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            () => true
+        );
+
+        // the node is not asked to pay the invoice a second time
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe('');
+        expect(connection.activity).toHaveLength(1);
+        expect(connection.activity[0].status).toBe('pending');
     });
 
     it('finalizes and debits when the payment errors but the node lists settlement', async () => {

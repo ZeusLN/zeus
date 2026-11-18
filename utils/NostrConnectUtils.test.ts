@@ -2192,6 +2192,29 @@ describe('NostrConnectUtils', () => {
             createdAt: new Date(now - minAge)
         });
 
+        // literal ages, so the one hour is pinned: minAge comes from the
+        // constant itself and moves with it
+        it('keeps the minimum age at one hour', () => {
+            expect(minAge).toBe(60 * 60 * 1000);
+        });
+
+        it.each([
+            [30, false],
+            [59, false],
+            [60, true],
+            [61, true],
+            [24 * 60, true]
+        ])(
+            'a hold pending for %p minutes can be released: %p',
+            (minutes, expected) => {
+                const activity = oldPending();
+                activity.createdAt = new Date(now - minutes * 60 * 1000);
+                expect(
+                    NostrConnectUtils.canReleasePayInvoiceHold(activity, now)
+                ).toBe(expected);
+            }
+        );
+
         it('allows releasing a hold pending for the minimum age', () => {
             expect(
                 NostrConnectUtils.canReleasePayInvoiceHold(oldPending(), now)
