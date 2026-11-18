@@ -118,25 +118,30 @@ describe('fetchLnurlUrl', () => {
 
     // Sent as given, iOS 17+ NSURL would percent-encode the backslash into
     // the userinfo and contact the LAN address instead
-    it.each([
-        [
-            'http://abc.onion\\@192.168.1.50:8080/p',
-            'http://abc.onion/@192.168.1.50:8080/p'
-        ],
-        [
-            'https://example.com\\@10.0.0.1/cb',
-            'https://example.com/@10.0.0.1/cb'
-        ]
-    ])(
-        'requests the first URL as the policy parsed it: %s',
-        async (target, expected) => {
-            mockBlobFetch.mockResolvedValueOnce(respond(200));
+    it('requests the first URL as the policy parsed it', async () => {
+        mockBlobFetch.mockResolvedValueOnce(respond(200));
 
-            await fetchLnurlUrl(target);
+        await fetchLnurlUrl('https://example.com\\@10.0.0.1/cb');
 
-            expect(fetchedUrls()).toEqual([expected]);
-        }
-    );
+        expect(fetchedUrls()).toEqual(['https://example.com/@10.0.0.1/cb']);
+    });
+
+    it('requests a first onion URL as the policy parsed it, over Tor', async () => {
+        mockTorHttpRequest.mockResolvedValueOnce({
+            statusCode: 200,
+            headers: {},
+            body: '{}'
+        });
+
+        await fetchLnurlUrl('http://abc.onion\\@192.168.1.50:8080/p');
+
+        expect(mockTorHttpRequest).toHaveBeenCalledWith({
+            url: 'http://abc.onion/@192.168.1.50:8080/p',
+            method: 'get',
+            followRedirects: false
+        });
+        expect(mockBlobFetch).not.toHaveBeenCalled();
+    });
 
     it('leaves an ordinary first URL unchanged', async () => {
         mockBlobFetch.mockResolvedValueOnce(respond(200));
@@ -187,6 +192,137 @@ describe('fetchLnurlUrl', () => {
 
         expect(response.info().status).toBe(304);
         expect(mockBlobFetch).toHaveBeenCalledTimes(1);
+    });
+});
+
+// With Use Tor off, the transport is picked per hop: an .onion host goes
+// over the embedded Tor, any other host over ReactNativeBlobUtil
+describe('fetchLnurlUrl with Use Tor off', () => {
+    const ONION = 'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
+
+    const torRespond = (
+        statusCode: number,
+        body: any = {},
+        headers: { [key: string]: string[] } = {}
+    ) => ({
+        statusCode,
+        headers,
+        body: typeof body === 'string' ? body : JSON.stringify(body)
+    });
+
+    const torUrls = () =>
+        mockTorHttpRequest.mock.calls.map((call) => call[0].url);
+
+    beforeEach(() => {
+        mockSettingsStore.enableTor = false;
+        mockTorHttpRequest.mockReset();
+        mockBlobFetch.mockReset();
+        mockBlobConfig.mockClear();
+    });
+
+    afterEach(() => {
+        delete mockSettingsStore.enableTor;
+    });
+
+    it.each([
+        `http://${ONION}/.well-known/lnurlp/satoshi`,
+        `https://${ONION}/.well-known/lnurlp/satoshi`,
+        `http://${ONION.toUpperCase()}/.well-known/lnurlp/satoshi`,
+        `https://${ONION}./.well-known/lnurlp/satoshi`
+    ])('sends an onion hop over Tor: %s', async (target) => {
+        mockTorHttpRequest.mockResolvedValue(torRespond(200, { ok: true }));
+
+        const response = await fetchLnurlUrl(target);
+
+        expect(mockTorHttpRequest).toHaveBeenCalledTimes(1);
+        expect(mockTorHttpRequest.mock.calls[0][0].followRedirects).toBe(false);
+        expect(mockBlobConfig).not.toHaveBeenCalled();
+        expect(mockBlobFetch).not.toHaveBeenCalled();
+        expect(response.json()).toEqual({ ok: true });
+    });
+
+    it.each([
+        'https://example.com/.well-known/lnurlp/satoshi',
+        'https://pay.onion.example.com/.well-known/lnurlp/satoshi',
+        'https://example.com/onion'
+    ])('sends a clearnet hop with fetch: %s', async (target) => {
+        mockBlobFetch.mockResolvedValue(respond(200));
+
+        await fetchLnurlUrl(target);
+
+        expect(mockBlobFetch).toHaveBeenCalledWith('get', target);
+        expect(mockTorHttpRequest).not.toHaveBeenCalled();
+    });
+
+    it('switches to Tor for an onion hop a clearnet hop redirects to', async () => {
+        mockBlobFetch.mockResolvedValueOnce(
+            redirect(`http://${ONION}/lnurlp/satoshi`)
+        );
+        mockTorHttpRequest.mockResolvedValueOnce(
+            torRespond(200, { tag: 'payRequest' })
+        );
+
+        const response = await fetchLnurlUrl(
+            'https://example.com/.well-known/lnurlp/satoshi'
+        );
+
+        expect(fetchedUrls()).toEqual([
+            'https://example.com/.well-known/lnurlp/satoshi'
+        ]);
+        expect(torUrls()).toEqual([`http://${ONION}/lnurlp/satoshi`]);
+        expect(response.json()).toEqual({ tag: 'payRequest' });
+    });
+
+    it('goes back to fetch for a clearnet hop an onion hop redirects to', async () => {
+        mockTorHttpRequest.mockResolvedValueOnce(
+            torRespond(302, '', {
+                location: ['https://example.com/lnurlp/satoshi']
+            })
+        );
+        mockBlobFetch.mockResolvedValueOnce(respond(200));
+
+        await fetchLnurlUrl(`http://${ONION}/.well-known/lnurlp/satoshi`);
+
+        expect(torUrls()).toEqual([
+            `http://${ONION}/.well-known/lnurlp/satoshi`
+        ]);
+        expect(fetchedUrls()).toEqual(['https://example.com/lnurlp/satoshi']);
+    });
+
+    it('refuses a redirect from an onion hop to the LAN without requesting it', async () => {
+        mockTorHttpRequest.mockResolvedValueOnce(
+            torRespond(302, '', { location: ['http://192.168.1.1/lnurlp'] })
+        );
+
+        const error = await fetchLnurlUrl(
+            `http://${ONION}/.well-known/lnurlp/satoshi`
+        ).catch((e) => e);
+
+        expect(isUnsafeLnurlError(error)).toBe(true);
+        expect(mockTorHttpRequest).toHaveBeenCalledTimes(1);
+        expect(mockBlobFetch).not.toHaveBeenCalled();
+    });
+
+    it(`counts onion and clearnet hops toward ${MAX_LNURL_REDIRECTS} redirects`, async () => {
+        let hop = 0;
+        mockBlobFetch.mockImplementation(async () =>
+            redirect(`http://${ONION}/${++hop}`)
+        );
+        mockTorHttpRequest.mockImplementation(async () =>
+            torRespond(302, '', {
+                location: [`https://example.com/${++hop}`]
+            })
+        );
+
+        const error = await fetchLnurlUrl('https://example.com/cb').catch(
+            (e) => e
+        );
+
+        expect(error.message).toBe('utils.lnurl.tooManyRedirects');
+        expect(
+            mockBlobFetch.mock.calls.length +
+                mockTorHttpRequest.mock.calls.length
+        ).toBe(MAX_LNURL_REDIRECTS + 1);
     });
 });
 
@@ -316,6 +452,25 @@ describe('fetchLnurlUrl over Tor', () => {
             `${onion}/.well-known/lnurlp/satoshi`,
             `${onion}/lnurlp/satoshi`
         ]);
+    });
+
+    it('keeps clearnet and onion hops on Tor', async () => {
+        const onion =
+            'http://zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
+        mockTorHttpRequest
+            .mockResolvedValueOnce(torRedirect(`${onion}/lnurlp/satoshi`))
+            .mockResolvedValueOnce(torRedirect('https://example.com/done'))
+            .mockResolvedValueOnce(torRespond(200, { ok: true }));
+
+        await fetchLnurlUrl('https://example.com/.well-known/lnurlp/satoshi');
+
+        expect(torUrls()).toEqual([
+            'https://example.com/.well-known/lnurlp/satoshi',
+            `${onion}/lnurlp/satoshi`,
+            'https://example.com/done'
+        ]);
+        expect(mockBlobConfig).not.toHaveBeenCalled();
+        expect(mockBlobFetch).not.toHaveBeenCalled();
     });
 
     it(`stops after ${MAX_LNURL_REDIRECTS} redirects`, async () => {

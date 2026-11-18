@@ -44,11 +44,18 @@ const getHeader = (headers: any, name: string): string | undefined => {
 // Use Tor is read when each request starts. Stores is required here
 // rather than imported because stores that import this file (CashuStore,
 // InvoicesStore) are themselves loaded by Stores. TorUtils is required
-// only when Use Tor is on, so the native Tor module is not loaded for
-// clearnet requests.
+// only for requests that go over Tor, so the native Tor module is not
+// loaded for clearnet requests with Use Tor off.
 const isTorEnabled = (): boolean => {
     const { settingsStore } = require('../stores/Stores');
     return !!settingsStore?.enableTor;
+};
+
+// Whether a URL's host is an onion service. A trailing dot is accepted,
+// as resolvers treat `abc.onion.` as `abc.onion`.
+const isOnionUrl = (target: string): boolean => {
+    const hostname = (url.parse(target).hostname || '').toLowerCase();
+    return /\.onion\.?$/.test(hostname);
 };
 
 /**
@@ -69,13 +76,15 @@ const torResponse = (response: TorHttpResponse) => {
     };
 };
 
-// Sends one hop without following redirects, over Tor when Use Tor is on.
-// Returns the status, the location header if any, and the response for
-// the caller.
+// Sends one hop without following redirects. The hop goes over the
+// embedded Tor when Use Tor is on, and always when its host is an onion
+// service: sent over the device network, an .onion name is answered by
+// whatever DNS server or proxy the device uses. Returns the status, the
+// location header if any, and the response for the caller.
 const fetchHop = async (
     current: string
 ): Promise<{ status: number; location?: string; response: any }> => {
-    if (isTorEnabled()) {
+    if (isTorEnabled() || isOnionUrl(current)) {
         const { RequestMethod, torHttpRequest } = require('./TorUtils');
         const response: TorHttpResponse = await torHttpRequest({
             url: current,
@@ -114,10 +123,10 @@ const fetchHop = async (
  * host.
  *
  * When Use Tor is on, every hop goes over the embedded Tor with redirect
- * following turned off, so the same checks apply. With Use Tor off,
- * requests go through ReactNativeBlobUtil, including to .onion hosts, which
- * then work only if the device routes them through Tor itself (for
- * example with Orbot).
+ * following turned off, so the same checks apply. With Use Tor off, hops
+ * to an .onion host still go over the embedded Tor, and other hops go
+ * through ReactNativeBlobUtil. The transport is chosen per hop, so a
+ * clearnet URL that redirects to an onion service reaches it over Tor.
  *
  * Resolves with the final response, whatever its status: a
  * ReactNativeBlobUtil response, or an object with the same info(), text()

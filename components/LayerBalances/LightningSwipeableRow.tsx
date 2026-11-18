@@ -216,8 +216,8 @@ export default class LightningSwipeableRow extends Component<
         );
 
         try {
-            // fetchLnurlUrl goes over Tor when Use Tor is on, .onion
-            // included, and checks every redirect hop
+            // fetchLnurlUrl goes over Tor when Use Tor is on, and for an
+            // .onion host whatever the setting, and checks every redirect hop
             const response = await fetchLnurlUrl(url);
             if (response.info().status !== 200) {
                 throw new Error(error);

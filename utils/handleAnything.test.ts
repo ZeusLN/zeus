@@ -2126,16 +2126,48 @@ describe('handleAnything', () => {
                 expect(mockBlobUtilFetch).not.toHaveBeenCalled();
             });
 
-            it('makes no DoH request with Tor disabled', async () => {
+            it('looks up the address over Tor with Tor disabled', async () => {
+                settingsStore.enableTor = false;
+                const lnurlParams = { callback: `http://${ONION}/callback` };
+                mockTorHttpRequest.mockResolvedValue(torJson(lnurlParams));
+
                 const result = await handleAnything(ONION_ADDRESS);
 
                 expect(mockDnsFetch).not.toHaveBeenCalled();
-                expect(mockTorHttpRequest).not.toHaveBeenCalled();
+                expect(mockTorHttpRequest).toHaveBeenCalledWith({
+                    url: ONION_LNURLP,
+                    method: 'get',
+                    followRedirects: false
+                });
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                expect(result[0]).toBe('LnurlPay');
+            });
+
+            it('rejects a failed lookup with Tor disabled without a NIP-05 lookup', async () => {
+                settingsStore.enableTor = false;
+                mockTorHttpRequest.mockRejectedValue(new Error('tor failure'));
+
+                await expect(handleAnything(ONION_ADDRESS)).rejects.toThrow(
+                    'tor failure'
+                );
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                expect(nip05.queryProfile).not.toHaveBeenCalled();
+            });
+
+            it('looks up a clearnet address without Tor with Tor disabled', async () => {
+                settingsStore.enableTor = false;
+                mockBlobUtilFetch.mockResolvedValueOnce({
+                    info: () => ({ status: 200, headers: {} }),
+                    json: () => ({ callback: 'https://example.com/cb' })
+                });
+
+                await handleAnything('satoshi@example.com');
+
                 expect(mockBlobUtilFetch).toHaveBeenCalledWith(
                     'get',
-                    ONION_LNURLP
+                    'https://example.com/.well-known/lnurlp/satoshi'
                 );
-                expect(result[0]).toBe('LnurlPay');
+                expect(mockTorHttpRequest).not.toHaveBeenCalled();
             });
 
             it('still looks up a clearnet domain with an .onion label', async () => {

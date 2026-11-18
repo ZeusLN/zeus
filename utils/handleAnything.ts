@@ -742,8 +742,7 @@ const handleAnything = async (
 
         // fetchLnurlUrl sends the request over Tor when Use Tor is on, with
         // the host policy checked on every redirect hop, .onion included.
-        // With Use Tor off an .onion address is fetched like any other, for
-        // devices that route it through Tor themselves (e.g. Orbot).
+        // An .onion address goes over the embedded Tor with Use Tor off too.
         return fetchLnurlUrl(url)
             .then((response: any) => {
                 const status = response.info().status;
@@ -815,10 +814,9 @@ const handleAnything = async (
                     ];
                 }
 
-                // The NIP-05 lookup does not go over Tor, so with Use Tor on
-                // an .onion address fails here, as it did before lnurl
-                // requests went through fetchLnurlUrl
-                if (isOnion && settingsStore.enableTor) throw e;
+                // The NIP-05 lookup does not go over Tor and refuses .onion
+                // names, so an .onion address fails here with the lnurl error
+                if (isOnion) throw e;
 
                 return await attemptNip05Lookup(value);
             });
