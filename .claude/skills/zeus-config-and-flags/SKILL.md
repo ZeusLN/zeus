@@ -108,7 +108,7 @@ All defaults below are `DEFAULT_SETTINGS` in `stores/SettingsStore.ts` (search `
 |---|---|---|---|---|
 | `pin`, `passphrase`, `duressPin`, `duressPassphrase` | strings | unset | `views/Settings/SetPin.tsx`, `SetPassword.tsx`, `SetDuressPin.tsx`, `SetDuressPassword.tsx` | production — stored PLAINTEXT in the blob (keychain is the security boundary; do not "fix" by hashing without maintainer sign-off) |
 | `scramblePin` | bool | `true` | `views/Settings/Security.tsx` | production |
-| `loginBackground` | bool | `false` | Security.tsx | production |
+| `loginBackground` | bool | `true` for new installs; existing blobs without the key read it as off | Security.tsx | production |
 | `isBiometryEnabled` / `supportedBiometryType` | bool / detected enum | `false` / `undefined` | Security.tsx | production |
 | `authenticationAttempts` | number | unset | incremented by `views/Lockscreen.tsx` on failed login | internal counter, not a user toggle |
 | `fiatEnabled` | bool | `true` | `views/Settings/Currency.tsx` | production |

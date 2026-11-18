@@ -1656,7 +1656,12 @@ export const DEFAULT_SETTINGS: Settings = {
     supportedBiometryType: undefined,
     isBiometryEnabled: false,
     scramblePin: true,
-    loginBackground: false,
+    // On for new installs only. A stored blob replaces these defaults
+    // wholesale and flat keys are not backfilled, so an existing install
+    // that never wrote loginBackground keeps reading it as off. Has no
+    // effect until a PIN, passphrase or biometrics is set
+    // (loginMethodConfigured).
+    loginBackground: true,
     fiatEnabled: true,
     fiat: DEFAULT_FIAT,
     fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
