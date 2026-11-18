@@ -35,6 +35,12 @@ class TorWebSocketModule(private val reactContext: ReactApplicationContext) :
     private var client: OkHttpClient? = null
     private var clientSocksPort: Int = -1
 
+    // Set when React tears this module down (JS reload, in-app restart).
+    // A new module instance serves the next JS runtime, but under the new
+    // architecture this instance's emits still reach that runtime through
+    // the shared ReactHost, where socket ids restart and can collide.
+    @Volatile private var invalidated = false
+
     override fun getName(): String = "TorWebSocketModule"
 
     @Synchronized
@@ -67,6 +73,7 @@ class TorWebSocketModule(private val reactContext: ReactApplicationContext) :
     }
 
     private fun emit(event: String, id: String, fill: (WritableMap) -> Unit = {}) {
+        if (invalidated) return
         val map = Arguments.createMap()
         map.putString("id", id)
         fill(map)
@@ -77,6 +84,7 @@ class TorWebSocketModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun connect(id: String, url: String, headers: ReadableMap, socksPort: Int) {
+        if (invalidated) return
         val builder = Request.Builder().url(url)
         val iterator = headers.keySetIterator()
         while (iterator.hasNextKey()) {
@@ -135,6 +143,20 @@ class TorWebSocketModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun close(id: String) {
         sockets.remove(id)?.close(1000, null)
+    }
+
+    // Close every stream when React tears the module down, as React
+    // Native's WebSocketModule does. Otherwise the streams outlive the JS
+    // runtime that opened them: lnd keeps the orphaned channel acceptor
+    // registered and rejects inbound channel opens once it times out
+    // waiting for an answer that never comes.
+    override fun invalidate() {
+        invalidated = true
+        for (socket in sockets.values) {
+            socket.close(1001 /* endpoint is going away */, null)
+        }
+        sockets.clear()
+        super.invalidate()
     }
 
     // Required stubs for NativeEventEmitter on the new architecture interop

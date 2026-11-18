@@ -24,6 +24,8 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
     private var session: URLSession?
     private var sessionSocksPort: Int = -1
     private let lock = NSLock()
+    // set when React tears this module down (JS reload, in-app restart)
+    private var invalidated = false
 
     @objc
     override static func requiresMainQueueSetup() -> Bool {
@@ -37,6 +39,42 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
             "TorWebSocketError",
             "TorWebSocketClose"
         ]
+    }
+
+    private func emit(withName name: String, body: [String: Any]) {
+        lock.lock()
+        let isInvalidated = invalidated
+        lock.unlock()
+        if !isInvalidated {
+            sendEvent(withName: name, body: body)
+        }
+    }
+
+    // Close every stream when React tears the module down, as React
+    // Native's RCTWebSocketModule does. An in-app restart on iOS is a JS
+    // reload in the same process, and the session keeps this module alive
+    // as its delegate, so without this the streams (with the macaroon)
+    // outlive the JS runtime that opened them: lnd keeps the orphaned
+    // channel acceptor registered and rejects inbound channel opens once
+    // it times out waiting for an answer that never comes.
+    override func invalidate() {
+        lock.lock()
+        invalidated = true
+        let openTasks = Array(tasks.values)
+        tasks.removeAll()
+        idsByTask.removeAll()
+        redirectStatusByTask.removeAll()
+        let currentSession = session
+        session = nil
+        lock.unlock()
+
+        for task in openTasks {
+            task.cancel(with: .goingAway, reason: nil)
+        }
+        // releases the session's strong reference to this delegate once
+        // the closing tasks finish
+        currentSession?.finishTasksAndInvalidate()
+        super.invalidate()
     }
 
     private func getSession(socksPort: Int) -> URLSession {
@@ -68,11 +106,11 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
         socksPort: NSNumber
     ) {
         guard let parsedUrl = URL(string: url) else {
-            sendEvent(
+            emit(
                 withName: "TorWebSocketError",
                 body: ["id": id, "message": "invalid URL"]
             )
-            sendEvent(withName: "TorWebSocketClose", body: ["id": id])
+            emit(withName: "TorWebSocketClose", body: ["id": id])
             return
         }
 
@@ -84,10 +122,13 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
             }
         }
 
+        lock.lock()
+        if invalidated {
+            lock.unlock()
+            return
+        }
         let task = getSession(socksPort: socksPort.intValue)
             .webSocketTask(with: request)
-
-        lock.lock()
         tasks[id] = task
         idsByTask[task.taskIdentifier] = id
         lock.unlock()
@@ -111,7 +152,7 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
                     break
                 }
                 if let text = text {
-                    self.sendEvent(
+                    self.emit(
                         withName: "TorWebSocketMessage",
                         body: ["id": id, "data": text]
                     )
@@ -125,13 +166,13 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
                     let message = redirectStatus.map {
                         "Expected HTTP 101 response but was \($0) (redirect not followed)"
                     } ?? error.localizedDescription
-                    self.sendEvent(
+                    self.emit(
                         withName: "TorWebSocketError",
                         body: ["id": id, "message": message]
                     )
                     // mirror React Native's WebSocket, which emits close
                     // after error
-                    self.sendEvent(
+                    self.emit(
                         withName: "TorWebSocketClose",
                         body: ["id": id]
                     )
@@ -185,7 +226,7 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
         didOpenWithProtocol protocolName: String?
     ) {
         if let id = idFor(task: webSocketTask) {
-            sendEvent(withName: "TorWebSocketOpen", body: ["id": id])
+            emit(withName: "TorWebSocketOpen", body: ["id": id])
         }
     }
 
@@ -197,7 +238,7 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
     ) {
         if let id = idFor(task: webSocketTask),
             removeTask(id: id) != nil {
-            sendEvent(
+            emit(
                 withName: "TorWebSocketClose",
                 body: ["id": id, "code": closeCode.rawValue]
             )
@@ -211,7 +252,7 @@ class TorWebSocketModule: RCTEventEmitter, URLSessionWebSocketDelegate {
         lock.unlock()
         task?.send(.string(message)) { [weak self] error in
             if let error = error, let self = self {
-                self.sendEvent(
+                self.emit(
                     withName: "TorWebSocketError",
                     body: ["id": id, "message": error.localizedDescription]
                 )
