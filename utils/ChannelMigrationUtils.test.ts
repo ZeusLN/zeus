@@ -16,6 +16,9 @@ const mockMkdir = jest.fn().mockResolvedValue(undefined);
 const mockUnlink = jest.fn().mockResolvedValue(undefined);
 const mockCopyFile = jest.fn().mockResolvedValue(undefined);
 const mockReadDir = jest.fn().mockResolvedValue([]);
+const mockWriteFile = jest.fn().mockResolvedValue(undefined);
+const mockFsReadFile = jest.fn().mockResolvedValue('');
+const mockMoveFile = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('react-native-fs', () => ({
     DocumentDirectoryPath: '/data/user/0/app.zeusln.zeus/files',
@@ -28,7 +31,10 @@ jest.mock('react-native-fs', () => ({
     mkdir: (...args: any[]) => mockMkdir(...args),
     unlink: (...args: any[]) => mockUnlink(...args),
     copyFile: (...args: any[]) => mockCopyFile(...args),
-    readDir: (...args: any[]) => mockReadDir(...args)
+    readDir: (...args: any[]) => mockReadDir(...args),
+    writeFile: (...args: any[]) => mockWriteFile(...args),
+    readFile: (...args: any[]) => mockFsReadFile(...args),
+    moveFile: (...args: any[]) => mockMoveFile(...args)
 }));
 
 jest.mock('react-native-blob-util', () => ({
@@ -41,8 +47,11 @@ jest.mock('react-native-blob-util', () => ({
 
 jest.mock('react-native-share', () => ({ open: jest.fn() }));
 jest.mock('react-native-restart', () => ({ Restart: jest.fn() }));
+// A string with a date parameter ends with the date, so tests can see
+// which date a prompt shows
 jest.mock('./LocaleUtils', () => ({
-    localeString: (key: string) => key
+    localeString: (key: string, params?: any) =>
+        params?.date ? `${key} ${params.date}` : key
 }));
 jest.mock('./LndMobileUtils', () => ({
     stopLnd: jest.fn().mockResolvedValue(undefined)
@@ -93,7 +102,8 @@ import {
     exportChannelDb,
     restoreChannelBackupFromOlympus,
     unlockWalletFromMigration,
-    purgeChannelDbStagingFiles
+    purgeChannelDbStagingFiles,
+    BACKUP_METADATA_FILE
 } from './ChannelMigrationUtils';
 import { sourceMethods } from '../backends/lncTestUtils';
 
@@ -109,6 +119,32 @@ const RESTORED_GRAPH_DIR = [
     dirEntry('sphinxreplay.db', 16384),
     dirEntry('wtclient.db', 16384)
 ];
+
+// The directory restoreChannelBackupFromOlympus unpacks the download to
+const RESTORE_DIR_PATTERN = /^\/cache\/zeus-olympus-restore-\d+$/;
+const BACKUP_FILES: [string, number][] = [
+    ['channel.db', 262144],
+    ['sphinxreplay.db', 16384],
+    ['wtclient.db', 16384]
+];
+
+// Answers readDir for the restore's staging directory with `staged`
+// (name and size of each file the unzip wrote there) and for any other
+// directory with `other`
+const serveDirs = ({
+    staged = BACKUP_FILES,
+    other = [] as any[]
+}: { staged?: [string, number][]; other?: any[] } = {}) =>
+    mockReadDir.mockImplementation(async (dir: string) =>
+        RESTORE_DIR_PATTERN.test(dir)
+            ? staged.map(([name, size]) => ({
+                  name,
+                  path: `${dir}/${name}`,
+                  size,
+                  isFile: () => true
+              }))
+            : other
+    );
 
 const mockFetch = ReactNativeBlobUtil.fetch as jest.Mock;
 const mockSignNodePubkey = signMessageNodePubkey as jest.Mock;
@@ -158,6 +194,7 @@ const RESTORE_ZIP = expect.stringMatching(
 const RESTORE_ENC = expect.stringMatching(
     /^\/cache\/zeus-olympus-restore-\d+\.enc$/
 );
+const RESTORE_DIR = expect.stringMatching(RESTORE_DIR_PATTERN);
 
 const mockReadFile = ReactNativeBlobUtil.fs.readFile as jest.Mock;
 const mockStopLnd = stopLnd as jest.Mock;
@@ -202,9 +239,16 @@ const unlinkedPaths = () => mockUnlink.mock.calls.map((c) => c[0]);
 describe('ChannelMigrationUtils', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockExists.mockResolvedValue(true);
+        // Every path exists except a metadata file, which only the tests
+        // of backups that have one add
+        mockExists.mockImplementation(
+            async (path: string) => !path.endsWith(BACKUP_METADATA_FILE)
+        );
+        mockFsReadFile.mockResolvedValue('');
+        mockMoveFile.mockResolvedValue(undefined);
+        mockWriteFile.mockResolvedValue(undefined);
         mockStat.mockResolvedValue({ size: 1024 });
-        mockReadDir.mockResolvedValue([]);
+        serveDirs();
         mockUnlink.mockResolvedValue(undefined);
         mockZipFolder.mockResolvedValue(undefined);
         mockEncryptFile.mockResolvedValue(undefined);
@@ -718,9 +762,11 @@ describe('ChannelMigrationUtils', () => {
         });
 
         it('fails when an existing file cannot be removed', async () => {
-            mockReadDir.mockResolvedValue([
-                { path: '/graph/mainnet/channel.db', isFile: () => true }
-            ]);
+            serveDirs({
+                other: [
+                    { path: '/graph/mainnet/channel.db', isFile: () => true }
+                ]
+            });
             mockUnlink.mockImplementation(async (path: string) => {
                 if (path === '/graph/mainnet/channel.db') {
                     throw new Error('unlink failed');
@@ -736,7 +782,7 @@ describe('ChannelMigrationUtils', () => {
                     false
                 )
             ).rejects.toThrow('unlink failed');
-            expect(mockUnzipFile).not.toHaveBeenCalled();
+            expect(mockMoveFile).not.toHaveBeenCalled();
         });
     });
 
@@ -1024,17 +1070,21 @@ describe('ChannelMigrationUtils', () => {
 
         it('rejects when the downloaded backup unzips to an empty channel.db (#5797)', async () => {
             serveBackup();
-            mockReadDir
-                .mockResolvedValueOnce([])
-                .mockResolvedValueOnce([dirEntry('channel.db', 0)]);
+            serveDirs({ staged: [['channel.db', 0]] });
 
             await expect(restore()).rejects.toThrow(
                 'views.Tools.migration.import.databaseMissing'
             );
             expect(mockUnzipFile).toHaveBeenCalledTimes(1);
             expect(mockUnlink).toHaveBeenCalledWith(
-                '/graph/mainnet/channel.db'
+                expect.stringMatching(
+                    /^\/cache\/zeus-olympus-restore-\d+\/channel\.db$/
+                )
             );
+            // It fails before asking and before lnd is stopped
+            expect(mockAlert).not.toHaveBeenCalled();
+            expect(mockStopLnd).not.toHaveBeenCalled();
+            expect(mockMoveFile).not.toHaveBeenCalled();
         });
 
         it('refuses the LNURL-auth phrase as the restore challenge', async () => {
@@ -1312,11 +1362,7 @@ describe('ChannelMigrationUtils', () => {
                 false
             );
 
-        it('restores and removes the staging .enc and zip on success', async () => {
-            mockReadDir
-                .mockResolvedValueOnce([])
-                .mockResolvedValueOnce(RESTORED_GRAPH_DIR);
-
+        it('restores and removes the staging .enc, zip and directory on success', async () => {
             await expect(restore()).resolves.toBe(true);
 
             expect(mockDecryptFile).toHaveBeenCalledWith(
@@ -1326,21 +1372,27 @@ describe('ChannelMigrationUtils', () => {
             );
             expect(mockUnzipFile).toHaveBeenCalledWith(
                 RESTORE_ZIP,
-                expect.stringContaining('lnd/data/graph/mainnet')
+                RESTORE_DIR
+            );
+            expect(mockMoveFile).toHaveBeenCalledWith(
+                expect.stringMatching(/zeus-olympus-restore-\d+\/channel\.db$/),
+                expect.stringMatching(/lnd\/data\/graph\/mainnet\/channel\.db$/)
             );
             expect(mockUnlink).toHaveBeenCalledWith(RESTORE_ENC);
             expect(mockUnlink).toHaveBeenCalledWith(RESTORE_ZIP);
+            expect(mockUnlink).toHaveBeenCalledWith(RESTORE_DIR);
         });
 
-        it('removes the decrypted zip when stopping LND fails', async () => {
+        it('removes the staging directory when stopping LND fails', async () => {
             mockStopLnd.mockRejectedValue(new Error('rpc error'));
 
             await expect(restore()).rejects.toThrow(
                 'views.Tools.migration.export.failedToStopLnd'
             );
 
-            expect(mockUnzipFile).not.toHaveBeenCalled();
+            expect(mockMoveFile).not.toHaveBeenCalled();
             expect(mockUnlink).toHaveBeenCalledWith(RESTORE_ZIP);
+            expect(mockUnlink).toHaveBeenCalledWith(RESTORE_DIR);
         });
 
         it('removes the decrypted zip when unzipping fails', async () => {
@@ -1429,6 +1481,22 @@ describe('ChannelMigrationUtils', () => {
             ]);
         });
 
+        // The Olympus backup and restore stage the backup's files, including
+        // channel.db, in a directory next to their .zip and .enc
+        it('deletes the Olympus backup and restore staging directories', async () => {
+            mockReadDir.mockResolvedValue([
+                cacheEntry('zeus-olympus-backup-1736899200000'),
+                cacheEntry('zeus-olympus-restore-1736899200000')
+            ]);
+
+            await purgeChannelDbStagingFiles();
+
+            expect(mockUnlink.mock.calls.map((call) => call[0])).toEqual([
+                '/cache/zeus-olympus-backup-1736899200000',
+                '/cache/zeus-olympus-restore-1736899200000'
+            ]);
+        });
+
         it('keeps deleting after one file fails to unlink', async () => {
             mockReadDir.mockResolvedValue([
                 cacheEntry('zeus-olympus-restore-1.zip'),
@@ -1457,6 +1525,274 @@ describe('ChannelMigrationUtils', () => {
 
             expect(mockUnlink).not.toHaveBeenCalled();
             warn.mockRestore();
+        });
+    });
+
+    describe('backup creation date sealed in the archive', () => {
+        const NOW = 1763000000000;
+        const BACKUP_DIR = expect.stringMatching(
+            /^\/cache\/zeus-olympus-backup-\d+$/
+        );
+        const GRAPH_DIR =
+            '/data/user/0/app.zeusln.zeus/files/lnd/data/graph/mainnet';
+        let consoleError: jest.SpyInstance;
+        let consoleLog: jest.SpyInstance;
+
+        beforeEach(() => {
+            jest.spyOn(Date, 'now').mockReturnValue(NOW);
+            consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            consoleLog = jest
+                .spyOn(console, 'log')
+                .mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            (Date.now as jest.Mock).mockRestore();
+            consoleError.mockRestore();
+            consoleLog.mockRestore();
+        });
+
+        describe('uploadChannelBackupToOlympus', () => {
+            beforeEach(() => {
+                mockOlympusServer({ lastBackupAt: null });
+                serveDirs({
+                    other: [
+                        {
+                            name: 'channel.sqlite',
+                            path: `${GRAPH_DIR}/channel.sqlite`,
+                            size: 262144,
+                            isFile: () => true
+                        },
+                        {
+                            name: BACKUP_METADATA_FILE,
+                            path: `${GRAPH_DIR}/${BACKUP_METADATA_FILE}`,
+                            size: 40,
+                            isFile: () => true
+                        }
+                    ]
+                });
+            });
+
+            const upload = () =>
+                uploadChannelBackupToOlympus('lnd', false, 'pubkey', 'seed');
+
+            it('writes the creation time and format version into the archive', async () => {
+                await upload();
+
+                expect(mockWriteFile).toHaveBeenCalledWith(
+                    expect.stringMatching(
+                        /^\/cache\/zeus-olympus-backup-\d+\/zeus-backup-metadata\.json$/
+                    ),
+                    JSON.stringify({ version: 1, created_at: NOW }),
+                    'utf8'
+                );
+                expect(mockZipFolder).toHaveBeenCalledTimes(1);
+                expect(mockZipFolder).toHaveBeenCalledWith(
+                    BACKUP_DIR,
+                    BACKUP_ZIP
+                );
+                expect(fetchedPaths()).toContain('/api/channels-backup');
+            });
+
+            it("zips a copy of the graph directory and leaves lnd's directory unchanged", async () => {
+                await upload();
+
+                expect(mockCopyFile).toHaveBeenCalledWith(
+                    `${GRAPH_DIR}/channel.sqlite`,
+                    expect.stringMatching(
+                        /^\/cache\/zeus-olympus-backup-\d+\/channel\.sqlite$/
+                    )
+                );
+                // A metadata file left by an older version is replaced,
+                // not copied
+                expect(mockCopyFile).toHaveBeenCalledTimes(1);
+                expect(mockWriteFile).not.toHaveBeenCalledWith(
+                    expect.stringContaining(GRAPH_DIR),
+                    expect.anything(),
+                    expect.anything()
+                );
+                expect(mockUnlink).toHaveBeenCalledWith(BACKUP_DIR);
+            });
+
+            it('removes the staging directory when zipping fails', async () => {
+                mockZipFolder.mockRejectedValue(new Error('zip failed'));
+
+                await upload();
+
+                expect(mockUnlink).toHaveBeenCalledWith(BACKUP_DIR);
+                expect(fetchedPaths()).not.toContain('/api/channels-backup');
+            });
+        });
+
+        describe('restoreChannelBackupFromOlympus', () => {
+            const SERVER_DATE = 1762000000000;
+            const SEALED_DATE = 1700000000000;
+            const restore = () =>
+                restoreChannelBackupFromOlympus(
+                    'lnd',
+                    false,
+                    'pubkey',
+                    'seed',
+                    false
+                );
+
+            // The confirm prompt's message, and the requests made and
+            // files decrypted before it was shown
+            let prompt: {
+                message: string;
+                fetched: string[];
+                decrypted: number;
+            } | null;
+            let answer: 'restore' | 'cancel';
+
+            const sealMetadata = (contents: string) => {
+                mockExists.mockResolvedValue(true);
+                mockFsReadFile.mockImplementation(async (path: string) => {
+                    if (path.endsWith(`/${BACKUP_METADATA_FILE}`))
+                        return contents;
+                    throw new Error(`unexpected read ${path}`);
+                });
+                serveDirs({
+                    staged: [...BACKUP_FILES, [BACKUP_METADATA_FILE, 40]]
+                });
+            };
+
+            beforeEach(() => {
+                mockOlympusServer({ lastBackupAt: SERVER_DATE });
+                prompt = null;
+                answer = 'restore';
+                mockAlert.mockImplementation(
+                    (title: string, message: string, buttons: any[]) => {
+                        if (
+                            title !== 'views.Tools.migration.export.backupFound'
+                        )
+                            return;
+                        prompt = {
+                            message,
+                            fetched: fetchedPaths(),
+                            decrypted: mockDecryptFile.mock.calls.length
+                        };
+                        buttons[answer === 'restore' ? 1 : 0].onPress();
+                    }
+                );
+            });
+
+            it('shows the date sealed in the backup instead of the server date', async () => {
+                sealMetadata(
+                    JSON.stringify({ version: 1, created_at: SEALED_DATE })
+                );
+
+                expect(await restore()).toBe(true);
+
+                expect(prompt?.message).toBe(
+                    `views.Tools.migration.import.backupFoundMessage ${new Date(
+                        SEALED_DATE
+                    ).toLocaleString()}`
+                );
+            });
+
+            it('downloads the backup once, before asking, and installs that copy', async () => {
+                sealMetadata(
+                    JSON.stringify({ version: 1, created_at: SEALED_DATE })
+                );
+
+                expect(await restore()).toBe(true);
+
+                expect(prompt?.fetched).toContain('/api/restore-channels');
+                expect(prompt?.decrypted).toBe(1);
+                expect(
+                    fetchedPaths().filter((p) => p === '/api/restore-channels')
+                ).toHaveLength(1);
+
+                // The downloaded blob is the one decrypted, unpacked and
+                // moved into the graph directory
+                const [encPath, blob] = (
+                    ReactNativeBlobUtil.fs.writeFile as jest.Mock
+                ).mock.calls[0];
+                expect(blob).toBe('ZW5jcnlwdGVk');
+                const [decryptIn, decryptOut] = mockDecryptFile.mock.calls[0];
+                expect(decryptIn).toBe(encPath);
+                const [unzipIn, unzipDir] = mockUnzipFile.mock.calls[0];
+                expect(unzipIn).toBe(decryptOut);
+                expect(mockUnzipFile).toHaveBeenCalledTimes(1);
+                expect(mockMoveFile.mock.calls).toEqual(
+                    BACKUP_FILES.map(([name]) => [
+                        `${unzipDir}/${name}`,
+                        `/data/user/0/app.zeusln.zeus/files/lnd/data/graph/mainnet/${name}`
+                    ])
+                );
+            });
+
+            it('restores a backup without metadata and says the date is unverified', async () => {
+                expect(await restore()).toBe(true);
+
+                expect(prompt?.message).toBe(
+                    `views.Tools.migration.import.backupFoundMessageUnverified ${new Date(
+                        SERVER_DATE
+                    ).toLocaleString()}`
+                );
+                expect(mockMoveFile).toHaveBeenCalledTimes(BACKUP_FILES.length);
+            });
+
+            it.each([
+                ['an unknown version', { version: 2, created_at: SEALED_DATE }],
+                [
+                    'a date that is not a number',
+                    { version: 1, created_at: '2026' }
+                ],
+                ['no date', { version: 1 }]
+            ])(
+                'treats metadata with %s as unverified',
+                async (_case, metadata) => {
+                    sealMetadata(JSON.stringify(metadata));
+
+                    expect(await restore()).toBe(true);
+
+                    expect(prompt?.message).toContain(
+                        'views.Tools.migration.import.backupFoundMessageUnverified'
+                    );
+                }
+            );
+
+            it('treats metadata that is not JSON as unverified', async () => {
+                sealMetadata('{not json');
+
+                expect(await restore()).toBe(true);
+
+                expect(prompt?.message).toContain(
+                    'views.Tools.migration.import.backupFoundMessageUnverified'
+                );
+            });
+
+            it('removes the unpacked copy on cancel without touching lnd', async () => {
+                sealMetadata(
+                    JSON.stringify({ version: 1, created_at: SEALED_DATE })
+                );
+                answer = 'cancel';
+
+                expect(await restore()).toBe(false);
+
+                expect(mockUnlink).toHaveBeenCalledWith(RESTORE_DIR);
+                expect(mockUnlink).toHaveBeenCalledWith(RESTORE_ZIP);
+                expect(mockUnlink).toHaveBeenCalledWith(RESTORE_ENC);
+                expect(mockStopLnd).not.toHaveBeenCalled();
+                expect(mockMoveFile).not.toHaveBeenCalled();
+            });
+
+            it('removes the files it installed when a move fails', async () => {
+                mockMoveFile
+                    .mockResolvedValueOnce(undefined)
+                    .mockRejectedValueOnce(new Error('move failed'));
+
+                await expect(restore()).rejects.toThrow('move failed');
+
+                expect(mockUnlink).toHaveBeenCalledWith(
+                    '/data/user/0/app.zeusln.zeus/files/lnd/data/graph/mainnet/channel.db'
+                );
+                expect(mockUnlink).toHaveBeenCalledWith(RESTORE_DIR);
+            });
         });
     });
 });
