@@ -692,21 +692,49 @@ describe('rebuild for a new VSS auth header', () => {
 
     it('reconnects through the full connect path if the start fails', async () => {
         jest.spyOn(console, 'warn').mockImplementation(() => {});
-        const { settings, view, runner, ldk } = rebuildSetup();
+        const { settings, view, ldk } = rebuildSetup();
         ldk.startLdkNodeWallet
             .mockRejectedValueOnce(new Error('build failed'))
             .mockResolvedValue({});
-        const run = jest.spyOn(runner, 'run');
 
         await view.rebuildLdkNodeForVssHeader();
 
         expect(settings.setConnectingStatus).toHaveBeenCalledWith(true);
-        expect(run).toHaveBeenCalledTimes(1);
-        await run.mock.results[0].value;
         expect(ldk.startLdkNodeWallet).toHaveBeenCalledTimes(2);
         expect(ldk.waitForLdkNodeReady).toHaveBeenCalledTimes(1);
         expect(settings.connecting).toBe(false);
         expect(settings.error).toBe(false);
+    });
+
+    it('reconnects if the start fails while a resume refresh is in flight', async () => {
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const { settings, view, runner, refresh, ldk } = rebuildSetup();
+        const rebuildStart = deferred<any>();
+        ldk.startLdkNodeWallet
+            .mockReturnValueOnce(rebuildStart.promise)
+            .mockResolvedValue({});
+        const ready = deferred();
+        ldk.waitForLdkNodeReady
+            .mockReturnValueOnce(ready.promise)
+            .mockResolvedValue(undefined);
+
+        const rebuild = view.rebuildLdkNodeForVssHeader();
+        await flush();
+        // The app resumes during the rebuild: Wallet starts a refresh,
+        // which waits for the node to come up
+        const resumed = runner.run(refresh);
+        await flush();
+        expect(ldk.waitForLdkNodeReady).toHaveBeenCalledTimes(1);
+
+        rebuildStart.reject(new Error('build failed'));
+        await rebuild;
+        // The refresh gives up waiting: the node never started
+        ready.reject(new Error('timed out'));
+        await resumed;
+        await flush();
+
+        expect(ldk.startLdkNodeWallet).toHaveBeenCalledTimes(2);
+        expect(settings.connecting).toBe(false);
     });
 });
 

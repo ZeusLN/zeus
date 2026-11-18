@@ -530,13 +530,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } catch (e) {
             if (!isCurrent()) return;
             // The node is stopped now. Reconnect through the full connect
-            // path, which shows its errors the same way as at startup.
+            // path, which shows its errors the same way as at startup. Not
+            // through refreshRunner: a refresh already in flight (e.g. from
+            // an app resume) would make run() a no-op, and the reconnect
+            // fails that refresh's connection guard, so nothing would ever
+            // restart the node and connecting would stay set.
             console.warn(
                 'LDK Node: rebuild for a new VSS auth header failed, reconnecting:',
                 e
             );
-            SettingsStore.setConnectingStatus(true);
-            this.refreshRunner.run(() => this.getSettingsAndNavigate());
+            await this.retryConnection();
         }
     };
 
