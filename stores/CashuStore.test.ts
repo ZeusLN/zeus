@@ -224,18 +224,27 @@ describe('CashuStore NDK instance', () => {
         connectedRelays = jest.fn(() => [{}]);
         instances = [];
         MockNDK.mockReset().mockImplementation(() => {
-            const relays = new Set([
-                'wss://relay.one',
-                'wss://relay.two',
-                'wss://relay.three',
-                'wss://relay.four'
-            ]);
+            const relays = new Map(
+                [
+                    'wss://relay.one',
+                    'wss://relay.two',
+                    'wss://relay.three',
+                    'wss://relay.four'
+                ].map((url) => [
+                    url,
+                    {
+                        url,
+                        connectivity: { resetReconnectionState: jest.fn() }
+                    }
+                ])
+            );
             const listeners = new Map<string, Set<() => void>>();
             const instance = {
                 connect,
                 pool: {
                     connectedRelays,
-                    urls: jest.fn(() => Array.from(relays)),
+                    relays,
+                    urls: jest.fn(() => Array.from(relays.keys())),
                     removeRelay: jest.fn((url: string) => relays.delete(url)),
                     on: jest.fn((event: string, cb: () => void) => {
                         if (!listeners.has(event)) {
@@ -433,6 +442,114 @@ describe('CashuStore NDK instance', () => {
         store.releaseNdk(thirdNdk);
         expect(thirdNdk.pool.removeRelay).toHaveBeenCalledTimes(4);
         expect(store.ndk).toBeUndefined();
+    });
+
+    it('cancels pending reconnects before removing the relays', async () => {
+        const store = newStore() as any;
+        const ndk = await store.getNdk();
+        const relays = Array.from(ndk.pool.relays.values()) as any[];
+
+        store.releaseNdk(await store.acquireNdk());
+
+        expect(ndk.pool.removeRelay).toHaveBeenCalledTimes(4);
+        relays.forEach((relay) => {
+            const reset = relay.connectivity.resetReconnectionState;
+            expect(reset).toHaveBeenCalledTimes(1);
+            const removeOrder = ndk.pool.removeRelay.mock.calls.findIndex(
+                ([url]: [string]) => url === relay.url
+            );
+            expect(reset.mock.invocationCallOrder[0]).toBeLessThan(
+                ndk.pool.removeRelay.mock.invocationCallOrder[removeOrder]
+            );
+        });
+    });
+
+    it('fetchReviewerProfiles releases its instance', async () => {
+        const store = newStore() as any;
+
+        await store.fetchReviewerProfiles(['ab'.repeat(32)]);
+
+        expect(instances).toHaveLength(1);
+        expect(instances[0].fetchEvents).toHaveBeenCalledTimes(1);
+        expect(instances[0].pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(store.ndk).toBeUndefined();
+        expect(store.ndkUsers.size).toBe(0);
+        expect(store.loadingReviews).toBe(false);
+    });
+
+    it('fetchReviewerProfiles releases its instance when the fetch times out', async () => {
+        const store = newStore() as any;
+        const ndk = await store.getNdk();
+        ndk.fetchEvents.mockReturnValueOnce(new Promise(() => {}));
+
+        const profiles = store.fetchReviewerProfiles(['ab'.repeat(32)]);
+        await jest.advanceTimersByTimeAsync(15000);
+        await profiles;
+
+        expect(ndk.pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(store.ndk).toBeUndefined();
+        expect(store.ndkUsers.size).toBe(0);
+        expect(store.loadingReviews).toBe(false);
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('fetchReviewerProfiles creates no instance when every profile is cached', async () => {
+        const store = newStore() as any;
+        const pubkey = 'ab'.repeat(32);
+        store.reviewerProfiles.set(pubkey, { pubkey, npub: pubkey });
+
+        await store.fetchReviewerProfiles([pubkey]);
+
+        expect(MockNDK).not.toHaveBeenCalled();
+        expect(store.loadingReviews).toBe(false);
+    });
+
+    it('fails both concurrent discoveries on one instance when no relay connects', async () => {
+        connectedRelays.mockReturnValue([]);
+        const store = newStore() as any;
+        store.validateNpub = () => 'ab'.repeat(32);
+
+        const all = store.fetchMints();
+        const trusted = store.fetchMintsFromFollows();
+        await jest.advanceTimersByTimeAsync(8000);
+        await Promise.all([all, trusted]);
+
+        expect(MockNDK).toHaveBeenCalledTimes(1);
+        expect(instances[0].fetchEvents).not.toHaveBeenCalled();
+        expect(store.loading).toBe(false);
+        expect(store.loadingTrustedMints).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.ndkUsers.size).toBe(0);
+        expect(store.ndk).toBeUndefined();
+    });
+
+    it('fails a discovery whose connect is still pending on reset', async () => {
+        // Like NDK, connect() resolves when its timeout elapses, and only the
+        // relays still in the pool can be connected.
+        connect.mockImplementation(
+            () => new Promise<void>((resolve) => setTimeout(resolve, 2000))
+        );
+        connectedRelays.mockImplementation(() =>
+            Array.from(instances[0].pool.relays.values())
+        );
+        const store = newStore() as any;
+        store.validateNpub = () => 'ab'.repeat(32);
+        store.stopConnectivityMonitoring = jest.fn();
+
+        const trusted = store.fetchMintsFromFollows();
+        await Promise.resolve();
+        store.reset();
+        expect(instances[0].pool.removeRelay).toHaveBeenCalledTimes(4);
+
+        await jest.advanceTimersByTimeAsync(10000);
+        await trusted;
+
+        expect(instances[0].fetchEvents).not.toHaveBeenCalled();
+        expect(store.error).toBe(true);
+        expect(store.loadingTrustedMints).toBe(false);
+        expect(store.ndk).toBeUndefined();
+        expect(store.ndkUsers.size).toBe(0);
+        expect(jest.getTimerCount()).toBe(0);
     });
 
     it('resolves the collector on the single subscription EOSE', async () => {
