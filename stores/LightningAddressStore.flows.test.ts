@@ -494,6 +494,35 @@ describe('LightningAddressStore flows', () => {
             expect(store.error_msg).toBe('not found');
         });
 
+        it('redeems only the entries with a quote id on a manual Redeem All', async () => {
+            const store = authed();
+            reply(
+                '/api/lnurl/status',
+                ok({
+                    addressType: 'cashu',
+                    paid: [
+                        {},
+                        { quote_id: 'q1', mint_url: MINT, amount_msat: 1000 }
+                    ]
+                }),
+                // the status call at the end of Redeem All
+                ok({ addressType: 'cashu', paid: [] })
+            );
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: false });
+            await store.status();
+
+            await store.redeemAllOpenPaymentsCashu();
+            await flushPromises();
+
+            expect(cashuStore.checkInvoicePaid.mock.calls).toEqual([
+                ['q1', MINT, true, false]
+            ]);
+            // the reason for q1, not the mint check of the {} entry
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.quoteNotPaid'
+            );
+        });
+
         describe('an address this install did not create', () => {
             const withAddress = (addressType = 'cashu') =>
                 reply(
@@ -1155,6 +1184,41 @@ describe('LightningAddressStore flows', () => {
             });
             expect(redeem).toHaveBeenCalledWith('q9', MINT, 5000, false, true);
         });
+
+        it.each([
+            ['no quote id', { mint_url: MINT, amount_msat: 1000 }],
+            [
+                'an empty quote id',
+                { quote_id: '', mint_url: MINT, amount_msat: 1000 }
+            ],
+            [
+                'a number as quote id',
+                { quote_id: 5, mint_url: MINT, amount_msat: 1000 }
+            ],
+            ['null', null],
+            ['no payload', undefined]
+        ])(
+            'does not redeem a paid event with %s',
+            async (_name: string, data: any) => {
+                const store = newStore();
+                const { socket, handlers } = newSocket();
+                ioMock.mockReturnValue(socket);
+                reply('/api/lnurl/auth', ok({ verification: V }));
+                jest.spyOn(
+                    store,
+                    'redeemAllOpenPaymentsCashu'
+                ).mockResolvedValue(undefined);
+                const redeem = jest
+                    .spyOn(store, 'redeemCashu')
+                    .mockResolvedValue(true);
+
+                store.prepareToAutomaticallyAcceptCashu();
+                await flushPromises();
+                handlers.paid(data);
+
+                expect(redeem).not.toHaveBeenCalled();
+            }
+        );
 
         it('does nothing while a socket is connected', () => {
             const store = newStore();

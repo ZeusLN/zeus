@@ -23,6 +23,16 @@ import Storage from '../storage';
 const LNURL_HOST = 'https://zeuspay.com';
 const LNURL_SOCKET_PATH = '/stream';
 
+// ZEUS Pay sends open Cashu payments in the status `paid` list and in the
+// socket `paid` event. Both are server-supplied: only an object with a
+// non-empty string quote id can be redeemed or deleted.
+const isOpenCashuPayment = (item: any) =>
+    item !== null &&
+    typeof item === 'object' &&
+    !Array.isArray(item) &&
+    typeof item.quote_id === 'string' &&
+    item.quote_id !== '';
+
 export const LEGACY_ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
 export const LEGACY_HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 
@@ -426,16 +436,11 @@ export default class LightningAddressStore {
                 noffer
             } = statusData;
 
-            // The list is server-supplied: keep it only when it is an
-            // array, and only its entries that are objects, so one bad
-            // entry cannot break the Lightning address screen or Redeem All
+            // Keep the list only when it is an array, and only its open
+            // payments, so one bad entry cannot break the Lightning address
+            // screen or Redeem All.
             const openPayments = Array.isArray(paid)
-                ? paid.filter(
-                      (item: any) =>
-                          item !== null &&
-                          typeof item === 'object' &&
-                          !Array.isArray(item)
-                  )
+                ? paid.filter(isOpenCashuPayment)
                 : [];
 
             runInAction(() => {
@@ -922,6 +927,7 @@ export default class LightningAddressStore {
 
         this.socket.on('paid', (data: any) => {
             if (generation !== this.generation) return;
+            if (!isOpenCashuPayment(data)) return;
             const { quote_id, mint_url, amount_msat } = data;
             this.redeemCashu(
                 quote_id,
