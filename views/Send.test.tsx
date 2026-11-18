@@ -40,6 +40,10 @@ jest.mock('../utils/AmountUtils', () => ({
 jest.mock('../utils/GraphSyncUtils', () => ({
     clearPendingPaymentData: jest.fn()
 }));
+jest.mock('../utils/SleepUtils', () => ({
+    // yield to the macrotask queue so the polling loop can't starve the test
+    sleep: jest.fn(() => new Promise((resolve) => setImmediate(resolve)))
+}));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
@@ -93,7 +97,9 @@ const renderView = async ({
     InvoicesStore = {},
     settings = {},
     storeSettings = {},
-    lightningBalance = 0
+    lightningBalance = 0,
+    implementation = 'lnd',
+    isLightningReadyToSend = jest.fn()
 }: {
     params?: any;
     TransactionsStore?: any;
@@ -102,6 +108,8 @@ const renderView = async ({
     // SettingsStore.settings, which render reads synchronously
     storeSettings?: any;
     lightningBalance?: number;
+    implementation?: string;
+    isLightningReadyToSend?: jest.Mock;
 } = {}) => {
     const navigation = {
         navigate: jest.fn(),
@@ -113,7 +121,7 @@ const renderView = async ({
         lightningBalance,
         getLightningBalance: jest.fn()
     };
-    await render(
+    const result = await render(
         <Send
             {...({
                 navigation,
@@ -122,9 +130,12 @@ const renderView = async ({
                 ContactStore: { contacts: [] },
                 InvoicesStore,
                 ModalStore: {},
-                NodeInfoStore: { supportsOffers: true },
+                NodeInfoStore: {
+                    supportsOffers: true,
+                    isLightningReadyToSend
+                },
                 SettingsStore: {
-                    implementation: 'lnd',
+                    implementation,
                     settings: storeSettings,
                     getSettings: jest.fn(async () => settings)
                 },
@@ -133,8 +144,13 @@ const renderView = async ({
             } as any)}
         />
     );
-    return { navigation, BalanceStore };
+    return { navigation, BalanceStore, unmount: result.unmount };
 };
+
+const flush = () =>
+    act(async () => {
+        await new Promise((resolve) => setImmediate(resolve));
+    });
 
 const hosts = (type: string) =>
     screen.container.queryAll((n) => n.type === type);
@@ -879,6 +895,92 @@ describe('Send keysend slide to pay', () => {
         await enterAmount('5000', 5000);
 
         expect(swipeButton().props.disabled).toBe(true);
+    });
+});
+
+describe('Send keysend on embedded LND', () => {
+    const supportsKeysend = BackendUtils.supportsKeysend as jest.Mock;
+    const PUBKEY = '02' + 'ef'.repeat(32);
+    const GETTING_READY = 'views.PaymentRequest.lndGettingReady';
+
+    beforeEach(() => supportsKeysend.mockReturnValue(true));
+    afterEach(() => supportsKeysend.mockReturnValue(false));
+
+    const renderKeysend = (
+        isLightningReadyToSend: jest.Mock,
+        implementation = 'embedded-lnd'
+    ) =>
+        renderView({
+            params: {
+                destination: PUBKEY,
+                transactionType: 'Keysend',
+                isValid: true
+            },
+            TransactionsStore: { paymentInFlight: false },
+            storeSettings: { payments: { slideToPayThreshold: 1000 } },
+            lightningBalance: 100000,
+            implementation,
+            isLightningReadyToSend
+        });
+
+    const swipeButton = () => hosts('SwipeButton')[0];
+
+    it('disables the Send button while Lightning is not ready to send', async () => {
+        const { unmount } = await renderKeysend(
+            jest.fn().mockResolvedValue(false)
+        );
+        await enterAmount('999', 999);
+        await flush();
+
+        expect(screen.getByText(GETTING_READY)).toBeOnTheScreen();
+        expect(button('general.send').props.disabled).toBe(true);
+        await unmount();
+    });
+
+    it('disables slide to pay while Lightning is not ready to send', async () => {
+        const { unmount } = await renderKeysend(
+            jest.fn().mockResolvedValue(false)
+        );
+        await enterAmount('5000', 5000);
+        await flush();
+
+        expect(screen.getByText(GETTING_READY)).toBeOnTheScreen();
+        expect(swipeButton().props.disabled).toBe(true);
+        await unmount();
+    });
+
+    it('enables both controls once Lightning is ready to send', async () => {
+        await renderKeysend(jest.fn().mockResolvedValue(true));
+        await enterAmount('999', 999);
+        await flush();
+
+        expect(screen.queryByText(GETTING_READY)).not.toBeOnTheScreen();
+        expect(button('general.send').props.disabled).toBe(false);
+
+        await enterAmount('5000', 5000);
+        expect(swipeButton().props.disabled).toBe(false);
+    });
+
+    it('does not wait on other backends', async () => {
+        const isReady = jest.fn();
+        await renderKeysend(isReady, 'lnd');
+        await enterAmount('999', 999);
+        await flush();
+
+        expect(button('general.send').props.disabled).toBe(false);
+        expect(isReady).not.toHaveBeenCalled();
+    });
+
+    it('makes no readiness calls for a send that is not keysend', async () => {
+        const isReady = jest.fn();
+        await renderView({
+            lightningBalance: 100000,
+            implementation: 'embedded-lnd',
+            isLightningReadyToSend: isReady
+        });
+        await flush();
+
+        expect(isReady).not.toHaveBeenCalled();
     });
 });
 
