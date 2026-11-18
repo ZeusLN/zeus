@@ -633,10 +633,7 @@ export default class NostrWalletConnectStore {
                 console.log('NWC: resetting service');
                 this.cancelScheduledMaxBudgetRefresh();
                 this.maxBudgetRefreshNeeded = false;
-                // no retry: after a wallet switch it would save this
-                // wallet's connections as the next wallet's, removing that
-                // wallet's stored connections
-                await this.flushScheduledSave({ retry: false });
+                await this.flushScheduledSave();
                 if (Platform.OS === 'ios') {
                     this.teardownIOSAppStateMonitor();
                     await this.stopIOSAudioKeepAlive();
@@ -1428,25 +1425,19 @@ export default class NostrWalletConnectStore {
             void this.writeScheduledSave({ retry });
         }, SAVE_CONNECTIONS_DEBOUNCE_MS);
     }
-    private async flushScheduledSave({ retry = true } = {}): Promise<void> {
+    private async flushScheduledSave(): Promise<void> {
         if (this._scheduledSave === null) return;
         this.cancelScheduledSave();
-        await this.writeScheduledSave({ retry });
+        await this.writeScheduledSave({ retry: true });
     }
     // If the write fails, the changes are still only in memory, so write
-    // them once more on the timer. Not after a reset that started during
-    // the write: the next wallet may be current by the time the timer
-    // fires, and saving this wallet's connections as that wallet's would
-    // remove its stored connections.
+    // them once more on the timer
     private async writeScheduledSave({ retry }: { retry: boolean }) {
-        const generation = this.resetGeneration;
         try {
             await this.saveConnections();
         } catch (err) {
             console.error('NWC: scheduled save failed:', err);
-            if (retry && !this.wasResetSince(generation)) {
-                this.scheduleSave({ retry: false });
-            }
+            if (retry) this.scheduleSave({ retry: false });
         }
     }
 
@@ -1473,10 +1464,19 @@ export default class NostrWalletConnectStore {
                 const allConnections: any[] = existingData
                     ? JSON.parse(existingData)
                     : [];
-                const filteredExisting = allConnections.filter(
-                    (c: NWCConnectionData) =>
-                        !this.connectionBelongsToCurrentWallet(c)
+                // After a reset for a wallet switch, memory holds the
+                // previous wallet's connections until the next load.
+                // Replacing the current wallet's records with them would
+                // remove its connections, so only update their own records.
+                const replacesCurrentWallet = this.connections.every((c) =>
+                    this.connectionBelongsToCurrentWallet(c)
                 );
+                const filteredExisting = replacesCurrentWallet
+                    ? allConnections.filter(
+                          (c: NWCConnectionData) =>
+                              !this.connectionBelongsToCurrentWallet(c)
+                      )
+                    : allConnections;
                 const mergedConnections = [
                     ...filteredExisting,
                     ...this.connections

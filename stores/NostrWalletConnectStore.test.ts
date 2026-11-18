@@ -9751,6 +9751,78 @@ describe('NostrWalletConnectStore scheduled save', () => {
         expect(storedConnection().totalSpendSats).toBe(10_000);
     });
 
+    // A second wallet's connection, stored next to conn-1. A write that
+    // saved the first wallet's connections as the second wallet's would
+    // drop it from storage.
+    function storeSecondWalletConnection() {
+        storedItems.set(
+            NWC_CONNECTIONS_KEY,
+            JSON.stringify([
+                ...persistedConnections(),
+                connectionData({
+                    id: 'conn-b',
+                    pubkey: hex64('b'),
+                    nodePubkey: 'node-b'
+                })
+            ])
+        );
+    }
+
+    const storedSpend = () =>
+        Object.fromEntries(
+            persistedConnections().map((c) => [c.id, c.totalSpendSats])
+        );
+
+    // reset(true) leaves the first wallet's connections in memory until the
+    // next wallet's loadConnections
+    describe('across a wallet switch', () => {
+        it("keeps the next wallet's connections when its load writes a change made after the reset", async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
+            await store.reset(true);
+            debit(store, 10_000);
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+
+            await store.loadConnections();
+
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
+            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
+        });
+
+        it("keeps the next wallet's connections when a payment settles after the switch", async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
+            const connection = store.connections[0];
+            await store.reset(true);
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+
+            await (store as any).finalizePayment({
+                rawInvoice: 'lnbc1scheduledsave',
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                decoded: null,
+                connection,
+                amountSats: 10_000
+            });
+
+            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
+            await store.loadConnections();
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
+        });
+
+        it("keeps the next wallet's connections when the timer fires after the switch", async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
+            await store.reset(true);
+            debit(store, 10_000);
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+
+            await jest.advanceTimersByTimeAsync(500);
+
+            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
+        });
+    });
+
     describe('when a write fails', () => {
         const finalize = (store: NostrWalletConnectStore) =>
             (store as any).finalizePayment({
@@ -9825,23 +9897,7 @@ describe('NostrWalletConnectStore scheduled save', () => {
             expect(connectionWrites() - writesBefore).toBe(2);
         });
 
-        // A write after the switch would save the first wallet's
-        // connections as the second wallet's and drop conn-b from storage
-        function storeSecondWalletConnection() {
-            storedItems.set(
-                NWC_CONNECTIONS_KEY,
-                JSON.stringify([
-                    ...persistedConnections(),
-                    connectionData({
-                        id: 'conn-b',
-                        pubkey: hex64('b'),
-                        nodePubkey: 'node-b'
-                    })
-                ])
-            );
-        }
-
-        it('does not write again after a reset and a wallet switch', async () => {
+        it("keeps the next wallet's connections when a failed flush in a reset is written again after the switch", async () => {
             const { store, nodeInfoStore } = await buildStore();
             storeSecondWalletConnection();
             debit(store, 10_000);
@@ -9853,13 +9909,10 @@ describe('NostrWalletConnectStore scheduled save', () => {
             await store.loadConnections();
 
             expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
-            expect(persistedConnections().map((c) => c.id)).toEqual([
-                'conn-1',
-                'conn-b'
-            ]);
+            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
         });
 
-        it('does not write again on the next wallet when a reset starts during a flush that then fails', async () => {
+        it("keeps the next wallet's connections when a reset starts during a flush that then fails", async () => {
             const { store, nodeInfoStore } = await buildStore();
             storeSecondWalletConnection();
             const write = holdNextWrite(NWC_CONNECTIONS_KEY);
@@ -9872,13 +9925,10 @@ describe('NostrWalletConnectStore scheduled save', () => {
             await paying;
             await jest.advanceTimersByTimeAsync(500);
 
-            expect(persistedConnections().map((c) => c.id)).toEqual([
-                'conn-1',
-                'conn-b'
-            ]);
+            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
         });
 
-        it('does not write again on the next wallet when a reset starts during a timer write that then fails', async () => {
+        it("keeps the next wallet's connections when a reset starts during a timer write that then fails", async () => {
             const { store, nodeInfoStore } = await buildStore();
             storeSecondWalletConnection();
             const write = holdNextWrite(NWC_CONNECTIONS_KEY);
@@ -9891,10 +9941,7 @@ describe('NostrWalletConnectStore scheduled save', () => {
             write.fail(new Error('storage write failed'));
             await jest.advanceTimersByTimeAsync(500);
 
-            expect(persistedConnections().map((c) => c.id)).toEqual([
-                'conn-1',
-                'conn-b'
-            ]);
+            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
         });
     });
 });
