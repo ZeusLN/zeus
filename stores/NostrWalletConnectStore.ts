@@ -267,6 +267,7 @@ export default class NostrWalletConnectStore {
     // Bumped by every teardown, so an initializeService() that a reset ran
     // during (node switch, Android Stop Service) does not finish over it
     private resetGeneration = 0;
+    private _scheduledSaveRetries = true;
     private initializeInFlight: Promise<void> | null = null;
     private lastPendingPaymentStatusFetchByConnection = new Map<
         string,
@@ -1439,10 +1440,17 @@ export default class NostrWalletConnectStore {
     // let a steady stream of requests (each marks its connection as used)
     // put off the save indefinitely.
     private scheduleSave({ retry = true } = {}): void {
-        if (this._scheduledSave !== null) return;
+        if (this._scheduledSave !== null) {
+            // a change made while a retry is pending gets its own retry
+            if (retry) this._scheduledSaveRetries = true;
+            return;
+        }
+        this._scheduledSaveRetries = retry;
         this._scheduledSave = setTimeout(() => {
             this._scheduledSave = null;
-            void this.writeScheduledSave({ retry });
+            void this.writeScheduledSave({
+                retry: this._scheduledSaveRetries
+            });
         }, SAVE_CONNECTIONS_DEBOUNCE_MS);
     }
     private async flushScheduledSave(): Promise<void> {
