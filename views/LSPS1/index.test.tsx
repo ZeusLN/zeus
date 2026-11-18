@@ -55,6 +55,12 @@ jest.mock('../../utils/UnitsUtils', () => ({
     numberWithCommas: (value: any) => String(value)
 }));
 jest.mock('../../utils/LocaleUtils');
+// AmountUtils reads the β setting from the stores singleton
+jest.mock('../../stores/Stores', () => ({
+    settingsStore: { settings: { display: { useSatsSymbol: false } } },
+    fiatStore: {},
+    unitsStore: {}
+}));
 
 import LSPS1 from './index';
 import BackendUtils from '../../utils/BackendUtils';

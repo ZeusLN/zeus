@@ -45,6 +45,7 @@ import SettingsStore from '../stores/SettingsStore';
 
 import FeeUtils from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { getLocalizedSatsUnitLabel } from '../utils/AmountUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { sleep } from '../utils/SleepUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -1136,9 +1137,7 @@ export default class PaymentRequest extends React.Component<
                                                 >
                                                     {`${localeString(
                                                         'views.PaymentRequest.maxShardAmt'
-                                                    )} (${localeString(
-                                                        'general.sats'
-                                                    )}) (${localeString(
+                                                    )} (${getLocalizedSatsUnitLabel()}) (${localeString(
                                                         'general.optional'
                                                     )})`}
                                                 </Text>
@@ -1274,8 +1273,11 @@ export default class PaymentRequest extends React.Component<
                                                                     >
                                                                         {`${numberWithCommas(
                                                                             donationAmount
-                                                                        )} ${localeString(
-                                                                            'general.sats'
+                                                                        )} ${getLocalizedSatsUnitLabel(
+                                                                            Number(
+                                                                                donationAmount
+                                                                            ) !==
+                                                                                1
                                                                         )}`}
                                                                     </Text>
                                                                     <Text
@@ -1379,8 +1381,10 @@ export default class PaymentRequest extends React.Component<
                                                 {numberWithCommas(
                                                     donationAmount
                                                 ) +
-                                                    ` ${localeString(
-                                                        'general.sats'
+                                                    ` ${getLocalizedSatsUnitLabel(
+                                                        Number(
+                                                            donationAmount
+                                                        ) !== 1
                                                     )}`}
                                             </Text>
                                         </Row>
@@ -1398,8 +1402,11 @@ export default class PaymentRequest extends React.Component<
                                                 )} = ${numberWithCommas(
                                                     (requestAmount || 0) +
                                                         donationAmount
-                                                )} ${localeString(
-                                                    'general.sats'
+                                                )} ${getLocalizedSatsUnitLabel(
+                                                    Number(
+                                                        (requestAmount || 0) +
+                                                            donationAmount
+                                                    ) !== 1
                                                 )}`}
                                             </Text>
                                         </Row>

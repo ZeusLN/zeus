@@ -30,7 +30,11 @@ import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import Bolt11Utils from './Bolt11Utils';
 import BackendUtils from './BackendUtils';
-import { millisatsToSats, satsToMillisats } from './AmountUtils';
+import {
+    millisatsToSats,
+    satsToMillisats,
+    getLocalizedSatsUnitLabel
+} from './AmountUtils';
 import { numberWithCommas } from './UnitsUtils';
 
 export interface PermissionOption {
@@ -1829,7 +1833,7 @@ export default class NostrConnectUtils {
         connectionDisplayName: string
     ): void {
         const amountLabel = numberWithCommas(amountSats.toString());
-        const unit = localeString('general.sats');
+        const unit = getLocalizedSatsUnitLabel();
         const title = localeString(NWC_TRAY_NOTIFICATION_KEYS.outgoingTitle);
         const body = localeString(NWC_TRAY_NOTIFICATION_KEYS.outgoingBody, {
             amount: amountLabel,
@@ -1846,7 +1850,7 @@ export default class NostrConnectUtils {
         failedActivityId: string
     ): void {
         const amountLabel = numberWithCommas(amountSats.toString());
-        const unit = localeString('general.sats');
+        const unit = getLocalizedSatsUnitLabel();
         const title = localeString(
             NWC_TRAY_NOTIFICATION_KEYS.outgoingFailedTitle
         );
@@ -1873,7 +1877,7 @@ export default class NostrConnectUtils {
         description?: string
     ): void {
         const amountLabel = numberWithCommas(amountSats.toString());
-        const unit = localeString('general.sats');
+        const unit = getLocalizedSatsUnitLabel();
         const title = localeString(
             NWC_TRAY_NOTIFICATION_KEYS.invoiceReadyTitle
         );

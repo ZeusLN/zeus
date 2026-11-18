@@ -7,7 +7,11 @@ import Amount from './Amount';
 import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
-import { getRawAmountFromSats, getSatAmount } from '../utils/AmountUtils';
+import {
+    getRawAmountFromSats,
+    getSatAmount,
+    getSatsUnitLabel
+} from '../utils/AmountUtils';
 import {
     SATS_PER_BTC,
     formatBitcoinWithSpaces,
@@ -268,10 +272,10 @@ export default class AmountInput extends React.Component<
                 displayValue || '0'
             );
         } else {
-            const isSingular = parseFloat(displayValue) === 1;
-            formattedAmount = `${numberWithCommas(displayValue || '0')} ${
-                isSingular ? 'sat' : 'sats'
-            }`;
+            const plural = parseFloat(displayValue) !== 1;
+            formattedAmount = `${numberWithCommas(
+                displayValue || '0'
+            )} ${getSatsUnitLabel(plural)}`;
         }
 
         return (

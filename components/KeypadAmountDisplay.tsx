@@ -16,6 +16,7 @@ import {
     numberWithCommas,
     numberWithDecimals
 } from '../utils/UnitsUtils';
+import { getSatsUnitLabel, shouldUseSatsSymbol } from '../utils/AmountUtils';
 
 interface KeypadAmountDisplayState {
     exitingDigit: null | { char: string; key: number };
@@ -209,6 +210,7 @@ export default class KeypadAmountDisplay extends React.Component<
             UnitsStore,
             children
         } = this.props;
+        const useSatsSymbol = shouldUseSatsSymbol();
         const units = forceUnit || UnitsStore!.units;
         const { symbol, space, rtl } =
             units === 'fiat'
@@ -233,12 +235,16 @@ export default class KeypadAmountDisplay extends React.Component<
 
         const isSingularSat = units === 'sats' && parseFloat(amount) === 1;
 
+        // β scales 1:1 with the digits like ₿; the sat/sats word and RTL fiat
+        // symbols stay a small secondary label
+        const fullSizeSuffix = units === 'sats' && useSatsSymbol;
+
         let prefix = '';
         let suffix = '';
         if (units === 'BTC') {
             prefix = '₿';
         } else if (units === 'sats') {
-            suffix = ` ${isSingularSat ? 'sat' : 'sats'}`;
+            suffix = ` ${getSatsUnitLabel(!isSingularSat, useSatsSymbol)}`;
         } else if (units === 'fiat') {
             if (rtl) {
                 suffix = `${space ? ' ' : ''}${symbol}`;
@@ -253,7 +259,8 @@ export default class KeypadAmountDisplay extends React.Component<
             prefix.length +
             formattedNumber.length +
             (decimalPlaceholder.string?.length ?? 0);
-        const totalWeightedChars = mainChars + suffix.length * 0.25;
+        const totalWeightedChars =
+            mainChars + suffix.length * (fullSizeSuffix ? 1 : 0.25);
         const scaledFontSize =
             totalWeightedChars > 0
                 ? Math.min(
@@ -373,11 +380,13 @@ export default class KeypadAmountDisplay extends React.Component<
                                 style={{
                                     zIndex: 1,
                                     color: textColor,
-                                    fontSize: Math.max(
-                                        scaledFontSize * 0.2,
-                                        12
-                                    ),
-                                    fontFamily: 'PPNeueMontreal-Medium'
+                                    fontSize: fullSizeSuffix
+                                        ? scaledFontSize
+                                        : Math.max(scaledFontSize * 0.2, 12),
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    ...(fullSizeSuffix && {
+                                        lineHeight: scaledLineHeight
+                                    })
                                 }}
                             >
                                 {suffix}

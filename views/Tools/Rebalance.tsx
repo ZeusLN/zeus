@@ -29,6 +29,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { getLocalizedSatsUnitLabel } from '../../utils/AmountUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import { font } from '../../utils/FontUtils';
 
@@ -1453,7 +1454,7 @@ export default class Rebalance extends React.Component<
                 {this.renderNumericInput(
                     localeString('views.PaymentRequest.feeLimit') +
                         ' (' +
-                        localeString('general.sats') +
+                        getLocalizedSatsUnitLabel() +
                         ')',
                     feeLimit,
                     REBALANCE_CONSTANTS.DEFAULT_FEE_LIMIT,
