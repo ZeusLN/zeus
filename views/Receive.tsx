@@ -651,6 +651,18 @@ export default class Receive extends React.Component<
         this.cleanup();
     };
 
+    // Flow wraps the invoice in its own, which keeps no memo, AMP or
+    // blinded paths and expires in an hour. With LSPS2 the node makes the
+    // invoice itself. "Create a wrapped invoice" is always Flow.
+    flowWrapsInvoice = (lspIsActive: boolean) =>
+        lspIsActive &&
+        (!!this.props.route.params?.forceLsp || !BackendUtils.isLsps2Active());
+
+    // A JIT invoice keeps the hour too: the LSP drops a channel request
+    // nobody paid once its fee offer expires, and the app can't see when
+    expiryLocked = (lspIsActive: boolean, needInbound: boolean) =>
+        this.flowWrapsInvoice(lspIsActive) || (lspIsActive && needInbound);
+
     autoGenerateInvoice = (
         amount?: string,
         memo?: string,
@@ -665,6 +677,7 @@ export default class Receive extends React.Component<
         const { receiverName, orderId, orderTip, exchangeRate } = this.state;
         // Use passed lspIsActive parameter, fall back to state if not provided
         const effectiveLspIsActive = lspIsActive ?? this.state.lspIsActive;
+        const flowWraps = this.flowWrapsInvoice(effectiveLspIsActive);
         const { createUnifiedInvoice } = InvoicesStore;
         const skipOnchain = this.getSkipOnchain();
         const isCurrent = this.startInvoiceRequest();
@@ -716,19 +729,17 @@ export default class Receive extends React.Component<
             }
 
             createUnifiedInvoice({
-                memo: effectiveLspIsActive
+                memo: flowWraps
                     ? ''
                     : receiverName
                     ? `${receiverName}:  ${memo}`
                     : memo || '',
                 value: amount || '0',
-                expirySeconds: effectiveLspIsActive
+                expirySeconds: flowWraps
                     ? LOCKED_EXPIRY_SECONDS
                     : expirySeconds || '3600',
-                ampInvoice: effectiveLspIsActive ? false : ampInvoice || false,
-                blindedPaths: effectiveLspIsActive
-                    ? false
-                    : blindedPaths || false,
+                ampInvoice: flowWraps ? false : ampInvoice || false,
+                blindedPaths: flowWraps ? false : blindedPaths || false,
                 routeHints,
                 addressType: BackendUtils.supportsAddressTypeSelection()
                     ? addressType || '1'
@@ -907,7 +918,7 @@ export default class Receive extends React.Component<
                     if (Number(satAmount) > 0) {
                         const isCurrent = this.startInvoiceRequest();
                         createUnifiedInvoice({
-                            memo: lspIsActive
+                            memo: this.flowWrapsInvoice(lspIsActive)
                                 ? ''
                                 : receiverName
                                 ? `${receiverName}:  ${memo}`
@@ -1131,10 +1142,11 @@ export default class Receive extends React.Component<
     private modalBoxRef = React.createRef<ModalBox>();
 
     getFormattedDuration = () => {
-        const { expiry, timePeriod, lspIsActive } = this.state;
+        const { expiry, timePeriod, lspIsActive, needInbound } = this.state;
 
-        const expiryDisplay = lspIsActive ? LOCKED_EXPIRY : expiry;
-        const periodDisplay = lspIsActive ? LOCKED_TIME_PERIOD : timePeriod;
+        const locked = this.expiryLocked(lspIsActive, needInbound);
+        const expiryDisplay = locked ? LOCKED_EXPIRY : expiry;
+        const periodDisplay = locked ? LOCKED_TIME_PERIOD : timePeriod;
 
         return localizedExpiryDuration(expiryDisplay, periodDisplay);
     };
@@ -1181,6 +1193,8 @@ export default class Receive extends React.Component<
         // the Flow explainer's minimum and wrapped-invoice walkthrough don't
         // apply to LSPS2, whose LSP sets its own limits
         const lsps2Explainer = needInbound && BackendUtils.isLsps2Active();
+        const flowWraps = this.flowWrapsInvoice(lspIsActive);
+        const lockExpiry = this.expiryLocked(lspIsActive, needInbound);
         // the fee the shown invoice was priced with, not LSPStore.zeroConfFee,
         // which a later fee request can replace while this invoice is shown
         const zeroConfFee = InvoicesStore.payment_request_lsp_fee ?? undefined;
@@ -1558,9 +1572,9 @@ export default class Receive extends React.Component<
             !onChainOnly &&
             ((BackendUtils.supportsCustomPreimages() &&
                 showCustomPreimageField) ||
-                (BackendUtils.isLNDBased() && !lspIsActive) ||
-                (BackendUtils.supportsAMP() && !lspIsActive) ||
-                (BackendUtils.supportsBolt11BlindedRoutes() && !lspIsActive));
+                (BackendUtils.isLNDBased() && !flowWraps) ||
+                (BackendUtils.supportsAMP() && !flowWraps) ||
+                (BackendUtils.supportsBolt11BlindedRoutes() && !flowWraps));
 
         const baseModalHeight = 300;
         const itemHeight = ADDRESS_TYPES.length <= 2 ? 25 : 50;
@@ -2524,12 +2538,12 @@ export default class Receive extends React.Component<
                                                 BackendUtils.supportsSettingInvoiceExpiration() && (
                                                     <Accordion
                                                         headerLayout="form"
-                                                        key={`receive-expiration-${lspIsActive}`}
+                                                        key={`receive-expiration-${lockExpiry}`}
                                                         id="receive-expiration"
                                                         title={localeString(
                                                             'views.Receive.expiration'
                                                         )}
-                                                        disabled={lspIsActive}
+                                                        disabled={lockExpiry}
                                                         renderHeader={(
                                                             isOpen
                                                         ) => (
@@ -2582,7 +2596,7 @@ export default class Receive extends React.Component<
                                                                     </Row>
                                                                 </View>
 
-                                                                {lspIsActive ? (
+                                                                {lockExpiry ? (
                                                                     <LockIcon
                                                                         fill={themeColor(
                                                                             'secondaryText'
@@ -2773,7 +2787,7 @@ export default class Receive extends React.Component<
                                                             )}
 
                                                         {BackendUtils.isLNDBased() &&
-                                                            !lspIsActive && (
+                                                            !flowWraps && (
                                                                 <View
                                                                     style={{
                                                                         flexDirection:
@@ -2846,7 +2860,7 @@ export default class Receive extends React.Component<
                                                             )}
 
                                                         {BackendUtils.isLNDBased() &&
-                                                            !lspIsActive &&
+                                                            !flowWraps &&
                                                             routeHints && (
                                                                 <Row>
                                                                     <Text
@@ -2956,7 +2970,7 @@ export default class Receive extends React.Component<
                                                             )}
 
                                                         {BackendUtils.supportsAMP() &&
-                                                            !lspIsActive && (
+                                                            !flowWraps && (
                                                                 <View
                                                                     style={{
                                                                         flexDirection:
@@ -3021,7 +3035,7 @@ export default class Receive extends React.Component<
                                                             )}
 
                                                         {BackendUtils.supportsBolt11BlindedRoutes() &&
-                                                            !lspIsActive && (
+                                                            !flowWraps && (
                                                                 <View
                                                                     style={{
                                                                         flexDirection:
@@ -3128,7 +3142,7 @@ export default class Receive extends React.Component<
                                                         const isCurrent =
                                                             this.startInvoiceRequest();
                                                         createUnifiedInvoice({
-                                                            memo: lspIsActive
+                                                            memo: flowWraps
                                                                 ? ''
                                                                 : receiverName
                                                                 ? `${receiverName}:  ${memo}`
@@ -3137,18 +3151,18 @@ export default class Receive extends React.Component<
                                                                 satAmount.toString() ||
                                                                 '0',
                                                             expirySeconds:
-                                                                lspIsActive
+                                                                lockExpiry
                                                                     ? LOCKED_EXPIRY_SECONDS
                                                                     : expirySeconds ||
                                                                       '3600',
                                                             lnurl,
                                                             ampInvoice:
-                                                                lspIsActive
+                                                                flowWraps
                                                                     ? false
                                                                     : ampInvoice ||
                                                                       false,
                                                             blindedPaths:
-                                                                lspIsActive
+                                                                flowWraps
                                                                     ? false
                                                                     : blindedPaths ||
                                                                       false,

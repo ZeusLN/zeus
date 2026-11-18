@@ -1555,6 +1555,87 @@ describe('Receive LSP fee shown with the invoice', () => {
             ).toBe(true);
         });
 
+        describe('the invoice form', () => {
+            // memo, expiry and the Create invoice press, as the form sends them
+            beforeEach(() => {
+                backend.supportsSettingInvoiceExpiration = () => true;
+            });
+
+            afterEach(() => {
+                delete backend.supportsSettingInvoiceExpiration;
+            });
+
+            const createFrom = (state: any) => {
+                const createUnifiedInvoice = jest.fn(() => Promise.resolve());
+                const view = makeShownView({
+                    invoicesStore: {
+                        payment_request: null,
+                        createUnifiedInvoice
+                    },
+                    lspStore: { reset: jest.fn() },
+                    satAmount: '45000'
+                });
+                view.state = {
+                    ...view.state,
+                    lspIsActive: true,
+                    memo: 'coffee',
+                    expiry: '1',
+                    timePeriod: 'Days',
+                    expirySeconds: '86400',
+                    ...state
+                };
+                const elements = collect(view.render());
+                const button = elements.find(
+                    (e) =>
+                        e.type === 'Button' &&
+                        `${e.props.title}`.startsWith(
+                            'views.Receive.createInvoice'
+                        )
+                );
+                const expiry = elements.find(
+                    (e) =>
+                        e.type === 'Accordion' &&
+                        e.props.id === 'receive-expiration'
+                );
+                button.props.onPress();
+                return {
+                    request: (createUnifiedInvoice.mock.calls[0] as any)[0],
+                    expiryLocked: expiry.props.disabled
+                };
+            };
+
+            it('keeps the memo and expiry of a plain invoice under LSPS2', () => {
+                const { request, expiryLocked } = createFrom({
+                    needInbound: false
+                });
+
+                expect(request.memo).toEqual('coffee');
+                expect(request.expirySeconds).toEqual('86400');
+                expect(expiryLocked).toBe(false);
+            });
+
+            it('keeps the memo but locks the expiry when a JIT channel is bought', () => {
+                const { request, expiryLocked } = createFrom({
+                    needInbound: true
+                });
+
+                expect(request.memo).toEqual('coffee');
+                expect(request.expirySeconds).toEqual('3600');
+                expect(expiryLocked).toBe(true);
+            });
+
+            it("keeps Flow's limits for the invoice Flow wraps", () => {
+                lsps2 = false;
+                const { request, expiryLocked } = createFrom({
+                    needInbound: false
+                });
+
+                expect(request.memo).toEqual('');
+                expect(request.expirySeconds).toEqual('3600');
+                expect(expiryLocked).toBe(true);
+            });
+        });
+
         it('compares the amount with the inbound a JIT channel is bought against', () => {
             const view = enteringAmount();
             // 47,650 of inbound, of which 43,650 is left after the margin

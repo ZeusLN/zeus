@@ -5,6 +5,11 @@ import { localeString } from './LocaleUtils';
 // HTLC, so a payment right at the limit can fail. Kept back per channel.
 export const LSPS2_RECEIVE_MARGIN_MSAT = 2_000_000;
 
+// The LSP drops a JIT channel request nobody paid once its fee offer
+// expires. ldk-node doesn't hold the invoice to that, and doesn't say when
+// it is, so a JIT invoice expires within the hour LSP offers commonly last.
+export const LSPS2_JIT_INVOICE_MAX_EXPIRY_SECS = 3600;
+
 // What the node can receive without a new channel, assuming the payer can
 // split it across channels. inboundHtlcMaximumMsat also covers LDK's 10%
 // max-in-flight default on channels not opened by us or the LSPS2 LSP.

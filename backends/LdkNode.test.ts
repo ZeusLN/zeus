@@ -1434,6 +1434,33 @@ describe('LdkNode.createInvoice', () => {
         });
     });
 
+    it('caps a JIT invoice at an hour, and only a JIT invoice', async () => {
+        const createWithExpiry = (expiry_seconds: string) =>
+            new LdkNode().createInvoice({
+                value: '50000',
+                memo: 'memo',
+                expiry_seconds,
+                lsps2_jit: true
+            });
+
+        mockListChannels.mockResolvedValue([]);
+        await createWithExpiry('86400');
+        expect(mockReceiveViaJitChannel).toHaveBeenCalledWith(
+            expect.objectContaining({ expirySecs: 3600 })
+        );
+
+        await createWithExpiry('600');
+        expect(mockReceiveViaJitChannel).toHaveBeenLastCalledWith(
+            expect.objectContaining({ expirySecs: 600 })
+        );
+
+        mockListChannels.mockResolvedValue([channel(60_000)]);
+        await createWithExpiry('86400');
+        expect(mockReceiveBolt11).toHaveBeenCalledWith(
+            expect.objectContaining({ expirySecs: 86400 })
+        );
+    });
+
     it('adds up inbound across channels', async () => {
         mockListChannels.mockResolvedValue([channel(30_000), channel(30_000)]);
 

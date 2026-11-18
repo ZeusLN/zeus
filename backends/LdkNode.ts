@@ -21,7 +21,8 @@ import { getActiveLsps2NodeId } from '../utils/LdkNodeUtils';
 import {
     getJitQuoteMsat,
     getLsps2ErrorMessage,
-    getReceivableMsat
+    getReceivableMsat,
+    LSPS2_JIT_INVOICE_MAX_EXPIRY_SECS
 } from '../utils/Lsps2Utils';
 import type {
     Network,
@@ -1351,7 +1352,10 @@ export default class LdkNode {
                 invoice = await LdkNodeInjection.bolt11.receiveViaJitChannel({
                     amountMsat,
                     description: data.memo || '',
-                    expirySecs,
+                    expirySecs: Math.min(
+                        expirySecs,
+                        LSPS2_JIT_INVOICE_MAX_EXPIRY_SECS
+                    ),
                     // the LSP's fee has to leave something to receive
                     maxLspFeeLimitMsat: amountMsat - 1
                 });
