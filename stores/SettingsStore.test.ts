@@ -1712,6 +1712,61 @@ describe('SettingsStore.settingsLoaded', () => {
     });
 });
 
+// Require login after the app returns from the background: on for new
+// installs, unchanged for existing ones. A stored blob replaces the
+// defaults wholesale, so only an install with nothing stored picks up
+// the new default.
+describe('SettingsStore loginBackground default', () => {
+    it('is on for a fresh install and persists with the first write', async () => {
+        const store = new SettingsStore();
+
+        await store.getSettings();
+        expect(store.settings.loginBackground).toBe(true);
+
+        await store.updateSettings({ fiat: 'EUR' });
+        expect(persistedSettings().loginBackground).toBe(true);
+    });
+
+    it('stays off for stored settings that never wrote the key', async () => {
+        seedSettings({ fiat: 'USD', scramblePin: true });
+        const store = new SettingsStore();
+
+        await store.getSettings();
+        expect(store.settings.loginBackground).toBeFalsy();
+
+        await store.updateSettings({ fiat: 'EUR' });
+        expect(persistedSettings().loginBackground).toBeUndefined();
+    });
+
+    it.each([true, false])(
+        'keeps a stored value of %s',
+        async (loginBackground) => {
+            seedSettings({ fiat: 'USD', loginBackground });
+            const store = new SettingsStore();
+
+            await store.getSettings();
+            expect(store.settings.loginBackground).toBe(loginBackground);
+
+            await store.updateSettings({ fiat: 'EUR' });
+            expect(persistedSettings().loginBackground).toBe(loginBackground);
+        }
+    );
+
+    // App.handleAppStateChange and Wallet.handleAppStateChange only lock
+    // when loginMethodConfigured() is true, and only show the Lockscreen
+    // when loginRequired() is true
+    it('does not ask for a login on a fresh install without a PIN', async () => {
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        store.setLoginStatus(false);
+
+        expect(store.settings.loginBackground).toBe(true);
+        expect(store.loginMethodConfigured()).toBeFalsy();
+        expect(store.loginRequired()).toBeFalsy();
+    });
+});
+
 // The LSP settings screens decide whether to show Reset by comparing the
 // field against these defaults, so they must never follow the saved value.
 describe('getLspConfigForNetwork', () => {
