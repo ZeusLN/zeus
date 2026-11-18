@@ -558,12 +558,14 @@ describe('CashuStore startup restore of the mint list from Nostr', () => {
             expect(restoreMintsFromNostr).toHaveBeenCalledTimes(2);
         });
 
-        it('keeps asking when the restore fails for another reason', async () => {
+        // getNostrBackupSeed returns null rather than throwing when there
+        // is no seed; this covers any other error the restore throws
+        it('keeps asking when the restore throws an error other than no relay answering', async () => {
             await addMintWhileUnreachable();
 
             const store = newStore();
             (store as any).getNostrBackupSeed.mockImplementationOnce(() => {
-                throw new Error('no seed');
+                throw new Error('seed read failed');
             });
             await store.initializeWallets();
             expect(storage.get(PENDING_KEY)).toEqual('true');
@@ -571,6 +573,27 @@ describe('CashuStore startup restore of the mint list from Nostr', () => {
             (restoreMintsFromNostr as jest.Mock).mockResolvedValue(null);
             await newStore().initializeWallets();
             expect(restoreMintsFromNostr).toHaveBeenCalledTimes(2);
+        });
+
+        // Current behaviour: nostrRestoreMints returns null without asking
+        // the relays, which counts as a relay answering with no backup
+        it('stops asking when there is no seed at the next start', async () => {
+            await addMintWhileUnreachable();
+
+            const store = newStore();
+            (store as any).getNostrBackupSeed = jest.fn(() => null);
+            await store.initializeWallets();
+
+            expect(restoreMintsFromNostr).toHaveBeenCalledTimes(1);
+            expect(storage.has(PENDING_KEY)).toBe(false);
+            expect(store.mintUrls).toEqual([OTHER_MINT]);
+            await store.nostrBackupMints();
+            expect(backupMintsToNostr).not.toHaveBeenCalled();
+
+            // the mint list is stored and the key is gone, so a later start
+            // with the seed does not ask either
+            await newStore().initializeWallets();
+            expect(restoreMintsFromNostr).toHaveBeenCalledTimes(1);
         });
 
         it('is forgotten when the Cashu data is deleted', async () => {
