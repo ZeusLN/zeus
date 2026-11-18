@@ -29,6 +29,28 @@ class SettingsScreen {
         return byId(IDS.invoicesButton);
     }
 
+    // Listed once a wallet on a backend with ecash support exists.
+    get ecashButton() {
+        return byId(IDS.ecashButton);
+    }
+
+    get networkingButton() {
+        return byId(IDS.networkingButton);
+    }
+
+    // Listed once a wallet exists.
+    get lspButton() {
+        return byId(IDS.lspButton);
+    }
+
+    get channelsButton() {
+        return byId(IDS.channelsButton);
+    }
+
+    get posButton() {
+        return byId(IDS.posButton);
+    }
+
     async waitUntilDisplayed(): Promise<void> {
         await waitForVisible(this.securityButton);
     }

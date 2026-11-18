@@ -5,9 +5,10 @@ import { device } from 'detox';
 
 const IOS_BUNDLE_ID = 'com.zeusln.zeus';
 
-// Granted before launch so the system prompt that the app triggers on start
-// (push notification registration) never covers the screen under test.
-const IOS_PERMISSIONS = { notifications: 'YES' } as const;
+// Granted before launch so system prompts never cover the screen under test:
+// push notification registration on start, and the one-time Face ID
+// permission before the app's first biometric prompt.
+const IOS_PERMISSIONS = { notifications: 'YES', faceid: 'YES' } as const;
 
 // iOS asks before an app reads text that another app put on the pasteboard,
 // and the read blocks the app until the prompt is answered. The simulator
@@ -40,6 +41,10 @@ const allowIosPaste = (): void => {
 // which survives an app uninstall on the iOS simulator, so iOS also needs its
 // keychain reset. Android drops the app's keystore entries with the app, and
 // Detox installs it with every runtime permission granted.
+// Every spec starts synchronized, even after one that left synchronization
+// off for a busy node.
+const SYNCHRONIZED = { detoxEnableSynchronization: 1 };
+
 export const launchFreshApp = async (): Promise<void> => {
     if (device.getPlatform() === 'ios') {
         await device.terminateApp();
@@ -49,13 +54,52 @@ export const launchFreshApp = async (): Promise<void> => {
         allowIosPaste();
         await device.launchApp({
             newInstance: true,
-            permissions: IOS_PERMISSIONS
+            permissions: IOS_PERMISSIONS,
+            launchArgs: SYNCHRONIZED
         });
         return;
     }
-    await device.launchApp({ delete: true, newInstance: true });
+    await device.launchApp({
+        delete: true,
+        newInstance: true,
+        launchArgs: SYNCHRONIZED
+    });
 };
 
 export const relaunchApp = async (): Promise<void> => {
     await device.launchApp({ newInstance: true });
+};
+
+// Restarts the app without waiting for it to go idle, for a start that never
+// does: with Face ID on, the app opens on the system's Face ID prompt.
+// Synchronization stays off until the caller turns it back on.
+export const relaunchAppUnsynchronized = async (): Promise<void> => {
+    await device.launchApp({
+        newInstance: true,
+        launchArgs: { detoxEnableSynchronization: 0 }
+    });
+};
+
+// The Face ID prompt is system UI, which Detox can't see or wait for. It
+// slides in after the app asks for it, and a face matched before then is
+// lost, so this waits for the prompt to settle first.
+const BIOMETRIC_PROMPT_DELAY_MS = 2000;
+
+// Detox's setBiometricEnrollment() and matchFace() run applesimutils with
+// --booted, which acts on whichever simulator is booted, not necessarily the
+// one under test. These target the test simulator by its id.
+const appleSimUtils = (...args: string[]): void => {
+    execFileSync('applesimutils', ['--byId', device.id, ...args]);
+};
+
+export const setFaceIdEnrollment = (enrolled: boolean): void => {
+    appleSimUtils('--biometricEnrollment', enrolled ? 'YES' : 'NO');
+};
+
+const waitForBiometricPrompt = (): Promise<void> =>
+    new Promise((resolve) => setTimeout(resolve, BIOMETRIC_PROMPT_DELAY_MS));
+
+export const matchFaceWhenPrompted = async (): Promise<void> => {
+    await waitForBiometricPrompt();
+    appleSimUtils('--biometricMatch');
 };

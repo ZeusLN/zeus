@@ -1,5 +1,5 @@
 import { launchFreshApp, relaunchApp } from '../helpers/app';
-import { waitForVisible } from '../helpers/elements';
+import { tapUntilVisible, waitForVisible } from '../helpers/elements';
 import { withoutSynchronization } from '../helpers/synchronization';
 import IntroSplashScreen from '../screens/IntroSplashScreen';
 import MenuScreen from '../screens/MenuScreen';
@@ -38,11 +38,20 @@ export const openSettingsFromWallet = async (): Promise<void> => {
 };
 
 // Restarts the app, keeping its wallet and settings, and returns to Settings
-// once the wallet has started again.
+// once the wallet has started again. The node keeps the app busy for a while
+// after the restart, so this doesn't wait for the app to go idle. The menu ignores taps until the wallet has
+// connected, and its entries while it slides in.
 export const reopenSettingsFromWallet = async (): Promise<void> => {
     await relaunchApp();
-    await withoutSynchronization(() =>
-        waitForVisible(WalletScreen.menuButton, WALLET_START_TIMEOUT_MS)
-    );
-    await openSettingsFromWallet();
+    await withoutSynchronization(async () => {
+        await waitForVisible(WalletScreen.menuButton, WALLET_START_TIMEOUT_MS);
+        await tapUntilVisible(
+            WalletScreen.menuButton,
+            MenuScreen.selectedWalletButton
+        );
+        await tapUntilVisible(
+            MenuScreen.settingsButton,
+            SettingsScreen.securityButton
+        );
+    });
 };
