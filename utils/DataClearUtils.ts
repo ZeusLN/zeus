@@ -649,7 +649,8 @@ export const CASHU_KEY_SUFFIXES = [
     'dismissedUpgradeThreshold',
     'randomizeMintSelection',
     'nostrMintBackupTimestamp',
-    'pendingRestoreMints'
+    'pendingRestoreMints',
+    'nostrMintRestorePending'
 ];
 
 /**

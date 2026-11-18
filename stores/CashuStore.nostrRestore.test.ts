@@ -45,13 +45,15 @@ jest.mock('../cashu-cdk', () => ({
     getMintUrls: jest.fn().mockResolvedValue([]),
     addMint: jest.fn().mockResolvedValue(undefined),
     removeMint: jest.fn().mockResolvedValue(undefined),
-    restore: jest.fn().mockResolvedValue(0)
+    restore: jest.fn().mockResolvedValue(0),
+    deleteWalletDatabase: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(true),
     getItem: jest.fn().mockResolvedValue(null),
     removeItem: jest.fn().mockResolvedValue(true),
     getRawItem: jest.fn(),
+    removeRawItem: jest.fn().mockResolvedValue(undefined),
     KEY_PREFIX: 'zeus:'
 }));
 
@@ -449,5 +451,140 @@ describe('CashuStore startup restore of the mint list from Nostr', () => {
         await newStore().initializeWallets();
 
         expect(restoreMintsFromNostr).not.toHaveBeenCalled();
+    });
+
+    // Adding or removing a mint stores the mint list, which alone used to
+    // end the restore
+    describe('when a mint is added before a relay could be reached', () => {
+        const PENDING_KEY = 'lnd-cashu-nostrMintRestorePending';
+        let storage: Map<string, string>;
+        let cdkMints: Set<string>;
+
+        beforeEach(() => {
+            storage = new Map();
+            (Storage.getItem as jest.Mock).mockImplementation(
+                async (key: string) => storage.get(key) ?? null
+            );
+            (Storage.setItem as jest.Mock).mockImplementation(
+                async (key: string, value: string) => {
+                    storage.set(key, value);
+                    return true;
+                }
+            );
+            (Storage.removeItem as jest.Mock).mockImplementation(
+                async (key: string) => {
+                    storage.delete(key);
+                    return true;
+                }
+            );
+            // CDK keeps its mints across starts
+            cdkMints = new Set();
+            (CashuDevKit.getMintUrls as jest.Mock).mockImplementation(
+                async () => [...cdkMints]
+            );
+            (CashuDevKit.addMint as jest.Mock).mockImplementation(
+                async (url: string) => {
+                    cdkMints.add(url);
+                }
+            );
+        });
+
+        // First start with no relay reachable, then the user adds a mint
+        const addMintWhileUnreachable = async () => {
+            (restoreMintsFromNostr as jest.Mock).mockRejectedValueOnce(
+                new MintBackupRelaysUnreachableError()
+            );
+            const store = newStore();
+            await store.initializeWallets();
+            await store.addMint(OTHER_MINT);
+            expect(storage.get(MINT_URLS_KEY)).toEqual(
+                JSON.stringify([OTHER_MINT])
+            );
+        };
+
+        it('asks the relays again at the next start and keeps the added mint', async () => {
+            await addMintWhileUnreachable();
+
+            (restoreMintsFromNostr as jest.Mock).mockResolvedValue({
+                mints: [SAVED_MINT],
+                timestamp: 1768435200
+            });
+            const store = newStore();
+            await store.initializeWallets();
+
+            expect(restoreMintsFromNostr).toHaveBeenCalledTimes(2);
+            expect(CashuDevKit.addMint).toHaveBeenCalledWith(SAVED_MINT);
+            expect(store.mintUrls).toEqual([OTHER_MINT, SAVED_MINT]);
+            expect(storage.get(MINT_URLS_KEY)).toEqual(
+                JSON.stringify([OTHER_MINT, SAVED_MINT])
+            );
+            await store.nostrBackupMints();
+            expect((backupMintsToNostr as jest.Mock).mock.calls[0][2]).toEqual([
+                OTHER_MINT,
+                SAVED_MINT
+            ]);
+        });
+
+        it('does not publish a backup at the next start while no relay can be reached', async () => {
+            await addMintWhileUnreachable();
+
+            (restoreMintsFromNostr as jest.Mock).mockRejectedValueOnce(
+                new MintBackupRelaysUnreachableError()
+            );
+            const store = newStore();
+            await store.initializeWallets();
+            await store.nostrBackupMints();
+
+            expect(restoreMintsFromNostr).toHaveBeenCalledTimes(2);
+            expect(backupMintsToNostr).not.toHaveBeenCalled();
+            expect(storage.get(PENDING_KEY)).toEqual('true');
+        });
+
+        it('stops asking once a relay has answered', async () => {
+            await addMintWhileUnreachable();
+            expect(storage.get(PENDING_KEY)).toEqual('true');
+
+            (restoreMintsFromNostr as jest.Mock).mockResolvedValue(null);
+            const store = newStore();
+            await store.initializeWallets();
+
+            expect(storage.has(PENDING_KEY)).toBe(false);
+            expect(store.mintUrls).toEqual([OTHER_MINT]);
+            expect(storage.get(MINT_URLS_KEY)).toEqual(
+                JSON.stringify([OTHER_MINT])
+            );
+
+            await newStore().initializeWallets();
+            expect(restoreMintsFromNostr).toHaveBeenCalledTimes(2);
+        });
+
+        it('keeps asking when the restore fails for another reason', async () => {
+            await addMintWhileUnreachable();
+
+            const store = newStore();
+            (store as any).getNostrBackupSeed.mockImplementationOnce(() => {
+                throw new Error('no seed');
+            });
+            await store.initializeWallets();
+            expect(storage.get(PENDING_KEY)).toEqual('true');
+
+            (restoreMintsFromNostr as jest.Mock).mockResolvedValue(null);
+            await newStore().initializeWallets();
+            expect(restoreMintsFromNostr).toHaveBeenCalledTimes(2);
+        });
+
+        it('is forgotten when the Cashu data is deleted', async () => {
+            await addMintWhileUnreachable();
+            expect(storage.get(PENDING_KEY)).toEqual('true');
+
+            const store = newStore();
+            // No empty backup publish, so no 10 s race timer
+            (store as any).getNostrBackupSeed = jest.fn(() => null);
+            await store.deleteCashuData();
+
+            expect(storage.has(PENDING_KEY)).toBe(false);
+            await newStore().initializeWallets();
+            expect(restoreMintsFromNostr).toHaveBeenCalledTimes(1);
+        });
     });
 });
