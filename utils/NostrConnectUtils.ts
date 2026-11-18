@@ -1346,7 +1346,13 @@ export default class NostrConnectUtils {
         payment_error: string | null;
         loading: boolean;
     }): boolean {
-        if (NostrConnectUtils.isInFlightPaymentStatus(state.status)) {
+        // CLN's /v1/pay answers 'pending' while its HTLCs are out.
+        // getPaymentOutcome flags any status other than complete, SUCCEEDED
+        // or IN_FLIGHT as an error, but the payment can still settle.
+        if (
+            NostrConnectUtils.isInFlightPaymentStatus(state.status) ||
+            state.status === 'pending'
+        ) {
             return true;
         }
 
