@@ -2097,7 +2097,12 @@ export default class CashuStore {
      */
     private disconnectNdk = (ndk: NDK | undefined = this.ndk) => {
         if (!ndk) return;
-        for (const url of ndk.pool.urls()) {
+        for (const [url, relay] of Array.from(ndk.pool.relays.entries())) {
+            // removeRelay() disconnects the relay but does not cancel a
+            // pending reconnect: a relay that dropped during discovery would
+            // otherwise open a new socket after it was removed, which nothing
+            // could close anymore.
+            relay.connectivity.resetReconnectionState();
             ndk.pool.removeRelay(url);
         }
         if (this.ndk === ndk) {
