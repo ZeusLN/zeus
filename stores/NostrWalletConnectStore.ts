@@ -1441,28 +1441,32 @@ export default class NostrWalletConnectStore {
     // SAVE_CONNECTIONS_DEBOUNCE_MS. Restarting the timer on each call would
     // let a steady stream of requests (each marks its connection as used)
     // put off the save indefinitely.
-    private scheduleSave(): void {
+    private scheduleSave({ retry = true } = {}): void {
         if (this._scheduledSave !== null) return;
         this._scheduledSave = setTimeout(() => {
             this._scheduledSave = null;
-            this.saveConnections().catch((err) =>
-                console.error(
-                    'NWC: scheduleSave → saveConnections failed:',
-                    err
-                )
-            );
+            void this.writeScheduledSave({ retry });
         }, SAVE_CONNECTIONS_DEBOUNCE_MS);
     }
     private async flushScheduledSave({ retry = true } = {}): Promise<void> {
         if (this._scheduledSave === null) return;
         this.cancelScheduledSave();
+        await this.writeScheduledSave({ retry });
+    }
+    // If the write fails, the changes are still only in memory, so write
+    // them once more on the timer. Not after a reset that started during
+    // the write: the next wallet may be current by the time the timer
+    // fires, and saving this wallet's connections as that wallet's would
+    // remove its stored connections.
+    private async writeScheduledSave({ retry }: { retry: boolean }) {
+        const generation = this.resetGeneration;
         try {
             await this.saveConnections();
         } catch (err) {
-            console.error('NWC: flushScheduledSave failed:', err);
-            // the changes are still only in memory, so write them on the
-            // timer
-            if (retry) this.scheduleSave();
+            console.error('NWC: scheduled save failed:', err);
+            if (retry && !this.wasResetSince(generation)) {
+                this.scheduleSave({ retry: false });
+            }
         }
     }
 

@@ -11866,10 +11866,32 @@ describe('NostrWalletConnectStore scheduled save', () => {
             expect(storedConnection().totalSpendSats).toBe(10_000);
         });
 
+        it('writes a debit again when the timer write fails', async () => {
+            const { store } = await buildStore();
+            failWrites(NWC_CONNECTIONS_KEY, { once: true });
+            debit(store, 10_000);
+
+            await jest.advanceTimersByTimeAsync(500);
+            expect(storedConnection().totalSpendSats).toBe(0);
+
+            await jest.advanceTimersByTimeAsync(500);
+            expect(storedConnection().totalSpendSats).toBe(10_000);
+        });
+
+        it('writes again once, not more, when the retry fails too', async () => {
+            const { store } = await buildStore();
+            const writesBefore = connectionWrites();
+            failWrites(NWC_CONNECTIONS_KEY);
+
+            await finalize(store);
+            await jest.advanceTimersByTimeAsync(5_000);
+
+            expect(connectionWrites() - writesBefore).toBe(2);
+        });
+
         // A write after the switch would save the first wallet's
         // connections as the second wallet's and drop conn-b from storage
-        it('does not write again after a reset and a wallet switch', async () => {
-            const { store, nodeInfoStore } = await buildStore();
+        function storeSecondWalletConnection() {
             storedItems.set(
                 NWC_CONNECTIONS_KEY,
                 JSON.stringify([
@@ -11881,6 +11903,11 @@ describe('NostrWalletConnectStore scheduled save', () => {
                     })
                 ])
             );
+        }
+
+        it('does not write again after a reset and a wallet switch', async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
             debit(store, 10_000);
             failWrites(NWC_CONNECTIONS_KEY, { once: true });
 
@@ -11890,6 +11917,44 @@ describe('NostrWalletConnectStore scheduled save', () => {
             await store.loadConnections();
 
             expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
+            expect(persistedConnections().map((c) => c.id)).toEqual([
+                'conn-1',
+                'conn-b'
+            ]);
+        });
+
+        it('does not write again on the next wallet when a reset starts during a flush that then fails', async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
+            const write = holdNextWrite(NWC_CONNECTIONS_KEY);
+            const paying = finalize(store);
+            await write.entered;
+
+            await settle(store.reset(true));
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+            write.fail(new Error('storage write failed'));
+            await paying;
+            await jest.advanceTimersByTimeAsync(500);
+
+            expect(persistedConnections().map((c) => c.id)).toEqual([
+                'conn-1',
+                'conn-b'
+            ]);
+        });
+
+        it('does not write again on the next wallet when a reset starts during a timer write that then fails', async () => {
+            const { store, nodeInfoStore } = await buildStore();
+            storeSecondWalletConnection();
+            const write = holdNextWrite(NWC_CONNECTIONS_KEY);
+            debit(store, 10_000);
+            await jest.advanceTimersByTimeAsync(500);
+            await write.entered;
+
+            await settle(store.reset(true));
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+            write.fail(new Error('storage write failed'));
+            await jest.advanceTimersByTimeAsync(500);
+
             expect(persistedConnections().map((c) => c.id)).toEqual([
                 'conn-1',
                 'conn-b'
