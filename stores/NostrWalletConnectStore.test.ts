@@ -11832,10 +11832,9 @@ describe('NostrWalletConnectStore scheduled save', () => {
         );
     }
 
+    // one entry per stored record, so a duplicate id shows up
     const storedSpend = () =>
-        Object.fromEntries(
-            persistedConnections().map((c) => [c.id, c.totalSpendSats])
-        );
+        persistedConnections().map((c) => [c.id, c.totalSpendSats]);
 
     // reset(true) leaves the first wallet's connections in memory until the
     // next wallet's loadConnections
@@ -11850,7 +11849,10 @@ describe('NostrWalletConnectStore scheduled save', () => {
             await store.loadConnections();
 
             expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
-            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
         });
 
         it("keeps the next wallet's connections when a payment settles after the switch", async () => {
@@ -11869,7 +11871,10 @@ describe('NostrWalletConnectStore scheduled save', () => {
                 amountSats: 10_000
             });
 
-            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
             await store.loadConnections();
             expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
         });
@@ -11883,7 +11888,10 @@ describe('NostrWalletConnectStore scheduled save', () => {
 
             await jest.advanceTimersByTimeAsync(500);
 
-            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
         });
     });
 
@@ -11987,7 +11995,10 @@ describe('NostrWalletConnectStore scheduled save', () => {
             await store.loadConnections();
 
             expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
-            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
         });
 
         it("keeps the next wallet's connections when a reset starts during a flush that then fails", async () => {
@@ -12003,7 +12014,10 @@ describe('NostrWalletConnectStore scheduled save', () => {
             await paying;
             await jest.advanceTimersByTimeAsync(500);
 
-            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
         });
 
         it("keeps the next wallet's connections when a reset starts during a timer write that then fails", async () => {
@@ -12019,7 +12033,10 @@ describe('NostrWalletConnectStore scheduled save', () => {
             write.fail(new Error('storage write failed'));
             await jest.advanceTimersByTimeAsync(500);
 
-            expect(storedSpend()).toEqual({ 'conn-1': 10_000, 'conn-b': 0 });
+            expect(storedSpend()).toEqual([
+                ['conn-1', 10_000],
+                ['conn-b', 0]
+            ]);
         });
     });
 });
