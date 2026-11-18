@@ -2,7 +2,10 @@ import { action, observable, reaction, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { v4 as uuidv4 } from 'uuid';
 
-import SettingsStore, { getLspConfigForNetwork } from './SettingsStore';
+import SettingsStore, {
+    DEFAULT_LSP_MAINNET,
+    getLspConfigForNetwork
+} from './SettingsStore';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
 
@@ -404,6 +407,19 @@ export default class LSPStore {
 
     private getFlowHost = () => this.getLspConfig().flowHost;
 
+    // Discount codes are issued by the mainnet Olympus Flow host, so the
+    // code is only sent there: not to the testnet, signet or mutinynet hosts
+    // and not to a custom host. The host is trimmed as in views/Settings/LSP.
+    private getFlowHeaders = (flowHost: string): { [key: string]: string } => {
+        const { lspAccessKey } = this.settingsStore.settings;
+        return lspAccessKey && flowHost.trim() === DEFAULT_LSP_MAINNET
+            ? {
+                  'Content-Type': 'application/json',
+                  'x-auth-token': lspAccessKey
+              }
+            : { 'Content-Type': 'application/json' };
+    };
+
     public getLSPSPubkey = () => this.getLspConfig().lsps1Pubkey;
 
     // Returns a new request id bound to the peer it is sent to, and drops
@@ -602,19 +618,14 @@ export default class LSPStore {
         amount_msat: number,
         isCurrent: () => boolean = () => true
     ) => {
-        const { settings } = this.settingsStore;
         const requestId = ++this.feeRequestId;
+        const flowHost = this.getFlowHost();
 
         return new Promise<ZeroConfFeeQuote>((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
-                `${this.getFlowHost()}/api/v1/fee`,
-                settings.lspAccessKey
-                    ? {
-                          'Content-Type': 'application/json',
-                          'x-auth-token': settings.lspAccessKey
-                      }
-                    : { 'Content-Type': 'application/json' },
+                `${flowHost}/api/v1/fee`,
+                this.getFlowHeaders(flowHost),
                 JSON.stringify({
                     amount_msat,
                     pubkey: this.nodeInfoStore.nodeInfo.nodeId
@@ -835,17 +846,13 @@ export default class LSPStore {
         };
 
         const { settings } = this.settingsStore;
+        const flowHost = this.getFlowHost();
 
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
-                `${this.getFlowHost()}/api/v1/proposal`,
-                settings.lspAccessKey
-                    ? {
-                          'Content-Type': 'application/json',
-                          'x-auth-token': settings.lspAccessKey
-                      }
-                    : { 'Content-Type': 'application/json' },
+                `${flowHost}/api/v1/proposal`,
+                this.getFlowHeaders(flowHost),
                 JSON.stringify({
                     bolt11,
                     fee_id: quote.feeId,

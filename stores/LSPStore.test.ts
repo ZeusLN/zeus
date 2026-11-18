@@ -35,10 +35,14 @@ jest.mock('../utils/BackendUtils', () => ({
     requestLsps1Liquidity: jest.fn()
 }));
 jest.mock('../utils/LocaleUtils');
+const mockGetLspConfig = jest.fn((..._args: any[]): any => ({
+    lsps1Pubkey: 'aa'
+}));
 jest.mock('./SettingsStore', () => ({
     __esModule: true,
     default: class {},
-    getLspConfigForNetwork: () => ({ lsps1Pubkey: 'aa' })
+    DEFAULT_LSP_MAINNET: 'https://flow.zeuslsp.com',
+    getLspConfigForNetwork: (...args: any[]) => mockGetLspConfig(...args)
 }));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -2006,6 +2010,182 @@ describe('LSPStore.getZeroConfInvoice', () => {
 
         expect(store.flow_error).toBe(true);
         expect(store.flow_error_msg).toBe('error of the request on screen');
+    });
+});
+
+describe('LSPStore Flow discount code host', () => {
+    const DEFAULT_LSP_MAINNET = 'https://flow.zeuslsp.com';
+    const DEFAULT_LSP_TESTNET = 'https://flow.testnet.zeuslsp.com';
+    const DEFAULT_LSP_MUTINYNET = 'https://flow.mutinynet.zeuslsp.com';
+
+    // flowHost as getLspConfigForNetwork picks it (SettingsStore.test.ts
+    // covers that function; the real module can't load here)
+    const flowConfig = (settings: any, nodeInfo: any) => ({
+        lsps1Pubkey: 'aa',
+        flowHost: nodeInfo.isMutinynet
+            ? settings.lspMutinynet || DEFAULT_LSP_MUTINYNET
+            : nodeInfo.isTestNet
+            ? settings.lspTestnet || DEFAULT_LSP_TESTNET
+            : settings.lspMainnet || DEFAULT_LSP_MAINNET
+    });
+
+    const mainnet = { isTestNet: false, isMutinynet: false };
+    const testnet = { isTestNet: true, isMutinynet: false };
+    const mutinynet = { isTestNet: false, isMutinynet: true };
+
+    const makeFlowStore = (settings: any, nodeInfo: any) =>
+        new LSPStore(
+            {
+                implementation: 'lnd',
+                settings: { lspAccessKey: 'mainnet-code', ...settings }
+            } as any,
+            { channels: [] } as any,
+            { nodeInfo: { nodeId: 'node', ...nodeInfo } } as any
+        );
+
+    // headers of the fee request and of the proposal request
+    const sentHeaders = async (store: LSPStore) => {
+        await store.getZeroConfFee(100000000).catch(() => undefined);
+        await store
+            .getZeroConfInvoice('lnbc-inner', { feeSats: 1, feeId: 'fee' })
+            .catch(() => undefined);
+        const calls = jest.mocked(ReactNativeBlobUtil.fetch).mock.calls;
+        expect(calls).toHaveLength(2);
+        return calls.map((call) => ({ url: call[1], headers: call[2] }));
+    };
+
+    beforeEach(() => {
+        mockGetLspConfig.mockImplementation(flowConfig);
+        jest.mocked(ReactNativeBlobUtil.fetch).mockReset();
+        jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({
+            info: () => ({ status: 400 }),
+            json: () => ({ message: 'rejected' })
+        } as any);
+    });
+
+    afterEach(() => {
+        mockGetLspConfig.mockImplementation(() => ({ lsps1Pubkey: 'aa' }));
+    });
+
+    it('sends the code to the default mainnet Flow host', async () => {
+        const sent = await sentHeaders(
+            makeFlowStore({ lspMainnet: DEFAULT_LSP_MAINNET }, mainnet)
+        );
+        expect(sent).toEqual([
+            {
+                url: `${DEFAULT_LSP_MAINNET}/api/v1/fee`,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-auth-token': 'mainnet-code'
+                }
+            },
+            {
+                url: `${DEFAULT_LSP_MAINNET}/api/v1/proposal`,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-auth-token': 'mainnet-code'
+                }
+            }
+        ]);
+    });
+
+    it('sends the code to the mainnet host when lspMainnet is unset', async () => {
+        const sent = await sentHeaders(makeFlowStore({}, mainnet));
+        expect(sent[0].url).toBe(`${DEFAULT_LSP_MAINNET}/api/v1/fee`);
+        expect(sent.map((s) => s.headers?.['x-auth-token'])).toEqual([
+            'mainnet-code',
+            'mainnet-code'
+        ]);
+    });
+
+    it('sends the code when the mainnet host has surrounding whitespace', async () => {
+        // views/Settings/LSP compares hosts after trim()
+        const sent = await sentHeaders(
+            makeFlowStore({ lspMainnet: ` ${DEFAULT_LSP_MAINNET} ` }, mainnet)
+        );
+        expect(sent.map((s) => s.headers?.['x-auth-token'])).toEqual([
+            'mainnet-code',
+            'mainnet-code'
+        ]);
+    });
+
+    it.each([
+        ['testnet', {}, testnet, DEFAULT_LSP_TESTNET],
+        // signet nodes report isTestNet and use the testnet host
+        ['signet', {}, testnet, DEFAULT_LSP_TESTNET],
+        ['mutinynet', {}, mutinynet, DEFAULT_LSP_MUTINYNET],
+        [
+            'a custom mainnet host',
+            { lspMainnet: 'https://flow.example.com' },
+            mainnet,
+            'https://flow.example.com'
+        ],
+        [
+            'a custom testnet host',
+            { lspTestnet: 'https://flow.example.com' },
+            testnet,
+            'https://flow.example.com'
+        ],
+        // hosts are compared exactly elsewhere (isOlympus, the LSP settings
+        // reset button), so these are not the default host either
+        [
+            'the mainnet host with a trailing slash',
+            { lspMainnet: `${DEFAULT_LSP_MAINNET}/` },
+            mainnet,
+            `${DEFAULT_LSP_MAINNET}/`
+        ],
+        [
+            'the mainnet host in upper case',
+            { lspMainnet: DEFAULT_LSP_MAINNET.toUpperCase() },
+            mainnet,
+            DEFAULT_LSP_MAINNET.toUpperCase()
+        ]
+    ])(
+        'does not send the code to %s',
+        async (_name, settings, nodeInfo, host) => {
+            const sent = await sentHeaders(makeFlowStore(settings, nodeInfo));
+            expect(sent).toEqual([
+                {
+                    url: `${host}/api/v1/fee`,
+                    headers: { 'Content-Type': 'application/json' }
+                },
+                {
+                    url: `${host}/api/v1/proposal`,
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            ]);
+        }
+    );
+
+    it('does not send the code after switching from mainnet to testnet', async () => {
+        const nodeInfoStore = { nodeInfo: { nodeId: 'node', ...mainnet } };
+        const store = new LSPStore(
+            {
+                implementation: 'lnd',
+                settings: { lspAccessKey: 'mainnet-code' }
+            } as any,
+            { channels: [] } as any,
+            nodeInfoStore as any
+        );
+        await store.getZeroConfFee(100000000).catch(() => undefined);
+        nodeInfoStore.nodeInfo = { nodeId: 'node', ...testnet };
+        await store.getZeroConfFee(100000000).catch(() => undefined);
+
+        const calls = jest.mocked(ReactNativeBlobUtil.fetch).mock.calls;
+        expect(calls[0][1]).toBe(`${DEFAULT_LSP_MAINNET}/api/v1/fee`);
+        expect(calls[0][2]).toHaveProperty('x-auth-token', 'mainnet-code');
+        expect(calls[1][1]).toBe(`${DEFAULT_LSP_TESTNET}/api/v1/fee`);
+        expect(calls[1][2]).toEqual({ 'Content-Type': 'application/json' });
+    });
+
+    it('sends no code header when no code is set', async () => {
+        const sent = await sentHeaders(
+            makeFlowStore({ lspAccessKey: '' }, mainnet)
+        );
+        expect(sent.map((s) => s.headers)).toEqual([
+            { 'Content-Type': 'application/json' },
+            { 'Content-Type': 'application/json' }
+        ]);
     });
 });
 
