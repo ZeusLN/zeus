@@ -687,6 +687,7 @@ describe('SwapDetails lockup verification retry wiring', () => {
         'swap.expired',
         'invoice.expired',
         'transaction.failed',
+        'transaction.refunded',
         'invoice.settled'
     ])('cancels a scheduled recheck on %s', async (status) => {
         const { store } = await renderView();
@@ -1476,8 +1477,57 @@ describe('SwapDetails lockup verification retry wiring', () => {
             }
         );
 
-        // The host's refund has spent the lockup, and the socket handler
-        // has no case for transaction.refunded
+        describe('the host reports transaction.refunded for an expired swap', () => {
+            it('checks the lockup and reports the refund once it spent it', async () => {
+                const { store } = await renderView({
+                    status: 'swap.expired',
+                    claimTransactionHex: 'storedhex'
+                });
+                store.checkStoredClaim.mockResolvedValue({
+                    status: 'invalid',
+                    reason: 'lockup-spent',
+                    spendingTxid: 'refund',
+                    spentBy: 'refund'
+                });
+
+                await sendStatus('transaction.refunded');
+                await advance(180000);
+
+                expect(socket.close).toHaveBeenCalled();
+                expect(store.checkStoredClaim).toHaveBeenCalledTimes(1);
+                expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+                expect(statusShown()).toBe('transaction.refunded');
+                expect(errorShown()).toBe(
+                    'views.SwapDetails.lockupSpentElsewhere'
+                );
+            });
+
+            it('sends the stored claim while the lockup is unspent', async () => {
+                const { store } = await renderView({
+                    status: 'swap.expired',
+                    claimTransactionHex: 'storedhex'
+                });
+
+                await sendStatus('transaction.refunded');
+
+                expect(socket.close).toHaveBeenCalled();
+                expect(store.checkStoredClaim).toHaveBeenCalledTimes(1);
+                expect(store.checkStoredClaim.mock.calls[0][0]).toBe(
+                    'storedhex'
+                );
+                expect(store.broadcastSwapTransaction).toHaveBeenCalledWith(
+                    'storedhex',
+                    'https://provider.test/v2'
+                );
+                expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                    'swap',
+                    'claim-txid'
+                );
+            });
+        });
+
+        // The host's refund has spent the lockup, so the screen shows the
+        // stored status without waiting on the socket
         it('shows a swap stored as refunded without subscribing', async () => {
             const { store } = await renderView({
                 status: 'transaction.refunded',
