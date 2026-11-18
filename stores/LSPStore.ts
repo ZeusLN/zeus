@@ -1527,8 +1527,11 @@ export default class LSPStore {
         this.getOrderResponseResolver?.();
 
         this.loadingLSPS1 = true;
+        this.error = false;
+        this.error_msg = '';
 
         this.getOrderId = this.newCustomMessageRequestId(this.getOrderId, peer);
+        const requestId = this.getOrderId;
         const method = 'lsps1.get_order';
 
         return new Promise<void>((resolve) => {
@@ -1542,13 +1545,22 @@ export default class LSPStore {
                 }
                 resolve();
             };
-            const timeoutId = setTimeout(
-                settle,
-                CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS
-            );
+            const timeoutId = setTimeout(() => {
+                if (this.getOrderId === requestId) {
+                    runInAction(() => {
+                        this.error = true;
+                        this.error_msg = localeString(
+                            'views.LSPS1.timeoutError'
+                        );
+                        this.loadingLSPS1 = false;
+                    });
+                }
+                settle();
+            }, CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS);
             this.getOrderResponseResolver = settle;
 
             this.sendCustomMessage({
+                isCurrent: () => !settled && this.getOrderId === requestId,
                 peer,
                 type: CUSTOM_MESSAGE_TYPE,
                 data: this.encodeMessage({
@@ -1571,6 +1583,15 @@ export default class LSPStore {
                         `Error sending (${method}) custom message:`,
                         error
                     );
+                    // a late send failure must not overwrite the reply or
+                    // the timeout error of a request that already settled
+                    if (!settled && this.getOrderId === requestId) {
+                        runInAction(() => {
+                            this.error = true;
+                            this.error_msg = errorToUserFriendly(error);
+                            this.loadingLSPS1 = false;
+                        });
+                    }
                     settle();
                 });
         });
@@ -1984,11 +2005,18 @@ export default class LSPStore {
         }
 
         // Fall back to custom message for other backends
+        // Settle any earlier get_order request still waiting so its timer
+        // can't fire a stale timeout after this newer request completes.
         this.getExtensionOrderResponseResolver?.();
+
+        this.error = false;
+        this.error_msg = '';
+
         this.getExtensionOrderId = this.newCustomMessageRequestId(
             this.getExtensionOrderId,
             peer
         );
+        const requestId = this.getExtensionOrderId;
         const method = 'lsps7.get_order';
 
         await new Promise<void>((resolve) => {
@@ -2002,13 +2030,23 @@ export default class LSPStore {
                 }
                 resolve();
             };
-            const timeoutId = setTimeout(
-                settle,
-                CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS
-            );
+            const timeoutId = setTimeout(() => {
+                if (this.getExtensionOrderId === requestId) {
+                    runInAction(() => {
+                        this.error = true;
+                        this.error_msg = localeString(
+                            'views.LSPS1.timeoutError'
+                        );
+                        this.loadingLSPS7 = false;
+                    });
+                }
+                settle();
+            }, CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS);
             this.getExtensionOrderResponseResolver = settle;
 
             this.sendCustomMessage({
+                isCurrent: () =>
+                    !settled && this.getExtensionOrderId === requestId,
                 peer,
                 type: CUSTOM_MESSAGE_TYPE,
                 data: this.encodeMessage({
@@ -2031,6 +2069,15 @@ export default class LSPStore {
                         `Error sending (${method}) custom message:`,
                         error
                     );
+                    // a late send failure must not overwrite the reply or
+                    // the timeout error of a request that already settled
+                    if (!settled && this.getExtensionOrderId === requestId) {
+                        runInAction(() => {
+                            this.error = true;
+                            this.error_msg = errorToUserFriendly(error);
+                            this.loadingLSPS7 = false;
+                        });
+                    }
                     settle();
                 });
         });
