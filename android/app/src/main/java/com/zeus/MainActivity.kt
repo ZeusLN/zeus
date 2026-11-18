@@ -1,9 +1,12 @@
 package app.zeusln.zeus
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -19,6 +22,9 @@ import java.io.InputStream
 import java.lang.ref.WeakReference
 
 class MainActivity : ReactActivity() {
+    private var useSecureFallback = false
+    private var secureFallbackApplied = false
+
     /**
      * Returns the name of the main component registered from JavaScript. This is used to schedule
      * rendering of the component.
@@ -55,6 +61,8 @@ class MainActivity : ReactActivity() {
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setRecentsScreenshotEnabled(false) // Avoid data leak via recents
+        } else {
+            useSecureFallback = !disablePreviewScreenshots()
         }
 
         // With edge-to-edge on, adjustResize no longer shrinks the window for
@@ -74,6 +82,46 @@ class MainActivity : ReactActivity() {
 
         currentActivity = WeakReference(this@MainActivity)
         started = true
+    }
+
+    // API 28 to 32 have no public setRecentsScreenshotEnabled. It was added
+    // in API 33 as the public name of the hidden
+    // setDisablePreviewScreenshots, which sets the same window manager
+    // flag and is open to apps on API 28 to 32 (light greylist on 28,
+    // unsupported list without a target SDK limit on 29 to 32). Like
+    // setRecentsScreenshotEnabled it leaves user screenshots alone.
+    private fun disablePreviewScreenshots(): Boolean =
+        try {
+            Activity::class.java
+                .getMethod("setDisablePreviewScreenshots", Boolean::class.javaPrimitiveType)
+                .invoke(this, true)
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "setDisablePreviewScreenshots failed", e)
+            false
+        }
+
+    // Fallback if the hidden call fails: mark the window secure while
+    // paused, so the snapshot taken when the Home or Recents button hides
+    // the activity is blank. It misses the snapshot the launcher takes
+    // during a swipe-up gesture, which comes before onPause. FLAG_SECURE
+    // set elsewhere is left as is.
+    override fun onPause() {
+        if (useSecureFallback &&
+            (window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE) == 0
+        ) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            secureFallbackApplied = true
+        }
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (secureFallbackApplied) {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            secureFallbackApplied = false
+        }
     }
 
     override fun onDestroy() {
