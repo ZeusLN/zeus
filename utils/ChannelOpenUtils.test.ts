@@ -306,6 +306,44 @@ describe('signingKeepsTxid', () => {
         );
     });
 
+    // BIP141: a witness program is a version byte (OP_0 to OP_16) and one
+    // direct push of 2 to 40 bytes. The two programs at the bounds are
+    // BIP350 test vectors (BC1SW50QGDZ25J and bc1pw508...kt5nd6y). Each
+    // script outside the bounds breaks one rule and keeps the others.
+    it.each([
+        ['the shortest, a 2 byte version 16', '6002751e'],
+        [
+            'the longest, a 40 byte version 1',
+            '5128751e76e8199196d454941c45d1b3a323f1433bd6751e76e8199196d454941c45d1b3a323f1433bd6'
+        ]
+    ])('keeps the txid for a witness program at the bounds: %s', (_, hex) => {
+        expect(
+            signingKeepsTxid(
+                funded([{ witness: Buffer.from(hex, 'hex') }]).toBase64()
+            )
+        ).toBe(true);
+    });
+
+    it.each([
+        ['a 1 byte program', '0001ab'],
+        ['a 41 byte program', '5129' + 'ab'.repeat(41)],
+        [
+            'a P2WPKH script with an opcode after the push',
+            '0014' + 'ab'.repeat(20) + 'ac'
+        ],
+        ['OP_RESERVED, below OP_1, as the version', '5014' + 'ab'.repeat(20)],
+        ['OP_NOP, above OP_16, as the version', '6114' + 'ab'.repeat(20)]
+    ])(
+        'changes the txid for a script that is not a witness program: %s',
+        (_, hex) => {
+            expect(
+                signingKeepsTxid(
+                    funded([{ witness: Buffer.from(hex, 'hex') }]).toBase64()
+                )
+            ).toBe(false);
+        }
+    );
+
     it('parses a taproot input that carries the fields lnd adds', () => {
         const xOnlyKey = key.subarray(1);
         const psbt = new bitcoin.Psbt({ network: regtest });
