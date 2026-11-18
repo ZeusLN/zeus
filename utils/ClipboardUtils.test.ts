@@ -559,6 +559,68 @@ describe('copySensitive', () => {
                 expect(systemClipboard).toBe('');
             });
 
+            describe('when the native call succeeds after a delay', () => {
+                let resolveNative: () => void;
+
+                beforeEach(() => {
+                    nativeSetString.mockImplementationOnce(
+                        (value: string) =>
+                            new Promise<void>((resolve) => {
+                                resolveNative = () => {
+                                    systemClipboard = value;
+                                    resolve();
+                                };
+                            })
+                    );
+                });
+
+                it('clears a write that lands after clearAfterMs', async () => {
+                    systemClipboard = 'an address';
+
+                    const copied = copySensitive('seed words', 1000);
+                    jest.advanceTimersByTime(1000);
+                    await flush();
+                    expect(clipboard.getString).not.toHaveBeenCalled();
+
+                    resolveNative();
+                    await copied;
+                    expect(systemClipboard).toBe('seed words');
+
+                    jest.advanceTimersByTime(999);
+                    await flush();
+                    expect(systemClipboard).toBe('seed words');
+                    jest.advanceTimersByTime(1);
+                    await flush();
+                    expect(systemClipboard).toBe('');
+                });
+
+                it('schedules no clear when a newer secret was copied first', async () => {
+                    let resolveSecond: () => void = () => {};
+                    nativeSetString.mockImplementationOnce(
+                        (value: string) =>
+                            new Promise<void>((resolve) => {
+                                resolveSecond = () => {
+                                    systemClipboard = value;
+                                    resolve();
+                                };
+                            })
+                    );
+
+                    // Android runs the native calls in order on one thread
+                    const first = copySensitive('first', 1000);
+                    const second = copySensitive('second', 1000);
+                    resolveNative();
+                    await first;
+                    resolveSecond();
+                    await second;
+                    expect(jest.getTimerCount()).toBe(1);
+
+                    jest.advanceTimersByTime(1000);
+                    await flush();
+                    expect(systemClipboard).toBe('');
+                });
+            });
+
             describe('when the native call fails after a delay', () => {
                 let rejectNative: (e: Error) => void;
 
@@ -602,30 +664,6 @@ describe('copySensitive', () => {
                     await flush();
                     expect(systemClipboard).toBe('');
                     expect(clipboard.getString).toHaveBeenCalledTimes(1);
-                });
-
-                it('keeps the fresh clear when the timed read ends after the fallback copy', async () => {
-                    systemClipboard = 'an address';
-                    let finishRead: (value: string) => void = () => {};
-                    clipboard.getString.mockImplementationOnce(
-                        () =>
-                            new Promise<string>((resolve) => {
-                                finishRead = resolve;
-                            })
-                    );
-
-                    const copied = copySensitive('seed words', 1000);
-                    jest.advanceTimersByTime(1000);
-                    rejectNative(new Error('denied'));
-                    await copied;
-                    // the read started before the fallback copy
-                    finishRead('an address');
-                    await flush();
-                    expect(systemClipboard).toBe('seed words');
-
-                    jest.advanceTimersByTime(1000);
-                    await flush();
-                    expect(systemClipboard).toBe('');
                 });
 
                 it('does not fall back when a newer secret was copied first', async () => {

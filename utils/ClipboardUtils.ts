@@ -69,9 +69,8 @@ const scheduleClear = (value: string, copy: number, clearAfterMs: number) => {
         if (Platform.OS === 'android') waitForResume(value, copy);
         const denied = await clearIfUnchanged(value, copy);
         // The read was allowed, so no retry is needed. A newer copy has
-        // removed this listener already and has its own timer, and so has a
-        // fallback copy of this secret made during the read
-        if (!denied && copy === latestCopy && !pendingTimer) cancelPending();
+        // removed this listener already and has its own timer
+        if (!denied && copy === latestCopy) cancelPending();
     }, clearAfterMs);
 };
 
@@ -113,20 +112,25 @@ export const copySensitive = (
         return Promise.resolve();
     }
 
-    // iOS removes the item itself at its expiration date
-    if (Platform.OS !== 'ios') scheduleClear(value, copy, clearAfterMs);
-
+    // The timed clear starts once the write has settled, so a write that is
+    // slow to run is still cleared clearAfterMs after it lands. Nothing is
+    // pending for this copy before then: the call above dropped older timers
+    // and a newer copy changes latestCopy.
     return new Promise<void>((resolve) =>
         resolve(SensitiveClipboard.setString(value, clearAfterMs))
-    ).catch(() => {
-        // A newer copy has replaced this one
-        if (copy !== latestCopy) return;
-        // On Android the timer above may have fired already while the native
-        // call was pending, so the fallback copy gets a clear of its own
-        cancelPending();
-        Clipboard.setString(value);
-        scheduleClear(value, copy, clearAfterMs);
-    });
+    ).then(
+        () => {
+            // iOS removes the item itself at its expiration date
+            if (Platform.OS !== 'ios' && copy === latestCopy)
+                scheduleClear(value, copy, clearAfterMs);
+        },
+        () => {
+            // A newer copy has replaced this one
+            if (copy !== latestCopy) return;
+            Clipboard.setString(value);
+            scheduleClear(value, copy, clearAfterMs);
+        }
+    );
 };
 
 export default { copySensitive, SENSITIVE_CLIPBOARD_CLEAR_MS };
