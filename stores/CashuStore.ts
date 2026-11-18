@@ -4536,12 +4536,16 @@ export default class CashuStore {
                     ? JSON.parse(storedMintUrls)
                     : [];
 
-                // If mints have never been stored locally (fresh install
-                // or recovery), try to restore the mint list from Nostr
-                // backup. A stored empty list means the user removed every
-                // mint; treating it as fresh would resurrect the removed
-                // mints from a relay that never received the empty backup
-                // that removeMint publishes
+                // Restore the mint list from the Nostr backup when it is
+                // owed (restoreDue): no mint list is stored (fresh install
+                // or recovery), or an earlier restore reached no relay. A
+                // stored empty list alone does not count: it means the user
+                // removed every mint, and restoring would resurrect the
+                // removed mints from a relay that never received the empty
+                // backup that removeMint publishes. With no seed,
+                // nostrRestoreMints returns null without asking the relays,
+                // which is handled as a relay answering with no backup, so
+                // the pending key is removed
                 if (restoreDue) {
                     // Backups stay held back after the relays answer, until
                     // the restored mints are in this.mintUrls below
