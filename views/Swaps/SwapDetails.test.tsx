@@ -194,6 +194,12 @@ const advance = (ms: number) =>
 
 const errorShown = () => screen.queryByTestId('error')?.props.children;
 const noticeShown = () => screen.queryByTestId('notice')?.props.children;
+// the value of the status row, the swap's last known status
+const statusShown = () =>
+    screen.container.queryAll(
+        (node) =>
+            node.type === 'KeyValue' && node.props.keyValue === 'general.status'
+    )[0]?.props.value;
 
 const claimedTo = () =>
     (ReverseClaimTransaction.build as jest.Mock).mock.calls[0][0].swap
@@ -1469,6 +1475,20 @@ describe('SwapDetails lockup verification retry wiring', () => {
                 expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
             }
         );
+
+        // The host's refund has spent the lockup, and the socket handler
+        // has no case for transaction.refunded
+        it('shows a swap stored as refunded without subscribing', async () => {
+            const { store } = await renderView({
+                status: 'transaction.refunded',
+                claimTransactionHex: 'storedhex'
+            });
+
+            expect(global.WebSocket).not.toHaveBeenCalled();
+            expect(statusShown()).toBe('transaction.refunded');
+            expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+            expect(store.checkStoredClaim).not.toHaveBeenCalled();
+        });
     });
 
     describe('a lockup amount nothing in the wallet vouches for', () => {

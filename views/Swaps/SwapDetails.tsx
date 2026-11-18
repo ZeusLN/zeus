@@ -176,10 +176,17 @@ export default class SwapDetails extends React.Component<
                 SwapState.SwapExpired
             ];
             // A stored claim that never went out may already have sent the
-            // preimage to the host, so it is sent again whatever the status
+            // preimage to the host, so it is sent again on an expired
+            // status. transaction.refunded means the host's refund has
+            // spent the lockup, and the socket handler has no case for it,
+            // so that status always ends here.
             const storedClaimUnsent =
                 !!swapData?.claimTransactionHex && !swapData?.claimTxid;
-            if (failedStatus.includes(swapData?.status) && !storedClaimUnsent) {
+            if (
+                failedStatus.includes(swapData?.status) &&
+                (swapData.status === SwapState.TransactionRefunded ||
+                    !storedClaimUnsent)
+            ) {
                 this.setState({
                     updates: swapData.status,
                     socketConnected: false
