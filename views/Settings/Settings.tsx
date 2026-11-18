@@ -166,6 +166,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                             navigation.navigate('LSPSettings');
                                         }
                                     }}
+                                    testID={TEST_IDS.settings.lspButton}
                                 >
                                     <View style={styles.icon}>
                                         <CloudIcon
@@ -208,6 +209,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     onPress={() => {
                                         navigation.navigate('EcashSettings');
                                     }}
+                                    testID={TEST_IDS.settings.ecashButton}
                                 >
                                     <View style={styles.icon}>
                                         <EcashIcon
@@ -323,6 +325,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     onPress={() =>
                                         navigation.navigate('ChannelsSettings')
                                     }
+                                    testID={TEST_IDS.settings.channelsButton}
                                 >
                                     <View style={styles.columnField}>
                                         <View style={styles.icon}>
@@ -369,6 +372,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     onPress={() =>
                                         navigation.navigate('ChannelsSettings')
                                     }
+                                    testID={TEST_IDS.settings.channelsButton}
                                 >
                                     <View style={styles.columnField}>
                                         <View style={styles.icon}>
@@ -410,6 +414,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <TouchableOpacity
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Networking')}
+                            testID={TEST_IDS.settings.networkingButton}
                         >
                             <View style={styles.icon}>
                                 <NetworkingIcon
@@ -584,6 +589,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 onPress={() =>
                                     navigation.navigate('PointOfSaleSettings')
                                 }
+                                testID={TEST_IDS.settings.posButton}
                             >
                                 <View style={styles.icon}>
                                     <POS

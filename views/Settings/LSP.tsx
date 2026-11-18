@@ -20,6 +20,7 @@ import SettingsStore, {
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
@@ -197,6 +198,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                 >
                                     <Switch
                                         value={enableLSP ?? true}
+                                        testID={TEST_IDS.lsp.enableSwitch}
                                         onValueChange={async () => {
                                             this.setState({
                                                 enableLSP: !enableLSP
@@ -241,6 +243,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                 </Text>
                                 <TextInput
                                     value={lsp}
+                                    testID={TEST_IDS.lsp.hostInput}
                                     onChangeText={async (text: string) => {
                                         // the discount code was issued for
                                         // its host; don't send it to
@@ -292,6 +295,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                 </Text>
                                 <TextInput
                                     value={accessKey}
+                                    testID={TEST_IDS.lsp.accessKeyInput}
                                     onChangeText={async (text: string) => {
                                         this.savedAccessKey = text;
                                         this.savedAccessKeyHost =
@@ -346,6 +350,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                 <View style={{ marginTop: 20 }}>
                                     <Button
                                         title={localeString('general.reset')}
+                                        testID={TEST_IDS.lsp.resetButton}
                                         accessibilityLabel={localeString(
                                             'general.reset'
                                         )}

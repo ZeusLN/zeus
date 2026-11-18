@@ -18,6 +18,7 @@ import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
@@ -127,7 +128,11 @@ export default class EcashSettings extends React.Component<
                                 alignItems: 'center'
                             }}
                         >
-                            {loading && <LoadingIndicator size={30} />}
+                            {loading && (
+                                <View testID={TEST_IDS.ecashSettings.loading}>
+                                    <LoadingIndicator size={30} />
+                                </View>
+                            )}
                         </View>
                     }
                     navigation={navigation}
@@ -165,6 +170,7 @@ export default class EcashSettings extends React.Component<
                         >
                             <Switch
                                 value={enableCashu}
+                                testID={TEST_IDS.ecashSettings.enableSwitch}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({
                                         enableCashu: value,
@@ -220,6 +226,7 @@ export default class EcashSettings extends React.Component<
                         >
                             <Switch
                                 value={enableMultiMint}
+                                testID={TEST_IDS.ecashSettings.multiMintSwitch}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({
                                         enableMultiMint: value,
@@ -330,6 +337,7 @@ export default class EcashSettings extends React.Component<
                                 marginTop: 25
                             }}
                             onPress={() => navigation.navigate('Mints')}
+                            testID={TEST_IDS.ecashSettings.mintsRow}
                         >
                             <ListItem.Content>
                                 <ListItem.Title

@@ -407,6 +407,7 @@ export default class Security extends React.Component<
 
                             <Switch
                                 value={isBiometryEnabled}
+                                testID={TEST_IDS.security.biometricsSwitch}
                                 onValueChange={(value: boolean) =>
                                     this.handleBiometricsSwitchChange(value)
                                 }
@@ -433,6 +434,7 @@ export default class Security extends React.Component<
                             </ListItem.Content>
                             <Switch
                                 value={scramblePin}
+                                testID={TEST_IDS.security.scramblePinSwitch}
                                 onValueChange={async () => {
                                     this.setState({
                                         scramblePin: !scramblePin
@@ -464,6 +466,7 @@ export default class Security extends React.Component<
                             </ListItem.Content>
                             <Switch
                                 value={loginBackground}
+                                testID={TEST_IDS.security.loginBackgroundSwitch}
                                 onValueChange={async () => {
                                     this.setState({
                                         loginBackground: !loginBackground

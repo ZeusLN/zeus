@@ -133,7 +133,49 @@ export const TEST_IDS = {
         currencyButton: 'settings.currencyButton',
         displayButton: 'settings.displayButton',
         paymentsButton: 'settings.paymentsButton',
-        invoicesButton: 'settings.invoicesButton'
+        invoicesButton: 'settings.invoicesButton',
+        ecashButton: 'settings.ecashButton',
+        networkingButton: 'settings.networkingButton',
+        lspButton: 'settings.lspButton',
+        channelsButton: 'settings.channelsButton',
+        posButton: 'settings.posButton'
+    },
+    pos: {
+        scrollView: 'pos.scrollView',
+        modeDropdown: 'pos.modeDropdown',
+        squareAccessTokenInput: 'pos.squareAccessTokenInput',
+        squareLocationIdInput: 'pos.squareLocationIdInput',
+        squareDevModeSwitch: 'pos.squareDevModeSwitch',
+        merchantNameInput: 'pos.merchantNameInput',
+        confirmationDropdown: 'pos.confirmationDropdown',
+        defaultViewDropdown: 'pos.defaultViewDropdown',
+        disableTipsSwitch: 'pos.disableTipsSwitch',
+        showKeypadSwitch: 'pos.showKeypadSwitch',
+        taxInput: 'pos.taxInput',
+        page: (screen: string) => `pos.page.${screen}`
+    },
+    channelsSettings: {
+        announceLabel: 'channelsSettings.announceLabel',
+        announceSwitch: 'channelsSettings.announceSwitch'
+    },
+    lspServices: {
+        option: (screen: string) => `lspServices.option.${screen}`
+    },
+    lsp: {
+        enableSwitch: 'lsp.enableSwitch',
+        hostInput: 'lsp.hostInput',
+        accessKeyInput: 'lsp.accessKeyInput',
+        resetButton: 'lsp.resetButton'
+    },
+    ecashSettings: {
+        enableSwitch: 'ecashSettings.enableSwitch',
+        multiMintSwitch: 'ecashSettings.multiMintSwitch',
+        mintsRow: 'ecashSettings.mintsRow',
+        loading: 'ecashSettings.loading'
+    },
+    networking: {
+        offlineCheckSwitch: 'networking.offlineCheckSwitch',
+        status: 'networking.status'
     },
     payments: {
         feeLimitInput: 'payments.feeLimitInput',
@@ -187,7 +229,10 @@ export const TEST_IDS = {
         selectCurrencyLabel: 'currency.selectCurrencyLabel'
     },
     security: {
-        option: (screenOrAction: string) => `security.option.${screenOrAction}`
+        option: (screenOrAction: string) => `security.option.${screenOrAction}`,
+        biometricsSwitch: 'security.biometricsSwitch',
+        scramblePinSwitch: 'security.scramblePinSwitch',
+        loginBackgroundSwitch: 'security.loginBackgroundSwitch'
     },
     setPassword: {
         passwordInput: 'setPassword.passwordInput',
