@@ -228,11 +228,14 @@ export default class SendingOnChain extends React.Component<
                                         heading={localeString(
                                             'views.SendingOnChain.txid'
                                         )}
-                                        headingCopied={`${localeString(
-                                            'views.SendingOnChain.txid'
-                                        )} ${localeString(
-                                            'components.ExternalLinkModal.copied'
-                                        )}`}
+                                        headingCopied={localeString(
+                                            'components.CopyButton.itemCopied',
+                                            {
+                                                item: localeString(
+                                                    'views.SendingOnChain.txid'
+                                                )
+                                            }
+                                        )}
                                         URL={txid}
                                         theme="dark"
                                     />

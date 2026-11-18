@@ -712,11 +712,14 @@ export default class RebalancingChannels extends React.Component<
                                                 heading={localeString(
                                                     'views.Payment.paymentPreimage'
                                                 )}
-                                                headingCopied={`${localeString(
-                                                    'views.Payment.paymentPreimage'
-                                                )} ${localeString(
-                                                    'components.ExternalLinkModal.copied'
-                                                )}`}
+                                                headingCopied={localeString(
+                                                    'components.CopyButton.itemCopied',
+                                                    {
+                                                        item: localeString(
+                                                            'views.Payment.paymentPreimage'
+                                                        )
+                                                    }
+                                                )}
                                                 theme="dark"
                                                 URL={
                                                     rebalanceData.paymentPreimage ||
