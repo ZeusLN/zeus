@@ -9886,6 +9886,20 @@ describe('NostrWalletConnectStore scheduled save', () => {
             expect(storedConnection().totalSpendSats).toBe(10_000);
         });
 
+        it('writes a change made while a retry is pending again when the retry fails', async () => {
+            const { store } = await buildStore();
+            failWrites(NWC_CONNECTIONS_KEY);
+            debit(store, 1_000);
+            await jest.advanceTimersByTimeAsync(500);
+            debit(store, 2_000);
+            await jest.advanceTimersByTimeAsync(500);
+
+            writeFailures.delete(NWC_CONNECTIONS_KEY);
+            await jest.advanceTimersByTimeAsync(500);
+
+            expect(storedConnection().totalSpendSats).toBe(3_000);
+        });
+
         it('writes again once, not more, when the retry fails too', async () => {
             const { store } = await buildStore();
             const writesBefore = connectionWrites();
