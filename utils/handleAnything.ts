@@ -814,8 +814,9 @@ const handleAnything = async (
                     ];
                 }
 
-                // The NIP-05 lookup does not go over Tor and refuses .onion
-                // names, so an .onion address fails here with the lnurl error
+                // The NIP-05 lookup goes over Tor when Use Tor is on but
+                // refuses .onion names, so an .onion address fails here with
+                // the lnurl error
                 if (isOnion) throw e;
 
                 return await attemptNip05Lookup(value);

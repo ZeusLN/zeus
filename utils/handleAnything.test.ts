@@ -94,9 +94,12 @@ jest.mock('./AddressUtils', () => ({
     ZEUS_ECASH_GIFT_URL
 }));
 const mockTorHttpRequest = jest.fn();
+// doTorRequest is used by the NIP-05 lookup over Tor (#5321)
+const mockDoTorRequest = jest.fn();
 jest.mock('./TorUtils', () => ({
     torHttpRequest: (...args: any[]) => mockTorHttpRequest(...args),
-    RequestMethod: { GET: 'get' }
+    doTorRequest: (...args: any[]) => mockDoTorRequest(...args),
+    RequestMethod: { GET: 'GET' }
 }));
 const torJson = (body: any) => ({
     statusCode: 200,
@@ -1434,7 +1437,7 @@ describe('handleAnything', () => {
 
                 expect(mockTorHttpRequest).toHaveBeenCalledWith({
                     url: 'http://zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion/.well-known/lnurlp/satoshi',
-                    method: 'get',
+                    method: 'GET',
                     followRedirects: false
                 });
                 expect(mockBlobUtilFetch).not.toHaveBeenCalled();
@@ -2068,7 +2071,7 @@ describe('handleAnything', () => {
                 expect(mockDnsFetch).not.toHaveBeenCalled();
                 expect(mockTorHttpRequest).toHaveBeenCalledWith({
                     url: ONION_LNURLP,
-                    method: 'get',
+                    method: 'GET',
                     followRedirects: false
                 });
                 expect(mockBlobUtilFetch).not.toHaveBeenCalled();
@@ -2136,7 +2139,7 @@ describe('handleAnything', () => {
                 expect(mockDnsFetch).not.toHaveBeenCalled();
                 expect(mockTorHttpRequest).toHaveBeenCalledWith({
                     url: ONION_LNURLP,
-                    method: 'get',
+                    method: 'GET',
                     followRedirects: false
                 });
                 expect(mockBlobUtilFetch).not.toHaveBeenCalled();
@@ -2183,7 +2186,7 @@ describe('handleAnything', () => {
                 expect(mockDnsFetch).toHaveBeenCalledTimes(1);
                 expect(mockTorHttpRequest).toHaveBeenCalledWith({
                     url: 'https://pay.onion.example.com/.well-known/lnurlp/satoshi',
-                    method: 'get',
+                    method: 'GET',
                     followRedirects: false
                 });
                 expect(mockBlobUtilFetch).not.toHaveBeenCalled();
