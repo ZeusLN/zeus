@@ -10,7 +10,13 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 import * as React from 'react';
-import { Animated, Dimensions, PanResponder, StyleSheet } from 'react-native';
+import {
+    Animated,
+    Dimensions,
+    PanResponder,
+    Platform,
+    StyleSheet
+} from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import SwipeButton from './SwipeButton';
@@ -330,5 +336,273 @@ describe('SwipeButton', () => {
         });
 
         expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    // A screen reader cannot drag the knob. The track is a button, and its
+    // activate action (a double tap in TalkBack) completes it.
+    const activate = (actionName = 'activate') =>
+        act(async () => {
+            fireEvent(
+                screen.getByTestId('swipe-button-track'),
+                'accessibilityAction',
+                { nativeEvent: { actionName } }
+            );
+        });
+
+    it('is a button named by its instruction text, with an activate action', async () => {
+        jest.replaceProperty(Platform, 'OS', 'android');
+        await renderButton();
+
+        const track = screen.getByRole('button', { name: 'Slide to Pay' });
+        expect(track).toBe(screen.getByTestId('swipe-button-track'));
+        // the name would also come from the text inside; set it on the
+        // track so it does not depend on the children
+        expect(track.props.accessibilityLabel).toBe('Slide to Pay');
+        expect(track.props.accessibilityActions).toEqual([
+            { name: 'activate' }
+        ]);
+        expect(track.props.accessibilityState).toEqual({ disabled: false });
+    });
+
+    it('completes from the activate action the way a full swipe does', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await activate();
+
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+        expect(knobOffset()).toBe(250);
+        expect(canStartDrag()).toBe(false);
+    });
+
+    it('does nothing on the activate action while disabled', async () => {
+        const onSwipeSuccess = await renderButton({ disabled: true });
+        await layoutTrack(TRACK_WIDTH);
+
+        expect(
+            screen.getByTestId('swipe-button-track').props.accessibilityState
+        ).toEqual({ disabled: true });
+        await activate();
+
+        expect(onSwipeSuccess).not.toHaveBeenCalled();
+        expect(knobOffset()).toBe(0);
+    });
+
+    it('does not pay twice from two activate actions', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await activate();
+        await activate();
+
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('can be activated again once the screen regains focus', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+        await activate();
+
+        await act(async () => mockFocusEffect!());
+        await activate();
+
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(2);
+    });
+
+    it('reports a completed button as disabled until the screen regains focus', async () => {
+        await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+        const track = () => screen.getByTestId('swipe-button-track');
+
+        await activate();
+        expect(track().props.accessibilityState).toEqual({ disabled: true });
+        // only the screen reader hears it: the track does not fade
+        expect(StyleSheet.flatten(track().props.style).opacity).toBeUndefined();
+
+        await act(async () => mockFocusEffect!());
+        expect(track().props.accessibilityState).toEqual({ disabled: false });
+
+        await swipe(240);
+        expect(track().props.accessibilityState).toEqual({ disabled: true });
+    });
+
+    it('ignores other accessibility actions', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await activate('longpress');
+
+        expect(onSwipeSuccess).not.toHaveBeenCalled();
+    });
+
+    it('completes from the activate action before the track is measured', async () => {
+        const onSwipeSuccess = await renderButton();
+
+        await activate();
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+
+        // the locked knob goes to the end once the track is measured
+        await layoutTrack(TRACK_WIDTH);
+        expect(knobOffset()).toBe(250);
+    });
+
+    it('ignores the activate action during a drag', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await act(async () => {
+            responderConfig.onPanResponderGrant();
+            responderConfig.onPanResponderMove({}, { dx: 100 });
+        });
+        await activate();
+        expect(onSwipeSuccess).not.toHaveBeenCalled();
+
+        await act(async () => {
+            responderConfig.onPanResponderRelease({}, { dx: 100 });
+        });
+        await activate();
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores the activate action on a drag cancelled by a resize', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await act(async () => {
+            responderConfig.onPanResponderGrant();
+            responderConfig.onPanResponderMove({}, { dx: 200 });
+        });
+        // the finger is still down on a track of another width
+        await layoutTrack(200);
+        await activate();
+        expect(onSwipeSuccess).not.toHaveBeenCalled();
+
+        // the release springs the knob back; then the action works and
+        // locks the knob at the end of the resized track
+        await act(async () => {
+            responderConfig.onPanResponderRelease({}, { dx: 200 });
+        });
+        await activate();
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+        expect(knobOffset()).toBe(150);
+    });
+
+    it('does nothing on the activate action once disabled after mount', async () => {
+        const onSwipeSuccess = jest.fn();
+        await render(
+            <SwipeButton
+                onSwipeSuccess={onSwipeSuccess}
+                instructionText="Slide to Pay"
+            />
+        );
+        await layoutTrack(TRACK_WIDTH);
+
+        // e.g. TransactionsStore.paymentInFlight turns on
+        await screen.rerender(
+            <SwipeButton
+                onSwipeSuccess={onSwipeSuccess}
+                instructionText="Slide to Pay"
+                disabled
+            />
+        );
+        await activate();
+
+        expect(onSwipeSuccess).not.toHaveBeenCalled();
+        expect(
+            screen.getByTestId('swipe-button-track').props.accessibilityState
+        ).toEqual({ disabled: true });
+    });
+
+    it('keeps the untranslated activate action out of the iOS actions rotor', async () => {
+        jest.replaceProperty(Platform, 'OS', 'ios');
+        await renderButton();
+
+        const track = screen.getByRole('button', { name: 'Slide to Pay' });
+        expect(track.props.accessibilityActions).toBeUndefined();
+        expect(typeof track.props.onAccessibilityTap).toBe('function');
+    });
+
+    // VoiceOver on the New Architecture: a double tap fires
+    // onAccessibilityTap, not the activate action
+    const tap = () =>
+        act(async () => {
+            fireEvent(
+                screen.getByTestId('swipe-button-track'),
+                'accessibilityTap'
+            );
+        });
+
+    it('completes from a VoiceOver double tap the way a full swipe does', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await tap();
+
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+        expect(knobOffset()).toBe(250);
+        expect(canStartDrag()).toBe(false);
+    });
+
+    it('does nothing on a VoiceOver double tap while disabled', async () => {
+        const onSwipeSuccess = await renderButton({ disabled: true });
+        await layoutTrack(TRACK_WIDTH);
+
+        await tap();
+
+        expect(onSwipeSuccess).not.toHaveBeenCalled();
+    });
+
+    it('does not pay twice from two VoiceOver double taps', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await tap();
+        await tap();
+
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('pays once for two double taps before a re-render', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+        const { onAccessibilityAction, onAccessibilityTap } =
+            screen.getByTestId('swipe-button-track').props;
+
+        await act(async () => {
+            const event = { nativeEvent: { actionName: 'activate' } };
+            onAccessibilityAction(event);
+            onAccessibilityAction(event);
+            onAccessibilityTap();
+        });
+
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores a VoiceOver double tap during a drag', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await act(async () => {
+            responderConfig.onPanResponderGrant();
+            responderConfig.onPanResponderMove({}, { dx: 100 });
+        });
+        await tap();
+
+        expect(onSwipeSuccess).not.toHaveBeenCalled();
+    });
+
+    it('can be activated after another responder takes the drag', async () => {
+        const onSwipeSuccess = await renderButton();
+        await layoutTrack(TRACK_WIDTH);
+
+        await act(async () => {
+            responderConfig.onPanResponderGrant();
+            responderConfig.onPanResponderMove({}, { dx: 100 });
+            responderConfig.onPanResponderTerminate();
+        });
+        await activate();
+
+        expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
+        expect(knobOffset()).toBe(250);
     });
 });
