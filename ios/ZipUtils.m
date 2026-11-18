@@ -227,23 +227,35 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
     uint64_t length = zipData.length;
 
     // The end of central directory record is the last thing in the file,
-    // followed only by its comment (at most 65535 bytes). A candidate
-    // counts only if its comment ends exactly at the end of the file and
-    // its central directory lies before it, so the same signature inside a
-    // comment is not taken for the record.
+    // followed only by its comment (at most 65535 bytes). The comment can
+    // hold the same signature, so a candidate counts only if its comment
+    // ends exactly at the end of the file and its central directory lies
+    // before it and starts with a central directory header (or is empty
+    // with no entries). Otherwise the scan goes on backwards.
     uint64_t eocd = UINT64_MAX;
+    BOOL zip64Marker = NO;
     uint64_t lowest = length > 22 + 65535 ? length - 22 - 65535 : 0;
     for (uint64_t i = length - 22;; i--) {
         if (ZipRead32(bytes + i) == ZIP_END_CENTRAL_DIR_SIGNATURE && i + 22 + ZipRead16(bytes + i + 20) == length) {
+            uint16_t count = ZipRead16(bytes + i + 10);
             uint32_t size = ZipRead32(bytes + i + 12);
             uint32_t start = ZipRead32(bytes + i + 16);
-            // Zip64 markers are let through here and rejected below
-            if (size == 0xFFFFFFFF || start == 0xFFFFFFFF || (uint64_t)start + size <= i) {
+            // start <= i here, so the 4 bytes at start are in the file
+            if ((uint64_t)start + size <= i &&
+                (ZipRead32(bytes + start) == ZIP_CENTRAL_DIR_SIGNATURE || (count == 0 && size == 0))) {
                 eocd = i;
                 break;
             }
+            // Noted so that a zip64 archive is reported as one when no
+            // candidate is valid
+            if (size == 0xFFFFFFFF || start == 0xFFFFFFFF) {
+                zip64Marker = YES;
+            }
         }
         if (i == lowest) break;
+    }
+    if (eocd == UINT64_MAX && zip64Marker) {
+        return @"Zip64 files are not supported";
     }
     if (eocd == UINT64_MAX) {
         return @"Invalid zip file: no end of central directory record";
