@@ -35,9 +35,11 @@ jest.mock('../utils/BackendUtils', () => ({
     requestLsps1Liquidity: jest.fn()
 }));
 jest.mock('../utils/LocaleUtils');
-const mockGetLspConfig = jest.fn((..._args: any[]): any => ({
-    lsps1Pubkey: 'aa'
-}));
+const mockDefaultLspConfig = (..._args: any[]): any => ({
+    lsps1Pubkey: 'aa',
+    flowHost: 'https://flow.zeuslsp.com'
+});
+const mockGetLspConfig = jest.fn(mockDefaultLspConfig);
 jest.mock('./SettingsStore', () => ({
     __esModule: true,
     default: class {},
@@ -2064,7 +2066,7 @@ describe('LSPStore Flow discount code host', () => {
     });
 
     afterEach(() => {
-        mockGetLspConfig.mockImplementation(() => ({ lsps1Pubkey: 'aa' }));
+        mockGetLspConfig.mockImplementation(mockDefaultLspConfig);
     });
 
     it('sends the code to the default mainnet Flow host', async () => {
