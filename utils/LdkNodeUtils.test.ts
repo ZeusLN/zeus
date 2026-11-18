@@ -1,6 +1,7 @@
 const mockMkdir = jest.fn();
 const mockExists = jest.fn();
 const mockStart = jest.fn();
+const mockStop = jest.fn();
 
 jest.mock('react-native', () => ({
     Platform: { OS: 'ios' }
@@ -15,7 +16,12 @@ jest.mock('react-native-fs', () => ({
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
-    default: { node: { start: (...args: any[]) => mockStart(...args) } }
+    default: {
+        node: {
+            start: (...args: any[]) => mockStart(...args),
+            stop: (...args: any[]) => mockStop(...args)
+        }
+    }
 }));
 
 jest.mock('./LocaleUtils', () => ({
@@ -32,8 +38,13 @@ import {
     ensureLdkNodeBackupExclusion,
     getLdkNodeBaseDirectory,
     getLdkNodeStoragePath,
-    startLdkNodeWallet
+    startLdkNodeWallet,
+    stopLdkNode
 } from './LdkNodeUtils';
+import {
+    getVssHeaderIssuedAt,
+    noteVssHeaderIssued
+} from './VssHeaderRefreshUtils';
 
 describe('LdkNodeUtils', () => {
     beforeEach(() => {
@@ -157,6 +168,30 @@ describe('LdkNodeUtils', () => {
                 mockStart.mock.invocationCallOrder[0]
             );
             warnSpy.mockRestore();
+        });
+    });
+
+    describe('stopLdkNode', () => {
+        it('forgets the VSS header of the stopped node', async () => {
+            noteVssHeaderIssued(1000);
+
+            await stopLdkNode();
+
+            expect(mockStop).toHaveBeenCalledTimes(1);
+            expect(getVssHeaderIssuedAt()).toBeUndefined();
+        });
+
+        it('forgets the header even if stop fails', async () => {
+            noteVssHeaderIssued(1000);
+            mockStop.mockRejectedValueOnce(new Error('not running'));
+            const logSpy = jest
+                .spyOn(console, 'log')
+                .mockImplementation(() => {});
+
+            await stopLdkNode();
+
+            expect(getVssHeaderIssuedAt()).toBeUndefined();
+            logSpy.mockRestore();
         });
     });
 });

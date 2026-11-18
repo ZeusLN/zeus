@@ -133,7 +133,10 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             'fetchData',
             'fetchDataCore',
             'retryConnection',
-            'handleFocus'
+            'handleFocus',
+            'getLdkStartParams',
+            'showLdkStartErrors',
+            'rebuildLdkNodeForVssHeader'
         ],
         {
             BackendUtils,
@@ -636,6 +639,77 @@ describe('error-screen Retry', () => {
 // runs CashuStore.reset(), while cdkInitialized is still true from the
 // outgoing wallet and native CDK still holds that wallet's handles. Uses the
 // production CashuStore methods with native CDK controlled.
+describe('rebuild for a new VSS auth header', () => {
+    const rebuildSetup = () => {
+        const ctx = setup(0);
+        ctx.view.refreshRunner = ctx.runner;
+        // the LDK Node wallet is connected
+        ctx.settings.connecting = false;
+        return ctx;
+    };
+
+    it("stops the node and starts it again with the wallet's settings", async () => {
+        const { settings, view, ldk } = rebuildSetup();
+        ldk.startLdkNodeWallet.mockResolvedValue({ rgsError: 'rgs down' });
+
+        await view.rebuildLdkNodeForVssHeader();
+
+        expect(ldk.stopLdkNode).toHaveBeenCalledTimes(1);
+        expect(ldk.startLdkNodeWallet).toHaveBeenCalledTimes(1);
+        expect(ldk.stopLdkNode.mock.invocationCallOrder[0]).toBeLessThan(
+            ldk.startLdkNodeWallet.mock.invocationCallOrder[0]
+        );
+        expect(ldk.startLdkNodeWallet).toHaveBeenCalledWith(
+            expect.objectContaining({
+                nodeDir: 'a',
+                seedMnemonic: 'm',
+                network: 'mainnet',
+                scorerUrl: 'scorer',
+                vssServerUrl: 'vss'
+            })
+        );
+        expect(view.props.AlertStore.setRgsError).toHaveBeenCalledWith(
+            'rgs down'
+        );
+        // no connecting screen and no store reset
+        expect(settings.setConnectingStatus).not.toHaveBeenCalled();
+        expect(view.props.AlertStore.reset).not.toHaveBeenCalled();
+        expect(settings.connecting).toBe(false);
+    });
+
+    it('does not start the node once another wallet is selected', async () => {
+        const { settings, view, ldk } = rebuildSetup();
+        const stop = deferred();
+        ldk.stopLdkNode.mockReturnValue(stop.promise);
+
+        const rebuild = view.rebuildLdkNodeForVssHeader();
+        select(settings, 1);
+        stop.resolve();
+        await rebuild;
+
+        expect(ldk.startLdkNodeWallet).not.toHaveBeenCalled();
+    });
+
+    it('reconnects through the full connect path if the start fails', async () => {
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const { settings, view, runner, ldk } = rebuildSetup();
+        ldk.startLdkNodeWallet
+            .mockRejectedValueOnce(new Error('build failed'))
+            .mockResolvedValue({});
+        const run = jest.spyOn(runner, 'run');
+
+        await view.rebuildLdkNodeForVssHeader();
+
+        expect(settings.setConnectingStatus).toHaveBeenCalledWith(true);
+        expect(run).toHaveBeenCalledTimes(1);
+        await run.mock.results[0].value;
+        expect(ldk.startLdkNodeWallet).toHaveBeenCalledTimes(2);
+        expect(ldk.waitForLdkNodeReady).toHaveBeenCalledTimes(1);
+        expect(settings.connecting).toBe(false);
+        expect(settings.error).toBe(false);
+    });
+});
+
 describe('Cashu work on focus', () => {
     const MINT_A = 'https://mint.a';
 

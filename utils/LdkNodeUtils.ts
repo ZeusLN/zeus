@@ -13,6 +13,7 @@ import { localeString } from './LocaleUtils';
 import { assertValidNodeDir } from './NodeDirUtils';
 import { retry } from './SleepUtils';
 import { deriveVssSigningKeyFromSeed } from './VssAuthUtils';
+import { clearVssHeaderIssued } from './VssHeaderRefreshUtils';
 
 export type SupportedNetwork =
     | 'mainnet'
@@ -611,6 +612,7 @@ export async function waitForLdkNodeReady(
  * Stop a running LDK Node
  */
 export async function stopLdkNode(): Promise<void> {
+    clearVssHeaderIssued();
     try {
         await LdkNode.node.stop();
     } catch (e) {
