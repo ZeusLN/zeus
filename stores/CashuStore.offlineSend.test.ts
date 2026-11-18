@@ -120,6 +120,8 @@ const mockGetItem = Storage.getItem as jest.Mock;
 const mockSetItem = Storage.setItem as jest.Mock;
 const defaultGetItem = mockGetItem.getMockImplementation()!;
 const defaultSetItem = mockSetItem.getMockImplementation()!;
+const defaultGetUnspentProofs = mockGetUnspentProofs.getMockImplementation()!;
+const defaultRemoveProofs = mockRemoveProofs.getMockImplementation()!;
 
 // Keychain reads of `key` reject, as on a transient keychain error.
 const failReadsOf = (key: string) =>
@@ -174,8 +176,14 @@ const getSentTokens = () =>
 describe('CashuStore offline send safety', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockGetItem.mockImplementation(defaultGetItem);
-        mockSetItem.mockImplementation(defaultSetItem);
+        // mockReset also drops queued *Once implementations a test left
+        // unconsumed, so they can't leak into the next test.
+        mockGetItem.mockReset().mockImplementation(defaultGetItem);
+        mockSetItem.mockReset().mockImplementation(defaultSetItem);
+        mockGetUnspentProofs
+            .mockReset()
+            .mockImplementation(defaultGetUnspentProofs);
+        mockRemoveProofs.mockReset().mockImplementation(defaultRemoveProofs);
         mockCallLog.length = 0;
         for (const key of Object.keys(mockBacking)) delete mockBacking[key];
         mockProofPool.current = [];
@@ -376,6 +384,96 @@ describe('CashuStore offline send safety', () => {
             expect(store.sentTokens).toHaveLength(1);
             expect(getSentTokens()).toHaveLength(1);
             expect(mockProofPool.current.map((p) => p.y)).toEqual(['y-b']);
+        });
+
+        it('keeps the pending record when proof deletion rejects after the delete committed', async () => {
+            mockProofPool.current = [proof(16, 'a'), proof(8, 'b')];
+            const store = buildStore();
+            // A bridge error or timeout after native committed the delete.
+            mockRemoveProofs.mockImplementationOnce(async (ys: string[]) => {
+                mockProofPool.current = mockProofPool.current.filter(
+                    (p) => !ys.includes(p.y)
+                );
+                throw new Error('bridge timeout');
+            });
+
+            await expect(store.sendTokenCDK(MINT_URL, 24)).rejects.toThrow(
+                'bridge timeout'
+            );
+
+            expect(mockProofPool.current).toEqual([]);
+            const records = getPendingRecords();
+            expect(records).toHaveLength(1);
+            expect(records[0].value).toBe(24);
+
+            // Startup reconciliation then promotes the token, the only
+            // handle left on the deleted proofs.
+            await store.reconcilePendingOfflineSends();
+            expect(getPendingRecords()).toEqual([]);
+            expect(getSentTokens().map((t: any) => t.encodedToken)).toEqual([
+                records[0].encodedToken
+            ]);
+        });
+
+        it('keeps the pending record when only some selected proofs are still present', async () => {
+            mockProofPool.current = [proof(16, 'a'), proof(8, 'b')];
+            const store = buildStore();
+            mockRemoveProofs.mockImplementationOnce(async () => {
+                mockProofPool.current = mockProofPool.current.filter(
+                    (p) => p.y !== 'y-a'
+                );
+                throw new Error('bridge timeout');
+            });
+
+            await expect(store.sendTokenCDK(MINT_URL, 24)).rejects.toThrow(
+                'bridge timeout'
+            );
+
+            expect(getPendingRecords()).toHaveLength(1);
+            expect(mockProofPool.current.map((p) => p.y)).toEqual(['y-b']);
+        });
+
+        it('keeps the pending record when the proofs cannot be re-read after deletion rejects', async () => {
+            mockProofPool.current = [proof(16, 'a'), proof(8, 'b')];
+            const store = buildStore();
+            mockRemoveProofs.mockRejectedValueOnce(new Error('db locked'));
+            // The selection read succeeds, the re-read in the catch fails.
+            mockGetUnspentProofs
+                .mockImplementationOnce(async () => [...mockProofPool.current])
+                .mockRejectedValueOnce(new Error('db unavailable'));
+
+            await expect(store.sendTokenCDK(MINT_URL, 24)).rejects.toThrow(
+                'db locked'
+            );
+
+            expect(mockProofPool.current).toHaveLength(2);
+            expect(getPendingRecords()).toHaveLength(1);
+
+            // The kept record holds its proofs out of offline selection
+            // until startup reconciliation resolves it.
+            await expect(store.sendTokenCDK(MINT_URL, 8)).rejects.toThrow(
+                'Insufficient proofs'
+            );
+            await store.reconcilePendingOfflineSends();
+            expect(getPendingRecords()).toEqual([]);
+            expect(getSentTokens()).toEqual([]);
+            expect(mockProofPool.current).toHaveLength(2);
+        });
+
+        it('rethrows the deletion error when dropping the record fails', async () => {
+            mockProofPool.current = [proof(16, 'a')];
+            const store = buildStore();
+            mockRemoveProofs.mockRejectedValueOnce(new Error('db locked'));
+            mockSetItem
+                .mockImplementationOnce(defaultSetItem)
+                .mockImplementationOnce(async () => {
+                    throw new Error('keychain unavailable');
+                });
+
+            await expect(store.sendTokenCDK(MINT_URL, 16)).rejects.toThrow(
+                'db locked'
+            );
+            expect(getPendingRecords()).toHaveLength(1);
         });
 
         it('refuses the send when the pending records cannot be read', async () => {

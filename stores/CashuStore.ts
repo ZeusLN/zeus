@@ -2346,20 +2346,39 @@ export default class CashuStore {
                 await this.savePendingOfflineSends(pendingKey, records);
 
                 // removeProofs is a single transactional delete, so a
-                // rejection means no proofs were removed. The pending
-                // record must not outlive the failure: a later retry
-                // could consume overlapping proofs, after which
-                // reconciliation would see partial presence, burn the
-                // remainder, and promote a token that was never handed
-                // out. We are still inside the serialized section, so
-                // this cleanup cannot interleave with another send.
+                // rejection from the database means no proofs were
+                // removed, and the record should go with the failed send.
+                // A bridge error or timeout can still reject after the
+                // delete committed, so drop the record only when every
+                // selected proof is still in the database. Otherwise, or
+                // if that read fails, keep it: reconciliation at next
+                // startup promotes the token if the proofs are gone, and
+                // until then offline selection skips them. We are still
+                // inside the serialized section, so this cleanup cannot
+                // interleave with another send.
                 try {
                     await CashuDevKit.removeProofs(selected.map((p) => p.y));
                 } catch (e) {
-                    await this.savePendingOfflineSends(
-                        pendingKey,
-                        records.filter((r) => r.encodedToken !== encoded)
-                    );
+                    try {
+                        const presentYs = new Set(
+                            (await CashuDevKit.getUnspentProofs(mintUrl)).map(
+                                (p) => p.y
+                            )
+                        );
+                        if (selected.every((p) => presentYs.has(p.y))) {
+                            await this.savePendingOfflineSends(
+                                pendingKey,
+                                records.filter(
+                                    (r) => r.encodedToken !== encoded
+                                )
+                            );
+                        }
+                    } catch (cleanupError) {
+                        console.warn(
+                            'Failed to clear pending offline send after removeProofs rejected, leaving it for reconciliation:',
+                            cleanupError
+                        );
+                    }
                     throw e;
                 }
                 await this.syncCDKBalances();
