@@ -119,6 +119,20 @@ describe('NWCConnectionActivity pay_invoice hold release', () => {
         expect(screen.getByText(RELEASED)).toBeOnTheScreen();
     });
 
+    it('does not say the hold is released once the payment has settled', async () => {
+        canRelease.mockReturnValue(false);
+        await renderActivity([
+            {
+                ...stuckPayment(),
+                status: 'success',
+                isHoldReleased: true,
+                isBudgetDebited: true
+            }
+        ]);
+
+        expect(screen.queryByText(RELEASED)).not.toBeOnTheScreen();
+    });
+
     it('opens the payment of a pending payment whose hold cannot be released', async () => {
         canRelease.mockReturnValue(false);
         const payment = { getAmount: 1000 };
