@@ -56,6 +56,10 @@
 	<true/>
 	<key>NFCReaderUsageDescription</key>
 	<string>ZEUS would like permission to use NFC to supplement QR code scanning</string>
+	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+	<array>
+		<string>D2760000850101</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
