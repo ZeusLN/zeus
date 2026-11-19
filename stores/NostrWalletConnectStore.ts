@@ -1950,6 +1950,13 @@ export default class NostrWalletConnectStore {
                 serviceSecretKey,
                 connection.pubkey
             );
+            // A reset (Stop Service on Android, End Session on iOS, a node
+            // switch) unsubscribes, but the SDK can still hand over a request
+            // it received before that, so a handler from before the reset
+            // refuses it instead of answering
+            const generation = this.resetGeneration;
+            const guarded = <T>(fn: () => Promise<T>): Promise<T> =>
+                this.withGlobalHandler(connection.id, fn, generation);
             const handler: NWCWalletServiceRequestHandler = {
                 // Called by the SDK with the request event id before any
                 // method handler runs; see recordNwcRequestEvent
@@ -1959,14 +1966,14 @@ export default class NostrWalletConnectStore {
 
             if (connection.hasPermission('get_info')) {
                 handler.getInfo = () =>
-                    this.withGlobalHandler(connection.id, () =>
+                    guarded(() =>
                         this.handleGetInfo(this.storedConnection(connection))
                     );
             }
 
             if (connection.hasPermission('get_balance')) {
                 handler.getBalance = () =>
-                    this.withGlobalHandler(connection.id, () =>
+                    guarded(() =>
                         this.handleGetBalance(this.storedConnection(connection))
                     );
             }
@@ -1994,7 +2001,7 @@ export default class NostrWalletConnectStore {
                           );
                 };
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, async () => {
+                    guarded(async () => {
                         const cached = await this.getSettledPayInvoiceResponse(
                             this.storedConnection(connection),
                             request.invoice
@@ -2004,7 +2011,10 @@ export default class NostrWalletConnectStore {
                         }
 
                         return this.enqueuePayment(
-                            () => pay(request),
+                            async () =>
+                                this.wasResetSince(generation)
+                                    ? this.serviceStoppedResponse<Nip47ErrorResponse>()
+                                    : pay(request),
                             () =>
                                 NostrConnectUtils.createNip47Error(
                                     localeString(
@@ -2018,7 +2028,7 @@ export default class NostrWalletConnectStore {
 
             if (connection.hasPermission('make_invoice')) {
                 handler.makeInvoice = (request: Nip47MakeInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
+                    guarded(() =>
                         this.handleMakeInvoice(
                             this.storedConnection(connection),
                             request
@@ -2028,7 +2038,7 @@ export default class NostrWalletConnectStore {
 
             if (connection.hasPermission('lookup_invoice')) {
                 handler.lookupInvoice = (request: Nip47LookupInvoiceRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
+                    guarded(() =>
                         this.handleLookupInvoice(
                             this.storedConnection(connection),
                             request
@@ -2040,7 +2050,7 @@ export default class NostrWalletConnectStore {
                 handler.listTransactions = (
                     request: Nip47ListTransactionsRequest
                 ) =>
-                    this.withGlobalHandler(connection.id, () =>
+                    guarded(() =>
                         this.handleListTransactions(
                             this.storedConnection(connection),
                             request
@@ -2053,9 +2063,7 @@ export default class NostrWalletConnectStore {
                 BackendUtils.supportsMessageSigning()
             ) {
                 handler.signMessage = (request: Nip47SignMessageRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handleSignMessage(request)
-                    );
+                    guarded(() => this.handleSignMessage(request));
             }
 
             if (!nwcWalletService) {
@@ -2482,6 +2490,16 @@ export default class NostrWalletConnectStore {
         return true;
     }
 
+    // For a request that reaches a handler after the service was reset
+    private serviceStoppedResponse<T>(): T {
+        return NostrConnectUtils.createNip47Error(
+            localeString(
+                'stores.NostrWalletConnectStore.error.serviceNotReady'
+            ),
+            Nip47ErrorCode.INTERNAL_ERROR
+        ) as T;
+    }
+
     private unauthorizedConnectionResponse<T>(): T {
         return NostrConnectUtils.createNip47Error(
             localeString(
@@ -2735,13 +2753,16 @@ export default class NostrWalletConnectStore {
 
     /**
      * Runs every subscribed NWC request through one gate: reject (and drop
-     * the subscription) when the connection is missing or has expired.
+     * the subscription) when the connection is missing or has expired, and
+     * reject when the service was reset after the subscription opened
+     * (`generation`).
      * When wallet identity is transiently unknown (e.g. during reconnect),
      * returns INTERNAL_ERROR without dropping the subscription.
      */
     private async withGlobalHandler<T>(
         connectionId: string,
-        handler: () => Promise<T>
+        handler: () => Promise<T>,
+        generation?: number
     ): Promise<T> {
         let releaseGate = () => {};
         const gate = new Promise<void>((resolve) => {
@@ -2761,6 +2782,9 @@ export default class NostrWalletConnectStore {
                 }
                 this.unsubscribeFromConnection(connectionId);
                 return this.unauthorizedConnectionResponse<T>();
+            }
+            if (generation !== undefined && this.wasResetSince(generation)) {
+                return this.serviceStoppedResponse<T>();
             }
             const mutationRejection = this.mutationRejection<T>(connectionId);
             if (mutationRejection !== undefined) {
@@ -5814,9 +5838,14 @@ export default class NostrWalletConnectStore {
             }
         );
 
-        // Native layer suspects the app is being suspended
+        // Native layer suspects the app is being suspended, or the user
+        // tapped End Session in the Live Activity
         this.iosAudioSuspendedUnsub = IOSAudioKeepAliveUtils.onSuspended(
             async (payload) => {
+                if (payload.reason === 'widget_stop') {
+                    await this.handleIOSWidgetStop();
+                    return;
+                }
                 console.warn(
                     `[NWCAudio] Suspected suspension – reason: ${payload.reason}, ` +
                         `uptime: ${payload.uptimeSeconds.toFixed(0)}s`
@@ -5828,6 +5857,24 @@ export default class NostrWalletConnectStore {
             '[NWCAudio] Keep-alive active – NWC relay will persist in background'
         );
         return true;
+    }
+
+    // iOS: "End Session" in the NWC Live Activity. The native module has
+    // already stopped the audio that keeps ZEUS running in the background,
+    // but the relay subscriptions that answer paired apps live here. Stop
+    // them as Stop Service does on Android: connections, permissions and
+    // budgets are kept, and the service starts again the next time ZEUS
+    // is opened (Wallet calls initializeService on 'active').
+    private async handleIOSWidgetStop(): Promise<void> {
+        console.log('[NWCAudio] End Session tapped, stopping NWC');
+        try {
+            await this.reset(true);
+        } catch (error) {
+            console.warn(
+                '[NWCAudio] Failed to reset NWC after End Session:',
+                error instanceof Error ? error.message : String(error)
+            );
+        }
     }
 
     /**

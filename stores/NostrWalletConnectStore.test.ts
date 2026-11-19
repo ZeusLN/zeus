@@ -104,6 +104,7 @@ import {
     NWCWalletServiceRequestHandler
 } from '@getalby/sdk';
 import Storage from '../storage';
+import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import BackendUtils from '../utils/BackendUtils';
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
 import CashuInvoice from '../models/CashuInvoice';
@@ -9898,6 +9899,178 @@ describe('NostrWalletConnectStore wallet deletion', () => {
         expect(storedItems.has(NWC_CONNECTIONS_KEY)).toBe(false);
         expect(storedItems.has(NWC_CLIENT_KEYS)).toBe(false);
         expect(storedItems.has(NWC_SERVICE_KEYS)).toBe(false);
+    });
+});
+
+describe('NostrWalletConnectStore iOS End Session', () => {
+    // What NWCAudioKeepAlive.m emits when NWCStopIntent (End Session in the
+    // Live Activity) posts its Darwin notification
+    const WIDGET_STOP = { reason: 'widget_stop', uptimeSeconds: 42 };
+    const SERVICE_NOT_READY = {
+        result: undefined,
+        error: {
+            code: 'INTERNAL_ERROR',
+            message: 'stores.NostrWalletConnectStore.error.serviceNotReady'
+        }
+    };
+    // get_balance reports what is left of the 5000 sat budget
+    const BUDGET_LEFT_MSATS = (5000 - 42) * 1000;
+    const originalOS = Platform.OS;
+    let suspended: (payload: {
+        reason: string;
+        uptimeSeconds: number;
+    }) => Promise<void>;
+
+    beforeEach(() => {
+        Platform.OS = 'ios';
+        const audio = IOSAudioKeepAliveUtils as jest.Mocked<
+            typeof IOSAudioKeepAliveUtils
+        >;
+        jest.spyOn(audio, 'isAvailable').mockReturnValue(true);
+        audio.start.mockResolvedValue({ isActive: true } as any);
+        audio.stop.mockResolvedValue({
+            uptimeSeconds: 42,
+            disconnectCount: 0
+        } as any);
+        audio.onInterrupted.mockReturnValue(jest.fn());
+        audio.onInterruptionEnded.mockReturnValue(jest.fn());
+        audio.onRouteChanged.mockReturnValue(jest.fn());
+        audio.onStatusUpdate.mockReturnValue(jest.fn());
+        audio.onSuspended.mockImplementation((handler: any) => {
+            suspended = handler;
+            return jest.fn();
+        });
+    });
+
+    afterEach(() => {
+        Platform.OS = originalOS;
+    });
+
+    // A store serving one connection with the background keep-alive on, as
+    // after ZEUS went to the background
+    async function startInBackground() {
+        const harness = await startService([
+            {
+                permissions: ['get_info', 'get_balance', 'pay_invoice'],
+                maxAmountSats: 5000,
+                totalSpendSats: 42,
+                budgetRenewal: BudgetRenewalType.Never
+            }
+        ]);
+        expect(await harness.store.startIOSAudioKeepAlive()).toBe(true);
+        expect(harness.store.iosAudioKeepAliveActive).toBe(true);
+        return harness;
+    }
+
+    it('stops answering requests when End Session is tapped', async () => {
+        const {
+            store,
+            balanceStore,
+            connections: [connection]
+        } = await startInBackground();
+        // Captured before the stop: a request the SDK received before the
+        // unsubscribe can still reach this handler
+        const client = clientFor(connection);
+
+        await suspended(WIDGET_STOP);
+        await flushMicrotasks();
+
+        expect(isSubscribed(connection)).toBe(false);
+        expect(liveSubscriptions(connection)).toBe(0);
+        expect(store.isServiceReady()).toBe(false);
+        expect(store.iosAudioKeepAliveActive).toBe(false);
+        expect(IOSAudioKeepAliveUtils.stop).toHaveBeenCalledTimes(1);
+
+        expect(await client.getBalance()).toEqual(SERVICE_NOT_READY);
+        expect(balanceStore.getLightningBalance).not.toHaveBeenCalled();
+    });
+
+    it('keeps the connection, its permissions and its budget', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startInBackground();
+        const before = persistedConnections();
+
+        await suspended(WIDGET_STOP);
+        await flushMicrotasks();
+
+        expect(store.connections).toHaveLength(1);
+        expect(store.connections[0].id).toBe(connection.id);
+        expect(store.connections[0].permissions).toEqual([
+            'get_info',
+            'get_balance',
+            'pay_invoice'
+        ]);
+        expect(store.connections[0].maxAmountSats).toBe(5000);
+        expect(store.connections[0].totalSpendSats).toBe(42);
+        expect(persistedConnections()).toEqual(before);
+        expect(storedItems.has(NWC_SERVICE_KEYS)).toBe(true);
+    });
+
+    it('does not pay a request that was queued when End Session was tapped', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startInBackground();
+        const client = clientFor(connection);
+        jest.spyOn(
+            store as any,
+            'getSettledPayInvoiceResponse'
+        ).mockResolvedValue(undefined);
+        const pay = jest
+            .spyOn(store as any, 'handleLightningPayInvoice')
+            .mockResolvedValue({ result: { preimage: 'x' } });
+        // An earlier payment still holds the queue
+        const earlier = createHold();
+        (store as any).paymentQueue = earlier.wait();
+
+        const response = client.payInvoice({ invoice: 'lnbc1queued' } as any);
+        await flushMicrotasks();
+        await suspended(WIDGET_STOP);
+        await flushMicrotasks();
+        earlier.release();
+
+        expect(await response).toEqual(SERVICE_NOT_READY);
+        expect(pay).not.toHaveBeenCalled();
+    });
+
+    it('serves requests again the next time ZEUS is opened', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startInBackground();
+        await suspended(WIDGET_STOP);
+        await flushMicrotasks();
+
+        // Wallet calls initializeService when the app is active again
+        await store.initializeService();
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
+        expect(store.isServiceReady()).toBe(true);
+        expect(isSubscribed(connection)).toBe(true);
+        expect(await clientFor(connection).getBalance()).toEqual({
+            result: { balance: BUDGET_LEFT_MSATS },
+            error: undefined
+        });
+    });
+
+    it('keeps serving when the audio is suspended for another reason', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startInBackground();
+
+        await suspended({ reason: 'player_restart_failed', uptimeSeconds: 1 });
+        await flushMicrotasks();
+
+        expect(isSubscribed(connection)).toBe(true);
+        expect(store.isServiceReady()).toBe(true);
+        expect(store.iosAudioKeepAliveActive).toBe(true);
+        expect(await clientFor(connection).getBalance()).toEqual({
+            result: { balance: BUDGET_LEFT_MSATS },
+            error: undefined
+        });
     });
 });
 
