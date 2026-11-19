@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "선택된 Cashu 민트가 없습니다. 먼저 민트를 선택하세요.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "인보이스 디코딩 실패 - payReq가 정의되지 않았습니다",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "이미 결제된 인보이스입니다",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "유효하지 않은 결제 요청",
     "stores.NostrWalletConnectStore.error.invalidAmount": "유효하지 않은 수량",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "Message must be a non-empty string",
