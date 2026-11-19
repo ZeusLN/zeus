@@ -691,7 +691,7 @@ describe('Cashu work on focus', () => {
             reconcilePendingMelts: jest.fn(async () => {}),
             recoverIncompleteSagas: jest.fn(async () => {}),
             clearInvoice: jest.fn(),
-            clearPayReq: jest.fn(),
+            clearPaymentResult: jest.fn(),
             stopConnectivityMonitoring: jest.fn(),
             initializeWallets: jest.fn(async () => {
                 cashu.cdkInitialized = true;
@@ -731,6 +731,7 @@ describe('Cashu work on focus', () => {
         expect(cashu.recoverIncompleteSagas).not.toHaveBeenCalled();
         // the connect reset CashuStore and initialized the selected wallet
         expect(cashu.reset).toHaveBeenCalledTimes(1);
+        expect(cashu.clearPaymentResult).toHaveBeenCalledTimes(1);
         expect(cashu.initializeWallets).toHaveBeenCalledTimes(1);
         expect(cashu.mintBalances).toEqual({});
         expect(cashu.cdkInitialized).toBe(true);

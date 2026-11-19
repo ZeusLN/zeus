@@ -8071,18 +8071,23 @@ describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
                 selectedMintUrl: 'https://mint.example',
                 isProperlyConfigured: () => true,
                 totalBalanceSats: 100_000,
-                paymentRequest: invoice,
-                payReq: new Invoice({
-                    payment_request: invoice,
-                    num_satoshis: '5000'
-                } as any),
-                getPayReqError: null,
                 getPayReq: jest.fn(),
                 payLnInvoiceFromEcash
             }
         });
         cashuStore.getPayReq.mockImplementation(async () => {
             settingsStore.connectionSeq++;
+            return {
+                paymentRequest: invoice,
+                payReq: new Invoice({
+                    payment_request: invoice,
+                    num_satoshis: '5000'
+                } as any),
+                meltQuotes: [],
+                plannerSkips: [],
+                mintBalance: 100_000,
+                amount: 5000
+            };
         });
         store.cashuEnabled = true;
         const connection = addConnection(store, {
@@ -9279,6 +9284,27 @@ describe('NostrWalletConnectStore sign_message', () => {
 describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
     const invoice = 'lnbc1cashupreimagetest';
     const preimage = 'a'.repeat(64);
+    const paidMelt = {
+        isFailed: false,
+        getPreimage: preimage,
+        getPaymentRequest: invoice,
+        getFee: 1
+    };
+
+    const planFor = (overrides: any = {}) => ({
+        paymentRequest: invoice,
+        payReq: new Invoice({
+            payment_request: invoice,
+            num_satoshis: '100'
+        } as any),
+        meltQuote: { quote: 'quote-1', amount: 100, fee_reserve: 2 },
+        meltQuotes: [],
+        plannerSkips: [],
+        feeEstimate: 2,
+        mintBalance: 100_000,
+        amount: 100,
+        ...overrides
+    });
 
     // Drives handleCashuPayInvoice past its guards to the response shape.
     // The melt has already succeeded by that point, so only the fields the
@@ -9286,7 +9312,8 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
     const payWith = async (
         cashuInvoice: any,
         payments: any[] = [],
-        cashuOverrides: any = {}
+        cashuOverrides: any = {},
+        plan: any = planFor()
     ) => {
         const { store } = createStore({
             cashuStore: {
@@ -9294,13 +9321,7 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
                 totalBalanceSats: 100_000,
                 paymentError: false,
                 paymentErrorMsg: '',
-                paymentRequest: invoice,
-                payReq: new Invoice({
-                    payment_request: invoice,
-                    num_satoshis: '100'
-                } as any),
-                getPayReqError: null,
-                getPayReq: jest.fn().mockResolvedValue(undefined),
+                getPayReq: jest.fn().mockResolvedValue(plan),
                 payLnInvoiceFromEcash: jest
                     .fn()
                     .mockResolvedValue(cashuInvoice),
@@ -9320,7 +9341,12 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
             { invoice },
             () => true
         );
-        return { response, connection, cashuStore: (store as any).cashuStore };
+        return {
+            response,
+            connection,
+            plan,
+            cashuStore: (store as any).cashuStore
+        };
     };
 
     beforeEach(() => {
@@ -9346,12 +9372,7 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
     });
 
     it('returns the melt preimage and debits the amount plus fee', async () => {
-        const { response, connection } = await payWith({
-            isFailed: false,
-            getPreimage: preimage,
-            getPaymentRequest: invoice,
-            getFee: 1
-        });
+        const { response, connection } = await payWith(paidMelt);
 
         expect(response.result.preimage).toBe(preimage);
         expect(connection.totalSpendSats).toBe(101);
@@ -9379,35 +9400,75 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
         expect(response.result.fees_paid).toBe(3000);
     });
 
-    it('tells CashuStore which invoice it may pay', async () => {
-        const { cashuStore } = await payWith({
-            isFailed: false,
-            getPreimage: preimage,
-            getPaymentRequest: invoice,
-            getFee: 1
-        });
+    it('pays the plan getPayReq returned for the requested invoice', async () => {
+        const { cashuStore, plan } = await payWith(paidMelt);
 
-        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledWith(
-            expect.objectContaining({ paymentRequest: invoice })
+        expect(cashuStore.getPayReq).toHaveBeenCalledWith(invoice);
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledWith({
+            amount: '100',
+            plan
+        });
+        expect(cashuStore.payLnInvoiceFromEcash.mock.calls[0][0].plan).toBe(
+            plan
         );
     });
 
-    it('pays nothing when another invoice was loaded into CashuStore meanwhile', async () => {
-        // getPayReq was superseded: it returns without an error and the
-        // store describes the invoice opened on a send screen
-        const { response, connection, cashuStore } = await payWith(
-            {
-                isFailed: false,
-                getPreimage: preimage,
-                getPaymentRequest: invoice,
-                getFee: 1
-            },
+    it('pays its own plan when the store or another getPayReq call holds a different invoice', async () => {
+        const other = 'lnbc1otherinvoice';
+        const ownPlan = planFor();
+        const otherPlan = planFor({
+            paymentRequest: other,
+            payReq: new Invoice({
+                payment_request: other,
+                num_satoshis: '7'
+            } as any),
+            amount: 7
+        });
+        // a send screen quotes another invoice while this one is quoted
+        const getPayReq = jest.fn();
+        getPayReq.mockImplementation(async (bolt11: string) => {
+            if (bolt11 !== invoice) return otherPlan;
+            await getPayReq(other);
+            return ownPlan;
+        });
+
+        const { response, cashuStore } = await payWith(
+            paidMelt,
             [],
-            { paymentRequest: 'lnbc1otherinvoice' }
+            {
+                getPayReq,
+                // fields the store had before plans; nothing reads them now
+                paymentRequest: other,
+                payReq: otherPlan.payReq,
+                getPayReqError: 'decoy error'
+            },
+            ownPlan
+        );
+
+        expect(getPayReq).toHaveBeenCalledWith(other);
+        expect(response.error).toBeUndefined();
+        expect(response.result.preimage).toBe(preimage);
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
+        expect(cashuStore.payLnInvoiceFromEcash.mock.calls[0][0].plan).toBe(
+            ownPlan
+        );
+    });
+
+    it('rejects the invoice with the error of its plan', async () => {
+        // the plan decoded the invoice, but the mint could not quote it
+        const { response, connection, cashuStore } = await payWith(
+            paidMelt,
+            [],
+            {},
+            planFor({ error: 'mint refused the quote' })
         );
 
         expect(response.result).toBeUndefined();
-        expect(response.error).toBeDefined();
+        expect(response.error).toEqual({
+            code: Nip47ErrorCode.INVALID_INVOICE,
+            message: 'mint refused the quote'
+        });
         expect(cashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
         expect(connection.totalSpendSats).toBe(0);
     });
@@ -9427,6 +9488,64 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
         expect(response.error).toBeUndefined();
         expect(response.result.preimage).toBe(preimage);
         expect(connection.totalSpendSats).toBe(101);
+    });
+
+    it('rejects a plan that holds no decoded invoice', async () => {
+        const { response, cashuStore } = await payWith(
+            paidMelt,
+            [],
+            {},
+            planFor({ payReq: undefined })
+        );
+
+        expect(response.error).toEqual({
+            code: Nip47ErrorCode.INVALID_INVOICE,
+            message:
+                'stores.NostrWalletConnectStore.error.failedToDecodeInvoice'
+        });
+        expect(cashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
+    });
+
+    it('rejects an invoice the plan shows as already paid', async () => {
+        const { response, cashuStore } = await payWith(
+            paidMelt,
+            [],
+            {},
+            planFor({
+                payReq: new Invoice({
+                    payment_request: invoice,
+                    num_satoshis: '100',
+                    settled: true
+                } as any)
+            })
+        );
+
+        expect(response.error).toEqual({
+            code: Nip47ErrorCode.INVALID_INVOICE,
+            message: 'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
+        });
+        expect(cashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
+    });
+
+    it('rejects an invoice the plan shows as expired', async () => {
+        const { response, cashuStore } = await payWith(
+            paidMelt,
+            [],
+            {},
+            planFor({
+                payReq: {
+                    isPaid: false,
+                    isExpired: true,
+                    getPaymentRequest: invoice
+                }
+            })
+        );
+
+        expect(response.error).toEqual({
+            code: Nip47ErrorCode.INVALID_INVOICE,
+            message: 'stores.NostrWalletConnectStore.error.invoiceExpired'
+        });
+        expect(cashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
     });
 
     it('never returns the invoice as the preimage', async () => {

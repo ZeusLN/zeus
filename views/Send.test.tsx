@@ -426,19 +426,17 @@ describe('Send BOLT 12 Proceed', () => {
         bolt12?: string;
         satAmount?: number | string;
         paymentInFlight?: boolean;
-        // amount the fetched invoice decodes to, as InvoicesStore sets it
+        // amount the fetched invoice decodes to. Without it the decode
+        // fails
         decodedSats?: number;
     } = {}) => {
         const TransactionsStore = { paymentInFlight, sendPayment: jest.fn() };
         const InvoicesStore: any = {
-            pay_req: null,
             getPayReq: jest.fn(async () => {
-                if (decodedSats !== undefined) {
-                    InvoicesStore.pay_req = { getRequestAmount: decodedSats };
+                if (decodedSats === undefined) {
+                    throw new Error('decode failed');
                 }
-            }),
-            clearPayReq: jest.fn(() => {
-                InvoicesStore.pay_req = null;
+                return { getRequestAmount: decodedSats };
             })
         };
         const { navigation } = await renderView({
@@ -598,6 +596,7 @@ describe('Send BOLT 12 Proceed', () => {
         expect(navigation.navigate).not.toHaveBeenCalled();
     });
 
+    // the invoice here fails to decode: PaymentRequest shows that error
     it('fetches an invoice for PaymentRequest on a backend without direct offer pay', async () => {
         supportsOffersDirectPay.mockReturnValue(false);
         fetchInvoiceFromOffer.mockResolvedValue({ invoice: 'lnbcrt1...' });
@@ -616,7 +615,10 @@ describe('Send BOLT 12 Proceed', () => {
             '100'
         );
         expect(InvoicesStore.getPayReq).toHaveBeenCalledWith('lnbcrt1...');
-        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest');
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {
+            paymentRequest: 'lnbcrt1...'
+        });
+        expect(errorShown()).toBeUndefined();
         expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
     });
 
@@ -630,8 +632,10 @@ describe('Send BOLT 12 Proceed', () => {
         await proceed();
 
         expect(InvoicesStore.getPayReq).toHaveBeenCalledWith('lni1...');
-        expect(InvoicesStore.clearPayReq).not.toHaveBeenCalled();
-        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest');
+        // PaymentRequest decodes and pays the invoice that was checked
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {
+            paymentRequest: 'lni1...'
+        });
         expect(errorShown()).toBeUndefined();
     });
 
@@ -646,8 +650,6 @@ describe('Send BOLT 12 Proceed', () => {
             await proceed();
 
             expect(InvoicesStore.getPayReq).toHaveBeenCalledWith('lni1...');
-            expect(InvoicesStore.clearPayReq).toHaveBeenCalled();
-            expect(InvoicesStore.pay_req).toBeNull();
             expect(navigation.navigate).not.toHaveBeenCalled();
             expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
             expect(errorShown()).toBe(
@@ -691,6 +693,33 @@ describe('Send BOLT 12 Proceed', () => {
             expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
         }
     );
+});
+
+describe('Send Lightning lookup', () => {
+    const params = {
+        destination: 'lnbcrt1...',
+        transactionType: 'Lightning',
+        isValid: true
+    };
+
+    it('leaves the decode to PaymentRequest', async () => {
+        const InvoicesStore = { getPayReq: jest.fn() };
+        await renderView({ params, InvoicesStore });
+
+        expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
+    });
+
+    it('opens PaymentRequest with the payment request shown', async () => {
+        const InvoicesStore = { getPayReq: jest.fn() };
+        const { navigation } = await renderView({ params, InvoicesStore });
+
+        await fireEvent.press(button('views.Send.lookup'));
+
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {
+            paymentRequest: 'lnbcrt1...'
+        });
+        expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
+    });
 });
 
 describe('Send mount', () => {

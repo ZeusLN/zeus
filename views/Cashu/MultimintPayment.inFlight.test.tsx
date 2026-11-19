@@ -68,7 +68,6 @@ const renderAfterPayment = async (
         payReq: { getRequestAmount: 1000 },
         feeEstimate: 2,
         payReqMintBalance: 1100,
-        multiMintPlannerSkips: [],
         mintInfos: {},
         paymentError: false
     };

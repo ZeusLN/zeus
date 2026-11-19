@@ -8,7 +8,6 @@ import TextInput from './TextInput';
 import { Row } from './layout/Row';
 
 import SettingsStore from '../stores/SettingsStore';
-import InvoicesStore from '../stores/InvoicesStore';
 
 import BackendUtils from '../utils/BackendUtils';
 import FeeUtils from '../utils/FeeUtils';
@@ -22,8 +21,9 @@ interface FeeLimitProps {
     onFeeOptionChange?: (feeOption: string) => void;
     satAmount?: string | number;
     SettingsStore: SettingsStore;
-    InvoicesStore?: InvoicesStore;
     feeOption?: string;
+    // the route fee estimate of the payment the limit is for, if any
+    feeEstimate?: number | null;
     displayFeeRecommendation?: boolean;
     // render but do not display so our calculations
     // are always done on PaymentRequest view
@@ -38,7 +38,7 @@ interface FeeLimitState {
     satAmount: string;
 }
 
-@inject('SettingsStore', 'InvoicesStore')
+@inject('SettingsStore')
 @observer
 export default class FeeLimit extends React.Component<
     FeeLimitProps,
@@ -150,8 +150,7 @@ export default class FeeLimit extends React.Component<
 
     feeRecommendation = () => {
         const { feeLimitSat } = this.state;
-        const { InvoicesStore } = this.props;
-        const { feeEstimate } = InvoicesStore!;
+        const { feeEstimate } = this.props;
 
         if (
             feeEstimate &&

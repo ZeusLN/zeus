@@ -54,33 +54,72 @@ import { render, screen, waitFor } from '@testing-library/react-native';
 import { loadDonationLnurl } from '../../utils/DonationUtils';
 import CashuSendingLightning from './CashuSendingLightning';
 
-const renderView = async (paymentHash: string, LnurlPayStore: any) => {
-    const CashuStore = {
-        loading: false,
-        paymentSuccess: true,
-        paymentError: false,
-        payReq: { payment_hash: paymentHash, getRequestAmount: 21 },
-        paymentPreimage: 'ab'.repeat(32),
-        resetPaymentState: jest.fn(),
-        payLnInvoiceFromEcash: jest.fn()
-    };
-    await render(
-        <CashuSendingLightning
-            {...({
-                navigation: { addListener: jest.fn(() => jest.fn()) },
-                route: { params: {} },
-                CashuStore,
-                ContactStore: { contacts: [] },
-                LnurlPayStore,
-                NodeInfoStore: { nodeInfo: {} }
-            } as any)}
-        />
-    );
+const REVIEWED = 'lnbc1reviewed';
+
+// the plan CashuPaymentRequest quoted for the invoice it showed
+const makePlan = (paymentRequest: string, payReq: object = {}): any => ({
+    paymentRequest,
+    payReq: {
+        payment_hash: 'ab'.repeat(32),
+        getRequestAmount: 21,
+        getMemo: 'coffee',
+        ...payReq
+    },
+    meltQuote: { quote: `quote-${paymentRequest}` },
+    meltQuotes: [],
+    plannerSkips: [],
+    feeEstimate: 1,
+    mintBalance: 5000,
+    amount: 21
+});
+
+// what the store held before getPayReq stopped keeping its result: none
+// of it may reach the screen or the payment
+const decoys = {
+    paymentRequest: 'lnbc1decoy',
+    payReq: {
+        payment_hash: 'de'.repeat(32),
+        getRequestAmount: 999,
+        getMemo: 'decoy memo'
+    },
+    meltQuote: { quote: 'decoy-quote' },
+    meltQuotes: [{ mintUrl: 'https://decoy.mint', quote: 'decoy-quote' }],
+    feeEstimate: 4242,
+    payReqMintBalance: 1,
+    payReqAmount: 999
 };
 
-const recipient = () =>
-    screen.container.queryAll((n) => n.type === 'PaymentDetailsSheet')[0].props
-        .lightningAddress;
+const navigation = {
+    addListener: jest.fn(() => () => {}),
+    navigate: jest.fn(),
+    popTo: jest.fn()
+} as any;
+
+const buildCashuStore = (fields: object = {}): any => ({
+    ...decoys,
+    resetPaymentState: jest.fn(),
+    getPayReq: jest.fn(async (paymentRequest: string) =>
+        makePlan(paymentRequest)
+    ),
+    payLnInvoiceFromEcash: jest.fn().mockResolvedValue(undefined),
+    paymentSuccess: false,
+    paymentError: false,
+    loading: false,
+    ...fields
+});
+
+const view = (cashuStore: any, params: any, LnurlPayStore: any = {}) => (
+    <CashuSendingLightning
+        navigation={navigation}
+        route={{ params } as any}
+        CashuStore={cashuStore}
+        ContactStore={{ contacts: [] } as any}
+        LnurlPayStore={LnurlPayStore}
+    />
+);
+
+const hostProps = (type: string) =>
+    screen.container.queryAll((n) => n.type === type)[0]?.props;
 
 describe('CashuSendingLightning recipient', () => {
     // a Lightning address looked up earlier for another invoice
@@ -89,72 +128,125 @@ describe('CashuSendingLightning recipient', () => {
         lightningAddress: 'alice@friends.example'
     };
 
-    it('shows the Lightning address for the invoice it was looked up for', async () => {
-        await renderView(lnurlPay.paymentHash, lnurlPay);
+    const renderPaid = (planHash: string, storeHash: string) =>
+        render(
+            view(
+                buildCashuStore({
+                    paymentSuccess: true,
+                    paymentPreimage: 'ab'.repeat(32),
+                    payReq: { ...decoys.payReq, payment_hash: storeHash }
+                }),
+                {
+                    paymentPlan: makePlan(REVIEWED, {
+                        payment_hash: planHash
+                    })
+                },
+                lnurlPay
+            )
+        );
 
-        expect(recipient()).toBe('alice@friends.example');
+    it('shows the Lightning address for the invoice it was looked up for', async () => {
+        await renderPaid(lnurlPay.paymentHash, 'cd'.repeat(32));
+
+        expect(hostProps('PaymentDetailsSheet').lightningAddress).toBe(
+            'alice@friends.example'
+        );
     });
 
     it('does not show the Lightning address for a different payment', async () => {
-        await renderView('cd'.repeat(32), lnurlPay);
+        // the store still holds the invoice the address was looked up for
+        await renderPaid('cd'.repeat(32), lnurlPay.paymentHash);
 
-        expect(recipient()).toBeUndefined();
+        expect(
+            hostProps('PaymentDetailsSheet').lightningAddress
+        ).toBeUndefined();
     });
 });
 
-const navigation = {
-    addListener: jest.fn(() => () => {}),
-    navigate: jest.fn(),
-    popTo: jest.fn()
-} as any;
+describe('CashuSendingLightning shows the plan it was handed', () => {
+    const renderPaid = (params: object) =>
+        render(
+            view(
+                buildCashuStore({
+                    paymentSuccess: true,
+                    paymentPreimage: 'ab'.repeat(32)
+                }),
+                params
+            )
+        );
 
-const buildCashuStore = () => ({
-    resetPaymentState: jest.fn(),
-    getPayReq: jest.fn().mockResolvedValue(undefined),
-    payLnInvoiceFromEcash: jest.fn().mockResolvedValue(undefined),
-    paymentSuccess: false,
-    paymentError: false,
-    loading: false
+    it('shows the amount, memo and payment hash of the plan', async () => {
+        await renderPaid({ paymentPlan: makePlan(REVIEWED) });
+
+        expect(hostProps('PaymentSuccessView').paymentAmount).toBe(21);
+        expect(hostProps('PaymentDetailsSheet')).toMatchObject({
+            paymentAmount: 21,
+            memo: 'coffee',
+            paymentHash: 'ab'.repeat(32)
+        });
+    });
+
+    it('shows the amount from the route params over the plan amount', async () => {
+        await renderPaid({
+            paymentAmount: '100',
+            paymentPlan: makePlan(REVIEWED)
+        });
+
+        expect(hostProps('PaymentSuccessView').paymentAmount).toBe(100);
+    });
+
+    it('shows no invoice details without a plan', async () => {
+        await renderPaid({ paymentAmount: '100' });
+
+        expect(hostProps('PaymentDetailsSheet')).toMatchObject({
+            paymentAmount: 100,
+            memo: undefined,
+            paymentHash: undefined
+        });
+    });
 });
-
-const view = (cashuStore: any, params: any) => (
-    <CashuSendingLightning
-        navigation={navigation}
-        route={{ params } as any}
-        CashuStore={cashuStore}
-        ContactStore={{ contacts: [] } as any}
-        LnurlPayStore={{} as any}
-    />
-);
 
 describe('CashuSendingLightning', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    it('pays only the invoice reviewed on the previous screen', async () => {
+    it('pays the plan reviewed on the previous screen', async () => {
         const cashuStore = buildCashuStore();
+        const paymentPlan = makePlan(REVIEWED);
 
-        await render(
-            view(cashuStore, {
-                paymentAmount: '100',
-                paymentRequest: 'lnbc1reviewed',
-                enableDonations: false
-            })
-        );
+        await render(view(cashuStore, { paymentAmount: '100', paymentPlan }));
 
         expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
         expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledWith({
             amount: '100',
-            paymentRequest: 'lnbc1reviewed'
+            plan: paymentPlan
         });
+        expect(cashuStore.payLnInvoiceFromEcash.mock.calls[0][0].plan).toBe(
+            paymentPlan
+        );
+        // the screen pays what it was handed and quotes nothing itself
+        expect(cashuStore.getPayReq).not.toHaveBeenCalled();
     });
 
-    it('pays the donation only for the donation invoice it loaded', async () => {
+    it('hands the store no plan when it was opened without one', async () => {
+        const cashuStore = buildCashuStore();
+
+        await render(view(cashuStore, { paymentAmount: '100' }));
+
+        // payLnInvoiceFromEcash pays nothing without a plan
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledWith({
+            amount: '100',
+            plan: undefined
+        });
+        expect(cashuStore.getPayReq).not.toHaveBeenCalled();
+    });
+
+    it('quotes the donation invoice it loaded and pays that plan as a donation', async () => {
         (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
         const cashuStore = buildCashuStore();
         const params = {
             paymentAmount: '100',
-            paymentRequest: 'lnbc1reviewed',
-            enableDonations: true,
+            paymentPlan: makePlan(REVIEWED),
             donationAmount: '5'
         };
 
@@ -165,15 +257,34 @@ describe('CashuSendingLightning', () => {
         await waitFor(() =>
             expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(2)
         );
-        expect(cashuStore.getPayReq).toHaveBeenCalledWith(
-            'lnbc1donation',
-            true
-        );
+        expect(cashuStore.getPayReq.mock.calls).toEqual([['lnbc1donation']]);
+        const donationPlan = await cashuStore.getPayReq.mock.results[0].value;
         expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenLastCalledWith({
             amount: '5',
-            paymentRequest: 'lnbc1donation',
+            plan: donationPlan,
             isDonationPayment: true
         });
+        const { plan } = cashuStore.payLnInvoiceFromEcash.mock.calls[1][0];
+        expect(plan).toBe(donationPlan);
+        expect(plan).not.toBe(params.paymentPlan);
+    });
+
+    it('sends no donation without a donation amount', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const cashuStore = buildCashuStore();
+        const params = {
+            paymentAmount: '100',
+            paymentPlan: makePlan(REVIEWED)
+        };
+
+        const { rerender } = await render(view(cashuStore, params));
+        cashuStore.paymentSuccess = true;
+        await rerender(view(cashuStore, params));
+        await new Promise((r) => setImmediate(r));
+
+        expect(loadDonationLnurl).not.toHaveBeenCalled();
+        expect(cashuStore.getPayReq).not.toHaveBeenCalled();
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
     });
 
     // The screen stays mounted under anything pushed on top of it (Add a
@@ -192,7 +303,7 @@ describe('CashuSendingLightning', () => {
 
     const donationParams = {
         paymentAmount: '100',
-        paymentRequest: 'lnbc1reviewed',
+        paymentPlan: makePlan(REVIEWED),
         donationAmount: '25'
     };
 

@@ -1,7 +1,7 @@
 import { Alert, Platform } from 'react-native';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
 
-import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
+import { nodeInfoStore, settingsStore } from '../stores/Stores';
 
 import AddressUtils from './AddressUtils';
 import BackendUtils from './BackendUtils';
@@ -491,8 +491,7 @@ const handleAnything = async (
                 }
             ];
         } else {
-            await invoicesStore.getPayReq(value || lightning);
-            return ['PaymentRequest', {}];
+            return ['PaymentRequest', { paymentRequest: value || lightning }];
         }
     } else if (
         !hasAt &&

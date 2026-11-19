@@ -44,7 +44,7 @@ jest.mock('../storage', () => ({
     KEY_PREFIX: 'zeus:'
 }));
 
-import CashuStore from './CashuStore';
+import CashuStore, { CashuPaymentPlan } from './CashuStore';
 import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
 import Bolt11Utils from '../utils/Bolt11Utils';
@@ -166,8 +166,8 @@ const invoiceFor = (fields: Record<string, any>) =>
         ...fields
     });
 
-const planOf = (store: CashuStore) =>
-    store.meltQuotes.map(({ mintUrl, meltQuote, useRegularMelt }) => ({
+const planOf = (plan: CashuPaymentPlan) =>
+    plan.meltQuotes.map(({ mintUrl, meltQuote, useRegularMelt }) => ({
         mintUrl,
         amount: meltQuote.amount,
         fee: meltQuote.fee_reserve,
@@ -233,17 +233,16 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             [B]: () => ({ fee: 1 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         // usable A 599, B 499 (balance minus probe fee), total 1098.
         // A's share is ceil(1000 * 599 / 1098) = 546; B covers the other 454.
-        expect(planOf(store)).toEqual([
+        expect(planOf(plan)).toEqual([
             { mintUrl: A, amount: 546, fee: 1 },
             { mintUrl: B, amount: 454, fee: 1 }
         ]);
-        expect(store.getPayReqError).toBeUndefined();
-        expect(store.feeEstimate).toBe(2);
-        expect(store.loading).toBe(false);
+        expect(plan.error).toBeUndefined();
+        expect(plan.feeEstimate).toBe(2);
         // Each mint is probed at min(balance, amount), then re-quoted for
         // its share. The mpp amount goes over the wire in msat.
         expect(calls).toEqual([
@@ -268,15 +267,15 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             [C]: () => ({ fee: 0 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         // ceil(1000 / 3) = 334 for the first two, the last takes the rest
-        expect(planOf(store)).toEqual([
+        expect(planOf(plan)).toEqual([
             { mintUrl: A, amount: 334, fee: 0 },
             { mintUrl: B, amount: 334, fee: 0 },
             { mintUrl: C, amount: 332, fee: 0 }
         ]);
-        expect(store.getPayReqError).toBeUndefined();
+        expect(plan.error).toBeUndefined();
     });
 
     it('stops probing once one mint covers the invoice, so the others never see it', async () => {
@@ -289,11 +288,11 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             [B]: () => ({ fee: 2 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         expect(calls).toEqual([{ mintUrl: B, amountSats: 1000 }]);
-        expect(planOf(store)).toEqual([{ mintUrl: B, amount: 1000, fee: 2 }]);
-        expect(store.feeEstimate).toBe(2);
+        expect(planOf(plan)).toEqual([{ mintUrl: B, amount: 1000, fee: 2 }]);
+        expect(plan.feeEstimate).toBe(2);
     });
 
     it('uses a regular melt quote when only one selected mint has funds', async () => {
@@ -303,15 +302,15 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
         });
         const { fetchMock } = mintApi({});
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         expect(fetchMock).not.toHaveBeenCalled();
         expect(cdk.createMeltQuote).toHaveBeenCalledWith(A, INVOICE, undefined);
-        expect(planOf(store)).toEqual([
+        expect(planOf(plan)).toEqual([
             { mintUrl: A, amount: 1000, fee: 3, regular: true }
         ]);
-        expect(store.meltQuotes[0].meltQuote.id).toBe(`regular-${A}`);
-        expect(store.getPayReqError).toBeUndefined();
+        expect(plan.meltQuotes[0].meltQuote.id).toBe(`regular-${A}`);
+        expect(plan.error).toBeUndefined();
     });
 
     it('reports not enough funds when the only funded mint cannot cover amount plus fee', async () => {
@@ -321,11 +320,11 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
         });
         mintApi({});
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         // 1000 + 3 fee reserve > 1002
-        expect(store.meltQuotes).toEqual([]);
-        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+        expect(plan.meltQuotes).toEqual([]);
+        expect(plan.error).toBe('stores.CashuStore.notEnoughFunds');
     });
 
     it('reports not enough funds and keeps the partial plan when the mints fall short', async () => {
@@ -338,16 +337,16 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             [C]: () => ({ fee: 0 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
-        expect(planOf(store)).toEqual([
+        expect(planOf(plan)).toEqual([
             { mintUrl: A, amount: 300, fee: 0 },
             { mintUrl: C, amount: 200, fee: 0 }
         ]);
-        expect(store.multiMintPlannerSkips).toEqual([
+        expect(plan.plannerSkips).toEqual([
             { mintUrl: B, reason: 'noBalance' }
         ]);
-        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+        expect(plan.error).toBe('stores.CashuStore.notEnoughFunds');
     });
 
     it('skips mints that are unreachable, reject MPP, or whose fee eats the balance', async () => {
@@ -363,18 +362,18 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             'https://d.mint': () => ({ fee: 1 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
-        expect(store.multiMintPlannerSkips).toEqual([
+        expect(plan.plannerSkips).toEqual([
             { mintUrl: A, reason: 'networkError' },
             { mintUrl: B, reason: 'mppRejected' },
             { mintUrl: C, reason: 'feeOverBalance' }
         ]);
         // D can spend its balance less the fee: 699 of 700
-        expect(planOf(store)).toEqual([
+        expect(planOf(plan)).toEqual([
             { mintUrl: 'https://d.mint', amount: 699, fee: 1 }
         ]);
-        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+        expect(plan.error).toBe('stores.CashuStore.notEnoughFunds');
     });
 
     it('falls back to a regular melt on the invoice mint when it refuses MPP for its own invoice', async () => {
@@ -387,15 +386,48 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             [B]: () => ({ fee: 0 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
-        expect(store.multiMintPlannerSkips).toEqual([
-            { mintUrl: A, reason: 'selfSend' }
-        ]);
-        expect(planOf(store)).toEqual([
+        expect(plan.plannerSkips).toEqual([{ mintUrl: A, reason: 'selfSend' }]);
+        expect(planOf(plan)).toEqual([
             { mintUrl: A, amount: 1000, fee: 3, regular: true }
         ]);
-        expect(store.getPayReqError).toBeUndefined();
+        expect(plan.error).toBeUndefined();
+    });
+
+    it('keeps the skips of each plan to that plan when another invoice is quoted after it', async () => {
+        const store = newStore({
+            balances: { [A]: 600, [B]: 300 },
+            selected: [A, B]
+        });
+        mintApi({
+            [A]: () => ({
+                status: 400,
+                body: 'Multi-Part Internal Melt Quotes are not supported'
+            }),
+            [B]: () => ({ fee: 0 })
+        });
+        const first = await store.getPayReq(INVOICE);
+
+        // A quotes this time, so the second plan skips no mint
+        mintApi({
+            [A]: () => ({ fee: 0 }),
+            [B]: () => ({ fee: 0 })
+        });
+        const second = await store.getPayReq(INVOICE);
+        expect(second.plannerSkips).toEqual([]);
+
+        await store.payLnInvoiceFromEcash({
+            plan: { ...first, meltQuotes: [] },
+            amount: '1000'
+        });
+
+        expect(first.plannerSkips).toEqual([
+            { mintUrl: A, reason: 'selfSend' }
+        ]);
+        expect(store.paymentErrorMsg).toBe(
+            'stores.CashuStore.notEnoughFundsSelfSend'
+        );
     });
 
     it('names the invoice mint when it refuses MPP and the others fall short', async () => {
@@ -411,14 +443,10 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             [B]: () => ({ fee: 0 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
-        expect(store.multiMintPlannerSkips).toEqual([
-            { mintUrl: A, reason: 'selfSend' }
-        ]);
-        expect(store.getPayReqError).toBe(
-            'stores.CashuStore.notEnoughFundsSelfSend'
-        );
+        expect(plan.plannerSkips).toEqual([{ mintUrl: A, reason: 'selfSend' }]);
+        expect(plan.error).toBe('stores.CashuStore.notEnoughFundsSelfSend');
         expect(localeString).toHaveBeenCalledWith(
             'stores.CashuStore.notEnoughFundsSelfSend',
             { mintName: 'Mint A' }
@@ -437,7 +465,7 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             [B]: () => ({ fee: 1 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         // A's share 546 + 60 > 600, so it is re-quoted at 600 - 60 = 540
         // and B takes the remaining 460.
@@ -446,12 +474,12 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             { mintUrl: A, amountSats: 546 },
             { mintUrl: A, amountSats: 540 }
         ]);
-        expect(planOf(store)).toEqual([
+        expect(planOf(plan)).toEqual([
             { mintUrl: A, amount: 540, fee: 60 },
             { mintUrl: B, amount: 460, fee: 1 }
         ]);
-        expect(store.feeEstimate).toBe(61);
-        expect(store.getPayReqError).toBeUndefined();
+        expect(plan.feeEstimate).toBe(61);
+        expect(plan.error).toBeUndefined();
     });
 
     it('rejects an invoice amount that is not a whole number of sats', async () => {
@@ -462,11 +490,11 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
         const { fetchMock } = mintApi({});
         invoiceFor({ millisatoshis: '1000500' });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         expect(fetchMock).not.toHaveBeenCalled();
-        expect(store.meltQuotes).toEqual([]);
-        expect(store.getPayReqError).toBe(
+        expect(plan.meltQuotes).toEqual([]);
+        expect(plan.error).toBe(
             'stores.CashuStore.invalidMultimintPaymentAmount'
         );
     });
@@ -482,11 +510,11 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             timestamp: Math.floor(Date.now() / 1000) - 7200
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         expect(fetchMock).not.toHaveBeenCalled();
         expect(cdk.createMeltQuote).not.toHaveBeenCalled();
-        expect(store.meltQuotes).toEqual([]);
+        expect(plan.meltQuotes).toEqual([]);
     });
 
     it('quotes the single selected mint, not the receive mint, when one mint is selected', async () => {
@@ -496,13 +524,13 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
         });
         const { fetchMock } = mintApi({});
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         expect(fetchMock).not.toHaveBeenCalled();
         expect(cdk.createMeltQuote).toHaveBeenCalledWith(B, INVOICE, undefined);
-        expect(store.meltQuote?.quote).toBe(`regular-${B}`);
-        expect(store.meltQuotes).toEqual([]);
-        expect(store.getPayReqError).toBeUndefined();
+        expect(plan.meltQuote?.quote).toBe(`regular-${B}`);
+        expect(plan.meltQuotes).toEqual([]);
+        expect(plan.error).toBeUndefined();
     });
 
     it('ignores the multi-mint selection when multi-mint is turned off', async () => {
@@ -513,12 +541,12 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
         });
         const { fetchMock } = mintApi({});
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         expect(fetchMock).not.toHaveBeenCalled();
         expect(cdk.createMeltQuote).toHaveBeenCalledWith(A, INVOICE, undefined);
         // the receive mint holds 100 sats, so the payment cannot go ahead
-        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+        expect(plan.error).toBe('stores.CashuStore.notEnoughFunds');
     });
 
     it('currently gives up without the single-mint fallback when no selected mint advertises MPP', async () => {
@@ -529,15 +557,15 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
         });
         const { fetchMock } = mintApi({});
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         // A alone could pay with a regular melt (that is what the planner
         // does when A is the only funded mint), but with no MPP candidates
         // it returns before reaching the fallback.
         expect(fetchMock).not.toHaveBeenCalled();
         expect(cdk.createMeltQuote).not.toHaveBeenCalled();
-        expect(store.meltQuotes).toEqual([]);
-        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+        expect(plan.meltQuotes).toEqual([]);
+        expect(plan.error).toBe('stores.CashuStore.notEnoughFunds');
     });
 
     it('currently gives up without the fallback when the invoice mint refuses MPP and no other mint can probe', async () => {
@@ -550,14 +578,12 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             [A]: () => ({ status: 400, body: 'internal mpp not allowed' })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         // Same invoice and balances as the fallback test above, except B
         // does not advertise NUT-15. A could still pay alone.
         expect(cdk.createMeltQuote).not.toHaveBeenCalled();
-        expect(store.getPayReqError).toBe(
-            'stores.CashuStore.notEnoughFundsSelfSend'
-        );
+        expect(plan.error).toBe('stores.CashuStore.notEnoughFundsSelfSend');
     });
 
     it('currently leaves unprobed mints out when a probed mint fails its re-quote', async () => {
@@ -572,7 +598,7 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
             [C]: () => ({ fee: 0 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         // A and B covered the invoice at probe time, so C was never asked.
         // When A's re-quote fails, B keeps its proportional share
@@ -580,10 +606,10 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
         // B and C together hold 1000.
         expect(calls.some((c) => c.mintUrl === C)).toBe(false);
         // The requoteFailed skip is pushed after the skip list was
-        // published, so it never reaches multiMintPlannerSkips
-        expect(store.multiMintPlannerSkips).toEqual([]);
-        expect(planOf(store)).toEqual([{ mintUrl: B, amount: 455, fee: 0 }]);
-        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+        // published, so it never reaches the plan's plannerSkips
+        expect(plan.plannerSkips).toEqual([]);
+        expect(planOf(plan)).toEqual([{ mintUrl: B, amount: 455, fee: 0 }]);
+        expect(plan.error).toBe('stores.CashuStore.notEnoughFunds');
     });
 });
 
@@ -597,9 +623,9 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
                 Object.keys(balances).map((m) => [m, () => ({ fee: 1 })])
             )
         );
-        await store.getPayReq(INVOICE);
-        expect(store.getPayReqError).toBeUndefined();
-        return store;
+        const plan = await store.getPayReq(INVOICE);
+        expect(plan.error).toBeUndefined();
+        return { store, plan };
     };
 
     // Only A has funds, so the planner prepares one regular quote on it
@@ -609,11 +635,11 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             selected: [A, B]
         });
         mintApi({});
-        await store.getPayReq(INVOICE);
-        expect(store.meltQuotes).toEqual([
+        const plan = await store.getPayReq(INVOICE);
+        expect(plan.meltQuotes).toEqual([
             expect.objectContaining({ mintUrl: A, useRegularMelt: true })
         ]);
-        return store;
+        return { store, plan };
     };
 
     const paid = (amount: number, fee: number, preimage = PREIMAGE) => ({
@@ -635,6 +661,15 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         used_by_operation: 'saga-1'
     });
 
+    // A plan for the invoice with no quotes in it
+    const emptyPlan: CashuPaymentPlan = {
+        paymentRequest: INVOICE,
+        meltQuotes: [],
+        plannerSkips: [],
+        mintBalance: 0,
+        amount: 0
+    };
+
     const pendingQuotes = (store: CashuStore) =>
         store.pendingMelts.map((melt) => melt.quote);
 
@@ -652,14 +687,14 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('quotes and melts each part, records it, and reports the combined fee', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.melt.mockImplementation(async (mintUrl: string) =>
             mintUrl === A ? paid(546, 1) : paid(454, 2, '')
         );
         const onProgress = jest.fn();
 
         const result = await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             onProgress
         });
 
@@ -715,7 +750,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('records a paid part once when reconcile settles it while another part is still melting', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.melt.mockImplementation(async (mintUrl: string) => {
             if (mintUrl === A) return paid(546, 1);
             // A has been paid and is still tracked while B melts. A reconcile
@@ -737,7 +772,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
                 : heldQuote(id)
         );
 
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+        await store.payLnInvoiceFromEcash({ plan });
 
         expect(cdk.checkMeltQuote).toHaveBeenCalledWith(A, `cdk-mpp-${A}`);
         expect(store.paymentSuccess).toBe(true);
@@ -758,19 +793,19 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('counts a part that paid no fee', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.melt.mockImplementation(async (mintUrl: string) =>
             mintUrl === A ? paid(546, 0) : paid(454, 2)
         );
 
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+        await store.payLnInvoiceFromEcash({ plan });
 
         expect(store.paymentFee).toBe(2);
         expect(store.payments!.map((p) => p.fee)).toEqual([0, 2]);
     });
 
     it('leaves the fee out when the fee of a paid part is not known', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.melt.mockImplementation(async (mintUrl: string) => {
             if (mintUrl === A) return paid(546, 1);
             throw new Error('connection lost');
@@ -786,7 +821,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             })
         );
 
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+        await store.payLnInvoiceFromEcash({ plan });
 
         expect(store.paymentSuccess).toBe(true);
         expect(store.paymentFee).toBeUndefined();
@@ -805,7 +840,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     ])(
         'reports a paid invoice as paid when writing %s after the parts fails',
         async (_label, failingKey, callsBeforeFailing) => {
-            const store = await plannedStore();
+            const { store, plan } = await plannedStore();
             cdk.melt.mockImplementation(async (mintUrl: string) =>
                 mintUrl === A ? paid(546, 1) : paid(454, 2, '')
             );
@@ -819,7 +854,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             const onProgress = jest.fn();
 
             await store.payLnInvoiceFromEcash({
-                paymentRequest: INVOICE,
+                plan,
                 onProgress
             });
 
@@ -859,11 +894,11 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     );
 
     it('melts a regular-quote plan with its quote id without quoting it again', async () => {
-        const store = await regularPlannedStore();
+        const { store, plan } = await regularPlannedStore();
         cdk.createMeltQuote.mockClear();
         cdk.melt.mockResolvedValue(paid(1000, 2));
 
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+        await store.payLnInvoiceFromEcash({ plan });
 
         expect(cdk.melt).toHaveBeenCalledWith(A, `regular-${A}`);
         expect(cdk.createMeltQuote).not.toHaveBeenCalled();
@@ -877,7 +912,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('reports success when one part is paid and another fails unpaid, recording only the paid part', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.melt.mockImplementation(async (mintUrl: string) => {
             if (mintUrl === B) throw new Error('mint B timed out');
             return paid(546, 1);
@@ -885,7 +920,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         const onProgress = jest.fn();
 
         await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             onProgress
         });
 
@@ -912,7 +947,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('reports success when one part is paid and another may still settle, recording both', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.melt.mockImplementation(async (mintUrl: string) => {
             if (mintUrl === B) throw new Error('connection lost');
             return paid(546, 1);
@@ -923,7 +958,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         const onProgress = jest.fn();
 
         await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             onProgress
         });
 
@@ -964,14 +999,14 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('reports the first failure and records nothing when every part fails', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.melt.mockImplementation(async (mintUrl: string) => {
             throw new Error(`${mintUrl} refused`);
         });
         const onProgress = jest.fn();
 
         const result = await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             onProgress
         });
 
@@ -996,7 +1031,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     // reported as failed and recorded nowhere, while the mint kept the
     // ecash and could still pay the invoice
     it('treats a part the mint has not settled as in flight', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.melt.mockResolvedValue({
             state: 'PENDING',
             amount: 0,
@@ -1005,7 +1040,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         const onProgress = jest.fn();
 
         await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             onProgress
         });
 
@@ -1026,13 +1061,13 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('records a regular-melt part whose melt throws while the mint holds the quote as in flight, and settles it on reconcile', async () => {
-        const store = await regularPlannedStore();
+        const { store, plan } = await regularPlannedStore();
         cdk.melt.mockRejectedValue(new Error('connection lost'));
         cdk.checkMeltQuote.mockResolvedValue(heldQuote(`regular-${A}`));
         const onProgress = jest.fn();
 
         const result = await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             onProgress
         });
 
@@ -1090,7 +1125,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('reports a part as paid when its melt throws but the mint has paid the quote', async () => {
-        const store = await regularPlannedStore();
+        const { store, plan } = await regularPlannedStore();
         cdk.melt.mockRejectedValue(new Error('connection lost'));
         cdk.checkMeltQuote.mockResolvedValue({
             id: `regular-${A}`,
@@ -1101,7 +1136,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             payment_preimage: PREIMAGE
         });
 
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+        await store.payLnInvoiceFromEcash({ plan });
 
         expect(store.paymentSuccess).toBe(true);
         expect(store.paymentError).toBe(false);
@@ -1114,12 +1149,12 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('still fails a part whose melt throws with the quote unpaid and expired', async () => {
-        const store = await regularPlannedStore();
+        const { store, plan } = await regularPlannedStore();
         cdk.melt.mockRejectedValue(new Error('mint unreachable'));
         const onProgress = jest.fn();
 
         await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             onProgress
         });
 
@@ -1135,7 +1170,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('keeps a part in flight when its melt throws and its quote cannot be checked', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.melt.mockImplementation(async (mintUrl: string) => {
             if (mintUrl === B) throw new Error('connection lost');
             return paid(546, 1);
@@ -1144,7 +1179,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         const onProgress = jest.fn();
 
         await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             onProgress
         });
 
@@ -1215,7 +1250,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             step,
             errorMsg
         ) => {
-            const store = await regularPlannedStore();
+            const { store, plan } = await regularPlannedStore();
             cdk.melt.mockRejectedValue(new Error('connection lost'));
             // A reconcile pass resumes the melt saga at the same moment, so
             // CDK refuses the pay path's check
@@ -1236,7 +1271,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             const onProgress = jest.fn();
 
             await store.payLnInvoiceFromEcash({
-                paymentRequest: INVOICE,
+                plan,
                 onProgress
             });
 
@@ -1264,7 +1299,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     ])(
         'reports a part %s when its quote has a settled entry the melt is still tracked for',
         async (label, status) => {
-            const store = await regularPlannedStore();
+            const { store, plan } = await regularPlannedStore();
             cdk.melt.mockRejectedValue(new Error('connection lost'));
             // A reconcile pass has stored the settled entry and is about to
             // untrack the melt when the pay path's check fails
@@ -1279,7 +1314,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             const onProgress = jest.fn();
 
             await store.payLnInvoiceFromEcash({
-                paymentRequest: INVOICE,
+                plan,
                 onProgress
             });
 
@@ -1311,7 +1346,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     ])(
         'still reports a part in flight when writing %s fails',
         async (_label, failingKey, callsBeforeFailing) => {
-            const store = await regularPlannedStore();
+            const { store, plan } = await regularPlannedStore();
             cdk.melt.mockRejectedValue(new Error('connection lost'));
             cdk.checkMeltQuote.mockResolvedValue(heldQuote(`regular-${A}`));
             let calls = 0;
@@ -1324,7 +1359,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             const onProgress = jest.fn();
 
             await store.payLnInvoiceFromEcash({
-                paymentRequest: INVOICE,
+                plan,
                 onProgress
             });
 
@@ -1342,7 +1377,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     );
 
     it('turns a melt fee mismatch into a message naming the mint', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.melt.mockImplementation(async (mintUrl: string) => {
             throw new Error(
                 mintUrl === A
@@ -1353,7 +1388,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         const onProgress = jest.fn();
 
         await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             onProgress
         });
 
@@ -1373,12 +1408,12 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             selected: [A, C]
         });
         mintApi({ [A]: () => ({ fee: 0 }), [C]: () => ({ fee: 0 }) });
-        await store.getPayReq(INVOICE);
-        expect(store.meltQuotes).toHaveLength(2);
+        const plan = await store.getPayReq(INVOICE);
+        expect(plan.meltQuotes).toHaveLength(2);
         const onProgress = jest.fn();
 
         await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             onProgress
         });
 
@@ -1390,16 +1425,16 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         );
     });
 
-    it('refuses to melt with no plan and names the invoice mint if it was skipped', async () => {
+    it('refuses to melt a plan with no quotes and names the invoice mint if it was skipped', async () => {
         const store = newStore({
             balances: { [A]: 600, [B]: 300 },
             selected: [A, B]
         });
-        store.paymentRequest = INVOICE;
-        store.multiMintPlannerSkips = [{ mintUrl: A, reason: 'selfSend' }];
-
         await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan: {
+                ...emptyPlan,
+                plannerSkips: [{ mintUrl: A, reason: 'selfSend' }]
+            },
             amount: '1000'
         });
 
@@ -1413,15 +1448,14 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         );
     });
 
-    it('does not set an error when a donation has no plan', async () => {
+    it('does not set an error when a donation plan has no quotes', async () => {
         const store = newStore({
             balances: { [A]: 600, [B]: 300 },
             selected: [A, B]
         });
-        store.paymentRequest = INVOICE;
 
         await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan: emptyPlan,
             amount: '1000',
             isDonationPayment: true
         });
@@ -1432,13 +1466,13 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('currently sets the payment error when every part of a donation fails', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         // the main payment already succeeded on this screen
         store.paymentSuccess = true;
         cdk.melt.mockRejectedValue(new Error('refused'));
 
         await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             isDonationPayment: true
         });
 
@@ -1451,10 +1485,10 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
 
     // An absent state is ambiguous, so it must not be reported as paid
     it('does not treat a part with no melt state as paid', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.melt.mockResolvedValue({ amount: 0, fee_paid: 0 });
 
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+        await store.payLnInvoiceFromEcash({ plan });
 
         expect(store.paymentSuccess).toBe(false);
         expect(store.paymentError).toBe(true);
@@ -1464,7 +1498,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('records each MPP part with the quote CDK created for it', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         cdk.createMeltQuote.mockImplementation(
             async (mintUrl: string, _r: string, options: any) => ({
                 id: `paid-${mintUrl}`,
@@ -1480,12 +1514,12 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             paid(mintUrl === A ? 546 : 454, 0)
         );
 
-        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+        await store.payLnInvoiceFromEcash({ plan });
 
         // The planner's probe quote was never paid, so it is not recorded.
         // The planner quoted fee 1 and expiry 9999999999 for both parts, so
         // a falsy fallback would record B's fee reserve as 1.
-        expect(store.meltQuotes[0].meltQuote).toMatchObject({
+        expect(plan.meltQuotes[0].meltQuote).toMatchObject({
             quote: `mpp-${A}-546`
         });
         expect(
@@ -1501,7 +1535,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
     });
 
     it('refuses to melt an MPP part whose CDK quote is not for its share', async () => {
-        const store = await plannedStore();
+        const { store, plan } = await plannedStore();
         const mppQuote = cdk.createMeltQuote.getMockImplementation()!;
         // A quote for the whole invoice would pay all of it from mint A
         cdk.createMeltQuote.mockImplementation(
@@ -1517,7 +1551,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         const onProgress = jest.fn();
 
         await store.payLnInvoiceFromEcash({
-            paymentRequest: INVOICE,
+            plan,
             onProgress
         });
 
@@ -1575,7 +1609,7 @@ describe('CashuStore multi-mint selection', () => {
         expect(storage.setItem).not.toHaveBeenCalled();
     });
 
-    it('describes the planned mints, or the selection before a plan exists', async () => {
+    it('describes the mints of the quotes it is given, or the selection when there are none', async () => {
         const store = newStore({
             balances: { [A]: 600, [B]: 500, [C]: 50 },
             selected: [`${A}/`, B]
@@ -1589,9 +1623,9 @@ describe('CashuStore multi-mint selection', () => {
             [A, 600, true],
             [B, 500, true]
         ]);
+        expect(store.getMultimintInfo([])).toEqual(store.getMultimintInfo());
 
-        store.meltQuotes = [{ mintUrl: C, meltQuote: { amount: 50 } as any }];
-        expect(store.getMultimintInfo()).toEqual([
+        expect(store.getMultimintInfo([{ mintUrl: C }])).toEqual([
             {
                 mintUrl: C,
                 mintName: 'Mint C',
@@ -1601,6 +1635,29 @@ describe('CashuStore multi-mint selection', () => {
                 allocatedAmount: 0
             }
         ]);
+    });
+
+    it('lists the mints of the plan it is given, not those of a plan quoted since', async () => {
+        const store = newStore({
+            balances: { [A]: 600, [B]: 500 },
+            selected: [A, B]
+        });
+        mintApi({
+            [A]: () => ({ fee: 1 }),
+            [B]: () => ({ fee: 1 })
+        });
+        const split = await store.getPayReq(INVOICE);
+        // B now covers the invoice alone
+        store.mintBalances = { [A]: 500, [B]: 5000 };
+        cdk.getBalances.mockResolvedValue({ [A]: 500, [B]: 5000 });
+        const single = await store.getPayReq(INVOICE);
+
+        expect(
+            store.getMultimintInfo(split.meltQuotes).map((m) => m.mintUrl)
+        ).toEqual([A, B]);
+        expect(
+            store.getMultimintInfo(single.meltQuotes).map((m) => m.mintUrl)
+        ).toEqual([B]);
     });
 
     it('replaces per-mint balances on sync, dropping mints CDK no longer reports', async () => {
@@ -1706,7 +1763,7 @@ describe('CashuStore removeMint with several mints', () => {
     });
 });
 
-describe('CashuStore payReqMintBalance and payReqAmount', () => {
+describe('CashuStore plan mintBalance and amount', () => {
     const singleMintStore = () =>
         newStore({
             balances: { [A]: 1200 },
@@ -1717,13 +1774,13 @@ describe('CashuStore payReqMintBalance and payReqAmount', () => {
     it('sets the mint balance and the quote amount for a single mint', async () => {
         const store = singleMintStore();
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         // the quote is 1000 + 3 fee reserve
         expect(cdk.createMeltQuote).toHaveBeenCalledWith(A, INVOICE, undefined);
-        expect(store.getPayReqError).toBeUndefined();
-        expect(store.payReqMintBalance).toBe(1200);
-        expect(store.payReqAmount).toBe(1000);
+        expect(plan.error).toBeUndefined();
+        expect(plan.mintBalance).toBe(1200);
+        expect(plan.amount).toBe(1000);
     });
 
     it('sets the balance of both mints and the invoice amount when the invoice is split across two mints', async () => {
@@ -1736,12 +1793,12 @@ describe('CashuStore payReqMintBalance and payReqAmount', () => {
             [B]: () => ({ fee: 1 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
-        expect(planOf(store).map(({ mintUrl }) => mintUrl)).toEqual([A, B]);
-        expect(store.getPayReqError).toBeUndefined();
-        expect(store.payReqMintBalance).toBe(1100);
-        expect(store.payReqAmount).toBe(1000);
+        expect(planOf(plan).map(({ mintUrl }) => mintUrl)).toEqual([A, B]);
+        expect(plan.error).toBeUndefined();
+        expect(plan.mintBalance).toBe(1100);
+        expect(plan.amount).toBe(1000);
     });
 
     it('counts the funded mints the planner stopped before', async () => {
@@ -1755,12 +1812,12 @@ describe('CashuStore payReqMintBalance and payReqAmount', () => {
             [B]: () => ({ fee: 2 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         // A alone covers the invoice, so B is never probed
-        expect(planOf(store).map(({ mintUrl }) => mintUrl)).toEqual([A]);
-        expect(store.payReqMintBalance).toBe(139);
-        expect(store.payReqAmount).toBe(75);
+        expect(planOf(plan).map(({ mintUrl }) => mintUrl)).toEqual([A]);
+        expect(plan.mintBalance).toBe(139);
+        expect(plan.amount).toBe(75);
     });
 
     it('leaves out a funded mint without MPP that is not in the plan', async () => {
@@ -1774,10 +1831,10 @@ describe('CashuStore payReqMintBalance and payReqAmount', () => {
             [B]: () => ({ fee: 1 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
-        expect(planOf(store).map(({ mintUrl }) => mintUrl)).toEqual([A, B]);
-        expect(store.payReqMintBalance).toBe(1100);
+        expect(planOf(plan).map(({ mintUrl }) => mintUrl)).toEqual([A, B]);
+        expect(plan.mintBalance).toBe(1100);
     });
 
     it('counts a mint without MPP when the planner falls back to a regular melt on it', async () => {
@@ -1790,59 +1847,52 @@ describe('CashuStore payReqMintBalance and payReqAmount', () => {
             [B]: () => ({ fee: 1 })
         });
 
-        await store.getPayReq(INVOICE);
+        const plan = await store.getPayReq(INVOICE);
 
         // B can't cover 1000 over MPP, so A pays the invoice alone
-        expect(planOf(store)).toEqual([
+        expect(planOf(plan)).toEqual([
             { mintUrl: A, amount: 1000, fee: 3, regular: true }
         ]);
-        expect(store.getPayReqError).toBeUndefined();
-        expect(store.payReqMintBalance).toBe(2050);
-        expect(store.payReqAmount).toBe(1000);
+        expect(plan.error).toBeUndefined();
+        expect(plan.mintBalance).toBe(2050);
+        expect(plan.amount).toBe(1000);
     });
 
-    it('resets both when a good invoice is followed by an expired one', async () => {
+    it('leaves both at 0 for an expired invoice, and the earlier plan keeps its own', async () => {
         const store = singleMintStore();
-        await store.getPayReq(INVOICE);
-        expect(store.payReqMintBalance).toBe(1200);
-        expect(store.payReqAmount).toBe(1000);
+        const good = await store.getPayReq(INVOICE);
 
         invoiceFor({
             num_satoshis: '1000',
             timestamp: Math.floor(Date.now() / 1000) - 7200
         });
         cdk.createMeltQuote.mockClear();
-        await store.getPayReq(INVOICE);
+        const expired = await store.getPayReq(INVOICE);
 
         // an expired invoice returns before any melt quote is requested
         expect(cdk.createMeltQuote).not.toHaveBeenCalled();
-        expect(store.payReqMintBalance).toBe(0);
-        expect(store.payReqAmount).toBe(0);
+        expect(expired.mintBalance).toBe(0);
+        expect(expired.amount).toBe(0);
+        expect(expired.meltQuote).toBeUndefined();
+        expect(good.mintBalance).toBe(1200);
+        expect(good.amount).toBe(1000);
+        expect(good.meltQuote?.quote).toBe(`regular-${A}`);
     });
 
-    it('resets both and sets the error when the melt quote request fails', async () => {
+    it('leaves both at 0 and sets the error when the melt quote request fails, and the earlier plan keeps its own', async () => {
         const store = singleMintStore();
-        await store.getPayReq(INVOICE);
-        expect(store.payReqMintBalance).toBe(1200);
-        expect(store.payReqAmount).toBe(1000);
+        const good = await store.getPayReq(INVOICE);
 
         cdk.createMeltQuote.mockRejectedValueOnce(new Error('mint offline'));
-        await store.getPayReq(INVOICE);
+        const failed = await store.getPayReq(INVOICE);
 
-        expect(store.getPayReqError).toBe('mint offline');
-        expect(store.payReqMintBalance).toBe(0);
-        expect(store.payReqAmount).toBe(0);
-    });
-
-    it('resets both on clearPayReq', async () => {
-        const store = singleMintStore();
-        await store.getPayReq(INVOICE);
-        expect(store.payReqMintBalance).toBe(1200);
-        expect(store.payReqAmount).toBe(1000);
-
-        store.clearPayReq();
-
-        expect(store.payReqMintBalance).toBe(0);
-        expect(store.payReqAmount).toBe(0);
+        expect(failed.error).toBe('mint offline');
+        expect(failed.mintBalance).toBe(0);
+        expect(failed.amount).toBe(0);
+        expect(failed.meltQuote).toBeUndefined();
+        expect(failed.meltQuotes).toEqual([]);
+        expect(good.error).toBeUndefined();
+        expect(good.mintBalance).toBe(1200);
+        expect(good.amount).toBe(1000);
     });
 });

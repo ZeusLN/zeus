@@ -207,8 +207,55 @@ type MultimintSkipReason =
     | 'requoteFailed'
     | 'networkError';
 
+type PlannerSkip = { mintUrl: string; reason: MultimintSkipReason };
+
+type PlannedMeltQuote = {
+    mintUrl: string;
+    meltQuote: CDKMeltQuote;
+    // When true, this entry is a regular (non-MPP) melt quote and the
+    // executor must use CashuDevKit.melt(mintUrl, quote.id) rather than
+    // meltPartial. Used when the multi-mint planner falls back to a
+    // single mint (only one selected mint had funds, or MPP was
+    // rejected by the destination mint).
+    useRegularMelt?: boolean;
+};
+
+// What getPayReq prepared for one invoice: its decode and the melt quotes
+// to pay it with. It belongs to the caller that asked for it and is handed
+// back to payLnInvoiceFromEcash, so the invoice reviewed, the quotes shown
+// and what is melted can't come from different requests.
+export interface CashuPaymentPlan {
+    paymentRequest: string; // bolt11 invoice
+    // undefined when the invoice could not be decoded
+    payReq?: Invoice;
+    // the single mint quote, when one mint pays
+    meltQuote?: {
+        quote: string;
+        amount: number;
+        fee_reserve: number;
+        state: string;
+        expiry: number;
+        payment_preimage?: string | null;
+    };
+    // one quote per mint, when several mints pay
+    meltQuotes: PlannedMeltQuote[];
+    feeEstimate?: number;
+    // why the invoice can't be paid as planned, if it can't
+    error?: string;
+    // Mints the multi-mint planner left out for this invoice, with a
+    // classified reason, so a not enough funds message can name the mint
+    // that couldn't take part (e.g. the invoice's own mint)
+    plannerSkips: PlannerSkip[];
+    // Inputs of the sufficiency check, so the payment views can extend it
+    // with the donation that is sent from the same mints right after the
+    // invoice is paid: the balance the payment can be drawn from (the one
+    // mint, or every mint the multi-mint planner can use) and the amount
+    // quoted for the invoice. Both stay 0 when the invoice was not quoted.
+    mintBalance: number;
+    amount: number;
+}
+
 export default class CashuStore {
-    private getPayReqRequestId = 0;
     // Bumped by each createInvoice call and by clearInvoice, so a quote that
     // arrives after a newer request or after the invoice was cleared does
     // not replace the invoice on screen
@@ -277,48 +324,10 @@ export default class CashuStore {
     @observable public error_msg?: string;
     @observable public errorAddingMint = false;
 
-    @observable public payReq?: Invoice;
-    @observable public paymentRequest?: string; // bolt11 invoice
     @observable public paymentPreimage?: string;
     @observable public paymentSuccess?: boolean; // true when payment completed successfully
-    @observable public getPayReqError?: string;
     @observable public paymentError?: boolean;
     @observable public paymentErrorMsg?: string;
-    @observable public feeEstimate?: number;
-    // Inputs of the sufficiency check run by getPayReq(), exposed so the
-    // payment views can extend it with the donation that is sent from the
-    // same mints right after the invoice is paid: the balance the payment
-    // can be drawn from (the one mint, or every mint the multi-mint planner
-    // can use) and the amount quoted for the invoice. Both stay 0 when
-    // getPayReq did not quote the invoice.
-    @observable public payReqMintBalance: number = 0;
-    @observable public payReqAmount: number = 0;
-    @observable public meltQuotes: {
-        mintUrl: string;
-        meltQuote: CDKMeltQuote;
-        // When true, this entry is a regular (non-MPP) melt quote and the
-        // executor must use CashuDevKit.melt(mintUrl, quote.id) rather than
-        // meltPartial. Used when the multi-mint planner falls back to a
-        // single mint (only one selected mint had funds, or MPP was
-        // rejected by the destination mint).
-        useRegularMelt?: boolean;
-    }[] = [];
-    // Mints excluded by the multi-mint planner during the most recent
-    // prepare pass, with a classified reason. Consumed when the
-    // notEnoughFunds error fires so the message can name the specific
-    // mint that couldn't participate (e.g. invoice destination).
-    @observable public multiMintPlannerSkips: {
-        mintUrl: string;
-        reason: MultimintSkipReason;
-    }[] = [];
-    @observable public meltQuote?: {
-        quote: string;
-        amount: number;
-        fee_reserve: number;
-        state: string;
-        expiry: number;
-        payment_preimage?: string | null;
-    };
     @observable public noteKey?: string;
     @observable public paymentStartTime?: number;
     @observable public paymentDuration?: number;
@@ -342,7 +351,6 @@ export default class CashuStore {
     @observable public submittingReview = false;
     @observable public reviewSubmitSuccess = false;
     @observable public reviewSubmitError = false;
-    @observable loadingFeeEstimate = false;
     @observable shownThresholdModals: number[] = [];
     @observable dismissedUpgradeThreshold: number = 0;
     @observable public nostrMintBackupTimestamp?: number;
@@ -1403,10 +1411,8 @@ export default class CashuStore {
     // Builds the user-facing "not enough funds" message, augmenting it
     // with context when the planner classified a skip the user can act on
     // (e.g. the destination mint refused MPP for its own invoice).
-    private notEnoughFundsMessage = (): string => {
-        const selfSend = this.multiMintPlannerSkips.find(
-            (s) => s.reason === 'selfSend'
-        );
+    private notEnoughFundsMessage = (plannerSkips: PlannerSkip[]): string => {
+        const selfSend = plannerSkips.find((s) => s.reason === 'selfSend');
         if (selfSend) {
             return localeString('stores.CashuStore.notEnoughFundsSelfSend', {
                 mintName: this.getMintName(selfSend.mintUrl)
@@ -1540,11 +1546,14 @@ export default class CashuStore {
     private prepareMultiMintMeltQuotesCDK = async ({
         invoice,
         amountToPay,
-        mintUrls
+        mintUrls,
+        plannerSkips
     }: {
         invoice: string;
         amountToPay: number;
         mintUrls?: string[];
+        // filled with the mints this pass leaves out, and why
+        plannerSkips?: PlannerSkip[];
     }): Promise<
         {
             mintUrl: string;
@@ -1578,15 +1587,8 @@ export default class CashuStore {
         );
 
         if (amountToPay <= 0) {
-            this.multiMintPlannerSkips = [];
             return [];
         }
-
-        // Reset skip classification at the start of every pass so stale
-        // entries from a prior invoice don't leak into the error message.
-        runInAction(() => {
-            this.multiMintPlannerSkips = [];
-        });
 
         // All selected mints with positive balance (regardless of MPP
         // support). This is what determines whether MPP is even possible.
@@ -1690,9 +1692,7 @@ export default class CashuStore {
 
         // Surface skip reasons so the error-message layer can name the
         // mint that couldn't participate (e.g. invoice destination).
-        runInAction(() => {
-            this.multiMintPlannerSkips = [...skipped];
-        });
+        plannerSkips?.push(...skipped);
 
         if (candidates.length === 0) {
             return [];
@@ -1832,11 +1832,14 @@ export default class CashuStore {
         }));
     };
 
+    // meltQuotes: the quotes of the plan about to be paid, if any
     @action
-    public getMultimintInfo = (): MintProgressInfo[] => {
+    public getMultimintInfo = (
+        meltQuotes: { mintUrl: string }[] = []
+    ): MintProgressInfo[] => {
         const mintUrls =
-            this.meltQuotes.length > 0
-                ? this.meltQuotes.map(({ mintUrl }) => mintUrl)
+            meltQuotes.length > 0
+                ? meltQuotes.map(({ mintUrl }) => mintUrl)
                 : this.multiMintSelectedUrls.length > 0
                 ? this.multiMintSelectedUrls
                 : this.selectedMintUrl
@@ -2196,7 +2199,7 @@ export default class CashuStore {
         this.seedPhrase = undefined;
         this.seed = undefined;
         this.clearInvoice();
-        this.clearPayReq();
+        this.clearPaymentResult();
         this.shownThresholdModals = [];
         this.addedMintsCache.clear();
         this.mintInfos = {};
@@ -2238,16 +2241,8 @@ export default class CashuStore {
     };
 
     @action
-    public clearPayReq = () => {
-        this.payReq = undefined;
-        this.paymentRequest = undefined;
+    private clearPaymentResult = () => {
         this.paymentPreimage = undefined;
-        this.getPayReqError = undefined;
-        this.feeEstimate = undefined;
-        this.payReqMintBalance = 0;
-        this.payReqAmount = 0;
-        this.meltQuotes = [];
-        this.meltQuote = undefined;
         this.noteKey = undefined;
         this.error = false;
         this.paymentError = false;
@@ -5052,34 +5047,26 @@ export default class CashuStore {
         }
     };
 
-    @action
+    // Decodes an invoice and quotes its melt. Keeps nothing in the store:
+    // the plan belongs to the caller, so the send screens, links and the
+    // NWC service can't replace each other's invoice or quotes. Never
+    // rejects: what went wrong is in the plan's error
     public getPayReq = async (
-        bolt11Invoice: string,
-        isDonationPayment: boolean = false
-    ) => {
-        const requestId = ++this.getPayReqRequestId;
-
+        bolt11Invoice: string
+    ): Promise<CashuPaymentPlan> => {
         if (__DEV__) {
             console.log('getPayReq: Starting', {
-                bolt11Invoice: bolt11Invoice?.substring(0, 20),
-                isDonationPayment
+                bolt11Invoice: bolt11Invoice?.substring(0, 20)
             });
         }
 
-        if (!isDonationPayment) {
-            this.loading = true;
-        }
-        this.payReq = undefined;
-        this.paymentRequest = bolt11Invoice;
-        this.feeEstimate = undefined;
-        this.getPayReqError = undefined;
-        // The quotes in the store must always belong to paymentRequest:
-        // the previous invoice's are still payable, and would be melted
-        // by a caller that pays before this invoice's have arrived
-        this.meltQuotes = [];
-        this.meltQuote = undefined;
-        this.payReqMintBalance = 0;
-        this.payReqAmount = 0;
+        const plan: CashuPaymentPlan = {
+            paymentRequest: bolt11Invoice,
+            meltQuotes: [],
+            plannerSkips: [],
+            mintBalance: 0,
+            amount: 0
+        };
 
         try {
             if (__DEV__) {
@@ -5108,28 +5095,24 @@ export default class CashuStore {
                 console.log('getPayReq: bolt11 decoded');
             }
 
-            if (requestId !== this.getPayReqRequestId) {
-                return;
-            }
-
             const payReq = new Invoice(data);
             // Set payReq early so the view can render invoice details
             // even if melt quote preparation fails
-            this.payReq = payReq;
+            plan.payReq = payReq;
 
             // don't request melt quotes for an expired invoice: it can't
             // be paid, and the quote requests would needlessly disclose
             // the invoice to the mint(s)
             if (payReq.isExpiredNow()) {
-                return;
+                return plan;
             }
 
             // Mints know nothing of each other's payments: quoted again
             // while it is being paid, the invoice would be planned on the
             // mints that still have funds and could be paid twice
             if (this.paymentHashesInFlight.has(payReq.payment_hash)) {
-                this.getPayReqError = localeString('stores.CashuStore.pending');
-                return;
+                plan.error = localeString('stores.CashuStore.pending');
+                return plan;
             }
 
             const rawPaymentAmt = payReq.getRequestAmount
@@ -5167,8 +5150,8 @@ export default class CashuStore {
                 ? normalizedMultiMintPaymentAmt || 0
                 : rawPaymentAmt;
 
-            let singleMeltQuote: CashuStore['meltQuote'];
-            let multiMintMeltQuotes: CashuStore['meltQuotes'] = [];
+            let singleMeltQuote: CashuPaymentPlan['meltQuote'];
+            let multiMintMeltQuotes: CashuPaymentPlan['meltQuotes'] = [];
             let computedPayReqError: string | undefined;
 
             // Left undefined (rather than 0) in the no-amount branch below so
@@ -5198,7 +5181,8 @@ export default class CashuStore {
                     const preparedQuotes =
                         await this.prepareMultiMintMeltQuotesCDK({
                             invoice: bolt11Invoice,
-                            amountToPay: paymentAmt
+                            amountToPay: paymentAmt,
+                            plannerSkips: plan.plannerSkips
                         });
                     multiMintMeltQuotes = preparedQuotes;
 
@@ -5209,7 +5193,9 @@ export default class CashuStore {
                     );
 
                     if (!preparedQuotes.length || totalAllocated < paymentAmt) {
-                        computedPayReqError = this.notEnoughFundsMessage();
+                        computedPayReqError = this.notEnoughFundsMessage(
+                            plan.plannerSkips
+                        );
                     }
 
                     totalFeeEstimate = preparedQuotes.reduce(
@@ -5273,70 +5259,40 @@ export default class CashuStore {
                 amountChecked = Number(singleMeltQuote.amount) || 0;
             }
 
-            if (requestId !== this.getPayReqRequestId) {
-                return;
-            }
-
-            runInAction(() => {
-                this.payReq = payReq;
-                this.meltQuote = singleMeltQuote;
-                this.meltQuotes = multiMintMeltQuotes;
-                this.feeEstimate = totalFeeEstimate;
-                this.getPayReqError = computedPayReqError;
-                this.payReqMintBalance = mintBalanceChecked;
-                this.payReqAmount = amountChecked;
-            });
-            if (__DEV__) {
-                console.log('getPayReq: Success, setting loading = false');
-            }
+            plan.meltQuote = singleMeltQuote;
+            plan.meltQuotes = multiMintMeltQuotes;
+            plan.feeEstimate = totalFeeEstimate;
+            plan.error = computedPayReqError;
+            plan.mintBalance = mintBalanceChecked;
+            plan.amount = amountChecked;
         } catch (e: any) {
             if (__DEV__) {
                 console.log('getPayReq: Error caught', e?.message || e);
             }
-            const errorMsg = errorToUserFriendly(e);
-
-            if (requestId !== this.getPayReqRequestId) {
-                return;
-            }
-
-            runInAction(() => {
-                this.meltQuotes = [];
-                this.meltQuote = undefined;
-                this.getPayReqError = errorMsg;
-            });
-        } finally {
-            // ALWAYS set loading = false when done
-            if (__DEV__) {
-                console.log(
-                    'getPayReq: Finally block, setting loading = false'
-                );
-            }
-            if (!isDonationPayment && requestId === this.getPayReqRequestId) {
-                runInAction(() => {
-                    this.loading = false;
-                });
-            }
+            plan.error = errorToUserFriendly(e);
         }
+        return plan;
     };
 
     @action
     public payLnInvoiceFromEcash = async ({
         amount,
-        paymentRequest,
+        plan,
         isDonationPayment = false,
         onProgress
     }: {
         amount?: string;
-        // The invoice the caller reviewed or validated: nothing else is
-        // paid, and nothing at all when it is undefined
-        paymentRequest: string | undefined;
+        // What getPayReq prepared for the invoice the caller reviewed or
+        // validated: its invoice is paid with its quotes, and nothing at
+        // all is paid when it is undefined
+        plan: CashuPaymentPlan | undefined;
         isDonationPayment?: boolean;
         onProgress?: MultimintProgressCallback;
     }) => {
         // Refuse a second payment of an invoice that is still being paid.
         // The payment state below belongs to the first attempt, so it is
         // left as it is.
-        const inFlightHash = this.payReq?.payment_hash;
+        const inFlightHash = plan?.payReq?.payment_hash;
         if (inFlightHash && this.paymentHashesInFlight.has(inFlightHash)) {
             return;
         }
@@ -5352,28 +5308,23 @@ export default class CashuStore {
             this.paymentStartTime = Date.now();
         }
 
-        // Every getPayReq call (send screens, links, the NWC service)
-        // replaces these. Read them once, before the first await, so that
-        // what is checked here is what gets melted and recorded.
-        const { payReq, meltQuote, feeEstimate } = this;
-        const bolt11 = this.paymentRequest;
         let paymentHash: string | undefined;
 
         try {
-            if (!paymentRequest || paymentRequest !== bolt11) {
+            if (!plan?.paymentRequest) {
                 if (!isDonationPayment) {
                     runInAction(() => {
                         this.paymentError = true;
                         this.paymentErrorMsg = localeString(
-                            paymentRequest
-                                ? 'views.PaymentRequest.payReqChanged'
-                                : 'stores.CashuStore.noPaymentRequestAvailable'
+                            'stores.CashuStore.noPaymentRequestAvailable'
                         );
                         this.loading = false;
                     });
                 }
                 return;
             }
+            const { payReq, meltQuote, feeEstimate } = plan;
+            const bolt11 = plan.paymentRequest;
 
             if (payReq?.payment_hash) {
                 paymentHash = payReq.payment_hash;
@@ -5405,6 +5356,7 @@ export default class CashuStore {
                 }
 
                 return await this.payLnInvoiceFromEcashMultiMint({
+                    plan,
                     paymentAmt,
                     isDonationPayment,
                     onProgress
@@ -5624,43 +5576,28 @@ export default class CashuStore {
     };
 
     private payLnInvoiceFromEcashMultiMint = async ({
+        plan,
         paymentAmt,
         isDonationPayment,
         onProgress
     }: {
+        plan: CashuPaymentPlan;
         paymentAmt: number;
         isDonationPayment: boolean;
         onProgress?: MultimintProgressCallback;
     }): Promise<CashuPayment | undefined> => {
-        const paymentRequest = this.paymentRequest;
-        const payReq = this.payReq;
+        const paymentRequest = plan.paymentRequest;
+        const payReq = plan.payReq;
         const emptyMints: MintProgressInfo[] = [];
-        const plannedMeltQuotes = [...this.meltQuotes];
-
-        if (!paymentRequest) {
-            if (!isDonationPayment) {
-                runInAction(() => {
-                    this.paymentError = true;
-                    this.paymentErrorMsg = localeString(
-                        'stores.CashuStore.noPaymentRequestAvailable'
-                    );
-                    this.loading = false;
-                });
-            }
-            onProgress?.({
-                step: MultinutPaymentStep.FAILED,
-                mints: emptyMints,
-                totalSelectedBalance: 0,
-                isProcessing: false
-            });
-            return;
-        }
+        const plannedMeltQuotes = [...plan.meltQuotes];
 
         if (plannedMeltQuotes.length === 0) {
             if (!isDonationPayment) {
                 runInAction(() => {
                     this.paymentError = true;
-                    this.paymentErrorMsg = this.notEnoughFundsMessage();
+                    this.paymentErrorMsg = this.notEnoughFundsMessage(
+                        plan.plannerSkips
+                    );
                     this.loading = false;
                 });
             }
@@ -5680,7 +5617,9 @@ export default class CashuStore {
             if (!isDonationPayment) {
                 runInAction(() => {
                     this.paymentError = true;
-                    this.paymentErrorMsg = this.notEnoughFundsMessage();
+                    this.paymentErrorMsg = this.notEnoughFundsMessage(
+                        plan.plannerSkips
+                    );
                     this.loading = false;
                 });
             }

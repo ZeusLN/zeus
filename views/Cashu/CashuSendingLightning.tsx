@@ -24,7 +24,7 @@ import DonationGiftIcon from '../../components/DonationGiftIcon';
 import SendingLoadingView from '../../components/SendingLoadingView';
 import { sendingStyles } from '../../components/sendingStyles';
 
-import CashuStore from '../../stores/CashuStore';
+import CashuStore, { CashuPaymentPlan } from '../../stores/CashuStore';
 import ContactStore from '../../stores/ContactStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 
@@ -51,7 +51,9 @@ interface CashuSendingLightningProps {
         {
             donationAmount?: string;
             paymentAmount?: string;
-            paymentRequest?: string;
+            // what CashuPaymentRequest reviewed: the invoice and the
+            // quotes to pay it with
+            paymentPlan?: CashuPaymentPlan;
         }
     >;
 }
@@ -101,7 +103,7 @@ export default class CashuSendingLightning extends React.Component<
 
     componentDidMount() {
         const { CashuStore, navigation, route } = this.props;
-        const { paymentAmount, paymentRequest } = route.params || {};
+        const { paymentAmount, paymentPlan } = route.params || {};
 
         // Reset payment state and start the payment once the JS thread is
         // free, so the melt does not jank the navigation transition. The
@@ -113,7 +115,7 @@ export default class CashuSendingLightning extends React.Component<
             () =>
                 CashuStore.payLnInvoiceFromEcash({
                     amount: paymentAmount,
-                    paymentRequest
+                    plan: paymentPlan
                 }),
             500
         );
@@ -183,11 +185,11 @@ export default class CashuSendingLightning extends React.Component<
                 );
             }
             const isDonationPayment = true;
-            await CashuStore.getPayReq(paymentRequest, isDonationPayment);
+            const plan = await CashuStore.getPayReq(paymentRequest);
 
             const donationPayment = await CashuStore.payLnInvoiceFromEcash({
                 amount: donationAmount.toString(),
-                paymentRequest,
+                plan,
                 isDonationPayment
             });
 
@@ -256,13 +258,14 @@ export default class CashuSendingLightning extends React.Component<
             paymentError,
             paymentSuccess,
             error_msg,
-            payReq,
             paymentPreimage,
             paymentErrorMsg,
             noteKey,
             paymentDuration,
             paymentFee
         } = CashuStore;
+        // the invoice CashuPaymentRequest reviewed and handed over
+        const payReq = route.params?.paymentPlan?.payReq;
         const payment_hash = payReq && payReq.payment_hash;
         const paymentAmount =
             amountFromRoute > 0 ? amountFromRoute : payReq?.getRequestAmount;

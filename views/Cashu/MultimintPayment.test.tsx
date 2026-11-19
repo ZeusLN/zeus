@@ -2,16 +2,26 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-jest.mock('@rneui/themed', () => ({
-    Icon: 'Icon',
-    ListItem: Object.assign(() => null, {
-        Content: 'ListItem.Content',
-        Title: 'ListItem.Title',
-        Subtitle: 'ListItem.Subtitle'
-    })
+jest.mock('@rneui/themed', () => {
+    const { Text, View } = require('react-native');
+    const ListItem: any = ({ children }: any) => <View>{children}</View>;
+    ListItem.Content = ListItem;
+    ListItem.Title = ({ children }: any) => <Text>{children}</Text>;
+    ListItem.Subtitle = ListItem.Title;
+    return { Icon: 'Icon', ListItem };
+});
+jest.mock('../../utils/LocaleUtils');
+jest.mock('../../utils/ThemeUtils', () => ({
+    themeColor: (key: string) => `theme:${key}`
 }));
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('../../utils/LnurlPayUtils', () => ({}));
+jest.mock('../../utils/DonationUtils', () => ({
+    ...jest.requireActual('../../utils/DonationUtils'),
+    loadDonationLnurl: jest.fn()
+}));
+jest.mock('../../utils/UrlUtils', () => ({}));
+jest.mock('../../storage', () => ({}));
 jest.mock('../../components/Amount', () => 'Amount');
 jest.mock('../../components/Button', () => 'Button');
 jest.mock('../../components/DonationGiftIcon', () => 'DonationGiftIcon');
@@ -20,236 +30,347 @@ jest.mock('../../components/Header', () => 'Header');
 jest.mock('../../components/MintAvatar', () => 'MintAvatar');
 jest.mock('../../components/PaymentDetailsSheet', () => 'PaymentDetailsSheet');
 jest.mock('../../components/PaymentSuccessView', () => 'PaymentSuccessView');
-jest.mock('../../components/Screen', () => 'Screen');
-jest.mock('../../components/sendingStyles', () => ({
-    sendingStyles: { content: {} }
-}));
-jest.mock('../../cashu-cdk', () => ({}));
-jest.mock('../../stores/CashuStore', () => ({}));
-jest.mock('../../stores/NodeInfoStore', () => ({}));
-jest.mock('../../utils/DonationUtils', () => ({
-    ...jest.requireActual('../../utils/DonationUtils'),
-    loadDonationLnurl: jest.fn()
-}));
-jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
-jest.mock('../../utils/ThemeUtils', () => ({
-    themeColor: (key: string) => key
-}));
-jest.mock('../../utils/UrlUtils', () => ({}));
-jest.mock('../../storage', () => ({}));
+jest.mock('../../components/Screen', () => {
+    const { View } = require('react-native');
+    return ({ children }: any) => <View>{children}</View>;
+});
 jest.mock('../../assets/images/SVG/ErrorIcon.svg', () => 'ErrorIcon');
 jest.mock('../../assets/images/SVG/wordmark-black.svg', () => 'Wordmark');
 
-import React from 'react';
-import { act, render, screen } from '@testing-library/react-native';
-
+import * as React from 'react';
+import { render, screen } from '@testing-library/react-native';
+import { MintPaymentStatus } from '../../utils/CashuUtils';
 import { loadDonationLnurl } from '../../utils/DonationUtils';
 import MultimintPayment from './MultimintPayment';
-import { MultinutPaymentStep } from '../../utils/CashuUtils';
-
-const reviewed = { getRequestAmount: 6000, payment_hash: 'a'.repeat(64) };
-const other = { getRequestAmount: 1, payment_hash: 'b'.repeat(64) };
-
-const renderScreen = async (CashuStore: any) => {
-    let view: MultimintPayment | null = null;
-    await act(async () => {
-        render(
-            <MultimintPayment
-                ref={(r: MultimintPayment | null) => {
-                    view = r;
-                }}
-                navigation={{ addListener: () => () => {} } as any}
-                route={{ params: { paymentAmount: '6000' } } as any}
-                CashuStore={CashuStore}
-            />
-        );
-    });
-    const propsOf = (type: string) =>
-        screen.container.queryAll((n) => n.type === type)[0]?.props;
-    return { state: view!.state, propsOf };
-};
-
-const cashuStore = (payLnInvoiceFromEcash: () => Promise<any>) => ({
-    payReq: reviewed,
-    feeEstimate: 0,
-    mintInfos: {},
-    multiMintSelectedUrls: [],
-    paymentError: false,
-    paymentErrorMsg: '',
-    getMultimintInfo: () => [
-        { mintUrl: 'https://mint.example', balance: 10000 }
-    ],
-    payLnInvoiceFromEcash
-});
 
 const REVIEWED = 'lnbc1reviewed';
+const MINT_1 = 'https://mint.one';
+const MINT_2 = 'https://mint.two';
 
-// The payment and donation handlers are driven directly on an instance;
-// setState is replaced because the instance is never mounted
-const paymentScreen = () => {
-    const cashuStore = {
-        multiMintSelectedUrls: ['https://mint.one', 'https://mint.two'],
-        getMultimintInfo: () => [],
-        getPayReq: jest.fn().mockResolvedValue(undefined),
-        payLnInvoiceFromEcash: jest.fn().mockResolvedValue(undefined),
-        paymentError: false
-    };
-    const screen = new MultimintPayment({
-        navigation: { addListener: jest.fn() },
-        route: {
-            params: {
-                paymentAmount: '100',
-                paymentRequest: REVIEWED
-            }
-        },
-        CashuStore: cashuStore,
-        NodeInfoStore: { nodeInfo: { isMainNet: true } }
-    } as any);
-    screen.setState = jest.fn();
-    return { screen, cashuStore };
+// The invoice is 75 sats with a 2 sat fee reserve. Both mints are selected,
+// but the planner stopped after the first one, so only it is in meltQuotes.
+// mintBalance counts both mints: 89 + 50.
+const makePlan = (overrides: object = {}): any => ({
+    paymentRequest: REVIEWED,
+    payReq: { getRequestAmount: 75, payment_hash: 'ab'.repeat(32) },
+    meltQuotes: [
+        { mintUrl: MINT_1, quote: 'quote-1', amount: 75, fee_reserve: 2 }
+    ],
+    feeEstimate: 2,
+    plannerSkips: [],
+    mintBalance: 139,
+    amount: 75,
+    ...overrides
+});
+
+// what the store held before getPayReq stopped keeping its result: none
+// of it may reach the screen or the payment
+const decoys = {
+    paymentRequest: 'lnbc1decoy',
+    payReq: { getRequestAmount: 999, payment_hash: 'de'.repeat(32) },
+    meltQuote: { quote: 'decoy-quote' },
+    meltQuotes: [{ mintUrl: MINT_2, quote: 'decoy-quote' }],
+    feeEstimate: 4242,
+    payReqMintBalance: 1,
+    payReqAmount: 999,
+    multiMintPlannerSkips: [{ mintUrl: MINT_1, reason: 'selfSend' }]
 };
 
-describe('MultimintPayment', () => {
+const buildCashuStore = (fields: object = {}): any => {
+    const store: any = {
+        ...decoys,
+        multiMintSelectedUrls: [MINT_1, MINT_2],
+        mintBalances: { [MINT_1]: 89, [MINT_2]: 50 },
+        mintInfos: {},
+        getMintName: (mintUrl: string) => `name of ${mintUrl}`,
+        // as CashuStore lists them: the mints of the quotes it is given,
+        // or the selected mints without quotes
+        getMultimintInfo: jest.fn((meltQuotes: { mintUrl: string }[] = []) =>
+            (meltQuotes.length > 0
+                ? meltQuotes.map(({ mintUrl }) => mintUrl)
+                : store.multiMintSelectedUrls
+            ).map((mintUrl: string) => ({
+                mintUrl,
+                mintName: store.getMintName(mintUrl),
+                balance: store.mintBalances[mintUrl] || 0,
+                selected: true,
+                status: MintPaymentStatus.IDLE,
+                allocatedAmount: 0
+            }))
+        ),
+        getPayReq: jest.fn(async (paymentRequest: string) =>
+            makePlan({ paymentRequest })
+        ),
+        payLnInvoiceFromEcash: jest.fn().mockResolvedValue(undefined),
+        paymentError: false,
+        ...fields
+    };
+    return store;
+};
+
+const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+const renderView = async ({
+    params = { paymentAmount: '75', paymentPlan: makePlan() },
+    cashuStore = buildCashuStore()
+}: { params?: object; cashuStore?: any } = {}) => {
+    await render(
+        <MultimintPayment
+            {...({
+                navigation: {
+                    addListener: jest.fn(() => jest.fn()),
+                    navigate: jest.fn(),
+                    popTo: jest.fn()
+                },
+                route: { params },
+                CashuStore: cashuStore
+            } as any)}
+        />
+    );
+    return { cashuStore, params: params as any };
+};
+
+const hosts = (type: string) =>
+    screen.container.queryAll((n) => n.type === type);
+const shownAmount = () =>
+    hosts('Amount').find((n) => n.props.jumboText)!.props.sats;
+const paid = {
+    meltResponse: { state: 'PAID' },
+    payment_preimage: 'cd'.repeat(32)
+};
+
+describe('MultimintPayment pays the plan it was handed', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    it('pays only the invoice reviewed on the previous screen', async () => {
-        const { screen, cashuStore } = paymentScreen();
+    it('pays the plan reviewed on the previous screen', async () => {
+        const { cashuStore, params } = await renderView();
 
-        await screen.executePayment();
-
-        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledWith(
-            expect.objectContaining({
-                amount: '100',
-                paymentRequest: REVIEWED
-            })
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledWith({
+            amount: '75',
+            plan: params.paymentPlan,
+            onProgress: expect.any(Function)
+        });
+        expect(cashuStore.payLnInvoiceFromEcash.mock.calls[0][0].plan).toBe(
+            params.paymentPlan
         );
+        // the screen pays what it was handed and quotes nothing itself
+        expect(cashuStore.getPayReq).not.toHaveBeenCalled();
     });
 
-    it('pays the donation only for the donation invoice it loaded', async () => {
-        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
-        const { screen, cashuStore } = paymentScreen();
+    it('hands the store no plan when it was opened without one', async () => {
+        const { cashuStore } = await renderView({
+            params: { paymentAmount: '75' }
+        });
 
-        await screen.handleDonationPayment('5');
-
-        expect(cashuStore.getPayReq).toHaveBeenCalledWith(
-            'lnbc1donation',
-            true
-        );
+        // payLnInvoiceFromEcash pays nothing without a plan
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
         expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledWith({
-            amount: '5',
-            paymentRequest: 'lnbc1donation',
-            isDonationPayment: true
+            amount: '75',
+            plan: undefined,
+            onProgress: expect.any(Function)
+        });
+        expect(cashuStore.getPayReq).not.toHaveBeenCalled();
+        await flush();
+        expect(
+            screen.getByText('stores.CashuStore.errorPayingInvoice')
+        ).toBeOnTheScreen();
+    });
+
+    // a payment still in flight, so the progress view stays up
+    const processing = () => {
+        const cashuStore = buildCashuStore();
+        cashuStore.payLnInvoiceFromEcash.mockReturnValue(new Promise(() => {}));
+        return cashuStore;
+    };
+
+    it('lists the mints of the plan quotes, with their balance', async () => {
+        const { cashuStore, params } = await renderView({
+            cashuStore: processing()
+        });
+
+        expect(cashuStore.getMultimintInfo).toHaveBeenCalledTimes(1);
+        expect(cashuStore.getMultimintInfo.mock.calls[0][0]).toBe(
+            params.paymentPlan.meltQuotes
+        );
+        expect(screen.getByText(`name of ${MINT_1}`)).toBeOnTheScreen();
+        expect(screen.queryByText(`name of ${MINT_2}`)).not.toBeOnTheScreen();
+        // totalAvailable shows what the listed mints hold
+        expect(
+            hosts('Amount').find((n) => n.props.color === 'secondaryText')!
+                .props.sats
+        ).toBe(89);
+    });
+
+    it('shows the amount of the plan', async () => {
+        await renderView({
+            cashuStore: processing(),
+            params: { paymentPlan: makePlan() }
+        });
+
+        expect(shownAmount()).toBe(75);
+    });
+
+    it('shows the payment hash of the plan once paid', async () => {
+        const cashuStore = buildCashuStore();
+        cashuStore.payLnInvoiceFromEcash.mockResolvedValue(paid);
+        await renderView({ cashuStore });
+        await flush();
+
+        expect(hosts('PaymentDetailsSheet')[0].props).toMatchObject({
+            paymentAmount: 75,
+            paymentHash: 'ab'.repeat(32)
         });
     });
 
     it('shows a paid invoice as sent when another payment left an error on the store', async () => {
-        const CashuStore: any = cashuStore(async () => {
+        const cashuStore = buildCashuStore();
+        cashuStore.payLnInvoiceFromEcash.mockImplementation(async () => {
             // another payment that failed while this melt was awaited
-            CashuStore.paymentError = true;
-            CashuStore.paymentErrorMsg = 'error of another payment';
-            return {};
+            cashuStore.paymentError = true;
+            cashuStore.paymentErrorMsg = 'error of another payment';
+            return paid;
         });
+        await renderView({ cashuStore });
+        await flush();
 
-        const { state, propsOf } = await renderScreen(CashuStore);
-
-        expect(state.step).toBe(MultinutPaymentStep.COMPLETE);
-        expect(state.error).toBeUndefined();
-        expect(propsOf('PaymentSuccessView')).toBeDefined();
+        expect(hosts('PaymentSuccessView')).toHaveLength(1);
+        expect(
+            screen.queryByText('error of another payment')
+        ).not.toBeOnTheScreen();
     });
 
     it('shows a failed payment as failed', async () => {
-        const CashuStore: any = cashuStore(async () => {
-            CashuStore.paymentError = true;
-            CashuStore.paymentErrorMsg = 'mint unreachable';
+        const cashuStore = buildCashuStore();
+        cashuStore.payLnInvoiceFromEcash.mockImplementation(async () => {
+            cashuStore.paymentError = true;
+            cashuStore.paymentErrorMsg = 'mint unreachable';
             return undefined;
         });
+        await renderView({ cashuStore });
+        await flush();
 
-        const { state } = await renderScreen(CashuStore);
-
-        expect(state.step).toBe(MultinutPaymentStep.FAILED);
-        expect(state.error).toBe('mint unreachable');
-    });
-
-    it('reports the reviewed invoice when another one is decoded in flight', async () => {
-        const CashuStore: any = cashuStore(async () => {
-            // what getPayReq does for a deep link, an NWC request or
-            // the donation while the melt is awaited
-            CashuStore.payReq = other;
-            return {};
-        });
-
-        const { propsOf } = await renderScreen(CashuStore);
-
-        expect(propsOf('PaymentSuccessView').paymentAmount).toBe(
-            reviewed.getRequestAmount
-        );
-        expect(propsOf('PaymentDetailsSheet')).toMatchObject({
-            paymentAmount: reviewed.getRequestAmount,
-            paymentHash: reviewed.payment_hash
-        });
+        expect(hosts('PaymentSuccessView')).toHaveLength(0);
+        expect(screen.getByText('mint unreachable')).toBeOnTheScreen();
     });
 });
 
-const MINT_1 = 'https://mint.one';
-const MINT_2 = 'https://mint.two';
+describe('MultimintPayment donation', () => {
+    beforeEach(() => jest.clearAllMocks());
 
-// Two selected mints. The invoice is 75 sats with a 2 sat fee reserve, so
-// the planner stops after the first mint and only it is in meltQuotes:
-// getMultimintInfo() lists just that mint. The screen is constructed but
-// never mounted, so no payment starts.
-const fundsCheckScreen = ({
-    donationAmount,
-    plannedBalance = 89,
-    payReqMintBalance = 139
-}: {
-    donationAmount?: string;
-    plannedBalance?: number;
-    payReqMintBalance?: number;
-}) =>
-    new MultimintPayment({
-        navigation: { addListener: jest.fn() },
-        route: { params: { paymentAmount: '75', donationAmount } },
-        CashuStore: {
-            multiMintSelectedUrls: [MINT_1, MINT_2],
-            getMultimintInfo: () => [
-                { mintUrl: MINT_1, balance: plannedBalance }
-            ],
-            payReq: { getRequestAmount: 75 },
-            feeEstimate: 2,
-            payReqMintBalance,
-            multiMintPlannerSkips: []
-        }
-    } as any);
+    it('quotes the donation invoice it loaded and pays that plan as a donation', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const cashuStore = buildCashuStore();
+        cashuStore.payLnInvoiceFromEcash.mockResolvedValue(paid);
+        const { params } = await renderView({
+            cashuStore,
+            params: {
+                paymentAmount: '75',
+                paymentPlan: makePlan(),
+                donationAmount: '5'
+            }
+        });
+        await flush();
+        await flush();
 
+        expect(loadDonationLnurl).toHaveBeenCalledWith('5');
+        expect(cashuStore.getPayReq.mock.calls).toEqual([['lnbc1donation']]);
+        const donationPlan = await cashuStore.getPayReq.mock.results[0].value;
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(2);
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenLastCalledWith({
+            amount: '5',
+            plan: donationPlan,
+            isDonationPayment: true
+        });
+        const { plan } = cashuStore.payLnInvoiceFromEcash.mock.calls[1][0];
+        expect(plan).toBe(donationPlan);
+        expect(plan).not.toBe(params.paymentPlan);
+    });
+
+    it('sends no donation when the payment fails', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const { cashuStore } = await renderView({
+            params: {
+                paymentAmount: '75',
+                paymentPlan: makePlan(),
+                donationAmount: '5'
+            }
+        });
+        await flush();
+
+        expect(loadDonationLnurl).not.toHaveBeenCalled();
+        expect(cashuStore.getPayReq).not.toHaveBeenCalled();
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
+    });
+});
+
+// The fee and the balance are those of the plan; CashuStore holds decoy
+// values that would refuse every payment here if they were read
 describe('MultimintPayment funds check', () => {
-    it('starts when both selected mints cover the invoice and the donation', () => {
-        // 75 + 2 + 20 = 97: more than the planned mint has, less than both
-        const { state } = fundsCheckScreen({ donationAmount: '20' });
+    beforeEach(() => jest.clearAllMocks());
 
-        expect(state.step).toBe(MultinutPaymentStep.PROCESSING);
-        expect(state.error).toBeUndefined();
-        // the progress list still shows only the planned mint
-        expect(state.mints.map(({ mintUrl }) => mintUrl)).toEqual([MINT_1]);
-    });
-
-    it('refuses to start when the donation leaves both mints short', () => {
-        // 75 + 2 + 75 = 152 > 139
-        const { state } = fundsCheckScreen({ donationAmount: '75' });
-
-        expect(state.step).toBe(MultinutPaymentStep.FAILED);
-        expect(state.error).toBe('stores.CashuStore.notEnoughFunds');
-    });
-
-    it('checks the planned mints when getPayReq did not count a balance', () => {
-        // 75 + 2 = 77 > 70
-        const { state } = fundsCheckScreen({
-            plannedBalance: 70,
-            payReqMintBalance: 0
+    const check = (plan: object, donationAmount?: string, fields?: object) =>
+        renderView({
+            cashuStore: buildCashuStore(fields),
+            params: {
+                paymentAmount: '75',
+                paymentPlan: makePlan(plan),
+                donationAmount
+            }
         });
 
-        expect(state.step).toBe(MultinutPaymentStep.FAILED);
-        expect(state.error).toBe('stores.CashuStore.notEnoughFunds');
+    it('starts when both selected mints cover the invoice and the donation', async () => {
+        // 75 + 2 + 20 = 97: more than the planned mint has, less than both
+        const { cashuStore } = await check({}, '20');
+
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(1);
+        expect(
+            screen.queryByText('stores.CashuStore.notEnoughFunds')
+        ).not.toBeOnTheScreen();
+        // the progress list still shows only the planned mint
+        expect(screen.queryByText(`name of ${MINT_2}`)).not.toBeOnTheScreen();
+    });
+
+    it('refuses to start when the donation leaves both mints short', async () => {
+        // 75 + 2 + 75 = 152 > 139
+        const { cashuStore } = await check({}, '75');
+
+        expect(cashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        expect(
+            screen.getByText('stores.CashuStore.notEnoughFunds')
+        ).toBeOnTheScreen();
+    });
+
+    it('refuses to start when the fee of the plan leaves both mints short', async () => {
+        // 75 + 65 = 140 > 139
+        const { cashuStore } = await check({ feeEstimate: 65 });
+
+        expect(cashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        expect(
+            screen.getByText('stores.CashuStore.notEnoughFunds')
+        ).toBeOnTheScreen();
+    });
+
+    it('checks the planned mints when getPayReq did not count a balance', async () => {
+        // 75 + 2 = 77 > 70
+        const { cashuStore } = await check({ mintBalance: 0 }, undefined, {
+            mintBalances: { [MINT_1]: 70, [MINT_2]: 50 }
+        });
+
+        expect(cashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        expect(
+            screen.getByText('stores.CashuStore.notEnoughFunds')
+        ).toBeOnTheScreen();
+    });
+
+    it('names the self-send skip when the planner left out the receiving mint', async () => {
+        await check(
+            { plannerSkips: [{ mintUrl: MINT_2, reason: 'selfSend' }] },
+            '75'
+        );
+
+        expect(
+            screen.getByText('stores.CashuStore.notEnoughFundsSelfSend')
+        ).toBeOnTheScreen();
     });
 });

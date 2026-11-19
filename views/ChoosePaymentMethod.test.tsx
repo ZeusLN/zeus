@@ -9,7 +9,7 @@ jest.mock('../stores/Stores', () => ({
 jest.mock('../utils/BackendUtils', () => ({
     supportsChannelManagement: jest.fn(),
     supportsOnchainReceiving: () => false,
-    supportsCashuWallet: () => false
+    supportsCashuWallet: jest.fn(() => false)
 }));
 jest.mock('../utils/Bolt11Utils', () => ({}));
 jest.mock('../models/Invoice', () => ({}));
@@ -40,7 +40,7 @@ jest.mock('../components/RescanStatus', () => 'RescanStatus');
 jest.mock('../components/FeeEstimate', () => 'FeeEstimate');
 
 import * as React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import ChoosePaymentMethod from './ChoosePaymentMethod';
 import BackendUtils from '../utils/BackendUtils';
 
@@ -67,15 +67,31 @@ let channels:
       }
     | undefined;
 
+const DECODED = { destination: 'node', getRequestAmount: 12000 };
+
+// InvoicesStore as the screen uses it: it decodes what it is asked to and
+// keeps nothing
+const makeInvoicesStore = () => ({
+    getPayReq: jest.fn(async (): Promise<any> => DECODED),
+    getRouteEstimate: jest.fn(
+        async (): Promise<any> => ({
+            feeEstimate: null,
+            successProbability: null
+        })
+    )
+});
+
 // Opens the payment method picker for an invoice of `satAmount` sats
-const renderView = async (params: any = {}) => {
-    const InvoicesStore = {
-        getPayReq: jest.fn().mockResolvedValue(undefined)
-    };
+const renderView = async (
+    params: any = {},
+    InvoicesStore = makeInvoicesStore(),
+    navigation: any = { addListener: jest.fn(() => jest.fn()) },
+    CashuStore: any = { totalBalanceSats: 0 }
+) => {
     await render(
         <ChoosePaymentMethod
             {...({
-                navigation: { addListener: jest.fn(() => jest.fn()) },
+                navigation,
                 route: {
                     params: {
                         lightning: 'invoice',
@@ -85,7 +101,7 @@ const renderView = async (params: any = {}) => {
                 },
                 BalanceStore: balances,
                 ChannelsStore: channels,
-                CashuStore: { totalBalanceSats: 0 },
+                CashuStore,
                 UTXOsStore: { accounts: [] },
                 InvoicesStore
             } as any)}
@@ -96,6 +112,39 @@ const renderView = async (params: any = {}) => {
 
 const list = () =>
     screen.container.queryAll((n) => n.type === 'PaymentMethodList')[0].props;
+
+const feeEstimate = () =>
+    screen.container.queryAll((n) => n.type === 'FeeEstimate')[0].props;
+
+const flush = () =>
+    act(async () => {
+        await new Promise((resolve) => setImmediate(resolve));
+    });
+
+type Deferred = {
+    resolve: (value: any) => void;
+    reject: (e: Error) => void;
+};
+const deferred = () => {
+    const d = {} as Deferred & { promise: Promise<any> };
+    d.promise = new Promise((resolve, reject) => {
+        d.resolve = resolve;
+        d.reject = reject;
+    });
+    return d;
+};
+
+// a navigation whose focus and blur events the test can fire
+const makeNavigation = () => {
+    const listeners: { [event: string]: () => void } = {};
+    return {
+        addListener: jest.fn((event: string, callback: () => void) => {
+            listeners[event] = callback;
+            return jest.fn();
+        }),
+        emit: (event: string) => act(async () => listeners[event]())
+    };
+};
 
 const notEnoughShown = () => !!screen.queryByText(NOT_ENOUGH);
 
@@ -244,5 +293,340 @@ describe('ChoosePaymentMethod sending capacity', () => {
         });
 
         expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
+    });
+});
+
+// The screen decodes the invoice for its own fee row. Nothing is shared
+// through InvoicesStore, so a PaymentRequest open lower in the stack keeps
+// the invoice it is reviewing
+describe('ChoosePaymentMethod Lightning fee estimate', () => {
+    beforeEach(() => {
+        jest.mocked(BackendUtils.supportsChannelManagement).mockReturnValue(
+            false
+        );
+        balances = { lightningBalance: 50000, totalBlockchainBalance: 0 };
+        channels = undefined;
+    });
+
+    it('queries the route of the invoice it decoded and passes the fee on', async () => {
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getRouteEstimate.mockResolvedValue({
+            feeEstimate: 7,
+            successProbability: 90
+        });
+
+        await renderView({}, InvoicesStore);
+        await flush();
+
+        expect(InvoicesStore.getPayReq).toHaveBeenCalledWith('invoice');
+        expect(InvoicesStore.getRouteEstimate).toHaveBeenCalledWith(DECODED);
+        expect(feeEstimate()).toMatchObject({
+            lightningFee: 7,
+            lightningFeeLoading: false
+        });
+    });
+
+    it('passes a 0 sat fee on as a fee', async () => {
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getRouteEstimate.mockResolvedValue({
+            feeEstimate: 0,
+            successProbability: 0
+        });
+
+        await renderView({}, InvoicesStore);
+        await flush();
+
+        expect(feeEstimate().lightningFee).toBe(0);
+    });
+
+    it('shows the fee as loading until the decode and the route query are in', async () => {
+        const decode = deferred();
+        const route = deferred();
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getPayReq.mockReturnValue(decode.promise);
+        InvoicesStore.getRouteEstimate.mockReturnValue(route.promise);
+
+        await renderView({}, InvoicesStore);
+        await flush();
+        expect(feeEstimate()).toMatchObject({
+            lightningFee: undefined,
+            lightningFeeLoading: true
+        });
+
+        decode.resolve(DECODED);
+        await flush();
+        expect(feeEstimate().lightningFeeLoading).toBe(true);
+
+        route.resolve({ feeEstimate: 3, successProbability: 50 });
+        await flush();
+        expect(feeEstimate()).toMatchObject({
+            lightningFee: 3,
+            lightningFeeLoading: false
+        });
+    });
+
+    it('passes no fee when the backend has no estimate', async () => {
+        await renderView();
+        await flush();
+
+        expect(feeEstimate()).toMatchObject({
+            lightningFee: undefined,
+            lightningFeeLoading: false
+        });
+    });
+
+    it('passes no fee and queries no route when the invoice cannot be decoded', async () => {
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getPayReq.mockRejectedValue(new Error('decode failed'));
+
+        await renderView({}, InvoicesStore);
+        await flush();
+
+        expect(InvoicesStore.getRouteEstimate).not.toHaveBeenCalled();
+        expect(feeEstimate()).toMatchObject({
+            lightningFee: undefined,
+            lightningFeeLoading: false
+        });
+    });
+
+    it('does not load a fee for an LNURL withdraw', async () => {
+        const InvoicesStore = makeInvoicesStore();
+
+        await renderView(
+            {
+                lightning: 'lnurl1withdraw',
+                satAmount: '20000',
+                lnurlParams: LNURL_WITHDRAW
+            },
+            InvoicesStore
+        );
+        await flush();
+
+        expect(InvoicesStore.getRouteEstimate).not.toHaveBeenCalled();
+        expect(feeEstimate().lightningFeeLoading).toBe(false);
+    });
+
+    it('estimates again when the screen regains focus', async () => {
+        const InvoicesStore = makeInvoicesStore();
+        const navigation = makeNavigation();
+        await renderView({}, InvoicesStore, navigation);
+        await flush();
+        expect(InvoicesStore.getPayReq).toHaveBeenCalledTimes(1);
+
+        // focus without a blur is the first focus of the screen
+        await navigation.emit('focus');
+        expect(InvoicesStore.getPayReq).toHaveBeenCalledTimes(1);
+
+        await navigation.emit('blur');
+        InvoicesStore.getRouteEstimate.mockResolvedValue({
+            feeEstimate: 9,
+            successProbability: 80
+        });
+        await navigation.emit('focus');
+        await flush();
+
+        expect(InvoicesStore.getPayReq).toHaveBeenCalledTimes(2);
+        expect(feeEstimate().lightningFee).toBe(9);
+    });
+
+    it('keeps the newer estimate when an older one answers last', async () => {
+        const first = deferred();
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getRouteEstimate
+            .mockReturnValueOnce(first.promise)
+            .mockResolvedValueOnce({ feeEstimate: 9, successProbability: 80 });
+        const navigation = makeNavigation();
+        await renderView({}, InvoicesStore, navigation);
+        await flush();
+
+        await navigation.emit('blur');
+        await navigation.emit('focus');
+        await flush();
+        expect(feeEstimate().lightningFee).toBe(9);
+
+        first.resolve({ feeEstimate: 500, successProbability: 10 });
+        await flush();
+
+        expect(feeEstimate()).toMatchObject({
+            lightningFee: 9,
+            lightningFeeLoading: false
+        });
+    });
+});
+
+// The screen quotes the invoice for its own ecash fee row. Nothing is
+// shared through CashuStore, so a CashuPaymentRequest open lower in the
+// stack keeps the invoice and quotes it is reviewing
+describe('ChoosePaymentMethod ecash fee estimate', () => {
+    const planFor = (overrides: any = {}) => ({
+        paymentRequest: 'invoice',
+        payReq: DECODED,
+        meltQuotes: [],
+        feeEstimate: 2,
+        mintBalance: 50000,
+        amount: 12000,
+        ...overrides
+    });
+
+    // CashuStore as the screen uses it: it quotes what it is asked to and
+    // keeps nothing
+    const makeCashuStore = () => ({
+        totalBalanceSats: 50000,
+        getPayReq: jest.fn(async (): Promise<any> => planFor())
+    });
+
+    beforeEach(() => {
+        jest.mocked(BackendUtils.supportsChannelManagement).mockReturnValue(
+            false
+        );
+        jest.mocked(BackendUtils.supportsCashuWallet).mockReturnValue(true);
+        balances = { lightningBalance: 50000, totalBlockchainBalance: 0 };
+        channels = undefined;
+    });
+
+    afterEach(() => {
+        jest.mocked(BackendUtils.supportsCashuWallet).mockReturnValue(false);
+    });
+
+    it('quotes the invoice itself and passes the fee on', async () => {
+        const CashuStore = makeCashuStore();
+
+        await renderView({}, undefined, undefined, CashuStore);
+        await flush();
+
+        expect(CashuStore.getPayReq).toHaveBeenCalledTimes(1);
+        expect(CashuStore.getPayReq).toHaveBeenCalledWith('invoice');
+        expect(feeEstimate()).toMatchObject({
+            ecashFee: 2,
+            ecashFeeLoading: false
+        });
+    });
+
+    it('passes a 0 sat fee on as a fee', async () => {
+        const CashuStore = makeCashuStore();
+        CashuStore.getPayReq.mockResolvedValue(planFor({ feeEstimate: 0 }));
+
+        await renderView({}, undefined, undefined, CashuStore);
+        await flush();
+
+        expect(feeEstimate()).toMatchObject({
+            ecashFee: 0,
+            ecashFeeLoading: false
+        });
+    });
+
+    it('shows the fee as loading until the quote is in', async () => {
+        const quote = deferred();
+        const CashuStore = makeCashuStore();
+        CashuStore.getPayReq.mockReturnValue(quote.promise);
+
+        await renderView({}, undefined, undefined, CashuStore);
+        await flush();
+        expect(feeEstimate()).toMatchObject({
+            ecashFee: undefined,
+            ecashFeeLoading: true
+        });
+
+        quote.resolve(planFor({ feeEstimate: 3 }));
+        await flush();
+        expect(feeEstimate()).toMatchObject({
+            ecashFee: 3,
+            ecashFeeLoading: false
+        });
+    });
+
+    it('passes no fee and stops loading when the plan has an error', async () => {
+        const CashuStore = makeCashuStore();
+        CashuStore.getPayReq.mockResolvedValue(
+            planFor({ feeEstimate: undefined, error: 'mint is offline' })
+        );
+
+        await renderView({}, undefined, undefined, CashuStore);
+        await flush();
+
+        expect(feeEstimate()).toMatchObject({
+            ecashFee: undefined,
+            ecashFeeLoading: false
+        });
+    });
+
+    it('does not quote when the backend has no Cashu wallet', async () => {
+        jest.mocked(BackendUtils.supportsCashuWallet).mockReturnValue(false);
+        const CashuStore = makeCashuStore();
+
+        await renderView({}, undefined, undefined, CashuStore);
+        await flush();
+
+        expect(CashuStore.getPayReq).not.toHaveBeenCalled();
+        expect(feeEstimate()).toMatchObject({
+            ecashFee: undefined,
+            ecashFeeLoading: false
+        });
+    });
+
+    it('does not quote an LNURL withdraw', async () => {
+        const CashuStore = makeCashuStore();
+
+        await renderView(
+            {
+                lightning: 'lnurl1withdraw',
+                satAmount: '20000',
+                lnurlParams: LNURL_WITHDRAW
+            },
+            undefined,
+            undefined,
+            CashuStore
+        );
+        await flush();
+
+        expect(CashuStore.getPayReq).not.toHaveBeenCalled();
+        expect(feeEstimate().ecashFeeLoading).toBe(false);
+    });
+
+    it('quotes again when the screen regains focus', async () => {
+        const CashuStore = makeCashuStore();
+        const navigation = makeNavigation();
+        await renderView({}, undefined, navigation, CashuStore);
+        await flush();
+        expect(CashuStore.getPayReq).toHaveBeenCalledTimes(1);
+
+        // focus without a blur is the first focus of the screen
+        await navigation.emit('focus');
+        expect(CashuStore.getPayReq).toHaveBeenCalledTimes(1);
+
+        await navigation.emit('blur');
+        CashuStore.getPayReq.mockResolvedValue(planFor({ feeEstimate: 9 }));
+        await navigation.emit('focus');
+        await flush();
+
+        expect(CashuStore.getPayReq).toHaveBeenCalledTimes(2);
+        expect(feeEstimate()).toMatchObject({
+            ecashFee: 9,
+            ecashFeeLoading: false
+        });
+    });
+
+    it('keeps the newer quote when an older one answers last', async () => {
+        const first = deferred();
+        const CashuStore = makeCashuStore();
+        CashuStore.getPayReq
+            .mockReturnValueOnce(first.promise)
+            .mockResolvedValueOnce(planFor({ feeEstimate: 9 }));
+        const navigation = makeNavigation();
+        await renderView({}, undefined, navigation, CashuStore);
+        await flush();
+
+        await navigation.emit('blur');
+        await navigation.emit('focus');
+        await flush();
+        expect(feeEstimate().ecashFee).toBe(9);
+
+        first.resolve(planFor({ feeEstimate: 500 }));
+        await flush();
+
+        expect(feeEstimate()).toMatchObject({
+            ecashFee: 9,
+            ecashFeeLoading: false
+        });
     });
 });

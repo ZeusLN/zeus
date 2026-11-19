@@ -18,7 +18,6 @@ jest.mock('../../utils/BackendUtils', () => ({
 }));
 jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({ themeColor: () => '#ffffff' }));
-jest.mock('../../stores/Stores', () => ({ cashuStore: {} }));
 jest.mock('../../stores/SyncStore', () => ({}));
 jest.mock('./SwipeableRowAction', () => 'SwipeableRowAction');
 jest.mock('./SwipeableRowContainer', () => 'SwipeableRowContainer');
@@ -59,6 +58,19 @@ const tapRowWith = async (destination: any) => {
     await new Promise(setImmediate);
     return navigation;
 };
+
+describe('EcashSwipeableRow payment request', () => {
+    // CashuPaymentRequest quotes the request in its route params itself
+    it('opens CashuPaymentRequest with the invoice', async () => {
+        const navigation = await tapRowWith({ lightning: 'lnbc1invoice' });
+
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'CashuPaymentRequest',
+            { paymentRequest: 'lnbc1invoice' }
+        );
+    });
+});
 
 // A BIP21 lightning= lnurl reaches the row without passing through
 // handleAnything, so the row's own resolve is the only policy check

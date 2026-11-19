@@ -397,14 +397,31 @@ describe('LnurlPay ecash payment', () => {
         mockFetchLnurlUrl.mockImplementation(() => new Promise(() => {}));
     });
 
-    // Confirms an ecash payment while another caller of the shared
-    // CashuStore loads OTHER_INVOICE during the mint quote round trip
-    const confirmWhileStoreIsReplaced = async () => {
+    const planFor = (overrides: any = {}) => ({
+        paymentRequest: SERVICE_INVOICE,
+        payReq: { payment_hash: SERVICE_PAYMENT_HASH },
+        meltQuotes: [],
+        mintBalance: 300,
+        amount: 250,
+        ...overrides
+    });
+
+    // Confirms an ecash payment whose quote resolves with plan. With
+    // storeDecoys, another caller loads OTHER_INVOICE into the shared
+    // CashuStore during the mint quote round trip, in the fields the store
+    // had before plans
+    const confirmEcash = async (
+        plan: any = planFor(),
+        { storeDecoys = false } = {}
+    ) => {
         const CashuStore: any = {};
         CashuStore.getPayReq = jest.fn(async () => {
-            CashuStore.paymentRequest = OTHER_INVOICE;
-            CashuStore.payReq = { payment_hash: 'other-payment-hash' };
-            CashuStore.getPayReqError = 'error of the other invoice';
+            if (storeDecoys) {
+                CashuStore.paymentRequest = OTHER_INVOICE;
+                CashuStore.payReq = { payment_hash: 'other-payment-hash' };
+                CashuStore.getPayReqError = 'error of the other invoice';
+            }
+            return plan;
         });
         const navigation = {
             addListener: jest.fn(),
@@ -413,6 +430,7 @@ describe('LnurlPay ecash payment', () => {
             goBack: jest.fn()
         };
         const LnurlPayStore = { keep: jest.fn() };
+        const InvoicesStore = { getPayReq: jest.fn(async () => {}) };
         await render(
             <LnurlPay
                 {...({
@@ -426,7 +444,7 @@ describe('LnurlPay ecash payment', () => {
                     UnitsStore: { resetUnits: jest.fn() },
                     ContactStore: { contacts: [] },
                     CashuStore,
-                    InvoicesStore: { getPayReq: jest.fn(async () => {}) },
+                    InvoicesStore,
                     LnurlPayStore
                 } as any)}
             />
@@ -435,12 +453,15 @@ describe('LnurlPay ecash payment', () => {
         await act(async () => {
             await new Promise(setImmediate);
         });
-        return { navigation, LnurlPayStore };
+        return { navigation, LnurlPayStore, InvoicesStore, CashuStore };
     };
 
     it('passes the invoice it checked to ChoosePaymentMethod', async () => {
-        const { navigation } = await confirmWhileStoreIsReplaced();
+        const { navigation, CashuStore } = await confirmEcash();
 
+        expect(CashuStore.getPayReq).toHaveBeenCalledWith(SERVICE_INVOICE);
+        expect(Alert.alert).not.toHaveBeenCalled();
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
         expect(navigation.navigate).toHaveBeenCalledWith(
             'ChoosePaymentMethod',
             { lightning: SERVICE_INVOICE, locked: true }
@@ -448,16 +469,61 @@ describe('LnurlPay ecash payment', () => {
     });
 
     it('records the payment under the checked invoice payment hash', async () => {
-        const { LnurlPayStore } = await confirmWhileStoreIsReplaced();
+        const { LnurlPayStore } = await confirmEcash();
 
         expect(LnurlPayStore.keep).toHaveBeenCalledTimes(1);
         expect(LnurlPayStore.keep.mock.calls[0][0]).toBe(SERVICE_PAYMENT_HASH);
     });
 
-    it('ignores the error of an invoice another caller loaded', async () => {
-        await confirmWhileStoreIsReplaced();
+    it('shows the error of its own plan and stays on the screen', async () => {
+        const { navigation, LnurlPayStore } = await confirmEcash(
+            planFor({ error: 'mint is offline' })
+        );
+
+        expect(Alert.alert).toHaveBeenCalledTimes(1);
+        expect(Alert.alert).toHaveBeenCalledWith(
+            'views.LnurlPay.LnurlPay.invalidInvoice',
+            'mint is offline',
+            expect.any(Array),
+            expect.any(Object)
+        );
+        expect(LnurlPayStore.keep).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(hostOfType('LoadingIndicator')).toBeUndefined();
+    });
+
+    // ChoosePaymentMethod offers the other payment methods
+    it('carries on to ChoosePaymentMethod when its plan is short of ecash', async () => {
+        const { navigation, LnurlPayStore } = await confirmEcash(
+            planFor({ error: 'Stores.CashuStore.notEnoughFunds: 250 sats' })
+        );
 
         expect(Alert.alert).not.toHaveBeenCalled();
+        expect(LnurlPayStore.keep).toHaveBeenCalledTimes(1);
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'ChoosePaymentMethod',
+            { lightning: SERVICE_INVOICE, locked: true }
+        );
+    });
+
+    it('ignores the error and invoice another caller left on CashuStore', async () => {
+        const { navigation, LnurlPayStore } = await confirmEcash(planFor(), {
+            storeDecoys: true
+        });
+
+        expect(Alert.alert).not.toHaveBeenCalled();
+        expect(LnurlPayStore.keep.mock.calls[0][0]).toBe(SERVICE_PAYMENT_HASH);
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'ChoosePaymentMethod',
+            { lightning: SERVICE_INVOICE, locked: true }
+        );
+    });
+
+    // ChoosePaymentMethod decodes the invoice for its own Lightning fee row
+    it('leaves the Lightning decode to ChoosePaymentMethod', async () => {
+        const { InvoicesStore } = await confirmEcash();
+
+        expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
     });
 });
 
@@ -477,21 +543,9 @@ describe('LnurlPay invoice decode', () => {
         jest.restoreAllMocks();
     });
 
-    // InvoicesStore whose getPayReq ends in the given state
-    const invoicesStore = (after: { [key: string]: any }) => {
-        const store: { [key: string]: any } = {
-            paymentRequest: '',
-            pay_req: null,
-            getPayReqError: null
-        };
-        store.getPayReq = jest.fn(async (request: string) => {
-            store.paymentRequest = request;
-            Object.assign(store, after);
-        });
-        return store;
-    };
-
-    const confirm = async (InvoicesStore: { [key: string]: any }) => {
+    // getPayReq is the store's decode: it resolves with the invoice or
+    // rejects, and keeps nothing
+    const confirm = async (getPayReq: jest.Mock) => {
         const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
         const LnurlPayStore = { keep: jest.fn() };
         const navigate = jest.fn();
@@ -508,7 +562,7 @@ describe('LnurlPay invoice decode', () => {
                     UnitsStore: { resetUnits: jest.fn() },
                     ContactStore: { contacts: [] },
                     CashuStore: {},
-                    InvoicesStore,
+                    InvoicesStore: { getPayReq },
                     LnurlPayStore
                 } as any)}
             />
@@ -518,15 +572,16 @@ describe('LnurlPay invoice decode', () => {
         await act(async () => {
             await new Promise((resolve) => setImmediate(resolve));
         });
-        expect(InvoicesStore.getPayReq).toHaveBeenCalledWith(PR);
+        expect(getPayReq).toHaveBeenCalledWith(PR);
         return { alert, keep: LnurlPayStore.keep, navigate };
     };
 
-    it('binds the LNURL to the decoded invoice and opens PaymentRequest', async () => {
-        const { keep, navigate } = await confirm(
-            invoicesStore({
-                pay_req: { payment_hash: 'aa', description_hash: 'dd' }
-            })
+    it('binds the LNURL to the invoice it decoded and opens PaymentRequest with it', async () => {
+        const { alert, keep, navigate } = await confirm(
+            jest.fn(async () => ({
+                payment_hash: 'aa',
+                description_hash: 'dd'
+            }))
         );
 
         expect(keep).toHaveBeenCalledWith(
@@ -538,49 +593,51 @@ describe('LnurlPay invoice decode', () => {
             { tag: 'noop' },
             ''
         );
-        expect(navigate).toHaveBeenCalledWith('PaymentRequest');
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledWith('PaymentRequest', {
+            paymentRequest: PR
+        });
+        expect(alert).not.toHaveBeenCalled();
+        expect(hostOfType('LoadingIndicator')).toBeUndefined();
     });
 
-    it('stops when a newer request replaced the decode', async () => {
+    it('binds empty hashes when the decode has none', async () => {
+        const { keep, navigate } = await confirm(jest.fn(async () => ({})));
+
+        expect(keep.mock.calls[0][0]).toBe('');
+        expect(keep.mock.calls[0][4]).toBe('');
+        expect(navigate).toHaveBeenCalledWith('PaymentRequest', {
+            paymentRequest: PR
+        });
+    });
+
+    // A deep link or NFC tap used to replace the decode in InvoicesStore and
+    // stop this flow. Each caller now gets its own answer
+    it('carries on with its own invoice when another one is decoded meanwhile', async () => {
+        const getPayReq: jest.Mock = jest.fn(async (request: string) => {
+            if (request === PR) await getPayReq('lnbc-deep-link');
+            return request === PR
+                ? { payment_hash: 'aa', description_hash: 'dd' }
+                : { payment_hash: 'bb', description_hash: 'ee' };
+        });
+        const { keep, navigate } = await confirm(getPayReq);
+
+        expect(keep).toHaveBeenCalledTimes(1);
+        expect(keep.mock.calls[0][0]).toBe('aa');
+        expect(keep.mock.calls[0][4]).toBe('dd');
+        expect(navigate).toHaveBeenCalledWith('PaymentRequest', {
+            paymentRequest: PR
+        });
+    });
+
+    it('shows the error of a failed decode and stays on the screen', async () => {
         const { alert, keep, navigate } = await confirm(
-            invoicesStore({
-                paymentRequest: 'lnbc-deep-link',
-                pay_req: { payment_hash: 'bb', description_hash: 'ee' }
+            jest.fn(async () => {
+                throw new Error('decode failed');
             })
         );
 
-        expect(keep).not.toHaveBeenCalled();
-        expect(navigate).not.toHaveBeenCalled();
-        expect(alert).not.toHaveBeenCalled();
-    });
-
-    it("doesn't show the error of a newer request that replaced the decode", async () => {
-        const { alert, keep, navigate } = await confirm(
-            invoicesStore({
-                paymentRequest: 'lnbc-deep-link',
-                getPayReqError: 'decode failed'
-            })
-        );
-
-        expect(alert).not.toHaveBeenCalled();
-        expect(keep).not.toHaveBeenCalled();
-        expect(navigate).not.toHaveBeenCalled();
-    });
-
-    it('stops when the decode was dropped with nothing decoded yet', async () => {
-        // a newer decode of the same string is still in flight
-        const { alert, keep, navigate } = await confirm(invoicesStore({}));
-
-        expect(keep).not.toHaveBeenCalled();
-        expect(navigate).not.toHaveBeenCalled();
-        expect(alert).not.toHaveBeenCalled();
-    });
-
-    it('still shows the error of its own failed decode', async () => {
-        const { alert, keep, navigate } = await confirm(
-            invoicesStore({ getPayReqError: 'decode failed' })
-        );
-
+        expect(alert).toHaveBeenCalledTimes(1);
         expect(alert).toHaveBeenCalledWith(
             'views.LnurlPay.LnurlPay.invalidInvoice',
             'decode failed',
@@ -589,5 +646,6 @@ describe('LnurlPay invoice decode', () => {
         );
         expect(keep).not.toHaveBeenCalled();
         expect(navigate).not.toHaveBeenCalled();
+        expect(hostOfType('LoadingIndicator')).toBeUndefined();
     });
 });

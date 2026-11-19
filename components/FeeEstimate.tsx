@@ -7,7 +7,6 @@ import {
     View
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { inject, observer } from 'mobx-react';
 import { LNURLWithdrawParams } from 'js-lnurl';
 
 import Amount from './Amount';
@@ -18,8 +17,6 @@ import OnchainFeeInput from './OnchainFeeInput';
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretUp from '../assets/images/SVG/Caret Up.svg';
 
-import InvoicesStore from '../stores/InvoicesStore';
-import CashuStore from '../stores/CashuStore';
 import { feeStore, settingsStore } from '../stores/Stores';
 
 import { localeString } from '../utils/LocaleUtils';
@@ -35,8 +32,13 @@ interface FeeEstimateProps {
     onFeeChange?: (fee: string) => void;
     feeRate?: string;
     navigation?: NativeStackNavigationProp<any, any>;
-    InvoicesStore?: InvoicesStore;
-    CashuStore?: CashuStore;
+    // the Lightning route fee estimate for the payment, from the screen
+    // that decoded it
+    lightningFee?: number;
+    lightningFeeLoading?: boolean;
+    // the ecash melt fee for the payment, from the same screen
+    ecashFee?: number;
+    ecashFeeLoading?: boolean;
 }
 
 interface FeeEstimateState {
@@ -70,8 +72,6 @@ const FeeCell = ({
     </View>
 );
 
-@inject('InvoicesStore', 'CashuStore')
-@observer
 export default class FeeEstimate extends React.PureComponent<
     FeeEstimateProps,
     FeeEstimateState
@@ -135,20 +135,17 @@ export default class FeeEstimate extends React.PureComponent<
             showOnchainFeeInput,
             onFeeChange,
             navigation,
-            InvoicesStore,
-            CashuStore
+            lightningFee,
+            lightningFeeLoading,
+            ecashFee,
+            ecashFeeLoading
         } = this.props;
 
         const isLightningPayment = !!(lightning || lnurlParams);
-        const lightningFee = InvoicesStore?.feeEstimate ?? undefined;
-        const ecashFee = CashuStore?.feeEstimate ?? undefined;
-        const lightningLoading =
-            isLightningPayment &&
-            !!(InvoicesStore?.loading || InvoicesStore?.loadingFeeEstimate);
-        const ecashLoading =
-            isLightningPayment &&
-            BackendUtils.supportsCashuWallet() &&
-            !!CashuStore?.loading;
+        const lightningLoading = isLightningPayment && !!lightningFeeLoading;
+        // the ecash row is only shown for a Lightning payment on a backend
+        // with a Cashu wallet
+        const ecashLoading = !!ecashFeeLoading;
 
         const satNum = Number(satAmount);
 

@@ -4027,20 +4027,11 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        await this.cashuStore.getPayReq(request.invoice);
-        // The send screens call getPayReq on the same store, outside the
-        // payment queue. A superseded getPayReq returns without an error and
-        // the store then describes the invoice the user has just opened.
-        if (this.cashuStore.paymentRequest !== request.invoice) {
-            return NostrConnectUtils.createNip47Error(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.failedToPayInvoice'
-                ),
-                Nip47ErrorCode.INTERNAL_ERROR
-            );
-        }
-        const invoice = this.cashuStore.payReq;
-        const decodeError = this.cashuStore.getPayReqError;
+        // The plan is this request's own: the send screens call getPayReq
+        // on the same store, outside the payment queue, and get theirs
+        const plan = await this.cashuStore.getPayReq(request.invoice);
+        const invoice = plan.payReq;
+        const decodeError = plan.error;
 
         if (decodeError) {
             return NostrConnectUtils.createNip47Error(
@@ -4128,7 +4119,7 @@ export default class NostrWalletConnectStore {
 
         const cashuInvoice = await this.cashuStore.payLnInvoiceFromEcash({
             amount: amountSats.toString(),
-            paymentRequest: request.invoice
+            plan
         });
 
         if (!cashuInvoice || cashuInvoice.isFailed) {

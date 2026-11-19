@@ -43,7 +43,7 @@ const renderFeeLimit = async ({
     ...props
 }: {
     payments?: Record<string, string>;
-    feeEstimate?: string;
+    feeEstimate?: number | null;
     [prop: string]: any;
 } = {}) => {
     const onFeeLimitSatChange = jest.fn();
@@ -59,7 +59,7 @@ const renderFeeLimit = async ({
                 onMaxFeePercentChange,
                 onFeeOptionChange,
                 SettingsStore,
-                InvoicesStore: { feeEstimate },
+                feeEstimate,
                 ...props,
                 ...extra
             } as any)}
@@ -290,7 +290,7 @@ describe('FeeLimit fee estimate warning', () => {
 
     it('warns when the estimate is over the fixed limit', async () => {
         await renderFeeLimit({
-            feeEstimate: '150',
+            feeEstimate: 150,
             displayFeeRecommendation: true
         });
 
@@ -299,15 +299,27 @@ describe('FeeLimit fee estimate warning', () => {
 
     it('does not warn when the estimate fits', async () => {
         await renderFeeLimit({
-            feeEstimate: '100',
+            feeEstimate: 100,
             displayFeeRecommendation: true
         });
 
         expect(screen.queryByText(warning)).not.toBeOnTheScreen();
     });
 
+    it.each([undefined, null])(
+        'does not warn without an estimate (%p)',
+        async (feeEstimate) => {
+            await renderFeeLimit({
+                feeEstimate,
+                displayFeeRecommendation: true
+            });
+
+            expect(screen.queryByText(warning)).not.toBeOnTheScreen();
+        }
+    );
+
     it('does not warn unless asked to', async () => {
-        await renderFeeLimit({ feeEstimate: '150' });
+        await renderFeeLimit({ feeEstimate: 150 });
 
         expect(screen.queryByText(warning)).not.toBeOnTheScreen();
     });

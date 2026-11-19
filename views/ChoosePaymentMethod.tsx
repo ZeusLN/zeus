@@ -61,6 +61,13 @@ interface ChoosePaymentMethodState {
     clinkNoffer: string;
     lnurlParams: LNURLWithdrawParams | undefined;
     feeRate: string;
+    // the Lightning route fee estimate for the invoice, queried by this
+    // screen from its own decode
+    lightningFee?: number;
+    lightningFeeLoading: boolean;
+    // the ecash melt fee for the invoice, from this screen's own quote
+    ecashFee?: number;
+    ecashFeeLoading: boolean;
 }
 
 @inject(
@@ -78,6 +85,10 @@ export default class ChoosePaymentMethod extends React.Component<
     private focusUnsubscribe?: () => void;
     private blurUnsubscribe?: () => void;
     private hasNavigatedAway = false;
+    // bumped by every Lightning fee estimate, so an answer can tell whether
+    // a newer one was started
+    private lightningFeeRequestId = 0;
+    private ecashFeeRequestId = 0;
 
     state: ChoosePaymentMethodState = {
         value: '',
@@ -87,7 +98,11 @@ export default class ChoosePaymentMethod extends React.Component<
         offer: '',
         clinkNoffer: '',
         lnurlParams: undefined,
-        feeRate: ''
+        feeRate: '',
+        lightningFee: undefined,
+        lightningFeeLoading: false,
+        ecashFee: undefined,
+        ecashFeeLoading: false
     };
 
     componentDidMount() {
@@ -179,12 +194,51 @@ export default class ChoosePaymentMethod extends React.Component<
         if (!lightning || lnurlParams?.tag === 'withdrawRequest') return;
         const tasks: Promise<void>[] = [];
         if (InvoicesStore) {
-            tasks.push(InvoicesStore.getPayReq(lightning).catch(() => {}));
+            tasks.push(this.fetchLightningFee(lightning));
         }
         if (BackendUtils.supportsCashuWallet() && CashuStore) {
-            tasks.push(CashuStore.getPayReq(lightning).catch(() => {}));
+            tasks.push(this.fetchEcashFee(lightning));
         }
         await Promise.all(tasks);
+    };
+
+    // Decodes the invoice for this screen's own fee row. The decode stays
+    // here: a PaymentRequest that is open lower in the stack keeps the
+    // invoice it is reviewing
+    private fetchLightningFee = async (lightning: string) => {
+        const { InvoicesStore } = this.props;
+        const requestId = ++this.lightningFeeRequestId;
+        this.setState({ lightningFee: undefined, lightningFeeLoading: true });
+
+        let lightningFee: number | undefined;
+        try {
+            const pay_req = await InvoicesStore!.getPayReq(lightning);
+            const { feeEstimate } = await InvoicesStore!.getRouteEstimate(
+                pay_req
+            );
+            lightningFee = feeEstimate ?? undefined;
+        } catch {
+            // no estimate for a request the backend can't decode
+        }
+
+        // a newer estimate was started (the screen regained focus)
+        if (requestId !== this.lightningFeeRequestId) return;
+        this.setState({ lightningFee, lightningFeeLoading: false });
+    };
+
+    // Quotes the invoice for this screen's own fee row. The quote stays
+    // here: a CashuPaymentRequest that is open lower in the stack keeps
+    // the invoice and quotes it is reviewing
+    private fetchEcashFee = async (lightning: string) => {
+        const { CashuStore } = this.props;
+        const requestId = ++this.ecashFeeRequestId;
+        this.setState({ ecashFee: undefined, ecashFeeLoading: true });
+
+        const { feeEstimate } = await CashuStore!.getPayReq(lightning);
+
+        // a newer quote was started (the screen regained focus)
+        if (requestId !== this.ecashFeeRequestId) return;
+        this.setState({ ecashFee: feeEstimate, ecashFeeLoading: false });
     };
 
     get usesSendingCapacity() {
@@ -300,7 +354,11 @@ export default class ChoosePaymentMethod extends React.Component<
             offer,
             clinkNoffer,
             lnurlParams,
-            feeRate
+            feeRate,
+            lightningFee,
+            lightningFeeLoading,
+            ecashFee,
+            ecashFeeLoading
         } = this.state;
 
         const { accounts } = UTXOsStore!;
@@ -426,6 +484,10 @@ export default class ChoosePaymentMethod extends React.Component<
                     satAmount={satAmount}
                     lightning={lightning}
                     lnurlParams={lnurlParams}
+                    lightningFee={lightningFee}
+                    lightningFeeLoading={lightningFeeLoading}
+                    ecashFee={ecashFee}
+                    ecashFeeLoading={ecashFeeLoading}
                     visible={showFees && !hasInsufficientFunds}
                     showOnchainFeeInput={showOnchainFeeInput}
                     feeRate={feeRate}
