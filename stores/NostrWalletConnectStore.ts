@@ -37,6 +37,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { mayHaveBeenSent } from '../utils/OnchainSendUtils';
+import { isPaymentRefusedAsDuplicate } from '../utils/PaymentLookupUtils';
 import NostrConnectUtils, {
     DEFAULT_INVOICE_EXPIRY_SECONDS,
     Nip47ErrorCode,
@@ -110,6 +111,13 @@ const PENDING_PAYMENT_STATUS_REFRESH_MS = 30_000;
  * waits on this refresh: Alby SDK clients give that request 10s.
  */
 const PENDING_PAYMENT_LOOKUP_TRACK_TIMEOUT_MS = 2_000;
+/**
+ * How far before an invoice's creation time the lookup before a pay_invoice
+ * send reaches, to absorb clock skew between the payee and the node. Same
+ * value as TransactionsStore's PAYMENT_LOOKUP_CREATION_SLACK_MS, which is
+ * not imported: this store uses TransactionsStore as a type only.
+ */
+const INVOICE_PAYMENT_LOOKUP_SLACK_MS = 10 * 60 * 1000;
 /** Per-connection make_invoice rate limit (remote abuse protection; in-memory, resets on app restart). */
 const MAKE_INVOICE_RATE_WINDOW_MS = 60_000;
 const MAX_MAKE_INVOICE_PER_WINDOW = 5;
@@ -178,6 +186,9 @@ interface LightningPaymentState {
     payment_hash: string | null;
     payment_preimage: string | null;
     payment_fee: string | null;
+    // the node rejected the send because it already has a payment for the
+    // hash (LND: AlreadyExists)
+    refusedAsDuplicate: boolean;
 }
 
 export interface CreateConnectionParams {
@@ -3655,6 +3666,57 @@ export default class NostrWalletConnectStore {
             };
         }
 
+        // The node's payments cover the whole wallet. If it already has
+        // this invoice settled or in flight and this connection has no
+        // record of paying it, the payment was made by the user or by
+        // another connection. Refuse, as the Cashu handler does, instead of
+        // adopting that payment and returning its preimage. An own attempt
+        // recorded failed is not refused: a dispatch rejected by a transport
+        // error after reaching the node is recorded failed, is not
+        // reconciled, and can settle, so refusing it would leave the spend
+        // outside the budget.
+        if (!existing) {
+            let listed: Payment | undefined;
+            try {
+                listed = await this.findNodePaymentForInvoice(
+                    request.invoice,
+                    decodedPaymentHash,
+                    Number(invoiceInfo.timestamp)
+                );
+            } catch (error) {
+                // Without an answer the invoice may be paid already. An
+                // error thrown from here would leave the client with no
+                // reply at all.
+                console.warn('NWC: pay_invoice payment lookup failed', error);
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.paymentStatusUnavailable'
+                    ),
+                    Nip47ErrorCode.INTERNAL_ERROR
+                );
+            }
+            if (listed && NostrConnectUtils.isSettledPayment(listed)) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
+                    ),
+                    Nip47ErrorCode.INVALID_INVOICE
+                );
+            }
+            // An in-flight payment can still fail, so don't tell the client
+            // the invoice is paid
+            if (listed && NostrConnectUtils.isListedPaymentInTransit(listed)) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.paymentInProgress'
+                    ),
+                    Nip47ErrorCode.INVALID_INVOICE
+                );
+            }
+            // The connections may have been reloaded during the lookup
+            connection = this.storedConnection(connection);
+        }
+
         if (amountSats <= 0) {
             return NostrConnectUtils.createNip47Error(
                 localeString(
@@ -3743,6 +3805,45 @@ export default class NostrWalletConnectStore {
             zeroAmountInvoice ? amountSats.toString() : undefined,
             feeLimitSats
         );
+
+        // The node refused this send because it already has a payment for
+        // the hash, so this send sent nothing. With no record for the
+        // invoice, that payment was made after the lookup above by the
+        // wallet or by another connection: refuse rather than adopt it
+        // below. An own pending or timed-out attempt returned early above,
+        // and an own attempt recorded failed may be the payment the node
+        // has, as in the check above. LND's rejection is read from its
+        // gRPC code where the backend records one; the node's error text
+        // covers the backends that do not (LNC, LDK Node). A send that
+        // returned a preimage settled and is never refused.
+        const refusedForAnotherPayment =
+            paymentState.refusedAsDuplicate ||
+            [paymentState.payment_error, paymentState.error_msg].some(
+                (message) =>
+                    NostrConnectUtils.isAlreadyPaidError(message) ||
+                    NostrConnectUtils.isDuplicatePaymentError(message) ||
+                    NostrConnectUtils.isPaymentInTransitionError(message)
+            );
+        if (
+            !paymentState.payment_preimage &&
+            refusedForAnotherPayment &&
+            !existing
+        ) {
+            const inTransition = [
+                paymentState.payment_error,
+                paymentState.error_msg
+            ].some((message) =>
+                NostrConnectUtils.isPaymentInTransitionError(message)
+            );
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    inTransition
+                        ? 'stores.NostrWalletConnectStore.error.paymentInProgress'
+                        : 'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
+                ),
+                Nip47ErrorCode.INVALID_INVOICE
+            );
+        }
 
         // The payment has been sent. A failed list refresh must not throw past
         // this point, or nothing would be recorded and the spend would escape
@@ -4429,6 +4530,51 @@ export default class NostrWalletConnectStore {
         }
     }
 
+    /**
+     * The node's payment for an invoice, if it has one, for the check
+     * before a pay_invoice send. Asks by hash where the backend can: one
+     * small request instead of the payment list, and no miss for a payment
+     * older than the list reaches (LND's newest 500, CLN's newest 150).
+     * Falls back to the list when the backend has no lookup, the invoice
+     * has no decoded hash, or the lookup rejects. Embedded LND and LNC
+     * confirm a not-found answer with a page scan, which cannot rule a
+     * payment out when the page is full; the scan is bounded from the
+     * invoice's creation time, since a payment of it cannot be older.
+     */
+    private async findNodePaymentForInvoice(
+        invoice: string,
+        paymentHash: string | undefined,
+        invoiceTimestampSeconds: number
+    ): Promise<Payment | undefined> {
+        if (paymentHash && BackendUtils.supportsPaymentLookup()) {
+            const creation_date_start =
+                invoiceTimestampSeconds > 0
+                    ? Math.max(
+                          0,
+                          Math.floor(
+                              invoiceTimestampSeconds -
+                                  INVOICE_PAYMENT_LOOKUP_SLACK_MS / 1000
+                          )
+                      )
+                    : undefined;
+            try {
+                const raw = await BackendUtils.lookupPayment({
+                    payment_hash: paymentHash,
+                    ...(creation_date_start ? { creation_date_start } : {}),
+                    trackTimeoutMs: PENDING_PAYMENT_LOOKUP_TRACK_TIMEOUT_MS
+                });
+                return raw ? new Payment(raw) : undefined;
+            } catch {
+                // answered from the list below
+            }
+        }
+        return NostrConnectUtils.findPaymentForInvoice(
+            invoice,
+            await this.paymentsStore.getPayments(),
+            paymentHash
+        );
+    }
+
     private findLightningInvoiceInStore(invoice: Invoice): Invoice | undefined {
         const rHash = invoice.getRHash;
         const paymentRequest = invoice.getPaymentRequest;
@@ -4630,7 +4776,8 @@ export default class NostrWalletConnectStore {
             payment_error: null,
             payment_hash: null,
             payment_preimage: null,
-            payment_fee: null
+            payment_fee: null,
+            refusedAsDuplicate: false
         };
         const maxWaitTime = (PAYMENT_TIMEOUT_SECONDS + 5) * 1000;
 
@@ -4661,7 +4808,8 @@ export default class NostrWalletConnectStore {
                     mayHaveBeenSent: mayHaveBeenSent(err, implementation),
                     error_msg:
                         errorToUserFriendly(err) ||
-                        localeString('error.sendingPayment')
+                        localeString('error.sendingPayment'),
+                    refusedAsDuplicate: isPaymentRefusedAsDuplicate(err)
                 })
             );
 
