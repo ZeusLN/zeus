@@ -42,7 +42,10 @@ describe('MintAvatar', () => {
         'https://127.0.0.1:8443/shutdown',
         'https://abcdefg.onion/icon.png',
         `https://${'a'.repeat(56)}.onion./icon.png`,
-        'https://%zz@mint.example/icon.png'
+        'https://%zz@mint.example/icon.png',
+        // url.parse reads the host as mint.example, OkHttp dials
+        // mint.example.evil.com
+        'https://mint.example%2eevil.com/icon.png'
     ])('shows initials instead of loading %p', async (iconUrl) => {
         await render(
             <MintAvatar

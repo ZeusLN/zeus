@@ -248,6 +248,14 @@ const isPrivateOrReservedHost = (hostnameRaw: string): boolean => {
 };
 
 /**
+ * The authority (userinfo, host and port) of a URL as written, before any
+ * parser has interpreted it. Both url.parse and OkHttp accept any run of '/'
+ * and '\' after the scheme.
+ */
+const rawAuthority = (target: string): string | undefined =>
+    /^[a-z][a-z0-9+.-]*:[/\\]*([^/?#\\]*)/i.exec(target.trim())?.[1];
+
+/**
  * Reject a service-supplied LNURL callback that the wallet must not fetch:
  *  - cleartext http to a non-onion host (leaks the amount/comment and lets a
  *    network attacker substitute the invoice), and
@@ -286,12 +294,8 @@ export const isLnurlCallbackAllowed = (callback: string): LnurlCheckResult => {
 
     // url.parse ends the host at '%', but OkHttp percent-decodes it before
     // dialing, so `https://192.168.%31.1/` is classified as `192.168.` and
-    // reaches 192.168.1.1. A real host never contains '%'. Both parsers
-    // accept any run of '/' and '\' after the scheme.
-    const authority = /^[a-z][a-z0-9+.-]*:[/\\]*([^/?#\\]*)/i.exec(
-        callback.trim()
-    )?.[1];
-    if (authority?.includes('%')) {
+    // reaches 192.168.1.1. A real host never contains '%'.
+    if (rawAuthority(callback)?.includes('%')) {
         return { ok: false, reason: 'percent-encoded host' };
     }
 
@@ -504,8 +508,13 @@ export const isImageSourceAllowed = (
         return false;
     }
     const host = (image.host || '').toLowerCase();
+    // url.parse ends the host at '%', ';', '|' and other characters and moves
+    // the rest into the path, so `http://mint.example%2eevil.com/` parses as
+    // host mint.example while OkHttp dials mint.example.evil.com. Compare
+    // only when the parsed host is the whole authority as written.
     return (
         !!host &&
+        (rawAuthority(imageUrl) || '').toLowerCase() === host &&
         !image.auth &&
         !isOnionHostname(image.hostname) &&
         (image.protocol === 'https:' || image.protocol === 'http:') &&

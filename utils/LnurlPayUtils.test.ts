@@ -669,6 +669,29 @@ describe('LnurlPayUtils', () => {
             );
         });
 
+        // url.parse ends the host at these characters, OkHttp does not
+        it('rejects an icon whose host url.parse cuts short', () => {
+            [
+                'http://mint.example%2eevil.com/icon.png',
+                `http://mint.example%2e${'a'.repeat(56)}.onion/icon.png`,
+                'http://mint.example;evil.com/icon.png',
+                'http://mint.example|evil.com/icon.png'
+            ].forEach((imageUrl) =>
+                expect(
+                    isImageSourceAllowed(imageUrl, 'http://mint.example')
+                ).toBe(false)
+            );
+        });
+
+        it('matches the mint host regardless of case', () => {
+            expect(
+                isImageSourceAllowed(
+                    'http://MINT.Example/icon.png',
+                    'http://mint.example'
+                )
+            ).toBe(true);
+        });
+
         it('rejects an icon on an onion mint', () => {
             expect(
                 isImageSourceAllowed(
