@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Mint Cashu belum dipilih. Mohon pilih mint terlebih dahulu.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Gagal membaca faktur - payReq tidak ditemukan",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Faktur sudah dibayar",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Permintaan pembayaran tidak valid",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Jumlah tidak valid",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "Message must be a non-empty string",
