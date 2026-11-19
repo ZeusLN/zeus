@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Nebyl vybrán žádný Cashu mint. Vyberte prosím nejdříve mint.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Nepodařilo se dekódovat fakturu – payReq není definován",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Faktura již byla zaplacena",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Neplatný platební požadavek",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Neplatná částka",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "Zpráva musí obsahovat nějaké znaky",
