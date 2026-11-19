@@ -1,4 +1,4 @@
-import { action, observable, runInAction } from 'mobx';
+import { action, computed, observable, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
@@ -27,7 +27,6 @@ export default class FiatStore {
           }[]
         | undefined;
     @observable public loading = false;
-    @observable public error = false;
 
     private sourceOfCurrentFiatRates: string | undefined;
 
@@ -634,17 +633,39 @@ export default class FiatStore {
         }
     };
 
+    // The rates entry of the selected currency, if its rate is a finite
+    // number above 0
+    private usableFiatEntry = () => {
+        const { fiat } = this.settingsStore.settings;
+        const fiatEntry = this.fiatRates?.find((entry) => entry.code === fiat);
+        return fiatEntry &&
+            Number.isFinite(fiatEntry.rate) &&
+            fiatEntry.rate > 0
+            ? fiatEntry
+            : undefined;
+    };
+
+    // Whether the selected currency has a rate to convert with. Rates can
+    // load without one: no row for the currency, or a rate of 0 or below.
+    @computed public get hasUsableRate(): boolean {
+        return !!this.usableFiatEntry();
+    }
+
     public getRate = (sats: boolean = false) => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
 
         if (fiat && this.fiatRates) {
-            const fiatEntry = this.fiatRates.filter(
-                (entry) => entry.code === fiat
-            )[0];
-            const rate = (fiatEntry && fiatEntry.rate) || 0;
+            // The selected currency is missing from the response, or its
+            // rate is not a number above 0. Report that with the same value
+            // used when no rates are loaded at all, instead of formatting
+            // such a rate and dividing by it.
+            const fiatEntry = this.usableFiatEntry();
+            if (!fiatEntry) return '$N/A';
+
+            const rate = fiatEntry.rate;
             const { symbol, space, rtl, separatorSwap } = this.symbolLookup(
-                fiatEntry && fiatEntry.code
+                fiatEntry.code
             );
 
             const moscowTime = new BigNumber(1)

@@ -90,7 +90,7 @@ const SwipeableOrderItem = React.forwardRef<
         },
         ref
     ) => {
-        const { getRate, getSymbol } = fiatStore!;
+        const { getSymbol } = fiatStore!;
         const isPaid = !!item.payment;
 
         let tip = '';
@@ -122,7 +122,10 @@ const SwipeableOrderItem = React.forwardRef<
             >
                 <TouchableHighlight
                     onPress={() => {
-                        if (getRate() === '$N/A') return;
+                        // Wait for the first rates. Rates that loaded
+                        // without a usable one for this currency still
+                        // open the order.
+                        if (!fiatStore!.fiatRates) return;
                         navigation.navigate('Order', { order: item });
                     }}
                 >
