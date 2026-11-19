@@ -12,6 +12,16 @@ jest.mock('react-native-blob-util', () => ({
 jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
+// Use Tor off: requests go through ReactNativeBlobUtil, except to .onion
+// hosts, which go over the embedded Tor
+jest.mock('../stores/Stores', () => ({
+    settingsStore: { enableTor: false }
+}));
+const mockTorHttpRequest = jest.fn();
+jest.mock('./TorUtils', () => ({
+    RequestMethod: { GET: 'get', POST: 'post', DELETE: 'delete' },
+    torHttpRequest: (...args: any[]) => mockTorHttpRequest(...args)
+}));
 
 import { bech32 } from 'bech32';
 
@@ -31,6 +41,7 @@ describe('getLnurlParams', () => {
 
     beforeEach(() => {
         mockFetch.mockReset();
+        mockTorHttpRequest.mockReset();
         mockFetch.mockResolvedValue({
             info: () => ({ status: 200, headers: {} }),
             json: () => ({
@@ -102,10 +113,11 @@ describe('getLnurlParams', () => {
         expect(isUnsafeLnurlError(error)).toBe(true);
     });
 
-    it('resolves an onion service with a cleartext onion callback', async () => {
-        mockFetch.mockResolvedValue({
-            info: () => ({ status: 200, headers: {} }),
-            json: () => ({
+    it('resolves an onion service with a cleartext onion callback over Tor', async () => {
+        mockTorHttpRequest.mockResolvedValue({
+            statusCode: 200,
+            headers: {},
+            body: JSON.stringify({
                 tag: 'withdrawRequest',
                 callback: 'http://abcdefg.onion/cb',
                 k1: 'K1'
@@ -117,6 +129,12 @@ describe('getLnurlParams', () => {
         );
 
         expect(params.callback).toBe('http://abcdefg.onion/cb');
+        expect(mockTorHttpRequest).toHaveBeenCalledWith({
+            url: 'http://abcdefg.onion/lnurl',
+            method: 'get',
+            followRedirects: false
+        });
+        expect(mockFetch).not.toHaveBeenCalled();
     });
 
     // A public endpoint that redirects to the LAN is refused at the hop,

@@ -18,7 +18,6 @@ import { getLnurlParams as getlnurlParams } from './LnurlResolveUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
-import { doTorRequest, RequestMethod } from './TorUtils';
 
 import CashuToken from '../models/CashuToken';
 import Invoice from '../models/Invoice';
@@ -751,99 +750,87 @@ const handleAnything = async (
             'utils.handleAnything.lightningAddressError'
         );
 
-        // handle Tor LN addresses
-        if (settingsStore.enableTor && isOnion) {
-            return doTorRequest(url, RequestMethod.GET).then(
-                (response: any) => {
-                    if (!response.callback) {
+        // fetchLnurlUrl sends the request over Tor when Use Tor is on, with
+        // the host policy checked on every redirect hop, .onion included.
+        // An .onion address goes over the embedded Tor with Use Tor off too.
+        return fetchLnurlUrl(url)
+            .then((response: any) => {
+                const status = response.info().status;
+                if (status == 200) {
+                    const lnurlpData = response.json();
+                    if (!lnurlpData.callback) {
                         throw new Error(error);
+                    }
+
+                    if (b12Offer) {
+                        return [
+                            'ChoosePaymentMethod',
+                            {
+                                value: b12Value,
+                                satAmount: b12SatAmount,
+                                lightning: b12Lightning,
+                                offer: b12Offer,
+                                lightningAddress: value,
+                                locked: true
+                            }
+                        ];
                     }
 
                     return [
                         'LnurlPay',
                         {
-                            lnurlParams: response,
+                            lnurlParams: lnurlpData,
                             satAmount: setAmount,
                             ecash,
                             lightningAddress: value
                         }
                     ];
+                } else {
+                    throw new Error(error);
                 }
-            );
-        } else {
-            return fetchLnurlUrl(url)
-                .then((response: any) => {
-                    const status = response.info().status;
-                    if (status == 200) {
-                        const lnurlpData = response.json();
-                        if (!lnurlpData.callback) {
-                            throw new Error(error);
-                        }
+            })
+            .catch(async (e: any) => {
+                const hasMultipleB12 = b12Value || b12Lightning;
 
-                        if (b12Offer) {
-                            return [
-                                'ChoosePaymentMethod',
-                                {
-                                    value: b12Value,
-                                    satAmount: b12SatAmount,
-                                    lightning: b12Lightning,
-                                    offer: b12Offer,
-                                    lightningAddress: value,
-                                    locked: true
-                                }
-                            ];
-                        }
+                // A redirect refused by the lnurl host policy is reported
+                // here instead of falling through to the NIP-05 lookup on the
+                // same host. Other failures (non-200, too many redirects)
+                // still fall through, and that lookup follows redirects
+                // without checking them (#5570). A BIP 353 offer came from
+                // DNS and is still usable.
+                if (isUnsafeLnurlError(e) && !b12Offer) throw e;
 
+                if (b12Offer) {
+                    if (hasMultipleB12) {
                         return [
-                            'LnurlPay',
+                            'ChoosePaymentMethod',
                             {
-                                lnurlParams: lnurlpData,
-                                satAmount: setAmount,
-                                ecash,
-                                lightningAddress: value
-                            }
-                        ];
-                    } else {
-                        throw new Error(error);
-                    }
-                })
-                .catch(async (e: any) => {
-                    const hasMultipleB12 = b12Value || b12Lightning;
-
-                    // A redirect refused by the lnurl host policy is reported
-                    // here instead of falling through to the NIP-05 lookup on
-                    // the same host. Other failures (non-200, too many
-                    // redirects) still fall through, and that lookup follows
-                    // redirects without checking them (#5570). A BIP 353
-                    // offer came from DNS and is still usable.
-                    if (isUnsafeLnurlError(e) && !b12Offer) throw e;
-
-                    if (b12Offer) {
-                        if (hasMultipleB12) {
-                            return [
-                                'ChoosePaymentMethod',
-                                {
-                                    value: b12Value,
-                                    satAmount: b12SatAmount,
-                                    lightning: b12Lightning,
-                                    offer: b12Offer,
-                                    locked: true
-                                }
-                            ];
-                        }
-                        return [
-                            'Send',
-                            {
-                                destination: b12Offer,
-                                bolt12: b12Offer,
-                                transactionType: 'BOLT 12',
-                                isValid: true
+                                value: b12Value,
+                                satAmount: b12SatAmount,
+                                lightning: b12Lightning,
+                                offer: b12Offer,
+                                locked: true
                             }
                         ];
                     }
-                    return await attemptNip05Lookup(value);
-                });
-        }
+                    return [
+                        'Send',
+                        {
+                            destination: b12Offer,
+                            bolt12: b12Offer,
+                            transactionType: 'BOLT 12',
+                            isValid: true
+                        }
+                    ];
+                }
+
+                // The NIP-05 lookup goes over Tor when Use Tor is on but
+                // refuses .onion names, so an .onion address fails here with
+                // the lnurl error
+                if (isOnion) throw e;
+
+                return await attemptNip05Lookup(value);
+            });
     } else if (value.includes('config=') && value.includes('lnd.config')) {
         // BTCPay pairing QR
         if (isClipboardValue) return true;
