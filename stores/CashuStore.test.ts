@@ -1018,7 +1018,12 @@ describe('CashuStore NDK instance', () => {
                     url,
                     {
                         url,
-                        connectivity: { resetReconnectionState: jest.fn() }
+                        updateValidationRatio: jest.fn(),
+                        connectivity: {
+                            resetReconnectionState: jest.fn(),
+                            disconnect: jest.fn(),
+                            connect: jest.fn()
+                        }
                     }
                 ])
             );
@@ -1245,6 +1250,41 @@ describe('CashuStore NDK instance', () => {
             expect(reset.mock.invocationCallOrder[0]).toBeLessThan(
                 ndk.pool.removeRelay.mock.invocationCallOrder[removeOrder]
             );
+        });
+    });
+
+    it('stops the timers and reconnects of the removed relays', async () => {
+        const store = newStore() as any;
+        const ndk = await store.getNdk();
+        const relays = Array.from(ndk.pool.relays.values()) as any[];
+        const originals = relays.map((relay) => ({
+            updateValidationRatio: relay.updateValidationRatio,
+            connect: relay.connectivity.connect
+        }));
+
+        store.releaseNdk(await store.acquireNdk());
+
+        relays.forEach((relay, i) => {
+            // disconnect() clears the monitor intervals even when the relay
+            // is already DISCONNECTED, where removeRelay() would skip it
+            const disconnect = relay.connectivity.disconnect;
+            expect(disconnect).toHaveBeenCalledTimes(1);
+            const removeOrder = ndk.pool.removeRelay.mock.calls.findIndex(
+                ([url]: [string]) => url === relay.url
+            );
+            expect(disconnect.mock.invocationCallOrder[0]).toBeLessThan(
+                ndk.pool.removeRelay.mock.invocationCallOrder[removeOrder]
+            );
+
+            // the validation-ratio timer and any late reconnect end here
+            expect(relay.updateValidationRatio).not.toBe(
+                originals[i].updateValidationRatio
+            );
+            expect(relay.connectivity.connect).not.toBe(originals[i].connect);
+            relay.updateValidationRatio();
+            relay.connectivity.connect();
+            expect(originals[i].updateValidationRatio).not.toHaveBeenCalled();
+            expect(originals[i].connect).not.toHaveBeenCalled();
         });
     });
 

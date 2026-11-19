@@ -2419,12 +2419,19 @@ export default class CashuStore {
     private disconnectNdk = (ndk: NDK | undefined = this.ndk) => {
         if (!ndk) return;
         for (const [url, relay] of Array.from(ndk.pool.relays.entries())) {
-            // removeRelay() disconnects the relay but does not cancel a
-            // pending reconnect: a relay that dropped during discovery would
-            // otherwise open a new socket after it was removed, which nothing
-            // could close anymore.
+            // removeRelay() does not cancel a pending reconnect, and it skips
+            // connectivity.disconnect() for a relay that is already
+            // DISCONNECTED, which would leave its wsStateMonitor and
+            // sleepDetector intervals running.
             relay.connectivity.resetReconnectionState();
+            relay.connectivity.disconnect();
             ndk.pool.removeRelay(url);
+            // NDK 3.0.3 cannot stop the 30 s updateValidationRatio() timer,
+            // which reschedules itself and keeps the instance reachable, and a
+            // wake probe still in flight would reconnect through connect().
+            // Neither has anything left to do on a removed relay.
+            (relay as any).updateValidationRatio = () => {};
+            relay.connectivity.connect = async () => {};
         }
         if (this.ndk === ndk) {
             this.ndk = undefined;
