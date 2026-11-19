@@ -332,6 +332,12 @@ export default class LSPStore {
         const result = orderResponse?.result || orderResponse;
         const orderId = result?.order_id;
         if (!orderId) return;
+        // same check as updateOrderInStorage: the order screens and the
+        // Activity list read the stored record
+        if (!isValidOrderResponse(orderResponse)) {
+            console.warn('LSPStore: not storing malformed order response');
+            return;
+        }
 
         try {
             const responseArrayString = await Storage.getItem(LSPS_ORDERS_KEY);
