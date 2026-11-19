@@ -65,7 +65,12 @@ import CommonCrypto
         let symmetricKey = SymmetricKey(data: derivedKey)
         let nonce = try AES.GCM.Nonce(data: iv)
         let sealedBox = try AES.GCM.SealedBox(nonce: nonce, ciphertext: ciphertext, tag: tag)
-        return try AES.GCM.open(sealedBox, using: symmetricKey)
+        do {
+            return try AES.GCM.open(sealedBox, using: symmetricKey)
+        } catch CryptoKitError.authenticationFailure {
+            // Same message as Android's AEADBadTagException branch
+            throw NSError(domain: "CryptoHelper", code: -6, userInfo: [NSLocalizedDescriptionKey: "Decryption failed. Incorrect seed or corrupted file."])
+        }
     }
 
     private static func deriveKey(passphrase: String, salt: Data) throws -> Data {
