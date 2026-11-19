@@ -342,6 +342,16 @@ describe('ErrorUtils', () => {
             ).toEqual('bar');
         });
 
+        it('finds an iOS form after any line terminator', () => {
+            for (const terminator of ['\r', '\u2028', '\u2029']) {
+                expect(
+                    parseLdkNodeError(
+                        `Foo(message: "line1${terminator}Bar(message: "x")`
+                    )
+                ).toEqual('x');
+            }
+        });
+
         it('extracts the same iOS message as the single regex did', () => {
             const singleRegex = (str: string) => {
                 const match = str.match(/\w+\(message:\s*"(.+?)"\)/);
@@ -357,7 +367,12 @@ describe('ErrorUtils', () => {
                 'A(message: "")")',
                 'A(message: "a\n")',
                 'A(message:\n"multi\nline")',
-                'A(message: "x"\n)'
+                'A(message: "x"\n)',
+                'A(message: "x\rB(message: "y")',
+                'A(message: "x\r\nB(message: "y")',
+                'A(message: "x\u2028B(message: "y")',
+                'A(message: "x\u2029B(message: "y")',
+                'A(message: "x\rB(message: "y\nC(message: "z")'
             ];
             for (const input of inputs) {
                 expect(parseLdkNodeError(input)).toEqual(singleRegex(input));

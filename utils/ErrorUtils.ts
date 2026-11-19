@@ -54,12 +54,14 @@ const parseLdkNodeError = (error: any): string => {
 
     // iOS: extract message from "<Type>(message: "...")"
     // Opening first, then its closing, see parseCashuDevKitError. Here the
-    // message cannot cross a newline, so an opening whose message does not
-    // close before the next newline is followed by the next opening whose
-    // message starts after that newline. Openings whose message starts
-    // before it would scan to the same newline and are skipped unscanned.
+    // message cannot cross a line terminator (the characters `.` does not
+    // match), so an opening whose message does not close before the next
+    // line terminator is followed by the next opening whose message starts
+    // after it. Openings whose message starts before it would scan to the
+    // same line terminator and are skipped unscanned.
     const iosOpening = /\w\(message:\s*"/g;
     const iosClosing = /(.+?)"\)/y;
+    const lineTerminator = /[\n\r\u2028\u2029]/g;
     let blockedUntil = -1;
     let opening: RegExpExecArray | null;
     while ((opening = iosOpening.exec(str))) {
@@ -69,8 +71,10 @@ const parseLdkNodeError = (error: any): string => {
         iosClosing.lastIndex = start;
         const iosMatch = iosClosing.exec(str);
         if (iosMatch) return iosMatch[1].trim();
-        blockedUntil = str.indexOf('\n', start);
-        if (blockedUntil === -1) break;
+        lineTerminator.lastIndex = start;
+        const terminator = lineTerminator.exec(str);
+        if (!terminator) break;
+        blockedUntil = terminator.index;
     }
 
     // Fallback: strip generic "Error: " prefix
