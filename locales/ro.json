@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Nu a fost selectat niciun mint Cashu. Vă rugăm să selectați mai întâi un mint.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Factura nu a putut fi decodificată - payReq este nedefinită",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Factură deja plătită",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Cerere de plată nevalidă",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Sumă nevalidă",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "Message must be a non-empty string",
