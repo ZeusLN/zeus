@@ -1052,6 +1052,51 @@ describe('TransactionsStore.sendCoins double-submission guard', () => {
         expect(store.onchainSendInFlight).toBe(false);
     });
 
+    it('releases the guard when the dispatch throws synchronously', async () => {
+        sendCoins.mockImplementationOnce(() => {
+            throw new Error('not connected');
+        });
+        const store = newStore();
+        expect(() => store.sendCoins(request())).not.toThrow();
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('not connected');
+        expect(store.loading).toBe(false);
+        expect(store.onchainSendInFlight).toBe(false);
+
+        sendCoins.mockResolvedValue({ txid: 'abc' });
+        store.sendCoins(request());
+        await settle();
+        expect(sendCoins).toHaveBeenCalledTimes(2);
+        expect(store.txid).toBe('abc');
+    });
+
+    it('shows an error, not a success, on a backend without sendCoins', async () => {
+        // the dispatcher returns false when the backend lacks the method
+        sendCoins.mockReturnValueOnce(false);
+        const store = newStore();
+        store.sendCoins(request());
+        await settle();
+
+        expect(store.error).toBe(true);
+        expect(store.publishSuccess).toBe(false);
+        expect(store.onchainSendInFlight).toBe(false);
+    });
+
+    it('releases the guard when funding a batched send throws synchronously', async () => {
+        fundPsbt.mockReturnValueOnce(false);
+        const store = newStore();
+        store.sendCoins(batchedRequest());
+        expect(store.error).toBe(true);
+        expect(store.crafting).toBe(false);
+        expect(store.onchainSendInFlight).toBe(false);
+
+        publishTransaction.mockResolvedValue({});
+        store.sendCoins(batchedRequest());
+        await settle();
+        expect(fundPsbt).toHaveBeenCalledTimes(2);
+        expect(store.publishSuccess).toBe(true);
+    });
+
     it('keeps the guard across a reset until the pending send settles', async () => {
         let answer: (data: any) => void = () => undefined;
         sendCoins.mockReturnValueOnce(
