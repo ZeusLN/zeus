@@ -35,6 +35,8 @@ const extractCheck = () => {
 //   write         JS of this install writes a device-local keychain item
 //   ask           KeychainAudit asks whether the reinstall flag is still
 //                 pending; the answers are reported as "asked"
+//   read          KeychainAudit reads the reinstall flag; the answers are
+//                 reported as "read"
 // LOCAL_ITEMS=1 starts with device-local items an earlier install left, and
 // FIRST_UNLOCK_PENDING=1 makes keychain reads fail until unlock or active:1,
 // as before the first unlock after a reboot
@@ -101,6 +103,7 @@ int main(int argc, const char *argv[]) {
     LocalKeychainItems itemsAtLaunch = LocalKeychainItemsUnknown;
     int checks = 0;
     NSMutableArray *asked = [NSMutableArray array];
+    NSMutableArray *read = [NSMutableArray array];
     for (int i = 3; i < argc; i++) {
       NSString *event = @(argv[i]);
       if ([event hasPrefix:@"launch:"]) {
@@ -117,6 +120,8 @@ int main(int argc, const char *argv[]) {
         if (!gKeychainLocked) gLocalItems = YES;
       } else if ([event isEqualToString:@"ask"]) {
         [asked addObject:@(ReinstallFlagPending(pending, path))];
+      } else if ([event isEqualToString:@"read"]) {
+        [read addObject:@(KeychainSurvivedReinstall(path))];
       } else {
         fprintf(stderr, "unknown event %s\\n", argv[i]);
         return 1;
@@ -131,6 +136,7 @@ int main(int argc, const char *argv[]) {
       @"reinstalled": @([defaults boolForKey:kKeychainSurvivedReinstallKey])
     } mutableCopy];
     if (asked.count) report[@"asked"] = asked;
+    if (read.count) report[@"read"] = read;
     NSData *json = [NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
     printf("%s\\n", [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding].UTF8String);
   }
@@ -146,6 +152,7 @@ int main(int argc, const char *argv[]) {
         let withFlag: string;
         let withoutFlag: string;
         let missing: string;
+        let withReinstallFlag: string;
 
         beforeAll(() => {
             dir = fs.mkdtempSync(path.join(os.tmpdir(), 'keychain-first-run-'));
@@ -181,6 +188,13 @@ int main(int argc, const char *argv[]) {
                 plist('<key>HAS_RUN_BEFORE</key><true/>')
             );
             fs.writeFileSync(withoutFlag, plist('<key>other</key><true/>'));
+            withReinstallFlag = path.join(dir, 'with-reinstall-flag.plist');
+            fs.writeFileSync(
+                withReinstallFlag,
+                plist(
+                    '<key>HAS_RUN_BEFORE</key><true/><key>KEYCHAIN_SURVIVED_REINSTALL</key><true/>'
+                )
+            );
         }, 60000);
 
         afterAll(() => {
@@ -498,6 +512,29 @@ int main(int argc, const char *argv[]) {
                 });
             });
 
+            describe('reinstall flag read', () => {
+                it('reads the flag the check just set, before the file has it', () => {
+                    expect(
+                        runWith(true, false, missing, 'launch:1', 'read')
+                    ).toMatchObject({ reinstalled: true, read: [true] });
+                });
+
+                it('reads the flag from the file when defaults read empty', () => {
+                    expect(
+                        run(false, withReinstallFlag, 'launch:1', 'read')
+                    ).toMatchObject({ reinstalled: false, read: [true] });
+                });
+
+                it('reads no flag when neither has it', () => {
+                    expect(
+                        run(true, withFlag, 'launch:1', 'read')
+                    ).toMatchObject({ read: [false] });
+                    expect(
+                        run(false, missing, 'launch:1', 'read')
+                    ).toMatchObject({ read: [false] });
+                });
+            });
+
             it('never runs after a launch with protected data', () => {
                 expect(
                     run(false, missing, 'launch:1', 'unlock', 'active:1')
@@ -577,6 +614,14 @@ describe('AppDelegate deferred keychain check wiring', () => {
             audit.indexOf('RCT_EXPORT_METHOD(keychainSurvivedReinstall:')
         );
         expect(survived).toContain('@"firstRunKeychainCheckPending"');
+        // The answer comes from AppDelegate, which also reads the file
+        expect(method('- (BOOL)keychainSurvivedReinstallFlag')).toContain(
+            'return KeychainSurvivedReinstall(StandardDefaultsPath());'
+        );
+        expect(audit).toContain('@"keychainSurvivedReinstallFlag"');
+        expect(
+            survived.match(/resolve\(SurvivedReinstall\(delegate\)\)/g)
+        ).toHaveLength(2);
         expect(survived).toContain('@"ZeusFirstRunKeychainCheckDidRun"');
     });
 

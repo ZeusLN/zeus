@@ -155,6 +155,21 @@ static BOOL ReinstallFlagPending(BOOL checkPending, NSString *defaultsPath) {
     return ![persisted[kHasRunBeforeKey] boolValue];
 }
 
+/**
+ Whether KEYCHAIN_SURVIVED_REINSTALL is set, through defaults or in the file. Read like
+ HAS_RUN_BEFORE: in a process started before the first unlock defaults can read empty after it,
+ and a NO there would let JS copy the iCloud partition into an install that started as a
+ reinstall. The file alone is not enough either, since it is written some time after setBool.
+ YES from either is never wrong, because the flag is never cleared.
+ */
+static BOOL KeychainSurvivedReinstall(NSString *defaultsPath) {
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:kKeychainSurvivedReinstallKey]) {
+        return YES;
+    }
+    NSDictionary *persisted = [NSDictionary dictionaryWithContentsOfFile:defaultsPath];
+    return [persisted[kKeychainSurvivedReinstallKey] boolValue];
+}
+
 @interface AppDelegate () {
   // Set when launch happened without protected data, so the first-run
   // keychain check still has to run
@@ -222,6 +237,11 @@ static BOOL ReinstallFlagPending(BOOL checkPending, NSString *defaultsPath) {
 // Read by KeychainAudit.m, which holds keychainSurvivedReinstall until this is NO
 - (BOOL)firstRunKeychainCheckPending {
   return ReinstallFlagPending(_keychainCheckPending, StandardDefaultsPath());
+}
+
+// Read by KeychainAudit.m to answer keychainSurvivedReinstall
+- (BOOL)keychainSurvivedReinstallFlag {
+  return KeychainSurvivedReinstall(StandardDefaultsPath());
 }
 
 - (void)applicationProtectedDataDidBecomeAvailable:(UIApplication *)application {

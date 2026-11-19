@@ -70,6 +70,15 @@ RCT_EXPORT_METHOD(getInternetPasswordServers:(BOOL)synchronizable
 // keychain the check is about to clear. So the promise then resolves only once
 // the check has run. AppDelegate reports nothing pending for an install that
 // has run before, since its deferred check cannot change the flag.
+// AppDelegate reads the flag from defaults and from the file on disk. The
+// defaults-only read is a fallback for a delegate without that method.
+static NSNumber *SurvivedReinstall(id delegate) {
+    if ([delegate respondsToSelector:NSSelectorFromString(@"keychainSurvivedReinstallFlag")]) {
+        return @([[delegate valueForKey:@"keychainSurvivedReinstallFlag"] boolValue]);
+    }
+    return @([[NSUserDefaults standardUserDefaults] boolForKey:@"KEYCHAIN_SURVIVED_REINSTALL"]);
+}
+
 RCT_EXPORT_METHOD(keychainSurvivedReinstall:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
@@ -81,8 +90,7 @@ RCT_EXPORT_METHOD(keychainSurvivedReinstall:(RCTPromiseResolveBlock)resolve
             [[delegate valueForKey:@"firstRunKeychainCheckPending"] boolValue];
 
         if (!pending) {
-            resolve(@([[NSUserDefaults standardUserDefaults]
-                          boolForKey:@"KEYCHAIN_SURVIVED_REINSTALL"]));
+            resolve(SurvivedReinstall(delegate));
             return;
         }
 
@@ -94,8 +102,7 @@ RCT_EXPORT_METHOD(keychainSurvivedReinstall:(RCTPromiseResolveBlock)resolve
                     usingBlock:^(NSNotification *note) {
                         [[NSNotificationCenter defaultCenter] removeObserver:observer];
                         observer = nil;
-                        resolve(@([[NSUserDefaults standardUserDefaults]
-                                      boolForKey:@"KEYCHAIN_SURVIVED_REINSTALL"]));
+                        resolve(SurvivedReinstall(delegate));
                     }];
     });
 }
