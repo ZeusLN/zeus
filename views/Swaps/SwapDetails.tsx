@@ -2,7 +2,6 @@ import React from 'react';
 import { Alert, ScrollView, View, TouchableOpacity } from 'react-native';
 import { LinearProgress } from '@rneui/themed';
 
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { inject, observer } from 'mobx-react';
 import { crypto } from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
@@ -38,6 +37,8 @@ import { sleep } from '../../utils/SleepUtils';
 import { font } from '../../utils/FontUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
+import { networkFetch } from '../../utils/NetworkUtils';
+import SwapStatusPoller from '../../utils/SwapStatusPoller';
 import {
     nativeSwapEndpoint,
     swapNetworkName,
@@ -290,12 +291,12 @@ export default class SwapDetails extends React.Component<
         console.log('Connecting to WebSocket for updates...');
         this.setState({ loading: true });
 
-        // Create a WebSocket connection
-        const webSocket = new WebSocket(swapWebSocketUrl(endpoint));
+        const webSocket = this.openSwapUpdates(endpoint, createdResponse.id);
 
         // Handle WebSocket connection open
         webSocket.onopen = () => {
             console.log('WebSocket connection opened');
+            this.clearStatusError();
             webSocket.send(
                 JSON.stringify({
                     op: 'subscribe',
@@ -722,12 +723,12 @@ export default class SwapDetails extends React.Component<
         console.log('Connecting to WebSocket for updates...');
         this.setState({ loading: true });
 
-        // Create a WebSocket connection
-        const webSocket = new WebSocket(swapWebSocketUrl(endpoint));
+        const webSocket = this.openSwapUpdates(endpoint, createdResponse.id);
 
         // Handle WebSocket connection open
         webSocket.onopen = () => {
             console.log('WebSocket connection opened');
+            this.clearStatusError();
             webSocket.send(
                 JSON.stringify({
                     op: 'subscribe',
@@ -853,12 +854,40 @@ export default class SwapDetails extends React.Component<
         };
     };
 
+    // The Tor status poller reports an error after a run of failed polls and
+    // opens again once a poll gets a response. Clear only that error, not a
+    // claim or lockup error set in the meantime.
+    clearStatusError = () => {
+        if (
+            this.state.error ===
+            localeString('views.SwapDetails.statusUnavailable')
+        ) {
+            this.setState({ error: null });
+        }
+    };
+
+    // The platform WebSocket cannot use Tor, so with Tor enabled the status
+    // is polled over Tor instead. The poller implements the WebSocket members
+    // used here, hence the cast.
+    openSwapUpdates = (endpoint: string, swapId: string): WebSocket => {
+        const { SwapStore } = this.props;
+        if (SwapStore?.settingsStore?.enableTor) {
+            return new SwapStatusPoller(
+                endpoint,
+                swapId,
+                SwapStore.getHeaders
+            ) as unknown as WebSocket;
+        }
+        return new WebSocket(swapWebSocketUrl(endpoint));
+    };
+
     fetchClaimDetails = async (swapId: string, endpoint: string) => {
-        const response = await ReactNativeBlobUtil.fetch(
-            'GET',
-            `${endpoint}/swap/submarine/${swapId}/claim`,
-            { 'Content-Type': 'application/json' }
-        );
+        const response = await networkFetch({
+            method: 'GET',
+            url: `${endpoint}/swap/submarine/${swapId}/claim`,
+            headers: { 'Content-Type': 'application/json' },
+            enableTor: this.props.SwapStore?.settingsStore?.enableTor
+        });
         return response.json();
     };
 
