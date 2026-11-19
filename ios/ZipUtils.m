@@ -14,13 +14,6 @@
 // hundred MB on a mobile node
 #define ZIP_MAX_UNZIP_BYTES (4ULL * 1024 * 1024 * 1024)
 
-// Upper bound on the size of one inflated entry, which unzipFile holds in
-// memory along with the whole archive. Channel backup entries are lnd's
-// channel.db or SQLite files, usually tens to a few hundred MB on a mobile
-// node. zipFolder holds a file and its compressed copy in memory together,
-// so an entry larger than this needs over 4 GiB of memory to write on iOS
-#define ZIP_MAX_INFLATE_BYTES (2ULL * 1024 * 1024 * 1024)
-
 @implementation ZipUtils
 
 RCT_EXPORT_MODULE();
@@ -187,160 +180,258 @@ RCT_EXPORT_METHOD(zipFolder:(NSString *)sourceDirPath
 
 #pragma mark - Unzip
 
+static uint16_t ZipRead16(const uint8_t *p) {
+    return (uint16_t)(p[0] | (p[1] << 8));
+}
+
+static uint32_t ZipRead32(const uint8_t *p) {
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
 RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
                   destPath:(NSString *)destDirPath
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        NSFileManager *fm = [NSFileManager defaultManager];
-        if (![fm fileExistsAtPath:zipPath]) {
-            reject(@"ERR_UNZIP", [NSString stringWithFormat:@"Zip file does not exist: %@", zipPath], nil);
-            return;
-        }
-
-        NSData *zipData = [NSData dataWithContentsOfFile:zipPath];
-        if (!zipData || zipData.length < 22) {
-            reject(@"ERR_UNZIP", @"Invalid or empty zip file", nil);
-            return;
-        }
-
-        if (![fm fileExistsAtPath:destDirPath]) {
-            NSError *error;
-            [fm createDirectoryAtPath:destDirPath withIntermediateDirectories:YES attributes:nil error:&error];
-            if (error) {
-                reject(@"ERR_UNZIP", error.localizedDescription, error);
-                return;
-            }
-        }
-
-        const uint8_t *bytes = zipData.bytes;
-        NSUInteger length = zipData.length;
-        NSUInteger offset = 0;
-        unsigned long long total = 0;
-
-        // Files this call has written, removed again if it fails
-        NSMutableArray<NSString *> *written = [NSMutableArray array];
-        void (^fail)(NSString *) = ^(NSString *message) {
-            for (NSString *path in written) {
-                [fm removeItemAtPath:path error:nil];
-            }
+        NSString *message = [ZipUtils extractZipAtPath:zipPath toDirectory:destDirPath];
+        if (message) {
             reject(@"ERR_UNZIP", message, nil);
-        };
-
-        while (offset + 30 <= length) {
-            uint32_t sig = *(uint32_t *)(bytes + offset);
-            if (sig != ZIP_LOCAL_HEADER_SIGNATURE) break;
-
-            uint16_t method = *(uint16_t *)(bytes + offset + 8);
-            uint32_t crc = *(uint32_t *)(bytes + offset + 14);
-            uint32_t compSize = *(uint32_t *)(bytes + offset + 18);
-            uint32_t uncompSize = *(uint32_t *)(bytes + offset + 22);
-            uint16_t nameLen = *(uint16_t *)(bytes + offset + 26);
-            uint16_t extraLen = *(uint16_t *)(bytes + offset + 28);
-
-            if (offset + 30 + nameLen + extraLen + compSize > length) {
-                fail(@"Truncated zip file");
-                return;
-            }
-
-            NSString *entryName = [[NSString alloc] initWithBytes:(bytes + offset + 30) length:nameLen encoding:NSUTF8StringEncoding];
-            NSUInteger dataOffset = offset + 30 + nameLen + extraLen;
-
-            offset = dataOffset + compSize;
-
-            if (!entryName || [entryName hasSuffix:@"/"] || [entryName containsString:@".."]) continue;
-
-            // Strip path components — only use the filename
-            NSString *safeName = [entryName lastPathComponent];
-            NSString *destFilePath = [destDirPath stringByAppendingPathComponent:safeName];
-
-            // Checked before inflating, which allocates the declared size,
-            // and again below with the size actually inflated
-            uint32_t declaredSize = method == ZIP_COMPRESSION_STORE ? compSize : uncompSize;
-            if (total + declaredSize > ZIP_MAX_UNZIP_BYTES) {
-                fail([NSString stringWithFormat:@"Zip contents exceed the maximum size of %llu bytes", ZIP_MAX_UNZIP_BYTES]);
-                return;
-            }
-
-            NSData *fileData;
-            if (method == ZIP_COMPRESSION_STORE) {
-                fileData = [NSData dataWithBytes:(bytes + dataOffset) length:compSize];
-            } else if (method == ZIP_COMPRESSION_DEFLATE) {
-                fileData = [self inflateData:[NSData dataWithBytesNoCopy:(void *)(bytes + dataOffset) length:compSize freeWhenDone:NO]
-                            expectedSize:uncompSize];
-                if (!fileData) {
-                    fail([NSString stringWithFormat:@"Failed to decompress: %@", entryName]);
-                    return;
-                }
-            } else {
-                fail([NSString stringWithFormat:@"Unsupported compression method %d for: %@", method, entryName]);
-                return;
-            }
-
-            // Verify CRC
-            uint32_t actualCrc = (uint32_t)crc32(0L, fileData.bytes, (uInt)fileData.length);
-            if (actualCrc != crc && crc != 0) {
-                fail([NSString stringWithFormat:@"CRC mismatch for: %@", entryName]);
-                return;
-            }
-
-            total += fileData.length;
-            if (total > ZIP_MAX_UNZIP_BYTES) {
-                fail([NSString stringWithFormat:@"Zip contents exceed the maximum size of %llu bytes", ZIP_MAX_UNZIP_BYTES]);
-                return;
-            }
-
-            NSError *writeError = nil;
-            if (![fileData writeToFile:destFilePath options:NSDataWritingAtomic error:&writeError]) {
-                fail(writeError.localizedDescription ?: [NSString stringWithFormat:@"Failed to write: %@", safeName]);
-                return;
-            }
-            [written addObject:destFilePath];
+        } else {
+            resolve(nil);
         }
-
-        resolve(nil);
     });
 }
 
-- (NSData *)inflateData:(NSData *)data expectedSize:(uint32_t)expectedSize {
-    if (data.length == 0) return expectedSize == 0 ? [NSData data] : nil;
-    if (expectedSize > ZIP_MAX_INFLATE_BYTES) return nil;
-
-    z_stream stream;
-    memset(&stream, 0, sizeof(stream));
-    // -MAX_WBITS for raw inflate (no zlib/gzip header)
-    if (inflateInit2(&stream, -MAX_WBITS) != Z_OK) {
-        return nil;
+// Extracts every file entry of the archive into destDirPath, flattened to
+// its file name. Returns nil when it worked and the error message when it
+// did not, in which case the files it wrote have been removed again.
+//
+// Entries are read from the central directory. Its sizes and CRC are always
+// filled in, while a writer that streams (java.util.zip.ZipOutputStream, so
+// Android's zipFolder) leaves them 0 in the local headers and sets the data
+// descriptor flag. Each entry is inflated in pieces straight to a file, and
+// its size and CRC are checked against the central directory.
++ (NSString *)extractZipAtPath:(NSString *)zipPath toDirectory:(NSString *)destDirPath {
+    NSFileManager *fm = [NSFileManager defaultManager];
+    if (![fm fileExistsAtPath:zipPath]) {
+        return [NSString stringWithFormat:@"Zip file does not exist: %@", zipPath];
     }
 
-    stream.next_in = (Bytef *)data.bytes;
-    stream.avail_in = (uInt)data.length;
+    NSData *zipData = [NSData dataWithContentsOfFile:zipPath options:NSDataReadingMappedIfSafe error:nil];
+    if (!zipData || zipData.length < 22) {
+        return @"Invalid or empty zip file";
+    }
 
-    // expectedSize comes from the archive, so it is not allocated up front.
-    // The buffer grows with the output inflate produces, up to one byte past
-    // expectedSize so that an entry inflating to more than it declares is
-    // caught.
-    NSUInteger limit = (NSUInteger)expectedSize + 1;
-    NSMutableData *decompressed = [NSMutableData dataWithLength:MIN(limit, MAX(data.length * 4, (NSUInteger)65536))];
+    const uint8_t *bytes = zipData.bytes;
+    uint64_t length = zipData.length;
 
-    int status = Z_OK;
-    while (status == Z_OK) {
-        if (stream.total_out == decompressed.length) {
-            if (decompressed.length == limit) break;
-            decompressed.length = MIN(limit, decompressed.length * 2);
+    // The end of central directory record is the last thing in the file,
+    // followed only by its comment (at most 65535 bytes)
+    uint64_t eocd = UINT64_MAX;
+    uint64_t lowest = length > 22 + 65535 ? length - 22 - 65535 : 0;
+    for (uint64_t i = length - 22;; i--) {
+        if (ZipRead32(bytes + i) == ZIP_END_CENTRAL_DIR_SIGNATURE && i + 22 + ZipRead16(bytes + i + 20) <= length) {
+            eocd = i;
+            break;
         }
-        stream.next_out = (Bytef *)decompressed.mutableBytes + stream.total_out;
-        stream.avail_out = (uInt)(decompressed.length - stream.total_out);
-        status = inflate(&stream, Z_NO_FLUSH);
+        if (i == lowest) break;
+    }
+    if (eocd == UINT64_MAX) {
+        return @"Invalid zip file: no end of central directory record";
     }
 
-    uLong total = stream.total_out;
-    inflateEnd(&stream);
-    if (status != Z_STREAM_END || total != expectedSize) return nil;
+    uint16_t entryCount = ZipRead16(bytes + eocd + 10);
+    uint32_t cdSize = ZipRead32(bytes + eocd + 12);
+    uint32_t cdOffset = ZipRead32(bytes + eocd + 16);
+    if (ZipRead16(bytes + eocd + 4) != 0 || ZipRead16(bytes + eocd + 6) != 0 ||
+        ZipRead16(bytes + eocd + 8) != entryCount) {
+        return @"Multi-disk zip files are not supported";
+    }
+    if (entryCount == 0xFFFF || cdSize == 0xFFFFFFFF || cdOffset == 0xFFFFFFFF) {
+        return @"Zip64 files are not supported";
+    }
+    if ((uint64_t)cdOffset + cdSize > eocd) {
+        return @"Truncated zip file";
+    }
+    if (entryCount == 0) {
+        return @"Zip file has no entries";
+    }
 
-    decompressed.length = total;
-    return decompressed;
+    if (![fm fileExistsAtPath:destDirPath]) {
+        NSError *error;
+        [fm createDirectoryAtPath:destDirPath withIntermediateDirectories:YES attributes:nil error:&error];
+        if (error) {
+            return error.localizedDescription;
+        }
+    }
+
+    // Files this call has written, removed again if it fails
+    NSMutableArray<NSString *> *written = [NSMutableArray array];
+    NSString *failure = nil;
+    unsigned long long total = 0;
+    uint64_t cdEnd = (uint64_t)cdOffset + cdSize;
+    uint64_t pos = cdOffset;
+    size_t bufferSize = 64 * 1024;
+    uint8_t *buffer = malloc(bufferSize);
+
+    for (uint16_t index = 0; index < entryCount && !failure; index++) {
+        if (pos + 46 > cdEnd || ZipRead32(bytes + pos) != ZIP_CENTRAL_DIR_SIGNATURE) {
+            failure = @"Invalid zip file: bad central directory";
+            break;
+        }
+        const uint8_t *cd = bytes + pos;
+        uint16_t flags = ZipRead16(cd + 8);
+        uint16_t method = ZipRead16(cd + 10);
+        uint32_t crc = ZipRead32(cd + 16);
+        uint32_t compSize = ZipRead32(cd + 20);
+        uint32_t uncompSize = ZipRead32(cd + 24);
+        uint16_t nameLen = ZipRead16(cd + 28);
+        uint32_t localOffset = ZipRead32(cd + 42);
+        uint64_t next = pos + 46 + nameLen + ZipRead16(cd + 30) + ZipRead16(cd + 32);
+        if (next > cdEnd) {
+            failure = @"Invalid zip file: bad central directory";
+            break;
+        }
+        NSString *entryName = [[NSString alloc] initWithBytes:(cd + 46) length:nameLen encoding:NSUTF8StringEncoding];
+        pos = next;
+
+        if (!entryName || [entryName hasSuffix:@"/"] || [entryName containsString:@".."]) continue;
+
+        if (flags & 0x1) {
+            failure = [NSString stringWithFormat:@"Encrypted zip entry is not supported: %@", entryName];
+            break;
+        }
+        if (compSize == 0xFFFFFFFF || uncompSize == 0xFFFFFFFF || localOffset == 0xFFFFFFFF) {
+            failure = @"Zip64 files are not supported";
+            break;
+        }
+        if (method != ZIP_COMPRESSION_STORE && method != ZIP_COMPRESSION_DEFLATE) {
+            failure = [NSString stringWithFormat:@"Unsupported compression method %d for: %@", method, entryName];
+            break;
+        }
+
+        // The local header is only used to find where the data starts
+        if ((uint64_t)localOffset + 30 > cdOffset || ZipRead32(bytes + localOffset) != ZIP_LOCAL_HEADER_SIGNATURE) {
+            failure = @"Invalid zip file: bad local file header";
+            break;
+        }
+        // Without the data descriptor flag the local header repeats the
+        // central directory's values, and an archive where they differ is
+        // not read
+        const uint8_t *local = bytes + localOffset;
+        BOOL hasDescriptor = (ZipRead16(local + 6) & 0x8) != 0;
+        if (ZipRead16(local + 8) != method ||
+            (!hasDescriptor && (ZipRead32(local + 14) != crc || ZipRead32(local + 18) != compSize ||
+                                ZipRead32(local + 22) != uncompSize))) {
+            failure = [NSString stringWithFormat:@"Invalid zip file: headers differ for: %@", entryName];
+            break;
+        }
+        uint64_t dataOffset = (uint64_t)localOffset + 30 + ZipRead16(local + 26) + ZipRead16(local + 28);
+        if (dataOffset + compSize > cdOffset) {
+            failure = @"Truncated zip file";
+            break;
+        }
+        if (method == ZIP_COMPRESSION_STORE && compSize != uncompSize) {
+            failure = [NSString stringWithFormat:@"Size mismatch for: %@", entryName];
+            break;
+        }
+
+        // No more than uncompSize bytes are written for an entry, so the
+        // declared sizes bound what this call writes
+        if (total + uncompSize > ZIP_MAX_UNZIP_BYTES) {
+            failure = [NSString stringWithFormat:@"Zip contents exceed the maximum size of %llu bytes", ZIP_MAX_UNZIP_BYTES];
+            break;
+        }
+
+        // Only the file name is used, never the entry's directories
+        NSString *safeName = [entryName lastPathComponent];
+        NSString *destFilePath = [destDirPath stringByAppendingPathComponent:safeName];
+        NSString *tempFilePath = [destDirPath stringByAppendingPathComponent:
+                                  [NSString stringWithFormat:@".%@.unzip", [NSUUID UUID].UUIDString]];
+
+        FILE *out = fopen(tempFilePath.fileSystemRepresentation, "wb");
+        if (!out) {
+            failure = [NSString stringWithFormat:@"Failed to write: %@ (%s)", safeName, strerror(errno)];
+            break;
+        }
+        [written addObject:tempFilePath];
+
+        uint32_t actualCrc = (uint32_t)crc32(0L, Z_NULL, 0);
+        uint64_t actualSize = 0;
+
+        if (method == ZIP_COMPRESSION_STORE) {
+            uint64_t done = 0;
+            while (done < compSize && !failure) {
+                size_t piece = (size_t)MIN((uint64_t)bufferSize, compSize - done);
+                actualCrc = (uint32_t)crc32(actualCrc, bytes + dataOffset + done, (uInt)piece);
+                if (fwrite(bytes + dataOffset + done, 1, piece, out) != piece) {
+                    failure = [NSString stringWithFormat:@"Failed to write: %@ (%s)", safeName, strerror(errno)];
+                }
+                done += piece;
+            }
+            actualSize = done;
+        } else {
+            z_stream stream;
+            memset(&stream, 0, sizeof(stream));
+            // -MAX_WBITS for raw inflate (no zlib/gzip header)
+            if (inflateInit2(&stream, -MAX_WBITS) != Z_OK) {
+                failure = [NSString stringWithFormat:@"Failed to decompress: %@", entryName];
+            } else {
+                stream.next_in = (Bytef *)(bytes + dataOffset);
+                stream.avail_in = (uInt)compSize;
+                int status = Z_OK;
+                while (status != Z_STREAM_END && !failure) {
+                    stream.next_out = buffer;
+                    stream.avail_out = (uInt)bufferSize;
+                    status = inflate(&stream, Z_NO_FLUSH);
+                    size_t produced = bufferSize - stream.avail_out;
+                    // Z_BUF_ERROR here means the input ended before the
+                    // stream did
+                    if (status != Z_OK && status != Z_STREAM_END) {
+                        failure = [NSString stringWithFormat:@"Failed to decompress: %@", entryName];
+                    } else if (actualSize + produced > uncompSize) {
+                        failure = [NSString stringWithFormat:@"Size mismatch for: %@", entryName];
+                    } else if (produced > 0) {
+                        actualCrc = (uint32_t)crc32(actualCrc, buffer, (uInt)produced);
+                        actualSize += produced;
+                        if (fwrite(buffer, 1, produced, out) != produced) {
+                            failure = [NSString stringWithFormat:@"Failed to write: %@ (%s)", safeName, strerror(errno)];
+                        }
+                    }
+                }
+                inflateEnd(&stream);
+            }
+        }
+
+        if (fclose(out) != 0 && !failure) {
+            failure = [NSString stringWithFormat:@"Failed to write: %@ (%s)", safeName, strerror(errno)];
+        }
+        if (!failure && actualSize != uncompSize) {
+            failure = [NSString stringWithFormat:@"Size mismatch for: %@", entryName];
+        }
+        if (!failure && actualCrc != crc) {
+            failure = [NSString stringWithFormat:@"CRC mismatch for: %@", entryName];
+        }
+        // rename replaces a file of that name and fails on a directory
+        if (!failure && rename(tempFilePath.fileSystemRepresentation, destFilePath.fileSystemRepresentation) != 0) {
+            failure = [NSString stringWithFormat:@"Failed to write: %@ (%s)", safeName, strerror(errno)];
+        }
+        if (failure) break;
+
+        [written removeLastObject];
+        [written addObject:destFilePath];
+        total += actualSize;
+    }
+
+    free(buffer);
+
+    if (failure) {
+        for (NSString *path in written) {
+            [fm removeItemAtPath:path error:nil];
+        }
+    }
+    return failure;
 }
 
 #pragma mark - Encrypt
