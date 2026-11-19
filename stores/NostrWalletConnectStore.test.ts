@@ -29,6 +29,7 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
+        lookupInvoice: jest.fn(),
         supportsNodeInfo: jest.fn(),
         supportsCashuWallet: jest.fn(),
         supportsMessageSigning: jest.fn(),
@@ -4637,6 +4638,262 @@ describe('NostrWalletConnectStore connection data scoping', () => {
             expect(connection.totalReceivedActivitySats).toBe(0);
             lookup.mockRestore();
             coerce.mockRestore();
+        });
+
+        it('keeps an expired lightning invoice pending when the node lookup fails', async () => {
+            const { store } = buildStore();
+            const connection = seedConnection(store, {
+                activity: [
+                    pendingActivity('lnbc1expiredunknown', {
+                        expiresAt: new Date(Date.now() - 60_000)
+                    })
+                ]
+            });
+            (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+                new Error('Tor down')
+            );
+            const coerce = jest
+                .spyOn(NostrConnectUtils, 'coerceLightningInvoice')
+                .mockReturnValue({
+                    isPaid: false,
+                    isExpired: true,
+                    getPaymentRequest: '',
+                    getRHash: CONNECTION_HASH
+                } as any);
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(BackendUtils.lookupInvoice).toHaveBeenCalledTimes(1);
+            expect(connection.activity[0].status).toBe('pending');
+            coerce.mockRestore();
+            (BackendUtils.lookupInvoice as jest.Mock).mockReset();
+        });
+
+        it('keeps the next wallet connections when a save is pending across a wallet switch', async () => {
+            // not the describe's buildStore: it replaces scheduleSave
+            const { store, nodeInfoStore } = createStore();
+            storedItems.set(
+                NWC_CONNECTIONS_KEY,
+                JSON.stringify([
+                    connectionData({ id: 'conn-a' }),
+                    connectionData({
+                        id: 'conn-b',
+                        pubkey: hex64('b'),
+                        nodePubkey: 'node-b'
+                    })
+                ])
+            );
+            await store.loadConnections();
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-a']);
+            (store as any).scheduleSave();
+
+            // the new wallet is current while the old connections are still
+            // in memory, as when initializeService reloads after a switch
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+            await store.loadConnections();
+            await jest.advanceTimersByTimeAsync(1000);
+
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
+            expect(persistedConnections().map((c) => c.id)).toEqual([
+                'conn-a',
+                'conn-b'
+            ]);
+        });
+
+        it('keeps an expired lightning invoice pending when it is missing from the LndHub list', async () => {
+            // LNbits lists only the newest invoices, so a miss is not an
+            // answer
+            const { store } = buildStore();
+            const connection = seedConnection(store, {
+                activity: [
+                    pendingActivity('lnbc1expiredlndhub', {
+                        expiresAt: new Date(Date.now() - 60_000)
+                    })
+                ]
+            });
+            (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+                new Error('backends.LndHub.invoiceNotInList')
+            );
+            const coerce = jest
+                .spyOn(NostrConnectUtils, 'coerceLightningInvoice')
+                .mockReturnValue({
+                    isPaid: false,
+                    isExpired: true,
+                    getPaymentRequest: '',
+                    getRHash: CONNECTION_HASH
+                } as any);
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(BackendUtils.lookupInvoice).toHaveBeenCalledTimes(1);
+            expect(connection.activity[0].status).toBe('pending');
+            coerce.mockRestore();
+            (BackendUtils.lookupInvoice as jest.Mock).mockReset();
+        });
+
+        it('closes an expired lightning invoice the node no longer has', async () => {
+            const { store } = buildStore();
+            const connection = seedConnection(store, {
+                activity: [
+                    pendingActivity('lnbc1expiredgone', {
+                        expiresAt: new Date(Date.now() - 60_000)
+                    })
+                ]
+            });
+            (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+                new Error('unable to locate invoice')
+            );
+            const coerce = jest
+                .spyOn(NostrConnectUtils, 'coerceLightningInvoice')
+                .mockReturnValue({
+                    isPaid: false,
+                    isExpired: true,
+                    getPaymentRequest: '',
+                    getRHash: CONNECTION_HASH
+                } as any);
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(BackendUtils.lookupInvoice).toHaveBeenCalledTimes(1);
+            expect(connection.activity[0].status).toBe('expired');
+            coerce.mockRestore();
+            (BackendUtils.lookupInvoice as jest.Mock).mockReset();
+        });
+
+        it('does not look up the previous wallet invoices on a trailing run after a wallet switch', async () => {
+            const { store, nodeInfoStore, settingsStore } = createStore();
+            // 21 pending, so the trailing run has one invoice left to check
+            const activity = Array.from({ length: 21 }, (_, i) => ({
+                id: `lnbc1old${i}`,
+                type: 'make_invoice',
+                payment_source: 'lightning',
+                status: 'pending',
+                satAmount: 1000,
+                invoice: { payment_request: `lnbc1old${i}` },
+                createdAt: new Date(Date.now() - (i + 1) * 1000),
+                expiresAt: new Date(Date.now() - 60_000)
+            }));
+            storedItems.set(
+                NWC_CONNECTIONS_KEY,
+                JSON.stringify([
+                    connectionData({ id: 'conn-a', activity }),
+                    connectionData({
+                        id: 'conn-b',
+                        pubkey: hex64('b'),
+                        nodePubkey: 'node-b'
+                    })
+                ])
+            );
+            await store.loadConnections();
+            const coerce = jest
+                .spyOn(NostrConnectUtils, 'coerceLightningInvoice')
+                .mockReturnValue({
+                    isPaid: false,
+                    isExpired: true,
+                    getPaymentRequest: '',
+                    getRHash: CONNECTION_HASH
+                } as any);
+            let release: () => void = () => undefined;
+            const gate = new Promise<void>((resolve) => {
+                release = resolve;
+            });
+            const askedNodes: string[] = [];
+            (BackendUtils.lookupInvoice as jest.Mock).mockImplementation(
+                async () => {
+                    const node = nodeInfoStore.nodeInfo.nodeId;
+                    askedNodes.push(node);
+                    if (node === 'node-b') {
+                        throw new Error('unable to locate invoice');
+                    }
+                    // the old node is slow (Tor) and the run outlives the
+                    // switch
+                    await gate;
+                    throw new Error('Network request failed');
+                }
+            );
+
+            const first = store.refreshPendingMakeInvoices({ force: true });
+            await Promise.resolve();
+            const second = store.refreshPendingMakeInvoices({ force: true });
+            // wallet switch: the old connections stay in memory until
+            // initializeService reloads them
+            settingsStore.connectionSeq++;
+            nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
+            release();
+            await Promise.all([first, second]);
+            await jest.advanceTimersByTimeAsync(1000);
+
+            expect(askedNodes).not.toContain('node-b');
+            expect(
+                store.connections[0].activity.every(
+                    (a) => a.status === 'pending'
+                )
+            ).toBe(true);
+            expect(persistedConnections().map((c) => c.id)).toEqual([
+                'conn-a',
+                'conn-b'
+            ]);
+            coerce.mockRestore();
+            (BackendUtils.lookupInvoice as jest.Mock).mockReset();
+        });
+
+        it('does not save connections the wallet switched away from during the lookups', async () => {
+            const { store, settingsStore } = buildStore();
+            const connection = seedConnection(store, {
+                activity: [pendingActivity('lnbc1switchedwallet')]
+            });
+            const scheduleSave = store['scheduleSave' as keyof typeof store];
+            (scheduleSave as jest.Mock).mockClear();
+            jest.spyOn(
+                store as any,
+                'reconcilePendingMakeInvoiceActivity'
+            ).mockImplementation(async () => {
+                connection.activity[0].status = 'success';
+                // the wallet is switched while the lookups run
+                settingsStore.connectionSeq += 1;
+                return connection.activity[0];
+            });
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(connection.activity[0].status).toBe('success');
+            expect(scheduleSave).not.toHaveBeenCalled();
+        });
+
+        it('saves the changes when the wallet did not change', async () => {
+            const { store } = buildStore();
+            const connection = seedConnection(store, {
+                activity: [pendingActivity('lnbc1samewallet')]
+            });
+            const scheduleSave = store['scheduleSave' as keyof typeof store];
+            (scheduleSave as jest.Mock).mockClear();
+            jest.spyOn(
+                store as any,
+                'reconcilePendingMakeInvoiceActivity'
+            ).mockImplementation(async () => {
+                connection.activity[0].status = 'success';
+                return connection.activity[0];
+            });
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(scheduleSave).toHaveBeenCalledTimes(1);
+        });
+
+        it('checks nothing without a wallet', async () => {
+            const { store, settingsStore } = buildStore();
+            seedConnection(store, {
+                activity: [pendingActivity('lnbc1nowallet')]
+            });
+            const reconcile = jest.spyOn(
+                store as any,
+                'reconcilePendingMakeInvoiceActivity'
+            );
+            settingsStore.implementation = undefined;
+
+            await store.refreshPendingMakeInvoices({ force: true });
+
+            expect(reconcile).not.toHaveBeenCalled();
         });
 
         it('does not save when nothing changed and survives lookup errors', async () => {

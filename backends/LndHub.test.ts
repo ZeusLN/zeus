@@ -15,6 +15,7 @@ jest.mock('../utils/TorUtils', () => ({
 import LndHub from './LndHub';
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import { settingsStore } from '../stores/Stores';
+import { isInvoiceNotFoundError } from '../utils/PaymentLookupUtils';
 
 describe('LndHub requests', () => {
     let lndHub: LndHub;
@@ -429,5 +430,24 @@ describe('LndHub.login', () => {
         ['undefined', undefined]
     ])('rejects a response %s', async (_label, response) => {
         await expect(loginWith(response)).rejects.toThrow(Error);
+    });
+});
+
+describe('LndHub.lookupInvoice', () => {
+    // LNbits returns the newest 20 invoices of /getuserinvoices unless asked
+    // for more, so an invoice missing from the list may still exist
+    it('does not throw the error callers read as "invoice not found" for a hash missing from the list', async () => {
+        const lndHub = new LndHub();
+        jest.spyOn(lndHub, 'getRequest').mockResolvedValue([]);
+
+        const error = await lndHub
+            .lookupInvoice({ r_hash: 'ab'.repeat(32) })
+            .then(
+                () => undefined,
+                (e: any) => e
+            );
+
+        expect(error).toBeInstanceOf(Error);
+        expect(isInvoiceNotFoundError(error)).toBe(false);
     });
 });

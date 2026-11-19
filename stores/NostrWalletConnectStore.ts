@@ -281,8 +281,8 @@ export default class NostrWalletConnectStore {
     private lastPendingMakeInvoiceRefreshAt = 0;
     // Activity objects already looked up during the current single-flight
     // cycle, so a queued trailing run skips them. Keyed by object identity:
-    // after loadConnections replaces the connections the entries are new
-    // objects and are checked again, which is the point of the trailing run.
+    // loadConnections keeps the objects of connections already in memory, so
+    // only an entry rebuilt from storage is a new object and is checked again.
     private pendingMakeInvoiceCheckedThisCycle = new WeakSet<object>();
     private pendingMakeInvoiceRefreshQueued = false;
     private makeInvoiceTimestampsByConnection = new Map<string, number[]>();
@@ -1730,8 +1730,7 @@ export default class NostrWalletConnectStore {
      * min-age and per-connection debounce as the activity screen.
      *
      * Single-flight: a call made while one is running queues one trailing
-     * run, because loadConnections replaces the connection objects and a
-     * run that started before that would update stale activity entries.
+     * run, so a call that arrives mid-run is not dropped.
      * Calls within PENDING_PAYMENT_STATUS_REFRESH_MS of the last run are
      * skipped unless `force` is set (pull-to-refresh).
      */
@@ -1768,6 +1767,9 @@ export default class NostrWalletConnectStore {
 
     private async runPendingMakeInvoiceRefresh(): Promise<void> {
         if (!this.hasWalletContext()) return;
+        // The lookups below take a while. A save after a wallet switch would
+        // write the previous wallet's connections over the new wallet's.
+        const isCurrent = this.getWalletGuard();
 
         const MAX_PENDING_CHECKS = 20;
         const candidates: {
@@ -1780,6 +1782,10 @@ export default class NostrWalletConnectStore {
         let changed = false;
 
         for (const connection of this.connections) {
+            // After a wallet switch this.connections still holds the
+            // previous wallet's objects until they are reloaded: their
+            // invoices must not be looked up on the new wallet's node
+            if (!this.connectionBelongsToCurrentWallet(connection)) continue;
             const pendingCashu = connection.activity.filter(
                 (activity) =>
                     activity.type === 'make_invoice' &&
@@ -1877,7 +1883,7 @@ export default class NostrWalletConnectStore {
             })
         );
 
-        if (changed) this.scheduleSave();
+        if (changed && isCurrent()) this.scheduleSave();
     }
 
     public refreshActivityInvoiceForNavigation = async (
@@ -4790,11 +4796,11 @@ export default class NostrWalletConnectStore {
         );
         if (!invoice) return requestActivity;
 
-        const settled =
-            (await NostrConnectUtils.lookupInvoicePaidFromNode({
-                paymentRequest: invoice.getPaymentRequest,
-                rHash: invoice.getRHash
-            })) || invoice.isPaid;
+        const lookedUp = await NostrConnectUtils.lookupInvoicePaidFromNode({
+            paymentRequest: invoice.getPaymentRequest,
+            rHash: invoice.getRHash
+        });
+        const settled = lookedUp || invoice.isPaid;
 
         if (settled) {
             const refreshed = await this.refreshLightningInvoiceFromNode(
@@ -4822,7 +4828,9 @@ export default class NostrWalletConnectStore {
             requestConnection,
             requestActivity
         );
-        if (invoice.isExpired) {
+        // Only close the invoice when the node answered "unpaid": a failed
+        // lookup (Tor drop, node still starting) leaves it pending to retry
+        if (invoice.isExpired && lookedUp === false) {
             runInAction(() => {
                 if (activity.status === 'pending') {
                     activity.status = 'expired';

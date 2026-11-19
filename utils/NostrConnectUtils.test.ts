@@ -25,7 +25,8 @@ jest.mock('./LocaleUtils', () => ({
 jest.mock('./BackendUtils', () => ({
     __esModule: true,
     default: {
-        supportsMessageSigning: jest.fn(() => true)
+        supportsMessageSigning: jest.fn(() => true),
+        lookupInvoice: jest.fn()
     }
 }));
 
@@ -43,6 +44,10 @@ import NostrConnectUtils from './NostrConnectUtils';
 import Payment from '../models/Payment';
 import Invoice from '../models/Invoice';
 import Base64Utils from './Base64Utils';
+import {
+    invoiceNotFoundError,
+    isInvoiceNotFoundError
+} from './PaymentLookupUtils';
 import { PermissionType } from '../models/NWCConnection';
 import type { ConnectionActivity } from '../models/NWCConnection';
 import CashuPayment from '../models/CashuPayment';
@@ -2407,5 +2412,180 @@ describe('NostrConnectUtils request event checks', () => {
                 false
             );
         }
+    });
+});
+
+const INVOICE_NOT_FOUND =
+    'stores.NostrWalletConnectStore.error.invoiceNotFound';
+const LNDHUB_NOT_IN_LIST = 'backends.LndHub.invoiceNotInList';
+
+describe('isInvoiceNotFoundError', () => {
+    it.each([
+        ['lnd, unknown hash', new Error('unable to locate invoice')],
+        [
+            'lnd, node that never created an invoice',
+            new Error('there are no existing invoices')
+        ],
+        [
+            'the error CLNRest and LdkNode throw',
+            invoiceNotFoundError(INVOICE_NOT_FOUND)
+        ],
+        ['an error given as a string', 'Unable to locate invoice']
+    ])('matches %s', (_name, error) => {
+        expect(isInvoiceNotFoundError(error)).toBe(true);
+    });
+
+    it.each([
+        ['a transport error', new Error('Network request failed')],
+        ['a timeout', new Error('Request timed out')],
+        [
+            'an error with another code (a native rejection)',
+            Object.assign(new Error('Network request failed'), {
+                code: 'error'
+            })
+        ],
+        ['an unrelated not found', new Error('route not found')],
+        ['LndHub, hash missing from its list', new Error(LNDHUB_NOT_IN_LIST)],
+        // the text is translated, so it is not what marks the error: another
+        // message that contains it (es: "Factura no encontrada en la lista
+        // que devolvió LndHub") is not the answer
+        ['the not-found text without the code', new Error(INVOICE_NOT_FOUND)],
+        [
+            'English not-found text without the code',
+            new Error('Invoice not found in the list LndHub returned')
+        ],
+        [
+            'a translation that contains the not-found text',
+            new Error(`${INVOICE_NOT_FOUND} in the list LndHub returned`)
+        ],
+        ['nothing', undefined]
+    ])('does not match %s', (_name, error) => {
+        expect(isInvoiceNotFoundError(error)).toBe(false);
+    });
+});
+
+describe('NostrConnectUtils.lookupInvoicePaidFromNode', () => {
+    const rHash = hex64('a');
+
+    beforeEach(() => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockReset();
+    });
+
+    it('returns true when the node reports the invoice settled', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue({
+            state: 'SETTLED',
+            settled: true
+        });
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+        ).resolves.toBe(true);
+    });
+
+    it('returns false when the node reports the invoice open', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue({
+            state: 'OPEN',
+            settled: false
+        });
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+        ).resolves.toBe(false);
+    });
+
+    it('returns undefined when the lookup fails', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+            new Error('Tor down')
+        );
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+        ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when there is no hash to look up', async () => {
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({})
+        ).resolves.toBeUndefined();
+        expect(BackendUtils.lookupInvoice).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['lnd', new Error('unable to locate invoice')],
+        ['CLNRest and LdkNode', invoiceNotFoundError(INVOICE_NOT_FOUND)]
+    ])(
+        'returns false when the node has no such invoice (%s)',
+        async (_backend, error) => {
+            (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(error);
+            await expect(
+                NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+            ).resolves.toBe(false);
+        }
+    );
+
+    it('returns undefined when the hash is missing from the LndHub list', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+            new Error(LNDHUB_NOT_IN_LIST)
+        );
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+        ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined for an error that is not a not-found answer', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+            new Error('Network request failed')
+        );
+        await expect(
+            NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+        ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when the node answers with something that is not an invoice', async () => {
+        for (const answer of [undefined, null, 'ok', 42]) {
+            (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue(answer);
+            await expect(
+                NostrConnectUtils.lookupInvoicePaidFromNode({ rHash })
+            ).resolves.toBeUndefined();
+        }
+    });
+
+    describe('for a payment request', () => {
+        afterEach(() => jest.restoreAllMocks());
+
+        it('looks up the payment hash decoded from a BOLT11 invoice', async () => {
+            const decoded = jest
+                .spyOn(NostrConnectUtils, 'decodeInvoiceTags')
+                .mockResolvedValue({ paymentHash: hex64('b') } as any);
+            (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue({
+                state: 'OPEN',
+                settled: false
+            });
+
+            await expect(
+                NostrConnectUtils.lookupInvoicePaidFromNode({
+                    paymentRequest: ' LNBC1invoice ',
+                    // the hash of the request wins over rHash
+                    rHash
+                })
+            ).resolves.toBe(false);
+
+            expect(decoded).toHaveBeenCalledWith('LNBC1invoice');
+            expect(BackendUtils.lookupInvoice).toHaveBeenCalledWith({
+                r_hash: hex64('b')
+            });
+        });
+
+        it('returns undefined without a lookup when the invoice does not decode', async () => {
+            jest.spyOn(
+                NostrConnectUtils,
+                'decodeInvoiceTags'
+            ).mockRejectedValue(new Error('bad invoice'));
+
+            await expect(
+                NostrConnectUtils.lookupInvoicePaidFromNode({
+                    paymentRequest: 'lnbc1broken',
+                    rHash
+                })
+            ).resolves.toBeUndefined();
+            expect(BackendUtils.lookupInvoice).not.toHaveBeenCalled();
+        });
     });
 });

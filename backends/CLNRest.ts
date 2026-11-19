@@ -17,7 +17,11 @@ import {
 } from './CoreLightningRequestHandler';
 import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { markHttpStatus, markJsonRpcCode } from '../utils/PaymentLookupUtils';
+import {
+    invoiceNotFoundError,
+    markHttpStatus,
+    markJsonRpcCode
+} from '../utils/PaymentLookupUtils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import {
     doTorRequest,
@@ -331,7 +335,7 @@ export default class CLNRest {
         }).then((response: any) => {
             const invoice = response?.invoices?.[0];
             if (!invoice) {
-                throw new Error(
+                throw invoiceNotFoundError(
                     localeString(
                         'stores.NostrWalletConnectStore.error.invoiceNotFound'
                     )

@@ -27,6 +27,7 @@ import { lnrpc } from '../proto/lightning';
 import Base64Utils from './Base64Utils';
 import { FAILURE_REASON_LOCALE_KEYS } from './ErrorUtils';
 import { localeString } from './LocaleUtils';
+import { isInvoiceNotFoundError } from './PaymentLookupUtils';
 import dateTimeUtils from './DateTimeUtils';
 import Bolt11Utils from './Bolt11Utils';
 import BackendUtils from './BackendUtils';
@@ -774,30 +775,36 @@ export default class NostrConnectUtils {
         };
     }
 
+    /**
+     * Asks the node whether an invoice is settled. Resolves true or false
+     * when the node answered, and undefined when it could not be asked (no
+     * hash, transport error, node down), so a caller never treats a failed
+     * lookup as "unpaid". A node that has no such invoice (one that deletes
+     * its expired invoices) has answered: that is false.
+     */
     static async lookupInvoicePaidFromNode(options: {
         paymentRequest?: string;
         rHash?: string;
-    }): Promise<boolean> {
+    }): Promise<boolean | undefined> {
         const pr = options.paymentRequest?.trim() || '';
+        let hash: string | undefined;
         if (/^ln/i.test(pr)) {
             try {
-                const decoded = await NostrConnectUtils.decodeInvoiceTags(
-                    pr,
-                    true
-                );
-                return !!decoded.isPaid;
+                hash = (await NostrConnectUtils.decodeInvoiceTags(pr))
+                    .paymentHash;
             } catch {
-                return false;
+                return undefined;
             }
+        } else {
+            hash = NostrConnectUtils.normalizePaymentHash(options.rHash);
         }
-        const hash = NostrConnectUtils.normalizePaymentHash(options.rHash);
-        if (!hash) return false;
+        if (!hash) return undefined;
         try {
             const result = await BackendUtils.lookupInvoice({ r_hash: hash });
-            if (!result || typeof result !== 'object') return false;
+            if (!result || typeof result !== 'object') return undefined;
             return new Invoice(result).isPaid;
-        } catch {
-            return false;
+        } catch (error) {
+            return isInvoiceNotFoundError(error) ? false : undefined;
         }
     }
 

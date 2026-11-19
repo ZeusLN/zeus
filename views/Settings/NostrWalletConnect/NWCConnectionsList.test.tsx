@@ -76,7 +76,25 @@ const buildConnection = (overrides: Record<string, unknown> = {}) => ({
     ...overrides
 });
 
-const renderList = async (connection: any, refresh: () => Promise<void>) => {
+// The pull-to-refresh handler: the list gives its scroll view a refresh
+// control element
+const findOnRefresh = (node: any): (() => void) => {
+    const search = (current: any): any => {
+        if (!current || typeof current !== 'object') return undefined;
+        const onRefresh = current.props?.refreshControl?.props?.onRefresh;
+        if (typeof onRefresh === 'function') return onRefresh;
+        return (current.children || []).map(search).find(Boolean);
+    };
+    const found = search(node);
+    expect(found).toBeDefined();
+    return found;
+};
+
+const renderList = async (
+    connection: any,
+    refresh: () => Promise<void>,
+    connecting = false
+) => {
     const NostrWalletConnectStore = {
         connections: [connection],
         loadMaxBudget: jest.fn(() => Promise.resolve()),
@@ -87,12 +105,17 @@ const renderList = async (connection: any, refresh: () => Promise<void>) => {
         <NWCConnectionsList
             navigation={
                 {
-                    addListener: jest.fn(),
+                    // the initial focus event loads the list
+                    addListener: jest.fn(
+                        (event: string, callback: () => void) => {
+                            if (event === 'focus') callback();
+                        }
+                    ),
                     removeListener: jest.fn(),
                     navigate: jest.fn()
                 } as any
             }
-            SettingsStore={{ connecting: false } as any}
+            SettingsStore={{ connecting } as any}
             NostrWalletConnectStore={NostrWalletConnectStore as any}
         />
     );
@@ -127,6 +150,35 @@ describe('NWCConnectionsList', () => {
 
         expect(screen.getByText(RECENTLY_RECEIVED)).toBeOnTheScreen();
         expect(screen.getByText('amount:1000')).toBeOnTheScreen();
+    });
+
+    it('does not look up pending invoices while the node is connecting', async () => {
+        const NostrWalletConnectStore = await renderList(
+            buildConnection(),
+            async () => undefined,
+            true
+        );
+
+        expect(NostrWalletConnectStore.loadConnections).toHaveBeenCalled();
+        expect(
+            NostrWalletConnectStore.refreshPendingMakeInvoices
+        ).not.toHaveBeenCalled();
+    });
+
+    it('forces the lookup on pull to refresh', async () => {
+        const NostrWalletConnectStore = await renderList(
+            buildConnection(),
+            async () => undefined
+        );
+        NostrWalletConnectStore.refreshPendingMakeInvoices.mockClear();
+
+        await act(async () => {
+            findOnRefresh(screen.toJSON())();
+        });
+
+        expect(
+            NostrWalletConnectStore.refreshPendingMakeInvoices
+        ).toHaveBeenCalledWith({ force: true });
     });
 
     it('shows the Invoice Only tag and hides the amount before anything is received', async () => {
