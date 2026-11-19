@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Nenhuma bala Cashu selecionada. Por favor, selecione uma bala primeiro.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Falha ao decodificar a fatura - payReq não está definido.",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Fatura já paga",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Solicitação de pagamento inválida",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Valor inválido",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "A mensagem deve ser uma string não vazia",
