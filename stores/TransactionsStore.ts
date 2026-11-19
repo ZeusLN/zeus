@@ -649,7 +649,6 @@ export default class TransactionsStore {
         // coin control path carries seq through funding, finalizing and
         // broadcasting
         const seq = ++this.sendCoinsSeq;
-        const isCurrent = () => seq === this.sendCoinsSeq;
 
         this.onchainSendInFlight = true;
         this.onchainSendOwnerSeq = seq;
@@ -659,6 +658,29 @@ export default class TransactionsStore {
                 this.onchainSendInFlight = false;
                 this.onchainSendOwnerSeq = null;
             });
+
+        // A synchronous throw sends nothing, so it must not keep the guard.
+        // A backend without the method makes the dispatcher return false,
+        // and `.then` on that throws here too.
+        try {
+            return this.dispatchSendCoins(transactionRequest, seq).finally(
+                releaseGuard
+            );
+        } catch (error: any) {
+            this.error_msg = errorToUserFriendly(error);
+            this.error = true;
+            this.crafting = false;
+            this.loading = false;
+            releaseGuard();
+        }
+    };
+
+    @action
+    private dispatchSendCoins = (
+        transactionRequest: TransactionRequest,
+        seq: number
+    ) => {
+        const isCurrent = () => seq === this.sendCoinsSeq;
 
         this.funded_psbt = '';
         this.error = false;
@@ -703,7 +725,7 @@ export default class TransactionsStore {
                 transactionRequest,
                 transactionRequest.account === 'default',
                 seq
-            ).finally(releaseGuard);
+            );
         }
 
         this.crafting = false;
@@ -758,8 +780,7 @@ export default class TransactionsStore {
                     this.error = true;
                     this.loading = false;
                 });
-            })
-            .finally(releaseGuard);
+            });
     };
 
     // The send may have been broadcast before its request timed out. Only
