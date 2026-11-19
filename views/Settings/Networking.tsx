@@ -12,6 +12,7 @@ import ConnectivityStore from '../../stores/ConnectivityStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface NetworkingProps {
@@ -79,6 +80,7 @@ export default class Networking extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={disableOfflineCheck}
+                                testID={TEST_IDS.networking.offlineCheckSwitch}
                                 onValueChange={async (newValue: boolean) => {
                                     this.setState({
                                         disableOfflineCheck: newValue
@@ -135,6 +137,7 @@ export default class Networking extends React.Component<
                                 fontSize: 17,
                                 fontFamily: 'PPNeueMontreal-Book'
                             }}
+                            testID={TEST_IDS.networking.status}
                         >
                             {ConnectivityStore.isOffline
                                 ? localeString('general.offline')

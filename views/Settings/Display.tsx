@@ -11,6 +11,7 @@ import SettingsStore, {
     THEME_KEYS
 } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 import { applySystemNavigationBarTheme } from '../../utils/SystemNavigationBarUtils';
 
@@ -122,6 +123,7 @@ export default class Display extends React.Component<
                     keyboardShouldPersistTaps="handled"
                 >
                     <DropdownSetting
+                        testID={TEST_IDS.display.themeDropdown}
                         title={localeString('views.Settings.Theme.title')}
                         selectedValue={theme}
                         disabled={SettingsStore.settingsUpdateInProgress}
@@ -138,6 +140,7 @@ export default class Display extends React.Component<
                     />
 
                     <DropdownSetting
+                        testID={TEST_IDS.display.defaultViewDropdown}
                         title={localeString(
                             'views.Settings.Display.defaultView'
                         )}
@@ -169,6 +172,7 @@ export default class Display extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
+                                testID={TEST_IDS.display.displayNicknameSwitch}
                                 value={displayNickname}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({ displayNickname: value });
@@ -196,6 +200,7 @@ export default class Display extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
+                                testID={TEST_IDS.display.bigKeypadButtonsSwitch}
                                 value={bigKeypadButtons}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({ bigKeypadButtons: value });
@@ -223,6 +228,9 @@ export default class Display extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
+                                testID={
+                                    TEST_IDS.display.showAllDecimalPlacesSwitch
+                                }
                                 value={showAllDecimalPlaces}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({
@@ -252,6 +260,9 @@ export default class Display extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
+                                testID={
+                                    TEST_IDS.display.removeDecimalSpacesSwitch
+                                }
                                 value={removeDecimalSpaces}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({
@@ -281,6 +292,10 @@ export default class Display extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
+                                testID={
+                                    TEST_IDS.display
+                                        .showMillisatoshiAmountsSwitch
+                                }
                                 value={showMillisatoshiAmounts}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({
@@ -310,6 +325,9 @@ export default class Display extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
+                                testID={
+                                    TEST_IDS.display.selectNodeOnStartupSwitch
+                                }
                                 value={selectNodeOnStartup}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({
@@ -329,6 +347,7 @@ export default class Display extends React.Component<
                             marginTop: 20,
                             alignItems: 'center'
                         }}
+                        testID={TEST_IDS.display.dateTimeButton}
                         onPress={() => navigation.navigate('DateTime')}
                     >
                         <View

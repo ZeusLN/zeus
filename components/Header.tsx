@@ -5,6 +5,7 @@ import { initialWindowMetrics } from 'react-native-safe-area-context';
 import type { IconObject } from '@rneui/base/dist/Icon/Icon';
 
 import { localeString } from '../utils/LocaleUtils';
+import { TEST_IDS } from '../utils/TestIds';
 import { themeColor } from '../utils/ThemeUtils';
 
 const insets = initialWindowMetrics?.insets ?? {
@@ -54,6 +55,7 @@ function ZeusHeader(props: HeaderProps) {
                 }
             }}
             accessibilityLabel={localeString('general.goBack')}
+            testID={TEST_IDS.header.backButton}
         >
             <ArrowLeft
                 fill={themeColor('text')}
@@ -71,6 +73,7 @@ function ZeusHeader(props: HeaderProps) {
                 props.navigation!.goBack();
             }}
             accessibilityLabel={localeString('general.close')}
+            testID={TEST_IDS.header.closeButton}
             style={{ marginLeft: 4 }}
         >
             <Close

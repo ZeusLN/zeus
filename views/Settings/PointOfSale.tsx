@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import BackendUtils from '../../utils/BackendUtils';
 import { hasLockCredential } from '../../utils/LockVerifierUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
@@ -172,6 +173,7 @@ export default class PointOfSale extends React.Component<
                 <ScrollView
                     style={{ flex: 1 }}
                     keyboardShouldPersistTaps="handled"
+                    testID={TEST_IDS.pos.scrollView}
                 >
                     <View style={{ padding: 15 }}>
                         {!fiatEnabled && posEnabled === 'square' && (
@@ -199,6 +201,7 @@ export default class PointOfSale extends React.Component<
                         <DropdownSetting
                             title={localeString('views.Settings.POS.enablePos')}
                             selectedValue={posEnabled}
+                            testID={TEST_IDS.pos.modeDropdown}
                             onValueChange={async (value: PosEnabled) => {
                                 const { SettingsStore } = this.props;
                                 const { setPosStatus } = SettingsStore;
@@ -235,6 +238,9 @@ export default class PointOfSale extends React.Component<
                                 >
                                     <TextInput
                                         value={squareAccessToken}
+                                        testID={
+                                            TEST_IDS.pos.squareAccessTokenInput
+                                        }
                                         onChangeText={(text: string) => {
                                             this.setState({
                                                 squareAccessToken: text
@@ -304,6 +310,7 @@ export default class PointOfSale extends React.Component<
                                 </Text>
                                 <TextInput
                                     value={squareLocationId}
+                                    testID={TEST_IDS.pos.squareLocationIdInput}
                                     onChangeText={(text: string) => {
                                         this.setState({
                                             squareLocationId: text
@@ -328,6 +335,9 @@ export default class PointOfSale extends React.Component<
                                     </Text>
                                     <Switch
                                         value={squareDevMode}
+                                        testID={
+                                            TEST_IDS.pos.squareDevModeSwitch
+                                        }
                                         onValueChange={async (
                                             value: boolean
                                         ) => {
@@ -356,6 +366,7 @@ export default class PointOfSale extends React.Component<
                                 </Text>
                                 <TextInput
                                     value={merchantName}
+                                    testID={TEST_IDS.pos.merchantNameInput}
                                     onChangeText={(text: string) => {
                                         this.setState({
                                             merchantName: text
@@ -371,6 +382,7 @@ export default class PointOfSale extends React.Component<
                                         'views.Settings.POS.confPref'
                                     )}
                                     selectedValue={confirmationPreference}
+                                    testID={TEST_IDS.pos.confirmationDropdown}
                                     onValueChange={async (value: string) => {
                                         this.setState({
                                             confirmationPreference: value
@@ -387,6 +399,9 @@ export default class PointOfSale extends React.Component<
                                             'views.Settings.Display.defaultView'
                                         )}
                                         selectedValue={defaultView}
+                                        testID={
+                                            TEST_IDS.pos.defaultViewDropdown
+                                        }
                                         onValueChange={async (
                                             value: string
                                         ) => {
@@ -414,6 +429,7 @@ export default class PointOfSale extends React.Component<
                                     </Text>
                                     <Switch
                                         value={disableTips}
+                                        testID={TEST_IDS.pos.disableTipsSwitch}
                                         onValueChange={async (
                                             value: boolean
                                         ) => {
@@ -477,6 +493,7 @@ export default class PointOfSale extends React.Component<
                                     </Text>
                                     <Switch
                                         value={showKeypad}
+                                        testID={TEST_IDS.pos.showKeypadSwitch}
                                         onValueChange={async (
                                             value: boolean
                                         ) => {
@@ -504,6 +521,7 @@ export default class PointOfSale extends React.Component<
                                 <TextInput
                                     placeholder={'0'}
                                     value={taxPercentage}
+                                    testID={TEST_IDS.pos.taxInput}
                                     keyboardType="numeric"
                                     onChangeText={(text: string) => {
                                         this.setState({
@@ -525,6 +543,7 @@ export default class PointOfSale extends React.Component<
                                         navigation.navigate(item.path)
                                     }
                                     key={`${item.label}-${index}`}
+                                    testID={TEST_IDS.pos.page(item.path)}
                                 >
                                     <View style={styles.tappableRow}>
                                         <Row justify="space-between">

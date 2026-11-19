@@ -14,6 +14,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Text from '../../components/Text';
@@ -162,6 +163,7 @@ export default class PaymentsSettings extends React.Component<
                                     }}
                                     keyboardType="numeric"
                                     value={feeLimit}
+                                    testID={TEST_IDS.payments.feeLimitInput}
                                     suffix={localeString('general.sats')}
                                     onChangeText={(text: string) => {
                                         this.setState({
@@ -187,6 +189,9 @@ export default class PaymentsSettings extends React.Component<
                                     }}
                                     keyboardType="numeric"
                                     value={feePercentage}
+                                    testID={
+                                        TEST_IDS.payments.feePercentageInput
+                                    }
                                     suffix="%"
                                     onChangeText={(text: string) => {
                                         this.setState({
@@ -244,6 +249,7 @@ export default class PaymentsSettings extends React.Component<
                         hideConversion={true}
                         hideUnitChangeButton={true}
                         forceUnit="sats"
+                        testID={TEST_IDS.payments.slideToPayThresholdInput}
                     />
 
                     {(BackendUtils.isLNDBased() ||
@@ -266,6 +272,7 @@ export default class PaymentsSettings extends React.Component<
                             <TextInput
                                 keyboardType="numeric"
                                 value={timeoutSeconds}
+                                testID={TEST_IDS.payments.timeoutInput}
                                 onChangeText={(text: string) => {
                                     this.setState({
                                         timeoutSeconds: text
@@ -297,6 +304,7 @@ export default class PaymentsSettings extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={enableMempoolRates}
+                                testID={TEST_IDS.payments.mempoolRatesSwitch}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({
                                         enableMempoolRates: value
@@ -324,6 +332,9 @@ export default class PaymentsSettings extends React.Component<
                             }}
                             values={MEMPOOL_RATES_KEYS}
                             disabled={!enableMempoolRates}
+                            testID={
+                                TEST_IDS.payments.preferredMempoolRateDropdown
+                            }
                         />
                     </View>
                     {isMainNet && Platform.OS !== 'ios' && (

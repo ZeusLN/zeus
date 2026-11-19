@@ -44,6 +44,7 @@ import {
     startKeypadInvalidInputAnimation
 } from '../../utils/KeypadUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
 
@@ -397,6 +398,7 @@ export default class KeypadPane extends React.PureComponent<
                         }}
                     >
                         <KeypadAmountDisplay
+                            testID={TEST_IDS.keypad.amount}
                             amount={amount}
                             shakeAnimation={this.shakeAnimation}
                             textAnimation={this.textAnimation}
@@ -413,6 +415,9 @@ export default class KeypadPane extends React.PureComponent<
                                     settings?.ecash?.enableCashu && (
                                         <>
                                             <EcashToggle
+                                                testID={
+                                                    TEST_IDS.keypad.ecashToggle
+                                                }
                                                 ecashMode={ecashMode}
                                                 onToggle={() => {
                                                     this.setState({
@@ -424,6 +429,10 @@ export default class KeypadPane extends React.PureComponent<
                                             {ecashMode && (
                                                 <>
                                                     <EcashMintPicker
+                                                        testID={
+                                                            TEST_IDS.keypad
+                                                                .mintPicker
+                                                        }
                                                         hideAmount
                                                         navigation={navigation}
                                                     />
@@ -433,6 +442,7 @@ export default class KeypadPane extends React.PureComponent<
                                         </>
                                     )}
                                 <UnitToggle
+                                    testID={TEST_IDS.keypad.unitToggle}
                                     onToggle={this.clearValue}
                                     onOpenModal={this.handleOpenCurrencyModal}
                                 />
@@ -464,6 +474,9 @@ export default class KeypadPane extends React.PureComponent<
                                 >
                                     <View style={{ width: '25%' }}>
                                         <Button
+                                            testID={TEST_IDS.keypad.amountShortcut(
+                                                '50000'
+                                            )}
                                             title={'50k'}
                                             quaternary
                                             noUppercase
@@ -479,6 +492,9 @@ export default class KeypadPane extends React.PureComponent<
                                     </View>
                                     <View style={{ width: '25%' }}>
                                         <Button
+                                            testID={TEST_IDS.keypad.amountShortcut(
+                                                '100000'
+                                            )}
                                             title={'100k'}
                                             quaternary
                                             noUppercase
@@ -494,6 +510,9 @@ export default class KeypadPane extends React.PureComponent<
                                     </View>
                                     <View style={{ width: '25%' }}>
                                         <Button
+                                            testID={TEST_IDS.keypad.amountShortcut(
+                                                '1000000'
+                                            )}
                                             title={'1m'}
                                             quaternary
                                             noUppercase
@@ -509,6 +528,9 @@ export default class KeypadPane extends React.PureComponent<
                                     </View>
                                     <View style={{ width: '25%' }}>
                                         <Button
+                                            testID={TEST_IDS.keypad.amountShortcut(
+                                                'other'
+                                            )}
                                             title={localeString(
                                                 'general.other'
                                             )}
@@ -537,6 +559,7 @@ export default class KeypadPane extends React.PureComponent<
                             >
                                 <View style={{ width: '40%' }}>
                                     <Button
+                                        testID={TEST_IDS.keypad.requestButton}
                                         title={localeString('general.request')}
                                         quaternary
                                         noUppercase
@@ -565,6 +588,7 @@ export default class KeypadPane extends React.PureComponent<
                                 </View>
                                 <View style={{ width: '20%' }}>
                                     <Button
+                                        testID={TEST_IDS.keypad.editButton}
                                         icon={{
                                             name: 'pencil',
                                             type: 'font-awesome',
@@ -595,6 +619,7 @@ export default class KeypadPane extends React.PureComponent<
                                 </View>
                                 <View style={{ width: '40%' }}>
                                     <Button
+                                        testID={TEST_IDS.keypad.sendButton}
                                         title={localeString('general.send')}
                                         quaternary
                                         noUppercase
@@ -651,6 +676,7 @@ export default class KeypadPane extends React.PureComponent<
                         </Text>
                         <TouchableOpacity
                             key="send-bitcoin-tx"
+                            testID={TEST_IDS.keypad.sendBitcoinOption}
                             onPress={async () => {
                                 navigation.navigate('Send', {
                                     amount: amount !== '0' ? amount : ''
@@ -686,6 +712,7 @@ export default class KeypadPane extends React.PureComponent<
                         </TouchableOpacity>
                         <TouchableOpacity
                             key="send-mint-token"
+                            testID={TEST_IDS.keypad.sendEcashOption}
                             onPress={async () => {
                                 navigation.navigate('SendEcash', {
                                     amount: amount !== '0' ? amount : ''

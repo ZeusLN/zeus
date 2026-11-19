@@ -29,6 +29,7 @@ import Screen from '../../components/Screen';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
@@ -165,6 +166,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                             navigation.navigate('LSPSettings');
                                         }
                                     }}
+                                    testID={TEST_IDS.settings.lspButton}
                                 >
                                     <View style={styles.icon}>
                                         <CloudIcon
@@ -207,6 +209,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     onPress={() => {
                                         navigation.navigate('EcashSettings');
                                     }}
+                                    testID={TEST_IDS.settings.ecashButton}
                                 >
                                     <View style={styles.icon}>
                                         <EcashIcon
@@ -247,6 +250,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 onPress={() =>
                                     navigation.navigate('PaymentsSettings')
                                 }
+                                testID={TEST_IDS.settings.paymentsButton}
                             >
                                 <View style={styles.icon}>
                                     <SendIcon
@@ -275,6 +279,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     onPress={() =>
                                         navigation.navigate('InvoicesSettings')
                                     }
+                                    testID={TEST_IDS.settings.invoicesButton}
                                 >
                                     <View style={styles.icon}>
                                         <ReceiveIcon
@@ -320,6 +325,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     onPress={() =>
                                         navigation.navigate('ChannelsSettings')
                                     }
+                                    testID={TEST_IDS.settings.channelsButton}
                                 >
                                     <View style={styles.columnField}>
                                         <View style={styles.icon}>
@@ -366,6 +372,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     onPress={() =>
                                         navigation.navigate('ChannelsSettings')
                                     }
+                                    testID={TEST_IDS.settings.channelsButton}
                                 >
                                     <View style={styles.columnField}>
                                         <View style={styles.icon}>
@@ -407,6 +414,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <TouchableOpacity
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Networking')}
+                            testID={TEST_IDS.settings.networkingButton}
                         >
                             <View style={styles.icon}>
                                 <NetworkingIcon
@@ -431,6 +439,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
 
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.privacyButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Privacy')}
                         >
@@ -453,6 +462,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         <View style={styles.separationLine} />
 
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.securityButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Security')}
                         >
@@ -487,6 +497,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         }}
                     >
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.currencyButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Currency')}
                         >
@@ -538,6 +549,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         }}
                     >
                         <TouchableOpacity
+                            testID={TEST_IDS.settings.displayButton}
                             style={styles.columnField}
                             onPress={() => navigation.navigate('Display')}
                         >
@@ -577,6 +589,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 onPress={() =>
                                     navigation.navigate('PointOfSaleSettings')
                                 }
+                                testID={TEST_IDS.settings.posButton}
                             >
                                 <View style={styles.icon}>
                                     <POS

@@ -18,6 +18,7 @@ import {
     hasLockCredential
 } from '../../utils/LockVerifierUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface SecurityProps {
@@ -322,6 +323,9 @@ export default class Security extends React.Component<
     renderItem = ({ item }: { item: SecurityItem }) => {
         return (
             <ListItem
+                testID={TEST_IDS.security.option(
+                    'screen' in item ? item.screen : item.action
+                )}
                 containerStyle={{
                     borderBottomWidth: 0,
                     backgroundColor: 'transparent'
@@ -403,6 +407,7 @@ export default class Security extends React.Component<
 
                             <Switch
                                 value={isBiometryEnabled}
+                                testID={TEST_IDS.security.biometricsSwitch}
                                 onValueChange={(value: boolean) =>
                                     this.handleBiometricsSwitchChange(value)
                                 }
@@ -429,6 +434,7 @@ export default class Security extends React.Component<
                             </ListItem.Content>
                             <Switch
                                 value={scramblePin}
+                                testID={TEST_IDS.security.scramblePinSwitch}
                                 onValueChange={async () => {
                                     this.setState({
                                         scramblePin: !scramblePin
@@ -460,6 +466,7 @@ export default class Security extends React.Component<
                             </ListItem.Content>
                             <Switch
                                 value={loginBackground}
+                                testID={TEST_IDS.security.loginBackgroundSwitch}
                                 onValueChange={async () => {
                                     this.setState({
                                         loginBackground: !loginBackground

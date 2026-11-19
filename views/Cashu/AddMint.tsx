@@ -26,6 +26,7 @@ import TextInput from '../../components/TextInput';
 import { confirmAction } from '../../utils/ActionUtils';
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
@@ -586,6 +587,7 @@ export default class AddMint extends React.Component<
                                 {localeString('cashu.mintUrl')}
                             </Text>
                             <TextInput
+                                testID={TEST_IDS.addMint.urlInput}
                                 placeholder={'https://'}
                                 value={mintUrl}
                                 onChangeText={(text: string) =>
@@ -609,6 +611,7 @@ export default class AddMint extends React.Component<
                             }}
                         >
                             <Button
+                                testID={TEST_IDS.addMint.submitButton}
                                 title={localeString(
                                     'views.Cashu.AddMint.title'
                                 )}

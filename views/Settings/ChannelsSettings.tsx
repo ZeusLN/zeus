@@ -14,6 +14,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import BackendUtils from '../../utils/BackendUtils';
 import OpenChannelUtils from '../../utils/OpenChannelUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface ChannelsSettingsProps {
@@ -132,6 +133,7 @@ export default class ChannelsSettings extends React.Component<
                                 infoModalText={localeString(
                                     'views.OpenChannel.announceChannelExplainer'
                                 )}
+                                testID={TEST_IDS.channelsSettings.announceLabel}
                             >
                                 {localeString(
                                     'views.OpenChannel.announceChannel'
@@ -141,6 +143,9 @@ export default class ChannelsSettings extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={!privateChannel}
+                                testID={
+                                    TEST_IDS.channelsSettings.announceSwitch
+                                }
                                 onValueChange={async (announce: boolean) => {
                                     this.setState({
                                         privateChannel: !announce

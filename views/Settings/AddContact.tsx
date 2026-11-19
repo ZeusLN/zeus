@@ -20,6 +20,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import { Row } from '../../components/layout/Row';
@@ -49,6 +50,7 @@ interface ContactInputFieldProps {
     setValidationState: (index: number, isValid: boolean) => void;
     isAdditionalField?: boolean;
     onDelete?: () => void;
+    testID?: string;
 }
 
 interface AddContactProps {
@@ -116,12 +118,14 @@ const ContactInputField = ({
     index,
     setValidationState,
     isAdditionalField = false,
-    onDelete
+    onDelete,
+    testID
 }: ContactInputFieldProps) => (
     <View>
         <View style={styles.inputContainer}>
             <View style={styles.icons}>{icon}</View>
             <TextInput
+                testID={testID}
                 onChangeText={(text) => {
                     onChangeText(text);
                     onValidate(text);
@@ -541,6 +545,7 @@ export default class AddContact extends React.Component<
         allFields.push(
             <ContactInputField
                 key="default-ln-address"
+                testID={TEST_IDS.addContact.lightningAddressInput}
                 icon={<LightningBolt />}
                 value={this.state.lnAddress[0] || ''}
                 onChangeText={(text) => {
@@ -960,6 +965,7 @@ export default class AddContact extends React.Component<
                             }}
                         >
                             <TextInput
+                                testID={TEST_IDS.addContact.nameInput}
                                 onChangeText={(text) =>
                                     this.setState({ name: text })
                                 }
@@ -1120,6 +1126,7 @@ export default class AddContact extends React.Component<
                     {/* Save Button */}
                     <View style={styles.button}>
                         <Button
+                            testID={TEST_IDS.addContact.saveButton}
                             title={localeString(
                                 'views.Settings.AddContact.saveContact'
                             )}

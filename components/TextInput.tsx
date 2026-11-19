@@ -39,6 +39,7 @@ interface TextInputProps {
     onBlur?: any;
     onSubmitEditing?: () => void;
     trailing?: React.ReactNode;
+    testID?: string;
 }
 
 const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
@@ -189,6 +190,7 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                     ref={ref}
                     onFocus={onFocus}
                     onBlur={onBlur}
+                    testID={props.testID}
                 />
                 {suffix ? (
                     toggleUnits ? (

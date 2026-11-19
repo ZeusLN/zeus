@@ -13,6 +13,7 @@ import SettingsStore, {
 } from '../../stores/SettingsStore';
 import { alertStore } from '../../stores/Stores';
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
@@ -219,6 +220,7 @@ export default class Privacy extends React.Component<
                     keyboardShouldPersistTaps="handled"
                 >
                     <DropdownSetting
+                        testID={TEST_IDS.privacy.blockExplorerDropdown}
                         title={localeString(
                             'views.Settings.Privacy.blockExplorer'
                         )}
@@ -247,6 +249,9 @@ export default class Privacy extends React.Component<
                                 )}
                             </Text>
                             <TextInput
+                                testID={
+                                    TEST_IDS.privacy.customBlockExplorerInput
+                                }
                                 value={customBlockExplorer}
                                 placeholder="https://explorer.mynode.local"
                                 error={customBlockExplorerError}
@@ -290,6 +295,7 @@ export default class Privacy extends React.Component<
                     >
                         <View style={{ flex: 1 }}>
                             <Text
+                                testID={TEST_IDS.privacy.clipboardLabel}
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
@@ -306,6 +312,7 @@ export default class Privacy extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
+                                testID={TEST_IDS.privacy.clipboardSwitch}
                                 value={clipboard}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({ clipboard: value });
@@ -324,6 +331,7 @@ export default class Privacy extends React.Component<
                     >
                         <View style={{ flex: 1 }}>
                             <Text
+                                testID={TEST_IDS.privacy.lurkerModeLabel}
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
@@ -348,6 +356,7 @@ export default class Privacy extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
+                                testID={TEST_IDS.privacy.lurkerModeSwitch}
                                 value={lurkerMode}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({ lurkerMode: value });
@@ -379,6 +388,7 @@ export default class Privacy extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
+                                testID={TEST_IDS.privacy.mempoolRatesSwitch}
                                 value={enableMempoolRates}
                                 onValueChange={async (value: boolean) => {
                                     this.setState({
@@ -394,6 +404,7 @@ export default class Privacy extends React.Component<
 
                     <View style={{ marginTop: 20 }}>
                         <DropdownSetting
+                            testID={TEST_IDS.privacy.mempoolInstanceDropdown}
                             title={localeString(
                                 'views.Settings.Privacy.mempoolInstance'
                             )}
@@ -421,6 +432,10 @@ export default class Privacy extends React.Component<
                                     {localeString('general.custom')}
                                 </Text>
                                 <TextInput
+                                    testID={
+                                        TEST_IDS.privacy
+                                            .customMempoolInstanceInput
+                                    }
                                     value={customMempoolInstance}
                                     placeholder="https://mempool.mynode.local"
                                     error={customMempoolInstanceError}

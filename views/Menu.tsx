@@ -36,6 +36,7 @@ import Screen from '../components/Screen';
 import BackendUtils from '../utils/BackendUtils';
 import { getPhoto } from '../utils/PhotoUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { TEST_IDS } from '../utils/TestIds';
 import { reAuthNavigation } from '../utils/NavigationUtils';
 import {
     themeColor,
@@ -182,6 +183,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                 >
                     {selectedNode ? (
                         <TouchableOpacity
+                            testID={TEST_IDS.menu.selectedWalletButton}
                             onPress={() => navigation.navigate('Wallets')}
                         >
                             <View
@@ -251,6 +253,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             }}
                         >
                             <TouchableOpacity
+                                testID={TEST_IDS.menu.addWalletButton}
                                 style={styles.columnField}
                                 onPress={() =>
                                     navigation.navigate('WalletConfiguration', {
@@ -372,6 +375,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         }}
                     >
                         <TouchableOpacity
+                            testID={TEST_IDS.menu.settingsButton}
                             style={styles.columnField}
                             onPress={() => {
                                 navigation.navigate('Settings');
@@ -411,6 +415,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 }}
                             >
                                 <TouchableOpacity
+                                    testID={TEST_IDS.menu.backupButton}
                                     style={styles.columnField}
                                     onPress={() =>
                                         reAuthNavigation(navigation, 'Seed')
@@ -853,6 +858,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             }}
                         >
                             <TouchableOpacity
+                                testID={TEST_IDS.menu.contactsButton}
                                 onPress={() => navigation.navigate('Contacts')}
                             >
                                 <View style={styles.columnField}>

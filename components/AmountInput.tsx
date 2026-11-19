@@ -44,6 +44,9 @@ interface AmountInputProps {
     // Why the amount could not be shown in fiat. Shown under the input in
     // place of the conversion rate.
     fiatError?: string;
+    // On the field that opens the keypad. The amount shown in it gets
+    // `${testID}.value`.
+    testID?: string;
 }
 
 interface AmountInputState {
@@ -241,6 +244,7 @@ export default class AmountInput extends React.Component<
         const {
             title,
             locked,
+            testID,
             hideConversion,
             hideUnitChangeButton,
             FiatStore,
@@ -293,6 +297,7 @@ export default class AmountInput extends React.Component<
                     <TouchableOpacity
                         onPress={this.openKeypad}
                         disabled={locked}
+                        testID={testID}
                         activeOpacity={0.7}
                         style={[
                             styles.amountDisplay,
@@ -317,6 +322,7 @@ export default class AmountInput extends React.Component<
                                             : themeColor('text')
                                 }
                             ]}
+                            testID={testID && `${testID}.value`}
                         >
                             {formattedAmount}
                         </Text>

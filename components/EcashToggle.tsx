@@ -8,17 +8,19 @@ import { localeString } from '../utils/LocaleUtils';
 interface EcashToggleProps {
     ecashMode?: boolean;
     onToggle?: () => void;
+    testID?: string;
 }
 
 @inject('UnitsStore', 'SettingsStore')
 @observer
 export default class EcashToggle extends React.Component<EcashToggleProps, {}> {
     render() {
-        const { ecashMode, onToggle } = this.props;
+        const { ecashMode, onToggle, testID } = this.props;
 
         return (
             <React.Fragment>
                 <Button
+                    testID={testID}
                     title={
                         ecashMode
                             ? localeString('general.ecash')

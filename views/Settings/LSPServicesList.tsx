@@ -6,6 +6,7 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { TEST_IDS } from '../../utils/TestIds';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface LSPServicesListProps {
@@ -59,6 +60,7 @@ function LSPServicesList(props: LSPServicesListProps) {
                         onPress={() => {
                             navigation.navigate(item.nav);
                         }}
+                        testID={TEST_IDS.lspServices.option(item.nav)}
                     >
                         <ListItem.Content>
                             <ListItem.Title
