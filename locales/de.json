@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Keine Cashu-Mint ausgewählt. Bitte erst eine Mint auswählen.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Rechnung konnte nicht dekodiert werden - payReq ist nicht definiert",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Rechnung bereits bezahlt",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Ungültige Rechnung",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Ungültiger Betrag",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "Die Nachricht darf nicht leer sein",
