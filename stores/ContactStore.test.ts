@@ -8,6 +8,7 @@ jest.mock('../storage', () => ({
 }));
 
 import Storage from '../storage';
+import Contact from '../models/Contact';
 import ContactStore, { CONTACTS_KEY } from './ContactStore';
 
 const getItemMock = Storage.getItem as jest.Mock;
@@ -119,6 +120,31 @@ describe('ContactStore', () => {
                 { id: 'old-b', name: 'Robert' }
             ]);
         });
+
+        it('updates an old contact passed in as a Contact model', async () => {
+            // ContactDetails passes new Contact(storedContact) to
+            // setPrefillContact, so the match must work on the model too
+            const existing = [
+                { id: 'old-a', name: 'Alice' },
+                { id: 'old-b', name: 'Bob' },
+                { contactId: 'new-c', name: 'Carol' }
+            ];
+            getItemMock.mockResolvedValue(JSON.stringify(existing));
+            store.setPrefillContact(new Contact(existing[1]));
+
+            await store.saveContact(
+                { name: 'Robert' },
+                true,
+                false,
+                navigation
+            );
+
+            expect(savedContacts()).toEqual([
+                { id: 'old-a', name: 'Alice' },
+                { contactId: 'new-c', name: 'Carol' },
+                { id: 'old-b', name: 'Robert' }
+            ]);
+        });
     });
 
     describe('deleteContact', () => {
@@ -149,6 +175,23 @@ describe('ContactStore', () => {
             ];
             getItemMock.mockResolvedValue(JSON.stringify(existing));
             store.setPrefillContact(existing[0] as any);
+
+            await store.deleteContact(navigation);
+
+            expect(savedContacts()).toEqual([
+                { id: 'old-b', name: 'Bob' },
+                { contactId: 'new-c', name: 'Carol' }
+            ]);
+        });
+
+        it('removes an old contact passed in as a Contact model', async () => {
+            const existing = [
+                { id: 'old-a', name: 'Alice' },
+                { id: 'old-b', name: 'Bob' },
+                { contactId: 'new-c', name: 'Carol' }
+            ];
+            getItemMock.mockResolvedValue(JSON.stringify(existing));
+            store.setPrefillContact(new Contact(existing[0]));
 
             await store.deleteContact(navigation);
 
