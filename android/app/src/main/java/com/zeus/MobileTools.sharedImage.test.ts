@@ -44,9 +44,11 @@ const extract = () => {
 // argv[0] is the provider: "valid" serves a small image at once, "stalled"
 // returns a pipe and never writes to it, "blockingClose" does the same and
 // never returns from close(), "endless" writes without end, "atCap" and
-// "overCap" serve exactly SHARED_IMAGE_MAX_BYTES and one byte more. Prints
-// how long the @ReactMethod held its caller, how the promise settled, and
-// whether the provider's stream was closed and its reader let go.
+// "overCap" serve exactly SHARED_IMAGE_MAX_BYTES and one byte more. argv[1]
+// is the deadline JS passes, in ms from the call. Prints how long the
+// @ReactMethod held its caller, how the promise settled, whether the
+// provider was opened, and whether its stream was closed and its reader let
+// go.
 const HARNESS = (method: string) => `import java.io.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
@@ -80,7 +82,10 @@ class Harness {
   }
   static class Activity { Intent getIntent() { return new Intent(); } }
   static class ContentResolver {
-    InputStream openInputStream(Uri uri) { return provider; }
+    InputStream openInputStream(Uri uri) {
+      opened.set(true);
+      return provider;
+    }
   }
   static class Context {
     Activity getCurrentActivity() { return new Activity(); }
@@ -90,12 +95,16 @@ class Harness {
     final CountDownLatch settled = new CountDownLatch(1);
     final AtomicInteger calls = new AtomicInteger();
     volatile String outcome;
+    // settled on the thread running the @ReactMethod, before it returned
+    volatile boolean inCall;
     void resolve(Object value) {
+      inCall = Thread.currentThread() == caller;
       calls.incrementAndGet();
       outcome = value == null ? "resolved:null" : "resolved:" + value;
       settled.countDown();
     }
     void reject(String code, String message) {
+      inCall = Thread.currentThread() == caller;
       calls.incrementAndGet();
       outcome = "rejected:" + code;
       settled.countDown();
@@ -129,6 +138,8 @@ class Harness {
   }
 
   static InputStream provider;
+  static volatile Thread caller;
+  static final AtomicBoolean opened = new AtomicBoolean();
   static final AtomicLong served = new AtomicLong();
   static final AtomicBoolean closed = new AtomicBoolean();
   static final AtomicBoolean consumed = new AtomicBoolean();
@@ -214,9 +225,13 @@ class Harness {
         break;
     }
 
+    long settleByOffsetMs = Long.parseLong(args[1]);
     Promise promise = new Promise();
     long start = System.nanoTime();
-    new Harness().takeSharedImageBase64(promise);
+    caller = Thread.currentThread();
+    new Harness().takeSharedImageBase64(
+        System.currentTimeMillis() + settleByOffsetMs, promise);
+    caller = null;
     long heldMs = (System.nanoTime() - start) / 1000000;
 
     boolean settled = promise.settled.await(SHARED_IMAGE_TIMEOUT_MS + 3000, TimeUnit.MILLISECONDS);
@@ -233,7 +248,8 @@ class Harness {
     if (args[0].equals("blockingClose")) {
       provider = blockingClose();
       Promise second = new Promise();
-      new Harness().takeSharedImageBase64(second);
+      new Harness().takeSharedImageBase64(
+          System.currentTimeMillis() + settleByOffsetMs, second);
       second.settled.await(SHARED_IMAGE_TIMEOUT_MS + 3000, TimeUnit.MILLISECONDS);
       secondOutcome = second.outcome;
     }
@@ -244,6 +260,8 @@ class Harness {
         + ",\\"outcome\\":\\"" + promise.outcome + "\\""
         + ",\\"secondOutcome\\":\\"" + secondOutcome + "\\""
         + ",\\"settleCalls\\":" + promise.calls.get()
+        + ",\\"settledInCall\\":" + promise.inCall
+        + ",\\"opened\\":" + opened.get()
         + ",\\"served\\":" + served.get()
         + ",\\"closed\\":" + closed.get()
         + ",\\"consumed\\":" + consumed.get()
@@ -271,12 +289,17 @@ class Harness {
             if (dir) fs.rmSync(dir, { recursive: true, force: true });
         });
 
-        const run = (provider: string) =>
+        // What ShareIntentProcessor passes for a call that runs at once:
+        // its 8 s timeout less the 1 s it leaves for the result to reach it
+        const JS_SETTLE_BY_MS = 7000;
+
+        const run = (provider: string, settleByMs = JS_SETTLE_BY_MS) =>
             JSON.parse(
-                execFileSync('java', ['-cp', dir, 'Harness', provider], {
-                    encoding: 'utf8',
-                    timeout: 20000
-                })
+                execFileSync(
+                    'java',
+                    ['-cp', dir, 'Harness', provider, String(settleByMs)],
+                    { encoding: 'utf8', timeout: 20000 }
+                )
             );
 
         it('reads an image the sending app serves at once', () => {
@@ -306,6 +329,39 @@ class Harness {
             expect(result.closed).toBe(true);
             expect(result.readerStopped).toBe(true);
             // left in place for the next read
+            expect(result.consumed).toBe(false);
+        }, 20000);
+
+        // JS stops waiting soon after the deadline it passes, and the call
+        // can wait behind other native calls before it runs. A read that ran
+        // past that deadline would consume the share with nobody to receive
+        // the image.
+        it('gives up by the deadline JS passes when that comes first', () => {
+            const result = run('stalled', 2000);
+
+            expect(result.outcome).toBe('rejected:SHARE_TIMEOUT');
+            expect(result.settleCalls).toBe(1);
+            expect(result.settledMs).toBeGreaterThanOrEqual(1900);
+            expect(result.settledMs).toBeLessThan(3000);
+            expect(result.consumed).toBe(false);
+        }, 20000);
+
+        it('keeps its own deadline when JS would wait longer', () => {
+            const result = run('stalled', 60000);
+
+            expect(result.settled).toBe(true);
+            expect(result.outcome).toBe('rejected:SHARE_TIMEOUT');
+            expect(result.settledMs).toBeLessThan(result.timeoutMs + 2000);
+        }, 20000);
+
+        it('does not open a share when it starts after the deadline JS passed', () => {
+            const result = run('valid', -1000);
+
+            expect(result.outcome).toBe('rejected:SHARE_TIMEOUT');
+            expect(result.settleCalls).toBe(1);
+            // rejected before the method returned, so no reader was started
+            expect(result.settledInCall).toBe(true);
+            expect(result.opened).toBe(false);
             expect(result.consumed).toBe(false);
         }, 20000);
 

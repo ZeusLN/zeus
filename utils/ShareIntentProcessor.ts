@@ -10,6 +10,12 @@ const { MobileTools } = NativeModules;
 // 5 s) plus time spent queued behind other native calls.
 export const SHARED_IMAGE_TIMEOUT_MS = 8000;
 
+// The native take is told to settle this long before SHARED_IMAGE_TIMEOUT_MS
+// runs out, so its result reaches JS while the race below still waits for
+// it. A take that settled after JS gave up could consume the share with
+// nobody to receive the image, and the next read would find nothing.
+export const SHARED_IMAGE_RESULT_MARGIN_MS = 1000;
+
 // A shared image on its way to the ShareIntentProcessing screen, with the
 // gates it still has to clear
 export interface ShareIntentPayload {
@@ -58,9 +64,15 @@ export const processSharedQRImageFast =
             // the share in place, so the next read delivers it again. A read
             // that gives up is a processing error; the native side consumes
             // the share only with the image in hand, so the next read asks
-            // for it again.
+            // for it again. The native side gives up by settleBy (a
+            // Date.now() time, read there from the same wall clock), a
+            // second before this call does.
+            const settleBy =
+                Date.now() +
+                SHARED_IMAGE_TIMEOUT_MS -
+                SHARED_IMAGE_RESULT_MARGIN_MS;
             const base64Image = await Promise.race([
-                MobileTools.takeSharedImageBase64(),
+                MobileTools.takeSharedImageBase64(settleBy),
                 new Promise<never>((_, reject) => {
                     timeout = setTimeout(
                         () => reject(new Error('Shared image read timed out')),

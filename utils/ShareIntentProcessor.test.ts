@@ -231,6 +231,22 @@ describe('processSharedQRImageFast', () => {
             });
         });
 
+        // The native take can wait behind other native calls before it
+        // runs. Told when JS gives up, it gives up first, so it never
+        // consumes the share after nobody is waiting for the image.
+        it('tells the native take to settle a second before it gives up', async () => {
+            const now = Date.UTC(2026, 10, 19, 12, 0, 0);
+            jest.setSystemTime(now);
+            takeSharedImageBase64.mockReturnValueOnce(new Promise(() => {}));
+
+            const result = processSharedQRImageFast();
+            await jest.advanceTimersByTimeAsync(SHARED_IMAGE_TIMEOUT_MS);
+            await result;
+
+            // its own 5 s read plus 2 s queued behind other native calls
+            expect(takeSharedImageBase64).toHaveBeenCalledWith(now + 7000);
+        });
+
         it('reads again once the stalled read has given up', async () => {
             takeSharedImageBase64.mockReturnValueOnce(new Promise(() => {}));
 

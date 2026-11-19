@@ -20,9 +20,21 @@ RCT_EXPORT_MODULE(MobileTools);
 // first renamed out of the way (an atomic rename within the container) and
 // then read. A share written after the rename lands at sharedQR.txt again and
 // is left for the next call instead of being removed unread.
-RCT_EXPORT_METHOD(takeSharedImageBase64:(RCTPromiseResolveBlock)resolve
+//
+// JS stops waiting for the image soon after settleByMs, its Date.now()
+// deadline. This call can wait behind other modules on a shared method
+// queue, and a take that ran after JS gave up would remove the share with
+// nobody to receive the image. The take reads a local file and does not
+// block, so checking the deadline before it starts is enough.
+RCT_EXPORT_METHOD(takeSharedImageBase64:(double)settleByMs
+                  resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
+  if ([[NSDate date] timeIntervalSince1970] * 1000 >= settleByMs) {
+    reject(@"SHARE_TIMEOUT", @"Shared image take started after its deadline", nil);
+    return;
+  }
+
   @try {
     NSURL *fileURL = [self getSharedFileURL];
     if (fileURL == nil) {

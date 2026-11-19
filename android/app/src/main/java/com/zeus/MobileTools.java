@@ -162,8 +162,17 @@ class MobileTools extends ReactContextBaseJavaModule {
     }
   }
 
+  // JS stops waiting for the image soon after settleByMs, its Date.now()
+  // deadline (the same wall clock as System.currentTimeMillis()). This call
+  // can wait behind other native calls before it runs, and a read that ran
+  // past JS's deadline would consume the share with nobody to receive the
+  // image. So the read gives up at settleByMs or after
+  // SHARED_IMAGE_TIMEOUT_MS, whichever comes first.
   @ReactMethod
-  public void takeSharedImageBase64(Promise promise) {
+  public void takeSharedImageBase64(double settleByMs, Promise promise) {
+    long timeoutMs = Math.min(SHARED_IMAGE_TIMEOUT_MS,
+        (long) settleByMs - System.currentTimeMillis());
+
     // Read and clear the same intent: MainActivity.onNewIntent can replace
     // the activity's intent on the UI thread while this runs, and a second
     // getIntent() could clear a newer share than the one read here.
@@ -194,7 +203,7 @@ class MobileTools extends ReactContextBaseJavaModule {
         android.util.Log.d(TAG, "Image URI: " + imageUri);
 
         if (imageUri != null) {
-          readSharedImage(intent, imageUri, promise);
+          readSharedImage(intent, imageUri, timeoutMs, promise);
           return;
         }
       }
@@ -213,7 +222,16 @@ class MobileTools extends ReactContextBaseJavaModule {
   // parked, but the promise is settled all the same. The share is consumed
   // only when the promise settles with the image, so a read that times out
   // or fails leaves it for the next one.
-  private void readSharedImage(Intent intent, Uri imageUri, Promise promise) {
+  private void readSharedImage(
+      Intent intent, Uri imageUri, long timeoutMs, Promise promise) {
+    // JS has given up on this call, or is about to: leave the share for the
+    // next read without opening it
+    if (timeoutMs <= 0) {
+      android.util.Log.w(TAG, "Shared image read started after its deadline");
+      promise.reject("SHARE_TIMEOUT", "Shared image was not served in time");
+      return;
+    }
+
     AtomicBoolean settled = new AtomicBoolean(false);
     AtomicReference<InputStream> stream = new AtomicReference<>();
 
@@ -266,7 +284,7 @@ class MobileTools extends ReactContextBaseJavaModule {
 
     sharedImageDeadlines.schedule(() -> {
       if (!settled.compareAndSet(false, true)) return;
-      android.util.Log.w(TAG, "Shared image not served within " + SHARED_IMAGE_TIMEOUT_MS + " ms");
+      android.util.Log.w(TAG, "Shared image not served within " + timeoutMs + " ms");
       promise.reject("SHARE_TIMEOUT", "Shared image was not served in time");
       read.cancel(true);
       // Closing a provider's stream can itself block, so it runs on the
@@ -281,7 +299,7 @@ class MobileTools extends ReactContextBaseJavaModule {
           }
         });
       }
-    }, SHARED_IMAGE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+    }, timeoutMs, TimeUnit.MILLISECONDS);
   }
 
   // Fails the read once a shared image passes the byte cap, so a sending
