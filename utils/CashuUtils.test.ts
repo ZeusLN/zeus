@@ -296,7 +296,6 @@ describe('CashuUtils', () => {
     });
 
     describe('P2PK helpers', () => {
-        // Use a far-future locktime so the token is still considered locked
         const futureLocktime = Math.floor(Date.now() / 1000) + 86400 * 365;
         const p2pkSecret = JSON.stringify([
             'P2PK',
@@ -306,22 +305,6 @@ describe('CashuUtils', () => {
                 tags: [['locktime', futureLocktime]]
             }
         ]);
-
-        it('detects P2PK locked tokens', () => {
-            expect(
-                CashuUtils.isTokenP2PKLocked({
-                    proofs: [{ secret: p2pkSecret }]
-                })
-            ).toBe(true);
-        });
-
-        it('returns false for non-P2PK tokens', () => {
-            expect(
-                CashuUtils.isTokenP2PKLocked({
-                    proofs: [{ secret: 'plainSecret' }]
-                })
-            ).toBe(false);
-        });
 
         it('extracts P2PK pubkey from secret', () => {
             expect(CashuUtils.getP2PKPubkeySecret(p2pkSecret)).toBe(

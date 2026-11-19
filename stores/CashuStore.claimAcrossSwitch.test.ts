@@ -310,7 +310,7 @@ describe('CashuStore receive in flight at a wallet switch on iOS', () => {
         mockCdk.destroysPreviousHandle = false;
         await openCDK(SEED_A);
         mockCdk.holdMint = NEW_MINT;
-        const claim = store.receiveTokenCDK('token-A', undefined, NEW_MINT);
+        const claim = store.receiveTokenCDK('token-A', { mintUrl: NEW_MINT });
         await until(() => mockCdk.answerAddMint !== undefined);
 
         const opening = startSwitchToWalletB();

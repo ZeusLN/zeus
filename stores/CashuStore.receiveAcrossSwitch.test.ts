@@ -213,7 +213,7 @@ const startSwitchToWalletB = () => {
 describe('CashuStore receive in flight at a wallet switch', () => {
     it('stores the proofs in the wallet the receive started on', async () => {
         await openCDK(SEED_A);
-        const claim = store.receiveTokenCDK('token-A', undefined, MINT);
+        const claim = store.receiveTokenCDK('token-A', { mintUrl: MINT });
         await flush();
         expect(mockCdk.heldClaims).toHaveLength(1);
 
@@ -236,7 +236,7 @@ describe('CashuStore receive in flight at a wallet switch', () => {
     it("waits for a receive still adding the token's mint", async () => {
         await openCDK(SEED_A);
         mockCdk.holdMint = NEW_MINT;
-        const claim = store.receiveTokenCDK('token-A', undefined, NEW_MINT);
+        const claim = store.receiveTokenCDK('token-A', { mintUrl: NEW_MINT });
         await flush();
         expect(mockCdk.answerAddMint).toBeDefined();
 
@@ -283,7 +283,7 @@ describe('CashuStore receive in flight at a wallet switch', () => {
     it('opens the next wallet once the wait limit passes', async () => {
         jest.useFakeTimers();
         await openCDK(SEED_A);
-        const claim = store.receiveTokenCDK('token-A', undefined, MINT);
+        const claim = store.receiveTokenCDK('token-A', { mintUrl: MINT });
         await flush();
         expect(mockCdk.heldClaims).toHaveLength(1);
 
@@ -304,7 +304,7 @@ describe('CashuStore receive in flight at a wallet switch', () => {
     it('does not wait again at a later switch for a receive it gave up on', async () => {
         jest.useFakeTimers();
         await openCDK(SEED_A);
-        const claim = store.receiveTokenCDK('token-A', undefined, MINT);
+        const claim = store.receiveTokenCDK('token-A', { mintUrl: MINT });
         await flush();
         expect(mockCdk.heldClaims).toHaveLength(1);
 
@@ -327,7 +327,7 @@ describe('CashuStore receive in flight at a wallet switch', () => {
     it('opens the wallet at once when no receive is in flight', async () => {
         jest.useFakeTimers();
         await openCDK(SEED_A);
-        const claim = store.receiveTokenCDK('token-A', undefined, MINT);
+        const claim = store.receiveTokenCDK('token-A', { mintUrl: MINT });
         await flush();
         mockCdk.heldClaims[0]();
         await expect(claim).resolves.toBe(100);
@@ -343,7 +343,7 @@ describe('CashuStore receive in flight at a wallet switch', () => {
             storeWallet('walletB', SEED_B, [], MINT_B);
             storeWallet('walletC', SEED_C, [], MINT_C);
             await store.initializeWallets();
-            const claim = store.receiveTokenCDK('token-A', undefined, MINT);
+            const claim = store.receiveTokenCDK('token-A', { mintUrl: MINT });
             await flush();
             expect(mockCdk.heldClaims).toHaveLength(1);
 
