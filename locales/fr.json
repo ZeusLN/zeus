@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Aucun atelier monétaire de Cashu n'a été sélectionné. Veuillez d'abord en sélectionner un.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Échec du décodage de la facture - payReq est indéfini",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Facture déjà payée",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Demande de paiement invalide",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Montant invalide",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "Le message doit être une chaîne de caractères non vide.",
