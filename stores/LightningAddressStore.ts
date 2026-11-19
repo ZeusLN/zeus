@@ -752,12 +752,7 @@ export default class LightningAddressStore {
                         this.rejectUntrustedMint(localNotification);
                         return false;
                     }
-                    // Provide our Cashu secret key; CDK will only use it if the token is P2PK-locked.
-                    const signingKey = this.cashuStore.deriveCashuSecretKey();
-                    await this.cashuStore.receiveTokenCDK(
-                        redeemData.token,
-                        signingKey || undefined
-                    );
+                    await this.cashuStore.receiveTokenCDK(redeemData.token);
                 }
 
                 notify = !!(localNotification && response.isPaid);

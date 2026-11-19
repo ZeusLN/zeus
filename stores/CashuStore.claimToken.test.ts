@@ -69,7 +69,8 @@ jest.mock('../cashu-cdk', () => ({
         getUnspentProofs: jest.fn(),
         getMintBalance: jest.fn(),
         createMeltQuote: jest.fn(),
-        melt: jest.fn()
+        melt: jest.fn(),
+        receive: jest.fn()
     }
 }));
 
@@ -126,6 +127,7 @@ const makeStore = () => {
         {} as any
     );
     store.cdkInitialized = true;
+    const realReceiveTokenCDK = store.receiveTokenCDK;
     store.receiveTokenCDK = jest.fn();
     store.createMeltQuoteCDK = jest.fn();
     store.meltCDK = jest.fn();
@@ -137,7 +139,7 @@ const makeStore = () => {
     (CashuDevKit.getMintKeysets as jest.Mock).mockResolvedValue([]);
     (CashuDevKit.getUnspentProofs as jest.Mock).mockResolvedValue([]);
 
-    return { store, invoicesStore };
+    return { store, invoicesStore, realReceiveTokenCDK };
 };
 
 describe('CashuStore.claimToken toSelfCustody', () => {
@@ -589,15 +591,25 @@ describe('CashuStore.claimToken signing key', () => {
             value: TOKEN_AMT
         });
 
+    // receiveTokenCDK is not stubbed here: the key has to reach CDK
     const makeKeyedStore = () => {
-        const { store, invoicesStore } = makeStore();
+        const { store, invoicesStore, realReceiveTokenCDK } = makeStore();
+        store.receiveTokenCDK = jest.fn(realReceiveTokenCDK);
         store.deriveCashuSecretKey = jest.fn(() => SECRET_KEY);
+        (store as any).ensureMintAdded = jest.fn();
         (store as any).checkAndSweepMints = jest.fn();
         return { store, invoicesStore };
     };
 
+    // toStrictEqual: toHaveBeenCalledWith treats [undefined] as []
+    const expectReceivedWithKeys = (keys: string[]) =>
+        expect((CashuDevKit.receive as jest.Mock).mock.calls).toStrictEqual([
+            [ENCODED_TOKEN, { p2pk_signing_keys: keys }]
+        ]);
+
     beforeEach(() => {
         jest.clearAllMocks();
+        (CashuDevKit.receive as jest.Mock).mockResolvedValue(TOKEN_AMT);
     });
 
     it('offers our key for a token decoded without proofs', async () => {
@@ -608,11 +620,8 @@ describe('CashuStore.claimToken signing key', () => {
             makeDecodedWithoutProofs()
         );
 
-        expect(store.receiveTokenCDK).toHaveBeenCalledWith(
-            ENCODED_TOKEN,
-            SECRET_KEY,
-            MINT_URL
-        );
+        expectReceivedWithKeys([SECRET_KEY]);
+        expect((store as any).ensureMintAdded).toHaveBeenCalledWith(MINT_URL);
         expect(result).toEqual({ success: true, errorMessage: '' });
     });
 
@@ -621,11 +630,7 @@ describe('CashuStore.claimToken signing key', () => {
 
         await store.claimToken(ENCODED_TOKEN, makeDecoded());
 
-        expect(store.receiveTokenCDK).toHaveBeenCalledWith(
-            ENCODED_TOKEN,
-            SECRET_KEY,
-            MINT_URL
-        );
+        expectReceivedWithKeys([SECRET_KEY]);
     });
 
     it('offers our key when sweeping a token decoded without proofs to self-custody', async () => {
@@ -636,7 +641,6 @@ describe('CashuStore.claimToken signing key', () => {
         (store.createMeltQuoteCDK as jest.Mock).mockResolvedValue({
             fee_reserve: 0
         });
-        (store.receiveTokenCDK as jest.Mock).mockResolvedValue(TOKEN_AMT);
 
         const result = await store.claimToken(
             ENCODED_TOKEN,
@@ -644,11 +648,8 @@ describe('CashuStore.claimToken signing key', () => {
             true
         );
 
-        expect(store.receiveTokenCDK).toHaveBeenCalledWith(
-            ENCODED_TOKEN,
-            SECRET_KEY,
-            MINT_URL
-        );
+        expectReceivedWithKeys([SECRET_KEY]);
+        expect((store as any).ensureMintAdded).toHaveBeenCalledWith(MINT_URL);
         expect(result).toEqual({ success: true, errorMessage: '' });
     });
 
@@ -658,10 +659,6 @@ describe('CashuStore.claimToken signing key', () => {
 
         await store.claimToken(ENCODED_TOKEN, makeDecodedWithoutProofs());
 
-        expect(store.receiveTokenCDK).toHaveBeenCalledWith(
-            ENCODED_TOKEN,
-            undefined,
-            MINT_URL
-        );
+        expectReceivedWithKeys([]);
     });
 });

@@ -495,11 +495,9 @@ describe('CashuStore offline-token sweep across a wallet switch during addMint',
         mockCdk.answerAddMint!();
         await sweeps.mock.results[0].value;
 
-        await store.receiveTokenCDK(
-            'token-from-mint-C-for-B',
-            undefined,
-            MINT_C
-        );
+        await store.receiveTokenCDK('token-from-mint-C-for-B', {
+            mintUrl: MINT_C
+        });
         expect(mockCdk.databases[SEED_B].mints).toContain(MINT_C);
     });
 

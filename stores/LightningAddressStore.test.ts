@@ -464,7 +464,6 @@ describe('LightningAddressStore', () => {
         it('does not promise a retry when receiving a server token fails after /redeem', async () => {
             const store = setup({
                 checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: true }),
-                deriveCashuSecretKey: jest.fn().mockReturnValue(null),
                 receiveTokenCDK: jest.fn().mockRejectedValue(transportError)
             });
             mockRedeemResponse(200, { success: true, token: 'cashuB...' });
@@ -537,7 +536,6 @@ const makeStore = (configuredMintUrl?: string, localMintUrls?: string[]) => {
     const checkInvoicePaid = jest.fn().mockResolvedValue({ isPaid: false });
     const cashuStore: any = {
         checkInvoicePaid,
-        deriveCashuSecretKey: jest.fn(),
         receiveTokenCDK: jest.fn(),
         decodeTokenCDK: jest.fn(),
         mintUrls: localMintUrls
