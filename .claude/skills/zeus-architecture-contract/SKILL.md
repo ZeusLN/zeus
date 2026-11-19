@@ -312,7 +312,7 @@ campaigns). Cite them; don't silently "clean them up".
 | `payLightningInvoiceStreaming` dead dispatch | Declared only in `utils/BackendUtils.ts`; no backend implements it; always returns `false` | Open question (vestigial vs planned — unresolved) |
 | `readLndLog` stub returns `['']` | `lndmobile/index.ts`, marked `TODO remove` | Open |
 | LNC permissions hard-coded to `true` | `backends/LightningNodeConnect.ts checkPerms`: "ZEUS-3642: we are temporarily returning all perms as true until resolved" (github issue #3642) | Open — perm-derived `supports*` on LNC is untrustworthy; read-only pairings show send UI |
-| WebSocket streams bypass Tor | `backends/LND.ts wsReq` constructs `new WebSocket(url, ...)` directly — no `doTorRequest`/SOCKS path, unlike `restReq` which routes through Tor when enabled | Open privacy gap |
+| WebSocket streams over Tor | `backends/LND.ts createWebSocket`: with `enableTor` the three streams (`subscribeCustomMessages`, `initChanAcceptor`, `openChannelStream`) open through `utils/TorWebSocket.ts` (native `TorWebSocketModule`, SOCKS to nitro-tor) and fail closed. They keep standard TLS validation, so an onion node whose lnd certificate does not name the onion fails the stream handshake, while REST skips the check for `.onion` | Bypass fixed in #4579; onion certificate gap open |
 | LNURL params unfetchable from `.onion` in some flows | `// TODO handle fetching of params with internal Tor` at 3 call sites: `utils/handleAnything.ts`, `components/LayerBalances/LightningSwipeableRow.tsx`, `components/LayerBalances/EcashSwipeableRow.tsx` | Open |
 | `fetchLock` not released on early-return error paths in `fetchData` | `views/Wallet/Wallet.tsx` (§1) | Fixed in `e5abe14` (release in `finally`, sequence-numbered lock); since `9591920` a run superseded by `setConnectingStatus(true)` or a wallet switch also stops at its next await (`getConnectionGuard()`) — see zeus-node-lifecycle-campaign |
 
@@ -360,7 +360,7 @@ One-line re-verification commands (all read-only):
 | thread.run() hack | `grep -n -B4 'thread.run()' android/app/src/main/java/com/zeus/LndMobileScheduledSyncWorker.java` |
 | unbind broken TODO | `grep -n 'looks broken' lndmobile/LndMobile.d.ts` |
 | LNC perms hardcoded | `grep -n -A3 'ZEUS-3642' backends/LightningNodeConnect.ts` |
-| WS-bypasses-Tor | `grep -n 'new WebSocket' backends/LND.ts` (constructed directly, no Tor branch) |
+| WS-over-Tor | `grep -n -A5 'createWebSocket = ' backends/LND.ts` (`TorWebSocket` when `enableTor`) |
 | onion LNURL TODOs (3 sites) | `grep -rn 'TODO handle fetching of params with internal Tor' utils components` |
 | Store/view/component/backend test count | `find stores views components backends -name '*.test.ts*' \| wc -l` (99 at `3dc9f83e6`) |
 | Incident hashes | `git log --oneline -1 <hash>` for `fdad118ed`, `93227029e`, `7abc7a971`, `f08bfc7c5`, `2c55e4f89`, `d13ebc2cd`, `7ed901a10`, `d416052cd` |
