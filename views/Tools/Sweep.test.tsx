@@ -6,19 +6,11 @@ jest.mock('../../stores/Stores');
 jest.mock('../../utils/AddressUtils', () => ({
     isValidBitcoinAddressForNode: () => true
 }));
-// uses the en.json text for the confirmation, substituted the way
-// localeString does, so the test fails if code and placeholders disagree
 jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (key: string, substitutions?: { [key: string]: string }) =>
-        key === 'views.Sweep.confirm'
-            ? Object.entries(substitutions || {}).reduce(
-                  (text, [subKey, value]) =>
-                      text.split(`{{${subKey}}}`).join(value),
-                  require('../../locales/en.json')[key] as string
-              )
-            : key
+    localeString: (key: string) => key
 }));
 jest.mock('../../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
+jest.mock('../../assets/images/SVG/QR.svg', () => 'QR');
 jest.mock('../../components/Amount', () => 'Amount');
 jest.mock('../../components/Button', () => {
     const { Text, TouchableOpacity } = require('react-native');
@@ -33,6 +25,7 @@ jest.mock('../../components/Button', () => {
     );
 });
 jest.mock('../../components/Header', () => 'Header');
+jest.mock('../../components/KeyValue', () => 'KeyValue');
 jest.mock('../../components/OnchainFeeInput', () => {
     const { TextInput } = require('react-native');
     return ({ fee, onChangeFee }: any) => (
@@ -46,17 +39,21 @@ jest.mock('../../components/Screen', () => {
 jest.mock('../../components/SuccessErrorMessage', () => ({
     WarningMessage: 'WarningMessage'
 }));
+jest.mock('../../components/SwipeButton', () => 'SwipeButton');
+jest.mock('../../components/Text', () => require('react-native').Text);
 jest.mock('../../components/TextInput', () => 'TextInput');
 
 import * as React from 'react';
-import { Alert } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import Sweep from './Sweep';
+import VerifyOnChain from '../VerifyOnChain';
 
 const DESTINATION = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
 
+const hosts = (type: string) =>
+    screen.container.queryAll((n: any) => n.type === type);
+
 const renderSweep = async (implementation = 'lnd', fee?: string) => {
-    const TransactionsStore = { sendCoins: jest.fn() };
     const navigation = { navigate: jest.fn() };
     await render(
         <Sweep
@@ -68,7 +65,6 @@ const renderSweep = async (implementation = 'lnd', fee?: string) => {
                     unconfirmedBlockchainBalance: 250000
                 },
                 SettingsStore: { implementation },
-                TransactionsStore,
                 InvoicesStore: {},
                 ModalStore: {}
             } as any)}
@@ -77,101 +73,119 @@ const renderSweep = async (implementation = 'lnd', fee?: string) => {
     if (fee !== undefined) {
         await fireEvent.changeText(screen.getByTestId('fee'), fee);
     }
-    await fireEvent.press(screen.getByText('views.Send.sendCoins'));
+    await fireEvent.press(screen.getByText('general.proceed'));
+    return navigation;
+};
+
+// renders VerifyOnChain with the params Sweep navigated to it with
+const renderVerifyOnChain = async (implementation: string, params: any) => {
+    const TransactionsStore = { sendCoins: jest.fn() };
+    const navigation = { navigate: jest.fn() };
+    await render(
+        <VerifyOnChain
+            {...({
+                navigation,
+                route: { name: 'VerifyOnChain', params },
+                TransactionsStore,
+                SettingsStore: {
+                    implementation,
+                    getSettings: async () => ({
+                        payments: { slideToPayThreshold: 10000 }
+                    })
+                },
+                UnitsStore: {}
+            } as any)}
+        />
+    );
     return { TransactionsStore, navigation };
 };
 
-// presses the Alert button with the given locale key
-const pressAlertButton = async (text: string) => {
-    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
-    await act(async () => {
-        buttons.find((b: any) => b.text === text).onPress();
-    });
-};
-
 describe('Sweep', () => {
-    beforeEach(() => {
-        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    });
+    it('confirms on VerifyOnChain with the whole balance, destination and fee rate', async () => {
+        const navigation = await renderSweep();
 
-    afterEach(() => jest.restoreAllMocks());
-
-    it('asks for confirmation with amount, destination and fee rate before sending', async () => {
-        const { TransactionsStore, navigation } = await renderSweep();
-
-        expect(TransactionsStore.sendCoins).not.toHaveBeenCalled();
-        expect(navigation.navigate).not.toHaveBeenCalled();
-        expect(Alert.alert).toHaveBeenCalledTimes(1);
-        expect((Alert.alert as jest.Mock).mock.calls[0][1]).toBe(
-            'Send the whole on-chain balance (1,750,000 sats, less the ' +
-                `network fee) to ${DESTINATION} at 2 sat/vB?`
-        );
-    });
-
-    it('sends everything once confirmed', async () => {
-        const { TransactionsStore, navigation } = await renderSweep();
-
-        await pressAlertButton('general.confirm');
-
-        expect(TransactionsStore.sendCoins).toHaveBeenCalledWith({
-            addr: DESTINATION,
-            sat_per_vbyte: '2',
-            send_all: true,
-            spend_unconfirmed: true
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
+        expect(navigation.navigate).toHaveBeenCalledWith('VerifyOnChain', {
+            destination: DESTINATION,
+            fee: '2',
+            satAmount: '1750000',
+            fundMax: true
         });
-        expect(navigation.navigate).toHaveBeenCalledWith('SendingOnChain');
     });
 
     it('quotes only the confirmed balance on CLNRest', async () => {
-        await renderSweep('cln-rest');
+        const navigation = await renderSweep('cln-rest');
 
-        expect((Alert.alert as jest.Mock).mock.calls[0][1]).toBe(
-            'Send the whole on-chain balance (1,500,000 sats, less the ' +
-                `network fee) to ${DESTINATION} at 2 sat/vB?`
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'VerifyOnChain',
+            expect.objectContaining({ satAmount: '1500000' })
         );
-    });
-
-    it('uses amount all on CLNRest once confirmed', async () => {
-        const { TransactionsStore } = await renderSweep('cln-rest');
-
-        await pressAlertButton('general.confirm');
-
-        expect(TransactionsStore.sendCoins).toHaveBeenCalledWith({
-            addr: DESTINATION,
-            sat_per_vbyte: '2',
-            amount: 'all',
-            spend_unconfirmed: true
-        });
     });
 
     it.each(['', '0', '-1', 'abc', '2001', '2.5', '1e3', '0x10', ' 2'])(
-        'does not offer to send at a fee rate of %p',
+        'does not offer to proceed at a fee rate of %p',
         async (fee) => {
-            const { TransactionsStore } = await renderSweep('lnd', fee);
+            const navigation = await renderSweep('lnd', fee);
 
-            expect(Alert.alert).not.toHaveBeenCalled();
-            expect(TransactionsStore.sendCoins).not.toHaveBeenCalled();
+            expect(navigation.navigate).not.toHaveBeenCalled();
         }
     );
 
-    it('sends at a fee rate typed into the fee field', async () => {
-        const { TransactionsStore } = await renderSweep('lnd', '15');
+    it('passes on a fee rate typed into the fee field', async () => {
+        const navigation = await renderSweep('lnd', '15');
 
-        expect((Alert.alert as jest.Mock).mock.calls[0][1]).toContain(
-            'at 15 sat/vB?'
-        );
-        await pressAlertButton('general.confirm');
-        expect(TransactionsStore.sendCoins).toHaveBeenCalledWith(
-            expect.objectContaining({ sat_per_vbyte: '15' })
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'VerifyOnChain',
+            expect.objectContaining({ fee: '15' })
         );
     });
 
-    it('sends nothing when cancelled', async () => {
-        const { TransactionsStore, navigation } = await renderSweep();
+    it('shows the swept balance, destination and fee rate on VerifyOnChain', async () => {
+        const sweepNavigation = await renderSweep();
+        await renderVerifyOnChain(
+            'lnd',
+            sweepNavigation.navigate.mock.calls[0][1]
+        );
 
-        await pressAlertButton('general.cancel');
-
-        expect(TransactionsStore.sendCoins).not.toHaveBeenCalled();
-        expect(navigation.navigate).not.toHaveBeenCalled();
+        const keyValue = (key: string) =>
+            hosts('KeyValue').find((n: any) => n.props.keyValue === key)!.props
+                .value;
+        expect(
+            hosts('Amount').find((n: any) => n.props.jumboText)!.props.sats
+        ).toBe('1750000');
+        expect(keyValue('general.destination')).toBe(DESTINATION);
+        expect(keyValue('views.Send.feeSatsVbyte')).toBe('2');
     });
+
+    it.each([
+        ['lnd', { send_all: true }],
+        ['cln-rest', { amount: 'all' }]
+    ])(
+        'sends the whole balance once confirmed on VerifyOnChain (%s)',
+        async (implementation, sendAll) => {
+            const sweepNavigation = await renderSweep(implementation);
+            const { TransactionsStore, navigation } = await renderVerifyOnChain(
+                implementation,
+                sweepNavigation.navigate.mock.calls[0][1]
+            );
+
+            expect(TransactionsStore.sendCoins).not.toHaveBeenCalled();
+            // the balance is above the slide to pay threshold
+            await act(async () => {
+                hosts('SwipeButton')[0].props.onSwipeSuccess();
+            });
+
+            // the request Sweep sent itself before it confirmed on
+            // VerifyOnChain; the backends drop the account and
+            // additional_outputs keys VerifyOnChain adds, which are undefined
+            expect(TransactionsStore.sendCoins).toHaveBeenCalledTimes(1);
+            expect(TransactionsStore.sendCoins).toHaveBeenCalledWith({
+                addr: DESTINATION,
+                sat_per_vbyte: '2',
+                spend_unconfirmed: true,
+                ...sendAll
+            });
+            expect(navigation.navigate).toHaveBeenCalledWith('SendingOnChain');
+        }
+    );
 });
