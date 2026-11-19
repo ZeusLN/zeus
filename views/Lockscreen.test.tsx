@@ -1,4 +1,5 @@
 import React from 'react';
+import { DeviceEventEmitter, Platform, StyleSheet } from 'react-native';
 import {
     act,
     fireEvent,
@@ -16,7 +17,13 @@ jest.mock('../components/Screen', () => {
     const { View } = require('react-native');
     return ({ children }: any) => <View>{children}</View>;
 });
-jest.mock('../components/Button', () => () => null);
+// Shows the title, and whether the button is styled as a warning
+jest.mock('../components/Button', () => {
+    const { Text } = require('react-native');
+    return ({ title, warning, onPress }: any) => (
+        <Text onPress={onPress}>{title + (warning ? ' (warning)' : '')}</Text>
+    );
+});
 // Each header shows which Back it wires up
 jest.mock('../components/Header', () => {
     const { Text } = require('react-native');
@@ -40,8 +47,14 @@ jest.mock('../components/Pin', () => {
         </>
     );
 });
-jest.mock('../components/ShowHideToggle', () => () => null);
-jest.mock('../components/TextInput', () => () => null);
+jest.mock('../components/ShowHideToggle', () => {
+    const { Text } = require('react-native');
+    return ({ onPress }: any) => <Text onPress={onPress}>show/hide</Text>;
+});
+jest.mock('../components/TextInput', () => {
+    const { TextInput } = require('react-native');
+    return (props: any) => <TextInput testID="passphrase" {...props} />;
+});
 jest.mock('../components/SuccessErrorMessage', () => {
     const { Text } = require('react-native');
     return {
@@ -169,8 +182,7 @@ const renderLockscreen = async (
     return { SettingsStore, navigation, unmount, lockscreen: ref };
 };
 
-// the TextInput mock renders nothing, so a passphrase is entered through
-// the component
+// enters a passphrase on the component itself, skipping the field
 const submitPassphrase = async (lockscreen: any, passphrase: string) => {
     await act(async () => {
         lockscreen.current.setState({ passphraseAttempt: passphrase });
@@ -1230,5 +1242,159 @@ describe('Lockscreen delete handlers', () => {
                 )
             ).toBe(true);
         }
+    });
+});
+
+describe('Lockscreen passphrase form', () => {
+    const settings = { passphraseVerifier: testVerifier('open sesame') };
+
+    it.each([
+        [{}, 'views.Lockscreen.enterPassword', 'views.Lockscreen.login'],
+        [
+            { modifySecurityScreen: 'SetDuressPassword' },
+            'views.Lockscreen.enterExistingPassword',
+            'views.Lockscreen.login'
+        ],
+        [
+            { deletePassword: true },
+            'views.Lockscreen.enterPassword',
+            'views.Settings.SetPassword.deletePassword (warning)'
+        ],
+        [
+            { deleteDuressPassword: true },
+            'views.Lockscreen.enterLoginPassword',
+            'views.Settings.SetDuressPassword.deletePassword (warning)'
+        ]
+    ])('with %j asks %s and offers %s', async (params, prompt, button) => {
+        await renderLockscreen(jest.fn(), { settings, params });
+
+        expect(await screen.findByText(prompt)).toBeTruthy();
+        expect(screen.getByText(button)).toBeTruthy();
+    });
+
+    // the nearest ancestor of the prompt that carries a bottom padding: the
+    // wrapper that moves the form above the keyboard
+    const keyboardWrapper = async () => {
+        let node = (await screen.findByText('views.Lockscreen.enterPassword'))
+            .parent;
+        while (node) {
+            const style = StyleSheet.flatten(node.props.style);
+            if (style && 'paddingBottom' in style) return node;
+            node = node.parent;
+        }
+        return null;
+    };
+
+    it('moves the form above a keyboard that covers it on iOS', async () => {
+        await renderLockscreen(jest.fn(), {
+            settings,
+            params: { deletePassword: true }
+        });
+        const wrapper = (await keyboardWrapper())!;
+        expect(wrapper).not.toBeNull();
+
+        // below a 110pt Back header, ending at the window's bottom
+        await act(async () => {
+            fireEvent(wrapper, 'layout', {
+                persist: () => {},
+                nativeEvent: {
+                    layout: { x: 0, y: 110, width: 402, height: 764 }
+                }
+            });
+        });
+        await act(async () => {
+            DeviceEventEmitter.emit('keyboardWillShow', {
+                duration: 0,
+                easing: 'keyboard',
+                endCoordinates: {
+                    screenX: 0,
+                    screenY: 538,
+                    width: 402,
+                    height: 336
+                }
+            });
+        });
+
+        expect(StyleSheet.flatten(wrapper.props.style).paddingBottom).toBe(336);
+    });
+
+    it('leaves the keyboard to the window on Android', async () => {
+        const os = jest.replaceProperty(Platform, 'OS', 'android');
+        try {
+            await renderLockscreen(jest.fn(), {
+                settings,
+                params: { deletePassword: true }
+            });
+
+            expect(await keyboardWrapper()).toBeNull();
+        } finally {
+            os.restore();
+        }
+    });
+});
+
+describe('Lockscreen passphrase form controls', () => {
+    const PASSPHRASE = 'open sesame';
+    const field = () => screen.getByTestId('passphrase');
+
+    it('unlocks from the button', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier(PASSPHRASE)
+        };
+        const { navigation } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        await fireEvent.changeText(field(), PASSPHRASE);
+        await fireEvent.press(screen.getByText('views.Lockscreen.login'));
+
+        await waitFor(() => expect(navigation.pop).toHaveBeenCalledTimes(1));
+    });
+
+    it('unlocks from the keyboard return key', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier(PASSPHRASE)
+        };
+        const { navigation } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        await fireEvent.changeText(field(), PASSPHRASE);
+        await fireEvent(field(), 'submitEditing');
+
+        await waitFor(() => expect(navigation.pop).toHaveBeenCalledTimes(1));
+    });
+
+    it('clears the error when the password is edited', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier(PASSPHRASE)
+        };
+        await renderLockscreen(makeUpdateSettings(saved), { settings: saved });
+
+        await fireEvent.changeText(field(), 'wrong');
+        await fireEvent(field(), 'submitEditing');
+        expect(
+            await screen.findByText(/views\.Lockscreen\.incorrectPassword/)
+        ).toBeTruthy();
+
+        await fireEvent.changeText(field(), 'wrong!');
+        expect(
+            screen.queryByText(/views\.Lockscreen\.incorrectPassword/)
+        ).toBeNull();
+    });
+
+    it('shows and hides the password', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier(PASSPHRASE)
+        };
+        await renderLockscreen(makeUpdateSettings(saved), { settings: saved });
+
+        expect(field().props.secureTextEntry).toBe(true);
+        await fireEvent.press(screen.getByText('show/hide'));
+        expect(field().props.secureTextEntry).toBe(false);
+        await fireEvent.press(screen.getByText('show/hide'));
+        expect(field().props.secureTextEntry).toBe(true);
     });
 });
