@@ -24,8 +24,9 @@ RCT_EXPORT_MODULE(MobileTools);
 // JS stops waiting for the image soon after settleByMs, its Date.now()
 // deadline. This call can wait behind other modules on a shared method
 // queue, and a take that ran after JS gave up would remove the share with
-// nobody to receive the image. The take reads a local file and does not
-// block, so checking the deadline before it starts is enough.
+// nobody to receive the image. So the take rejects with SHARE_TIMEOUT and
+// leaves the share in place when it starts after settleByMs, or when its
+// read of the file ends after it.
 RCT_EXPORT_METHOD(takeSharedImageBase64:(double)settleByMs
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
@@ -77,6 +78,16 @@ RCT_EXPORT_METHOD(takeSharedImageBase64:(double)settleByMs
         [fileManager removeItemAtURL:takenURL error:nil];
       }
       resolve(nil);
+      return;
+    }
+
+    // A large file or a busy disk can keep the read going past the
+    // deadline. Put the share back the same way as for a failed read.
+    if ([[NSDate date] timeIntervalSince1970] * 1000 >= settleByMs) {
+      if (![fileManager moveItemAtURL:takenURL toURL:fileURL error:nil]) {
+        [fileManager removeItemAtURL:takenURL error:nil];
+      }
+      reject(@"SHARE_TIMEOUT", @"Shared image take ran past its deadline", nil);
       return;
     }
     [fileManager removeItemAtURL:takenURL error:nil];
