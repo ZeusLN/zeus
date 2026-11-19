@@ -1929,7 +1929,7 @@ describe('MigrationUtils', () => {
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
 
-        it('reads nothing until the first-run check answers', async () => {
+        it('reads no keychain partition until the first-run check answers', async () => {
             // KeychainAudit holds the answer while the check waits for
             // protected data after a locked launch
             let answer: (reinstalled: boolean) => void = () => {};
@@ -1947,7 +1947,7 @@ describe('MigrationUtils', () => {
             expect(
                 StorageModule.getInternetPasswordServers
             ).not.toHaveBeenCalled();
-            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(StorageModule.getRawItem).not.toHaveBeenCalled();
 
             answer(true);
             await migration;
@@ -1956,6 +1956,29 @@ describe('MigrationUtils', () => {
                 StorageModule.getInternetPasswordServers
             ).not.toHaveBeenCalled();
             expect(StorageModule.setRawLocalItem).not.toHaveBeenCalled();
+        });
+
+        it('does not wait for the first-run check once the migration has run', async () => {
+            // A launch while the device is locked defers the first-run check
+            // until unlock. An existing install must still load its settings
+            // then, so the flag check comes before the reinstall question.
+            mockKeychainSurvivedReinstall.mockClear();
+            mockKeychainSurvivedReinstall.mockImplementation(
+                () => new Promise<boolean>(() => {})
+            );
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            const outcome = await Promise.race([
+                MigrationUtils.keychainDesyncMigration().then(() => 'done'),
+                new Promise((resolve) => setImmediate(() => resolve('waiting')))
+            ]);
+
+            expect(outcome).toEqual('done');
+            expect(mockKeychainSurvivedReinstall).not.toHaveBeenCalled();
+            expect(
+                StorageModule.getInternetPasswordServers
+            ).not.toHaveBeenCalled();
+            mockKeychainSurvivedReinstall.mockImplementation(async () => false);
         });
 
         it('is a no-op off iOS', async () => {

@@ -1462,6 +1462,30 @@ describe('SettingsStore.getSettings', () => {
         mockKeychainSurvivedReinstall.mockImplementation(async () => false);
     });
 
+    it('loads a stored blob without waiting for the first-run check', async () => {
+        // A launch while the device is locked defers the check until
+        // unlock; only the synchronizable fallback needs its answer
+        mockKeychainSurvivedReinstall.mockClear();
+        mockKeychainSurvivedReinstall.mockImplementation(
+            () => new Promise<boolean>(() => {})
+        );
+        seedSettings({
+            nodes: [{ implementation: 'lnd', host: 'example.com' }],
+            selectedNode: 0
+        });
+        const store = new SettingsStore();
+
+        const outcome = await Promise.race([
+            store.getSettings(),
+            new Promise((resolve) => setTimeout(() => resolve('waiting'), 50))
+        ]);
+
+        expect(outcome).not.toEqual('waiting');
+        expect((outcome as any).nodes?.[0].host).toEqual('example.com');
+        expect(mockKeychainSurvivedReinstall).not.toHaveBeenCalled();
+        mockKeychainSurvivedReinstall.mockImplementation(async () => false);
+    });
+
     it('falls back to the synchronizable blob when the local partition is empty', async () => {
         // Desync migration not yet complete: nothing in local storage, the
         // real blob still lives only in the synchronizable partition. A user
