@@ -21,10 +21,9 @@ const MOBILE_TOOLS = path.join(__dirname, 'MobileTools.java');
 const extractMethod = () => {
     const source = fs.readFileSync(MOBILE_TOOLS, 'utf8');
     const start = source.indexOf('  public void getIntentNfcData(');
-    const end = source.indexOf(
-        '  @ReactMethod\n  public void getSharedImageBase64',
-        start
-    );
+    // Ends at the next bridged method, so renaming that method does not
+    // break the slice
+    const end = source.indexOf('  @ReactMethod\n', start);
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
     return source.slice(start, end);
