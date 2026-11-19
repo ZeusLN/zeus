@@ -94,6 +94,9 @@ const MAX_RELAY_ATTEMPTS = 5;
 // A mark is saved when it moved this far past the saved one, so a busy
 // connection does not write the keychain on every request
 const REQUEST_MARK_SAVE_INTERVAL_SECONDS = 60;
+// After the saved marks could not be read, they are not read again for this
+// long, so a keychain that keeps failing is not asked once per request
+const REQUEST_MARKS_RETRY_MS = 30_000;
 const SUBSCRIPTION_DELAY_MS = 1000;
 const SERVICE_START_DELAY_MS = 2000;
 const PAYMENT_TIMEOUT_SECONDS = 120;
@@ -276,6 +279,8 @@ export default class NostrWalletConnectStore {
     private requestMarks = new Map<string, number>();
     private savedRequestMarks = new Map<string, number>();
     private requestMarksLoad: Promise<void> | undefined;
+    private requestMarksLoadFailure: { at: number; error: unknown } | undefined;
+    private loggedRequestMarksLoadError: unknown;
     private _requestMarksWrite: Promise<void> = Promise.resolve();
     private resetInFlight: Promise<void> | null = null;
     // Bumped by every teardown, so an initializeService() that a reset ran
@@ -569,11 +574,7 @@ export default class NostrWalletConnectStore {
             (c) => c.pubkey === event?.pubkey
         );
         if (connection) {
-            try {
-                await this.loadRequestMarks();
-            } catch (error) {
-                console.error('NWC: failed to load request marks:', error);
-            }
+            await this.tryLoadRequestMarks();
             if (
                 NostrConnectUtils.isRequestEventBehindMark(
                     event,
@@ -625,8 +626,25 @@ export default class NostrWalletConnectStore {
         return true;
     }
 
+    // The marks are an extra guard next to the remembered ids: a request is
+    // answered when they cannot be read, and the failure is logged once
+    private async tryLoadRequestMarks(): Promise<void> {
+        try {
+            await this.loadRequestMarks();
+        } catch (error) {
+            if (error !== this.loggedRequestMarksLoadError) {
+                this.loggedRequestMarksLoadError = error;
+                console.error('NWC: failed to load request marks:', error);
+            }
+        }
+    }
+
     private loadRequestMarks(): Promise<void> {
         if (!this.requestMarksLoad) {
+            const failure = this.requestMarksLoadFailure;
+            if (failure && Date.now() - failure.at < REQUEST_MARKS_RETRY_MS) {
+                return Promise.reject(failure.error);
+            }
             this.requestMarksLoad = (async () => {
                 const data = await Storage.getItem(NWC_REQUEST_MARKS_KEY);
                 const stored = data ? JSON.parse(data) : {};
@@ -641,8 +659,9 @@ export default class NostrWalletConnectStore {
                     );
                 }
             })().catch((error) => {
-                // Try again on the next request
+                // Try again after REQUEST_MARKS_RETRY_MS
                 this.requestMarksLoad = undefined;
+                this.requestMarksLoadFailure = { at: Date.now(), error };
                 throw error;
             });
         }
@@ -699,10 +718,13 @@ export default class NostrWalletConnectStore {
                     this.savedRequestMarks.set(id, mark);
                 }
             })
-            .catch((error) =>
-                // The mark is an extra guard next to the remembered ids
-                console.error('NWC: failed to save request marks:', error)
-            );
+            .catch((error) => {
+                // The mark is an extra guard next to the remembered ids. A
+                // failed read of the saved marks is logged where it happens.
+                if (error !== this.loggedRequestMarksLoadError) {
+                    console.error('NWC: failed to save request marks:', error);
+                }
+            });
     }
 
     @action
@@ -1041,6 +1063,7 @@ export default class NostrWalletConnectStore {
                 );
                 this.makeInvoiceTimestampsByConnection.delete(connectionId);
                 this.requestMarks.delete(connectionId);
+                this.savedRequestMarks.delete(connectionId);
                 let hadInFlight = false;
                 if (this.inFlightHandlersByConnection.get(connectionId)?.size) {
                     runInAction(() => {
@@ -2389,11 +2412,7 @@ export default class NostrWalletConnectStore {
             // Ask the relay only for requests newer than the replay window
             // behind the newest one this connection accepted; acceptRequestEvent
             // holds the ones a relay sends anyway to the same bound
-            try {
-                await this.loadRequestMarks();
-            } catch (error) {
-                console.error('NWC: failed to load request marks:', error);
-            }
+            await this.tryLoadRequestMarks();
             const floor = NostrConnectUtils.requestMarkFloor(
                 this.requestMarks.get(connection.id)
             );

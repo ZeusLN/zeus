@@ -281,6 +281,9 @@ function storedClientKeys(): Record<string, string> {
     return JSON.parse(storedItems.get(NWC_CLIENT_KEYS) ?? '{}');
 }
 
+// NostrWalletConnectStore's REQUEST_MARKS_RETRY_MS
+const REQUEST_MARKS_RETRY_MS = 30_000;
+
 function persistedConnections(): any[] {
     return JSON.parse(storedItems.get(NWC_CONNECTIONS_KEY) ?? '[]');
 }
@@ -11510,6 +11513,19 @@ describe('NostrWalletConnectStore request event checks with the real SDK', () =>
     describe('request mark', () => {
         const nowSeconds = () => Math.floor(Date.now() / 1000);
         const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+        // the tests of this block run on real timers, so the clock is moved
+        // by hand
+        let clockOffset = 0;
+        const realNow = Date.now.bind(Date);
+        const advanceClock = (ms: number) => {
+            clockOffset += ms;
+        };
+        beforeEach(() => {
+            clockOffset = 0;
+            jest.spyOn(Date, 'now').mockImplementation(
+                () => realNow() + clockOffset
+            );
+        });
         const seedMark = (mark: number) =>
             storedItems.set(
                 NWC_REQUEST_MARKS_KEY,
@@ -11641,6 +11657,7 @@ describe('NostrWalletConnectStore request event checks with the real SDK', () =>
 
             // only the stored mark, read now, holds this one back
             failing = false;
+            advanceClock(REQUEST_MARKS_RETRY_MS);
             seedMark(nowSeconds() - 30);
             await onevent(requestEvent('get_info', {}, 30 * 60));
             expect(handler.getInfo).toHaveBeenCalledTimes(1);
@@ -11667,6 +11684,7 @@ describe('NostrWalletConnectStore request event checks with the real SDK', () =>
 
             // an older mark than the one just accepted
             failing = false;
+            advanceClock(REQUEST_MARKS_RETRY_MS);
             seedMark(nowSeconds() - 60 * 60);
             await onevent(requestEvent('get_info', {}, 30 * 60));
 
@@ -11704,11 +11722,66 @@ describe('NostrWalletConnectStore request event checks with the real SDK', () =>
 
             // once they are read, the save keeps them
             failing = false;
+            advanceClock(REQUEST_MARKS_RETRY_MS);
             await onevent(requestEvent('get_info', {}, 0));
             await flush();
             const saved = JSON.parse(storedItems.get(NWC_REQUEST_MARKS_KEY)!);
             expect(saved.other).toBe(other);
             expect(saved['conn-1']).toBeGreaterThanOrEqual(nowSeconds() - 1);
+        });
+
+        it('does not read the marks again for a while after a read failed, and logs the failure once', async () => {
+            const read = (
+                Storage.getItem as jest.Mock
+            ).getMockImplementation()!;
+            (Storage.getItem as jest.Mock).mockImplementation(
+                async (key: string) => {
+                    if (key === NWC_REQUEST_MARKS_KEY) {
+                        throw new Error('keychain read failed');
+                    }
+                    return read(key);
+                }
+            );
+            const logged = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => undefined);
+            const markReads = () =>
+                (Storage.getItem as jest.Mock).mock.calls.filter(
+                    ([key]) => key === NWC_REQUEST_MARKS_KEY
+                ).length;
+            const { handler, onevent } = await subscribe();
+            const readsBefore = markReads();
+            const loggedBefore = logged.mock.calls.length;
+
+            await onevent(requestEvent('get_info', {}, 30));
+            await onevent(requestEvent('get_info', {}, 20));
+            await onevent(requestEvent('get_info', {}, 10));
+
+            // every request was answered, and the keychain was asked once,
+            // by the first of them
+            expect(handler.getInfo).toHaveBeenCalledTimes(3);
+            expect(markReads()).toBe(readsBefore + 1);
+            expect(logged.mock.calls.length).toBe(loggedBefore + 1);
+
+            // after the wait it is asked once more
+            advanceClock(REQUEST_MARKS_RETRY_MS);
+            await onevent(requestEvent('get_info', {}, 5));
+            expect(markReads()).toBe(readsBefore + 2);
+        });
+
+        it('ignores a request more than the window older than the newest one, though it arrives later', async () => {
+            // a relay sends stored events newest first, so a request more
+            // than the window older than a newer one that is waiting is
+            // dropped although it never ran
+            const { handler, onevent } = await subscribe();
+
+            await onevent(requestEvent('get_info', {}, 5 * 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(1);
+            await onevent(requestEvent('get_info', {}, 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(2);
+
+            await onevent(requestEvent('get_info', {}, 20 * 60));
+            expect(handler.getInfo).toHaveBeenCalledTimes(2);
         });
 
         it('answers when the mark cannot be saved', async () => {
@@ -11820,7 +11893,7 @@ describe('NostrWalletConnectStore request mark and subscriptions', () => {
         expect((store as any).requestMarks.get('conn-2')).toBe(mark);
     });
 
-    it('drops the mark of a deleted connection from memory', async () => {
+    it('drops the mark of a deleted connection from memory, saved copy included', async () => {
         seedMark(nowSeconds() - 100);
         const {
             store,
@@ -11828,12 +11901,14 @@ describe('NostrWalletConnectStore request mark and subscriptions', () => {
         } = await startService();
         await (store as any).loadRequestMarks();
         expect((store as any).requestMarks.has(connection.id)).toBe(true);
+        expect((store as any).savedRequestMarks.has(connection.id)).toBe(true);
 
         const deletion = store.deleteConnection(connection.id);
         await jest.advanceTimersByTimeAsync(RELAY_RELEASE_GRACE_MS);
         await deletion;
 
         expect((store as any).requestMarks.has(connection.id)).toBe(false);
+        expect((store as any).savedRequestMarks.has(connection.id)).toBe(false);
     });
 
     it('removes the marks with the rest of the connection data', async () => {
