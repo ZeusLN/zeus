@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Nessuna menta Cashu selezionata. Seleziona prima una menta.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Impossibile decodificare la richiesta di pagamento Lightning: payReq non è definito",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Richiesta di pagamento Lightning già pagata",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Richiesta di pagamento non valida",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Importo non valido",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "Il testo del messaggio non può essere vuoto",
