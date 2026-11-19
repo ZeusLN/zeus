@@ -11,7 +11,10 @@ jest.mock('react-native-nitro-tor', () => {
         Tor: {
             daemon: {
                 start: jest.fn(),
-                stop: jest.fn()
+                stop: jest.fn(),
+                getStatus: jest.fn(),
+                subscribe: jest.fn(),
+                requestNewIdentity: jest.fn()
             },
             http: {
                 request: jest.fn()
@@ -32,7 +35,9 @@ import { Tor, TorError } from 'react-native-nitro-tor';
 import {
     doTorRequest,
     isOnionHttpsUrl,
+    restartTor,
     RequestMethod,
+    setTorRequestOutcomeListener,
     torHttpRequest
 } from './TorUtils';
 import { mayHaveBeenSent } from './OnchainSendUtils';
@@ -135,14 +140,27 @@ const RUNNING = {
 };
 
 const startMock = Tor.daemon.start as jest.Mock;
+const getStatusMock = Tor.daemon.getStatus as jest.Mock;
 const requestMock = Tor.http.request as jest.Mock;
 
 const respond = (statusCode: number, body: string, headers = {}) =>
     requestMock.mockResolvedValue({ statusCode, headers, body });
 
+const daemon = Tor.daemon as jest.Mocked<typeof Tor.daemon>;
+const request = requestMock;
+const ONION = 'https://xyz.onion/v1/getinfo';
+
+const ok = (body: string, statusCode = 200) => ({
+    statusCode,
+    headers: {},
+    body
+});
+
 describe('doTorRequest errors', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        setTorRequestOutcomeListener(null);
+        getStatusMock.mockResolvedValue(RUNNING);
         startMock.mockResolvedValue(RUNNING);
     });
 
@@ -231,6 +249,7 @@ describe('doTorRequest errors', () => {
                 tor = require('react-native-nitro-tor').Tor;
                 fresh = require('./TorUtils');
             });
+            tor.daemon.getStatus.mockResolvedValue({ state: 'stopped' });
             tor.daemon.start.mockRejectedValueOnce(rejection);
 
             const error = await fresh
@@ -312,6 +331,8 @@ describe('doTorRequest errors', () => {
 describe('doTorRequest errors for a CLNRest send', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        setTorRequestOutcomeListener(null);
+        getStatusMock.mockResolvedValue(RUNNING);
         startMock.mockResolvedValue(RUNNING);
     });
 
@@ -369,6 +390,8 @@ describe('doTorRequest errors for a CLNRest send', () => {
 describe('doTorRequest', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        setTorRequestOutcomeListener(null);
+        getStatusMock.mockResolvedValue(RUNNING);
         startMock.mockResolvedValue(RUNNING);
     });
 
@@ -534,6 +557,8 @@ describe('doTorRequest', () => {
 describe('torHttpRequest', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        setTorRequestOutcomeListener(null);
+        getStatusMock.mockResolvedValue(RUNNING);
         startMock.mockResolvedValue(RUNNING);
     });
 
@@ -618,6 +643,403 @@ describe('torHttpRequest', () => {
     });
 });
 
+describe('Tor daemon status and request outcomes', () => {
+    let warn: jest.SpyInstance;
+
+    beforeEach(() => {
+        jest.resetAllMocks();
+        setTorRequestOutcomeListener(null);
+        daemon.getStatus.mockResolvedValue(RUNNING as any);
+        daemon.start.mockResolvedValue(RUNNING as any);
+        request.mockResolvedValue(ok('{}'));
+        warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => warn.mockRestore());
+
+    it('starts the daemon when it is not running', async () => {
+        daemon.getStatus.mockResolvedValueOnce({ state: 'stopped' });
+
+        await doTorRequest(ONION, RequestMethod.GET);
+
+        expect(daemon.start).toHaveBeenCalledWith({
+            dataDirectory: '/tmp/tor_data',
+            socksPort: 9056,
+            bootstrapTimeoutMs: 90000
+        });
+    });
+
+    it('does not start the daemon when it is already running', async () => {
+        await doTorRequest(ONION, RequestMethod.GET);
+
+        expect(daemon.start).not.toHaveBeenCalled();
+    });
+
+    it('starts the daemon again after it dies following a successful start', async () => {
+        daemon.getStatus
+            .mockResolvedValueOnce({ state: 'stopped' })
+            .mockResolvedValueOnce(RUNNING as any)
+            .mockResolvedValueOnce({
+                state: 'failed',
+                error: { code: 'TOR_STOPPED', message: 'gone' }
+            });
+
+        await doTorRequest(ONION, RequestMethod.GET);
+        await doTorRequest(ONION, RequestMethod.GET);
+        await doTorRequest(ONION, RequestMethod.GET);
+
+        expect(daemon.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('starts the daemon again for torHttpRequest after it dies', async () => {
+        daemon.getStatus
+            .mockResolvedValueOnce({ state: 'stopped' })
+            .mockResolvedValueOnce({ state: 'stopped' });
+
+        await torHttpRequest({ url: ONION, method: RequestMethod.GET });
+        await torHttpRequest({ url: ONION, method: RequestMethod.GET });
+
+        expect(daemon.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the start restartTor began when the start it replaced settles', async () => {
+        const flush = () => new Promise((r) => setImmediate(r));
+        daemon.getStatus.mockResolvedValue({ state: 'stopped' });
+        let failFirst: (e: Error) => void = () => {};
+        let finishSecond: (v: any) => void = () => {};
+        daemon.start
+            .mockReturnValueOnce(
+                new Promise((_, reject) => (failFirst = reject))
+            )
+            .mockReturnValueOnce(
+                new Promise((resolve) => (finishSecond = resolve))
+            );
+        daemon.stop.mockImplementation(async () => {
+            failFirst(
+                new TorError('TOR_STOPPED', 'Tor stopped during startup')
+            );
+        });
+
+        const first = doTorRequest(ONION, RequestMethod.GET).catch(
+            (e: any) => e
+        );
+        await flush();
+        const restart = restartTor();
+        await flush();
+        // the start restartTor began is still running, so a new request
+        // has to wait for it rather than start a third
+        const second = doTorRequest(ONION, RequestMethod.GET);
+        await flush();
+        expect(daemon.start).toHaveBeenCalledTimes(2);
+
+        daemon.getStatus.mockResolvedValue(RUNNING as any);
+        finishSecond(RUNNING);
+        await restart;
+        await expect(second).resolves.toEqual({});
+        // the request whose start was stopped waits for the restart
+        await expect(first).resolves.toEqual({});
+        expect(daemon.start).toHaveBeenCalledTimes(2);
+    });
+
+    it('rejects unsupported methods before touching the daemon', async () => {
+        await expect(
+            doTorRequest(ONION, 'patch' as RequestMethod)
+        ).rejects.toThrow('Unsupported method: patch');
+        expect(daemon.getStatus).not.toHaveBeenCalled();
+    });
+
+    it('reports a success to the outcome listener, including HTTP errors', async () => {
+        const listener = jest.fn();
+        setTorRequestOutcomeListener(listener);
+        request.mockResolvedValueOnce(ok('{}'));
+        request.mockResolvedValueOnce(ok('', 500));
+
+        await doTorRequest(ONION, RequestMethod.GET);
+        await expect(doTorRequest(ONION, RequestMethod.GET)).rejects.toThrow();
+
+        expect(listener.mock.calls).toEqual([
+            [true, ONION],
+            [true, ONION]
+        ]);
+    });
+
+    it('reports a 3xx from torHttpRequest as a success, since the host answered', async () => {
+        const listener = jest.fn();
+        setTorRequestOutcomeListener(listener);
+        request.mockResolvedValueOnce({
+            statusCode: 302,
+            headers: { location: ['https://elsewhere.example/'] },
+            body: ''
+        });
+
+        await torHttpRequest({ url: ONION, method: RequestMethod.GET });
+
+        expect(listener.mock.calls).toEqual([[true, ONION]]);
+    });
+
+    it('reports transport failures to the outcome listener', async () => {
+        const listener = jest.fn();
+        setTorRequestOutcomeListener(listener);
+        request.mockRejectedValue(
+            new TorError('HTTP_TIMEOUT', 'request timed out')
+        );
+
+        await expect(doTorRequest(ONION, RequestMethod.GET)).rejects.toThrow(
+            'request timed out'
+        );
+
+        expect(listener).toHaveBeenCalledWith(false, ONION);
+    });
+
+    it('reports transport failures from torHttpRequest', async () => {
+        const listener = jest.fn();
+        setTorRequestOutcomeListener(listener);
+        request.mockRejectedValue(
+            new TorError('HTTP_TRANSPORT_ERROR', 'circuit closed')
+        );
+
+        await expect(
+            torHttpRequest({ url: ONION, method: RequestMethod.GET })
+        ).rejects.toThrow('circuit closed');
+
+        expect(listener).toHaveBeenCalledWith(false, ONION);
+    });
+
+    it('does not report caller errors as transport failures', async () => {
+        const listener = jest.fn();
+        setTorRequestOutcomeListener(listener);
+        request.mockRejectedValue(
+            new TorError('INVALID_REQUEST', 'url must not be empty')
+        );
+
+        await expect(doTorRequest(ONION, RequestMethod.GET)).rejects.toThrow();
+
+        expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('retries a GET once when Tor stopped mid-request (Restart Tor)', async () => {
+        request
+            .mockRejectedValueOnce(
+                new TorError(
+                    'TOR_STOPPED',
+                    'Tor stopped before the HTTP request completed'
+                )
+            )
+            .mockResolvedValueOnce(ok('{"alias":"node"}'));
+        daemon.getStatus
+            .mockResolvedValueOnce(RUNNING as any)
+            .mockResolvedValueOnce({ state: 'stopped' });
+
+        await expect(doTorRequest(ONION, RequestMethod.GET)).resolves.toEqual({
+            alias: 'node'
+        });
+
+        expect(request).toHaveBeenCalledTimes(2);
+        expect(daemon.start).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not retry a POST that Tor stopped mid-request, since the node may have received it', async () => {
+        request.mockRejectedValue(
+            new TorError(
+                'TOR_STOPPED',
+                'Tor stopped before the HTTP request completed'
+            )
+        );
+
+        await expect(
+            doTorRequest(ONION, RequestMethod.POST, '{"amt":1}')
+        ).rejects.toThrow('Tor stopped');
+
+        expect(request).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries any method once when Tor was not running, since nothing was sent', async () => {
+        request
+            .mockRejectedValueOnce(
+                new TorError('NOT_RUNNING', 'Tor is not running')
+            )
+            .mockResolvedValueOnce(ok('{}'));
+
+        await doTorRequest(ONION, RequestMethod.POST, '{"amt":1}');
+
+        expect(request).toHaveBeenCalledTimes(2);
+    });
+
+    it('gives up after one retry', async () => {
+        request.mockRejectedValue(
+            new TorError(
+                'TOR_STOPPED',
+                'Tor stopped before the HTTP request completed'
+            )
+        );
+
+        await expect(doTorRequest(ONION, RequestMethod.GET)).rejects.toThrow(
+            'Tor stopped'
+        );
+
+        expect(request).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries a GET that hit a transport error because Tor restarted during it', async () => {
+        // On device a GET cut off mid SOCKS connect by Restart Tor
+        // fails with HTTP_TRANSPORT_ERROR, not TOR_STOPPED
+        daemon.stop.mockResolvedValue(undefined);
+        let restart: Promise<void> = Promise.resolve();
+        request
+            .mockImplementationOnce(() => {
+                restart = restartTor();
+                return Promise.reject(
+                    new TorError(
+                        'HTTP_TRANSPORT_ERROR',
+                        'socks connect error: unexpected end of file'
+                    )
+                );
+            })
+            .mockResolvedValueOnce(ok('{"alias":"node"}'));
+
+        await expect(doTorRequest(ONION, RequestMethod.GET)).resolves.toEqual({
+            alias: 'node'
+        });
+        await restart;
+
+        expect(request).toHaveBeenCalledTimes(2);
+    });
+
+    it('resends only after the restart has finished', async () => {
+        let finishStop: () => void = () => {};
+        daemon.stop.mockReturnValue(
+            new Promise<void>((resolve) => (finishStop = resolve))
+        );
+        daemon.getStatus
+            .mockResolvedValueOnce(RUNNING as any)
+            .mockResolvedValue({ state: 'stopped' });
+        let restart: Promise<void> = Promise.resolve();
+        request
+            .mockImplementationOnce(() => {
+                restart = restartTor();
+                return Promise.reject(
+                    new TorError('TOR_STOPPED', 'Tor stopped')
+                );
+            })
+            .mockResolvedValueOnce(ok('{}'));
+
+        const pending = doTorRequest(ONION, RequestMethod.GET);
+        await new Promise((r) => setImmediate(r));
+        expect(request).toHaveBeenCalledTimes(1);
+
+        finishStop();
+        await pending;
+        await restart;
+
+        expect(request).toHaveBeenCalledTimes(2);
+        expect(daemon.start.mock.invocationCallOrder[0]).toBeLessThan(
+            request.mock.invocationCallOrder[1]
+        );
+    });
+
+    it('does not retry a transport error when Tor was not restarted', async () => {
+        request.mockRejectedValue(
+            new TorError('HTTP_TRANSPORT_ERROR', 'connection refused')
+        );
+
+        await expect(doTorRequest(ONION, RequestMethod.GET)).rejects.toThrow(
+            'connection refused'
+        );
+
+        expect(request).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not retry a POST transport error even when Tor restarted', async () => {
+        daemon.stop.mockResolvedValue(undefined);
+        let restart: Promise<void> = Promise.resolve();
+        request.mockImplementationOnce(() => {
+            restart = restartTor();
+            return Promise.reject(
+                new TorError('HTTP_TRANSPORT_ERROR', 'unexpected end of file')
+            );
+        });
+
+        await expect(
+            doTorRequest(ONION, RequestMethod.POST, '{"amt":1}')
+        ).rejects.toThrow('unexpected end of file');
+        await restart;
+
+        expect(request).toHaveBeenCalledTimes(1);
+    });
+
+    it('survives Restart Tor stopping the start it was waiting on', async () => {
+        // Seen on iOS: requests waiting for Tor to start failed with
+        // "Tor stopped during startup" when Restart Tor stopped that
+        // start, although nothing had been sent yet
+        daemon.getStatus.mockResolvedValue({ state: 'stopped' });
+        let failStart: (e: Error) => void = () => {};
+        daemon.start
+            .mockReturnValueOnce(
+                new Promise((_, reject) => (failStart = reject))
+            )
+            .mockResolvedValue(RUNNING as any);
+        daemon.stop.mockImplementation(async () => {
+            failStart(
+                new TorError('TOR_STOPPED', 'Tor stopped during startup')
+            );
+        });
+
+        const get = doTorRequest(ONION, RequestMethod.GET);
+        const post = doTorRequest(ONION, RequestMethod.POST, '{"a":1}');
+        await new Promise((r) => setImmediate(r));
+        const restart = restartTor();
+
+        await expect(get).resolves.toEqual({});
+        await expect(post).resolves.toEqual({});
+        await restart;
+        expect(request).toHaveBeenCalledTimes(2);
+    });
+
+    it('still fails a start that fails with no restart involved', async () => {
+        daemon.getStatus.mockResolvedValue({ state: 'stopped' });
+        daemon.start.mockRejectedValue(
+            new TorError('BOOTSTRAP_TIMEOUT', 'timed out')
+        );
+
+        await expect(doTorRequest(ONION, RequestMethod.GET)).rejects.toThrow(
+            'timed out'
+        );
+        expect(request).not.toHaveBeenCalled();
+    });
+
+    it('resends a torHttpRequest GET that Tor stopped mid-request, keeping followRedirects', async () => {
+        request
+            .mockRejectedValueOnce(new TorError('TOR_STOPPED', 'Tor stopped'))
+            .mockResolvedValueOnce({
+                statusCode: 302,
+                headers: { location: ['https://service.example/next'] },
+                body: ''
+            });
+
+        const response = await torHttpRequest({
+            url: 'https://service.example/lnurl',
+            method: RequestMethod.GET,
+            followRedirects: true
+        });
+
+        expect(response.statusCode).toBe(302);
+        expect(request).toHaveBeenCalledTimes(2);
+        expect(request.mock.calls[1][0].followRedirects).toBe(true);
+    });
+
+    it('still returns the response when the outcome listener throws', async () => {
+        setTorRequestOutcomeListener(() => {
+            throw new Error('listener bug');
+        });
+        request.mockResolvedValueOnce(ok('{"alias":"node"}'));
+
+        await expect(doTorRequest(ONION, RequestMethod.GET)).resolves.toEqual({
+            alias: 'node'
+        });
+        expect(warn).toHaveBeenCalled();
+    });
+});
+
 describe('Tor start', () => {
     // ensureTorStarted keeps its promise in module state, so each test
     // loads a fresh copy of TorUtils
@@ -633,6 +1055,26 @@ describe('Tor start', () => {
             statusCode: 200,
             headers: {},
             body: '{}'
+        });
+        // The daemon runs once the latest start() resolved and no stop()
+        // came after it
+        tor.daemon.getStatus.mockImplementation(async () => {
+            const starts = tor.daemon.start.mock;
+            const stops = tor.daemon.stop.mock.invocationCallOrder;
+            const lastStart = starts.invocationCallOrder.length - 1;
+            if (lastStart < 0) return { state: 'stopped' };
+            if (
+                stops.length > 0 &&
+                stops[stops.length - 1] > starts.invocationCallOrder[lastStart]
+            ) {
+                return { state: 'stopped' };
+            }
+            try {
+                await starts.results[lastStart].value;
+                return RUNNING;
+            } catch {
+                return { state: 'stopped' };
+            }
         });
         return { utils, tor };
     };

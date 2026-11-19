@@ -33,6 +33,7 @@ class MainApplication : Application(), ReactApplication {
                     add(StealthModePackage())
                     add(CashuDevKitPackage())
                     add(LdkNodePackage())
+                    add(TorServicePackage())
                     add(ZipUtilsPackage())
                     add(LockKdfPackage())
                 },
