@@ -29,6 +29,7 @@ import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
 import { font } from '../../utils/FontUtils';
+import { offerLightningAddressMintSwitch } from '../../utils/LightningAddressMintUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import NostrUtils from '../../utils/NostrUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
@@ -36,6 +37,8 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 import CashuStore from '../../stores/CashuStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import MintAvatar from '../../components/MintAvatar';
 
@@ -46,6 +49,8 @@ interface MintProps {
         { mint: any; lookup?: boolean; isMultiMintView?: boolean }
     >;
     CashuStore: CashuStore;
+    LightningAddressStore: LightningAddressStore;
+    SettingsStore: SettingsStore;
 }
 
 type ReviewStep = 'rating' | 'signing' | 'success';
@@ -65,7 +70,7 @@ interface MintState {
 
 const supportedContacts = ['email', 'nostr', 'twitter', 'x'];
 
-@inject('CashuStore')
+@inject('CashuStore', 'LightningAddressStore', 'SettingsStore')
 @observer
 export default class Mint extends React.Component<MintProps, MintState> {
     state: MintState = {
@@ -577,7 +582,13 @@ export default class Mint extends React.Component<MintProps, MintState> {
     };
 
     render() {
-        const { navigation, route, CashuStore } = this.props;
+        const {
+            navigation,
+            route,
+            CashuStore,
+            LightningAddressStore,
+            SettingsStore
+        } = this.props;
         const { checkForExistingBalances } = this.state;
         const {
             addMint,
@@ -1057,6 +1068,18 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                                 onPress={async () => {
                                                     await setSelectedMint(
                                                         mint?.mintUrl
+                                                    );
+                                                    offerLightningAddressMintSwitch(
+                                                        {
+                                                            lightningAddressStore:
+                                                                LightningAddressStore,
+                                                            settingsStore:
+                                                                SettingsStore,
+                                                            cashuStore:
+                                                                CashuStore,
+                                                            newMintUrl:
+                                                                mint?.mintUrl
+                                                        }
                                                     );
                                                 }}
                                                 buttonStyle={{ height: 40 }}
