@@ -8,6 +8,7 @@ import { Notifications } from 'react-native-notifications';
 import { BackHandler, Networking, Platform } from 'react-native';
 import CashuDevKit from '../cashu-cdk';
 import Storage, { getInternetPasswordServers, removeRawItem } from '../storage';
+import { DB_KEY_STORAGE_KEY, wipeDatabase } from '../storage/Database';
 
 import {
     STORAGE_KEY,
@@ -96,6 +97,9 @@ const KEY_PREFIX = 'zeus:';
 const STORAGE_KEYS = [
     // Current keys
     STORAGE_KEY,
+    // Key of the encrypted app database (storage/Database.ts); the database
+    // files themselves are deleted in step 2b
+    DB_KEY_STORAGE_KEY,
     CONTACTS_KEY,
     NOTES_KEY,
     LAST_CHANNEL_BACKUP_STATUS,
@@ -1014,6 +1018,13 @@ export async function clearAllData(): Promise<void> {
 
     // 2b. Clear CDK SQLite database (contains mints, proofs, transactions)
     await clearCDKDatabase();
+    // ...and the app's own encrypted database (LNURL payment records),
+    // which also stops this JS context from reopening it before the restart
+    try {
+        await wipeDatabase();
+    } catch (e) {
+        console.warn('[ClearData] Error deleting app database:', e);
+    }
 
     // 2b2. Stop Tor and delete its data directories. Their guard and
     // consensus state shows Tor was used. clearTorData bounds its wait for
