@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "No se ha seleccionado ninguna menta Cashu. Seleccione una primero.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "No se pudo decodificar la factura: payReq no está definido",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Factura ya pagada",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Solicitud de pago no válida",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Cantidad no válida",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "El mensaje debe ser una cadena no vacía.",
