@@ -48,6 +48,7 @@ const CAPABILITIES = [
     'supportsKeysend',
     'supportsCircularRebalancing',
     'supportsLSPScustomMessage',
+    'supportsLSPS1native',
     'supportsLSPS1rest',
     'supportsLSPS7native',
     'supportsCashuWallet'
