@@ -14,8 +14,15 @@ jest.mock('./SettingsStore', () => ({
 
 // UnitsUtils, imported for number formatting, loads the store graph
 jest.mock('./Stores', () => ({
-    settingsStore: { settings: {} },
-    fiatStore: {}
+    settingsStore: { settings: { display: {} } },
+    fiatStore: {
+        symbolLookup: () => ({
+            symbol: '$',
+            space: false,
+            rtl: false,
+            separatorSwap: false
+        })
+    }
 }));
 
 const USD = {
@@ -24,6 +31,13 @@ const USD = {
     currencyPair: 'BTC_USD',
     code: 'USD',
     rate: 100000.5
+};
+
+const usdEntry = {
+    code: 'USD',
+    rate: 50000,
+    cryptoCode: 'BTC',
+    currencyPair: 'USD/BTC'
 };
 
 const newStore = (fiatRatesSource: string, fiatEnabled: boolean) =>
@@ -76,5 +90,139 @@ describe('FiatStore', () => {
                 expect(store.fiatRates![0].code).toBe('USD');
             }
         );
+    });
+
+    describe('getRate', () => {
+        let store: FiatStore;
+        let settingsStore: any;
+
+        beforeEach(() => {
+            settingsStore = { settings: { fiat: 'USD' } };
+            store = new FiatStore(settingsStore);
+            store.fiatRates = [usdEntry];
+        });
+
+        it('formats the rate of the selected currency', () => {
+            expect(store.getRate()).toBe('$50,000 BTC/USD');
+        });
+
+        it('formats the same rate in sats', () => {
+            // 1 BTC is 50,000 USD, so one USD buys 2,000 sats
+            expect(store.getRate(true)).toBe('2,000 sats = 1 USD');
+        });
+
+        it('swaps the separators for a currency that uses them swapped', () => {
+            settingsStore.settings.fiat = 'EUR';
+            store.fiatRates = [
+                {
+                    ...usdEntry,
+                    code: 'EUR',
+                    currencyPair: 'EUR/BTC',
+                    rate: 50000.5
+                }
+            ];
+            expect(store.getRate()).toBe('€50.000,5 BTC/EUR');
+            expect(store.getRate(true)).toBe('2.000 sats = 1 EUR');
+        });
+
+        it('puts the symbol after the rate for a right-to-left currency', () => {
+            settingsStore.settings.fiat = 'AED';
+            store.fiatRates = [
+                {
+                    ...usdEntry,
+                    code: 'AED',
+                    currencyPair: 'AED/BTC',
+                    rate: 50000.5
+                }
+            ];
+            expect(store.getRate()).toBe('50,000.5د.إ BTC/AED');
+        });
+
+        // #4717: the currency is in the app list but not in the rates
+        // response. The rate used to fall back to 0, which printed
+        // 'N/A 0 BTC/IDR' and, in the sats form, a division by zero.
+        it('reports no rate when the selected currency is missing', () => {
+            settingsStore.settings.fiat = 'IDR';
+            expect(store.getRate()).toBe('$N/A');
+            expect(store.getRate(true)).toBe('$N/A');
+        });
+
+        it('reports no rate when the entry carries a zero rate', () => {
+            store.fiatRates = [{ ...usdEntry, rate: 0 }];
+            expect(store.getRate()).toBe('$N/A');
+            expect(store.getRate(true)).toBe('$N/A');
+        });
+
+        it('reports no rate when the entry carries a negative rate', () => {
+            store.fiatRates = [{ ...usdEntry, rate: -1 }];
+            expect(store.getRate()).toBe('$N/A');
+            expect(store.getRate(true)).toBe('$N/A');
+        });
+
+        // #5813: rates that loaded can still be an empty list
+        it('reports no rate when the rates list is empty', () => {
+            store.fiatRates = [];
+            expect(store.getRate()).toBe('$N/A');
+            expect(store.getRate(true)).toBe('$N/A');
+        });
+
+        it('reports no rate when no rates are loaded', () => {
+            store.fiatRates = undefined;
+            expect(store.getRate()).toBe('$N/A');
+            expect(store.getRate(true)).toBe('$N/A');
+        });
+
+        it('reports no rate when no currency is selected', () => {
+            settingsStore.settings.fiat = undefined;
+            expect(store.getRate()).toBe('$N/A');
+            expect(store.getRate(true)).toBe('$N/A');
+        });
+    });
+
+    describe('hasUsableRate', () => {
+        let store: FiatStore;
+        let settingsStore: any;
+
+        beforeEach(() => {
+            settingsStore = { settings: { fiat: 'USD' } };
+            store = new FiatStore(settingsStore);
+            store.fiatRates = [usdEntry];
+        });
+
+        it('is true when the selected currency has a rate above 0', () => {
+            expect(store.hasUsableRate).toBe(true);
+        });
+
+        it.each([
+            [
+                'the selected currency is missing',
+                () => (settingsStore.settings.fiat = 'IDR')
+            ],
+            [
+                'the rate is 0',
+                () => (store.fiatRates = [{ ...usdEntry, rate: 0 }])
+            ],
+            [
+                'the rate is negative',
+                () => (store.fiatRates = [{ ...usdEntry, rate: -1 }])
+            ],
+            [
+                'the rate is not a number',
+                () => (store.fiatRates = [{ ...usdEntry, rate: NaN }])
+            ],
+            [
+                'the rate is not finite',
+                () => (store.fiatRates = [{ ...usdEntry, rate: Infinity }])
+            ],
+            ['the rates list is empty', () => (store.fiatRates = [])],
+            ['no rates are loaded', () => (store.fiatRates = undefined)],
+            [
+                'no currency is selected',
+                () => (settingsStore.settings.fiat = undefined)
+            ]
+        ])('is false when %s', (_, arrange) => {
+            arrange();
+            expect(store.hasUsableRate).toBe(false);
+        });
     });
 });

@@ -105,35 +105,58 @@ export default class Layout extends React.PureComponent<LayoutProps> {
 
     renderRateDisplay = () => {
         const { FiatStore, SettingsStore, fadeAnimation } = this.props;
-        const getRate = FiatStore?.getRate || (() => '$N/A');
         const getFiatRates = FiatStore?.getFiatRates || (() => {});
         const fiatEnabled = SettingsStore?.settings?.fiatEnabled;
 
         if (!fiatEnabled) return null;
 
-        return getRate() === '$N/A' && !FiatStore?.error ? (
-            <Animated.View
-                style={{ alignSelf: 'center', opacity: fadeAnimation }}
-            >
-                <Text style={{ color: themeColor('text'), marginBottom: 10 }}>
-                    {localeString('pos.views.Wallet.PosPane.fetchingRates')}
-                </Text>
-            </Animated.View>
-        ) : (
+        if (FiatStore?.hasUsableRate) {
+            return (
+                <TouchableOpacity onPress={() => getFiatRates()}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            alignSelf: 'center',
+                            marginBottom: 10
+                        }}
+                    >
+                        {FiatStore.getRate()}
+                    </Text>
+                </TouchableOpacity>
+            );
+        }
+
+        if (FiatStore?.loading) {
+            return (
+                <Animated.View
+                    style={{ alignSelf: 'center', opacity: fadeAnimation }}
+                >
+                    <Text
+                        style={{ color: themeColor('text'), marginBottom: 10 }}
+                    >
+                        {localeString('pos.views.Wallet.PosPane.fetchingRates')}
+                    </Text>
+                </Animated.View>
+            );
+        }
+
+        // Rates that loaded without a usable rate for the selected currency
+        // are a different problem from a request that never came back, so
+        // say which one it is.
+        return (
             <TouchableOpacity onPress={() => getFiatRates()}>
                 <Text
                     style={{
-                        color:
-                            getRate() === '$N/A'
-                                ? themeColor('error')
-                                : themeColor('text'),
+                        color: themeColor('error'),
                         alignSelf: 'center',
                         marginBottom: 10
                     }}
                 >
-                    {getRate() === '$N/A'
-                        ? localeString('general.fiatFetchError')
-                        : getRate()}
+                    {localeString(
+                        FiatStore?.fiatRates
+                            ? 'general.fiatRateNotAvailable'
+                            : 'general.fiatFetchError'
+                    )}
                 </Text>
             </TouchableOpacity>
         );
