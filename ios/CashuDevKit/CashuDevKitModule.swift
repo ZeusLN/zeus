@@ -3,15 +3,6 @@ import CommonCrypto
 import CashuDevKit
 import ZeusCashuRestore
 
-/// CashuDevKit Native Module for React Native
-/// Provides bridge to CDK FFI bindings
-///
-/// CDK 0.15+ replaced the MultiMintWallet with a WalletRepository plus
-/// per-mint Wallet objects, and one-shot melts with a two-phase
-/// prepare/confirm flow. This module adapts the new API behind the
-/// pre-existing bridge contract: method names, parameters and resolved
-/// JSON shapes are unchanged from the 0.14.x module.
-
 // MARK: - External quote fetch without redirects
 
 /// Refuses every HTTP redirect, so the task completes with the 3xx
@@ -43,6 +34,14 @@ enum CashuExternalQuoteFetch {
 
 // MARK: - End external quote fetch without redirects
 
+/// CashuDevKit Native Module for React Native
+/// Provides bridge to CDK FFI bindings
+///
+/// CDK 0.15+ replaced the MultiMintWallet with a WalletRepository plus
+/// per-mint Wallet objects, and one-shot melts with a two-phase
+/// prepare/confirm flow. This module adapts the new API behind the
+/// pre-existing bridge contract: method names, parameters and resolved
+/// JSON shapes are unchanged from the 0.14.x module.
 @objc(CashuDevKitModule)
 class CashuDevKitModule: RCTEventEmitter {
 
