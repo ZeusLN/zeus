@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "未选择 Cashu 铸币厂。请先选择一家铸币厂。",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "无法解码发票——payReq 未定义",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "发票已支付",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "支付请求无效",
     "stores.NostrWalletConnectStore.error.invalidAmount": "金额无效",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "消息必须为非空字符串",
