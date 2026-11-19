@@ -103,7 +103,6 @@ import ChannelBackupStore, {
 import ChannelsStore from '../../stores/ChannelsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
 import FiatStore from '../../stores/FiatStore';
-import InvoicesStore from '../../stores/InvoicesStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import LSPStore from '../../stores/LSPStore';
@@ -145,7 +144,6 @@ interface WalletProps {
     CashuStore: CashuStore;
     ChannelsStore: ChannelsStore;
     TransactionsStore: TransactionsStore;
-    InvoicesStore: InvoicesStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
@@ -178,7 +176,6 @@ interface WalletState {
     'CashuStore',
     'ChannelsStore',
     'TransactionsStore',
-    'InvoicesStore',
     'NodeInfoStore',
     'SettingsStore',
     'UnitsStore',
@@ -1564,13 +1561,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         try {
             const pendingPaymentData = await loadPendingPaymentData();
             if (pendingPaymentData) {
-                const { InvoicesStore, navigation } = this.props;
+                const { navigation } = this.props;
 
                 if (pendingPaymentData.payment_request) {
-                    await InvoicesStore.getPayReq(
-                        pendingPaymentData.payment_request
-                    );
                     navigation.navigate('PaymentRequest', {
+                        paymentRequest: pendingPaymentData.payment_request,
                         fromGraphSync: true
                     });
                 } else if (pendingPaymentData.pubkey) {

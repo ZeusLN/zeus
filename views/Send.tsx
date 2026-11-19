@@ -156,10 +156,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         } = route.params ?? {};
         const clearOnBackPress = route.params?.clearOnBackPress ?? !destination;
 
-        if (transactionType === 'Lightning') {
-            this.props.InvoicesStore.getPayReq(destination);
-        }
-
         let rawAmount;
         if (satAmount) {
             rawAmount = getRawAmountFromSats(satAmount);
@@ -198,7 +194,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     async componentDidUpdate(prevProps: SendProps) {
-        const { route, InvoicesStore } = this.props;
+        const { route } = this.props;
         const { route: prevRoute } = prevProps;
 
         if (JSON.stringify(route.params) !== JSON.stringify(prevRoute.params)) {
@@ -210,10 +206,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                 transactionType,
                 contactName
             } = route.params ?? {};
-
-            if (transactionType === 'Lightning') {
-                InvoicesStore.getPayReq(destination);
-            }
 
             const stateUpdate: Partial<SendState> = {
                 transactionType,
@@ -531,11 +523,12 @@ export default class Send extends React.Component<SendProps, SendState> {
             // fetchinvoice succeeds when the issuer answers with an invoice
             // for another amount than the one requested, so decode it and
             // refuse it unless it is for the amount entered. A decode
-            // failure is left to PaymentRequest, which shows it.
-            await this.props.InvoicesStore.getPayReq(res.invoice);
-            const { pay_req } = this.props.InvoicesStore;
+            // failure is left to PaymentRequest, which decodes the invoice
+            // itself and shows the error.
+            const pay_req = await this.props.InvoicesStore.getPayReq(
+                res.invoice
+            ).catch(() => null);
             if (pay_req && pay_req.getRequestAmount !== Number(satAmount)) {
-                this.props.InvoicesStore.clearPayReq();
                 this.setState({
                     loading: false,
                     error_msg: localeString(
@@ -544,7 +537,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                 });
                 return;
             }
-            this.props.navigation.navigate('PaymentRequest');
+            this.props.navigation.navigate('PaymentRequest', {
+                paymentRequest: res.invoice
+            });
             this.setState({
                 loading: false,
                 error_msg: ''
@@ -1751,7 +1746,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             : themeColor('background')
                                 }}
                                 onPress={() =>
-                                    navigation.navigate('PaymentRequest')
+                                    navigation.navigate('PaymentRequest', {
+                                        paymentRequest: destination
+                                    })
                                 }
                                 disabled={lightningBalance === 0}
                             />

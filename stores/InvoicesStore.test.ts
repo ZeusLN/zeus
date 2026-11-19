@@ -29,6 +29,7 @@ jest.mock('../utils/LocaleUtils');
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import InvoicesStore from './InvoicesStore';
+import Invoice from '../models/Invoice';
 import BackendUtils from '../utils/BackendUtils';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 
@@ -68,31 +69,103 @@ describe('InvoicesStore.fetchInvoices', () => {
     });
 });
 
+type Deferred = {
+    resolve: (data: any) => void;
+    reject: (error: Error) => void;
+};
+
+// The store keeps nothing of a decode: PaymentRequest shows and pays the
+// invoice its own call resolved with, so one caller's decode must never
+// reach another
 describe('InvoicesStore.getPayReq', () => {
     it('threads the original payment request through so expiry is computable when the decode response omits the bolt11 string', async () => {
         (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
             lndDecodeResponse
         );
 
-        const store = newStore();
-        await store.getPayReq(paymentRequest);
+        const pay_req = await newStore().getPayReq(paymentRequest);
 
-        expect(store.getPayReqError).toBeNull();
-        expect(store.pay_req).not.toBeNull();
-        expect(store.pay_req!.getPaymentRequest).toBe(paymentRequest);
-        expect(store.pay_req!.isExpiredNow()).toBe(true);
+        expect(BackendUtils.decodePaymentRequest).toHaveBeenCalledWith([
+            paymentRequest
+        ]);
+        expect(pay_req.paymentRequest).toBe(paymentRequest);
+        expect(pay_req.getPaymentRequest).toBe(paymentRequest);
+        expect(pay_req.getRequestAmount).toBe(123);
+        expect(pay_req.isExpiredNow()).toBe(true);
     });
 
-    it('surfaces decode errors and clears pay_req', async () => {
+    it('keeps the string it was asked to decode over one in the decode response', async () => {
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
+            ...lndDecodeResponse,
+            paymentRequest: 'lnbc-other'
+        });
+
+        const pay_req = await newStore().getPayReq(paymentRequest);
+
+        expect(pay_req.paymentRequest).toBe(paymentRequest);
+    });
+
+    it('rejects with the backend error when the decode fails', async () => {
         (BackendUtils.decodePaymentRequest as jest.Mock).mockRejectedValue(
             new Error('decode failed')
         );
 
-        const store = newStore();
-        await store.getPayReq(paymentRequest);
+        await expect(newStore().getPayReq(paymentRequest)).rejects.toThrow(
+            'decode failed'
+        );
+    });
 
-        expect(store.pay_req).toBeNull();
-        expect(store.getPayReqError).toBe('decode failed');
+    describe('with decodes in flight together', () => {
+        let settle: { [request: string]: Deferred };
+
+        beforeEach(() => {
+            settle = {};
+            (BackendUtils.decodePaymentRequest as jest.Mock).mockImplementation(
+                ([request]: string[]) =>
+                    new Promise((resolve, reject) => {
+                        settle[request] = { resolve, reject };
+                    })
+            );
+        });
+
+        it('answers each caller with its own invoice, whatever the order', async () => {
+            const store = newStore();
+            const first = store.getPayReq('lnbc-first');
+            const second = store.getPayReq('lnbc-second');
+            settle['lnbc-second'].resolve({ num_satoshis: '1000000' });
+            settle['lnbc-first'].resolve({ num_satoshis: '10' });
+
+            const [firstPayReq, secondPayReq] = await Promise.all([
+                first,
+                second
+            ]);
+
+            expect(firstPayReq.paymentRequest).toBe('lnbc-first');
+            expect(firstPayReq.getRequestAmount).toBe(10);
+            expect(secondPayReq.paymentRequest).toBe('lnbc-second');
+            expect(secondPayReq.getRequestAmount).toBe(1000000);
+        });
+
+        it('fails only the caller whose decode failed', async () => {
+            const store = newStore();
+            const first = store.getPayReq('lnbc-first');
+            const second = store.getPayReq('lnbc-second');
+            settle['lnbc-second'].resolve({ num_satoshis: '1000000' });
+            settle['lnbc-first'].reject(new Error('decode failed'));
+
+            await expect(first).rejects.toThrow('decode failed');
+            expect((await second).paymentRequest).toBe('lnbc-second');
+        });
+
+        it('does not change the loading state the invoice list shows', async () => {
+            const store = newStore();
+            const call = store.getPayReq('lnbc-first');
+
+            expect(store.loading).toBe(false);
+            settle['lnbc-first'].resolve({ num_satoshis: '10' });
+            await call;
+            expect(store.loading).toBe(false);
+        });
     });
 
     it('does not send LDK Node probes for an invoice that was only decoded', async () => {
@@ -106,38 +179,163 @@ describe('InvoicesStore.getPayReq', () => {
             {} as any,
             {} as any
         );
-        await store.getPayReq(paymentRequest);
+        const pay_req = await store.getPayReq(paymentRequest);
         await new Promise((resolve) => setImmediate(resolve));
 
-        expect(store.pay_req!.getRequestAmount).toBeGreaterThan(0);
+        expect(pay_req.getRequestAmount).toBeGreaterThan(0);
         expect(LdkNodeInjection.bolt11.sendBolt11Probes).not.toHaveBeenCalled();
     });
 });
 
-describe('InvoicesStore route fee estimate', () => {
+// WithdrawalRequestInfo shows what getWithdrawalReq resolves with
+describe('InvoicesStore.getWithdrawalReq', () => {
+    it('resolves with the decoded withdrawal request', async () => {
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
+            invreq_amount_msat: 1000
+        });
+
+        const decoded = await newStore().getWithdrawalReq('lnr-first');
+
+        expect(BackendUtils.decodePaymentRequest).toHaveBeenCalledWith([
+            'lnr-first'
+        ]);
+        expect(decoded!.invreq_amount_msat).toBe(1000);
+    });
+
+    it('resolves with null for a failed decode', async () => {
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockRejectedValue(
+            new Error('decode failed')
+        );
+
+        expect(await newStore().getWithdrawalReq('lnr-first')).toBeNull();
+    });
+});
+
+describe('InvoicesStore.getRouteEstimate', () => {
+    const NO_ESTIMATE = { feeEstimate: null, successProbability: null };
+    const payReq = (overrides: object = {}) =>
+        new Invoice({ ...lndDecodeResponse, ...overrides });
+
+    beforeEach(() => {
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+        (BackendUtils.getRoutes as jest.Mock).mockReset();
+        (BackendUtils.getRoutes as jest.Mock).mockResolvedValue({
+            routes: []
+        });
+    });
+
     afterEach(() => {
         (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(false);
     });
 
     it('queries routes in whole sats, rounded up, for a msat amount', async () => {
-        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
-        (BackendUtils.getRoutes as jest.Mock).mockResolvedValue({
-            routes: []
-        });
-        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
-            ...lndDecodeResponse,
-            num_satoshis: '1',
-            num_msat: '1500'
-        });
+        const pay_req = payReq({ num_satoshis: '1', num_msat: '1500' });
+        expect(pay_req.getRequestAmount).toBe(1.5);
 
-        const store = newStore();
-        await store.getPayReq(paymentRequest);
+        await newStore().getRouteEstimate(pay_req);
 
-        expect(store.pay_req!.getRequestAmount).toBe(1.5);
         expect(BackendUtils.getRoutes).toHaveBeenCalledWith([
             lndDecodeResponse.destination,
             2
         ]);
+    });
+
+    it('returns the route fee and the success probability as a percentage', async () => {
+        (BackendUtils.getRoutes as jest.Mock).mockResolvedValue({
+            routes: [{ total_fees: 5 }],
+            success_prob: 0.9
+        });
+
+        expect(await newStore().getRouteEstimate(payReq())).toEqual({
+            feeEstimate: 5,
+            successProbability: 90
+        });
+    });
+
+    it('returns the cheapest of several routes', async () => {
+        (BackendUtils.getRoutes as jest.Mock).mockResolvedValue({
+            routes: [{ total_fees: 30 }, { total_fees: 12 }, { total_fees: 20 }]
+        });
+
+        const estimate = await newStore().getRouteEstimate(payReq());
+
+        expect(estimate.feeEstimate).toBe(12);
+    });
+
+    it('returns a 0 fee for a route that charges none', async () => {
+        (BackendUtils.getRoutes as jest.Mock).mockResolvedValue({
+            routes: [{}]
+        });
+
+        expect(await newStore().getRouteEstimate(payReq())).toEqual({
+            feeEstimate: 0,
+            successProbability: 0
+        });
+    });
+
+    it('returns no fee when the answer has no routes', async () => {
+        (BackendUtils.getRoutes as jest.Mock).mockResolvedValue({});
+
+        expect(await newStore().getRouteEstimate(payReq())).toEqual({
+            feeEstimate: null,
+            successProbability: 0
+        });
+    });
+
+    it('does not query routes on a backend that is not LND based', async () => {
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(false);
+
+        expect(await newStore().getRouteEstimate(payReq())).toEqual(
+            NO_ESTIMATE
+        );
+        expect(BackendUtils.getRoutes).not.toHaveBeenCalled();
+    });
+
+    it('does not query routes for a request without a destination', async () => {
+        const pay_req = payReq({ destination: undefined });
+
+        expect(await newStore().getRouteEstimate(pay_req)).toEqual(NO_ESTIMATE);
+        expect(BackendUtils.getRoutes).not.toHaveBeenCalled();
+    });
+
+    it('returns no estimate when the route query fails', async () => {
+        (BackendUtils.getRoutes as jest.Mock).mockRejectedValue(
+            new Error('no route')
+        );
+
+        expect(await newStore().getRouteEstimate(payReq())).toEqual(
+            NO_ESTIMATE
+        );
+    });
+
+    // the fee and success probability a screen shows must belong to the
+    // invoice it queried them for
+    it('answers each caller with the estimate for its own invoice, whatever the order', async () => {
+        const routes: { [destination: string]: Deferred } = {};
+        (BackendUtils.getRoutes as jest.Mock).mockImplementation(
+            ([destination]: string[]) =>
+                new Promise((resolve, reject) => {
+                    routes[destination] = { resolve, reject };
+                })
+        );
+        const store = newStore();
+        const first = store.getRouteEstimate(
+            payReq({ destination: 'node-first' })
+        );
+        const second = store.getRouteEstimate(
+            payReq({ destination: 'node-second' })
+        );
+        routes['node-second'].resolve({
+            routes: [{ total_fees: 5 }],
+            success_prob: 0.9
+        });
+        routes['node-first'].reject(new Error('no route'));
+
+        expect(await first).toEqual(NO_ESTIMATE);
+        expect(await second).toEqual({
+            feeEstimate: 5,
+            successProbability: 90
+        });
     });
 });
 
@@ -162,327 +360,6 @@ describe('InvoicesStore.isInvoicePaid', () => {
         );
 
         expect(await newStore().isInvoicePaid('aa')).toBe(false);
-    });
-});
-
-// PaymentRequest renders pay_req and pays paymentRequest,
-// so pay_req must never come from a stale decode
-describe('InvoicesStore superseded decode requests', () => {
-    let settle: {
-        [request: string]: {
-            resolve: (data: any) => void;
-            reject: (error: Error) => void;
-        };
-    };
-
-    beforeEach(() => {
-        settle = {};
-        (BackendUtils.decodePaymentRequest as jest.Mock).mockImplementation(
-            ([request]: string[]) =>
-                new Promise((resolve, reject) => {
-                    settle[request] = { resolve, reject };
-                })
-        );
-    });
-
-    it('ignores a decode response that arrives after a newer getPayReq', async () => {
-        const store = newStore();
-        const first = store.getPayReq('lnbc-first');
-        const second = store.getPayReq('lnbc-second');
-        settle['lnbc-second'].resolve({ num_satoshis: '1000000' });
-        settle['lnbc-first'].resolve({ num_satoshis: '10' });
-        await Promise.all([first, second]);
-
-        expect(store.paymentRequest).toBe('lnbc-second');
-        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-second');
-        expect(store.pay_req!.getRequestAmount).toBe(1000000);
-    });
-
-    it('keeps the latest request when a repeated decode shares the earlier in-flight response', async () => {
-        // restReq hands an identical request the promise already in flight,
-        // so first, second, first is answered in the order first, second
-        const pending: { [request: string]: Promise<any> } = {};
-        (BackendUtils.decodePaymentRequest as jest.Mock).mockImplementation(
-            ([request]: string[]) => {
-                if (!pending[request]) {
-                    pending[request] = new Promise((resolve, reject) => {
-                        settle[request] = { resolve, reject };
-                    });
-                }
-                return pending[request];
-            }
-        );
-
-        const store = newStore();
-        const calls = [
-            store.getPayReq('lnbc-first'),
-            store.getPayReq('lnbc-second'),
-            store.getPayReq('lnbc-first')
-        ];
-        settle['lnbc-first'].resolve({ num_satoshis: '1000000' });
-        settle['lnbc-second'].resolve({ num_satoshis: '10' });
-        await Promise.all(calls);
-
-        expect(store.paymentRequest).toBe('lnbc-first');
-        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-first');
-        expect(store.pay_req!.getRequestAmount).toBe(1000000);
-        expect(store.loading).toBe(false);
-    });
-
-    it('keeps a newer success when an older decode of the same string fails later', async () => {
-        // backends without restReq de-duplication (embedded LND, LDK, LNC,
-        // NWC) run each decode separately, e.g. Send decoding on input and
-        // handleAnything decoding the same string again on submit
-        const calls: Array<{
-            resolve: (data: any) => void;
-            reject: (error: Error) => void;
-        }> = [];
-        (BackendUtils.decodePaymentRequest as jest.Mock).mockImplementation(
-            () =>
-                new Promise((resolve, reject) => {
-                    calls.push({ resolve, reject });
-                })
-        );
-
-        const store = newStore();
-        const first = store.getPayReq('lnbc-same');
-        const second = store.getPayReq('lnbc-same');
-        calls[1].resolve({ num_satoshis: '1000000' });
-        calls[0].reject(new Error('decode failed'));
-        await Promise.all([first, second]);
-
-        expect(store.getPayReqError).toBeNull();
-        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-same');
-        expect(store.pay_req!.getRequestAmount).toBe(1000000);
-        expect(store.loading).toBe(false);
-    });
-
-    it('ignores a decode answer that arrives after reset', async () => {
-        const store = newStore();
-        const first = store.getPayReq('lnbc-first');
-        store.reset();
-        settle['lnbc-first'].resolve({ num_satoshis: '10' });
-        await first;
-
-        expect(store.paymentRequest).toBe('');
-        expect(store.pay_req).toBeNull();
-        expect(store.loading).toBe(false);
-    });
-
-    it('stays loading when only the superseded request has been answered', async () => {
-        const store = newStore();
-        const first = store.getPayReq('lnbc-first');
-        store.getPayReq('lnbc-second');
-        settle['lnbc-first'].resolve({ num_satoshis: '10' });
-        await first;
-
-        expect(store.pay_req).toBeNull();
-        expect(store.loading).toBe(true);
-    });
-
-    it('ignores a decode error that arrives after a newer getPayReq', async () => {
-        const store = newStore();
-        const first = store.getPayReq('lnbc-first');
-        const second = store.getPayReq('lnbc-second');
-        settle['lnbc-second'].resolve({ num_satoshis: '1000000' });
-        settle['lnbc-first'].reject(new Error('decode failed'));
-        await Promise.all([first, second]);
-
-        expect(store.getPayReqError).toBeNull();
-        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-second');
-    });
-
-    it('ignores a getWithdrawalReq error that arrives after a newer getPayReq', async () => {
-        const store = newStore();
-        const first = store.getWithdrawalReq('lnr-first');
-        const second = store.getPayReq('lnbc-second');
-        settle['lnbc-second'].resolve({ num_satoshis: '1000000' });
-        settle['lnr-first'].reject(new Error('decode failed'));
-        await Promise.all([first, second]);
-
-        expect(store.getPayReqError).toBeNull();
-        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-second');
-    });
-
-    it('ignores a getWithdrawalReq answer that arrives after a newer getPayReq', async () => {
-        const store = newStore();
-        const first = store.getWithdrawalReq('lnr-first');
-        const second = store.getPayReq('lnbc-second');
-        settle['lnbc-second'].resolve({ num_satoshis: '1000000' });
-        settle['lnr-first'].resolve({ invreq_amount_msat: 1000 });
-        await Promise.all([first, second]);
-
-        expect(store.paymentRequest).toBe('lnbc-second');
-        expect(store.withdrawal_req).toBeNull();
-        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-second');
-    });
-
-    // WithdrawalRequestInfo shows what getWithdrawalReq resolves with
-    it('still returns a superseded withdrawal decode to its caller', async () => {
-        const store = newStore();
-        const first = store.getWithdrawalReq('lnr-first');
-        store.getPayReq('lnbc-second');
-        settle['lnr-first'].resolve({ invreq_amount_msat: 1000 });
-
-        expect((await first)!.invreq_amount_msat).toBe(1000);
-        expect(store.withdrawal_req).toBeNull();
-    });
-
-    it('returns null for a failed withdrawal decode', async () => {
-        const store = newStore();
-        const request = store.getWithdrawalReq('lnr-first');
-        settle['lnr-first'].reject(new Error('decode failed'));
-
-        expect(await request).toBeNull();
-        expect(store.getPayReqError).not.toBeNull();
-    });
-
-    it('ignores a getPayReq response that arrives after a newer getWithdrawalReq', async () => {
-        const store = newStore();
-        const first = store.getPayReq('lnbc-first');
-        const second = store.getWithdrawalReq('lnr-second');
-        settle['lnr-second'].resolve({ invreq_amount_msat: 1000 });
-        settle['lnbc-first'].resolve({ num_satoshis: '10' });
-        await Promise.all([first, second]);
-
-        expect(store.paymentRequest).toBe('lnr-second');
-        expect(store.pay_req).toBeNull();
-        expect(store.withdrawal_req).not.toBeNull();
-    });
-});
-
-// the pay_req reaction queries routes on LND-based backends; the fee
-// estimate and success probability shown must belong to the current pay_req
-describe('InvoicesStore superseded route queries', () => {
-    type Deferred = {
-        resolve: (data: any) => void;
-        reject: (error: Error) => void;
-    };
-    let decodes: { [request: string]: Deferred };
-    let routes: { [destination: string]: Deferred };
-
-    const flush = () => new Promise((resolve) => setImmediate(resolve));
-
-    beforeEach(() => {
-        decodes = {};
-        routes = {};
-        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
-        (BackendUtils.decodePaymentRequest as jest.Mock).mockImplementation(
-            ([request]: string[]) =>
-                new Promise((resolve, reject) => {
-                    decodes[request] = { resolve, reject };
-                })
-        );
-        (BackendUtils.getRoutes as jest.Mock).mockReset();
-        (BackendUtils.getRoutes as jest.Mock).mockImplementation(
-            ([destination]: string[]) =>
-                new Promise((resolve, reject) => {
-                    routes[destination] = { resolve, reject };
-                })
-        );
-    });
-
-    afterEach(() => {
-        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(false);
-    });
-
-    // decodes request, leaving its route query in flight
-    const decodeWithRoutes = async (
-        store: InvoicesStore,
-        request: string,
-        destination: string
-    ) => {
-        const call = store.getPayReq(request);
-        decodes[request].resolve({ destination, num_satoshis: '1000' });
-        await call;
-        expect(routes[destination]).toBeDefined();
-    };
-
-    it('ignores a route answer for an earlier pay_req', async () => {
-        const store = newStore();
-        await decodeWithRoutes(store, 'lnbc-first', 'node-first');
-        await decodeWithRoutes(store, 'lnbc-second', 'node-second');
-
-        routes['node-second'].resolve({
-            routes: [{ total_fees: 5 }],
-            success_prob: 0.9
-        });
-        routes['node-first'].resolve({
-            routes: [{ total_fees: 500 }],
-            success_prob: 0.1
-        });
-        await flush();
-
-        expect(store.feeEstimate).toBe(5);
-        expect(store.successProbability).toBe(90);
-        expect(store.loadingFeeEstimate).toBe(false);
-    });
-
-    it('ignores a route error for an earlier pay_req', async () => {
-        const store = newStore();
-        await decodeWithRoutes(store, 'lnbc-first', 'node-first');
-        await decodeWithRoutes(store, 'lnbc-second', 'node-second');
-
-        routes['node-second'].resolve({
-            routes: [{ total_fees: 5 }],
-            success_prob: 0.9
-        });
-        await flush();
-        routes['node-first'].reject(new Error('no route'));
-        await flush();
-
-        expect(store.feeEstimate).toBe(5);
-        expect(store.successProbability).toBe(90);
-    });
-
-    it('stops loading the fee estimate when the newer decode fails', async () => {
-        const store = newStore();
-        await decodeWithRoutes(store, 'lnbc-first', 'node-first');
-        expect(store.loadingFeeEstimate).toBe(true);
-
-        const second = store.getPayReq('lnbc-second');
-        decodes['lnbc-second'].reject(new Error('decode failed'));
-        await second;
-        routes['node-first'].resolve({
-            routes: [{ total_fees: 500 }],
-            success_prob: 0.1
-        });
-        await flush();
-
-        expect(store.loadingFeeEstimate).toBe(false);
-        expect(store.feeEstimate).toBeNull();
-        expect(store.successProbability).toBeNull();
-    });
-
-    it('ignores a decode answer that arrives after clearPayReq', async () => {
-        const store = newStore();
-        const call = store.getPayReq('lnbc-first');
-        store.clearPayReq();
-        decodes['lnbc-first'].resolve({
-            destination: 'node-first',
-            num_satoshis: '1000'
-        });
-        await call;
-
-        expect(store.pay_req).toBeNull();
-        expect(store.loading).toBe(false);
-        expect(BackendUtils.getRoutes).not.toHaveBeenCalled();
-    });
-
-    it('ignores a route answer that arrives after clearPayReq', async () => {
-        const store = newStore();
-        await decodeWithRoutes(store, 'lnbc-first', 'node-first');
-        store.clearPayReq();
-        expect(store.loadingFeeEstimate).toBe(false);
-
-        routes['node-first'].resolve({
-            routes: [{ total_fees: 500 }],
-            success_prob: 0.1
-        });
-        await flush();
-
-        expect(store.feeEstimate).toBeNull();
-        expect(store.successProbability).toBeNull();
     });
 });
 

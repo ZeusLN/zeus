@@ -137,13 +137,12 @@ class LinkingUtils {
                     // currently focused one, so a payment request arriving
                     // while another screen sits on top of PaymentRequest
                     // (e.g. the QR view opened from its header) would push a
-                    // SECOND PaymentRequest, freshly pinned to the injected
-                    // invoice. That bypasses the payment-request-changed
-                    // warning on the buried instance and leaves stale review
-                    // screens in the stack. If a PaymentRequest already
-                    // exists, pop back to it instead: it is already showing
-                    // the new invoice alongside the warning. Never pop while
-                    // a payment status screen is focused, so an in-flight
+                    // second PaymentRequest and leave the review of the
+                    // earlier request, and the screens above it, in the
+                    // stack. If a PaymentRequest already exists, pop back to
+                    // it instead: the new request in its route params
+                    // replaces the one it was reviewing. Never pop while a
+                    // payment status screen is focused, so an in-flight
                     // payment's UI is not torn down.
                     const state = navigation.getState();
                     const routes = state?.routes ?? [];

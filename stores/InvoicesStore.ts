@@ -1,5 +1,5 @@
 import url from 'url';
-import { action, observable, reaction, runInAction } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
@@ -16,7 +16,6 @@ import {
     toWalletrpcAddressTypeName
 } from '../utils/LndUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
 import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
 import ChannelsStore from './ChannelsStore';
@@ -29,17 +28,23 @@ import WithdrawalRequest from '../models/WithdrawalRequest';
 // them at least 2 minutes, enough for a slow Tor connection.
 const LSP_FEE_QUOTE_MAX_AGE_MS = 3 * 60 * 1000;
 
+export interface RouteEstimate {
+    feeEstimate: number | null;
+    successProbability: number | null;
+}
+
+const NO_ROUTE_ESTIMATE: RouteEstimate = {
+    feeEstimate: null,
+    successProbability: null
+};
+
 export default class InvoicesStore {
-    @observable paymentRequest: string;
     @observable loading = false;
     @observable error = false;
     @observable error_msg: string | null;
-    @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
     @observable invoice: Invoice | null;
     @observable onChainAddress: string | null;
-    @observable pay_req: Invoice | null;
-    @observable withdrawal_req: WithdrawalRequest | null;
     @observable payment_request: string | null;
     @observable payment_request_amt: string | null;
     // The LSP fee payment_request was priced with, null when it is not
@@ -51,10 +56,6 @@ export default class InvoicesStore {
     @observable invoicesCount: number;
     @observable watchedInvoicePaid = false;
     @observable watchedInvoicePaidAmt: number | string | null = null;
-    // bumped by every getPayReq, getWithdrawalReq, clearPayReq and reset,
-    // so a decode or route answer can tell whether its request is still
-    // the current one
-    private payReqRequestId = 0;
     settingsStore: SettingsStore;
     lspStore: LSPStore;
     channelsStore: ChannelsStore;
@@ -68,11 +69,6 @@ export default class InvoicesStore {
     // and the screens don't cancel each other.
     private invoiceRequestSeq = 0;
 
-    // lnd
-    @observable loadingFeeEstimate = false;
-    @observable feeEstimate: number | null;
-    @observable successProbability: number | null;
-
     constructor(
         settingsStore: SettingsStore,
         lspStore: LSPStore,
@@ -83,46 +79,22 @@ export default class InvoicesStore {
         this.lspStore = lspStore;
         this.channelsStore = channelsStore;
         this.nodeInfoStore = nodeInfoStore;
-
-        reaction(
-            () => this.pay_req,
-            () => {
-                if (
-                    this.pay_req &&
-                    this.pay_req.destination &&
-                    BackendUtils.isLNDBased()
-                ) {
-                    // QueryRoutes takes whole sats; round a msat amount up
-                    this.getRoutes(
-                        this.pay_req.destination,
-                        Math.ceil(this.pay_req.getRequestAmount)
-                    );
-                }
-            }
-        );
     }
 
     @action
     public reset = () => {
         this.invoiceRequestSeq++;
-        this.payReqRequestId++;
-        this.paymentRequest = '';
         this.onChainAddress = '';
         this.loading = false;
         this.error = false;
         this.error_msg = null;
-        this.getPayReqError = null;
         this.invoices = [];
         this.invoice = null;
-        this.pay_req = null;
         this.payment_request = null;
         this.payment_request_lsp_fee = null;
         this.creatingInvoice = false;
         this.creatingInvoiceError = false;
         this.invoicesCount = 0;
-        this.loadingFeeEstimate = false;
-        this.feeEstimate = null;
-        this.successProbability = null;
         this.watchedInvoicePaid = false;
         this.watchedInvoicePaidAmt = null;
     };
@@ -989,20 +961,6 @@ export default class InvoicesStore {
     };
 
     @action
-    public clearPayReq = () => {
-        // drop answers still in flight, so leaving PaymentRequest during a
-        // decode doesn't refill pay_req and start route queries or probes.
-        // Clear the loading flags those answers would have cleared
-        this.payReqRequestId++;
-        this.pay_req = null;
-        this.getPayReqError = null;
-        this.loading = false;
-        this.loadingFeeEstimate = false;
-        this.feeEstimate = null;
-        this.successProbability = null;
-    };
-
-    @action
     public clearUnified = () => {
         this.clearAddress();
         this.clearPaymentRequest();
@@ -1010,132 +968,71 @@ export default class InvoicesStore {
         this.creatingInvoiceError = false;
     };
 
-    @action
-    public getPayReq = (paymentRequest: string) => {
-        const requestId = ++this.payReqRequestId;
-        this.loading = true;
-        this.pay_req = null;
-        this.paymentRequest = paymentRequest;
-        // a route query for the previous pay_req will be dropped, so it
-        // can't clear these
-        this.loadingFeeEstimate = false;
-        this.feeEstimate = null;
-        this.successProbability = null;
-
-        return BackendUtils.decodePaymentRequest([paymentRequest])
-            .then((data: any) => {
-                // drop the response of a superseded request: applying it
-                // would leave pay_req (what the user reviews) describing a
-                // different invoice than paymentRequest (what gets paid).
-                // Compare ids, not strings: two decodes of the same string
-                // can settle out of order on backends without restReq
-                // de-duplication, and an older failure must not clear a
-                // newer success
-                if (requestId !== this.payReqRequestId) return;
-                runInAction(() => {
-                    // thread the original bolt11 string through: several
-                    // backends' decode responses omit it, leaving the
-                    // Invoice unable to compute its expiry
-                    this.pay_req = new Invoice({ ...data, paymentRequest });
-                    this.getPayReqError = null;
-                    this.loading = false;
-                });
-                return;
-            })
-            .catch((error: Error) => {
-                if (requestId !== this.payReqRequestId) return;
-                const error_friendly = errorToUserFriendly(error);
-                runInAction(() => {
-                    this.pay_req = null;
-                    this.getPayReqError = error_friendly;
-                    this.loading = false;
-                });
-            });
+    // Decodes a payment request and keeps nothing in the store: the result
+    // belongs to the caller. A screen that reviews and pays a request holds
+    // its own decode, so a decode started anywhere else (deep link, NFC tap,
+    // ChoosePaymentMethod's fee estimate) can't change what it shows or
+    // pays. Rejects when the backend can't decode the request
+    public getPayReq = async (paymentRequest: string): Promise<Invoice> => {
+        const data = await BackendUtils.decodePaymentRequest([paymentRequest]);
+        // thread the original bolt11 string through: several backends'
+        // decode responses omit it, leaving the Invoice unable to compute
+        // its expiry
+        return new Invoice({ ...data, paymentRequest });
     };
 
-    @action
-    public getWithdrawalReq = (
+    // Resolves with the decode, or null when the backend can't decode it
+    public getWithdrawalReq = async (
         withdrawalReq: string
     ): Promise<WithdrawalRequest | null> => {
-        const requestId = ++this.payReqRequestId;
-        this.loading = true;
-        this.withdrawal_req = null;
-        this.paymentRequest = withdrawalReq;
-        this.loadingFeeEstimate = false;
-        this.feeEstimate = null;
-        this.successProbability = null;
-
-        return BackendUtils.decodePaymentRequest([withdrawalReq])
-            .then((data: any) => {
-                const decoded = new WithdrawalRequest(data);
-                // same guard as getPayReq: both share paymentRequest. The
-                // decode is still returned, so WithdrawalRequestInfo can
-                // show it after a getPayReq (deep link, NFC) superseded it
-                if (requestId !== this.payReqRequestId) return decoded;
-                runInAction(() => {
-                    this.withdrawal_req = decoded;
-                    this.getPayReqError = null;
-                    this.loading = false;
-                });
-                return decoded;
-            })
-            .catch((error: Error) => {
-                if (requestId !== this.payReqRequestId) return null;
-                const error_friendly = errorToUserFriendly(error);
-                runInAction(() => {
-                    this.withdrawal_req = null;
-                    this.getPayReqError = error_friendly;
-                    this.loading = false;
-                });
-                return null;
-            });
+        try {
+            const data = await BackendUtils.decodePaymentRequest([
+                withdrawalReq
+            ]);
+            return new WithdrawalRequest(data);
+        } catch {
+            return null;
+        }
     };
 
-    @action
-    private getRoutesError = () => {
-        this.loadingFeeEstimate = false;
-        this.feeEstimate = null;
-        this.successProbability = null;
-    };
+    // The fee and success probability of a route to a decoded payment
+    // request. Like getPayReq it keeps nothing in the store. Both values
+    // are null when there is no estimate: the backend has no route query,
+    // the request names no destination, or the query failed
+    public getRouteEstimate = async (
+        pay_req: Invoice
+    ): Promise<RouteEstimate> => {
+        if (!pay_req.destination || !BackendUtils.isLNDBased()) {
+            return NO_ROUTE_ESTIMATE;
+        }
 
-    @action
-    private getRoutes = (destination: string, amount: string | number) => {
-        // runs from the pay_req reaction, so the current id belongs to the
-        // pay_req being queried. Drop answers for a superseded pay_req:
-        // they would show its fee and success probability next to the
-        // newer invoice
-        const requestId = this.payReqRequestId;
-        this.loadingFeeEstimate = true;
-        this.feeEstimate = null;
-        this.successProbability = null;
+        try {
+            // QueryRoutes takes whole sats; round a msat amount up
+            const data = await BackendUtils.getRoutes([
+                pay_req.destination,
+                Math.ceil(pay_req.getRequestAmount)
+            ]);
 
-        return BackendUtils.getRoutes([destination, amount])
-            .then((data: any) => {
-                if (requestId !== this.payReqRequestId) return;
-                runInAction(() => {
-                    this.loadingFeeEstimate = false;
-                    this.successProbability = data.success_prob
-                        ? data.success_prob * 100
-                        : 0;
-
-                    const routes = data.routes;
-                    if (routes) {
-                        routes.forEach((route: any) => {
-                            // expect lnd to pick the cheapest route
-                            if (this.feeEstimate) {
-                                if (route.total_fees < this.feeEstimate) {
-                                    this.feeEstimate = route.total_fees;
-                                }
-                            } else {
-                                this.feeEstimate = route.total_fees || 0;
-                            }
-                        });
+            let feeEstimate: number | null = null;
+            (data.routes || []).forEach((route: any) => {
+                // expect lnd to pick the cheapest route
+                if (feeEstimate) {
+                    if (route.total_fees < feeEstimate) {
+                        feeEstimate = route.total_fees;
                     }
-                });
-            })
-            .catch(() => {
-                if (requestId !== this.payReqRequestId) return;
-                this.getRoutesError();
+                } else {
+                    feeEstimate = route.total_fees || 0;
+                }
             });
+
+            return {
+                feeEstimate,
+                successProbability: data.success_prob
+                    ? data.success_prob * 100
+                    : 0
+            };
+        } catch {
+            return NO_ROUTE_ESTIMATE;
+        }
     };
 }

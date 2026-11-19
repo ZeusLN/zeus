@@ -13,7 +13,12 @@ jest.mock('../stores/Stores', () => ({
     }
 }));
 
-let mockHandleAnythingResult: [string, any] = ['PaymentRequest', {}];
+// PaymentRequest decodes the request in its route params
+const mockRequestParams = { paymentRequest: 'lnbc1...' };
+let mockHandleAnythingResult: [string, any] = [
+    'PaymentRequest',
+    mockRequestParams
+];
 jest.mock('./handleAnything', () => ({
     __esModule: true,
     default: jest.fn(() => Promise.resolve(mockHandleAnythingResult))
@@ -47,20 +52,23 @@ describe('LinkingUtils.handleDeepLink', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockLoginRequired = false;
-        mockHandleAnythingResult = ['PaymentRequest', {}];
+        mockHandleAnythingResult = ['PaymentRequest', mockRequestParams];
     });
 
     it('pops back to an existing PaymentRequest instead of pushing a duplicate', async () => {
         // A payment request arrives while the QR view sits on top of
-        // PaymentRequest: navigate() would push a second, freshly pinned
-        // instance, bypassing the payment-request-changed warning on the
-        // buried one.
+        // PaymentRequest: navigate() would push a second instance and
+        // leave the review of the earlier request, and the QR view, in
+        // the stack. The open screen gets the new request in its params.
         const navigation = makeNavigation(['Wallet', 'PaymentRequest', 'QR']);
 
         LinkingUtils.handleDeepLink('lightning:lnbc1...', navigation as any);
         await flushPromises();
 
-        expect(navigation.popTo).toHaveBeenCalledWith('PaymentRequest', {});
+        expect(navigation.popTo).toHaveBeenCalledWith(
+            'PaymentRequest',
+            mockRequestParams
+        );
         expect(navigation.navigate).not.toHaveBeenCalled();
     });
 
@@ -72,7 +80,10 @@ describe('LinkingUtils.handleDeepLink', () => {
         LinkingUtils.handleDeepLink('lightning:lnbc1...', navigation as any);
         await flushPromises();
 
-        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {});
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'PaymentRequest',
+            mockRequestParams
+        );
         expect(navigation.popTo).not.toHaveBeenCalled();
     });
 
@@ -98,7 +109,7 @@ describe('LinkingUtils.handleDeepLink', () => {
 
             expect(navigation.navigate).toHaveBeenCalledWith(
                 'PaymentRequest',
-                {}
+                mockRequestParams
             );
             expect(navigation.popTo).not.toHaveBeenCalled();
         }
@@ -156,13 +167,18 @@ describe('LinkingUtils.handleDeepLink', () => {
         expect(navigation.replace).not.toHaveBeenCalled();
     });
 
+    // PaymentRequest is keyed by the request in its params, so new params
+    // already mount a fresh review
     it('pops to a focused PaymentRequest instead of replacing it', async () => {
         const navigation = makeNavigation(['Wallet', 'PaymentRequest']);
 
         LinkingUtils.handleDeepLink('lightning:lnbc1...', navigation as any);
         await flushPromises();
 
-        expect(navigation.popTo).toHaveBeenCalledWith('PaymentRequest', {});
+        expect(navigation.popTo).toHaveBeenCalledWith(
+            'PaymentRequest',
+            mockRequestParams
+        );
         expect(navigation.replace).not.toHaveBeenCalled();
     });
 
@@ -180,7 +196,10 @@ describe('LinkingUtils.handleDeepLink', () => {
         LinkingUtils.processPendingDeepLink(navigation as any);
         await flushPromises();
 
-        expect(navigation.popTo).toHaveBeenCalledWith('PaymentRequest', {});
+        expect(navigation.popTo).toHaveBeenCalledWith(
+            'PaymentRequest',
+            mockRequestParams
+        );
     });
 });
 
@@ -266,7 +285,7 @@ describe('LinkingUtils.handleInitialUrl', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockLoginRequired = false;
-        mockHandleAnythingResult = ['PaymentRequest', {}];
+        mockHandleAnythingResult = ['PaymentRequest', mockRequestParams];
         Platform.OS = 'android';
         LinkingUtils.resetShareIntentFlag();
         NativeModules.MobileTools = {
@@ -294,7 +313,10 @@ describe('LinkingUtils.handleInitialUrl', () => {
         await flushPromises();
 
         expect(navigation.navigate).toHaveBeenCalledTimes(1);
-        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {});
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'PaymentRequest',
+            mockRequestParams
+        );
     });
 
     it('handles a new initial URL after a different one was handled', async () => {
@@ -353,7 +375,10 @@ describe('LinkingUtils.handleInitialUrl', () => {
         await LinkingUtils.handleInitialUrl(navigation as any);
         await flushPromises();
 
-        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {});
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'PaymentRequest',
+            mockRequestParams
+        );
         expect(processSharedQRImageFast).not.toHaveBeenCalled();
     });
 

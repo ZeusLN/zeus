@@ -21,7 +21,6 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import {
     modalStore,
-    invoicesStore,
     nodeInfoStore,
     settingsStore
 } from './../../stores/Stores';
@@ -315,8 +314,9 @@ export default class LightningSwipeableRow extends Component<
                 this.showError(error);
             }
         } else {
-            invoicesStore.getPayReq(lightning ?? '');
-            navigation.navigate('PaymentRequest', {});
+            navigation.navigate('PaymentRequest', {
+                paymentRequest: lightning
+            });
         }
     };
 

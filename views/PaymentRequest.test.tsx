@@ -11,16 +11,18 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsLightningSends: () => true,
     supportsMPP: () => false,
     supportsAMP: () => false,
-    supportsCustomFeeLimit: () => false,
+    supportsCustomFeeLimit: jest.fn(() => false),
     supportsHopPicking: () => false
 }));
 jest.mock('../utils/DonationUtils', () => ({
-    calculateDonationAmount: () => 0,
-    findDonationPercentageIndex: () => 0
+    calculateDonationAmount: (amount: number, percentage: number) =>
+        (amount * percentage) / 100,
+    findDonationPercentageIndex: (percentage: number, options: number[]) =>
+        options.indexOf(percentage)
 }));
 jest.mock('../utils/LinkingUtils', () => ({}));
 jest.mock('../utils/GraphSyncUtils', () => ({
-    clearPendingPaymentData: jest.fn()
+    clearPendingPaymentData: jest.fn(() => Promise.resolve())
 }));
 jest.mock('../components/AmountInput', () => {
     const { View } = require('react-native');
@@ -66,14 +68,18 @@ jest.mock('../utils/SleepUtils', () => ({
 }));
 
 import * as React from 'react';
-import { observable, runInAction } from 'mobx';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import Invoice from '../models/Invoice';
-import PaymentRequest from './PaymentRequest';
+import BackendUtils from '../utils/BackendUtils';
+import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
+import PaymentRequest, { PaymentRequestView } from './PaymentRequest';
 
 const PAY = 'views.PaymentRequest.payInvoice';
 const GETTING_READY = 'views.PaymentRequest.lndGettingReady';
 const ENTER_AMOUNT = 'views.PaymentRequest.enterAmount';
+const NO_PAY_REQ = 'views.PaymentRequest.noPayReq';
+
+const PAYMENT_REQUEST = 'lnbc10u1example';
 
 // a decoded 1,000 sat invoice that never expires during a test
 const payReq = {
@@ -85,32 +91,54 @@ const payReq = {
     destination: '02' + 'cd'.repeat(32)
 };
 
-const renderView = async ({
+const NO_ESTIMATE = { feeEstimate: null, successProbability: null };
+
+// InvoicesStore as the screen uses it: it decodes what it is asked to and
+// keeps nothing
+const makeInvoicesStore = (payReqOverrides: object = {}) => ({
+    getPayReq: jest.fn(
+        async (paymentRequest: string): Promise<any> => ({
+            ...payReq,
+            ...payReqOverrides,
+            paymentRequest
+        })
+    ),
+    getRouteEstimate: jest.fn(async (): Promise<any> => NO_ESTIMATE)
+});
+
+const flush = () =>
+    act(async () => {
+        await new Promise((resolve) => setImmediate(resolve));
+    });
+
+const deferred = <T,>() => {
+    let resolve!: (value: T) => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+    });
+    return { promise, resolve, reject };
+};
+
+const makeProps = ({
     implementation = 'embedded-lnd',
     lightningBalance = 50000,
     isLightningReadyToSend = jest.fn().mockResolvedValue(true),
     getSettings = jest.fn(async () => ({ payments: {} })),
     payReqOverrides = {},
-    InvoicesStore = {
-        pay_req: { ...payReq, ...payReqOverrides },
-        paymentRequest: 'lnbc10u1example',
-        clearPayReq: jest.fn()
-    },
-    TransactionsStore = { paymentInFlight: false },
-    ref
+    routeParams = { paymentRequest: PAYMENT_REQUEST },
+    InvoicesStore = makeInvoicesStore(payReqOverrides),
+    TransactionsStore = { paymentInFlight: false }
 }: {
     payReqOverrides?: object;
+    routeParams?: object | null;
     TransactionsStore?: object;
-    ref?: React.Ref<any>;
     implementation?: string;
     lightningBalance?: number;
     isLightningReadyToSend?: jest.Mock;
     getSettings?: jest.Mock;
-    InvoicesStore?: {
-        pay_req: any;
-        paymentRequest: string;
-        clearPayReq?: jest.Mock;
-    };
+    InvoicesStore?: any;
 } = {}) => {
     const BalanceStore = {
         lightningBalance,
@@ -124,38 +152,48 @@ const renderView = async ({
         }),
         navigate: jest.fn()
     };
-    // what react-navigation does when the route is removed or focused
+    // what react-navigation does when the route is focused
     const emit = (event: string) =>
         (listeners[event] || []).forEach((callback) => callback());
+    const props: any = {
+        navigation,
+        // null stands for a route without params
+        route: { params: routeParams ?? undefined },
+        BalanceStore,
+        SettingsStore: {
+            implementation,
+            settings: { payments: {} },
+            getSettings
+        },
+        InvoicesStore,
+        NodeInfoStore: { nodeInfo: {}, isLightningReadyToSend },
+        TransactionsStore,
+        LnurlPayStore: {},
+        UnitsStore: {},
+        ChannelsStore: {}
+    };
+    return { props, BalanceStore, InvoicesStore, navigation, emit };
+};
+
+// mounts one review and lets its decode, route estimate and settings land
+const renderView = async ({
+    ref,
+    ...options
+}: Parameters<typeof makeProps>[0] & { ref?: React.Ref<any> } = {}) => {
+    const made = makeProps(options);
     const result = await render(
-        <PaymentRequest
-            ref={ref}
-            {...({
-                navigation,
-                route: { params: {} },
-                BalanceStore,
-                SettingsStore: {
-                    implementation,
-                    settings: { payments: {} },
-                    getSettings
-                },
-                InvoicesStore,
-                NodeInfoStore: { nodeInfo: {}, isLightningReadyToSend },
-                TransactionsStore,
-                LnurlPayStore: {},
-                UnitsStore: {},
-                ChannelsStore: {}
-            } as any)}
-        />
+        <PaymentRequestView ref={ref} {...made.props} />
     );
-    return { BalanceStore, InvoicesStore, navigation, emit, ...result };
+    await flush();
+    return { ...made, ...result };
 };
 
 const payButton = () => screen.getByRole('button', { name: PAY });
-const flush = () =>
-    act(async () => {
-        await new Promise((resolve) => setImmediate(resolve));
-    });
+const queryPayButton = () => screen.queryByRole('button', { name: PAY });
+const hosts = (type: string) =>
+    screen.container.queryAll((n) => n.type === type);
+const keyValue = (key: string) =>
+    hosts('KeyValue').find((n) => n.props.keyValue === key);
 
 describe('PaymentRequest mount', () => {
     it('refreshes the lightning balance on mount without awaiting settings', async () => {
@@ -175,45 +213,520 @@ describe('PaymentRequest mount', () => {
         expect(screen.queryByText(GETTING_READY)).not.toBeOnTheScreen();
         expect(isLightningReadyToSend).not.toHaveBeenCalled();
     });
-});
 
-// header Back, Android hardware back, the iOS swipe and popTo after a payment
-// all remove the route, so the decode is cleared on beforeRemove rather
-// than only from the header's onBack
-describe('PaymentRequest leaving the screen', () => {
-    it('clears the decode when the route is removed', async () => {
-        const { InvoicesStore, emit } = await renderView({
-            implementation: 'lnd'
+    it('clears the pending graph sync payment it was opened for', async () => {
+        (clearPendingPaymentData as jest.Mock).mockClear();
+        await renderView({
+            implementation: 'lnd',
+            routeParams: {
+                paymentRequest: PAYMENT_REQUEST,
+                fromGraphSync: true
+            }
         });
-        expect(InvoicesStore.clearPayReq).not.toHaveBeenCalled();
 
-        emit('beforeRemove');
-
-        expect(InvoicesStore.clearPayReq).toHaveBeenCalledTimes(1);
+        expect(clearPendingPaymentData).toHaveBeenCalledTimes(1);
     });
 
-    it('clears the decode when the route is removed before settings load', async () => {
-        const { InvoicesStore, emit } = await renderView({
+    it('leaves pending graph sync data alone otherwise', async () => {
+        (clearPendingPaymentData as jest.Mock).mockClear();
+        await renderView({ implementation: 'lnd' });
+
+        expect(clearPendingPaymentData).not.toHaveBeenCalled();
+    });
+});
+
+// The screen decodes the request in its route params and holds the result
+// itself, instead of showing whatever decode sits in InvoicesStore
+describe('PaymentRequest decode', () => {
+    it('decodes the payment request it was opened with', async () => {
+        const { InvoicesStore } = await renderView({ implementation: 'lnd' });
+
+        expect(InvoicesStore.getPayReq).toHaveBeenCalledTimes(1);
+        expect(InvoicesStore.getPayReq).toHaveBeenCalledWith(PAYMENT_REQUEST);
+        expect(payButton()).toBeEnabled();
+        expect(hosts('LoadingIndicator')).toHaveLength(0);
+    });
+
+    it('starts the decode before the settings are loaded', async () => {
+        const { InvoicesStore } = await renderView({
             getSettings: jest.fn(() => new Promise(() => {}))
         });
 
-        emit('beforeRemove');
-
-        expect(InvoicesStore.clearPayReq).toHaveBeenCalledTimes(1);
+        expect(InvoicesStore.getPayReq).toHaveBeenCalledWith(PAYMENT_REQUEST);
+        // the invoice waits for the settings its donation is derived from
+        expect(queryPayButton()).not.toBeOnTheScreen();
     });
 
-    it('stops listening for removal on unmount', async () => {
-        const { navigation, unmount } = await renderView({
-            implementation: 'lnd'
-        });
-        const index = navigation.addListener.mock.calls.findIndex(
-            ([event]) => event === 'beforeRemove'
+    it('shows a spinner and no invoice while the decode is in flight', async () => {
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getPayReq.mockReturnValue(new Promise(() => {}));
+        await renderView({ implementation: 'lnd', InvoicesStore });
+
+        expect(hosts('LoadingIndicator')).toHaveLength(1);
+        expect(queryPayButton()).not.toBeOnTheScreen();
+        expect(InvoicesStore.getRouteEstimate).not.toHaveBeenCalled();
+    });
+
+    it('shows the invoice once its route estimate is in, with the fee and success probability', async () => {
+        const estimate = deferred<any>();
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getRouteEstimate.mockReturnValue(estimate.promise);
+        await renderView({ implementation: 'lnd', InvoicesStore });
+
+        expect(InvoicesStore.getRouteEstimate).toHaveBeenCalledWith(
+            expect.objectContaining({ paymentRequest: PAYMENT_REQUEST })
         );
-        const unsubscribe = navigation.addListener.mock.results[index].value;
+        expect(hosts('LoadingIndicator')).toHaveLength(1);
+        expect(queryPayButton()).not.toBeOnTheScreen();
+
+        estimate.resolve({ feeEstimate: 7, successProbability: 90 });
+        await flush();
+
+        expect(hosts('LoadingIndicator')).toHaveLength(0);
+        expect(payButton()).toBeEnabled();
+        expect(
+            keyValue('views.PaymentRequest.successProbability')!.props.value
+        ).toBe('90%');
+        expect(
+            keyValue('views.PaymentRequest.feeEstimate')!.props.value.props.sats
+        ).toBe(7);
+        // FeeLimit compares its limit with the estimate of this invoice
+        expect(hosts('FeeLimit')[0].props.feeEstimate).toBe(7);
+    });
+
+    it('passes the fee estimate to the FeeLimit shown on a backend with a custom fee limit', async () => {
+        jest.mocked(BackendUtils.supportsCustomFeeLimit).mockReturnValue(true);
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getRouteEstimate.mockResolvedValue({
+            feeEstimate: 7,
+            successProbability: 90
+        });
+        await renderView({ implementation: 'lnd', InvoicesStore });
+        jest.mocked(BackendUtils.supportsCustomFeeLimit).mockReturnValue(false);
+
+        const feeLimits = hosts('FeeLimit');
+        expect(feeLimits).toHaveLength(1);
+        expect(feeLimits[0].props).toMatchObject({
+            feeEstimate: 7,
+            hide: false
+        });
+    });
+
+    it('shows a 0 sat fee estimate, and no fee row without an estimate', async () => {
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getRouteEstimate.mockResolvedValue({
+            feeEstimate: 0,
+            successProbability: 0
+        });
+        const first = await renderView({
+            implementation: 'lnd',
+            InvoicesStore
+        });
+
+        expect(
+            keyValue('views.PaymentRequest.feeEstimate')!.props.value.props.sats
+        ).toBe(0);
+        expect(
+            keyValue('views.PaymentRequest.successProbability')
+        ).toBeUndefined();
+
+        await first.unmount();
+        await renderView({ implementation: 'lnd' });
+
+        expect(keyValue('views.PaymentRequest.feeEstimate')).toBeUndefined();
+    });
+
+    it('shows the decode error and nothing to pay when the decode fails', async () => {
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getPayReq.mockRejectedValue(new Error('decode failed'));
+        await renderView({ implementation: 'lnd', InvoicesStore });
+
+        expect(
+            screen.getByText('views.PaymentRequest.error: decode failed')
+        ).toBeOnTheScreen();
+        expect(hosts('LoadingIndicator')).toHaveLength(0);
+        expect(queryPayButton()).not.toBeOnTheScreen();
+        expect(InvoicesStore.getRouteEstimate).not.toHaveBeenCalled();
+    });
+
+    it('derives the fee mode and donation from the decoded invoice', async () => {
+        const ref = React.createRef<any>();
+        const getSettings = jest.fn(async () => ({
+            payments: { defaultDonationPercentage: 10 }
+        }));
+        await renderView({
+            implementation: 'lnd',
+            getSettings,
+            payReqOverrides: { getRequestAmount: 2000 },
+            ref
+        });
+
+        expect(ref.current.state).toMatchObject({
+            feeOption: 'percent',
+            donationPercentage: 10,
+            donationAmount: 200,
+            selectedIndex: 1
+        });
+        // FeeLimit reads the fee mode once, when it mounts
+        expect(hosts('FeeLimit')[0].props.feeOption).toBe('percent');
+    });
+
+    it('keeps the fixed fee mode and no donation for a small invoice without a default', async () => {
+        const ref = React.createRef<any>();
+        await renderView({ implementation: 'lnd', ref });
+
+        expect(ref.current.state).toMatchObject({
+            feeOption: 'fixed',
+            donationPercentage: 0,
+            donationAmount: 0
+        });
+    });
+
+    it('starts no route query when the screen is left during the decode', async () => {
+        const decode = deferred<any>();
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getPayReq.mockReturnValue(decode.promise);
+        const { unmount } = await renderView({
+            implementation: 'lnd',
+            InvoicesStore
+        });
 
         await unmount();
+        decode.resolve({ ...payReq, paymentRequest: PAYMENT_REQUEST });
+        await flush();
 
-        expect(unsubscribe).toHaveBeenCalled();
+        expect(InvoicesStore.getRouteEstimate).not.toHaveBeenCalled();
+    });
+});
+
+// Any entry point that forgets the param must fail where the user sees it
+describe('PaymentRequest without a payment request', () => {
+    it.each([
+        ['no params', null],
+        ['empty params', {}],
+        ['an empty request', { paymentRequest: '' }]
+    ])('shows an error and decodes nothing with %s', async (_, routeParams) => {
+        const { InvoicesStore } = await renderView({
+            implementation: 'lnd',
+            routeParams
+        });
+
+        const [error] = hosts('ErrorMessage');
+        expect(error.props.message).toBe(NO_PAY_REQ);
+        expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
+        expect(hosts('LoadingIndicator')).toHaveLength(0);
+        expect(queryPayButton()).not.toBeOnTheScreen();
+        // no QR of a request that isn't there
+        expect(hosts('Header')[0].props.rightComponent).toBeUndefined();
+    });
+
+    it('shows no such error for a request that is loading or decoded', async () => {
+        await renderView({ implementation: 'lnd' });
+
+        expect(hosts('ErrorMessage')).toHaveLength(0);
+        expect(hosts('Header')[0].props.rightComponent).toBeDefined();
+    });
+
+    it('refuses to pay from triggerPayment', async () => {
+        const ref = React.createRef<any>();
+        await renderView({ implementation: 'lnd', routeParams: {}, ref });
+        const view = ref.current;
+        view.sendPayment = jest.fn();
+        // as if a decode had landed anyway
+        await act(async () =>
+            view.setState({ pay_req: { ...payReq }, satAmount: 500 })
+        );
+
+        await act(async () => view.triggerPayment());
+
+        expect(view.sendPayment).not.toHaveBeenCalled();
+    });
+});
+
+// "Review invoice A, pay invoice B": the invoice shown and the string paid
+// both come from this screen's route param, so a decode made anywhere else
+// can't come between them
+describe('PaymentRequest pays the request it shows', () => {
+    const setup = async (options: Parameters<typeof renderView>[0] = {}) => {
+        const sendPayment = jest.fn();
+        const view = await renderView({
+            implementation: 'lnd',
+            TransactionsStore: { paymentInFlight: false, sendPayment },
+            ...options
+        });
+        return { sendPayment, ...view };
+    };
+
+    it('pays the request from its route params', async () => {
+        const { sendPayment } = await setup();
+
+        await fireEvent.press(payButton());
+
+        expect(sendPayment).toHaveBeenCalledTimes(1);
+        expect(sendPayment.mock.calls[0][0]).toMatchObject({
+            payment_request: PAYMENT_REQUEST,
+            amount: undefined
+        });
+    });
+
+    it('ignores another invoice held by InvoicesStore', async () => {
+        // what the store held after a deep link, NFC tap or
+        // ChoosePaymentMethod decoded a second invoice
+        const InvoicesStore = {
+            ...makeInvoicesStore(),
+            paymentRequest: 'lnbc-other',
+            pay_req: { ...payReq, getRequestAmount: 999999 },
+            getPayReqError: 'other error',
+            loading: true,
+            loadingFeeEstimate: true,
+            feeEstimate: 4242,
+            successProbability: 1
+        };
+        const { sendPayment } = await setup({ InvoicesStore });
+
+        const [amount] = screen.container.queryAll(
+            (n) => n.type === 'Amount' && n.props.jumboText
+        );
+        expect(amount.props.sats).toBe(1000);
+        expect(hosts('LoadingIndicator')).toHaveLength(0);
+        expect(screen.queryByText(/other error/)).not.toBeOnTheScreen();
+        expect(keyValue('views.PaymentRequest.feeEstimate')).toBeUndefined();
+
+        await fireEvent.press(payButton());
+
+        expect(sendPayment.mock.calls[0][0]).toMatchObject({
+            payment_request: PAYMENT_REQUEST
+        });
+    });
+
+    it('keeps its invoice when another request is decoded while it is open', async () => {
+        const { InvoicesStore, sendPayment } = await setup();
+
+        await act(async () => {
+            await InvoicesStore.getPayReq('lnbc-other');
+        });
+        await fireEvent.press(payButton());
+
+        expect(sendPayment.mock.calls[0][0]).toMatchObject({
+            payment_request: PAYMENT_REQUEST
+        });
+    });
+
+    it('refuses to pay from triggerPayment before the decode is in', async () => {
+        const ref = React.createRef<any>();
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getPayReq.mockReturnValue(new Promise(() => {}));
+        await setup({ InvoicesStore, ref });
+        const view = ref.current;
+        view.sendPayment = jest.fn();
+        // an amount alone must not make an undecoded request payable
+        await act(async () => view.setState({ satAmount: 500 }));
+
+        await act(async () => view.triggerPayment());
+
+        expect(view.sendPayment).not.toHaveBeenCalled();
+    });
+
+    it('refuses to pay an invoice that expired while it was on screen', async () => {
+        let expired = false;
+        const { sendPayment } = await setup({
+            payReqOverrides: { isExpiredNow: () => expired }
+        });
+        expired = true;
+
+        await fireEvent.press(payButton());
+
+        expect(sendPayment).not.toHaveBeenCalled();
+        expect(queryPayButton()).not.toBeOnTheScreen();
+        expect(hosts('ErrorMessage')[0].props.message).toBe(
+            'views.PaymentRequest.invoiceExpired'
+        );
+    });
+});
+
+// navigate() and popTo() to an open PaymentRequest only swap its route
+// params (deep link, NFC tap or scan of a second invoice)
+describe('PaymentRequest opened with another request', () => {
+    const OTHER_REQUEST = 'lnbc100n1tensats';
+    const noAmount = { getRequestAmount: 0 };
+    const tenSats = { getRequestAmount: 10 };
+    const overThreshold = { getRequestAmount: 20000 };
+
+    // PAYMENT_REQUEST and OTHER_REQUEST decode to the given invoices
+    const setup = async (first: object, other: object) => {
+        const InvoicesStore = makeInvoicesStore();
+        InvoicesStore.getPayReq.mockImplementation(
+            async (paymentRequest: string) => ({
+                ...payReq,
+                ...(paymentRequest === OTHER_REQUEST ? other : first),
+                paymentRequest
+            })
+        );
+        const sendPayment = jest.fn();
+        const made = makeProps({
+            implementation: 'lnd',
+            getSettings: jest.fn(async () => ({
+                payments: { slideToPayThreshold: 10000 }
+            })),
+            InvoicesStore,
+            TransactionsStore: { paymentInFlight: false, sendPayment }
+        });
+        const result = await render(<PaymentRequest {...made.props} />);
+        await flush();
+        const open = async (params: object) => {
+            await result.rerender(
+                <PaymentRequest {...made.props} route={{ params } as any} />
+            );
+            await flush();
+        };
+        return { ...made, ...result, sendPayment, open };
+    };
+
+    const amountInputs = () => screen.queryAllByTestId('AmountInput');
+    const typeAmount = (sats: string) =>
+        act(async () => amountInputs()[0].props.onAmountChange(sats, sats));
+    const swipeButton = () => hosts('SwipeButton')[0];
+
+    it('sends the typed amount with a no-amount invoice', async () => {
+        const { sendPayment } = await setup(noAmount, tenSats);
+        await typeAmount('100000');
+
+        await fireEvent.press(payButton());
+
+        expect(sendPayment).toHaveBeenCalledWith(
+            expect.objectContaining({
+                payment_request: PAYMENT_REQUEST,
+                amount: '100000'
+            })
+        );
+    });
+
+    it('decodes, shows and pays the new request', async () => {
+        const { InvoicesStore, sendPayment, open } = await setup(
+            tenSats,
+            overThreshold
+        );
+        expect(payButton()).toBeEnabled();
+
+        await open({ paymentRequest: OTHER_REQUEST });
+
+        expect(InvoicesStore.getPayReq.mock.calls).toEqual([
+            [PAYMENT_REQUEST],
+            [OTHER_REQUEST]
+        ]);
+        const [amount] = screen.container.queryAll(
+            (n) => n.type === 'Amount' && n.props.jumboText
+        );
+        expect(amount.props.sats).toBe(20000);
+
+        await act(async () => swipeButton().props.onSwipeSuccess());
+
+        expect(sendPayment).toHaveBeenCalledTimes(1);
+        expect(sendPayment.mock.calls[0][0]).toMatchObject({
+            payment_request: OTHER_REQUEST,
+            amount: undefined
+        });
+    });
+
+    it('does not send an amount typed for the request it replaced', async () => {
+        const { sendPayment, open } = await setup(noAmount, tenSats);
+        await typeAmount('100000');
+
+        await open({ paymentRequest: OTHER_REQUEST });
+        expect(amountInputs()).toHaveLength(0);
+        await fireEvent.press(payButton());
+
+        expect(sendPayment).toHaveBeenCalledTimes(1);
+        expect(sendPayment.mock.calls[0][0]).toMatchObject({
+            payment_request: OTHER_REQUEST,
+            amount: undefined
+        });
+    });
+
+    it('starts the new request with an empty amount when it has none either', async () => {
+        const { sendPayment, open } = await setup(noAmount, noAmount);
+        await typeAmount('100000');
+
+        await open({ paymentRequest: OTHER_REQUEST });
+
+        expect(amountInputs()[0].props.amount).toBe('');
+        expect(payButton()).toBeDisabled();
+        expect(sendPayment).not.toHaveBeenCalled();
+    });
+
+    it('does not let a slide begun on the old request pay either request', async () => {
+        const { sendPayment, open } = await setup(overThreshold, overThreshold);
+        // the gesture in progress on the first request
+        const oldSwipe = swipeButton().props.onSwipeSuccess;
+
+        await open({ paymentRequest: OTHER_REQUEST });
+        expect(swipeButton().props.onSwipeSuccess).not.toBe(oldSwipe);
+        await act(async () => oldSwipe());
+
+        expect(sendPayment).not.toHaveBeenCalled();
+    });
+
+    it('drops a decode of the old request that lands after the new one', async () => {
+        const oldDecode = deferred<any>();
+        const { InvoicesStore, sendPayment, open } = await setup(
+            tenSats,
+            tenSats
+        );
+        InvoicesStore.getPayReq.mockImplementation(
+            async (paymentRequest: string) =>
+                paymentRequest === OTHER_REQUEST
+                    ? { ...payReq, ...tenSats, paymentRequest }
+                    : oldDecode.promise
+        );
+        // a third request, so the first screen instance is not reused
+        await open({ paymentRequest: 'lnbc-slow' });
+        InvoicesStore.getRouteEstimate.mockClear();
+
+        await open({ paymentRequest: OTHER_REQUEST });
+        oldDecode.resolve({
+            ...payReq,
+            getRequestAmount: 999999,
+            paymentRequest: 'lnbc-slow'
+        });
+        await flush();
+
+        const [amount] = screen.container.queryAll(
+            (n) => n.type === 'Amount' && n.props.jumboText
+        );
+        expect(amount.props.sats).toBe(10);
+        expect(InvoicesStore.getRouteEstimate).toHaveBeenCalledTimes(1);
+
+        await fireEvent.press(payButton());
+
+        expect(sendPayment.mock.calls[0][0]).toMatchObject({
+            payment_request: OTHER_REQUEST
+        });
+    });
+
+    it('keeps the review when the same request is opened again', async () => {
+        const { InvoicesStore, sendPayment, open } = await setup(
+            noAmount,
+            tenSats
+        );
+        await typeAmount('100000');
+
+        await open({ paymentRequest: PAYMENT_REQUEST });
+
+        expect(InvoicesStore.getPayReq).toHaveBeenCalledTimes(1);
+        await fireEvent.press(payButton());
+        expect(sendPayment.mock.calls[0][0]).toMatchObject({
+            payment_request: PAYMENT_REQUEST,
+            amount: '100000'
+        });
+    });
+
+    it('shows the missing request error when the params lose the request', async () => {
+        const { open } = await setup(tenSats, tenSats);
+
+        await open({});
+
+        expect(hosts('ErrorMessage')[0].props.message).toBe(NO_PAY_REQ);
+        expect(queryPayButton()).not.toBeOnTheScreen();
     });
 });
 
@@ -281,8 +794,7 @@ describe('PaymentRequest slide to pay', () => {
     const getSettings = jest.fn(async () => ({
         payments: { slideToPayThreshold: 10000 }
     }));
-    const swipeButton = () =>
-        screen.container.queryAll((n) => n.type === 'SwipeButton')[0];
+    const swipeButton = () => hosts('SwipeButton')[0];
 
     it('disables slide to pay while Lightning is not ready to send', async () => {
         await renderView({
@@ -305,6 +817,20 @@ describe('PaymentRequest slide to pay', () => {
 
         expect(screen.queryByText(GETTING_READY)).not.toBeOnTheScreen();
         expect(swipeButton().props.disabled).toBe(false);
+    });
+
+    it('resets the slider when the screen is focused again', async () => {
+        const { emit } = await renderView({
+            implementation: 'lnd',
+            getSettings,
+            payReqOverrides: { getRequestAmount: 10000 }
+        });
+        const slider = swipeButton();
+
+        await act(async () => emit('focus'));
+
+        // a new key mounts a new SwipeButton
+        expect(swipeButton()).not.toBe(slider);
     });
 });
 
@@ -356,50 +882,6 @@ describe('PaymentRequest no-amount invoice', () => {
         expect(view.sendPayment).toHaveBeenCalledWith(
             expect.objectContaining({ amount: '500' })
         );
-    });
-
-    it('clears the typed amount when a newly pinned request replaces it', async () => {
-        const ref = React.createRef<any>();
-        const InvoicesStore = observable(
-            {
-                pay_req: { ...payReq, getRequestAmount: 0 },
-                paymentRequest: 'lnbc1noamount'
-            },
-            {},
-            { deep: false }
-        );
-        await renderView({ implementation: 'ldk-node', InvoicesStore, ref });
-        const view = ref.current;
-        view.sendPayment = jest.fn();
-
-        const amountInput = screen.getByTestId('AmountInput');
-        await act(async () =>
-            amountInput.props.onAmountChange('100000', 100000)
-        );
-
-        // a 10 sat invoice replaces the no-amount one on the open screen
-        await act(async () =>
-            runInAction(() => {
-                InvoicesStore.paymentRequest = 'lnbc100n1tensats';
-                InvoicesStore.pay_req = { ...payReq, getRequestAmount: 10 };
-            })
-        );
-        await fireEvent.press(
-            screen.getByRole('button', {
-                name: 'views.PaymentRequest.reviewNewPayReq'
-            })
-        );
-
-        expect(view.state.reviewedPaymentRequest).toBe('lnbc100n1tensats');
-        expect(view.state.customAmount).toBe('');
-        expect(view.state.satAmount).toBe('');
-
-        await act(async () => view.triggerPayment());
-        expect(view.sendPayment).toHaveBeenCalledTimes(1);
-        expect(view.sendPayment.mock.calls[0][0]).toMatchObject({
-            payment_request: 'lnbc100n1tensats',
-            amount: undefined
-        });
     });
 });
 
@@ -478,20 +960,19 @@ describe('PaymentRequest fee limit', () => {
             paymentInFlight: false,
             sendPayment: jest.fn()
         };
-        await renderView({
+        const { unmount } = await renderView({
             implementation: 'lnd',
             payReqOverrides: { getRequestAmount },
             TransactionsStore
         });
         await flush();
 
-        const [feeLimit] = screen.container.queryAll(
-            (n) => n.type === 'FeeLimit'
-        );
+        const [feeLimit] = hosts('FeeLimit');
         await act(async () => feeLimit.props.onFeeLimitSatChange(feeLimitSat));
         await fireEvent.press(payButton());
 
         expect(TransactionsStore.sendPayment).toHaveBeenCalledTimes(1);
+        await unmount();
         return TransactionsStore.sendPayment.mock.calls[0][0];
     };
 
@@ -561,71 +1042,5 @@ describe('PaymentRequest sending', () => {
             'SendingLightning',
             expect.objectContaining({ paymentSequence: null })
         );
-    });
-});
-
-describe('PaymentRequest custom amount', () => {
-    const noAmountPayReq = { ...payReq, getRequestAmount: 0 };
-    const tenSatPayReq = { ...payReq, getRequestAmount: 10 };
-
-    const setup = async (pay_req: any) => {
-        const InvoicesStore = observable(
-            { pay_req, paymentRequest: 'lnbc1noamount' },
-            {},
-            { deep: false }
-        );
-        const sendPayment = jest.fn();
-        const view = await renderView({
-            implementation: 'ldk-node',
-            InvoicesStore,
-            TransactionsStore: { paymentInFlight: false, sendPayment }
-        });
-        return { sendPayment, ...view };
-    };
-
-    const amountInputs = () => screen.queryAllByTestId('AmountInput');
-
-    const typeAmount = (sats: string) =>
-        act(async () => amountInputs()[0].props.onAmountChange(sats, sats));
-
-    it('sends the typed amount with a no-amount invoice', async () => {
-        const { sendPayment } = await setup(noAmountPayReq);
-        await typeAmount('100000');
-
-        await fireEvent.press(payButton());
-
-        expect(sendPayment).toHaveBeenCalledWith(
-            expect.objectContaining({
-                payment_request: 'lnbc1noamount',
-                amount: '100000'
-            })
-        );
-    });
-
-    it('does not send a typed amount with a fixed-amount invoice swapped in after it was entered', async () => {
-        const { InvoicesStore, sendPayment } = await setup(noAmountPayReq);
-        await typeAmount('100000');
-
-        // a 10 sat invoice replaces the no-amount one on the open screen
-        await act(async () =>
-            runInAction(() => {
-                InvoicesStore.paymentRequest = 'lnbc100n1tensats';
-                InvoicesStore.pay_req = tenSatPayReq;
-            })
-        );
-        expect(amountInputs()).toHaveLength(0);
-        await fireEvent.press(
-            screen.getByRole('button', {
-                name: 'views.PaymentRequest.reviewNewPayReq'
-            })
-        );
-
-        await fireEvent.press(payButton());
-
-        expect(sendPayment).toHaveBeenCalledTimes(1);
-        expect(sendPayment.mock.calls[0][0]).toMatchObject({
-            payment_request: 'lnbc100n1tensats',
-            amount: undefined
-        });
     });
 });

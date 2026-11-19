@@ -11,7 +11,7 @@ import { Alert } from 'react-native';
 
 import { nip05 } from 'nostr-tools';
 
-import { invoicesStore, settingsStore } from '../stores/Stores';
+import { settingsStore } from '../stores/Stores';
 import handleAnything, {
     strictUriEncode,
     convertMerchantQRToLightningAddress,
@@ -147,7 +147,6 @@ jest.mock('./ConnectionFormatUtils', () => ({
 }));
 jest.mock('../stores/Stores', () => ({
     nodeInfoStore: { nodeInfo: {} },
-    invoicesStore: { getPayReq: jest.fn() },
     settingsStore: { settings: { locale: 'en' } }
 }));
 jest.mock('react-native-blob-util', () => ({
@@ -309,7 +308,8 @@ describe('handleAnything', () => {
     });
 
     describe('lightning payment request', () => {
-        it('should return PaymentRequest screen and call getPayReq if not from clipboard', async () => {
+        // PaymentRequest decodes the request in its route params itself
+        it('should return PaymentRequest screen with the payment request if not from clipboard', async () => {
             const data = 'test data';
             mockProcessBIP21Uri.mockReturnValue({
                 value: 'some payment request'
@@ -318,10 +318,26 @@ describe('handleAnything', () => {
 
             const result = await handleAnything(data);
 
-            expect(result).toEqual(['PaymentRequest', {}]);
-            expect(invoicesStore.getPayReq).toHaveBeenCalledWith(
-                'some payment request'
-            );
+            expect(result).toEqual([
+                'PaymentRequest',
+                { paymentRequest: 'some payment request' }
+            ]);
+        });
+
+        it('should pass on the lightning param of a BIP 21 URI without a usable address', async () => {
+            const data = 'test data';
+            mockProcessBIP21Uri.mockReturnValue({
+                value: '',
+                lightning: 'some payment request'
+            });
+            mockIsValidLightningPaymentRequest = true;
+
+            const result = await handleAnything(data);
+
+            expect(result).toEqual([
+                'PaymentRequest',
+                { paymentRequest: 'some payment request' }
+            ]);
         });
 
         it('should return true if from clipboard', async () => {
