@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "Δεν έχει επιλεγεί κανένα Cashu mint. Παρακαλώ, επιλέξτε πρώτα ένα mint.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Αποτυχία αποκωδικοποίησης τιμολογίου – το payReq δεν έχει οριστεί",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Το τιμολόγιο έχει ήδη πληρωθεί",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "Μη έγκυρο αίτημα πληρωμής",
     "stores.NostrWalletConnectStore.error.invalidAmount": "Μη έγκυρο ποσό",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "Το μήνυμα δεν πρέπει να είναι κενό ",
