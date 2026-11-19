@@ -20,8 +20,8 @@ jest.mock('../components/Screen', () => {
 // Shows the title, and whether the button is styled as a warning
 jest.mock('../components/Button', () => {
     const { Text } = require('react-native');
-    return ({ title, warning }: any) => (
-        <Text>{title + (warning ? ' (warning)' : '')}</Text>
+    return ({ title, warning, onPress }: any) => (
+        <Text onPress={onPress}>{title + (warning ? ' (warning)' : '')}</Text>
     );
 });
 // Each header shows which Back it wires up
@@ -47,8 +47,14 @@ jest.mock('../components/Pin', () => {
         </>
     );
 });
-jest.mock('../components/ShowHideToggle', () => () => null);
-jest.mock('../components/TextInput', () => () => null);
+jest.mock('../components/ShowHideToggle', () => {
+    const { Text } = require('react-native');
+    return ({ onPress }: any) => <Text onPress={onPress}>show/hide</Text>;
+});
+jest.mock('../components/TextInput', () => {
+    const { TextInput } = require('react-native');
+    return (props: any) => <TextInput testID="passphrase" {...props} />;
+});
 jest.mock('../components/SuccessErrorMessage', () => {
     const { Text } = require('react-native');
     return {
@@ -176,8 +182,7 @@ const renderLockscreen = async (
     return { SettingsStore, navigation, unmount, lockscreen: ref };
 };
 
-// the TextInput mock renders nothing, so a passphrase is entered through
-// the component
+// enters a passphrase on the component itself, skipping the field
 const submitPassphrase = async (lockscreen: any, passphrase: string) => {
     await act(async () => {
         lockscreen.current.setState({ passphraseAttempt: passphrase });
@@ -1325,5 +1330,71 @@ describe('Lockscreen passphrase form', () => {
         } finally {
             os.restore();
         }
+    });
+});
+
+describe('Lockscreen passphrase form controls', () => {
+    const PASSPHRASE = 'open sesame';
+    const field = () => screen.getByTestId('passphrase');
+
+    it('unlocks from the button', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier(PASSPHRASE)
+        };
+        const { navigation } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        await fireEvent.changeText(field(), PASSPHRASE);
+        await fireEvent.press(screen.getByText('views.Lockscreen.login'));
+
+        await waitFor(() => expect(navigation.pop).toHaveBeenCalledTimes(1));
+    });
+
+    it('unlocks from the keyboard return key', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier(PASSPHRASE)
+        };
+        const { navigation } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        await fireEvent.changeText(field(), PASSPHRASE);
+        await fireEvent(field(), 'submitEditing');
+
+        await waitFor(() => expect(navigation.pop).toHaveBeenCalledTimes(1));
+    });
+
+    it('clears the error when the password is edited', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier(PASSPHRASE)
+        };
+        await renderLockscreen(makeUpdateSettings(saved), { settings: saved });
+
+        await fireEvent.changeText(field(), 'wrong');
+        await fireEvent(field(), 'submitEditing');
+        expect(
+            await screen.findByText(/views\.Lockscreen\.incorrectPassword/)
+        ).toBeTruthy();
+
+        await fireEvent.changeText(field(), 'wrong!');
+        expect(
+            screen.queryByText(/views\.Lockscreen\.incorrectPassword/)
+        ).toBeNull();
+    });
+
+    it('shows and hides the password', async () => {
+        const saved: any = {
+            passphraseVerifier: await deriveVerifier(PASSPHRASE)
+        };
+        await renderLockscreen(makeUpdateSettings(saved), { settings: saved });
+
+        expect(field().props.secureTextEntry).toBe(true);
+        await fireEvent.press(screen.getByText('show/hide'));
+        expect(field().props.secureTextEntry).toBe(false);
+        await fireEvent.press(screen.getByText('show/hide'));
+        expect(field().props.secureTextEntry).toBe(true);
     });
 });
