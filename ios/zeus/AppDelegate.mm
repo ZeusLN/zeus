@@ -135,6 +135,26 @@ static BOOL RunPendingKeychainCheck(BOOL *pending, BOOL protectedDataAvailable, 
     return YES;
 }
 
+/**
+ Whether a deferred first-run check can still set KEYCHAIN_SURVIVED_REINSTALL, so
+ keychainSurvivedReinstall in KeychainAudit.m has to wait for it. When HAS_RUN_BEFORE reads YES
+ through defaults or in the file, the check returns before touching the flag, so its current
+ value is final and an existing install launched while locked gets its answer at once. YES is
+ never wrong: an unreadable defaults file reads NO, and nothing clears HAS_RUN_BEFORE. Once the
+ check has run it is never pending, even if HAS_RUN_BEFORE somehow failed to persist, because
+ its notification has already been posted and a caller waiting for it would wait forever.
+ */
+static BOOL ReinstallFlagPending(BOOL checkPending, NSString *defaultsPath) {
+    if (!checkPending) {
+        return NO;
+    }
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:kHasRunBeforeKey]) {
+        return NO;
+    }
+    NSDictionary *persisted = [NSDictionary dictionaryWithContentsOfFile:defaultsPath];
+    return ![persisted[kHasRunBeforeKey] boolValue];
+}
+
 @interface AppDelegate () {
   // Set when launch happened without protected data, so the first-run
   // keychain check still has to run
@@ -201,7 +221,7 @@ static BOOL RunPendingKeychainCheck(BOOL *pending, BOOL protectedDataAvailable, 
 
 // Read by KeychainAudit.m, which holds keychainSurvivedReinstall until this is NO
 - (BOOL)firstRunKeychainCheckPending {
-  return _keychainCheckPending;
+  return ReinstallFlagPending(_keychainCheckPending, StandardDefaultsPath());
 }
 
 - (void)applicationProtectedDataDidBecomeAvailable:(UIApplication *)application {

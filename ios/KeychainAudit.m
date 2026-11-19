@@ -65,9 +65,11 @@ RCT_EXPORT_METHOD(getInternetPasswordServers:(BOOL)synchronizable
 // can run after JS has loaded when launch happened before protected data was
 // available.
 //
-// While that check is still deferred the flag is not known yet, and an unset
-// flag would let JS copy the iCloud partition into a keychain the check is
-// about to clear. So the promise resolves only once the check has run.
+// While that check is still deferred on a fresh install the flag is not known
+// yet, and an unset flag would let JS copy the iCloud partition into a
+// keychain the check is about to clear. So the promise then resolves only once
+// the check has run. AppDelegate reports nothing pending for an install that
+// has run before, since its deferred check cannot change the flag.
 RCT_EXPORT_METHOD(keychainSurvivedReinstall:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
