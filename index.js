@@ -1,4 +1,5 @@
 import './polyfills';
+import './utils/BigNumberConfig';
 import 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
 enableScreens();
@@ -20,6 +21,7 @@ protobuf.configure();
 
 import {AppRegistry, LogBox} from 'react-native';
 import './shim.js';
+import './utils/Nip05FetchConfig';
 import App from './App.tsx';
 import {name as appName} from './app.json';
 

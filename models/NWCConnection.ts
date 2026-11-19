@@ -1,5 +1,5 @@
 import { action, computed, observable } from 'mobx';
-import { Nip47SingleMethod } from '@getalby/sdk';
+import { Nip47Method } from '@getalby/sdk';
 import { localeString } from '../utils/LocaleUtils';
 
 import BaseModel from './BaseModel';
@@ -41,6 +41,9 @@ export interface ConnectionActivity {
     isExpired?: boolean;
     expiryLabel?: string;
     fees_paid?: number;
+    // routing fee cap sent with a pay_invoice, or the fee reserve on
+    // backends that take no fee limit; held with satAmount while pending
+    feeLimitSats?: number;
     isBudgetDebited?: boolean;
 }
 
@@ -63,7 +66,7 @@ export interface NWCConnectionData {
     description?: string;
     pubkey: string;
     relayUrl: string;
-    permissions: Nip47SingleMethod[];
+    permissions: Nip47Method[];
     createdAt: Date;
     lastUsed?: Date;
     totalSpendSats: number;
@@ -75,6 +78,7 @@ export interface NWCConnectionData {
     customExpiryUnit?: TimeUnit;
     nodePubkey: string;
     implementation: string;
+    walletConfigId?: string;
     activity?: ConnectionActivity[];
     metadata?: any;
 }
@@ -116,7 +120,7 @@ export default class NWCConnection extends BaseModel {
     @observable description?: string;
     pubkey: string;
     relayUrl: string;
-    @observable permissions: Nip47SingleMethod[];
+    @observable permissions: Nip47Method[];
     createdAt: Date;
     @observable lastUsed?: Date;
     @observable totalSpendSats: number;
@@ -128,6 +132,9 @@ export default class NWCConnection extends BaseModel {
     @observable customExpiryUnit?: TimeUnit;
     @observable nodePubkey: string;
     @observable implementation: Implementations;
+    // NostrConnectUtils.getWalletConfigId of the wallet config that last
+    // loaded this connection
+    walletConfigId?: string;
     @observable metadata?: any;
     @observable activity: ConnectionActivity[] = [];
     @observable private _warningTypes: ConnectionWarningType[] = [];
@@ -189,6 +196,14 @@ export default class NWCConnection extends BaseModel {
         }
     }
     @computed public get isExpired(): boolean {
+        return this.isExpiredNow();
+    }
+
+    // plain method, not @computed: the current time is not observable, so
+    // while a mounted screen tracks the computed it keeps returning a stale
+    // "not expired". Use this for the request checks (withGlobalHandler,
+    // validateBudgetBeforePayment)
+    public isExpiredNow(): boolean {
         return this.expiresAt ? new Date() > this.expiresAt : false;
     }
     @computed public get statusText(): string {
@@ -216,11 +231,12 @@ export default class NWCConnection extends BaseModel {
 
     /**
      * Sum of in-flight (pending) pay_invoice amounts on this connection's
-     * activity log. Counted against the budget so concurrent or
-     * slow-settling (hodl) payments cannot exceed the limit while their
-     * debits are deferred to reconcile. Reconcile flips an activity to
-     * success and calls trackSpending in one atomic action, so an amount
-     * is never counted in both this and totalSpendSats.
+     * activity log, each with the routing fee cap it was sent with. Counted
+     * against the budget so concurrent or slow-settling (hodl) payments
+     * cannot exceed the limit while their debits are deferred to reconcile.
+     * Reconcile flips an activity to success and calls trackSpending in one
+     * atomic action, so an amount is never counted in both this and
+     * totalSpendSats.
      */
     @computed public get pendingSpendSats(): number {
         if (!this.activity?.length) return 0;
@@ -228,7 +244,11 @@ export default class NWCConnection extends BaseModel {
             if (a.type !== 'pay_invoice' || a.status !== 'pending') {
                 return sum;
             }
-            return sum + Math.max(0, Math.floor(Number(a.satAmount) || 0));
+            return (
+                sum +
+                Math.max(0, Math.floor(Number(a.satAmount) || 0)) +
+                Math.max(0, Math.floor(Number(a.feeLimitSats) || 0))
+            );
         }, 0);
     }
 
@@ -433,6 +453,29 @@ export default class NWCConnection extends BaseModel {
         return this.effectiveSpendSats + amountSats <= this.maxAmountSats!;
     }
 
+    /**
+     * Routing fee cap for a payment of amountSats: what the budget has left
+     * after the amount, at most maxFeeLimitSats. Unchanged without a budget.
+     */
+    public feeLimitSatsForPayment(
+        amountSats: number,
+        maxFeeLimitSats: number
+    ): number {
+        if (!this.hasBudgetLimit) return maxFeeLimitSats;
+        return Math.max(
+            0,
+            Math.min(maxFeeLimitSats, this.remainingBudget - amountSats)
+        );
+    }
+
+    /**
+     * Fee reserve for a payment of amountSats on backends that take no fee
+     * limit (LndHub): 1% of the amount, rounded up, and at least 10 sats.
+     */
+    public static feeReserveSatsWithoutFeeLimit(amountSats: number): number {
+        return Math.max(Math.ceil(amountSats / 100), 10);
+    }
+
     @action
     public resetBudget(): void {
         this.totalSpendSats = 0;
@@ -528,14 +571,21 @@ export default class NWCConnection extends BaseModel {
     /**
      * Validates spendable budget against the invoice amount only.
      *
-     * Routing fees are unknown until the payment settles and are intentionally
-     * excluded here. Worst-case overshoot is bounded by PAYMENT_FEE_LIMIT_SATS
-     * (the fee cap passed to the backend). Debit happens on finalize/reconcile
-     * for the settled amount; subsequent pays see the reduced remaining budget.
+     * Routing fees are unknown until the payment settles, so they are not
+     * required here. Instead, on backends that enforce a fee limit, the fee
+     * cap passed to the backend comes from feeLimitSatsForPayment, which
+     * limits it to the budget left after the amount, and a pending payment
+     * holds that cap until it resolves. Debit happens on finalize/reconcile
+     * for the settled amount plus fee.
      *
-     * Reserving amount + fee_limit up front would reject legitimate payments
-     * when remaining budget is in (amount, amount + fee_limit], which is a
-     * worse failure mode for tight budgets.
+     * Requiring amount + fee_limit up front would reject payments when the
+     * remaining budget is in [amount, amount + fee_limit); those are still
+     * attempted, with the smaller fee cap.
+     *
+     * Backends that take no fee limit (LndHub) cannot cap the fee, so
+     * pay_invoice there also requires the budget to cover the amount plus
+     * feeReserveSatsWithoutFeeLimit, and a pending payment holds that
+     * reserve. The fee actually paid is debited once the payment settles.
      */
     @action
     public validateBudgetBeforePayment(amountSats: number): {
@@ -544,7 +594,7 @@ export default class NWCConnection extends BaseModel {
     } {
         this.validateAmount(amountSats);
 
-        if (this.isExpired) {
+        if (this.isExpiredNow()) {
             return {
                 success: false,
                 errorMessage: localeString(
@@ -579,7 +629,7 @@ export default class NWCConnection extends BaseModel {
         this.syncWarnings(maxBudgetLimit);
     }
 
-    public hasPermission(permission: Nip47SingleMethod): boolean {
+    public hasPermission(permission: Nip47Method): boolean {
         return this.permissions?.includes(permission) || false;
     }
     public hasReadOnlyPermissions(): boolean {

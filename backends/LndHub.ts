@@ -6,7 +6,7 @@ import Base64Utils from './../utils/Base64Utils';
 import Bolt11Utils from './../utils/Bolt11Utils';
 import Invoice from './../models/Invoice';
 import { localeString } from './../utils/LocaleUtils';
-import { Hash as sha256Hash } from 'fast-sha256';
+import { sha256Bytes } from '../utils/HashingUtils';
 import { ecdsaSignDERHex } from '../utils/SigningUtils';
 
 export default class LndHub extends LND {
@@ -24,10 +24,52 @@ export default class LndHub extends LND {
         };
     };
 
+    // LND's request resolves host || lndhubUrl, port and
+    // macaroonHex || accessToken. An lndhub account only has lndhubUrl and
+    // the session token, but REST fields can be left on its config (the
+    // implementation dropdown keeps port and macaroonHex, older clipboard
+    // imports kept host), which redirected requests and sent the LND
+    // macaroon as the Bearer token.
+    request = (
+        route: string,
+        method: string,
+        data?: any,
+        params?: any,
+        timeout?: number
+    ) => {
+        const { lndhubUrl, accessToken, certVerification, enableTor } =
+            settingsStore;
+
+        if (params) {
+            route = `${route}?${Object.keys(params)
+                .map((key: string) => key + '=' + params[key])
+                .join('&')}`;
+        }
+
+        return this.restReq(
+            this.getHeaders(accessToken),
+            this.getURL(lndhubUrl, '', route),
+            method,
+            data,
+            certVerification,
+            enableTor,
+            timeout
+        );
+    };
+
+    // BlueWallet LndHub answers a failed login with HTTP 200 and
+    // {"error":true,"code":1,"message":"bad auth"}, which restReq resolves.
+    // Reject it with the body, as restReq does for non-2xx errors, so the
+    // caller reports the failure instead of storing undefined tokens.
     login = (data: LoginRequest) =>
         this.postRequest('/auth?type=auth', {
             login: data.login,
             password: data.password
+        }).then((response: any) => {
+            if (!response || response.error || !response.access_token) {
+                throw new Error(JSON.stringify(response));
+            }
+            return response;
         });
 
     getPayments = () =>
@@ -63,9 +105,10 @@ export default class LndHub extends LND {
 
     // Scans the user's invoice list since LndHub has no per-invoice
     // endpoint returning amount details. rHash arrives in whatever format
-    // getFormattedRhash produced when the invoice was created
+    // getFormattedRhash produced when the invoice was created. A paid
+    // invoice is the signal, with no amount check, as in LND
     watchInvoicePaid = (
-        { rHash, value }: { rHash: string; value?: string | number },
+        { rHash }: { rHash: string },
         onPaid: (payload: {
             amountSat: number;
             tx?: string;
@@ -81,7 +124,6 @@ export default class LndHub extends LND {
                         if (
                             result.getFormattedRhash === rHash &&
                             result.ispaid &&
-                            Number(result.amt) >= Number(value) &&
                             Number(result.amt) !== 0
                         ) {
                             clearInterval(interval);
@@ -150,24 +192,20 @@ export default class LndHub extends LND {
         ]);
     };
     lnurlAuth = (message: string) => {
-        const messageHash = new sha256Hash()
-            .update(Base64Utils.stringToUint8Array(message))
-            .digest();
+        const messageHash = sha256Bytes(
+            Base64Utils.stringToUint8Array(message)
+        );
 
         let signed, signature, key;
         switch (settingsStore.settings.lndHubLnAuthMode || 'Alby') {
             case 'Alby':
-                key = new sha256Hash()
-                    .update(
-                        Base64Utils.stringToUint8Array(
-                            `lndhub://${settingsStore.username}:${settingsStore.password}`
-                        )
+                key = sha256Bytes(
+                    Base64Utils.stringToUint8Array(
+                        `lndhub://${settingsStore.username}:${settingsStore.password}`
                     )
-                    .digest();
+                );
                 signed = ecdsaSignDERHex(messageHash, key);
-                signature = new sha256Hash()
-                    .update(Base64Utils.stringToUint8Array(signed))
-                    .digest();
+                signature = sha256Bytes(Base64Utils.stringToUint8Array(signed));
                 break;
             case 'BlueWallet':
                 signature = Base64Utils.stringToUint8Array(
@@ -207,6 +245,9 @@ export default class LndHub extends LND {
     };
     supportsWatchtowerClient = () => false;
     supportsKeysend = () => false;
+    // the inherited lookupPayment would scan LndHub's /gettxs-shaped
+    // getPayments response, which has no payment_hash/status fields
+    supportsPaymentLookup = () => false;
     supportsChannelManagement = () => false;
     supportsCircularRebalancing = () => false;
     supportsForceClose = () => false;
@@ -235,8 +276,10 @@ export default class LndHub extends LND {
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
     supportsOnchainSendMax = () => false;
+    supportsChannelMemo = () => false;
     supportsOnchainBatching = () => false;
-    supportsChannelBatching = () => true;
+    supportsChannelBatching = () => false;
+    supportsChannelFundMax = () => false;
     supportsLSPScustomMessage = () => false;
     supportsLSPS1rest = () => false;
     supportsBolt11BlindedRoutes = () => false;
@@ -250,6 +293,7 @@ export default class LndHub extends LND {
     supportInboundFees = () => false;
     supportsDevTools = () => true;
     supportsCashuWallet = () => false;
+    supportsAddressMessageSigning = () => false;
     supportsSettingInvoiceExpiration = () => false;
     supportsNostrWalletConnectService = () => true;
 }

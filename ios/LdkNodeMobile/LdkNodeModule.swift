@@ -573,7 +573,7 @@ class LdkNodeModule: RCTEventEmitter {
 
         if !self.storedStorageDirPath.isEmpty {
             NSLog("LdkNodeModule: applyBuilderSettings: Enabling filesystem logger")
-            builder.setFilesystemLogger(logFilePath: "\(self.storedStorageDirPath)/ldk_node.log", maxLogLevel: .debug)
+            builder.setFilesystemLogger(logFilePath: "\(self.storedStorageDirPath)/ldk_node.log", maxLogLevel: .info)
         }
     }
 
@@ -761,9 +761,15 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let feeRate = toUInt64(feeRateSatsPerVbyte.doubleValue),
+              let sleepSecs = toUInt64(sleepSeconds.doubleValue) else {
+            reject("error", "Invalid fee rate or sleep seconds", nil)
+            return
+        }
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let txHex = try node.sweepRemoteClosedOutputs(sweepAddress: sweepAddress, feeRateSatsPerVbyte: feeRateSatsPerVbyte.uint64Value, sleepSeconds: sleepSeconds.uint64Value)
+                let txHex = try node.sweepRemoteClosedOutputs(sweepAddress: sweepAddress, feeRateSatsPerVbyte: feeRate, sleepSeconds: sleepSecs)
                 resolve(["txHex": txHex])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -882,16 +888,24 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
-        do {
-            // Treat 0 as nil (no push to counterparty)
-            let pushMsat: UInt64? = pushToCounterpartyMsat.uint64Value > 0 ? pushToCounterpartyMsat.uint64Value : nil
+        guard let amount = toUInt64(channelAmountSats.doubleValue) else {
+            reject("error", "Invalid channel amount", nil)
+            return
+        }
 
+        // Treat 0 as nil (no push to counterparty)
+        guard let pushMsat = optionalPositiveUInt64(pushToCounterpartyMsat) else {
+            reject("error", "Invalid push amount", nil)
+            return
+        }
+
+        do {
             let userChannelId: UserChannelId
             if announceChannel {
                 userChannelId = try node.openAnnouncedChannel(
                     nodeId: nodeId,
                     address: address,
-                    channelAmountSats: channelAmountSats.uint64Value,
+                    channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil
                 )
@@ -899,7 +913,7 @@ class LdkNodeModule: RCTEventEmitter {
                 userChannelId = try node.openChannel(
                     nodeId: nodeId,
                     address: address,
-                    channelAmountSats: channelAmountSats.uint64Value,
+                    channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil
                 )
@@ -917,24 +931,23 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
-        do {
-            let pushMsat: UInt64? = pushToCounterpartyMsat.uint64Value > 0 ? pushToCounterpartyMsat.uint64Value : nil
+        guard let pushMsat = optionalPositiveUInt64(pushToCounterpartyMsat) else {
+            reject("error", "Invalid push amount", nil)
+            return
+        }
 
-            var outpoints: [OutPoint]? = nil
-            if let utxosArray = utxos {
-                var parsed: [OutPoint] = []
-                for item in utxosArray {
-                    if let dict = item as? [String: Any],
-                       let txid = dict["txid"] as? String,
-                       let vout = dict["vout"] as? NSNumber {
-                        parsed.append(OutPoint(txid: txid, vout: vout.uint32Value))
-                    }
-                }
-                if !parsed.isEmpty {
-                    outpoints = parsed
-                }
+        var outpoints: [OutPoint]? = nil
+        if let utxosArray = utxos {
+            guard let parsed = parseOutPoints(utxosArray) else {
+                reject("error", "Invalid vout", nil)
+                return
             }
+            if !parsed.isEmpty {
+                outpoints = parsed
+            }
+        }
 
+        do {
             let userChannelId: UserChannelId
             if announceChannel {
                 userChannelId = try node.openAnnouncedChannelFundMax(
@@ -966,24 +979,28 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(channelAmountSats.doubleValue) else {
+            reject("error", "Invalid channel amount", nil)
+            return
+        }
+
+        guard let pushMsat = optionalPositiveUInt64(pushToCounterpartyMsat) else {
+            reject("error", "Invalid push amount", nil)
+            return
+        }
+
+        guard let outpoints = parseOutPoints(utxos) else {
+            reject("error", "Invalid vout", nil)
+            return
+        }
+
         do {
-            let pushMsat: UInt64? = pushToCounterpartyMsat.uint64Value > 0 ? pushToCounterpartyMsat.uint64Value : nil
-
-            var outpoints: [OutPoint] = []
-            for item in utxos {
-                if let dict = item as? [String: Any],
-                   let txid = dict["txid"] as? String,
-                   let vout = dict["vout"] as? NSNumber {
-                    outpoints.append(OutPoint(txid: txid, vout: vout.uint32Value))
-                }
-            }
-
             let userChannelId: UserChannelId
             if announceChannel {
                 userChannelId = try node.openAnnouncedChannelWithUtxos(
                     nodeId: nodeId,
                     address: address,
-                    channelAmountSats: channelAmountSats.uint64Value,
+                    channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil,
                     utxos: outpoints
@@ -992,7 +1009,7 @@ class LdkNodeModule: RCTEventEmitter {
                 userChannelId = try node.openChannelWithUtxos(
                     nodeId: nodeId,
                     address: address,
-                    channelAmountSats: channelAmountSats.uint64Value,
+                    channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil,
                     utxos: outpoints
@@ -1059,9 +1076,14 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountSats.doubleValue) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
         do {
             let onchain = node.onchainPayment()
-            let txid = try onchain.sendToAddress(address: address, amountSats: amountSats.uint64Value, feeRate: nil)
+            let txid = try onchain.sendToAddress(address: address, amountSats: amount, feeRate: nil)
             resolve(["txid": txid])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1116,17 +1138,19 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountSats.doubleValue) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
+        guard let outpoints = parseOutPoints(utxos) else {
+            reject("error", "Invalid vout", nil)
+            return
+        }
+
         do {
             let onchain = node.onchainPayment()
-            var outpoints: [OutPoint] = []
-            for item in utxos {
-                if let dict = item as? [String: Any],
-                   let txid = dict["txid"] as? String,
-                   let vout = dict["vout"] as? NSNumber {
-                    outpoints.append(OutPoint(txid: txid, vout: vout.uint32Value))
-                }
-            }
-            let txid = try onchain.sendToAddressWithUtxos(address: address, amountSats: amountSats.uint64Value, utxos: outpoints, feeRate: nil)
+            let txid = try onchain.sendToAddressWithUtxos(address: address, amountSats: amount, utxos: outpoints, feeRate: nil)
             resolve(["txid": txid])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1140,16 +1164,13 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let outpoints = parseOutPoints(utxos) else {
+            reject("error", "Invalid vout", nil)
+            return
+        }
+
         do {
             let onchain = node.onchainPayment()
-            var outpoints: [OutPoint] = []
-            for item in utxos {
-                if let dict = item as? [String: Any],
-                   let txid = dict["txid"] as? String,
-                   let vout = dict["vout"] as? NSNumber {
-                    outpoints.append(OutPoint(txid: txid, vout: vout.uint32Value))
-                }
-            }
             let txid = try onchain.sendAllToAddressWithUtxos(address: address, retainReserves: retainReserve, utxos: outpoints, feeRate: nil)
             resolve(["txid": txid])
         } catch {
@@ -1163,10 +1184,11 @@ class LdkNodeModule: RCTEventEmitter {
         let hasFeeMsat = maxTotalRoutingFeeMsat >= 0
         let hasPathCount = maxPathCount >= 0
         guard hasFeeMsat || hasPathCount else { return nil }
+        // Both are upper limits, so one too large for its type becomes the largest
         return RouteParametersConfig(
-            maxTotalRoutingFeeMsat: hasFeeMsat ? UInt64(maxTotalRoutingFeeMsat) : nil,
+            maxTotalRoutingFeeMsat: hasFeeMsat ? (toUInt64(maxTotalRoutingFeeMsat) ?? UInt64.max) : nil,
             maxTotalCltvExpiryDelta: 1008,
-            maxPathCount: hasPathCount ? UInt8(maxPathCount) : 10,
+            maxPathCount: hasPathCount ? (UInt8(exactly: maxPathCount.rounded(.towardZero)) ?? UInt8.max) : 10,
             maxChannelSaturationPowerOfHalf: 2
         )
     }
@@ -1174,6 +1196,41 @@ class LdkNodeModule: RCTEventEmitter {
     private func optionalTimeoutSecs(_ value: Double) -> UInt64? {
         guard value > 0 else { return nil }
         return UInt64(exactly: value)
+    }
+
+    // UInt64(_:) and UInt32(_:) trap on a Double that is NaN, negative or too
+    // large for the type instead of throwing, so the catch blocks below never
+    // see it and the app terminates. Some of these values come from outside
+    // the app (e.g. the amount and expiry of an NWC make_invoice request), so
+    // convert with the failable initialisers and reject the promise instead.
+    private func toUInt64(_ value: Double) -> UInt64? {
+        return UInt64(exactly: value.rounded(.towardZero))
+    }
+
+    private func toUInt32(_ value: Double) -> UInt32? {
+        return UInt32(exactly: value.rounded(.towardZero))
+    }
+
+    // Optional amount that is only set when positive, e.g. the push amount of
+    // a channel open. The outer optional is nil when the value does not fit.
+    private func optionalPositiveUInt64(_ value: NSNumber) -> UInt64?? {
+        guard value.doubleValue > 0 else { return .some(nil) }
+        guard let converted = toUInt64(value.doubleValue) else { return .none }
+        return .some(converted > 0 ? converted : nil)
+    }
+
+    // Returns nil when a vout is negative or too large for UInt32
+    private func parseOutPoints(_ utxos: NSArray) -> [OutPoint]? {
+        var outpoints: [OutPoint] = []
+        for item in utxos {
+            if let dict = item as? [String: Any],
+               let txid = dict["txid"] as? String,
+               let vout = dict["vout"] as? NSNumber {
+                guard let voutValue = toUInt32(vout.doubleValue) else { return nil }
+                outpoints.append(OutPoint(txid: txid, vout: voutValue))
+            }
+        }
+        return outpoints
     }
 
     // MARK: - BOLT11 Payment Methods
@@ -1185,10 +1242,15 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat), let expiry = toUInt32(expirySecs) else {
+            reject("error", "Invalid amount or expiry", nil)
+            return
+        }
+
         do {
             let bolt11 = node.bolt11Payment()
             let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
-            let invoice = try bolt11.receive(amountMsat: UInt64(amountMsat), description: descriptionObj, expirySecs: UInt32(expirySecs))
+            let invoice = try bolt11.receive(amountMsat: amount, description: descriptionObj, expirySecs: expiry)
             resolve(["invoice": invoice.description])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1202,10 +1264,15 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let expiry = toUInt32(expirySecs) else {
+            reject("error", "Invalid expiry", nil)
+            return
+        }
+
         do {
             let bolt11 = node.bolt11Payment()
             let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
-            let invoice = try bolt11.receiveVariableAmount(description: descriptionObj, expirySecs: UInt32(expirySecs))
+            let invoice = try bolt11.receiveVariableAmount(description: descriptionObj, expirySecs: expiry)
             resolve(["invoice": invoice.description])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1241,6 +1308,11 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
         let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
         let timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
 
@@ -1248,7 +1320,7 @@ class LdkNodeModule: RCTEventEmitter {
             do {
                 let bolt11 = node.bolt11Payment()
                 let bolt11Invoice = try Bolt11Invoice.fromStr(invoiceStr: invoice)
-                let paymentId = try bolt11.sendUsingAmount(invoice: bolt11Invoice, amountMsat: UInt64(amountMsat), routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
+                let paymentId = try bolt11.sendUsingAmount(invoice: bolt11Invoice, amountMsat: amount, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
                 resolve(["paymentId": paymentId])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -1286,13 +1358,18 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
         let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let bolt11 = node.bolt11Payment()
                 let bolt11Invoice = try Bolt11Invoice.fromStr(invoiceStr: invoice)
-                try bolt11.sendProbesUsingAmount(invoice: bolt11Invoice, amountMsat: UInt64(amountMsat), routeParameters: routeParams)
+                try bolt11.sendProbesUsingAmount(invoice: bolt11Invoice, amountMsat: amount, routeParameters: routeParams)
                 resolve(nil)
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -1309,12 +1386,17 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
         let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
         let timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let paymentId = try node.spontaneousPayment().send(amountMsat: UInt64(amountMsat), nodeId: nodeId, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
+                let paymentId = try node.spontaneousPayment().send(amountMsat: amount, nodeId: nodeId, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
                 resolve(["paymentId": paymentId])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -1331,9 +1413,22 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+        var expiry: UInt32? = nil
+        if expirySecs > 0 {
+            guard let secs = toUInt32(expirySecs) else {
+                reject("error", "Invalid expiry", nil)
+                return
+            }
+            expiry = secs
+        }
+
         do {
             let bolt12 = node.bolt12Payment()
-            let offer = try bolt12.receive(amountMsat: UInt64(amountMsat), description: description, expirySecs: expirySecs > 0 ? UInt32(expirySecs) : nil, quantity: nil)
+            let offer = try bolt12.receive(amountMsat: amount, description: description, expirySecs: expiry, quantity: nil)
             resolve(["offer": offer.description, "offerId": offer.id()])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1347,9 +1442,18 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        var expiry: UInt32? = nil
+        if expirySecs > 0 {
+            guard let secs = toUInt32(expirySecs) else {
+                reject("error", "Invalid expiry", nil)
+                return
+            }
+            expiry = secs
+        }
+
         do {
             let bolt12 = node.bolt12Payment()
-            let offer = try bolt12.receiveVariableAmount(description: description, expirySecs: expirySecs > 0 ? UInt32(expirySecs) : nil)
+            let offer = try bolt12.receiveVariableAmount(description: description, expirySecs: expiry)
             resolve(["offer": offer.description, "offerId": offer.id()])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1385,6 +1489,11 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
         let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
         let timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
 
@@ -1392,7 +1501,7 @@ class LdkNodeModule: RCTEventEmitter {
             do {
                 let bolt12 = node.bolt12Payment()
                 let offer = try Offer.fromStr(offerStr: offerStr)
-                let paymentId = try bolt12.sendUsingAmount(offer: offer, amountMsat: UInt64(amountMsat), quantity: nil, payerNote: payerNote, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
+                let paymentId = try bolt12.sendUsingAmount(offer: offer, amountMsat: amount, quantity: nil, payerNote: payerNote, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
                 resolve(["paymentId": paymentId])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -1407,12 +1516,17 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat), let expiry = toUInt32(expirySecs) else {
+            reject("error", "Invalid amount or expiry", nil)
+            return
+        }
+
         let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
         let timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
 
         do {
             let bolt12 = node.bolt12Payment()
-            let refund = try bolt12.initiateRefund(amountMsat: UInt64(amountMsat), expirySecs: UInt32(expirySecs), quantity: nil, payerNote: nil, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
+            let refund = try bolt12.initiateRefund(amountMsat: amount, expirySecs: expiry, quantity: nil, payerNote: nil, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
             resolve(["refund": refund.description])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1430,7 +1544,12 @@ class LdkNodeModule: RCTEventEmitter {
             let bolt12 = node.bolt12Payment()
             let refund = try Refund.fromStr(refundStr: refundStr)
             let invoice = try bolt12.requestRefundPayment(refund: refund)
-            resolve(["invoice": String(describing: invoice)])
+            // ldk-node stores the refund payment under the invoice's payment
+            // hash, so JS can wait for this payment by that id.
+            resolve([
+                "invoice": String(describing: invoice),
+                "paymentHash": invoice.paymentHash()
+            ])
         } catch {
             reject("error", self.errorMessage(error), error)
         }
@@ -1591,13 +1710,20 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let lspBalance = toUInt64(lspBalanceSat),
+              let clientBalance = toUInt64(clientBalanceSat),
+              let expiryBlocks = toUInt32(channelExpiryBlocks) else {
+            reject("error", "Invalid balance or expiry", nil)
+            return
+        }
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let lsps1 = node.lsps1Liquidity()
                 let orderStatus = try lsps1.requestChannel(
-                    lspBalanceSat: UInt64(lspBalanceSat),
-                    clientBalanceSat: UInt64(clientBalanceSat),
-                    channelExpiryBlocks: UInt32(channelExpiryBlocks),
+                    lspBalanceSat: lspBalance,
+                    clientBalanceSat: clientBalance,
+                    channelExpiryBlocks: expiryBlocks,
                     announceChannel: announceChannel
                 )
                 resolve(self.serializeLsps1OrderStatus(orderStatus))
@@ -1654,12 +1780,17 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let expiryBlocks = toUInt32(channelExtensionExpiryBlocks) else {
+            reject("error", "Invalid expiry", nil)
+            return
+        }
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let lsps7 = node.lsps7Liquidity()
                 let response = try lsps7.createOrder(
                     shortChannelId: shortChannelId,
-                    channelExtensionExpiryBlocks: UInt32(channelExtensionExpiryBlocks),
+                    channelExtensionExpiryBlocks: expiryBlocks,
                     token: token,
                     refundOnchainAddress: refundOnchainAddress
                 )

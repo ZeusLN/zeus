@@ -4,10 +4,12 @@ import BigNumber from 'bignumber.js';
 
 import SettingsStore from './SettingsStore';
 import NodeInfoStore from './NodeInfoStore';
+import { alertStore } from './Stores';
 
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { sanitizeRecommendedFees } from '../utils/FeeUtils';
 import UrlUtils from '../utils/UrlUtils';
 import ForwardEvent from '../models/ForwardEvent';
 
@@ -38,7 +40,7 @@ export default class FeeStore {
     @observable public bumpFeeError = false;
     @observable public bumpFeeErrorMsg = '';
 
-    getOnchainFeesToken: any;
+    getOnchainFeesToken: number = 0;
 
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
@@ -53,21 +55,53 @@ export default class FeeStore {
         this.loading = true;
         this.error = false;
         this.recommendedFees = {};
-        return ReactNativeBlobUtil.fetch(
-            'get',
-            `${UrlUtils.getMempoolApiUrl(
-                this.nodeInfoStore.nodeInfo
-            )}/v1/fees/recommended`
-        )
+        const url = `${UrlUtils.getMempoolApiUrl(
+            this.nodeInfoStore.nodeInfo
+        )}/v1/fees/recommended`;
+
+        const token = ++this.getOnchainFeesToken;
+
+        return ReactNativeBlobUtil.fetch('get', url)
             .then((response: any) => {
                 const status = response.info().status;
+
+                // A newer call owns the store and the alert. Callers read
+                // the resolved value, so still return this call's own rates.
+                if (token !== this.getOnchainFeesToken) {
+                    return status == 200
+                        ? sanitizeRecommendedFees(response.json()) ?? undefined
+                        : undefined;
+                }
+
                 if (status == 200) {
+                    // These rates become defaults the user does not have
+                    // to look at (Sweep sends at one without a confirm
+                    // screen), so an implausible response is rejected
+                    // rather than trusted. When the fetch fails,
+                    // consumers show an error and ask for a rate.
+                    const sanitized = sanitizeRecommendedFees(response.json());
+                    if (!sanitized) {
+                        console.error(
+                            'Rejected implausible recommended fees response'
+                        );
+                        // Server is reachable, payload is not: clear the alert
+                        alertStore.clearMempoolError();
+                        runInAction(() => {
+                            this.recommendedFees = {};
+                            this.loading = false;
+                            this.error = true;
+                        });
+                        return;
+                    }
+                    alertStore.clearMempoolError();
                     runInAction(() => {
                         this.loading = false;
-                        this.recommendedFees = response.json();
+                        this.recommendedFees = sanitized;
                     });
                     return this.recommendedFees;
                 } else {
+                    // Read endpoint: any non-2xx (incl. 404 for wrong custom URL)
+                    alertStore.setMempoolErrorFromUrl(url, `HTTP ${status}`);
                     runInAction(() => {
                         this.recommendedFees = {};
                         this.loading = false;
@@ -76,7 +110,15 @@ export default class FeeStore {
                 }
             })
             .catch((error: any) => {
+                // Ignore stale failure — a newer call has superseded this one.
+                if (token !== this.getOnchainFeesToken) return;
+
                 console.error('Error fetching fees:', error);
+                const msg =
+                    error instanceof SyntaxError
+                        ? 'Invalid response'
+                        : errorToUserFriendly(error);
+                alertStore.setMempoolErrorFromUrl(url, msg);
                 runInAction(() => {
                     this.recommendedFees = {};
                     this.loading = false;
@@ -221,13 +263,22 @@ export default class FeeStore {
         this.forwardingEvents = [];
         this.forwardingHistoryError = false;
         this.earnedDuringTimeframe = new BigNumber(0);
-        const response = BackendUtils.getForwardingHistory(
-            params,
-            chanIdIn,
-            chanIdOut
-        );
+        this.fetchForwardingHistory(params, chanIdIn, chanIdOut, true);
+    };
 
-        response
+    // serverFilter false: the node rejected the channel filter, so fetch
+    // everything and keep only events for the requested channels
+    private fetchForwardingHistory = (
+        params: number | undefined,
+        chanIdIn: string | undefined,
+        chanIdOut: string | undefined,
+        serverFilter: boolean
+    ) => {
+        BackendUtils.getForwardingHistory(
+            params,
+            serverFilter ? chanIdIn : undefined,
+            serverFilter ? chanIdOut : undefined
+        )
             .then((data: any) => {
                 try {
                     runInAction(() => {
@@ -243,15 +294,27 @@ export default class FeeStore {
                             );
                         }
 
-                        this.forwardingEvents = rawEvents
-                            .map((event: any) => new ForwardEvent(event))
-                            .reverse();
+                        let events: ForwardEvent[] = rawEvents.map(
+                            (event: any) => new ForwardEvent(event)
+                        );
+
+                        if (!serverFilter) {
+                            events = events.filter(
+                                (event) =>
+                                    (!chanIdIn ||
+                                        String(event.inChannelId) ===
+                                            chanIdIn) &&
+                                    (!chanIdOut ||
+                                        String(event.outChannelId) ===
+                                            chanIdOut)
+                            );
+                        }
+
+                        this.forwardingEvents = events.reverse();
 
                         this.forwardingEvents.forEach((event: ForwardEvent) => {
                             this.earnedDuringTimeframe =
-                                this.earnedDuringTimeframe.plus(
-                                    Number(event.fee_msat) / 1000
-                                );
+                                this.earnedDuringTimeframe.plus(event.feeSat);
                         });
 
                         this.lastOffsetIndex = data.last_offset_index;
@@ -286,14 +349,20 @@ export default class FeeStore {
                     (errorMessage.includes('incoming_chan_ids') ||
                         errorMessage.includes('outgoing_chan_ids'));
 
-                if (isUnsupportedFieldError && (chanIdIn || chanIdOut)) {
+                if (
+                    isUnsupportedFieldError &&
+                    serverFilter &&
+                    (chanIdIn || chanIdOut)
+                ) {
                     console.warn(
                         'Server does not support channel ID filtering, retrying without filter'
                     );
-                    runInAction(() => {
-                        this.forwardingHistoryError = false;
-                    });
-                    return this.getForwardingHistory(params);
+                    return this.fetchForwardingHistory(
+                        params,
+                        chanIdIn,
+                        chanIdOut,
+                        false
+                    );
                 }
 
                 console.error('Fetching forwarding history failed:', e);

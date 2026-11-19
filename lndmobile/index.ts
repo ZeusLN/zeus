@@ -1,10 +1,21 @@
-import { NativeModules } from 'react-native';
+import { EmitterSubscription, NativeModules } from 'react-native';
 import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
+import {
+    isEventForRequest,
+    newStreamRequestId
+} from '../utils/StreamRequestUtils';
 import { lnrpc, routerrpc, invoicesrpc } from './../proto/lightning';
 import Long from 'long';
 
 import Base64Utils from '../utils/Base64Utils';
+import { matchesExpectedPayment } from '../utils/EmbeddedLndPayUtils';
+import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { LndInvoiceListParams, LndPaymentListParams } from '../utils/LndUtils';
+import TrackPaymentStreams, {
+    TRACK_PAYMENT_STREAM_MAX_AGE_MS,
+    isTerminalPaymentStatus
+} from '../utils/TrackPaymentStreams';
 import {
     checkLndStreamErrorResponse,
     LndMobileEventEmitter
@@ -73,7 +84,9 @@ export const decodeState = (data: string): lnrpc.SubscribeStateResponse => {
  * @throws
  */
 export const stopLnd = async (): Promise<{ data: string }> => {
-    return await LndMobile.stopLnd();
+    const result = await LndMobile.stopLnd();
+    clearTrackPaymentStreams();
+    return result;
 };
 
 /**
@@ -294,6 +307,105 @@ export const getInfo = async (): Promise<lnrpc.GetInfoResponse> => {
     return response;
 };
 
+const forcedTimeout = async (time_ms: number, response: any) => {
+    await new Promise((res) => setTimeout(res, time_ms));
+    return response;
+};
+
+// Sends one RouterSendPaymentV2 request and waits for its terminal event,
+// or for timeout_seconds + 1 with an outcome-unknown result. Every in-flight
+// call shares the stream's events, so each listener skips events tagged with
+// another call's request id, and payment updates for other payment hashes.
+const sendPaymentV2Stream = async (
+    options: routerrpc.ISendPaymentRequest,
+    expectedPaymentHash: string | undefined,
+    timeout_seconds: number
+): Promise<lnrpc.Payment> => {
+    let listener: EmitterSubscription | undefined;
+    const requestId = newStreamRequestId();
+    const call = () =>
+        new Promise<lnrpc.Payment>((resolve, reject) => {
+            listener = LndMobileEventEmitter.addListener(
+                'RouterSendPaymentV2',
+                (e) => {
+                    // other payments' errors and EOFs arrive on the same event
+                    if (!isEventForRequest(e, requestId)) return;
+                    try {
+                        const error = checkLndStreamErrorResponse(
+                            'RouterSendPaymentV2',
+                            e
+                        );
+
+                        if (error === 'EOF') {
+                            return;
+                        } else if (error) {
+                            console.log('Got error from RouterSendPaymentV2', [
+                                error
+                            ]);
+                            listener?.remove();
+                            return reject(error);
+                        }
+
+                        const response = decodeSendPaymentV2Result(e.data);
+                        // a concurrent payment's event: leave it for that
+                        // payment's listener
+                        if (
+                            !matchesExpectedPayment(
+                                expectedPaymentHash,
+                                response
+                            )
+                        ) {
+                            return;
+                        }
+                        listener?.remove();
+                        resolve(response);
+                    } catch (error: any) {
+                        listener?.remove();
+                        reject(error.message || error.toString());
+                    }
+                }
+            );
+
+            sendStreamCommand<
+                routerrpc.ISendPaymentRequest,
+                routerrpc.SendPaymentRequest
+            >(
+                {
+                    request: routerrpc.SendPaymentRequest,
+                    method: 'RouterSendPaymentV2',
+                    options,
+                    requestId
+                },
+                false
+            ).catch((error) => {
+                listener?.remove();
+                reject(error);
+            });
+        });
+
+    try {
+        const result: any = await Promise.race([
+            forcedTimeout((timeout_seconds + 1) * 1000, {
+                payment_error: localeString(
+                    'views.SendingLightning.paymentTimedOut'
+                ),
+                // outcome unknown on the node: lets the caller track the
+                // payment to a terminal state instead of reporting failure
+                payment_timed_out: true,
+                // in-process call: the request reached lnd at dispatch
+                dispatch_deadline_ms: Date.now()
+            }),
+            call()
+        ]);
+
+        return result;
+    } finally {
+        // if the timeout won the race, stop listening so a late event
+        // cannot be mistaken for a different payment's outcome
+        if (listener) listener.remove();
+    }
+};
+
 export const sendPaymentV2Sync = async (
     sendPaymentReq: any
 ): Promise<lnrpc.Payment> => {
@@ -333,65 +445,11 @@ export const sendPaymentV2Sync = async (
         dest
     };
 
-    const forcedTimeout = async (time_ms: number, response: any) => {
-        await new Promise((res) => setTimeout(res, time_ms));
-        return response;
-    };
-
-    const call = () =>
-        new Promise(async (resolve, reject) => {
-            const listener = LndMobileEventEmitter.addListener(
-                'RouterSendPaymentV2',
-                (e) => {
-                    try {
-                        listener.remove();
-                        const error = checkLndStreamErrorResponse(
-                            'RouterSendPaymentV2',
-                            e
-                        );
-
-                        if (error === 'EOF') {
-                            return;
-                        } else if (error) {
-                            console.log('Got error from RouterSendPaymentV2', [
-                                error
-                            ]);
-                            return reject(error);
-                        }
-
-                        const response = decodeSendPaymentV2Result(e.data);
-                        resolve(response);
-                    } catch (error: any) {
-                        reject(error.message || error.toString());
-                    }
-                }
-            );
-
-            const response = await sendStreamCommand<
-                routerrpc.ISendPaymentRequest,
-                routerrpc.SendPaymentRequest
-            >(
-                {
-                    request: routerrpc.SendPaymentRequest,
-                    method: 'RouterSendPaymentV2',
-                    options
-                },
-                false
-            );
-
-            return response;
-        });
-
-    const result: any = await Promise.race([
-        forcedTimeout((timeout_seconds + 1) * 1000, {
-            payment_error: localeString(
-                'views.SendingLightning.paymentTimedOut'
-            )
-        }),
-        call()
-    ]);
-
-    return result;
+    return await sendPaymentV2Stream(
+        options,
+        deriveExpectedPaymentHash({ payment_hash, payment_request, amp }),
+        timeout_seconds
+    );
 };
 
 // TODO error handling
@@ -402,7 +460,93 @@ export const decodeSendPaymentV2Result = (data: string): lnrpc.Payment => {
     });
 };
 
-export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
+// how long trackPaymentV2 waits for the stream's first update before
+// concluding the transport is wedged; an existing payment answers
+// immediately (no_inflight_updates is false) and an unknown hash errors
+// immediately, so this only fires when lnd isn't answering at all
+const TRACK_PAYMENT_TIMEOUT_MS = 10000;
+
+let trackPaymentListener: EmitterSubscription | undefined;
+const trackPaymentStreams = new TrackPaymentStreams<lnrpc.Payment>({
+    maxAgeMs: TRACK_PAYMENT_STREAM_MAX_AGE_MS,
+    onIdle: () => {
+        trackPaymentListener?.remove();
+        trackPaymentListener = undefined;
+    }
+});
+
+const onTrackPaymentEvent = (e: any) => {
+    try {
+        const error = checkLndStreamErrorResponse('RouterTrackPaymentV2', e);
+        if (error) {
+            return trackPaymentStreams.fail(
+                error === 'EOF' ? new Error('EOF') : error,
+                e?.request_id
+            );
+        }
+        // a transient (null) error report carries no payload
+        if (!e?.data) return;
+
+        const response = decodeSendPaymentV2Result(e.data);
+        if (!response.payment_hash) return;
+        trackPaymentStreams.update(
+            response.payment_hash,
+            response,
+            isTerminalPaymentStatus(response.status),
+            e?.request_id
+        );
+    } catch (error: any) {
+        trackPaymentStreams.fail(
+            new Error(error?.message || String(error)),
+            e?.request_id
+        );
+    }
+};
+
+// forgets every open track stream, e.g. once lnd has stopped and they
+// have all ended
+export const clearTrackPaymentStreams = () => trackPaymentStreams.clear();
+
+/**
+ * Resolves with the tracked payment's current state: the latest
+ * TrackPaymentV2 update for its hash. One stream per hash is shared by
+ * all lookups (see TrackPaymentStreams), since a stream can't be
+ * cancelled from JS and stays open until the payment is terminal. A
+ * rejection is this hash's stream's own error; the caller decides what a
+ * NOT_FOUND ("payment isn't initiated") means.
+ * @throws
+ */
+export const trackPaymentV2 = (
+    payment_hash: string,
+    timeoutMs: number = TRACK_PAYMENT_TIMEOUT_MS
+): Promise<lnrpc.Payment> =>
+    trackPaymentStreams.lookup(payment_hash, timeoutMs, (requestId) => {
+        if (!trackPaymentListener) {
+            trackPaymentListener = LndMobileEventEmitter.addListener(
+                'RouterTrackPaymentV2',
+                onTrackPaymentEvent
+            );
+        }
+        return sendStreamCommand<
+            routerrpc.ITrackPaymentRequest,
+            routerrpc.TrackPaymentRequest
+        >(
+            {
+                request: routerrpc.TrackPaymentRequest,
+                method: 'RouterTrackPaymentV2',
+                options: {
+                    payment_hash: Base64Utils.hexToBytes(payment_hash),
+                    no_inflight_updates: false
+                },
+                requestId
+            },
+            false
+        );
+    });
+
+export const sendKeysendPaymentV2 = async (
+    request: any
+): Promise<lnrpc.Payment> => {
     const {
         dest,
         amt,
@@ -415,6 +559,9 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         amp
     } = request;
 
+    // the store sends the configured payment timeout; 60 matches its default
+    const timeout_seconds = Number(request.timeout_seconds) || 60;
+
     const options: routerrpc.ISendPaymentRequest = {
         dest: Base64Utils.hexToBytes(dest),
         amt,
@@ -422,7 +569,7 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         payment_hash,
         dest_features: [lnrpc.FeatureBit.TLV_ONION_REQ],
         no_inflight_updates: true,
-        timeout_seconds: 60,
+        timeout_seconds,
         max_parts: max_parts || 1,
         fee_limit_sat,
         max_shard_size_msat,
@@ -430,39 +577,11 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         amp
     };
 
-    return new Promise(async (resolve, reject) => {
-        const listener = LndMobileEventEmitter.addListener(
-            'RouterSendPaymentV2',
-            (e) => {
-                const error = checkLndStreamErrorResponse(
-                    'RouterSendPaymentV2',
-                    e
-                );
-                if (error === 'EOF') {
-                    return;
-                } else if (error) {
-                    console.log('Got error from RouterSendPaymentV2', [error]);
-                    return reject(error);
-                }
-
-                const response = decodeSendPaymentV2Result(e.data);
-                resolve(response);
-                listener.remove();
-            }
-        );
-
-        await sendStreamCommand<
-            routerrpc.ISendPaymentRequest,
-            routerrpc.SendPaymentRequest
-        >(
-            {
-                request: routerrpc.SendPaymentRequest,
-                method: 'RouterSendPaymentV2',
-                options
-            },
-            false
-        );
-    });
+    return await sendPaymentV2Stream(
+        options,
+        deriveExpectedPaymentHash({ payment_hash, amp }),
+        timeout_seconds
+    );
 };
 
 /**
@@ -625,10 +744,9 @@ export const listPeers = async (): Promise<lnrpc.ListPeersResponse> => {
 /**
  * @throws
  */
-export const listPayments = async (params?: {
-    maxPayments?: number;
-    reversed?: boolean;
-}): Promise<lnrpc.ListPaymentsResponse> => {
+export const listPayments = async (
+    params?: LndPaymentListParams
+): Promise<lnrpc.ListPaymentsResponse> => {
     const response = await sendCommand<
         lnrpc.IListPaymentsRequest,
         lnrpc.ListPaymentsRequest,
@@ -640,7 +758,15 @@ export const listPayments = async (params?: {
         options: {
             include_incomplete: true,
             max_payments: Long.fromValue(params?.maxPayments ?? 1000),
-            ...(params?.reversed && { reversed: params.reversed })
+            // without reversed, lnd pages forward from the oldest payment
+            // and never returns those made after the first max_payments
+            reversed: params?.reversed ?? true,
+            ...(params?.creationDateStart !== undefined && {
+                creation_date_start: Long.fromValue(params.creationDateStart)
+            }),
+            ...(params?.creationDateEnd !== undefined && {
+                creation_date_end: Long.fromValue(params.creationDateEnd)
+            })
         }
     });
     return response;
@@ -786,7 +912,9 @@ export const getNetworkInfo = async (): Promise<lnrpc.NetworkInfo> => {
 /**
  * @throws
  */
-export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
+export const listInvoices = async (
+    params?: LndInvoiceListParams
+): Promise<lnrpc.ListInvoiceResponse> => {
     const response = await sendCommand<
         lnrpc.IListInvoiceRequest,
         lnrpc.ListInvoiceRequest,
@@ -796,8 +924,14 @@ export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
         response: lnrpc.ListInvoiceResponse,
         method: 'ListInvoices',
         options: {
-            reversed: true,
-            num_max_invoices: Long.fromValue(1000)
+            reversed: params?.reversed ?? true,
+            num_max_invoices: Long.fromValue(params?.limit ?? 1000),
+            ...(params?.creationDateStart !== undefined && {
+                creation_date_start: Long.fromValue(params.creationDateStart)
+            }),
+            ...(params?.creationDateEnd !== undefined && {
+                creation_date_end: Long.fromValue(params.creationDateEnd)
+            })
         }
     });
     return response;

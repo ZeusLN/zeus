@@ -1,7 +1,5 @@
 import { Alert, Platform } from 'react-native';
-import { getParams as getlnurlParams } from 'js-lnurl';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
 
@@ -11,6 +9,12 @@ import Bolt11Utils from './Bolt11Utils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
+import {
+    getLnurlpUrl,
+    isLightningAddressEndpointAllowed
+} from './LnurlPayUtils';
+import { fetchLnurlUrl, isUnsafeLnurlError } from './LnurlFetchUtils';
+import { getLnurlParams as getlnurlParams } from './LnurlResolveUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
@@ -23,6 +27,13 @@ import Invoice from '../models/Invoice';
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 import { SimplePool } from 'nostr-tools';
 import wifUtils from './WIFUtils';
+import { walletrpc } from '../proto/lightning';
+
+const SUPPORTED_IMPORT_ADDRESS_TYPES: number[] = [
+    walletrpc.AddressType.WITNESS_PUBKEY_HASH,
+    walletrpc.AddressType.NESTED_WITNESS_PUBKEY_HASH,
+    walletrpc.AddressType.TAPROOT_PUBKEY
+];
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
@@ -190,7 +201,10 @@ const confirmBtcPayFetch = (
 
 const attemptNip05Lookup = async (identifier: string) => {
     try {
-        const lookup: any = await NostrUtils.queryNip05Profile(identifier);
+        const lookup: any = await NostrUtils.queryNip05Profile(
+            identifier,
+            settingsStore.enableTor
+        );
         const pubkey = lookup.pubkey;
         return await nostrProfileLookup(pubkey);
     } catch (e) {
@@ -260,8 +274,10 @@ const merchantConfigs = [
         }
     },
     {
+        // The zap.pe tail is a single character class: a nested quantifier
+        // such as `(.*\n?)*` backtracks exponentially on a `\r` in the tail.
         identifierRegex:
-            /(?<identifier>^((.*zapper\.com.*)|(.*\.wigroup\..*)|(.{2}\/.{4}\/.{20})|(.*payat\.io.*)|(.*(paynow\.netcash|paynow\.sagepay)\.co\.za.*)|(SK-\d{1,}-\d{23})|(\d{20})|(.*\d+\.zap\.pe(.*\n?)*)|(.*transactionjunction\.co\.za.*)|(CRSTPC-\d+-\d+-\d+-\d+-\d+))$)/iu,
+            /(?<identifier>^((.*zapper\.com.*)|(.*\.wigroup\..*)|(.{2}\/.{4}\/.{20})|(.*payat\.io.*)|(.*(paynow\.netcash|paynow\.sagepay)\.co\.za.*)|(SK-\d{1,}-\d{23})|(\d{20})|(.*\d+\.zap\.pe[^\r\u2028\u2029]*)|(.*transactionjunction\.co\.za.*)|(CRSTPC-\d+-\d+-\d+-\d+-\d+))$)/iu,
         domains: {
             mainnet: 'cryptoqr.net',
             signet: 'staging.cryptoqr.net',
@@ -301,8 +317,10 @@ const merchantConfigs = [
         }
     },
     {
+        // A bare Scan to Pay code is exactly ten digits. Ten digits inside
+        // other text (e.g. a SeedQR) must not be sent to the gateway.
         identifierRegex:
-            /(?<identifier>.*(?:scantopay\.io|\d{10}|payat\.io|UMPQR|\.oltio\.co\.za|easypay).*)/iu,
+            /(?<identifier>^\d{10}$|.*(?:scantopay\.io|za\.co\.mp|payat\.io|UMPQR|\.oltio\.co\.za|easypay).*)/iu,
         domains: {
             mainnet: 'cryptoqr.net',
             signet: 'staging.cryptoqr.net',
@@ -493,6 +511,12 @@ const handleAnything = async (
     } else if (!hasAt && AddressUtils.isValidNoffer(value)) {
         if (isClipboardValue) return true;
         return ['ClinkPay', { noffer: value }];
+    } else if (!hasAt && AddressUtils.isPsbt(value)) {
+        // A PSBT's base64 text can contain any substring (its output scripts
+        // and previous transactions come from other parties), so check it
+        // before the branches that search the text (clnrest+, lndconnect,
+        // findlnurl).
+        return ['PSBT', { psbt: value }];
     } else if (value.includes('clnrest://') || value.includes('clnrest+')) {
         if (isClipboardValue) return true;
         const { host, port, rune, implementation, enableTor } =
@@ -606,6 +630,13 @@ const handleAnything = async (
             throw new Error(localeString('utils.handleAnything.notValid'));
         }
     } else if (hasAt && NodeUriUtils.isValidNodeUri(value)) {
+        // A node URI is only actionable as a channel open
+        if (!BackendUtils.supportsChannelManagement()) {
+            if (isClipboardValue) return false;
+            throw new Error(
+                localeString('utils.handleAnything.channelsNotSupported')
+            );
+        }
         if (isClipboardValue) return true;
         const { pubkey, host } = NodeUriUtils.processNodeUri(value);
         return [
@@ -622,6 +653,13 @@ const handleAnything = async (
         // LUD-16: domain MUST be lowercased
         const normalizedDomain = domain.toLowerCase();
         const isOnion = normalizedDomain.endsWith('.onion');
+
+        const { url } = getLnurlpUrl(value);
+        // Refuse before the BOLT 12 lookup below, which would otherwise send
+        // the address, IP literal included, to the DoH resolver first
+        if (!isLightningAddressEndpointAllowed(url).ok) {
+            throw new Error(localeString('utils.lnurl.unsafeLightningAddress'));
+        }
 
         let bolt12: string | undefined;
         let b12Value: string | undefined,
@@ -709,14 +747,6 @@ const handleAnything = async (
         }
 
         // try BOLT 11 address
-        // Skip lowercasing for cryptoqr.net addresses as they contain URL-encoded
-        // data where hex digit casing matters for server-side lookup
-        const isCryptoQR = normalizedDomain.endsWith('cryptoqr.net');
-        const normalizedUsername = isCryptoQR
-            ? username
-            : username.toLowerCase();
-        const scheme = isOnion ? 'http' : 'https';
-        const url = `${scheme}://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
@@ -741,7 +771,7 @@ const handleAnything = async (
                 }
             );
         } else {
-            return ReactNativeBlobUtil.fetch('get', url)
+            return fetchLnurlUrl(url)
                 .then((response: any) => {
                     const status = response.info().status;
                     if (status == 200) {
@@ -777,8 +807,16 @@ const handleAnything = async (
                         throw new Error(error);
                     }
                 })
-                .catch(async () => {
+                .catch(async (e: any) => {
                     const hasMultipleB12 = b12Value || b12Lightning;
+
+                    // A redirect refused by the lnurl host policy is reported
+                    // here instead of falling through to the NIP-05 lookup on
+                    // the same host. Other failures (non-200, too many
+                    // redirects) still fall through, and that lookup follows
+                    // redirects without checking them (#5570). A BIP 353
+                    // offer came from DNS and is still usable.
+                    if (isUnsafeLnurlError(e) && !b12Offer) throw e;
 
                     if (b12Offer) {
                         if (hasMultipleB12) {
@@ -965,12 +1003,30 @@ const handleAnything = async (
                             }
                         ];
                     case 'channelRequest':
-                        return [
-                            'LnurlChannel',
-                            {
-                                lnurlParams: params
-                            }
-                        ];
+                        // The server opens the channel, so this only needs
+                        // connectPeer and our own pubkey
+                        if (BackendUtils.supportsPeers()) {
+                            return [
+                                'LnurlChannel',
+                                {
+                                    lnurlParams: params
+                                }
+                            ];
+                        }
+                        Alert.alert(
+                            localeString('general.error'),
+                            localeString(
+                                'utils.handleAnything.channelsNotSupported'
+                            ),
+                            [
+                                {
+                                    text: localeString('general.ok'),
+                                    onPress: () => void 0
+                                }
+                            ],
+                            { cancelable: false }
+                        );
+                        break;
                     case 'login':
                         if (BackendUtils.supportsLnurlAuth()) {
                             return [
@@ -1013,7 +1069,9 @@ const handleAnything = async (
                         );
                 }
             })
-            .catch(() => {
+            .catch((e) => {
+                // a host policy refusal keeps its own message
+                if (isUnsafeLnurlError(e)) throw e;
                 throw new Error(
                     localeString('utils.handleAnything.invalidLnurlParams')
                 );
@@ -1036,9 +1094,14 @@ const handleAnything = async (
         }
     } else if (data.startsWith('zeuscontact:')) {
         const zeusContactData = data.replace('zeuscontact:', '');
-        const contact = JSON.parse(zeusContactData);
+        const card = JSON.parse(zeusContactData);
 
-        if (contact?.contactId) {
+        if (card?.contactId) {
+            // Cards made before v0.11.0 could carry remote photo/banner
+            // URLs, which ContactDetails would load as soon as it opens
+            // and again on every display after saving.
+            const contact = ContactUtils.toCardContact(card);
+
             return [
                 'ContactDetails',
                 {
@@ -1047,8 +1110,6 @@ const handleAnything = async (
                 }
             ];
         }
-    } else if (AddressUtils.isPsbt(value)) {
-        return ['PSBT', { psbt: value }];
     } else if (AddressUtils.isValidTxHex(value)) {
         return ['TxHex', { txHex: value }];
     } else if (
@@ -1069,12 +1130,17 @@ const handleAnything = async (
         BackendUtils.supportsAccounts() &&
         AddressUtils.isJsonWalletExport(value)
     ) {
-        const { MasterFingerprint, ExtPubKey } = JSON.parse(value);
+        const { MasterFingerprint, ExtPubKey, AddressType } = JSON.parse(value);
         return [
             'ImportAccount',
             {
                 extended_public_key: ExtPubKey,
-                master_key_fingerprint: MasterFingerprint
+                master_key_fingerprint: MasterFingerprint,
+                // set by the BC-UR crypto-account scanner from the
+                // descriptor's script type
+                ...(SUPPORTED_IMPORT_ADDRESS_TYPES.includes(AddressType) && {
+                    address_type: AddressType
+                })
             }
         ];
     } else if (
@@ -1170,22 +1236,21 @@ const handleAnything = async (
         if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));
     } else {
-        try {
-            const { isValid, error } = wifUtils.validateWIF(value);
-            if (isValid) {
-                return [
-                    'WIFSweeper',
-                    {
-                        wif: value
-                    }
-                ];
-            } else {
-                throw new Error(error || localeString('views.Wif.invalidWif'));
-            }
-        } catch (err) {
-            if (isClipboardValue) return false;
-            throw new Error(localeString('utils.handleAnything.notValid'));
+        const { isValid, error } = wifUtils.validateWIF(value);
+        if (isValid) {
+            return [
+                'WIFSweeper',
+                {
+                    wif: value
+                }
+            ];
         }
+        if (isClipboardValue) return false;
+        // A decodable key for another network: say so instead of "not valid"
+        if (error === localeString('views.Wif.wrongNetwork')) {
+            throw new Error(error);
+        }
+        throw new Error(localeString('utils.handleAnything.notValid'));
     }
 };
 

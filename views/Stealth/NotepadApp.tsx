@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useStealthTapDetector } from './StealthTapDetector';
+import { DECOY_APP_NAMES } from '../../utils/StealthModeUtils';
 
 interface NotepadAppProps {
     onUnlock: () => void;
@@ -174,7 +175,9 @@ const NotepadApp: React.FC<NotepadAppProps> = ({
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleSecretTap} activeOpacity={1}>
-                    <Text style={styles.headerTitle}>Notepad</Text>
+                    <Text style={styles.headerTitle}>
+                        {DECOY_APP_NAMES.notepad}
+                    </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.addButton}

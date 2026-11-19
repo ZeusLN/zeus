@@ -391,12 +391,23 @@ export function millisatsToSats(millisats: number): number {
 }
 
 /**
+ * Whether an amount is a whole number of satoshis. On-chain outputs cannot
+ * carry millisatoshis, but the sats keypad allows 3 decimals.
+ * @param sats - Amount in satoshis (string or number)
+ * @returns true for whole numbers, false for fractions and non-numbers
+ */
+export function isWholeSatAmount(sats: string | number): boolean {
+    return Number.isInteger(Number(sats));
+}
+
+/**
  * Converts a routing fee limit in satoshis into the `maxTotalRoutingFeeMsat`
  * value ldk-node expects.
  *
  * Returns undefined when no limit was supplied or the value is unusable, so
- * ldk-node applies its own default rather than being handed a nonsense cap.
- * Note that an explicitly supplied '0' is a real cap of zero, not "no limit".
+ * the caller can apply a default rather than send a nonsense cap.
+ * A limit of 0, as '0' or as the number 0, is a real cap of zero, not
+ * "no limit".
  *
  * @param feeLimitSat - Fee limit in satoshis, as collected by FeeLimit
  * @returns Fee limit in millisatoshis, or undefined if none applies
@@ -404,9 +415,50 @@ export function millisatsToSats(millisats: number): number {
 export function feeLimitSatsToMaxRoutingFeeMsat(
     feeLimitSat?: string | number | null
 ): number | undefined {
-    if (!feeLimitSat) return undefined;
+    if (feeLimitSat == null || feeLimitSat === '') return undefined;
     const msats = satsToMillisats(Number(feeLimitSat));
     return Number.isFinite(msats) && msats >= 0 ? msats : undefined;
+}
+
+/**
+ * Converts a percent routing fee limit into whole satoshis for an amount.
+ *
+ * Rounds up so that a nonzero percent of a nonzero amount never becomes a
+ * fee limit of 0 sats, which backends treat as a hard cap of zero.
+ *
+ * @param maxFeePercent - Fee limit as a percent of the amount; commas are
+ * accepted as the decimal separator
+ * @param satAmount - Payment amount in satoshis
+ * @returns Fee limit in whole satoshis, or '' when the amount is missing or
+ * not above 0, or the percent is missing, not a number or negative
+ */
+export function getFeeLimitSatsFromPercent(
+    maxFeePercent: string,
+    satAmount?: string | number
+): string {
+    const percent = new BigNumber(maxFeePercent.replace(/,/g, '.'));
+    const amount = new BigNumber(satAmount ?? NaN);
+    if (!percent.isFinite() || percent.lt(0)) return '';
+    if (!amount.isFinite() || !amount.gt(0)) return '';
+    return percent
+        .div(100)
+        .times(amount)
+        .integerValue(BigNumber.ROUND_CEIL)
+        .toFixed();
+}
+
+/**
+ * LDK's default routing fee cap for a payment: 1% of the amount plus 50 sats.
+ *
+ * ldk-node applies this itself when a BOLT 11 or BOLT 12 payment is sent
+ * without `maxTotalRoutingFeeMsat`, but routes a keysend sent without one
+ * with no fee cap, so keysends pass it explicitly.
+ *
+ * @param amountMsat - Payment amount in millisatoshis
+ * @returns Fee cap in millisatoshis
+ */
+export function defaultMaxRoutingFeeMsat(amountMsat: number): number {
+    return Math.floor(amountMsat / 100) + 50_000;
 }
 
 /**

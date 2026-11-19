@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# app: manage the Zeus debug app on the rig emulator.
+#
+# usage: bin/app install [APK]      adb install -r -g (default: $APK)
+#        bin/app prefs              write debug_http_host=localhost:8081 into
+#                                   shared_prefs/app.zeusln.zeus_preferences.xml
+#        bin/app reverse            adb reverse tcp:8081 -> METRO_PORT and every
+#                                   service port (localhost:<port> = host port)
+#        bin/app setup [APK]        install + prefs + reverse
+#        bin/app launch|terminate
+#        bin/app restart [--node]   terminate + launch, wait until settings are
+#                                   loaded; with --node wait until the selected
+#                                   node is connected
+#        bin/app wait [--node] [SECONDS]
+#        bin/app clear              pm clear (wipes app data) + prefs
+#        bin/app logcat [N]         last N lines of ReactNativeJS/zeus logcat
+#        bin/app uninstall
+#
+# The debug build's default host is 10.0.2.2:8081, which is whatever Metro
+# owns the host's 8081 (often another session). prefs + reverse pin it to
+# this rig's Metro.
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+prefs() {
+    local tmp="$STATE/run/prefs.xml"
+    cat >"$tmp" <<'EOF'
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <string name="debug_http_host">localhost:8081</string>
+</map>
+EOF
+    adb_ push "$tmp" /data/local/tmp/zrig_prefs.xml >/dev/null
+    adb_ shell chmod 644 /data/local/tmp/zrig_prefs.xml
+    adb_ shell "run-as $APP_ID sh -c 'mkdir -p shared_prefs && cp /data/local/tmp/zrig_prefs.xml shared_prefs/${APP_ID}_preferences.xml'"
+    adb_ shell rm -f /data/local/tmp/zrig_prefs.xml
+    log "debug_http_host=localhost:8081 written"
+}
+
+reverse() {
+    adb_ reverse tcp:8081 "tcp:$METRO_PORT" >/dev/null
+    for p in $APP_PORTS; do adb_ reverse "tcp:$p" "tcp:$p" >/dev/null; done
+    log "adb reverse: 8081->$METRO_PORT, $APP_PORTS"
+}
+
+wait_ready() {
+    local node=0 t=180
+    for a in "$@"; do
+        case "$a" in --node) node=1 ;; *) t="$a" ;; esac
+    done
+    # cdp.js installs Z before every evaluation, so `typeof Z` is 'object' as
+    # soon as JS runs; wait for the stored settings to be loaded instead
+    local expr='String(!!Z.S().settingsStore.settingsLoaded)'
+    [ "$node" = 1 ] && expr='String(!!(Z.S().nodeInfoStore.nodeInfo && (Z.S().nodeInfoStore.nodeInfo.nodeId || Z.S().nodeInfoStore.nodeInfo.identity_pubkey)))'
+    local want=true
+    local i=0
+    while [ "$i" -lt "$t" ]; do
+        r=$(CDP_TIMEOUT=8000 node "$RIG_DIR/lib/cdp.js" "$expr" 2>/dev/null || true)
+        if [ "$r" = "$want" ]; then log "app ready (wait-for-node=$node)"; return 0; fi
+        sleep 3; i=$((i + 3))
+    done
+    die "app not ready after ${t}s (last: ${r:-no answer})"
+}
+
+launch() { adb_ shell am start -n "$APP_ID/.MainActivity" >/dev/null; }
+terminate() { adb_ shell am force-stop "$APP_ID"; }
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+    install)
+        apk="${1:-$APK}"; [ -f "$apk" ] || die "APK not found: '$apk'"
+        adb_ install -r -g "$apk" | tail -1 ;;
+    prefs) prefs ;;
+    reverse) reverse ;;
+    setup)
+        apk="${1:-$APK}"; [ -f "$apk" ] || die "APK not found: '$apk'"
+        adb_ install -r -g "$apk" | tail -1
+        prefs; reverse ;;
+    launch) launch ;;
+    terminate) terminate ;;
+    restart) terminate; sleep 1; reverse; launch; wait_ready "$@" ;;
+    wait) wait_ready "$@" ;;
+    clear) adb_ shell pm clear "$APP_ID"; prefs ;;
+    logcat) adb_ logcat -d -v time ReactNativeJS:V ReactNative:V '*:S' | tail -n "${1:-100}" ;;
+    uninstall) adb_ uninstall "$APP_ID" ;;
+    *) die "usage: bin/app install|prefs|reverse|setup|launch|terminate|restart|wait|clear|logcat|uninstall (see --help)" ;;
+esac

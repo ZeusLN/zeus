@@ -121,6 +121,7 @@ open class Lnd {
 
     // wallet
     "WalletKitFundPsbt": { bytes, cb in LndmobileWalletKitFundPsbt(bytes, cb) },
+    "WalletKitReleaseOutput": { bytes, cb in LndmobileWalletKitReleaseOutput(bytes, cb) },
     "WalletKitSignPsbt": { bytes, cb in LndmobileWalletKitSignPsbt(bytes, cb) },
     "WalletKitFinalizePsbt": { bytes, cb in LndmobileWalletKitFinalizePsbt(bytes, cb) },
     "WalletKitPublishTransaction": { bytes, cb in LndmobileWalletKitPublishTransaction(bytes, cb) },

@@ -1,0 +1,1114 @@
+// NostrWalletConnect backend against the real @getalby/sdk
+// NostrWebLNProvider. Only the provider's NIP-47 client is stubbed, so the
+// assertions cover the request that would be sent to the wallet service
+// (field names, msat units) and the decoded result Zeus gets back.
+import {
+    Nip47ReplyTimeoutError,
+    Nip47WalletError,
+    NostrWebLNProvider
+} from '@getalby/sdk';
+import Invoice from '../models/Invoice';
+
+const mockSettingsStore: any = {};
+// getter: the factory runs when the backend is imported, which is hoisted
+// above the const declaration
+// returns the locale key
+jest.mock('../utils/LocaleUtils');
+jest.mock('../stores/Stores', () => ({
+    get settingsStore() {
+        return mockSettingsStore;
+    }
+}));
+
+import NostrWalletConnect, {
+    SDK_EMPTY_REPLY_MESSAGE,
+    SDK_ERROR_MESSAGE_PREFIXES
+} from './NostrWalletConnect';
+import { localeString } from '../utils/LocaleUtils';
+
+const WALLET_PUBKEY = 'b'.repeat(64);
+const SECRET = 'a'.repeat(64);
+const RELAY = 'wss://relay.example.com';
+const NWC_URL = `nostr+walletconnect://${WALLET_PUBKEY}?relay=${encodeURIComponent(
+    RELAY
+)}&secret=${SECRET}`;
+
+// BOLT11 spec reference vector (lnbc2500u, 250,000 sat)
+// https://github.com/lightning/bolts/blob/master/11-payment-encoding.md#examples
+const SPEC_INVOICE =
+    'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+const SPEC_PAYMENT_HASH =
+    '0001020304050607080900010203040506070809000102030405060708090102';
+// signet invoice (56,778 sat) from utils/Bolt11Utils.test.ts; its payment
+// hash differs from the spec vector's
+const SIGNET_INVOICE =
+    'lntbs567780n1pnqr26ypp5c0wcrpzwxwqnwu2nld5q36dfc9yjrfdp87nn9d5y093jjncvqresdq0w3jhxar8v3n8xeccqzpuxqrrsssp5r94e3nwnw63gjaxc8wex38ufv2m6442vnrw49m7dad9jdum3tdsq9qyyssqk4dvvuk7zhhju8ztf7nfc2hzqq9gqtzuyc0ljz8nl93laxwv4869lt9fsxkxacje6eh4ur5ymg83hvakn4tfpzdu6fq49705sar7fxspga8qjp';
+const SIGNET_PAYMENT_HASH =
+    'c3dd81844e3381377153fb6808e9a9c14921a5a13fa732b6847963294f0c00f3';
+const PREIMAGE = 'c'.repeat(64);
+
+// NIP-47 transaction as a wallet service returns it (amounts in msat)
+const nip47Tx = (overrides: any = {}) => ({
+    type: 'incoming',
+    state: 'settled',
+    invoice: SPEC_INVOICE,
+    description: 'coffee',
+    description_hash: '',
+    preimage: PREIMAGE,
+    payment_hash: SPEC_PAYMENT_HASH,
+    amount: 250_000_000,
+    fees_paid: 0,
+    created_at: 1700000000,
+    expires_at: 1700003600,
+    settled_at: 1700000100,
+    metadata: {},
+    ...overrides
+});
+
+// Backend wired to a real provider whose NIP-47 client methods are mocks
+const setup = async () => {
+    mockSettingsStore.nostrWalletConnectUrl = NWC_URL;
+    const backend = new NostrWalletConnect();
+    await backend.initNWC();
+    await backend.connect();
+    const client = backend.nwc.client;
+    client.getBalance = jest.fn();
+    client.payInvoice = jest.fn();
+    client.makeInvoice = jest.fn();
+    client.lookupInvoice = jest.fn();
+    client.listTransactions = jest.fn();
+    return { backend, client };
+};
+
+let consoleError: jest.SpyInstance;
+beforeEach(() => {
+    // the SDK logs every failed request with console.error
+    consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+});
+afterEach(() => {
+    consoleError.mockRestore();
+});
+
+describe('NostrWalletConnect.initNWC', () => {
+    it('builds a provider from the connection string in settings', async () => {
+        mockSettingsStore.nostrWalletConnectUrl = NWC_URL;
+        const backend = new NostrWalletConnect();
+
+        const provider = await backend.initNWC();
+
+        expect(provider).toBeInstanceOf(NostrWebLNProvider);
+        expect(backend.nwc).toBe(provider);
+        expect(provider.client.walletPubkey).toBe(WALLET_PUBKEY);
+        expect(provider.client.relayUrls).toEqual([RELAY]);
+        expect(provider.client.secret).toBe(SECRET);
+    });
+
+    it('reads the connection string again on every init', async () => {
+        const backend = new NostrWalletConnect();
+        mockSettingsStore.nostrWalletConnectUrl = NWC_URL;
+        const first = await backend.initNWC();
+
+        const otherPubkey = 'd'.repeat(64);
+        mockSettingsStore.nostrWalletConnectUrl = NWC_URL.replace(
+            WALLET_PUBKEY,
+            otherPubkey
+        );
+        const second = await backend.initNWC();
+
+        expect(second).not.toBe(first);
+        expect(backend.nwc).toBe(second);
+        expect(second.client.walletPubkey).toBe(otherPubkey);
+    });
+
+    it('rejects a connection string without a valid wallet pubkey', async () => {
+        mockSettingsStore.nostrWalletConnectUrl = `nostr+walletconnect://not-a-pubkey?relay=${encodeURIComponent(
+            RELAY
+        )}&secret=${SECRET}`;
+        const backend = new NostrWalletConnect();
+
+        await expect(backend.initNWC()).rejects.toThrow('Invalid NWC URL');
+    });
+});
+
+describe('NostrWalletConnect.connect', () => {
+    it('enables the provider so requests can be sent', async () => {
+        mockSettingsStore.nostrWalletConnectUrl = NWC_URL;
+        const backend = new NostrWalletConnect();
+        await backend.initNWC();
+        backend.nwc.client.getBalance = jest
+            .fn()
+            .mockResolvedValue({ balance: 1000 });
+
+        await expect(backend.getLightningBalance()).rejects.toThrow(
+            'please call enable()'
+        );
+        expect(backend.nwc.client.getBalance).not.toHaveBeenCalled();
+
+        await backend.connect();
+
+        await expect(backend.getLightningBalance()).resolves.toEqual({
+            balance: 1,
+            currency: 'sats'
+        });
+    });
+});
+
+describe('NostrWalletConnect.getLightningBalance', () => {
+    it('converts the msat balance to whole sats, rounding down', async () => {
+        const { backend, client } = await setup();
+        client.getBalance.mockResolvedValue({ balance: 1_234_567 });
+
+        await expect(backend.getLightningBalance()).resolves.toEqual({
+            balance: 1234,
+            currency: 'sats'
+        });
+        expect(client.getBalance).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports a balance under one sat as zero', async () => {
+        const { backend, client } = await setup();
+        client.getBalance.mockResolvedValue({ balance: 999 });
+
+        await expect(backend.getLightningBalance()).resolves.toEqual({
+            balance: 0,
+            currency: 'sats'
+        });
+    });
+
+    it('rejects with the wallet service error', async () => {
+        const { backend, client } = await setup();
+        const error = new Nip47WalletError('Restricted', 'RESTRICTED');
+        client.getBalance.mockRejectedValue(error);
+
+        await expect(backend.getLightningBalance()).rejects.toBe(error);
+    });
+});
+
+describe('NostrWalletConnect.getInvoices', () => {
+    it('returns only incoming transactions, with amounts in sats', async () => {
+        const { backend, client } = await setup();
+        client.listTransactions.mockResolvedValue({
+            transactions: [
+                nip47Tx({ amount: 250_000_999 }),
+                nip47Tx({ type: 'outgoing', fees_paid: 2000 }),
+                nip47Tx({ amount: 1_500, settled_at: undefined })
+            ]
+        });
+
+        const { invoices } = await backend.getInvoices({ limit: 10 });
+
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'incoming',
+            unpaid: true,
+            limit: 10
+        });
+        expect(invoices).toHaveLength(2);
+        expect(invoices[0]).toEqual({
+            ...nip47Tx(),
+            amount: 250_000,
+            fees_paid: 0
+        });
+        expect(invoices[1].amount).toBe(1);
+        expect(invoices[1].settled_at).toBeUndefined();
+        expect(invoices.every((i: any) => i.type === 'incoming')).toBe(true);
+    });
+
+    it.each([
+        ['no arguments', undefined],
+        ['no limit', {}],
+        ['a zero limit', { limit: 0 }]
+    ])('sends no limit when called with %s', async (_, data) => {
+        const { backend, client } = await setup();
+        client.listTransactions.mockResolvedValue({ transactions: [] });
+
+        await expect(backend.getInvoices(data)).resolves.toEqual({
+            invoices: []
+        });
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'incoming',
+            unpaid: true
+        });
+    });
+
+    it('rejects with the wallet service error', async () => {
+        const { backend, client } = await setup();
+        const error = new Nip47WalletError(
+            'Not implemented',
+            'NOT_IMPLEMENTED'
+        );
+        client.listTransactions.mockRejectedValue(error);
+
+        await expect(backend.getInvoices({ limit: 10 })).rejects.toBe(error);
+    });
+
+    // Older ZEUS wallet services send expires_at in milliseconds
+    it('reads a millisecond expires_at as seconds', async () => {
+        const { backend, client } = await setup();
+        const expiredSeconds = 1_500_000_000; // 2017
+        client.listTransactions.mockResolvedValue({
+            transactions: [
+                nip47Tx({
+                    settled_at: undefined,
+                    expires_at: expiredSeconds * 1000
+                }),
+                nip47Tx({ settled_at: undefined, expires_at: expiredSeconds })
+            ]
+        });
+
+        const { invoices } = await backend.getInvoices({ limit: 10 });
+
+        expect(invoices.map((i: any) => i.expires_at)).toEqual([
+            expiredSeconds,
+            expiredSeconds
+        ]);
+        expect(invoices.every((i: any) => new Invoice(i).isExpired)).toBe(true);
+    });
+});
+
+describe('NostrWalletConnect.getPayments', () => {
+    it('returns only outgoing transactions, with amount and fee in sats', async () => {
+        const { backend, client } = await setup();
+        client.listTransactions.mockResolvedValue({
+            transactions: [
+                nip47Tx(),
+                nip47Tx({
+                    type: 'outgoing',
+                    amount: 10_000_500,
+                    fees_paid: 3_999
+                })
+            ]
+        });
+
+        const { payments } = await backend.getPayments({ maxPayments: 25 });
+
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'outgoing',
+            limit: 25
+        });
+        expect(payments).toEqual([
+            {
+                ...nip47Tx({ type: 'outgoing' }),
+                amount: 10_000,
+                fees_paid: 3
+            }
+        ]);
+    });
+
+    it('asks for 500 payments when called without arguments', async () => {
+        const { backend, client } = await setup();
+        client.listTransactions.mockResolvedValue({ transactions: [] });
+
+        await backend.getPayments();
+
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'outgoing',
+            limit: 500
+        });
+    });
+
+    it.each([
+        ['missing', {}],
+        ['zero', { maxPayments: 0 }]
+    ])('sends no limit when maxPayments is %s', async (_, params) => {
+        // the 500 default only applies when the argument itself is omitted
+        const { backend, client } = await setup();
+        client.listTransactions.mockResolvedValue({ transactions: [] });
+
+        await backend.getPayments(params);
+
+        expect(client.listTransactions).toHaveBeenCalledWith({
+            type: 'outgoing'
+        });
+    });
+
+    it('rejects with a reply timeout', async () => {
+        const { backend, client } = await setup();
+        const error = new Nip47ReplyTimeoutError(
+            'reply timeout: event abc',
+            'INTERNAL'
+        );
+        client.listTransactions.mockRejectedValue(error);
+
+        await expect(backend.getPayments()).rejects.toBe(error);
+    });
+});
+
+describe('NostrWalletConnect.createInvoice', () => {
+    it('requests the amount in msat with the memo as description', async () => {
+        const { backend, client } = await setup();
+        client.makeInvoice.mockResolvedValue(
+            nip47Tx({ state: 'pending', settled_at: undefined })
+        );
+
+        await backend.createInvoice({ value: '250000', memo: 'coffee' });
+
+        expect(client.makeInvoice).toHaveBeenCalledWith({
+            amount: 250_000_000,
+            description: 'coffee'
+        });
+    });
+
+    it.each([
+        ['1000', 1_000_000],
+        ['1.005', 1005],
+        ['2.01', 2010],
+        ['0.001', 1],
+        ['2.5', 2500]
+    ])('sends %s sats as whole msat', async (value, msat) => {
+        const { backend, client } = await setup();
+        client.makeInvoice.mockResolvedValue(
+            nip47Tx({ state: 'pending', settled_at: undefined })
+        );
+
+        await backend.createInvoice({ value, memo: '' });
+
+        expect(client.makeInvoice).toHaveBeenCalledWith({
+            amount: msat,
+            description: ''
+        });
+        // the real SDK rejects anything else
+        expect(
+            Number.isSafeInteger(client.makeInvoice.mock.calls[0][0].amount)
+        ).toBe(true);
+    });
+
+    it('returns the invoice with the payment hash decoded from it', async () => {
+        const { backend, client } = await setup();
+        client.makeInvoice.mockResolvedValue(
+            nip47Tx({ state: 'pending', settled_at: undefined })
+        );
+
+        await expect(
+            backend.createInvoice({ value: 250000, memo: 'coffee' })
+        ).resolves.toEqual({
+            paymentRequest: SPEC_INVOICE,
+            payment_hash: SPEC_PAYMENT_HASH
+        });
+    });
+
+    it('returns the invoice without a hash when it cannot be decoded', async () => {
+        const { backend, client } = await setup();
+        client.makeInvoice.mockResolvedValue({ invoice: 'lnbc1garbage' });
+
+        await expect(
+            backend.createInvoice({ value: 1, memo: '' })
+        ).resolves.toEqual({ paymentRequest: 'lnbc1garbage' });
+    });
+
+    it('does not send the expiry', async () => {
+        // supportsSettingInvoiceExpiration is false, so the wallet default
+        // applies
+        const { backend, client } = await setup();
+        client.makeInvoice.mockResolvedValue(nip47Tx());
+
+        await backend.createInvoice({ value: 1, memo: 'x', expiry: '600' });
+
+        expect(client.makeInvoice.mock.calls[0][0]).not.toHaveProperty(
+            'expiry'
+        );
+    });
+
+    it.each([
+        ['zero', 0],
+        ['empty', ''],
+        ['missing', undefined]
+    ])(
+        'rejects a %s amount without contacting the wallet',
+        async (_, value) => {
+            // zero-amount invoices cannot be created over NWC
+            const { backend, client } = await setup();
+
+            await expect(
+                backend.createInvoice({ value, memo: 'x' })
+            ).rejects.toThrow('No amount specified');
+            expect(client.makeInvoice).not.toHaveBeenCalled();
+        }
+    );
+
+    it('rejects with the wallet service error', async () => {
+        const { backend, client } = await setup();
+        const error = new Nip47WalletError('Quota exceeded', 'QUOTA_EXCEEDED');
+        client.makeInvoice.mockRejectedValue(error);
+
+        await expect(
+            backend.createInvoice({ value: 1, memo: 'x' })
+        ).rejects.toBe(error);
+    });
+});
+
+describe('NostrWalletConnect.payLightningInvoice', () => {
+    it('sends pay_invoice with the payment request and returns the preimage', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockResolvedValue({ preimage: PREIMAGE });
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).resolves.toEqual({ preimage: PREIMAGE });
+        expect(client.payInvoice).toHaveBeenCalledTimes(1);
+        expect(client.payInvoice).toHaveBeenCalledWith({
+            invoice: SPEC_INVOICE
+        });
+    });
+
+    it('sends only the invoice, dropping amount and fee limit', async () => {
+        // TransactionsStore.sendPayment sets amt for zero-amount invoices
+        // and fee_limit_sat; NIP-47 pay_invoice has an amount (msat) field
+        // but this backend does not forward it
+        const { backend, client } = await setup();
+        client.payInvoice.mockResolvedValue({ preimage: PREIMAGE });
+
+        await backend.payLightningInvoice({
+            payment_request: SPEC_INVOICE,
+            amt: 1234,
+            fee_limit_sat: 10,
+            max_parts: '1',
+            timeout_seconds: 60
+        });
+
+        expect(client.payInvoice).toHaveBeenCalledWith({
+            invoice: SPEC_INVOICE
+        });
+    });
+
+    it.todo('forwards the amount in msat when paying a zero-amount invoice');
+
+    it('drops the fee the wallet reports', async () => {
+        // pins current behavior: the provider keeps only the preimage, so
+        // the routing fee never reaches the payment result
+        const { backend, client } = await setup();
+        client.payInvoice.mockResolvedValue({
+            preimage: PREIMAGE,
+            fees_paid: 5000
+        });
+
+        const result = await backend.payLightningInvoice({
+            payment_request: SPEC_INVOICE
+        });
+
+        expect(result).toEqual({ preimage: PREIMAGE });
+        expect(result).not.toHaveProperty('fees_paid');
+    });
+
+    it.todo('returns the fee the wallet reports, in sats');
+
+    it('resolves without a preimage when the reply has none', async () => {
+        // pins current behavior: the SDK accepts any non-empty result for
+        // pay_invoice, and TransactionsStore.handlePayment marks a result
+        // without a status as complete
+        const { backend, client } = await setup();
+        client.payInvoice.mockResolvedValue({});
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).resolves.toEqual({ preimage: undefined });
+    });
+
+    it('rejects with the wallet error when the payment fails', async () => {
+        const { backend, client } = await setup();
+        const error = new Nip47WalletError('no route found', 'PAYMENT_FAILED');
+        client.payInvoice.mockRejectedValue(error);
+
+        const promise = backend.payLightningInvoice({
+            payment_request: SPEC_INVOICE
+        });
+
+        await expect(promise).rejects.toBe(error);
+        await expect(promise).rejects.toMatchObject({
+            message: 'no route found',
+            code: 'PAYMENT_FAILED'
+        });
+    });
+
+    it.each([
+        ['insufficient balance', 'INSUFFICIENT_BALANCE'],
+        ['budget exceeded', 'QUOTA_EXCEEDED'],
+        ['not allowed', 'RESTRICTED']
+    ])('passes a %s error through unchanged', async (message, code) => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError(message, code)
+        );
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).rejects.toMatchObject({ message, code });
+    });
+
+    it('rejects on a reply timeout the same way as on a failure', async () => {
+        // pins current behavior: the payment may still complete at the
+        // wallet after the 60 s reply timeout, but the rejection carries
+        // no in-flight marker, so the send screen reports a failure
+        const { backend, client } = await setup();
+        const error = new Nip47ReplyTimeoutError(
+            'reply timeout: event abc',
+            'INTERNAL'
+        );
+        client.payInvoice.mockRejectedValue(error);
+
+        const promise = backend.payLightningInvoice({
+            payment_request: SPEC_INVOICE
+        });
+
+        await expect(promise).rejects.toBe(error);
+        await expect(promise).rejects.toBeInstanceOf(Nip47ReplyTimeoutError);
+    });
+
+    // a refusal before anything is sent: the store keeps the message and
+    // releases the guard without tracking (the wallet often refuses the
+    // lookup for the same reason)
+    it.each([
+        'INSUFFICIENT_BALANCE',
+        'QUOTA_EXCEEDED',
+        'RESTRICTED',
+        'UNAUTHORIZED',
+        'RATE_LIMITED',
+        'NOT_IMPLEMENTED',
+        // Alby Hub
+        'BAD_REQUEST',
+        'EXPIRED',
+        // ZEUS's wallet service
+        'INVALID_INVOICE',
+        'INVOICE_EXPIRED'
+    ])('marks a %s reply as a refusal', async (code) => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError('wallet said no', code)
+        );
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error).toMatchObject({
+            code,
+            nodeResponded: true,
+            sendRefused: true
+        });
+        expect(error.walletReplied).toBeUndefined();
+    });
+
+    // the wallet tried the payment: one no-record lookup settles it
+    it.each(['PAYMENT_FAILED', 'NOT_FOUND'])(
+        'marks a %s reply as the wallet answering, not as a refusal',
+        async (code) => {
+            const { backend, client } = await setup();
+            client.payInvoice.mockRejectedValue(
+                new Nip47WalletError('wallet said no', code)
+            );
+
+            const error: any = await backend
+                .payLightningInvoice({ payment_request: SPEC_INVOICE })
+                .catch((e: any) => e);
+
+            expect(error).toMatchObject({ code, nodeResponded: true });
+            expect(error.sendRefused).toBeUndefined();
+        }
+    );
+
+    // ZEUS's wallet service sends its own codes; FAILED_TO_PAY_INVOICE also
+    // covers a pay still in progress, so it is not an answer
+    it.each(['FAILED_TO_PAY_INVOICE', 'INTERNAL_ERROR', 'SOME_NEW_CODE'])(
+        'marks a %s reply as a reply, not as an answer',
+        async (code) => {
+            const { backend, client } = await setup();
+            client.payInvoice.mockRejectedValue(
+                new Nip47WalletError('No route found', code)
+            );
+
+            const error: any = await backend
+                .payLightningInvoice({ payment_request: SPEC_INVOICE })
+                .catch((e: any) => e);
+
+            expect(error).toMatchObject({ code, walletReplied: true });
+            expect(error.nodeResponded).toBeUndefined();
+            expect(error.sendRefused).toBeUndefined();
+        }
+    );
+
+    // only a wallet's reply carries a code: a plain Error (the SDK's
+    // "Missing secret key", a socket error) is not the wallet's text
+    it('leaves an error without a code unmarked', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(new Error('WebSocket closed'));
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error.message).toBe('WebSocket closed');
+        expect(error.walletReplied).toBeUndefined();
+        expect(error.nodeResponded).toBeUndefined();
+        expect(error.sendRefused).toBeUndefined();
+    });
+
+    it('marks a refusal without a message as a refusal with the generic text', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError(SDK_EMPTY_REPLY_MESSAGE, 'QUOTA_EXCEEDED')
+        );
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error).toMatchObject({
+            sendRefused: true,
+            message: localeString('error.sendingPayment')
+        });
+        expect(error.walletReplied).toBeUndefined();
+    });
+
+    // the SDK uses these codes for its own failures too, and a wallet may
+    // send them after its own timeout, so the request may still be in
+    // flight: the message is the wallet's, but it is not an answer
+    it.each([
+        ['INTERNAL', 'Failed to send payment: no route'],
+        ['OTHER', 'wallet error']
+    ])(
+        "marks a wallet's %s reply as a reply, not as an answer",
+        async (code, message) => {
+            const { backend, client } = await setup();
+            client.payInvoice.mockRejectedValue(
+                new Nip47WalletError(message, code)
+            );
+
+            const error: any = await backend
+                .payLightningInvoice({ payment_request: SPEC_INVOICE })
+                .catch((e: any) => e);
+
+            expect(error).toMatchObject({ code, message, walletReplied: true });
+            expect(error.nodeResponded).toBeUndefined();
+        }
+    );
+
+    // the SDK's own failures carry these codes with fixed messages
+    it.each([
+        ['failed to deserialize response', 'INTERNAL'],
+        ['response from NWC failed validation: {}', 'INTERNAL'],
+        ['publish timeout: abc', 'INTERNAL'],
+        ['failed to publish: relay said no', 'INTERNAL'],
+        ['Failed to connect to wss://relay.example', 'OTHER']
+    ])('leaves the SDK error "%s" unmarked', async (message, code) => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError(message, code)
+        );
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error.walletReplied).toBeUndefined();
+        expect(error.nodeResponded).toBeUndefined();
+    });
+
+    // the SDK fills in 'unknown Error' for a wallet reply without a
+    // message, which says nothing about why the payment failed
+    it('shows the generic failure for an INTERNAL reply without a message, unmarked', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError(SDK_EMPTY_REPLY_MESSAGE, 'INTERNAL')
+        );
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error.code).toBe('INTERNAL');
+        expect(error.message).toBe(localeString('error.sendingPayment'));
+        expect(error.walletReplied).toBeUndefined();
+        expect(error.nodeResponded).toBeUndefined();
+    });
+
+    it('still marks an answer code without a message as the wallet answering', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError(SDK_EMPTY_REPLY_MESSAGE, 'PAYMENT_FAILED')
+        );
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error).toMatchObject({
+            code: 'PAYMENT_FAILED',
+            nodeResponded: true,
+            message: localeString('error.sendingPayment')
+        });
+        expect(error.walletReplied).toBeUndefined();
+    });
+
+    it('leaves a reply timeout unmarked', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47ReplyTimeoutError('reply timeout: event abc', 'INTERNAL')
+        );
+
+        const error: any = await backend
+            .payLightningInvoice({ payment_request: SPEC_INVOICE })
+            .catch((e: any) => e);
+
+        expect(error).toBeInstanceOf(Nip47ReplyTimeoutError);
+        expect(error.nodeResponded).toBeUndefined();
+        expect(error.walletReplied).toBeUndefined();
+    });
+
+    it('does not retry a failed payment', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockRejectedValue(
+            new Nip47WalletError('failed', 'PAYMENT_FAILED')
+        );
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).rejects.toThrow('failed');
+        expect(client.payInvoice).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('NostrWalletConnect.decodePaymentRequest', () => {
+    it('decodes the first URL parameter as a BOLT11 invoice', async () => {
+        const backend = new NostrWalletConnect();
+
+        const decoded = await backend.decodePaymentRequest([SPEC_INVOICE]);
+
+        expect(decoded.payment_hash).toBe(SPEC_PAYMENT_HASH);
+        expect(decoded.num_satoshis).toBe('250000');
+        expect(decoded.paymentRequest).toBe(SPEC_INVOICE);
+    });
+
+    it('decodes only the first of several parameters', async () => {
+        const backend = new NostrWalletConnect();
+
+        const decoded = await backend.decodePaymentRequest([
+            SIGNET_INVOICE,
+            SPEC_INVOICE
+        ]);
+
+        expect(decoded.payment_hash).toBe(SIGNET_PAYMENT_HASH);
+        expect(decoded.num_satoshis).toBe('56778');
+        expect(decoded.paymentRequest).toBe(SIGNET_INVOICE);
+    });
+
+    it.each([
+        ['no parameters', undefined],
+        ['an empty list', []],
+        ['an invalid invoice', ['lnbc1garbage']]
+    ])('rejects instead of throwing for %s', async (_, params) => {
+        const backend = new NostrWalletConnect();
+
+        let promise: Promise<any> | undefined;
+        expect(() => {
+            promise = backend.decodePaymentRequest(params);
+        }).not.toThrow();
+        await expect(promise).rejects.toThrow();
+    });
+});
+
+describe('NostrWalletConnect.lookupInvoice', () => {
+    it('sends the hex payment hash to lookup_invoice', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(nip47Tx());
+
+        await backend.lookupInvoice({ r_hash: SPEC_PAYMENT_HASH });
+
+        expect(client.lookupInvoice).toHaveBeenCalledTimes(1);
+        expect(client.lookupInvoice).toHaveBeenCalledWith({
+            invoice: undefined,
+            payment_hash: SPEC_PAYMENT_HASH
+        });
+    });
+
+    it('maps the wallet reply to preimage, paymentRequest and paid', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(nip47Tx());
+
+        await expect(
+            backend.lookupInvoice({ r_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toEqual({
+            preimage: PREIMAGE,
+            paymentRequest: SPEC_INVOICE,
+            paid: true
+        });
+    });
+
+    it('reports an invoice without settled_at as unpaid', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(
+            nip47Tx({ state: 'pending', settled_at: undefined, preimage: '' })
+        );
+
+        await expect(
+            backend.lookupInvoice({ r_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toMatchObject({ paid: false });
+    });
+
+    it('rejects with the wallet service error', async () => {
+        const { backend, client } = await setup();
+        const error = new Nip47WalletError('not found', 'NOT_FOUND');
+        client.lookupInvoice.mockRejectedValue(error);
+
+        await expect(
+            backend.lookupInvoice({ r_hash: SPEC_PAYMENT_HASH })
+        ).rejects.toBe(error);
+    });
+});
+
+describe('NostrWalletConnect.lookupPayment', () => {
+    const outgoing = (overrides: any = {}) =>
+        nip47Tx({ type: 'outgoing', ...overrides });
+
+    it('sends the payment hash to lookup_invoice on the raw client', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(outgoing());
+
+        await backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH });
+
+        expect(client.lookupInvoice).toHaveBeenCalledTimes(1);
+        expect(client.lookupInvoice).toHaveBeenCalledWith({
+            payment_hash: SPEC_PAYMENT_HASH
+        });
+    });
+
+    it('maps a settled payment to an LND-shaped payment in sats', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(
+            outgoing({ amount: 5000, fees_paid: 2500 })
+        );
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toEqual({
+            payment_hash: SPEC_PAYMENT_HASH,
+            payment_preimage: PREIMAGE,
+            invoice: SPEC_INVOICE,
+            creation_date: '1700000000',
+            amount: 5,
+            fees_paid: 2,
+            status: 'SUCCEEDED'
+        });
+    });
+
+    it.each([
+        ['settled', 'SUCCEEDED'],
+        ['failed', 'FAILED'],
+        ['pending', 'IN_FLIGHT']
+    ])('maps state %s to %s', async (state, status) => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(outgoing({ state }));
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toMatchObject({ status });
+    });
+
+    it('falls back to settled_at when the wallet sends no state', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(outgoing({ state: undefined }));
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toMatchObject({ status: 'SUCCEEDED' });
+    });
+
+    it('reports no state and no settled_at as in flight', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(
+            outgoing({ state: undefined, settled_at: undefined })
+        );
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toMatchObject({ status: 'IN_FLIGHT' });
+    });
+
+    it('reports a missing amount and fee as 0 sats', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(
+            outgoing({ amount: undefined, fees_paid: undefined })
+        );
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toMatchObject({ amount: 0, fees_paid: 0 });
+    });
+
+    it('answers null when the wallet has no record (NOT_FOUND)', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockRejectedValue(
+            new Nip47WalletError('not found', 'NOT_FOUND')
+        );
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toBeNull();
+    });
+
+    it('answers null for an empty reply', async () => {
+        const { backend, client } = await setup();
+        client.lookupInvoice.mockResolvedValue(undefined);
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).resolves.toBeNull();
+    });
+
+    it('rethrows any other wallet error', async () => {
+        const { backend, client } = await setup();
+        const error = new Nip47WalletError('wallet busy', 'INTERNAL');
+        client.lookupInvoice.mockRejectedValue(error);
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).rejects.toBe(error);
+    });
+
+    it('rethrows a reply timeout instead of answering null', async () => {
+        const { backend, client } = await setup();
+        const error = new Nip47ReplyTimeoutError('timed out', 'INTERNAL');
+        client.lookupInvoice.mockRejectedValue(error);
+
+        await expect(
+            backend.lookupPayment({ payment_hash: SPEC_PAYMENT_HASH })
+        ).rejects.toBe(error);
+    });
+});
+
+describe('NostrWalletConnect capability flags', () => {
+    // Every supports*/requires*/is*/single* flag with its expected value.
+    // Flags missing here fall through to false in BackendUtils.call.
+    const expected: { [flag: string]: boolean } = {
+        supportsPeers: false,
+        supportsMessageSigning: false,
+        supportsMessageVerification: false,
+        supportsLnurlAuth: false,
+        supportsOnchainBalance: false,
+        supportsOnchainSends: false,
+        supportsOnchainReceiving: false,
+        supportsLightningSends: true,
+        supportsKeysend: false,
+        supportsChannelManagement: false,
+        supportsCircularRebalancing: false,
+        supportsForceClose: false,
+        supportsPendingChannels: false,
+        supportsClosedChannels: false,
+        supportsMPP: false,
+        supportsAMP: false,
+        supportsCoinControl: false,
+        supportsChannelCoinControl: false,
+        supportsHopPicking: false,
+        supportsAccounts: false,
+        supportsRouting: false,
+        supportsNodeInfo: false,
+        supportsWithdrawalRequests: false,
+        singleFeesEarnedTotal: false,
+        supportsAddressTypeSelection: false,
+        supportsNestedSegWit: false,
+        supportsTaproot: false,
+        supportsBumpFee: false,
+        supportsOnchainSendFeeRate: false,
+        supportsChannelOpenFeeRate: false,
+        supportsChannelOpenMinConfs: false,
+        supportsFlowLSP: false,
+        supportsNetworkInfo: false,
+        supportsSimpleTaprootChannels: false,
+        supportsCustomPreimages: false,
+        supportsSweep: false,
+        supportsOnchainSendMax: false,
+        supportsOnchainBatching: false,
+        supportsChannelBatching: false,
+        supportsChannelFundMax: false,
+        // not read anywhere: BackendUtils asks for supportsLSPScustomMessage
+        supportsLSPS1customMessage: false,
+        supportsLSPS1rest: false,
+        supportsOffers: false,
+        supportsListingOffers: false,
+        supportsBolt12Address: false,
+        supportsBolt11BlindedRoutes: false,
+        supportsAddressesWithDerivationPaths: false,
+        supportsCustomFeeLimit: false,
+        isLNDBased: false,
+        supportsForwardingHistory: false,
+        supportInboundFees: false,
+        supportsCashuWallet: false,
+        supportsSettingInvoiceExpiration: false,
+        supportsNostrWalletConnectService: false,
+        supportsPaymentLookup: true,
+        supportsChannelMemo: false
+    };
+
+    const backend = new NostrWalletConnect();
+
+    it.each(Object.entries(expected))('%s() returns %s', (flag, value) => {
+        expect((backend as any)[flag]()).toBe(value);
+    });
+
+    it('has no flag missing from the table', () => {
+        const flags = Object.keys(backend).filter(
+            (key) =>
+                /^(supports?[A-Z]|requires|isLNDBased|single)/.test(key) &&
+                typeof (backend as any)[key] === 'function'
+        );
+        expect(flags.sort()).toEqual(Object.keys(expected).sort());
+    });
+});
+
+// The wallet-reply classification relies on every error the SDK builds
+// itself starting with one of SDK_ERROR_MESSAGE_PREFIXES. Read the
+// installed SDK (both builds Metro may resolve) so an upgrade that adds or
+// rewords one fails here instead of passing the SDK's message off as the
+// wallet's.
+describe('SDK_ERROR_MESSAGE_PREFIXES', () => {
+    const fs = require('fs');
+    const path = require('path');
+    // the package's exports map does not expose package.json
+    const sdkDir = path.join(__dirname, '..', 'node_modules', '@getalby/sdk');
+
+    it.each(['dist/esm/index.js', 'dist/cjs/index.cjs'])(
+        'covers every error %s builds itself',
+        (file) => {
+            const source: string = fs.readFileSync(
+                path.join(sdkDir, file),
+                'utf8'
+            );
+            const constructed = [
+                ...source.matchAll(/new (Nip47(?!Wallet)\w*Error)\(\s*/g)
+            ];
+            // a vacuous pass would hide a renamed class
+            expect(constructed.length).toBeGreaterThanOrEqual(8);
+            for (const match of constructed) {
+                const rest = source.slice(match.index! + match[0].length);
+                const literal = /^(["'`])((?:\\.|(?!\1).)*)\1/.exec(rest);
+                // every message must start with a literal
+                expect([match[1], !!literal]).toEqual([match[1], true]);
+                const start = literal![2].split('${')[0];
+                expect([
+                    match[1],
+                    start,
+                    SDK_ERROR_MESSAGE_PREFIXES.some((prefix) =>
+                        start.startsWith(prefix)
+                    )
+                ]).toEqual([match[1], start, true]);
+            }
+        }
+    );
+
+    it.each(['dist/esm/index.js', 'dist/cjs/index.cjs'])(
+        'matches the placeholder %s gives a wallet reply without a message',
+        (file) => {
+            const source: string = fs.readFileSync(
+                path.join(sdkDir, file),
+                'utf8'
+            );
+            const fallbacks = [
+                ...source.matchAll(
+                    /new (?:\w+\.)?Nip47WalletError\([^;]*?\|\|\s*(["'`])(.*?)\1/g
+                )
+            ].map((match) => match[2]);
+            expect(fallbacks.length).toBeGreaterThanOrEqual(1);
+            expect(new Set(fallbacks)).toEqual(
+                new Set([SDK_EMPTY_REPLY_MESSAGE])
+            );
+        }
+    );
+});

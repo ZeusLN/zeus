@@ -76,6 +76,7 @@ export default class Invoice extends BaseModel {
     public timestamp?: string | number;
     public destination?: string;
     public num_satoshis?: string | number;
+    public num_msat?: string | number;
     public features?: any;
     // lndhub
     public amt?: number;
@@ -86,6 +87,7 @@ export default class Invoice extends BaseModel {
     // LNC
     public paymentRequest?: string;
     public amount?: number;
+    // NWC (NIP-47)
     public state?: string;
     public created_at?: number;
     public settled_at?: number;
@@ -153,6 +155,7 @@ export default class Invoice extends BaseModel {
             this.creation_date ||
             this.timestamp ||
             this.settled_at ||
+            this.created_at ||
             this.settle_date ||
             0
         );
@@ -272,6 +275,11 @@ export default class Invoice extends BaseModel {
         if (this.millisatoshis || this.invoice_amount_msat) {
             const msatoshi = this.millisatoshis || this.invoice_amount_msat;
             return Number(msatoshi) / 1000;
+        }
+        // LND rounds num_satoshis down, so num_msat carries the exact
+        // amount (a 500 msat invoice decodes as 0 sats)
+        if (Number(this.num_msat || 0) > 0) {
+            return Number(this.num_msat) / 1000;
         }
         return Number(this.num_satoshis || 0);
     }
@@ -420,7 +428,8 @@ export default class Invoice extends BaseModel {
             // expiry is missing in payment request in Core Lightning
             return !isNaN(timestamp) ? this.expires_at - timestamp : undefined;
         }
-        if (decoded) return decoded.expiry;
+        // BOLT11: an invoice without an expiry (x) field expires after 3600s
+        if (decoded) return decoded.expiry ?? 3600;
         // no bolt11 string to decode (e.g. pay_req built from a backend
         // decodepayreq response) — use the reported expiry seconds
         return this.expiry != null && this.expiry !== ''
@@ -435,7 +444,10 @@ export default class Invoice extends BaseModel {
             this.originalTimeUntilExpiryInSeconds;
 
         if (originalTimeUntilExpiryInSeconds == null) {
-            return localeString('models.Invoice.never');
+            this.formattedOriginalTimeUntilExpiry = localeString(
+                'models.Invoice.never'
+            );
+            return;
         }
 
         const originalTimeUntilExpiryInMs =

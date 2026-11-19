@@ -9,6 +9,7 @@ import omit from 'lodash/omit';
 import BackendUtils from '../utils/BackendUtils';
 import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { VerifierRecord, hasLockCredential } from '../utils/LockVerifierUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { SETTINGS_VERSION } from '../utils/SettingsVersion';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
@@ -100,6 +101,9 @@ interface DisplaySettings {
     showAllDecimalPlaces?: boolean;
     removeDecimalSpaces?: boolean;
     showMillisatoshiAmounts?: boolean;
+    dateFormat?: string;
+    timeFormat?: string;
+    showSeconds?: boolean;
 }
 
 export enum PosEnabled {
@@ -164,13 +168,13 @@ interface ChannelsSettings {
 interface LightningAddressSettings {
     enabled: boolean;
     automaticallyAccept: boolean;
-    automaticallyAcceptAttestationLevel: number;
+    automaticallyAcceptAttestationLevel: number; // deprecated (Zaplocker)
     automaticallyRequestOlympusChannels: boolean; // deprecated
-    routeHints: boolean;
+    routeHints: boolean; // deprecated (Zaplocker)
     allowComments: boolean;
     zapReceiptsEnabled: boolean;
-    nostrPrivateKey: string;
-    nostrRelays: Array<string>;
+    nostrPrivateKey: string; // deprecated (Zaplocker)
+    nostrRelays: Array<string>; // deprecated (Zaplocker)
     notifications: number;
     mintUrl: string; // Cashu
     posEnabled?: boolean; // ZEUS Pay+
@@ -202,10 +206,19 @@ export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
     justDeletedWallet?: boolean;
+    // Legacy plaintext lock credentials. Retained only so the
+    // lock-verifier-hash migration can read and clear them; new code must use
+    // the salted verifier records below and never write these.
     passphrase?: string;
     duressPassphrase?: string;
     pin?: string;
     duressPin?: string;
+    // Salted PBKDF2 verifiers for the app lock (see utils/LockVerifierUtils).
+    // Presence of pinVerifier vs passphraseVerifier also selects the lock UI.
+    passphraseVerifier?: VerifierRecord;
+    duressPassphraseVerifier?: VerifierRecord;
+    pinVerifier?: VerifierRecord;
+    duressPinVerifier?: VerifierRecord;
     scramblePin?: boolean;
     loginBackground?: boolean;
     authenticationAttempts?: number;
@@ -236,6 +249,10 @@ export interface Settings {
     rescan: boolean;
     compactDb: boolean;
     recovery: boolean;
+    // Data directories (lndDir / ldkNodeDir) of the restored wallets whose
+    // recovery is still pending. Unset by versions that kept only the
+    // install-wide flag (see utils/WalletRecoveryUtils.ts)
+    recoveryWalletDirs?: string[];
     initialLoad: boolean;
     embeddedTor: boolean;
     feeEstimator: string;
@@ -1236,6 +1253,16 @@ export const THEME_KEYS = [
         key: 'Spooky',
         translateKey: 'views.Settings.Theme.spooky',
         value: 'orange'
+    },
+    {
+        key: 'Gilded',
+        translateKey: 'views.Settings.Theme.gilded',
+        value: 'gilded'
+    },
+    {
+        key: 'Ember',
+        translateKey: 'views.Settings.Theme.ember',
+        value: 'ember'
     }
 ];
 
@@ -1256,6 +1283,30 @@ export const DEFAULT_VIEW_KEYS = [
         key: 'Keypad',
         translateKey: 'views.Settings.Display.DefaultView.keypad',
         value: 'Keypad'
+    }
+];
+
+export const DATE_FORMAT_KEYS = [
+    {
+        key: 'Default',
+        translateKey: 'views.Settings.DateTime.DateFormat.default',
+        value: 'default'
+    },
+    { key: 'YYYY-MM-DD', value: 'iso' },
+    { key: 'DD/MM/YYYY', value: 'dmy' },
+    { key: 'MM/DD/YYYY', value: 'mdy' }
+];
+
+export const TIME_FORMAT_KEYS = [
+    {
+        key: '24-hour',
+        translateKey: 'views.Settings.DateTime.TimeFormat.24h',
+        value: '24h'
+    },
+    {
+        key: '12-hour',
+        translateKey: 'views.Settings.DateTime.TimeFormat.12h',
+        value: '12h'
     }
 ];
 
@@ -1481,22 +1532,6 @@ export const NOTIFICATIONS_PREF_KEYS = [
     }
 ];
 
-export const AUTOMATIC_ATTESTATION_KEYS = [
-    { key: 'Disabled', translateKey: 'general.disabled', value: 0 },
-    {
-        key: 'Successful only',
-        translateKey:
-            'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel.successOnly',
-        value: 1
-    },
-    {
-        key: 'Successful and not found',
-        translateKey:
-            'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel.successAndNotFound',
-        value: 2
-    }
-];
-
 export const TIME_PERIOD_KEYS = [
     { key: 'Seconds', translateKey: 'time.seconds', value: 'Seconds' },
     { key: 'Minutes', translateKey: 'time.minutes', value: 'Minutes' },
@@ -1569,7 +1604,10 @@ export const DEFAULT_SETTINGS: Settings = {
         bigKeypadButtons: false,
         showAllDecimalPlaces: false,
         removeDecimalSpaces: false,
-        showMillisatoshiAmounts: false
+        showMillisatoshiAmounts: false,
+        dateFormat: 'default',
+        timeFormat: '24h',
+        showSeconds: false
     },
     pos: {
         posEnabled: PosEnabled.Disabled,
@@ -1618,7 +1656,12 @@ export const DEFAULT_SETTINGS: Settings = {
     supportedBiometryType: undefined,
     isBiometryEnabled: false,
     scramblePin: true,
-    loginBackground: false,
+    // On for new installs only. A stored blob replaces these defaults
+    // wholesale and flat keys are not backfilled, so an existing install
+    // that never wrote loginBackground keeps reading it as off. Has no
+    // effect until a PIN, passphrase or biometrics is set
+    // (loginMethodConfigured).
+    loginBackground: true,
     fiatEnabled: true,
     fiat: DEFAULT_FIAT,
     fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
@@ -1708,7 +1751,8 @@ const REFRESH_EXEMPT_SETTINGS: Array<keyof Settings> = [
     'initialLoad',
     'resetExpressGraphSyncOnStartup',
     'rescan',
-    'recovery'
+    'recovery',
+    'recoveryWalletDirs'
 ];
 
 export default class SettingsStore {
@@ -1748,6 +1792,7 @@ export default class SettingsStore {
     // Monotonic token identifying the fetchData invocation that currently
     // owns fetchLock; releaseFetchLock is a no-op for stale owners
     private fetchLockSeq = 0;
+    private connectionSeq = 0;
     @observable public lurkerExposed = false;
     private lurkerTimeout: ReturnType<typeof setTimeout> | null = null;
     // LNDHub
@@ -1776,7 +1821,9 @@ export default class SettingsStore {
     @observable public isSqlite?: boolean;
     @observable public initialStart: boolean = true;
     @observable public embeddedLndStarted: boolean = false;
-    @observable public walletJustCreated: boolean = false;
+    // Data directory (lndDir / ldkNodeDir) of the wallet whose node is still
+    // up from its creation or restore, so Wallet.tsx can skip re-init for it
+    @observable public justCreatedNodeDir?: string;
     @observable public lndFolderMissing: boolean = false;
     // Embedded LDK Node
     @observable public ldkNodeDir?: string;
@@ -1986,6 +2033,32 @@ export default class SettingsStore {
         const node: any =
             settings?.nodes?.length &&
             settings?.nodes[settings.selectedNode || 0];
+
+        // The LndHub session token belongs to the server and account it was
+        // issued by. The backend sends it as a Bearer header (and LND sends
+        // macaroonHex || accessToken), so a token left over from another
+        // wallet would go to the next server. This runs after every settings
+        // write, so only clear it when the connection target changes.
+        //
+        // A connect still in flight for the old target is stale from here
+        // on: deleting the active wallet slides the next one into the same
+        // index with no reconnect in between, so without a new generation a
+        // login answered after the deletion would pass getConnectionGuard
+        // and store the deleted account's token for the next wallet's server.
+        if (
+            !node ||
+            (node.implementation || 'lnd') !== this.implementation ||
+            node.host !== this.host ||
+            node.port !== this.port ||
+            node.lndhubUrl !== this.lndhubUrl ||
+            node.username !== this.username ||
+            node.password !== this.password
+        ) {
+            this.connectionSeq++;
+            this.accessToken = '';
+            this.refreshToken = '';
+        }
+
         if (node) {
             this.host = node.host;
             this.port = node.port;
@@ -2028,7 +2101,7 @@ export default class SettingsStore {
                     (node.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
                         'mainnet'
                 );
-            this.ldkScorerUrl = node.ldkScorerUrl || DEFAULT_SCORER_URL;
+            this.ldkScorerUrl = node.ldkScorerUrl ?? DEFAULT_SCORER_URL;
             this.ldkVssServer = node.ldkVssServer || DEFAULT_VSS_SERVER;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
@@ -2099,14 +2172,49 @@ export default class SettingsStore {
             if (modernSettings) {
                 console.log('attempting to load modern settings');
                 const parsedSettings = JSON.parse(modernSettings);
-                this.settings = parsedSettings;
+                // only swap the settings reference on a real change:
+                // getSettings runs several times per boot/focus against an
+                // unchanged blob, and every swap re-runs all observers of
+                // SettingsStore.settings
+                if (!isEqual(this.settings, parsedSettings)) {
+                    this.settings = parsedSettings;
+                }
                 // when consolidation routes through the updateSettings
                 // queue the authoritative object is the queue's, not this
                 // call's snapshot, so adopt the return value
-                this.settings = await MigrationsUtils.runSettingsMigrations(
-                    parsedSettings,
-                    fromQueue
-                );
+                let migratedSettings =
+                    await MigrationsUtils.runSettingsMigrations(
+                        parsedSettings,
+                        fromQueue
+                    );
+                // hash any plaintext PIN/passphrase into salted verifiers.
+                // Runs after the consolidation so it sees (and, routed
+                // through the queue, persists) the authoritative object.
+                migratedSettings =
+                    await MigrationsUtils.migrateLockCredentialsToVerifiers(
+                        migratedSettings,
+                        fromQueue
+                    );
+                // iOS one-shot: rewrite pre-existing keychain items so
+                // write-once keys pick up the non-migratable accessibility
+                // class. Modern path only: the legacy path's
+                // storageMigrationV2 freshly writes every item, which
+                // stamps them correctly already.
+                migratedSettings =
+                    await MigrationsUtils.restampKeychainAccessibility(
+                        migratedSettings,
+                        fromQueue
+                    );
+                // second pass picks up whatever the migrations produced,
+                // in-place edits to the snapshot included, which the
+                // reference taken above does not see
+                if (!isEqual(this.settings, migratedSettings)) {
+                    this.settings = migratedSettings;
+                }
+                // Not a settings migration: it clears Storage markers under
+                // its own one-shot flag, so it stays outside
+                // runSettingsMigrations' version stamp.
+                await MigrationsUtils.migrateScbBackupFormat();
             } else {
                 console.log('attempting to load legacy settings');
 
@@ -2380,7 +2488,7 @@ export default class SettingsStore {
     public createAccount = (
         host: string,
         certVerification: boolean,
-        enableTor?: boolean
+        enableTor: boolean
     ) => {
         const url = `${host}/create`;
         const headers = {
@@ -2468,6 +2576,7 @@ export default class SettingsStore {
     // LNDHub
     @action
     public login = (request: LoginRequest) => {
+        const isCurrent = this.getConnectionGuard();
         this.error = false;
         this.errorMsg = '';
         this.createAccountSuccess = '';
@@ -2481,6 +2590,9 @@ export default class SettingsStore {
                 .then((data: any) => {
                     runInAction(() => {
                         this.loading = false;
+                        // The old account's tokens must not replace the
+                        // newly selected wallet's
+                        if (!isCurrent()) return;
                         this.accessToken = data.access_token;
                         this.refreshToken = data.refresh_token;
                     });
@@ -2489,6 +2601,7 @@ export default class SettingsStore {
                 .catch((error: any) => {
                     runInAction(() => {
                         this.loading = false;
+                        if (!isCurrent()) return;
                         this.error = true;
                         if (
                             typeof error.message === 'string' &&
@@ -2508,6 +2621,33 @@ export default class SettingsStore {
         });
     };
 
+    // Snapshot both selection and reconnect generation. A connect or refresh
+    // that outlives a wallet switch (or a reconnect of the same wallet) must
+    // not write the newer connection's loading/error/connecting state.
+    //
+    // Deleting a wallet listed above the selected one moves the selected
+    // index without a switch or reconnect. A guard held until something
+    // resubscribes (the NWC pay handlers) passes `ignoreSelectedNode` and
+    // compares the selected wallet itself.
+    public getConnectionGuard = ({ ignoreSelectedNode = false } = {}) => {
+        const {
+            implementation,
+            pairingPhrase,
+            mailboxServer,
+            customMailboxServer,
+            connectionSeq
+        } = this;
+        const selectedNode = this.settings.selectedNode;
+        return () =>
+            this.connectionSeq === connectionSeq &&
+            (ignoreSelectedNode ||
+                this.settings.selectedNode === selectedNode) &&
+            this.implementation === implementation &&
+            this.pairingPhrase === pairingPhrase &&
+            this.mailboxServer === mailboxServer &&
+            this.customMailboxServer === customMailboxServer;
+    };
+
     // LNC
     //
     // ConnectServer dials in a detached goroutine that retries until it
@@ -2518,13 +2658,21 @@ export default class SettingsStore {
     // dial that is still in progress, so calling connect() again after an
     // error goes back to waiting on it. The old 10s budget was routinely
     // shorter than a mailbox handshake on a cold radio (ZEUS-4278).
-    private waitForLncConnection = () =>
+    private waitForLncConnection = (isCurrent: () => boolean) =>
         new Promise<boolean>((resolve) => {
             let counter = 0;
             const interval = setInterval(async () => {
+                if (!isCurrent()) {
+                    clearInterval(interval);
+                    resolve(false);
+                    return;
+                }
                 counter++;
                 const connected = await BackendUtils.isConnected();
-                if (connected) {
+                if (!isCurrent()) {
+                    clearInterval(interval);
+                    resolve(false);
+                } else if (connected) {
                     clearInterval(interval);
                     resolve(true);
                 } else if (counter >= LNC_CONNECT_MAX_POLLS) {
@@ -2535,11 +2683,13 @@ export default class SettingsStore {
         });
 
     public connect = async () => {
+        const isCurrent = this.getConnectionGuard();
         this.loading = true;
 
         let error;
         try {
             await BackendUtils.initLNC();
+            if (!isCurrent()) return;
             error = await BackendUtils.connect();
         } catch (e: any) {
             // a throw means the native client could not be set up at all
@@ -2549,6 +2699,7 @@ export default class SettingsStore {
             error = e?.message ?? String(e);
         }
 
+        if (!isCurrent()) return;
         if (error) {
             // rejected before the handshake even started (bad mailbox
             // address, malformed keys)
@@ -2560,7 +2711,9 @@ export default class SettingsStore {
             return error;
         }
 
-        if (await this.waitForLncConnection()) {
+        const connected = await this.waitForLncConnection(isCurrent);
+        if (!isCurrent()) return;
+        if (connected) {
             runInAction(() => {
                 this.error = false;
                 this.errorMsg = '';
@@ -2593,11 +2746,13 @@ export default class SettingsStore {
     // NWC
     @action
     public connectNWC = async () => {
+        const isCurrent = this.getConnectionGuard();
         this.loading = true;
 
         await BackendUtils.initNWC();
 
         const error = await BackendUtils.connect();
+        if (!isCurrent()) return;
         if (error) {
             this.error = true;
             this.errorMsg = error;
@@ -2618,14 +2773,32 @@ export default class SettingsStore {
         !!this.loginMethodConfigured() &&
         (!this.loggedIn || this.posStatus === 'active');
 
+    // False from a cold start until Wallet has acted on the stored settings
+    // (logged in, or switched to POS mode), and again while locked. Before
+    // that, settings may still hold the in-memory defaults (no PIN, POS
+    // disabled), so a navigation cannot tell whether it needs the Lockscreen.
+    public sessionStarted = () => this.loggedIn || this.posStatus === 'active';
+
     public isPosEnabled = () =>
         (this.settings?.pos?.posEnabled || PosEnabled.Disabled) !==
         PosEnabled.Disabled;
 
+    // Whether Wallet shows the POS tabs. 'unselected' counts: with POS
+    // enabled, Wallet always moves it to 'active', and the tab navigator
+    // picks its first tab when it mounts. A new App root over a connected
+    // node (see startNewRootSession) mounts the tabs before Wallet makes
+    // that move, so treating 'unselected' as not POS would open the wallet
+    // tabs and then swap them out from under the navigator.
+    public posViewActive = () =>
+        this.isPosEnabled() && this.posStatus !== 'inactive';
+
     public loginMethodConfigured = () =>
         this.settings &&
-        (this.settings.passphrase ||
-            this.settings.pin ||
+        // a plaintext credential counts too: if the verifier migration
+        // threw on this boot, the blob in memory still holds it, and
+        // checking verifiers alone would boot with no lock
+        (hasLockCredential(this.settings, 'passphrase') ||
+            hasLockCredential(this.settings, 'pin') ||
             this.isBiometryConfigured());
 
     public checkBiometricsStatus = async () => {
@@ -2647,6 +2820,16 @@ export default class SettingsStore {
         this.settings.supportedBiometryType !== undefined;
 
     public setLoginStatus = (status = false) => (this.loggedIn = status);
+
+    // On Android a persistent LND, LDK Node or NWC service keeps the process
+    // and this store alive after MainActivity is destroyed, and the next
+    // MainActivity mounts a new App on it. Put the session back where a cold
+    // start leaves it: logged out, and POS not yet chosen, so Wallet opens
+    // POS (if enabled) or the Lockscreen as it does at launch.
+    public startNewRootSession = () => {
+        this.loggedIn = false;
+        this.posStatus = 'unselected';
+    };
 
     // Single-flight guard for Wallet.fetchData. Returns an ownership token,
     // or null if another invocation already holds the lock.
@@ -2672,6 +2855,7 @@ export default class SettingsStore {
     public setConnectingStatus = (status = false) => {
         // reset error on reconnect
         if (status) {
+            this.connectionSeq++;
             this.error = false;
             this.errorMsg = '';
             this.lndFolderMissing = false;
@@ -2681,6 +2865,13 @@ export default class SettingsStore {
         }
         this.connecting = status;
         return this.connecting;
+    };
+
+    // Fails the connection guard of every connect, login and refresh
+    // started so far, without starting a new connection
+    @action
+    public invalidateConnection = () => {
+        this.connectionSeq++;
     };
 
     @action

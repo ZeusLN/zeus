@@ -51,10 +51,14 @@ export default class Swap extends BaseModel {
     acceptZeroConf?: boolean;
     address?: string;
     bip21?: string;
+    // a reverse swap's claim fee in sats, and the sat/vB rate it was
+    // decided at, both fixed when the swap is created
     claimMinerFee?: number;
+    claimFeeRate?: number;
     failureReason?: string;
     imported?: boolean;
     claimAddressFromWallet?: boolean;
+    onchainAmountVerified?: boolean;
     keyIndex?: number;
     preimageHash?: string;
     serverPublicKey?: string;
@@ -62,6 +66,10 @@ export default class Swap extends BaseModel {
     tree?: any;
     lockupTransaction?: any;
     txid?: string;
+    // a reverse swap's signed claim, stored before it is first broadcast so
+    // a failed broadcast is retried with the same transaction
+    claimTransactionHex?: string;
+    claimTxid?: string;
 
     @computed public get model(): string {
         return localeString('views.Swaps.title');
@@ -116,12 +124,12 @@ export default class Swap extends BaseModel {
 
     /**
      * The address a reverse swap's claim may pay out to. On a rescued swap
-     * this is only the address this wallet generated for the claim: earlier
-     * rescues stored whatever the host's /swap/restore response held, so a
-     * destinationAddress without claimAddressFromWallet may be the host's.
+     * always resolve a fresh wallet address. Legacy rescues copied arbitrary
+     * host fields, including claimAddressFromWallet, so no persisted marker
+     * proves ownership, even after the preimage has been repaired.
      */
     @computed get claimDestinationAddress(): string | undefined {
-        if (this.imported && !this.claimAddressFromWallet) return undefined;
+        if (this.imported) return undefined;
         return this.destinationAddress;
     }
 
@@ -129,9 +137,16 @@ export default class Swap extends BaseModel {
         return this.address || this.lockupAddress;
     }
 
+    /**
+     * What the pay button and QR code hand over. A rescued submarine swap has
+     * none: /swap/restore returns no invoice, so nothing ties its address to
+     * a payment to this wallet. It is only there to be refunded. Swaps saved
+     * before bip21 was rebuilt on creation may lack it and fall back to the
+     * lockup address.
+     */
     @computed get qrCodeValue(): string | undefined {
         if (this.isSubmarineSwap) {
-            return this.bip21 || this.lockupAddress;
+            return this.imported ? undefined : this.bip21 || this.lockupAddress;
         }
         if (this.isReverseSwap) {
             return this.invoice;

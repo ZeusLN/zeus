@@ -154,6 +154,13 @@ class LndMobile extends ReactContextBaseJavaModule {
           final String method = (String) bundle.get("method");
           WritableMap params = Arguments.createMap();
 
+          // Echo the caller's request id so JS can tell concurrent streams
+          // of the same method apart: they all emit under the method name.
+          final String requestId = bundle.getString("request_id");
+          if (requestId != null && !requestId.isEmpty()) {
+            params.putString("request_id", requestId);
+          }
+
           if (bundle.containsKey("error_code")) {
             params.putString("error_code", bundle.getString("error_code"));
             params.putString("error_desc", bundle.getString("error_desc"));
@@ -181,15 +188,6 @@ class LndMobile extends ReactContextBaseJavaModule {
           final Promise promise = requests.remove(request);
           int flags = msg.arg2;
           promise.resolve(flags);
-          break;
-        }
-        case LndMobileService.MSG_GRPC_STREAM_STARTED:
-        case LndMobileService.MSG_GRPC_STREAM_WRITE: {
-          final int request = msg.arg1;
-          final Promise promise = requests.remove(request);
-          if (promise != null) {
-            promise.resolve("done");
-          }
           break;
         }
       }
@@ -497,10 +495,12 @@ class LndMobile extends ReactContextBaseJavaModule {
     }
   }
 
+  // Stream methods resolve once the message is sent and stay out of requests.
+  // Resolving again from the service's reply on the LndMobile handler thread
+  // can call the promise twice at once, which aborts the app (#3912).
   @ReactMethod
-  public void sendStreamCommand(String method, String payloadStr, boolean streamOnlyOnce, Promise promise) {
+  public void sendStreamCommand(String method, String payloadStr, boolean streamOnlyOnce, String requestId, Promise promise) {
     int req = new Random().nextInt();
-    requests.put(req, promise);
 
     Message message = Message.obtain(null, LndMobileService.MSG_GRPC_STREAM_COMMAND, req, 0);
     message.replyTo = messenger;
@@ -509,21 +509,22 @@ class LndMobile extends ReactContextBaseJavaModule {
     bundle.putString("method", method);
     bundle.putByteArray("payload", Base64.decode(payloadStr, Base64.NO_WRAP));
     bundle.putBoolean("stream_only_once", streamOnlyOnce);
+    bundle.putString("request_id", requestId);
     message.setData(bundle);
 
     try {
       lndMobileServiceMessenger.send(message);
     } catch (RemoteException e) {
       promise.reject(TAG, "Could not Send MSG_GRPC_STREAM_COMMAND to LndMobileService", e);
+      return;
     }
 
     promise.resolve("done");
   }
 
   @ReactMethod
-  public void sendBidiStreamCommand(String method, boolean streamOnlyOnce, Promise promise) {
+  public void sendBidiStreamCommand(String method, boolean streamOnlyOnce, String requestId, Promise promise) {
     int req = new Random().nextInt();
-    requests.put(req, promise);
 
     Message message = Message.obtain(null, LndMobileService.MSG_GRPC_BIDI_STREAM_COMMAND, req, 0);
     message.replyTo = messenger;
@@ -531,12 +532,14 @@ class LndMobile extends ReactContextBaseJavaModule {
     Bundle bundle = new Bundle();
     bundle.putString("method", method);
     bundle.putBoolean("stream_only_once", streamOnlyOnce);
+    bundle.putString("request_id", requestId);
     message.setData(bundle);
 
     try {
       lndMobileServiceMessenger.send(message);
     } catch (RemoteException e) {
       promise.reject(TAG, "Could not Send MSG_GRPC_BIDI_STREAM_COMMAND to LndMobileService", e);
+      return;
     }
 
     promise.resolve("done");
@@ -545,7 +548,6 @@ class LndMobile extends ReactContextBaseJavaModule {
   @ReactMethod
   public void writeToStream(String method, String payloadStr, Promise promise) {
     int req = new Random().nextInt();
-    requests.put(req, promise);
 
     Message message = Message.obtain(null, LndMobileService.MSG_GRPC_STREAM_WRITE, req, 0);
     message.replyTo = messenger;
@@ -559,6 +561,7 @@ class LndMobile extends ReactContextBaseJavaModule {
       lndMobileServiceMessenger.send(message);
     } catch (RemoteException e) {
       promise.reject(TAG, "Could not Send MSG_GRPC_STREAM_WRITE to LndMobileService", e);
+      return;
     }
 
     promise.resolve("done");

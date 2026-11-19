@@ -4,7 +4,6 @@ import {
     Dimensions,
     NativeEventSubscription,
     Text,
-    TouchableOpacity,
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,7 +27,6 @@ import { sendingStyles } from '../../components/sendingStyles';
 import CashuStore from '../../stores/CashuStore';
 import ContactStore from '../../stores/ContactStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import ContactUtils from '../../utils/ContactUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -38,10 +36,8 @@ import UrlUtils from '../../utils/UrlUtils';
 
 import Storage from '../../storage';
 
-import Clock from '../../assets/images/SVG/Clock.svg';
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
 
-import ModalBox from '../../components/ModalBox';
 import Header from '../../components/Header';
 import PaymentDetailsSheet from '../../components/PaymentDetailsSheet';
 
@@ -50,13 +46,12 @@ interface CashuSendingLightningProps {
     CashuStore: CashuStore;
     ContactStore: ContactStore;
     LnurlPayStore: LnurlPayStore;
-    NodeInfoStore: NodeInfoStore;
     route: Route<
         'CashuSendingLightning',
         {
             donationAmount?: string;
-            enableDonations: boolean;
             paymentAmount?: string;
+            paymentRequest?: string;
         }
     >;
 }
@@ -70,12 +65,10 @@ interface CashuSendingLightningState {
     donationHandled: boolean;
     donationPreimage: string;
     amountDonated: number | null;
-    donationIsPaid: boolean;
-    showZaplockerWarning: boolean;
     showPaymentDetails: boolean;
 }
 
-@inject('CashuStore', 'ContactStore', 'LnurlPayStore', 'NodeInfoStore')
+@inject('CashuStore', 'ContactStore', 'LnurlPayStore')
 @observer
 export default class CashuSendingLightning extends React.Component<
     CashuSendingLightningProps,
@@ -86,6 +79,10 @@ export default class CashuSendingLightning extends React.Component<
     private focusListener: (() => void) | undefined;
 
     private cancelPaymentKickoff: (() => void) | undefined;
+
+    // One attempt per screen: CashuStore.paymentSuccess is shared with
+    // later payments made while this screen stays mounted.
+    private donationAttempted = false;
 
     constructor(props: CashuSendingLightningProps) {
         super(props);
@@ -98,15 +95,13 @@ export default class CashuSendingLightning extends React.Component<
             amountDonated: null,
             wasSuccessful: false,
             paymentType: 'main',
-            donationIsPaid: false,
-            showZaplockerWarning: false,
             showPaymentDetails: false
         };
     }
 
     componentDidMount() {
         const { CashuStore, navigation, route } = this.props;
-        const { paymentAmount } = route.params || {};
+        const { paymentAmount, paymentRequest } = route.params || {};
 
         // Reset payment state and start the payment once the JS thread is
         // free, so the melt does not jank the navigation transition. The
@@ -117,7 +112,8 @@ export default class CashuSendingLightning extends React.Component<
         this.cancelPaymentKickoff = runWhenIdle(
             () =>
                 CashuStore.payLnInvoiceFromEcash({
-                    amount: paymentAmount
+                    amount: paymentAmount,
+                    paymentRequest
                 }),
             500
         );
@@ -144,9 +140,8 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     componentDidUpdate() {
-        const { CashuStore, NodeInfoStore, route } = this.props;
-        const { donationIsPaid } = this.state;
-        const { donationAmount, enableDonations } = route.params;
+        const { CashuStore, route } = this.props;
+        const { donationAmount } = route.params;
 
         const wasSuccessful = this.successfullySent(CashuStore);
 
@@ -156,14 +151,16 @@ export default class CashuSendingLightning extends React.Component<
             this.setState({ wasSuccessful: false });
         }
 
+        // donationAmount is only set when CashuPaymentRequest resolved a
+        // donation to send, against the same balance check it showed the
+        // user. Deciding again here could send one that was never counted.
         if (
-            NodeInfoStore!.nodeInfo.isMainNet &&
             wasSuccessful &&
             !this.state.wasSuccessful &&
-            enableDonations &&
             donationAmount &&
-            !donationIsPaid
+            !this.donationAttempted
         ) {
+            this.donationAttempted = true;
             this.handleDonationPayment(donationAmount);
         }
     }
@@ -190,6 +187,7 @@ export default class CashuSendingLightning extends React.Component<
 
             const donationPayment = await CashuStore.payLnInvoiceFromEcash({
                 amount: donationAmount.toString(),
+                paymentRequest,
                 isDonationPayment
             });
 
@@ -217,7 +215,6 @@ export default class CashuSendingLightning extends React.Component<
 
             this.setState({
                 donationHandled: true,
-                donationIsPaid: true,
                 amountDonated: parseFloat(amountDonated?.toString() || '0'),
                 donationPreimage: paymentPreimage || ''
             });
@@ -227,66 +224,6 @@ export default class CashuSendingLightning extends React.Component<
         } finally {
             this.setState({ payingDonation: false });
         }
-    };
-
-    renderZaplockerWarningModal = () => {
-        const { showZaplockerWarning } = this.state;
-
-        return (
-            <ModalBox
-                isOpen={showZaplockerWarning}
-                style={{
-                    backgroundColor: 'transparent'
-                }}
-                onClosed={() => {
-                    this.setState({
-                        showZaplockerWarning: false
-                    });
-                }}
-                position="center"
-            >
-                <View
-                    style={{
-                        flex: 1,
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}
-                >
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 24,
-                            padding: 20,
-                            alignItems: 'center',
-                            width: '90%'
-                        }}
-                    >
-                        <Text
-                            style={{
-                                fontFamily: 'PPNeueMontreal-Book',
-                                color: themeColor('text'),
-                                fontSize: 18,
-                                marginBottom: 20,
-                                textAlign: 'center'
-                            }}
-                        >
-                            {localeString('views.SendingLightning.isZaplocker')}
-                        </Text>
-
-                        <Button
-                            title={localeString('general.close')}
-                            onPress={() =>
-                                this.setState({ showZaplockerWarning: false })
-                            }
-                            containerStyle={{
-                                marginTop: 18
-                            }}
-                            tertiary
-                        />
-                    </View>
-                </View>
-            </ModalBox>
-        );
     };
 
     private handleBackPress(): boolean {
@@ -337,7 +274,12 @@ export default class CashuSendingLightning extends React.Component<
             showPaymentDetails
         } = this.state;
 
-        const lightningAddress = LnurlPayStore.lightningAddress;
+        // the address was looked up for one LNURL-pay invoice; don't show
+        // it as the recipient of a different payment
+        const lightningAddress =
+            payment_hash && payment_hash === LnurlPayStore.paymentHash
+                ? LnurlPayStore.lightningAddress
+                : undefined;
         const matchedContact = ContactUtils.findContactByLightningAddress(
             lightningAddress,
             ContactStore?.contacts
@@ -359,27 +301,7 @@ export default class CashuSendingLightning extends React.Component<
 
         return (
             <Screen>
-                {!loading && (
-                    <Header
-                        rightComponent={
-                            LnurlPayStore.isZaplocker &&
-                            (!success || !!paymentError) ? (
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        this.setState({
-                                            showZaplockerWarning: true
-                                        })
-                                    }
-                                >
-                                    <Clock color={themeColor('bitcoin')} />
-                                </TouchableOpacity>
-                            ) : (
-                                <></>
-                            )
-                        }
-                    />
-                )}
-                {this.renderZaplockerWarningModal()}
+                {!loading && <Header />}
                 <DonationInfoModal
                     isOpen={this.state.showDonationInfo}
                     onClose={() => this.setState({ showDonationInfo: false })}
@@ -418,14 +340,11 @@ export default class CashuSendingLightning extends React.Component<
                                     paymentDuration={paymentDuration}
                                 />
                             )}
-                            {(!!paymentError || !!paymentErrorMsg) &&
-                                !LnurlPayStore.isZaplocker && (
-                                    <PaymentErrorView
-                                        errorMessage={
-                                            paymentErrorMsg || error_msg
-                                        }
-                                    />
-                                )}
+                            {(!!paymentError || !!paymentErrorMsg) && (
+                                <PaymentErrorView
+                                    errorMessage={paymentErrorMsg || error_msg}
+                                />
+                            )}
                             {!paymentError &&
                                 payment_hash === LnurlPayStore.paymentHash &&
                                 LnurlPayStore.successAction &&

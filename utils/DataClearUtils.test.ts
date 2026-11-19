@@ -23,12 +23,17 @@ jest.mock('react-native-blob-util', () => ({
         ls: jest.fn().mockResolvedValue([])
     }
 }));
+jest.mock('react-native-notifications', () => ({
+    Notifications: { removeAllDeliveredNotifications: jest.fn() }
+}));
 
 jest.mock('../storage', () => ({
     getItem: jest.fn().mockResolvedValue(null),
     removeItem: jest.fn().mockResolvedValue(true),
     setItem: jest.fn().mockResolvedValue(true),
-    blockWrites: jest.fn()
+    blockWrites: jest.fn(),
+    getInternetPasswordServers: jest.fn().mockResolvedValue([]),
+    removeRawItem: jest.fn().mockResolvedValue(undefined)
 }));
 
 // Native CDK bridge. Both wipe paths must drop the SQLite handles before
@@ -51,12 +56,16 @@ jest.mock('./LndMobileUtils', () => ({
 }));
 jest.mock('./LdkNodeUtils', () => ({
     deleteLdkNodeWallet: jest.fn().mockResolvedValue(undefined),
+    getLdkNodeBaseDirectory: jest.fn().mockReturnValue('/docs/ldk-node'),
     stopLdkNode: jest.fn().mockResolvedValue(undefined)
 }));
 
 // Retry backoff - keep the suite from actually waiting on it
 jest.mock('./SleepUtils', () => ({
     sleep: jest.fn().mockResolvedValue(undefined)
+}));
+jest.mock('./TorUtils', () => ({
+    clearTorData: jest.fn().mockResolvedValue(undefined)
 }));
 
 // The real derivation runs scrypt (N=32768); its correctness is pinned by
@@ -127,7 +136,9 @@ jest.mock('../stores/ActivityStore', () => ({
     LEGACY_ACTIVITY_FILTERS_KEY: 'activityFilters'
 }));
 jest.mock('../utils/MigrationUtils', () => ({
-    IS_BACKED_UP_KEY: 'is-backed-up'
+    __esModule: true,
+    IS_BACKED_UP_KEY: 'is-backed-up',
+    default: { clearConfirmedFlags: jest.fn() }
 }));
 jest.mock('../utils/SwapUtils', () => ({
     SWAPS_KEY: 'swaps',
@@ -141,6 +152,7 @@ jest.mock('../stores/NostrWalletConnectStore', () => ({
     NWC_CONNECTIONS_KEY: 'zeus-nwc-connections',
     NWC_CLIENT_KEYS: 'zeus-nwc-client-keys',
     NWC_SERVICE_KEYS: 'zeus-nwc-service-keys',
+    NWC_PROCESSED_EVENTS_KEY: 'zeus-nwc-processed-events',
     NWC_CASHU_ENABLED: 'zeus-nwc-cashu-enabled',
     NWC_LUD16_ENABLED: 'zeus-nwc-lud16-enabled',
     NWC_PERSISTENT_SERVICE_ENABLED: 'persistentNWCServicesEnabled'
@@ -150,9 +162,13 @@ jest.mock('../utils/RatingUtils', () => ({
     RATING_DISMISSED_KEY: 'ratingDismissedPermanently'
 }));
 
-import hashjs from 'hash.js';
-import { BackHandler, Platform } from 'react-native';
+import { createHash } from 'node:crypto';
+// @ts-ignore: Networking is exported at runtime but missing from the legacy typings
+import { BackHandler, Networking, Platform } from 'react-native';
+import EncryptedStorage from 'react-native-encrypted-storage';
+import { Notifications } from 'react-native-notifications';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import RNFS from 'react-native-fs';
 
 import fs from 'fs';
 import path from 'path';
@@ -172,6 +188,10 @@ import {
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
+import MigrationUtils from './MigrationUtils';
+import LncCredentialStore, {
+    rememberCredentials
+} from '../backends/LNC/credentialStore';
 
 const mockedDeleteLndWallet = deleteLndWallet as jest.Mock;
 const mockedDeleteLdkNodeWallet = deleteLdkNodeWallet as jest.Mock;
@@ -180,7 +200,9 @@ const mockedStorageGetItem = Storage.getItem as jest.Mock;
 const mockedSleep = sleep as jest.Mock;
 const mockedStorageRemoveItem = Storage.removeItem as jest.Mock;
 
-const lncHash = (value: string) => hashjs.sha256().update(value).digest('hex');
+// Node's crypto, so the expected keys do not depend on the app's hashing library
+const lncHash = (value: string) =>
+    createHash('sha256').update(value, 'utf8').digest('hex');
 
 // clearKey() clears each key via Storage.removeItem(rawKey); asserting on it is
 // the cleanest way to prove a namespaced key was targeted by a wipe.
@@ -302,6 +324,34 @@ describe('clearAllData node data directory wipe (KEY-005 regression)', () => {
     });
 });
 
+describe('clearAllData Tor data', () => {
+    const { clearTorData } = require('./TorUtils');
+    const mockedClearTorData = clearTorData as jest.Mock;
+    const mockedAsyncStorageClear =
+        require('@react-native-async-storage/async-storage').clear as jest.Mock;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedClearTorData.mockResolvedValue(undefined);
+    });
+
+    it('stops Tor and deletes its data directories', async () => {
+        await clearAllData();
+
+        expect(mockedClearTorData).toHaveBeenCalledTimes(1);
+    });
+
+    it('finishes the wipe when clearing Tor data fails', async () => {
+        mockedClearTorData.mockRejectedValueOnce(new Error('unlink failed'));
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(mockedAsyncStorageClear).toHaveBeenCalled();
+        expect(EncryptedStorage.clear).toHaveBeenCalled();
+    });
+});
+
 // The wipe runs on the duress path, so a failed directory deletion must be
 // retried rather than surfaced: halting would leave the keychain and settings
 // blob unwiped, and an error in the UI would disclose the duress mechanism.
@@ -384,6 +434,266 @@ describe('clearAllData node data directory retry', () => {
 
         expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(3);
         expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-2');
+    });
+});
+
+// Node directories can outlive their config: a single-wallet deletion
+// removes the config before the directory, and the user can skip a failed
+// directory removal. The wipe must find these on disk.
+describe('clearAllData orphaned node data directories', () => {
+    const mockedLs = ReactNativeBlobUtil.fs.ls as jest.Mock;
+    const mockedExists = ReactNativeBlobUtil.fs.exists as jest.Mock;
+
+    const ORPHAN_LND = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
+    const ORPHAN_LND_2 = '9b2d5a1c-7e3f-4c6a-8d1b-2f4e6a8c0d12';
+    const CONFIGURED_LND = '1c4f9e2a-6b8d-4a3e-9f7c-5d2b8e1a4c63';
+    const IOS_BASE = '/lib/Application Support';
+    const ANDROID_BASE = '/docs/../files';
+
+    // Simulated disk: the listing of each directory and every existing path
+    const setDisk = (listings: Record<string, string[]>, paths: string[]) => {
+        mockedLs.mockImplementation((dir: string) =>
+            Promise.resolve(listings[dir] ?? [])
+        );
+        mockedExists.mockImplementation((p: string) =>
+            Promise.resolve(paths.includes(p) || p in listings)
+        );
+    };
+    const deletedLndDirs = () =>
+        mockedDeleteLndWallet.mock.calls.map((call) => call[0]);
+    const deletedLdkDirs = () =>
+        mockedDeleteLdkNodeWallet.mock.calls.map((call) => call[0]);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedDeleteLndWallet.mockResolvedValue(true);
+        mockedDeleteLdkNodeWallet.mockResolvedValue(undefined);
+        setDisk({}, []);
+    });
+
+    afterAll(() => {
+        mockedLs.mockResolvedValue([]);
+        mockedExists.mockResolvedValue(false);
+    });
+
+    it('deletes an LND directory of a wallet no longer in settings (iOS)', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'embedded-lnd', lndDir: CONFIGURED_LND }
+            ]).getItem
+        );
+        setDisk({ [IOS_BASE]: [CONFIGURED_LND, ORPHAN_LND] }, [
+            `${IOS_BASE}/${CONFIGURED_LND}/lnd.conf`,
+            `${IOS_BASE}/${ORPHAN_LND}/lnd.conf`,
+            `${IOS_BASE}/${ORPHAN_LND}/data/chain`
+        ]);
+
+        await clearAllData();
+
+        // configured directory once (settings pass), orphan once (sweep)
+        expect(deletedLndDirs()).toEqual([CONFIGURED_LND, ORPHAN_LND]);
+    });
+
+    it('deletes orphaned LND directories when the settings blob is unreadable', async () => {
+        mockedStorageGetItem.mockResolvedValue(null);
+        setDisk({ [IOS_BASE]: [ORPHAN_LND, ORPHAN_LND_2, 'lnd'] }, [
+            `${IOS_BASE}/${ORPHAN_LND}/data/chain`,
+            `${IOS_BASE}/${ORPHAN_LND_2}/logs/bitcoin`,
+            `${IOS_BASE}/lnd/tls.cert`
+        ]);
+
+        await clearAllData();
+
+        expect(deletedLndDirs().sort()).toEqual(
+            [ORPHAN_LND, ORPHAN_LND_2, 'lnd'].sort()
+        );
+    });
+
+    it('deletes a legacy Android LND wallet in the files dir root', async () => {
+        setPlatformOS('android');
+        setDisk({ [ANDROID_BASE]: ['data', 'logs', 'lnd.conf'] }, [
+            `${ANDROID_BASE}/lnd.conf`,
+            `${ANDROID_BASE}/data/chain`
+        ]);
+
+        await clearAllData();
+
+        expect(deletedLndDirs()).toEqual(['lnd']);
+    });
+
+    it('does not delete the files dir root again when the legacy wallet is configured', async () => {
+        setPlatformOS('android');
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([{ implementation: 'embedded-lnd' }]).getItem
+        );
+        setDisk({ [ANDROID_BASE]: ['data', 'lnd.conf'] }, [
+            `${ANDROID_BASE}/lnd.conf`
+        ]);
+
+        await clearAllData();
+
+        expect(deletedLndDirs()).toEqual(['lnd']);
+    });
+
+    it('leaves directories that are not ZEUS LND wallet directories alone', async () => {
+        setDisk(
+            {
+                [IOS_BASE]: [
+                    'cashu_wallet_0123456789abcdef.db',
+                    'ldk-node',
+                    'lnd-backup',
+                    'some-library',
+                    ORPHAN_LND
+                ]
+            },
+            [
+                // LND-like contents under names ZEUS never gives a wallet
+                `${IOS_BASE}/lnd-backup/lnd.conf`,
+                `${IOS_BASE}/some-library/logs/bitcoin`,
+                // a wallet-shaped name without LND files
+                `${IOS_BASE}/${ORPHAN_LND}/notes.txt`
+            ]
+        );
+
+        await clearAllData();
+
+        expect(mockedDeleteLndWallet).not.toHaveBeenCalled();
+    });
+
+    it('does not treat a stray data or logs dir in the Android files root as a wallet', async () => {
+        setPlatformOS('android');
+        setDisk({ [ANDROID_BASE]: ['data', 'logs'] }, [
+            `${ANDROID_BASE}/data`,
+            `${ANDROID_BASE}/logs`
+        ]);
+
+        await clearAllData();
+
+        expect(mockedDeleteLndWallet).not.toHaveBeenCalled();
+    });
+
+    it('does not retry a configured LND directory that already failed', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'embedded-lnd', lndDir: CONFIGURED_LND }
+            ]).getItem
+        );
+        setDisk({ [IOS_BASE]: [CONFIGURED_LND] }, [
+            `${IOS_BASE}/${CONFIGURED_LND}/lnd.conf`
+        ]);
+        mockedDeleteLndWallet.mockResolvedValue(false);
+
+        await clearAllData();
+
+        expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(3);
+    });
+
+    it('stops LDK Node and deletes LDK Node directories no longer in settings', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'ldk-node', ldkNodeDir: 'ldk-configured' }
+            ]).getItem
+        );
+        setDisk({ '/docs/ldk-node': ['ldk-configured', 'ldk-orphan'] }, []);
+
+        await clearAllData();
+
+        expect(deletedLdkDirs()).toEqual(['ldk-configured', 'ldk-orphan']);
+        const orphanCall = deletedLdkDirs().indexOf('ldk-orphan');
+        expect(
+            mockedStopLdkNode.mock.invocationCallOrder[orphanCall]
+        ).toBeLessThan(
+            mockedDeleteLdkNodeWallet.mock.invocationCallOrder[orphanCall]
+        );
+    });
+
+    it('does not stop LDK Node when no LDK Node directory exists', async () => {
+        setDisk({ [IOS_BASE]: [] }, []);
+
+        await clearAllData();
+
+        expect(mockedStopLdkNode).not.toHaveBeenCalled();
+        expect(mockedDeleteLdkNodeWallet).not.toHaveBeenCalled();
+    });
+
+    it('still finishes the wipe when listing a directory fails', async () => {
+        mockedLs.mockRejectedValue(new Error('EACCES'));
+        mockedExists.mockResolvedValue(true);
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+    });
+});
+
+describe('clearAllData channel database exports in Downloads', () => {
+    const mockedReadDir = RNFS.readDir as jest.Mock;
+    const mockedUnlink = RNFS.unlink as jest.Mock;
+
+    const file = (name: string, isFile = true) => ({
+        name,
+        path: `/public-downloads/${name}`,
+        isFile: () => isFile
+    });
+    const unlinked = () => mockedUnlink.mock.calls.map((call) => call[0]);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedUnlink.mockResolvedValue(undefined);
+        mockedReadDir.mockResolvedValue([
+            file('zeus-lnd-mainnet-1791995129313.zip'),
+            file('zeus-lnd-testnet-1791995129314.zip'),
+            file('rescue_key.json'),
+            file('holiday-photos.zip'),
+            file('my-zeus-lnd-mainnet-1791995129313.zip'),
+            file('zeus-lnd-mainnet-1791995129313 (1).zip'),
+            file('zeus-lnd-regtest-1791995129313.zip'),
+            file('zeus-lnd-mainnet-1791995129315.zip', false)
+        ]);
+    });
+
+    afterAll(() => {
+        mockedReadDir.mockResolvedValue([]);
+    });
+
+    it('deletes the exports ZEUS saved to Downloads on Android', async () => {
+        setPlatformOS('android');
+
+        await clearAllData();
+
+        expect(mockedReadDir).toHaveBeenCalledWith('/public-downloads');
+        expect(unlinked().sort()).toEqual([
+            '/public-downloads/zeus-lnd-mainnet-1791995129313.zip',
+            '/public-downloads/zeus-lnd-testnet-1791995129314.zip'
+        ]);
+    });
+
+    it('keeps going after a failed unlink', async () => {
+        setPlatformOS('android');
+        mockedUnlink
+            .mockRejectedValueOnce(new Error('EACCES'))
+            .mockResolvedValueOnce(undefined);
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(unlinked()).toHaveLength(2);
+    });
+
+    it('still finishes the wipe when Downloads cannot be listed', async () => {
+        setPlatformOS('android');
+        mockedReadDir.mockRejectedValue(new Error('EACCES'));
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(mockedUnlink).not.toHaveBeenCalled();
+        expect(MigrationUtils.clearConfirmedFlags).toHaveBeenCalled();
+    });
+
+    it('does not list Downloads on iOS, where the export is not saved there', async () => {
+        await clearAllData();
+
+        expect(mockedReadDir).not.toHaveBeenCalledWith('/public-downloads');
+        expect(mockedUnlink).not.toHaveBeenCalled();
     });
 });
 
@@ -478,6 +788,24 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         expect(removedKeys()).not.toContain('ldk-cashu-seed-phrase');
     });
 
+    // An imported remote config can carry any lndDir / ldkNodeDir. Deleting
+    // it must not clear the Cashu wallet of the embedded wallet that owns
+    // that namespace.
+    it('never clears Cashu data for node dirs on a remote node', async () => {
+        await clearNodeKeychainData({
+            implementation: 'lnd',
+            host: 'x',
+            lndDir: 'lnd',
+            ldkNodeDir: 'ldk-2'
+        });
+
+        expect(removedKeys()).not.toContain('lnd-cashu-seed-phrase');
+        expect(removedKeys()).not.toContain('ldk-2-cashu-seed-phrase');
+        expect(
+            removedKeys().filter((key: string) => key.includes('-cashu-'))
+        ).toEqual([]);
+    });
+
     it('clears hashed LNC credentials from the pairing phrase', async () => {
         const pairingPhrase = 'over hover clever trigger';
         await clearNodeKeychainData({
@@ -488,6 +816,88 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
         expect(removedKeys()).toContain(baseKey);
         expect(removedKeys()).toContain(`${baseKey}:host`);
+    });
+
+    it('keeps the LNC credentials when another config uses the phrase', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        await clearNodeKeychainData(
+            { implementation: 'lightning-node-connect', pairingPhrase },
+            { keepLncCredentials: true }
+        );
+
+        const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
+        expect(removedKeys()).not.toContain(baseKey);
+        expect(removedKeys()).not.toContain(`${baseKey}:host`);
+    });
+
+    // The deleted wallet's LNC client can still report keys (a pending
+    // dial cannot be cancelled); its store must not write them back
+    it('stops a live LNC credential store from writing the cleared keys back', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        const credentials = new LncCredentialStore(pairingPhrase);
+        credentials.localKey = 'local-abc';
+        await credentials.flushWrites();
+
+        await clearNodeKeychainData({
+            implementation: 'lightning-node-connect',
+            pairingPhrase
+        });
+        credentials.remoteKey = 'remote-def';
+        await credentials.flushWrites();
+
+        const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
+        expect(Storage.setItem).not.toHaveBeenCalledWith(
+            baseKey,
+            expect.anything()
+        );
+        rememberCredentials(pairingPhrase);
+    });
+
+    // On Android a keychain write runs off the JS thread and can finish
+    // after a reset that started later, so a write already in flight when
+    // the wallet is deleted must not leave its entry behind
+    it('removes a credential that an in-flight write restored after the clear', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        const hostKey = `lnc-rn:${lncHash(pairingPhrase)}:host`;
+        const stored: Record<string, any> = {};
+        const mockedSetItem = Storage.setItem as jest.Mock;
+        let release: () => void = () => {};
+        let started: () => void = () => {};
+        const entered = new Promise<void>((resolve) => (started = resolve));
+        mockedSetItem.mockImplementationOnce(
+            async (key: string, value: any) => {
+                started();
+                await new Promise<void>((resolve) => (release = resolve));
+                stored[key] = value;
+                return true;
+            }
+        );
+        mockedStorageGetItem.mockImplementation(
+            async (key: string) => stored[key] ?? null
+        );
+        mockedStorageRemoveItem.mockImplementation(async (key: string) => {
+            delete stored[key];
+            return true;
+        });
+
+        try {
+            const credentials = new LncCredentialStore(pairingPhrase);
+            credentials.serverHost = 'lnc.zeusln.app:443';
+            await entered;
+
+            await clearNodeKeychainData({
+                implementation: 'lightning-node-connect',
+                pairingPhrase
+            });
+            release();
+            await credentials.flushWrites();
+
+            expect(stored[hostKey]).toBeUndefined();
+        } finally {
+            mockedStorageGetItem.mockResolvedValue(null);
+            mockedStorageRemoveItem.mockResolvedValue(true);
+            rememberCredentials(pairingPhrase);
+        }
     });
 
     it('is a no-op for a null node', async () => {
@@ -629,6 +1039,48 @@ describe('legacy xprv cache purge (KEY-006 follow-up)', () => {
 
         expect(mockedDerive).not.toHaveBeenCalled();
     });
+
+    // The builds that wrote the cache named it after
+    // NodeInfoStore.nodeInfo.nodeId, which is undefined until LND is up
+    describe('cache written before node info had loaded', () => {
+        const NO_PUBKEY_XPRV_KEY = 'undefined-extended-private-keys';
+
+        it('is cleared on single-wallet deletion', async () => {
+            await clearNodeKeychainData({
+                implementation: 'embedded-lnd',
+                lndDir: 'lnd-abc',
+                seedPhrase
+            });
+
+            expect(removedKeys()).toContain(NO_PUBKEY_XPRV_KEY);
+        });
+
+        it('is cleared when the pubkey cannot be derived', async () => {
+            mockedDerive.mockRejectedValueOnce(
+                new Error('Decryption failed. Invalid passphrase?')
+            );
+
+            await clearNodeKeychainData({
+                implementation: 'embedded-lnd',
+                lndDir: 'lnd-abc',
+                seedPhrase
+            });
+
+            expect(removedKeys()).toContain(NO_PUBKEY_XPRV_KEY);
+        });
+
+        it('is left alone when a remote node is deleted', async () => {
+            await clearNodeKeychainData({ implementation: 'lnd' });
+
+            expect(removedKeys()).not.toContain(NO_PUBKEY_XPRV_KEY);
+        });
+
+        it('is cleared by a full wipe with no embedded wallet config left', async () => {
+            await clearAllData();
+
+            expect(removedKeys()).toContain(NO_PUBKEY_XPRV_KEY);
+        });
+    });
 });
 
 describe('clearAllData keychain backing store deletion (Android)', () => {
@@ -696,6 +1148,7 @@ describe('clearAllData write latch (settings resurrection regression)', () => {
         expect(removedKeys()).toContain('zeus-nwc-service-keys');
         expect(removedKeys()).toContain('zeus-nwc-client-keys');
         expect(removedKeys()).toContain('zeus-nwc-connections');
+        expect(removedKeys()).toContain('zeus-nwc-processed-events');
         expect(removedKeys()).toContain('successfulPaymentCount');
         expect(removedKeys()).toContain('lnurlpay:');
     });
@@ -712,6 +1165,78 @@ describe('clearAllData write latch (settings resurrection regression)', () => {
         expect(mockedBlockWrites.mock.invocationCallOrder[0]).toBeLessThan(
             mockedStorageRemoveItem.mock.invocationCallOrder[0]
         );
+    });
+
+    // MigrationUtils caches one-shot flags that have read 'true'. Clearing
+    // EncryptedStorage deletes the flags, so the cache must be dropped after
+    // it, or the next getSettings would skip migrations for the empty store
+    it('drops the cached migration flags after clearing EncryptedStorage', async () => {
+        const mockedClear = EncryptedStorage.clear as jest.Mock;
+        const mockedClearFlags =
+            MigrationUtils.clearConfirmedFlags as jest.Mock;
+
+        await clearAllData();
+
+        expect(mockedClearFlags).toHaveBeenCalledTimes(1);
+        expect(mockedClear.mock.invocationCallOrder[0]).toBeLessThan(
+            mockedClearFlags.mock.invocationCallOrder[0]
+        );
+    });
+});
+
+describe('clearAllData cookies and notifications', () => {
+    const mockedRemoveNotifications =
+        Notifications.removeAllDeliveredNotifications as jest.Mock;
+    let clearCookiesSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        clearCookiesSpy = jest
+            .spyOn(Networking, 'clearCookies')
+            .mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        clearCookiesSpy.mockRestore();
+    });
+
+    it('clears the HTTP cookie store', async () => {
+        await clearAllData();
+
+        expect(clearCookiesSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not wait for the cookie callback, which Android may never call', async () => {
+        // the mock never invokes the callback
+        await expect(clearAllData()).resolves.toBeUndefined();
+    });
+
+    it('removes delivered notifications', async () => {
+        await clearAllData();
+
+        expect(mockedRemoveNotifications).toHaveBeenCalledTimes(1);
+    });
+
+    it('finishes the wipe when clearing cookies throws', async () => {
+        clearCookiesSpy.mockImplementation(() => {
+            throw new Error('no Networking module');
+        });
+
+        await clearAllData();
+
+        expect(mockedRemoveNotifications).toHaveBeenCalledTimes(1);
+        expect(removedKeys()).toContain('lnc-rn');
+    });
+
+    it('finishes the wipe when removing notifications throws', async () => {
+        mockedRemoveNotifications.mockImplementationOnce(() => {
+            throw new Error('no notification service');
+        });
+
+        await clearAllData();
+
+        expect(removedKeys()).toContain('lnc-rn');
     });
 });
 
@@ -817,6 +1342,33 @@ describe('deleteNodeDataDirectoryWithRetry (single-wallet deletion path)', () =>
         expect(mockedStopLdkNode).toHaveBeenCalled();
         expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-2');
     });
+
+    it.each(['..', '../victim', '../../files', 'a/b'])(
+        'never deletes an ldk-node directory named %j',
+        async (ldkNodeDir) => {
+            const result = await deleteNodeDataDirectoryWithRetry({
+                implementation: 'ldk-node',
+                ldkNodeDir
+            });
+
+            expect(result).toBe(true);
+            expect(mockedStopLdkNode).not.toHaveBeenCalled();
+            expect(mockedDeleteLdkNodeWallet).not.toHaveBeenCalled();
+        }
+    );
+
+    it.each(['..', '../victim', 'a/b'])(
+        'never deletes an embedded-lnd directory named %j',
+        async (lndDir) => {
+            const result = await deleteNodeDataDirectoryWithRetry({
+                implementation: 'embedded-lnd',
+                lndDir
+            });
+
+            expect(result).toBe(true);
+            expect(mockedDeleteLndWallet).not.toHaveBeenCalled();
+        }
+    );
 });
 
 describe('CDK database deletion', () => {
@@ -923,7 +1475,10 @@ describe('CDK database deletion', () => {
         // Must match the native modules (CashuDevKitModule.kt/.swift):
         // first 8 bytes of sha256(space-joined mnemonic) as hex
         const walletDbHash = (mnemonic: string) =>
-            hashjs.sha256().update(mnemonic).digest('hex').slice(0, 16);
+            createHash('sha256')
+                .update(mnemonic, 'utf8')
+                .digest('hex')
+                .slice(0, 16);
 
         it('deletes the db and sidecars derived from the stored cashu seed', async () => {
             const words = ['abandon', 'ability', 'able', 'about'];

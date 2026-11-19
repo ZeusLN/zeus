@@ -11,7 +11,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 
 import lndMobile from '../../lndmobile/LndMobileInjection';
-const { createClaimTransaction, createReverseClaimTransaction } =
+const { createClaimTransaction, buildReverseClaimTransaction } =
     lndMobile.swaps;
 
 import Screen from '../../components/Screen';
@@ -28,15 +28,24 @@ import { Row } from '../../components/layout/Row';
 import Text from '../../components/Text';
 
 import BackendUtils from '../../utils/BackendUtils';
+import {
+    isPlausibleSatPerVbyte,
+    reverseClaimMinerFee
+} from '../../utils/FeeUtils';
 import handleAnything from '../../utils/handleAnything';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { sleep } from '../../utils/SleepUtils';
 import { font } from '../../utils/FontUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
-import { swapWebSocketUrl } from '../../utils/SwapUtils';
+import {
+    nativeSwapEndpoint,
+    swapNetworkName,
+    swapWebSocketUrl
+} from '../../utils/SwapUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
+import FeeStore from '../../stores/FeeStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore, { ReverseLockupCheck } from '../../stores/SwapStore';
@@ -52,6 +61,23 @@ import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
 
+// The host's WebSocket update can carry any JSON. Its error and failure
+// reason are rendered as text, and String() throws on an object such as
+// {"toString":1}, so only strings are shown. A host that resends such an
+// update on every subscribe would otherwise keep a swap waiting for its
+// refund from being opened.
+const updateText = (data: any) => ({
+    error: !data?.error
+        ? undefined
+        : typeof data.error === 'string'
+        ? data.error
+        : localeString('general.unknownError'),
+    failureReason:
+        typeof data?.failureReason === 'string' && data.failureReason
+            ? data.failureReason
+            : undefined
+});
+
 interface SwapDetailsProps {
     navigation: NativeStackNavigationProp<any, any>;
     route: Route<
@@ -65,6 +91,7 @@ interface SwapDetailsProps {
             fee: string;
         }
     >;
+    FeeStore?: FeeStore;
     InvoicesStore?: InvoicesStore;
     NodeInfoStore?: NodeInfoStore;
     SwapStore?: SwapStore;
@@ -79,12 +106,14 @@ interface SwapDetailsState {
     swapTreeToggle: boolean;
     swapData: Swap;
     lockupNotice: string | null;
+    // the current rate, for a reverse swap with none stored
+    currentClaimFeeRate?: number;
 }
 
 // how often to re-check an unconfirmed or unreachable lockup
 const LOCKUP_RECHECK_MS = 60 * 1000;
 
-@inject('InvoicesStore', 'NodeInfoStore', 'SwapStore')
+@inject('FeeStore', 'InvoicesStore', 'NodeInfoStore', 'SwapStore')
 @observer
 export default class SwapDetails extends React.Component<
     SwapDetailsProps,
@@ -154,16 +183,8 @@ export default class SwapDetails extends React.Component<
                 return;
             }
 
-            // legacy swaps predate claimMinerFee being stored at
-            // creation; fetch rates so the claim fee does not fall
-            // back to zero
-            if (
-                swapData.claimMinerFee == null &&
-                !this.props.SwapStore?.claimMinerFee
-            ) {
-                this.props.SwapStore?.getSwapFees();
-            }
-
+            // the claim awaits this same lookup
+            this.loadCurrentClaimFeeRate();
             this.getReverseSwapUpdates(swapData, swapData.isSubmarineSwap);
         }
     }
@@ -258,7 +279,8 @@ export default class SwapDetails extends React.Component<
         const { SwapStore } = this.props;
 
         if (!createdResponse || !createdResponse.id) {
-            console.error('Invalid response:', createdResponse);
+            // the swap holds the refund key or preimage; don't log it
+            console.error('Invalid response: swap has no ID');
             this.setState({ error: 'Invalid response received.' });
             return;
         }
@@ -295,10 +317,11 @@ export default class SwapDetails extends React.Component<
             console.log(msg);
 
             const data = msg.args[0];
+            const { error, failureReason } = updateText(data);
 
             // Check for API errors
-            if (data?.error) {
-                if (data.error === 'Operation timeout') {
+            if (error) {
+                if (error === 'Operation timeout') {
                     this.setState({
                         error: 'The operation timed out.',
                         loading: false,
@@ -309,7 +332,7 @@ export default class SwapDetails extends React.Component<
                 }
 
                 this.setState({
-                    error: data.error,
+                    error,
                     loading: false,
                     socketConnected: false
                 });
@@ -320,7 +343,7 @@ export default class SwapDetails extends React.Component<
             // Update the status in the component state
             this.setState({
                 updates: data.status,
-                failureReason: data.failureReason,
+                failureReason,
                 loading: false
             });
 
@@ -329,7 +352,7 @@ export default class SwapDetails extends React.Component<
                 createdResponse.id,
                 data.status,
                 isSubmarineSwap,
-                data.failureReason
+                failureReason
             );
 
             switch (data.status) {
@@ -394,10 +417,10 @@ export default class SwapDetails extends React.Component<
                         }));
                     }
 
-                    if (data?.failureReason) {
+                    if (failureReason) {
                         webSocket.close();
                         this.setState({
-                            error: data?.failureReason,
+                            error: failureReason,
                             socketConnected: false
                         });
                     }
@@ -405,9 +428,9 @@ export default class SwapDetails extends React.Component<
 
                 case SwapState.TransactionClaimed:
                     webSocket.close();
-                    data?.failureReason &&
+                    failureReason &&
                         this.setState({
-                            error: data?.failureReason,
+                            error: failureReason,
                             socketConnected: false
                         });
                     break;
@@ -448,12 +471,21 @@ export default class SwapDetails extends React.Component<
         const { SwapStore } = this.props;
 
         if (!createdResponse || !createdResponse.id) {
-            console.error('Invalid response:', createdResponse);
+            // the swap holds the refund key or preimage; don't log it
+            console.error('Invalid response: swap has no ID');
             this.setState({ error: 'Invalid response received.' });
             return;
         }
 
-        let submitted = false;
+        // a claim recorded as broadcast, on this screen or an earlier visit.
+        // A legacy rescue may carry the host's claimTxid, which stops the
+        // claim here; the invoice then expires and the payment returns. It
+        // can't be ignored on imported swaps, since this wallet records its
+        // own claims on them in the same field.
+        let submitted = !!swapData?.claimTxid;
+        // set once the host reports the invoice settled: it has the
+        // preimage, so a lockup already spent means the swap is done
+        let invoiceSettled = false;
         let verifyingLockup = false;
         let lockupRecheck: ReturnType<typeof setTimeout> | undefined;
         // Set once the screen unmounts or the swap reaches a final state, so
@@ -498,6 +530,17 @@ export default class SwapDetails extends React.Component<
                     confirmedLockupAmount,
                     () => stopped
                 );
+                if (result === 'unsent') {
+                    // Boltz sends no update after invoice.settled, so send
+                    // the stored claim again while the screen is open
+                    if (!stopped) {
+                        lockupRecheck = setTimeout(
+                            () => claimIfLockupVerified(transactionHex),
+                            LOCKUP_RECHECK_MS
+                        );
+                    }
+                    return;
+                }
                 if (typeof result === 'boolean') {
                     submitted = result;
                     return;
@@ -558,6 +601,50 @@ export default class SwapDetails extends React.Component<
                     return;
                 }
 
+                if (
+                    lockup.status === 'invalid' &&
+                    lockup.reason === 'lockup-spent' &&
+                    (invoiceSettled || this.state.swapData?.claimTransactionHex)
+                ) {
+                    // The host may hold the preimage, so the spend is
+                    // usually this wallet's claim, possibly sent from
+                    // another device. After the timeout the host's refund
+                    // spends the lockup too.
+                    if (!lockup.spentBy) {
+                        this.setState({
+                            lockupNotice: localeString(
+                                'views.SwapDetails.lockupVerificationUnavailable'
+                            )
+                        });
+                        lockupRecheck = setTimeout(
+                            () => claimIfLockupVerified(transactionHex),
+                            LOCKUP_RECHECK_MS
+                        );
+                        return;
+                    }
+                    stopRechecks();
+                    if (lockup.spentBy === 'claim') {
+                        console.log(
+                            'Reverse swap lockup already spent by a claim from this wallet'
+                        );
+                        this.setState({ lockupNotice: null });
+                        return;
+                    }
+                    console.error(
+                        'Reverse swap lockup verification failed:',
+                        'lockup-refunded',
+                        lockup.spendingTxid
+                    );
+                    this.setState({
+                        error: localeString(
+                            'views.SwapDetails.lockupSpentElsewhere'
+                        ),
+                        lockupNotice: null,
+                        loading: false
+                    });
+                    return;
+                }
+
                 if (lockup.status === 'invalid') {
                     console.error(
                         'Reverse swap lockup verification failed:',
@@ -592,6 +679,46 @@ export default class SwapDetails extends React.Component<
             }
         };
 
+        // The host settles the hold invoice as soon as it has the preimage,
+        // which a cooperative claim sends before ZEUS broadcasts. If the
+        // broadcast never went out, the lockup is still ours to claim until
+        // the timeout: resend a stored claim, or fetch the lockup from the
+        // host and claim it through the usual checks.
+        const recoverSettledClaim = async () => {
+            // A claim in progress on this screen is what told the host the
+            // preimage; it stores and broadcasts its own transaction
+            if (submitted || stopped || verifyingLockup || !SwapStore) return;
+            if (this.state.swapData?.claimTransactionHex) {
+                await claimIfLockupVerified('');
+                return;
+            }
+            const lockup = await SwapStore.getReverseLockupTransactionHex(
+                createdResponse.id,
+                endpoint
+            );
+            if (stopped || submitted) return;
+            if (lockup.status === 'none') {
+                stopRechecks();
+                return;
+            }
+            // The screen would otherwise rest on invoice.settled, which
+            // looks finished, with the lockup still unclaimed
+            if (lockup.status === 'unavailable') {
+                this.setState({
+                    lockupNotice: localeString(
+                        'views.SwapDetails.lockupVerificationUnavailable'
+                    )
+                });
+                clearTimeout(lockupRecheck);
+                lockupRecheck = setTimeout(
+                    recoverSettledClaim,
+                    LOCKUP_RECHECK_MS
+                );
+                return;
+            }
+            await claimIfLockupVerified(lockup.hex);
+        };
+
         console.log('Connecting to WebSocket for updates...');
         this.setState({ loading: true });
 
@@ -622,11 +749,12 @@ export default class SwapDetails extends React.Component<
             console.log(msg);
 
             const data = msg.args[0];
+            const { error, failureReason } = updateText(data);
 
             // Check for API errors
-            if (data?.error) {
+            if (error) {
                 stopRechecks();
-                if (data.error === 'Operation timeout') {
+                if (error === 'Operation timeout') {
                     this.setState({
                         error: 'The operation timed out.',
                         loading: false,
@@ -637,7 +765,7 @@ export default class SwapDetails extends React.Component<
                 }
 
                 this.setState({
-                    error: data.error,
+                    error,
                     loading: false,
                     socketConnected: false
                 });
@@ -676,20 +804,25 @@ export default class SwapDetails extends React.Component<
                 case SwapState.SwapExpired:
                     stopRechecks();
                     webSocket.close();
-                    data?.failureReason &&
+                    failureReason &&
                         this.setState({
-                            error: data?.failureReason,
+                            error: failureReason,
                             socketConnected: false
                         });
                     break;
 
                 case SwapState.InvoiceSettled:
-                    console.log('Swap successful');
-                    stopRechecks();
+                    console.log('Swap invoice settled');
+                    invoiceSettled = true;
                     webSocket.close();
                     this.setState({
                         socketConnected: false
                     });
+                    if (submitted) {
+                        stopRechecks();
+                    } else {
+                        await recoverSettledClaim();
+                    }
                     break;
 
                 default:
@@ -763,7 +896,7 @@ export default class SwapDetails extends React.Component<
         try {
             const claim = SubmarineClaimTransaction.build({
                 swap: new Swap({ ...createdResponse, keys }),
-                endpoint,
+                endpoint: nativeSwapEndpoint(endpoint),
                 claimTxDetails
             });
             if (!claim) return false;
@@ -788,35 +921,95 @@ export default class SwapDetails extends React.Component<
      *
      * A rescued swap has none: ZEUS attaches the address client-side and
      * never sends it to the host (only claimPublicKey and preimageHash go
-     * over the wire), so /swap/restore has nothing to return, and an
-     * address a rescued swap stored from the host is ignored. SwapStore
-     * falls back to a fresh address from the wallet in use, which is the
-     * same source the swap creation screen defaults to.
+     * over the wire), so /swap/restore has nothing to return, and any
+     * address a rescued swap has stored is ignored, including one this
+     * wallet generated on an earlier attempt. SwapStore falls back to a
+     * fresh address from the wallet in use, which is the same source the
+     * swap creation screen defaults to. That address is kept for the rest
+     * of this screen's session, so rechecks while the lockup confirms
+     * don't each take another one.
      */
     resolveDestinationAddress = async (swapId: string): Promise<string> => {
+        if (this.resolvedClaimAddress) return this.resolvedClaimAddress;
+
         const { InvoicesStore, SwapStore } = this.props;
 
-        const existing = this.state.swapData?.claimDestinationAddress;
         const destinationAddress =
             (await SwapStore?.resolveClaimAddress({
                 swapId,
-                destinationAddress: existing,
+                destinationAddress:
+                    this.state.swapData?.claimDestinationAddress,
                 canReceiveOnchain: BackendUtils.supportsOnchainReceiving(),
                 getNewAddress: () =>
                     InvoicesStore!.getNewAddress({ unified: true })
             })) || '';
 
-        if (destinationAddress && destinationAddress !== existing) {
-            this.setState((prevState) => ({
-                swapData: new Swap({
-                    ...prevState.swapData,
-                    destinationAddress,
-                    claimAddressFromWallet: true
-                })
-            }));
-        }
-
+        if (destinationAddress) this.resolvedClaimAddress = destinationAddress;
         return destinationAddress;
+    };
+
+    private resolvedClaimAddress?: string;
+
+    // The fee the reverse claim pays. A swap created since the fee is
+    // decided at creation stores it with its rate, so this returns the
+    // stored fee. One stored before that, or a rescued swap, pays at least
+    // currentRate (else 2 sat/vB) on the largest claim. Legacy rescues
+    // stored the host's fields, so a rescued swap's stored fee and rate
+    // are ignored.
+    claimMinerFee = (currentRate?: number): number | undefined => {
+        const { swapData } = this.state;
+        const { fee } = this.props.route.params;
+        const stored = swapData?.imported ? undefined : swapData;
+        return reverseClaimMinerFee(
+            stored?.claimMinerFee,
+            stored?.claimFeeRate ??
+                (fee ? Number(fee) : undefined) ??
+                currentRate ??
+                2
+        );
+    };
+
+    private currentClaimFeeRateLookup?: Promise<number | undefined>;
+
+    // The rate the Swaps screen would pre-fill now, for a swap that has
+    // none stored. Looked up once and kept in state, so the amount shown
+    // and the claim use the same rate. Undefined if none is needed or the
+    // lookup fails, and then both use the 2 sat/vB floor. A failed lookup
+    // is not kept, so a claim made later looks the rate up again.
+    loadCurrentClaimFeeRate = (): Promise<number | undefined> => {
+        if (!this.currentClaimFeeRateLookup) {
+            const lookup = this.fetchCurrentClaimFeeRate().then((rate) => {
+                if (
+                    rate === undefined &&
+                    this.currentClaimFeeRateLookup === lookup
+                ) {
+                    this.currentClaimFeeRateLookup = undefined;
+                }
+                return rate;
+            });
+            this.currentClaimFeeRateLookup = lookup;
+        }
+        return this.currentClaimFeeRateLookup;
+    };
+
+    fetchCurrentClaimFeeRate = async (): Promise<number | undefined> => {
+        const { swapData } = this.state;
+        if (
+            (!swapData?.imported && swapData?.claimFeeRate != null) ||
+            this.props.route.params.fee
+        ) {
+            return undefined;
+        }
+        try {
+            const fees = await this.props.FeeStore?.getOnchainFeesviaMempool();
+            const rate = fees?.fastestFee;
+            if (!isPlausibleSatPerVbyte(rate)) return undefined;
+            this.setState({ currentClaimFeeRate: Number(rate) });
+            return Number(rate);
+        } catch (e) {
+            console.log('Error fetching fee rates for claim', e);
+            return undefined;
+        }
     };
 
     /**
@@ -835,62 +1028,76 @@ export default class SwapDetails extends React.Component<
         // true once the screen is done with the swap: no new native claim
         // may start after that, though one already running finishes
         isStopped: () => boolean = () => false
-    ): Promise<boolean | ReverseLockupCheck> => {
+    ): Promise<boolean | 'unsent' | ReverseLockupCheck> => {
         try {
             const { SwapStore } = this.props;
+            if (!SwapStore) return { status: 'unavailable' };
 
-            // legacy swaps predate claimMinerFee being stored at
-            // creation; the mount-time rates prefetch may not have
-            // resolved yet, so wait for it here rather than building
-            // the claim with a zero miner fee
-            let minerFee =
-                this.state.swapData?.claimMinerFee ??
-                SwapStore?.claimMinerFee ??
-                0;
-            if (!minerFee) {
-                try {
-                    await SwapStore?.getSwapFees();
-                    minerFee = SwapStore?.claimMinerFee ?? 0;
-                } catch (e) {
-                    console.log('Error fetching rates for claim fee', e);
+            // A claim built on an earlier attempt may already have sent the
+            // preimage to the host. Broadcast that transaction again rather
+            // than build another one.
+            let claimHex: string | undefined =
+                this.state.swapData?.claimTransactionHex;
+            let claim: ReturnType<typeof ReverseClaimTransaction.build> = null;
+
+            // Once something else spent the lockup, such as the host's
+            // refund after the timeout, the stored claim can never confirm
+            if (claimHex) {
+                const spend = await SwapStore.checkStoredClaim(
+                    claimHex,
+                    preimage
+                );
+                if (spend.status === 'invalid') return spend;
+            }
+
+            if (!claimHex) {
+                const minerFee = this.claimMinerFee(
+                    await this.loadCurrentClaimFeeRate()
+                );
+                if (minerFee === undefined) {
+                    this.setState({
+                        error: localeString('views.SwapDetails.claimFailed'),
+                        loading: false
+                    });
+                    return false;
                 }
-            }
 
-            // a rescued swap arrives without one, and a claim cannot be
-            // built - let alone paid out - without somewhere to pay to
-            const claimAddress =
-                destinationAddress ||
-                (await this.resolveDestinationAddress(createdResponse.id));
-            if (!claimAddress) {
-                this.setState({
-                    error: localeString('views.SwapDetails.claimAddressFailed'),
-                    loading: false
-                });
-                return false;
-            }
+                // a rescued swap arrives without one, and a claim cannot be
+                // built - let alone paid out - without somewhere to pay to
+                const claimAddress =
+                    destinationAddress ||
+                    (await this.resolveDestinationAddress(createdResponse.id));
+                if (!claimAddress) {
+                    this.setState({
+                        error: localeString(
+                            'views.SwapDetails.claimAddressFailed'
+                        ),
+                        loading: false
+                    });
+                    return false;
+                }
 
-            const claim = ReverseClaimTransaction.build({
-                swap: new Swap({
-                    ...createdResponse,
-                    keys,
-                    preimage,
-                    lockupAddress,
-                    destinationAddress: claimAddress
-                }),
-                endpoint,
-                transactionHex,
-                feeRate: Number(fee || 2),
-                minerFee,
-                isTestnet: !!this.props.NodeInfoStore!.nodeInfo.isTestNet
-            });
-            // build fails closed on a swap missing the material a valid
-            // claim needs; say so rather than leaving the screen spinning
-            if (!claim) {
-                this.setState({
-                    error: localeString('views.SwapDetails.claimFailed'),
-                    loading: false
+                claim = ReverseClaimTransaction.build({
+                    swap: new Swap({
+                        ...createdResponse,
+                        keys,
+                        preimage,
+                        lockupAddress,
+                        destinationAddress: claimAddress
+                    }),
+                    transactionHex,
+                    feeRate: Number(fee || 2),
+                    minerFee
                 });
-                return false;
+                // build fails closed on a swap missing the material a valid
+                // claim needs; say so rather than leaving the screen spinning
+                if (!claim) {
+                    this.setState({
+                        error: localeString('views.SwapDetails.claimFailed'),
+                        loading: false
+                    });
+                    return false;
+                }
             }
 
             // allow some retries in case of alt network
@@ -898,30 +1105,65 @@ export default class SwapDetails extends React.Component<
             for (let i = 0; i <= 10; i++) {
                 try {
                     await sleep(1000);
-                    if (isStopped()) return false;
+                    // a claim that may have reached the host is still
+                    // broadcast; only a new one may not start
+                    if (!claimHex && isStopped()) return false;
 
-                    // Fee/address resolution and a previous native attempt
-                    // can take arbitrarily long. Never reuse an earlier
-                    // unspent/deadline check before revealing the preimage.
-                    if (!SwapStore) return { status: 'unavailable' };
-                    const lockup = await SwapStore.verifyReverseLockup(
-                        new Swap({
-                            ...createdResponse,
-                            keys,
-                            preimage,
-                            lockupAddress
-                        }),
-                        transactionHex,
-                        { confirmedLockupAmount }
+                    if (!claimHex) {
+                        // Fee/address resolution and a previous attempt can
+                        // take arbitrarily long. Never reuse an earlier
+                        // unspent/deadline check before revealing the
+                        // preimage.
+                        const lockup = await SwapStore.verifyReverseLockup(
+                            new Swap({
+                                ...createdResponse,
+                                keys,
+                                preimage,
+                                lockupAddress
+                            }),
+                            transactionHex,
+                            { confirmedLockupAmount }
+                        );
+                        if (isStopped()) return false;
+                        if (lockup.status !== 'ok') return lockup;
+                        this.setState({ lockupNotice: null });
+
+                        const builtHex = await buildReverseClaimTransaction({
+                            ...claim!,
+                            network: swapNetworkName(
+                                this.props.NodeInfoStore!.nodeInfo
+                            )
+                        });
+                        claimHex = builtHex;
+                        // stored before the first broadcast: from here on
+                        // the host may hold the preimage
+                        await SwapStore.saveClaimTransaction(
+                            createdResponse.id,
+                            builtHex
+                        );
+                        this.setState((prevState) => ({
+                            swapData: new Swap({
+                                ...prevState.swapData,
+                                claimTransactionHex: builtHex
+                            })
+                        }));
+                    }
+
+                    const txid = await SwapStore.broadcastSwapTransaction(
+                        claimHex,
+                        endpoint
                     );
-                    if (isStopped()) return false;
-                    if (lockup.status !== 'ok') return lockup;
-                    this.setState({ lockupNotice: null });
-                    await createReverseClaimTransaction(claim);
+                    await SwapStore.saveClaimTxid(createdResponse.id, txid);
+                    this.setState((prevState) => ({
+                        swapData: new Swap({
+                            ...prevState.swapData,
+                            claimTxid: txid
+                        })
+                    }));
 
                     console.log(
-                        'Reverse claim transaction submitted successfully.',
-                        { attempt: i + 1 }
+                        'Reverse claim transaction broadcast successfully.',
+                        { attempt: i + 1, txid }
                     );
                     // an earlier attempt (e.g. on transaction.mempool) may
                     // have failed and set an error that no longer applies
@@ -938,7 +1180,8 @@ export default class SwapDetails extends React.Component<
                 error: localeString('views.SwapDetails.claimBroadcastFailed'),
                 loading: false
             });
-            return false;
+            // a signed claim is stored, but no broadcast went through
+            return claimHex ? 'unsent' : false;
         } catch (e) {
             console.log('Error creating reverse claim tx ', e);
             this.setState({
@@ -1007,6 +1250,10 @@ export default class SwapDetails extends React.Component<
         };
 
         const failure = failureReason || swapData.failureReason;
+
+        const showPayButton =
+            !!swapData.qrCodeValue &&
+            (updates === SwapState.InvoiceSet || updates === SwapState.Created);
 
         const showRefundButton =
             swapData.lockupTransaction &&
@@ -1183,23 +1430,29 @@ export default class SwapDetails extends React.Component<
                                     showCopyIcon
                                 />
                             )}
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.SwapDetails.onchainAmount'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={
-                                            SwapStore?.getReverseSwapReceiveAmount(
-                                                swapData?.getAmount,
-                                                swapData?.claimMinerFee
-                                            ) || 0
-                                        }
-                                        sensitive
-                                        toggleable
-                                    />
-                                }
-                            />
+                            {/* a legacy rescue's amount came from the host */}
+                            {!swapData.imported && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.SwapDetails.onchainAmount'
+                                    )}
+                                    value={
+                                        <Amount
+                                            sats={
+                                                SwapStore?.getReverseSwapReceiveAmount(
+                                                    swapData?.getAmount,
+                                                    this.claimMinerFee(
+                                                        this.state
+                                                            .currentClaimFeeRate
+                                                    ) ?? swapData?.claimMinerFee
+                                                ) || 0
+                                            }
+                                            sensitive
+                                            toggleable
+                                        />
+                                    }
+                                />
+                            )}
                         </>
                     )}
                     {swapData.isReverseSwap && (
@@ -1254,8 +1507,7 @@ export default class SwapDetails extends React.Component<
                     {/* Render Swap Tree */}
                     {this.renderSwapTree(swapData?.swapTree || swapData?.tree)}
                 </ScrollView>
-                {(updates === SwapState.InvoiceSet ||
-                    updates === SwapState.Created) && (
+                {showPayButton && (
                     <Button
                         title={localeString('views.PaymentRequest.payInvoice')}
                         containerStyle={{

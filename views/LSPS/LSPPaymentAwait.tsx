@@ -30,6 +30,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import BackendUtils from '../../utils/BackendUtils';
 import handleAnything from '../../utils/handleAnything';
 import { localeString } from '../../utils/LocaleUtils';
+import { OrderInvoiceCheck, verifyOrderInvoice } from '../../utils/LspUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Storage from '../../storage';
@@ -77,6 +78,14 @@ export default class LSPPaymentAwait extends React.Component<
         };
     }
 
+    // checked against the current params on every use so the decision
+    // always describes the invoice being rendered; Bolt11Utils caches
+    // decodes, so repeat calls are cheap
+    private getInvoiceCheck(): OrderInvoiceCheck {
+        const { invoice, satAmount } = this.props.route.params;
+        return verifyOrderInvoice(invoice, satAmount);
+    }
+
     async componentDidMount() {
         const { orderId } = this.props.route.params;
 
@@ -84,6 +93,9 @@ export default class LSPPaymentAwait extends React.Component<
             'hardwareBackPress',
             this.handleBackPress
         );
+
+        // nothing to wait for when the invoice is not shown
+        if (!this.getInvoiceCheck().valid) return;
 
         try {
             const responseArrayString = await Storage.getItem(LSPS_ORDERS_KEY);
@@ -254,6 +266,11 @@ export default class LSPPaymentAwait extends React.Component<
         const { navigation, LSPStore } = this.props;
         const { invoice, satAmount, service } = this.props.route.params;
         const { paymentState } = this.state;
+        const invoiceValid = this.getInvoiceCheck().valid;
+        const invoiceRejected =
+            paymentState === PaymentAwaitState.POLLING && !invoiceValid;
+        const awaitingPayment =
+            paymentState === PaymentAwaitState.POLLING && invoiceValid;
 
         const successSubtitle =
             service === LSPService.LSPS7
@@ -288,7 +305,32 @@ export default class LSPPaymentAwait extends React.Component<
                             : undefined
                     }
                 />
-                {paymentState === PaymentAwaitState.POLLING && (
+                {invoiceRejected && (
+                    <View
+                        style={{
+                            flex: 1,
+                            justifyContent: 'space-between',
+                            paddingHorizontal: 20,
+                            paddingBottom: 20
+                        }}
+                    >
+                        <View style={{ paddingTop: 20 }}>
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.LSPS1.invoiceAmountMismatch'
+                                )}
+                            />
+                        </View>
+                        <Button
+                            title={localeString(
+                                'views.SendingLightning.goToWallet'
+                            )}
+                            onPress={this.goToWallet}
+                            secondary
+                        />
+                    </View>
+                )}
+                {awaitingPayment && (
                     <ScrollView
                         contentContainerStyle={{
                             paddingHorizontal: 15,

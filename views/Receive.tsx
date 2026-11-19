@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     Dimensions,
     ScrollView,
     StyleSheet,
@@ -17,6 +18,7 @@ import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import handleAnything from '../utils/handleAnything';
+import { isUnsafeLnurlError } from '../utils/LnurlFetchUtils';
 
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 const ZIcon = require('../assets/images/icon_black.png');
@@ -74,9 +76,10 @@ import UTXOsStore from '../stores/UTXOsStore';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
-import { scanNfcTag } from '../utils/NFCUtils';
+import { isNfcWithdraw, scanNfcTag } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import { numberWithCommas, roundUpToWholeSats } from '../utils/UnitsUtils';
+import { buildOnChainUri, buildUnifiedUri } from '../utils/Bip21Utils';
 import { getAmountFromSats } from '../utils/AmountUtils';
 import {
     ExpirationPreset,
@@ -157,6 +160,8 @@ interface ReceiveState {
     accountAddressType?: string;
     blindedPaths: boolean;
     nfcSupported: boolean;
+    // the last NFC read was not an LNURL-withdraw card
+    nfcError: boolean;
     // POS
     orderId: string;
     orderTotal: string;
@@ -223,6 +228,7 @@ export default class Receive extends React.Component<
             account: 'default',
             blindedPaths: false,
             nfcSupported: false,
+            nfcError: false,
             // POS
             orderId: '',
             orderTip: '',
@@ -242,7 +248,32 @@ export default class Receive extends React.Component<
 
     unsubscribeInvoiceWatch: (() => void) | null = null;
     unsubscribeOnchainWatch: (() => void) | null = null;
+    // set on unmount so address and invoice requests that resolve later
+    // don't start watchers that nothing will stop
+    private unmounted = false;
+    // Bumped for each invoice this view asks InvoicesStore for. The store
+    // only shows the invoice of its latest request, so the result of an
+    // older one must not be watched, recorded for the order or handed on
+    // to the withdraw screen after a failure.
+    private invoiceRequestId = 0;
+    // Bumped by each NFC tag lookup, each invoice request and Cancel. The
+    // tag's LNURL server can answer after any of those, and the answer
+    // must then create, submit or show nothing. Kept apart from
+    // invoiceRequestId so a tap that turns out not to be a withdraw does
+    // not cancel the invoice request still finishing on screen.
+    private nfcLookupId = 0;
     hopPickerRef: HopPicker | null;
+
+    private startInvoiceRequest = () => {
+        this.nfcLookupId++;
+        const id = ++this.invoiceRequestId;
+        return () => !this.unmounted && id === this.invoiceRequestId;
+    };
+
+    private startNfcLookup = () => {
+        const id = ++this.nfcLookupId;
+        return () => !this.unmounted && id === this.nfcLookupId;
+    };
 
     private getDefaultIndex = (): number => {
         const { settings } = this.props.SettingsStore;
@@ -268,11 +299,15 @@ export default class Receive extends React.Component<
         return { lnOnly, onChainOnly };
     };
 
+    // Lightning-only screens (POS set to Lightning only, the Lightning
+    // balance action) never show an on-chain address, so they do not ask
+    // for one
     private getSkipOnchain = (): boolean => {
         const { settings } = this.props.SettingsStore;
         return (
+            this.getReceiveModeFlags().lnOnly ||
             settings?.invoices?.defaultInvoiceType !==
-            DefaultInvoiceType.Unified
+                DefaultInvoiceType.Unified
         );
     };
 
@@ -513,9 +548,20 @@ export default class Receive extends React.Component<
         const { route, InvoicesStore } = this.props;
         const { route: prevRoute } = prevProps;
 
-        if (route.params?.amount !== prevRoute.params?.amount) {
+        // a new amount or a new LNURL-withdraw (Receive navigating to itself
+        // after an NFC tap) replaces the invoice flow; the withdraw alone
+        // changes when Receive was opened without an amount param
+        if (
+            route.params?.amount !== prevRoute.params?.amount ||
+            route.params?.lnurlParams !== prevRoute.params?.lnurlParams
+        ) {
             const { reset } = InvoicesStore;
 
+            // the invoice on screen is replaced: its watchers, or an
+            // invoice request still pending, must not mark this screen
+            // paid or record a payment for the order
+            this.invoiceRequestId++;
+            this.stopWatchers();
             reset();
             const { amount, lnurlParams: lnurl } = route.params ?? {};
 
@@ -538,6 +584,9 @@ export default class Receive extends React.Component<
             }
 
             if (lnurl) {
+                // maxWithdrawable is in msats: show and convert it in sats,
+                // as componentDidMount does, not in the unit the screen had
+                this.props.UnitsStore.resetUnits();
                 let needInbound = false;
                 if (
                     this.state.lspIsActive &&
@@ -558,6 +607,7 @@ export default class Receive extends React.Component<
     }
 
     componentWillUnmount() {
+        this.unmounted = true;
         this.cleanup();
     }
 
@@ -581,6 +631,12 @@ export default class Receive extends React.Component<
     };
 
     cleanup = () => {
+        // Cancel keeps the view mounted: an invoice request or NFC lookup
+        // still pending must not start a watcher, submit an invoice or
+        // open a screen afterwards
+        this.invoiceRequestId++;
+        this.nfcLookupId++;
+
         // kill all listeners and pollers
         this.stopWatchers();
 
@@ -611,6 +667,7 @@ export default class Receive extends React.Component<
         const effectiveLspIsActive = lspIsActive ?? this.state.lspIsActive;
         const { createUnifiedInvoice } = InvoicesStore;
         const skipOnchain = this.getSkipOnchain();
+        const isCurrent = this.startInvoiceRequest();
 
         // Set synchronously so componentDidMount's initialLoad flip sees
         // creatingInvoice=true before the checkExistingInvoice microtask runs.
@@ -623,6 +680,7 @@ export default class Receive extends React.Component<
                     const existingInvoice = await PosStore.getOrderInvoiceById(
                         orderId
                     );
+                    if (!isCurrent()) return false;
                     if (
                         existingInvoice &&
                         PosStore.canReuseInvoice(
@@ -633,8 +691,13 @@ export default class Receive extends React.Component<
                         )
                     ) {
                         // Reuse existing invoice
-                        InvoicesStore.payment_request =
-                            existingInvoice.payment_request;
+                        InvoicesStore.showStoredInvoice({
+                            paymentRequest: existingInvoice.payment_request,
+                            amount: existingInvoice.amount,
+                            // records from before the fee was stored
+                            // show no fee rather than another quote's
+                            lspFeeSats: existingInvoice.lspFeeSats ?? null
+                        });
                         this.subscribeInvoice(existingInvoice.rHash);
                         return true;
                     }
@@ -646,6 +709,7 @@ export default class Receive extends React.Component<
         };
 
         checkExistingInvoice().then((canReuseInvoice) => {
+            if (!isCurrent()) return;
             if (canReuseInvoice) {
                 InvoicesStore.creatingInvoice = false;
                 return;
@@ -678,16 +742,22 @@ export default class Receive extends React.Component<
                 .then(
                     ({
                         rHash,
-                        onChainAddress
+                        paymentRequest,
+                        onChainAddress,
+                        lspFeeSats
                     }: {
                         rHash: string;
+                        paymentRequest: string;
                         onChainAddress?: string;
+                        lspFeeSats?: number | null;
                     }) => {
+                        if (!isCurrent()) return;
                         // Store invoice for POS orders
-                        if (orderId && InvoicesStore.payment_request) {
+                        if (orderId && paymentRequest) {
                             PosStore.recordInvoice({
                                 orderId,
-                                payment_request: InvoicesStore.payment_request,
+                                payment_request: paymentRequest,
+                                lspFeeSats,
                                 rHash,
                                 exchangeRate,
                                 amount: amount || '0',
@@ -748,29 +818,94 @@ export default class Receive extends React.Component<
         });
     };
 
+    // An LNURL-withdraw invoice is submitted as soon as it is created, so the
+    // LSP fee has to be accepted before that rather than shown next to it.
+    // A fee that the amount doesn't cover is added on top, as InvoicesStore
+    // prices it.
+    confirmLspFee = (feeSats: number, amountSats: string) => {
+        const amount = new BigNumber(amountSats);
+        const message = amount.gt(feeSats)
+            ? localeString('views.Receive.lspFeeConfirmWithdrawal')
+                  .replace('{fee}', numberWithCommas(feeSats))
+                  .replace(
+                      '{amount}',
+                      numberWithCommas(amount.minus(feeSats).toString())
+                  )
+            : localeString('views.Receive.lspFeeOnTopConfirmWithdrawal')
+                  .replace('{fee}', numberWithCommas(feeSats))
+                  .replace(
+                      '{total}',
+                      numberWithCommas(amount.plus(feeSats).toString())
+                  )
+                  .replace('{amount}', numberWithCommas(amount.toString()));
+        return new Promise<boolean>((resolve) => {
+            Alert.alert(
+                localeString('general.lsp'),
+                message,
+                [
+                    {
+                        text: localeString('general.cancel'),
+                        style: 'cancel',
+                        onPress: () => resolve(false)
+                    },
+                    {
+                        text: localeString('general.confirm'),
+                        onPress: () => resolve(true)
+                    }
+                ],
+                { cancelable: false }
+            );
+        });
+    };
+
     scanNfc = async () => {
-        const str = await scanNfcTag(this.props.ModalStore);
-        if (str) this.validateAddress(str);
+        const str = await scanNfcTag(this.props.ModalStore, 'withdraw');
+        if (!str || this.unmounted) return;
+        this.setState({ nfcError: false });
+        this.validateAddress(str);
     };
 
     validateAddress = (text: string) => {
-        const { navigation, InvoicesStore, route } = this.props;
-        const { lspIsActive, receiverName } = this.state;
+        const { navigation, InvoicesStore } = this.props;
+        // route.params.amount is in the display unit that was active when it
+        // was passed, and the amount under the QR code toggles that unit:
+        // use the sats it was converted to back then
+        const { lspIsActive, receiverName, satAmount } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
-        const satAmount = getSatAmount(route.params?.amount);
         const skipOnchain = this.getSkipOnchain();
+        // taken before the lookup: a newer tap, invoice or Cancel while the
+        // tag's LNURL server is answering supersedes this tap
+        const lookupIsCurrent = this.startNfcLookup();
 
         handleAnything(text, satAmount.toString())
             .then((response) => {
+                // the tag's LNURL server decides when this runs
+                if (!lookupIsCurrent()) return;
                 try {
                     const [route, props] = response;
                     const { lnurlParams } = props;
+                    // outside POS mode a tag can also hold an ecash token:
+                    // open it on the screen a cashu: link opens
+                    if (
+                        route === 'CashuToken' &&
+                        this.props.SettingsStore.posStatus !== 'active'
+                    ) {
+                        navigation.navigate(route, props);
+                        return;
+                    }
+                    // otherwise NFC reads here are for LNURL-withdraw (e.g. a
+                    // Bolt Card) only; tell staff about anything else
+                    if (!isNfcWithdraw(route, lnurlParams)) {
+                        this.setState({ nfcError: true });
+                        return;
+                    }
                     const { memo } = lnurlParams.defaultDescription;
 
                     // if an amount was entered on the keypad screen before scanning
                     // we will automatically create an invoice and attempt to withdraw
                     // otherwise we present the user with the create invoice screen
                     if (Number(satAmount) > 0) {
+                        const isCurrent = this.startInvoiceRequest();
                         createUnifiedInvoice({
                             memo: lspIsActive
                                 ? ''
@@ -783,6 +918,7 @@ export default class Receive extends React.Component<
                             noLsp: !lspIsActive,
                             forceLsp: !!this.props.route.params?.forceLsp,
                             useLsp: lspIsActive,
+                            confirmLspFee: this.confirmLspFee,
                             skipOnchain,
                             ...this.getUnifiedAccountParams()
                         })
@@ -794,6 +930,7 @@ export default class Receive extends React.Component<
                                     rHash: string;
                                     onChainAddress?: string;
                                 }) => {
+                                    if (!isCurrent()) return;
                                     this.subscribeInvoice(
                                         rHash,
                                         onChainAddress
@@ -801,6 +938,7 @@ export default class Receive extends React.Component<
                                 }
                             )
                             .catch(() => {
+                                if (!isCurrent()) return;
                                 navigation.navigate(route, {
                                     satAmount,
                                     ...props
@@ -811,7 +949,15 @@ export default class Receive extends React.Component<
                     }
                 } catch (e) {}
             })
-            .catch();
+            .catch((e) => {
+                if (!lookupIsCurrent()) return;
+                // a host policy refusal is not a card that cannot pay
+                if (isUnsafeLnurlError(e)) {
+                    Alert.alert(localeString('general.error'), e.message);
+                    return;
+                }
+                this.setState({ nfcError: true });
+            });
     };
 
     handlePaymentReceived = (
@@ -827,7 +973,9 @@ export default class Receive extends React.Component<
         const { orderId, orderTotal, orderTip, exchangeRate, rate } =
             this.state;
 
-        InvoicesStore.setWatchedInvoicePaid(amount);
+        // a watcher callback that was in flight when the watchers were
+        // stopped must not mark the next view's invoice as paid
+        if (!this.unmounted) InvoicesStore.setWatchedInvoicePaid(amount);
         BalanceStore.getCombinedBalance();
 
         if (
@@ -852,8 +1000,12 @@ export default class Receive extends React.Component<
     };
 
     subscribeInvoice = (rHash?: string, onChainAddress?: string) => {
+        if (this.unmounted) return;
+
         const { SettingsStore, NodeInfoStore } = this.props;
-        const { value } = this.state;
+        // the on-chain watcher compares against sats; state.value is in the
+        // display unit (sats, BTC, or fiat)
+        const { satAmount } = this.state;
         const { settings } = SettingsStore;
         const { nodeInfo } = NodeInfoStore;
 
@@ -865,7 +1017,7 @@ export default class Receive extends React.Component<
         if (rHash) {
             this.stopInvoiceWatcher();
             const unsubscribe = BackendUtils.watchInvoicePaid(
-                { rHash, value },
+                { rHash },
                 ({
                     amountSat,
                     tx,
@@ -894,7 +1046,7 @@ export default class Receive extends React.Component<
             const unsubscribe = BackendUtils.watchOnchainReceived(
                 {
                     address: onChainAddress,
-                    value,
+                    expectedAmountSat: satAmount,
                     numConfPreference,
                     blockHeight: nodeInfo?.block_height
                 },
@@ -954,19 +1106,25 @@ export default class Receive extends React.Component<
         });
 
         // If switching to unified or on-chain and there's a lightning invoice
-        // but no on-chain address, generate one
+        // but no on-chain address, generate one and watch it for payment
+        // alongside the invoice
         if (
             (selectedIndex === 0 || selectedIndex === 2) &&
             payment_request &&
             !onChainAddress &&
             BackendUtils.supportsOnchainReceiving()
         ) {
-            await getNewAddress(
+            const address = await getNewAddress(
                 this.buildAddressRequest(
                     account,
                     account !== 'default' ? accountAddressType : addressType
                 )
             );
+            // an invoice paid while the request was in flight is done: don't
+            // start an on-chain watcher behind the paid screen
+            if (address && !InvoicesStore.watchedInvoicePaid) {
+                this.subscribeInvoice(undefined, address);
+            }
         }
     };
 
@@ -1019,9 +1177,12 @@ export default class Receive extends React.Component<
             showAdvanced
         } = this.state;
 
-        const { zeroConfFee, showLspSettings } = LSPStore;
+        const { showLspSettings } = LSPStore;
+        // the fee the shown invoice was priced with, not LSPStore.zeroConfFee,
+        // which a later fee request can replace while this invoice is shown
+        const zeroConfFee = InvoicesStore.payment_request_lsp_fee ?? undefined;
         const requiresChannelSetup =
-            zeroConfFee &&
+            !!zeroConfFee &&
             new BigNumber(zeroConfFee).gte(LSP_MIN_CHANNEL_OPEN_FEE_SATS);
 
         const {
@@ -1240,19 +1401,13 @@ export default class Receive extends React.Component<
             lnInvoiceCopyValue,
             btcAddress,
             btcAddressCopyValue;
-        // if format is case insensitive, format as all caps to save QR space, otherwise present in original format
-        const onChainFormatted =
-            address && address === address.toLowerCase()
-                ? address.toUpperCase()
-                : address;
         if (haveUnifiedInvoice) {
-            unifiedInvoice = `bitcoin:${onChainFormatted}?${`lightning=${payment_request.toUpperCase()}`}${
-                Number(satAmount) > 0
-                    ? `&amount=${new BigNumber(satAmount)
-                          .dividedBy(SATS_PER_BTC)
-                          .toFixed()}`
-                    : ''
-            }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
+            unifiedInvoice = buildUnifiedUri({
+                address,
+                paymentRequest: payment_request,
+                satAmount,
+                memo
+            });
         }
 
         if (payment_request) {
@@ -1261,21 +1416,7 @@ export default class Receive extends React.Component<
         }
 
         if (address) {
-            btcAddress = `bitcoin:${onChainFormatted}${
-                (Number(satAmount) > 0 || memo) && '?'
-            }${
-                Number(satAmount) > 0
-                    ? `amount=${new BigNumber(satAmount)
-                          .dividedBy(SATS_PER_BTC)
-                          .toFixed()}`
-                    : ''
-            }${
-                memo
-                    ? Number(satAmount) > 0
-                        ? `&message=${memo.replace(/ /g, '%20')}`
-                        : `message=${memo.replace(/ /g, '%20')}`
-                    : ''
-            }`;
+            btcAddress = buildOnChainUri({ address, satAmount, memo });
 
             if (Number(satAmount) > 0 || memo) {
                 btcAddressCopyValue = btcAddress;
@@ -1576,6 +1717,13 @@ export default class Receive extends React.Component<
                                     dismissable
                                 />
                             )}
+                            {this.state.nfcError && (
+                                <ErrorMessage
+                                    message={localeString(
+                                        'views.Receive.nfcNotWithdraw'
+                                    )}
+                                />
+                            )}
 
                             {lspErrorMsg &&
                                 lspIsActive &&
@@ -1621,11 +1769,12 @@ export default class Receive extends React.Component<
                                             <SuccessMessage
                                                 message={
                                                     !!lnurl &&
-                                                    `${localeString(
-                                                        'views.Receive.successCreate'
-                                                    )} ${localeString(
-                                                        'views.Receive.andSentTo'
-                                                    )} ${lnurl.domain}`
+                                                    localeString(
+                                                        'views.Receive.successCreateAndSentTo',
+                                                        {
+                                                            domain: lnurl.domain
+                                                        }
+                                                    )
                                                 }
                                             />
                                         )}
@@ -1674,7 +1823,9 @@ export default class Receive extends React.Component<
                                         </View>
                                     )}
                                 {haveInvoice &&
-                                    zeroConfFee &&
+                                    // a boolean: a fee of 0 must not become
+                                    // a bare text child of the View
+                                    !!zeroConfFee &&
                                     zeroConfFee > 0 &&
                                     (selectedIndex == 0 ||
                                         selectedIndex == 1) && (
@@ -1898,9 +2049,11 @@ export default class Receive extends React.Component<
                                                     }
                                                     nfcSupported={nfcSupported}
                                                     satAmount={
-                                                        satAmount === '0'
-                                                            ? undefined
-                                                            : satAmount
+                                                        Number(satAmount) > 0
+                                                            ? roundUpToWholeSats(
+                                                                  satAmount
+                                                              )
+                                                            : undefined
                                                     }
                                                     displayAmount
                                                 />
@@ -2926,16 +3079,16 @@ export default class Receive extends React.Component<
                                             <View style={styles.button}>
                                                 <Button
                                                     title={
-                                                        localeString(
-                                                            'views.Receive.createInvoice'
-                                                        ) +
-                                                        (lnurl
-                                                            ? ` ${localeString(
-                                                                  'views.Receive.andSubmitTo'
-                                                              )} ${
-                                                                  lnurl.domain
-                                                              }`
-                                                            : '')
+                                                        lnurl
+                                                            ? localeString(
+                                                                  'views.Receive.createInvoiceAndSubmitTo',
+                                                                  {
+                                                                      domain: lnurl.domain
+                                                                  }
+                                                              )
+                                                            : localeString(
+                                                                  'views.Receive.createInvoice'
+                                                              )
                                                     }
                                                     disabled={
                                                         (lspIsActive &&
@@ -2959,6 +3112,8 @@ export default class Receive extends React.Component<
                                                                 selectedIndex: 1
                                                             });
                                                         }
+                                                        const isCurrent =
+                                                            this.startInvoiceRequest();
                                                         createUnifiedInvoice({
                                                             memo: lspIsActive
                                                                 ? ''
@@ -3004,6 +3159,9 @@ export default class Receive extends React.Component<
                                                                 !!route.params
                                                                     ?.forceLsp,
                                                             useLsp: lspIsActive,
+                                                            confirmLspFee:
+                                                                this
+                                                                    .confirmLspFee,
                                                             skipOnchain,
                                                             ...this.getUnifiedAccountParams()
                                                         })
@@ -3015,6 +3173,10 @@ export default class Receive extends React.Component<
                                                                     rHash: string;
                                                                     onChainAddress?: string;
                                                                 }) => {
+                                                                    if (
+                                                                        !isCurrent()
+                                                                    )
+                                                                        return;
                                                                     this.subscribeInvoice(
                                                                         rHash,
                                                                         onChainAddress

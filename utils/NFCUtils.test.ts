@@ -6,17 +6,53 @@
 jest.mock('react-native-nfc-manager', () => ({
     __esModule: true,
     default: {
-        isEnabled: () => {},
-        setEventListener: () => {},
-        start: () => {},
-        registerTagEvent: () => {},
-        unregisterTagEvent: () => {}
+        isEnabled: jest.fn(async () => true),
+        setEventListener: jest.fn(),
+        start: jest.fn(async () => {}),
+        registerTagEvent: jest.fn(),
+        unregisterTagEvent: jest.fn(async () => {})
     },
     NfcEvents: { DiscoverTag: 'DiscoverTag', SessionClosed: 'SessionClosed' },
-    Ndef: { text: { decodePayload: () => {} } }
+    // the record helpers are plain JS, so tags are built and read with the
+    // real ones
+    Ndef: jest.requireActual('react-native-nfc-manager/ndef-lib')
 }));
 
-import { decodeNdefTextPayload } from './NFCUtils';
+import NfcManager, { Ndef, NdefRecord } from 'react-native-nfc-manager';
+import ModalStore from '../stores/ModalStore';
+import {
+    decodeNdefRecord,
+    decodeNdefTextPayload,
+    decodeNdefUriPayload,
+    isNfcWithdraw,
+    NfcRequestKind,
+    pickNfcRecord,
+    scanNfcTag
+} from './NFCUtils';
+
+const bytes = (text: string) => Array.from(Buffer.from(text, 'utf-8'));
+
+// Android hands the record type over as bytes, not as a string
+const record = (
+    tnf: NdefRecord['tnf'],
+    type: string,
+    payload: number[]
+): NdefRecord => ({ tnf, type: bytes(type), payload });
+
+// typed as returning a record, but they return the payload bytes
+const uriPayload = (uri: string) =>
+    Ndef.uri.encodePayload(uri) as unknown as number[];
+const textPayload = (text: string) =>
+    Ndef.text.encodePayload(text) as unknown as number[];
+
+const uriRecord = (uri: string) =>
+    record(Ndef.TNF_WELL_KNOWN, 'U', uriPayload(uri));
+const textRecord = (text: string) =>
+    record(Ndef.TNF_WELL_KNOWN, 'T', textPayload(text));
+const mimeRecord = (type: string, text: string) =>
+    record(Ndef.TNF_MIME_MEDIA, type, bytes(text));
+
+const TOKEN = 'cashuBo2FteCJodHRwczovL21pbnQuZXhhbXBsZS5jb20';
 
 // NDEF Text Record payload structure:
 //   byte 0:   status byte — lower 6 bits = language code length
@@ -52,5 +88,246 @@ describe('decodeNdefTextPayload', () => {
     it('returns null for a truncated multi-byte sequence', () => {
         // 0xC3 starts a 2-byte sequence but has no continuation byte
         expect(decodeNdefTextPayload(withHeader(0xc3))).toBeNull();
+    });
+});
+
+describe('isNfcWithdraw', () => {
+    it.each(['Receive', 'ChoosePaymentMethod'])(
+        'accepts a withdraw request routed to %s',
+        (route) => {
+            expect(isNfcWithdraw(route, { tag: 'withdrawRequest' })).toBe(true);
+        }
+    );
+
+    it.each([
+        ['an LNURL-pay request', 'LnurlPay', { tag: 'payRequest' }],
+        // the Lightning address server picks the tag
+        [
+            'a Lightning address answering withdrawRequest',
+            'LnurlPay',
+            { tag: 'withdrawRequest' }
+        ],
+        ['an LNURL-channel request', 'LnurlChannel', { tag: 'channelRequest' }],
+        ['an LNURL-auth request', 'LnurlAuth', { tag: 'login' }],
+        ['a Receive result with another tag', 'Receive', { tag: 'payRequest' }],
+        ['a result without lnurlParams', 'Send', undefined],
+        ['a Receive result without lnurlParams', 'Receive', undefined]
+    ])('rejects %s', (_, route, lnurlParams) => {
+        expect(isNfcWithdraw(route, lnurlParams)).toBe(false);
+    });
+});
+
+describe('decodeNdefUriPayload', () => {
+    it('reads a URI written out in full', () => {
+        const payload = uriPayload(`cashu://${TOKEN}`);
+        expect(payload[0]).toBe(0x00);
+        expect(decodeNdefUriPayload(new Uint8Array(payload))).toBe(
+            `cashu://${TOKEN}`
+        );
+    });
+
+    it.each([
+        ['https://', 0x04, 'https://card.example.com/lnurlw?p=1'],
+        ['https://www.', 0x02, 'https://www.example.com/']
+    ])('expands the abbreviated %s prefix', (_, code: number, uri: string) => {
+        const payload = uriPayload(uri);
+        expect(payload[0]).toBe(code);
+        expect(decodeNdefUriPayload(new Uint8Array(payload))).toBe(uri);
+    });
+
+    it('returns null for an empty payload or invalid UTF-8', () => {
+        expect(decodeNdefUriPayload(new Uint8Array([]))).toBeNull();
+        expect(decodeNdefUriPayload(new Uint8Array([0x00, 0xff]))).toBeNull();
+    });
+});
+
+describe('decodeNdefRecord', () => {
+    it('reads Text and URI records by their type', () => {
+        expect(decodeNdefRecord(textRecord(TOKEN))).toBe(TOKEN);
+        expect(
+            decodeNdefRecord(uriRecord('https://card.example.com/lnurlw'))
+        ).toBe('https://card.example.com/lnurlw');
+    });
+
+    it('reads a record whose type is a string', () => {
+        expect(decodeNdefRecord(Ndef.uriRecord('lightning:lnbc1x'))).toBe(
+            'lightning:lnbc1x'
+        );
+    });
+
+    it('reads an absolute URI record from its type', () => {
+        expect(
+            decodeNdefRecord(
+                record(Ndef.TNF_ABSOLUTE_URI, 'lnurlw://card.example/w', [])
+            )
+        ).toBe('lnurlw://card.example/w');
+    });
+
+    it('reads a text/plain MIME record whole', () => {
+        expect(decodeNdefRecord(mimeRecord('text/plain', TOKEN))).toBe(TOKEN);
+    });
+
+    it.each([
+        ['an Android application record', Ndef.androidApplicationRecord('x')],
+        ['another MIME type', mimeRecord('image/png', 'png')],
+        ['a CDF record', mimeRecord('cdf/lnw', 'https://w.example.org/w')],
+        ['a smart poster', record(Ndef.TNF_WELL_KNOWN, 'Sp', [0x00])],
+        ['an empty record', record(Ndef.TNF_EMPTY, '', [])]
+    ])('returns null for %s', (_, ndefRecord) => {
+        expect(decodeNdefRecord(ndefRecord)).toBeNull();
+    });
+});
+
+describe('pickNfcRecord', () => {
+    const SITE = 'https://bitcoin.example.org/get-a-wallet';
+    const site = uriRecord(SITE);
+
+    it.each([
+        ['an ecash token URI', `cashu://${TOKEN}`],
+        ['a bare ecash token', TOKEN],
+        [
+            'an ecash token behind a web address',
+            `https://zeusln.com/e/${TOKEN}`
+        ],
+        ['an LNURL-withdraw URI', 'lnurlw://card.example.com/ln?p=1&c=2'],
+        ['an LNURL web address', 'https://card.example.com/lnurlw/abc'],
+        ['a bech32 LNURL', 'LNURL1DP68GURN8GHJ7'],
+        ['a BIP21 URI', 'bitcoin:bc1qexample?lightning=lnbc1x'],
+        ['a BOLT 11 invoice', 'lnbc10u1pexample']
+    ])('skips a web page in front of %s', (_, data) => {
+        expect(pickNfcRecord([site, textRecord(data)])).toBe(data);
+    });
+
+    it.each([
+        ['"cashub" in another case', 'https://shop.example.org/cashubox'],
+        [
+            '"cashuA" without a token body',
+            'https://example.org/?ref=cashuAfrica'
+        ],
+        ['a token behind an http address', `http://zeusln.com/e/${TOKEN}`]
+    ])('does not take a web page holding %s for an ecash token', (_, page) => {
+        expect(
+            pickNfcRecord([uriRecord(page), textRecord('lightning:lnbc1a')])
+        ).toBe('lightning:lnbc1a');
+    });
+
+    it('ignores CDF records', () => {
+        expect(
+            pickNfcRecord([
+                site,
+                mimeRecord('cdf/lnw', 'Card;https://card.example.org/w?id=1')
+            ])
+        ).toBe(SITE);
+    });
+
+    it('takes the first of several wallet records', () => {
+        expect(
+            pickNfcRecord([
+                textRecord('lightning:lnbc1a'),
+                uriRecord(`cashu://${TOKEN}`)
+            ])
+        ).toBe('lightning:lnbc1a');
+    });
+
+    describe('with a preferred request', () => {
+        it('takes an lnurlp: or lnurlw: URI of that kind', () => {
+            const uris = [
+                uriRecord('lnurlw://card.example.com/w'),
+                uriRecord('LNURLP://card.example.com/p')
+            ];
+            expect(pickNfcRecord(uris, 'pay')).toBe(
+                'LNURLP://card.example.com/p'
+            );
+            expect(pickNfcRecord(uris, 'withdraw')).toBe(
+                'lnurlw://card.example.com/w'
+            );
+        });
+
+        it('falls back to the first wallet record without one', () => {
+            expect(
+                pickNfcRecord(
+                    [site, textRecord('lnbc10u1pexample')],
+                    'withdraw'
+                )
+            ).toBe('lnbc10u1pexample');
+        });
+    });
+
+    it('falls back to the first record with text', () => {
+        expect(
+            pickNfcRecord([
+                Ndef.androidApplicationRecord('x'),
+                textRecord('  '),
+                site,
+                textRecord('hello')
+            ])
+        ).toBe(SITE);
+        // e.g. a node URI for OpenChannel, which matches no wallet scheme
+        expect(pickNfcRecord([textRecord('02abc@node.example:9735')])).toBe(
+            '02abc@node.example:9735'
+        );
+    });
+
+    it('returns undefined when no record has text', () => {
+        expect(pickNfcRecord([])).toBeUndefined();
+        expect(
+            pickNfcRecord([record(Ndef.TNF_EMPTY, '', []), textRecord('')])
+        ).toBeUndefined();
+    });
+});
+
+describe('scanNfcTag', () => {
+    const modalStore = {
+        toggleAndroidNfcModal: jest.fn()
+    } as unknown as ModalStore;
+
+    const tap = async (
+        ndefMessage: NdefRecord[] | undefined,
+        prefer?: NfcRequestKind
+    ) => {
+        const scan = scanNfcTag(modalStore, prefer);
+        await new Promise(process.nextTick);
+        const onTag = (
+            NfcManager.setEventListener as jest.Mock
+        ).mock.calls.find(
+            ([event, listener]) => event === 'DiscoverTag' && listener
+        )[1];
+        onTag({ ndefMessage });
+        return scan;
+    };
+
+    beforeEach(() => jest.clearAllMocks());
+
+    it('reads an ecash token stored after a web page', async () => {
+        await expect(
+            tap([
+                uriRecord('https://bitcoin.example.org/'),
+                uriRecord(`cashu://${TOKEN}`)
+            ])
+        ).resolves.toBe(`cashu://${TOKEN}`);
+    });
+
+    it('reads an LNURL-withdraw https URI record with the abbreviated prefix', async () => {
+        await expect(
+            tap([uriRecord('https://card.example.com/lnurlw?p=1')])
+        ).resolves.toBe('https://card.example.com/lnurlw?p=1');
+    });
+
+    it('reads the withdraw record of a card that can also be paid', async () => {
+        await expect(
+            tap(
+                [
+                    uriRecord('https://bitcoin.example.org/'),
+                    uriRecord('lnurlp://card.example.com/p'),
+                    uriRecord('lnurlw://card.example.com/w')
+                ],
+                'withdraw'
+            )
+        ).resolves.toBe('lnurlw://card.example.com/w');
+    });
+
+    it('resolves undefined for a tag without NDEF records', async () => {
+        await expect(tap(undefined)).resolves.toBeUndefined();
+        expect(NfcManager.unregisterTagEvent).toHaveBeenCalled();
     });
 });

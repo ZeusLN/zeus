@@ -7,13 +7,13 @@ import {
     Text,
     TouchableOpacity
 } from 'react-native';
-import { ButtonGroup } from '@rneui/themed';
+import { ButtonGroup, Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import isEqual from 'lodash/isEqual';
 import Slider from '@react-native-community/slider';
-import { Nip47SingleMethod } from '@getalby/sdk';
+import { Nip47Method } from '@getalby/sdk';
 
 import Screen from '../../../components/Screen';
 import Accordion from '../../../components/Accordion';
@@ -34,6 +34,7 @@ import NostrConnectUtils, {
 } from '../../../utils/NostrConnectUtils';
 import { numberWithCommas } from '../../../utils/UnitsUtils';
 import BackendUtils from '../../../utils/BackendUtils';
+import ValidationUtils from '../../../utils/ValidationUtils';
 
 import NostrWalletConnectStore, {
     DEFAULT_NOSTR_RELAYS
@@ -59,7 +60,7 @@ interface AddOrEditNWCConnectionState {
     connectionName: string;
     selectedRelayUrl: string;
     customRelayUrl: string;
-    selectedPermissions: Nip47SingleMethod[];
+    selectedPermissions: Nip47Method[];
     selectedBudgetRenewalIndex: number;
     expiresAt: Date | undefined;
     error: string;
@@ -284,11 +285,11 @@ export default class AddOrEditNWCConnection extends React.Component<
         }
     };
 
-    isValidRelayUrl = (url: string) => {
-        const pattern =
-            /^(wss?:\/\/)([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+(:\d+)?(\/.*)?$/;
-        return pattern.test(url);
-    };
+    // An existing connection keeps the relay it was saved with; only a new
+    // or edited relay URL has to pass the check.
+    isValidRelayUrl = (url: string) =>
+        url === this.state.originalConnection?.relayUrl ||
+        ValidationUtils.isValidNwcServiceRelayUrl(url);
 
     updateStateWithChangeTracking = (newState: any) => {
         this.setState(newState, () => {
@@ -376,7 +377,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         });
     };
 
-    togglePermission = (permission: Nip47SingleMethod) => {
+    togglePermission = (permission: Nip47Method) => {
         const { selectedPermissions } = this.state;
         const isAdding = !selectedPermissions.includes(permission);
 
@@ -411,6 +412,21 @@ export default class AddOrEditNWCConnection extends React.Component<
                     title: localeString('general.confirm'),
                     callback: () => this.togglePermission('sign_message')
                 }
+            ]
+        });
+    };
+
+    showBudgetInfo = () => {
+        const { ModalStore } = this.props;
+        ModalStore.toggleInfoModal({
+            title: localeString('views.Settings.NostrWalletConnect.budget'),
+            text: [
+                localeString(
+                    'views.Settings.NostrWalletConnect.budgetInfo.reason'
+                ),
+                localeString(
+                    'views.Settings.NostrWalletConnect.budgetInfo.limit'
+                )
             ]
         });
     };
@@ -1096,6 +1112,16 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     <Body bold>
                                         {localeString('views.BumpFee.budget')}
                                     </Body>
+                                    <Icon
+                                        name="info"
+                                        onPress={this.showBudgetInfo}
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={22}
+                                        accessibilityLabel={localeString(
+                                            'views.Settings.NostrWalletConnect.budgetInfo.accessibilityLabel'
+                                        )}
+                                    />
                                 </View>
                                 <View
                                     style={styles.sectionDescriptionContainer}
@@ -1501,7 +1527,8 @@ const styles = StyleSheet.create({
     sectionTitleContainer: {
         marginHorizontal: 15,
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
+        gap: 5,
         alignItems: 'center'
     },
     sectionDescriptionContainer: {

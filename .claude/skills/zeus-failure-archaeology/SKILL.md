@@ -67,7 +67,7 @@ Background terms: the **keychain** is the OS secure credential store (accessed v
 | 2026-01-13 | Restructured: separate `iCloudCleanupMigration` function removed; cloud-synced data deleted before writing local, inside `keychainCloudSyncMigration`. Same day, `zeus:`-prefixed key namespacing added: "migration: move to new prefixed keys, added safety steps" | `bddf52507` + `318c721e7` (+ dedup refactor `f79ae68ff`) |
 | 2026-01-30 | **Final reversal of the deletion idea**: "migration: disable key deletion for now" — `deleteFromOldKeychain` becomes a deliberate no-op | `c6323fff4`; also iOS timing mitigation `35aaf8897` (500ms delays around keychain reads/writes) |
 
-**Current state (verified in source, 2026-07-06):** `utils/MigrationUtils.ts` → `migrateKey()` does read → write → verify → delete, but `deleteFromOldKeychain()` is a no-op whose comment reads "DISABLED: To prevent potential data loss during migration. Old keychain entries will remain but are harmless (orphaned data)." The old un-prefixed (and possibly iCloud-synced) entries are **retained deliberately**; the Keychain Recovery tool (`utils/KeychainRecoveryUtils.ts`, surfaced under `views/Tools/`) depends on those orphans existing. All new writes go through `storage/index.ts` with the `zeus:` prefix and `cloudSync: false` (both `setItem` and `removeItem`).
+**Migration state (verified in source, 2026-07-06; re-checked 2026-10-24):** `utils/MigrationUtils.ts` → `migrateKey()` does read → write → verify → delete, but `deleteFromOldKeychain()` is a no-op whose comment reads "DISABLED: To prevent potential data loss during migration. Old keychain entries will remain but are harmless (orphaned data)." The migration itself still retains the old un-prefixed entries. Since PR #4385 (2026-09) they no longer persist on iOS: `autoPurgeLegacyKeychain` (`utils/KeychainPurgeUtils.ts`, returns early on Android, called from `views/Wallet/Wallet.tsx`) deletes the legacy and iCloud-synced copies once the desync migration has made local copies (see Final chapter below). The Keychain Recovery tool (`utils/KeychainRecoveryUtils.ts`, surfaced under `views/Tools/`) can only find orphans on installs where that purge has not run yet. All new writes go through `storage/index.ts` with the `zeus:` prefix and `cloudSync: false` (both `setItem` and `removeItem`).
 
 **Root cause (of the whole saga):** deleting keychain data is irreversible and iCloud sync timing is unobservable, so every "clean up old entries" attempt risked destroying the only copy of a seed. The team converged on: never delete, namespace instead.
 
@@ -79,7 +79,7 @@ Background terms: the **keychain** is the OS secure credential store (accessed v
 
 ## FA-2 — React Native upgrade / New Architecture saga (~19-month freeze, then Fabric fallout)
 
-**Dates:** 2024-06-13 → 2026-06-12 (fallout); ongoing platform risk. **Status: settled (0.85.3 current), policy for Animated/layout patterns.**
+**Dates:** 2024-06-13 → 2026-09-30; ongoing platform risk. **Status: settled (0.87.1 current, see package.json), policy for Animated/layout patterns.**
 
 Background terms: **React Native (RN)** is the cross-platform mobile framework; its **New Architecture** replaces the old bridge with **Fabric** (new renderer) and TurboModules; **Hermes** is RN's JavaScript engine. Layout/animation code that was tolerated by the old renderer can hard-crash under Fabric.
 
@@ -92,12 +92,14 @@ Background terms: **React Native (RN)** is the cross-platform mobile framework; 
 | 2026-01-04 | The jump: "deps: React Native upgrade: 0.74.2 -> 0.83.1" — **~19 months** after 0.74.2 — with New Architecture ON (`android/gradle.properties` `newArchEnabled=true`, verified) | `d13ebc2cd`, merged `5c678f54b` (PR #3501, 2026-01-09) |
 | 2026-02-18 | RN 0.84.0 | `bb09f99c1` |
 | 2026-03-28 | Fabric fallout 1: "fix WalletHeader animation crashes on New Architecture" | `f08bfc7c5`, merge `6baf1051c` (PR #3910) |
-| 2026-05-12 | RN 0.85.3 (current — package.json `"react-native": "0.85.3"`, verified) | `5613ec2b7` |
+| 2026-05-12 | RN 0.85.3 | `5613ec2b7` |
 | 2026-06-12 | Fabric fallout 2: "fix(keypad): prevent Fabric crash by restructuring baseline layout" | `2c55e4f89`, merge `fe15a65ef` (PR #4163) |
+| 2026-08-31 | RN 0.86.0 (branch `rn-v0.86.0`, squash-merged) | PR #4185, merge `b413a8134` |
+| 2026-09-30 | RN 0.87.1 (current as of 2026-10-24; check package.json) | PR #4566, merge `d0a14e6c8` |
 
 **Root cause pattern:** the codebase accumulated 19 months of Animated/layout patterns validated only against the legacy renderer; Fabric enforces stricter invariants, so crashes surfaced screen-by-screen for months after the jump (WalletHeader at +3 months, keypad at +5 months).
 
-**Lesson:** treat any pre-2026 Animated/layout pattern as Fabric-suspect, and never let the RN version freeze again — incremental upgrades are cheaper than a 9-minor-version jump. (An `rn-v0.86.0` branch exists locally as candidate follow-up work — open, unmerged.)
+**Lesson:** treat any pre-2026 Animated/layout pattern as Fabric-suspect, and never let the RN version freeze again; incremental upgrades are cheaper than a 9-minor-version jump. Since the jump, RN has moved one minor at a time (0.84, 0.85, 0.86 via #4185, 0.87.1 via #4566).
 
 ---
 
@@ -105,15 +107,15 @@ Background terms: **React Native (RN)** is the cross-platform mobile framework; 
 
 **Dates:** 2026-05-30 → 2026-06-22. **Status: settled + policy.**
 
-Background terms: **MobX** is the state-management library; Zeus stores keep settings as MobX *observables* (proxied objects). A **MOD_KEY migration** is Zeus's one-shot pattern: check a flag key in legacy EncryptedStorage → mutate settings → `settingsStore.setSettings(...)` → set the flag (details in zeus-storage-and-migrations).
+Background terms: **MobX** is the state-management library; Zeus stores keep settings as MobX *observables* (proxied objects). A **MOD_KEY migration** was Zeus's one-shot pattern at the time: check a flag key in legacy EncryptedStorage → mutate settings → `settingsStore.setSettings(...)` → set the flag. PR #4477 (merged 2026-09-17, `dcf4f4a85`) replaced it for settings changes: a `settingsVersion` stamp in the blob (`SETTINGS_VERSION`, `utils/SettingsVersion.ts`) gates `priorVersion < N` blocks in `MigrationUtils.applySettingsMigrations`, which mutate in memory and land with the stamp in one write. The old flags are still read, never written (details in zeus-storage-and-migrations).
 
 Three related failures:
 
 1. **Stringify corruption.** Symptom: settings corrupted after a migration ran. Root cause: a migration passed a `JSON.stringify`'d string to `setSettings`, which expects a real object — corrupting the MobX observable state. Fix: `7ed901a10` "fix(migrations): pass object to setSettings to avoid MobX observable corruption (#4150)" (2026-06-09; #4150 is the issue — merged via PR #4155, merge `45e9d2095`, 2026-06-22).
 2. **Un-awaited setSettings.** Root cause: MOD_KEY blocks called `setSettings` without `await`, so the flag could be set before the write landed (or interleave with other writes). Fix: `d8e648b58` "fix(migrations): await settingsStore.setSettings in all MOD_KEY blocks" (2026-05-30).
-3. **Invoice-expiry repair had to run twice.** Symptom: invoice screen displayed "3600 hours" while invoices (BOLT11 = the standard Lightning payment-request format) actually expired in one hour. First repair `26d4215ea` (2026-05-30) fixed users whose settings *had* an `expirySeconds` field. It missed pre-Feb-2024 installs, which never stored `expirySeconds`/`timePeriod` at all — so a second pass `f7b2c30a8` (merge of `a7860aa96`, 2026-06-08, subject references #4149) derives a canonical seconds value and re-runs under a **new** flag key `invoices-expiry-display-fix-v2` (verified in `utils/MigrationUtils.ts` `migrateInvoiceExpiryDisplay`).
+3. **Invoice-expiry repair had to run twice.** Symptom: invoice screen displayed "3600 hours" while invoices (BOLT11 = the standard Lightning payment-request format) actually expired in one hour. First repair `26d4215ea` (2026-05-30) fixed users whose settings *had* an `expirySeconds` field. It missed pre-Feb-2024 installs, which never stored `expirySeconds`/`timePeriod` at all — so a second pass `f7b2c30a8` (merge of `a7860aa96`, 2026-06-08, subject references #4149) derives a canonical seconds value and re-runs under a **new** flag key `invoices-expiry-display-fix-v2`. Current state (2026-10-24): the repair is `applyInvoiceExpiryDisplay`, run once per blob in the `priorVersion < 1` block of `applySettingsMigrations` unless that flag is already set; the flag is read-only.
 
-**Lesson:** in migrations, always `await settingsStore.setSettings(realObject)` — never a stringified blob — and enumerate every historical settings shape (including fields that may have never existed) before declaring a repair complete.
+**Lesson:** never pass a stringified blob to `setSettings`, and enumerate every historical settings shape (including fields that may have never existed) before declaring a repair complete. Since #4477 a settings migration makes no `setSettings` call or flag write of its own: it mutates in memory inside a version-gated block, and a repair that missed people takes a new `SETTINGS_VERSION` bump.
 
 ---
 
@@ -137,7 +139,7 @@ Background: React class components have deprecated `UNSAFE_componentWillMount`-s
 
 Background terms: **Tor** routes traffic through an anonymity network; a **.onion** address is a Tor hidden service (its TLS certs can't be CA-validated normally); a **TLS cert bypass** disables certificate verification. Bypassing certs for *clearnet* hosts reached over Tor exposes users to exit-node man-in-the-middle attacks.
 
-- 2026-05-27: Tor stack replaced — merge `c512ea687` (PR #3971) migrates from the retired `ZeusLN/react-native-tor` fork to `react-native-nitro-tor` (package.json pins `0.6.0`, verified).
+- 2026-05-27: Tor stack replaced: merge `c512ea687` (PR #3971) migrates from the retired `ZeusLN/react-native-tor` fork to `react-native-nitro-tor` (package.json pinned `0.6.0` then; `0.6.1` on 2026-10-24; `1.1.0`, the 1.x `Tor.daemon`/`Tor.http` API, on 2026-10-29).
 - 2026-05-26: hardening: `d4c8f12e1` "fix(TorUtils): treat HTTP >= 300 responses as errors".
 - 2026-06-19: **the near-miss** — `9de1742f6` "fix(tor): trust invalid certs on LND/CLN REST over Tor" trusted invalid certs *broadly* on the Tor path.
 - 2026-06-20: scoped **one day later** by `8792003ee` "fix(tor): scope TLS bypass to .onion HTTPS endpoints", merge `5a7422a4b` (PR #4186). Standing rule since: cert bypass ONLY for HTTPS .onion; clearnet-over-Tor keeps strict TLS.
@@ -154,7 +156,7 @@ Background: **react-navigation** manages the screen stack; `navigation.navigate(
 
 - **Symptom:** broken back-navigation and node-picture selection after "upgrade react navigation" `3bae746ad` (2024-05-05; bumped `@react-navigation/bottom-tabs` 5.11→6.5 among others).
 - **Fix:** PR #2192 merge `7abc7a971` (2024-05-21), key commit `a54b3c91b` "use popTo instead of navigate to navigate back" — a sweep across 23 views.
-- **The class recurs:** `7830d772c` (2026-03-30) "fix: use popTo when returning from MintDiscovery to prevent navigation stack buildup"; `bc135dda7` (2026-03-11) moved navigation types to `NativeStackNavigationProp` (from `@react-navigation/native-stack` — the repo standard). Current deps: `@react-navigation/native` 7.1.28, `@react-navigation/native-stack` 7.12.0 (verified).
+- **The class recurs:** `7830d772c` (2026-03-30) "fix: use popTo when returning from MintDiscovery to prevent navigation stack buildup"; `bc135dda7` (2026-03-11) moved navigation types to `NativeStackNavigationProp` (from `@react-navigation/native-stack`, the repo standard). Current deps on 2026-10-24: `@react-navigation/native` 7.5.0, `@react-navigation/native-stack` 7.20.0 (see package.json).
 
 **Lesson:** for back-navigation always use `popTo`/`popToTop`, never `navigate`, and type screens with `NativeStackNavigationProp`.
 
@@ -222,15 +224,16 @@ Background: **NWC (Nostr Wallet Connect, NIP-47)** lets Nostr clients drive the 
 
 ## FA-11 — Cashu node-dir collision: all LDK wallets shared one mint DB
 
-**Dates:** 2026-03-20 → 2026-04-08. **Status: settled.**
+**Dates:** 2026-03-20 → 2026-04-08 (both fixes landed on feature branches before merge). **Status: settled.**
 
 Background: **Cashu** is a Chaumian ecash protocol; Zeus embeds the CDK (Cashu Dev Kit, Rust). Per-wallet Cashu data is namespaced by a node directory string.
 
-- **Symptom:** multiple LDK Node wallets on one device saw each other's mint data/balances.
+- **Symptom:** multiple LDK Node wallets on one device saw each other's mint data/balances. Seen only in builds of the `ldk-node` and `feat/cashu-multimint` feature branches; no release or tag was affected.
 - **Root cause:** namespacing used the LND directory getter, which returns the literal fallback `'lnd'` for every LDK Node wallet — so all LDK wallets collided on one namespace.
-- **Fix:** `1242ce94a` (2026-03-20) "fix: Cashu: isolate mint data per LDK node using getNodeDir()" — `CashuStore.getNodeDir()` returns `ldkNodeDir || 'ldk'` for ldk-node, `lndDir || 'lnd'` otherwise (verified in `stores/CashuStore.ts`). Follow-up `35fa31fee` (2026-04-08) "use getNodeDir for cashu multimint keys". Recovery is a **copy** migration, not a move: `MigrationUtils.migrateLegacyCashuKeysToNodeDir` copies four `cashu-*` key suffixes from the legacy `lnd`-prefixed keys to node-dir keys, only when the node key is empty (verified in `utils/MigrationUtils.ts`).
+- **Fix:** `1242ce94a` (2026-03-20) "fix: Cashu: isolate mint data per LDK node using getNodeDir()". `CashuStore.getNodeDir()` returns `ldkNodeDir || 'ldk'` for ldk-node, `lndDir || 'lnd'` otherwise (verified in `stores/CashuStore.ts`). It landed on the `ldk-node` branch, which reached master together with the LDK Node backend in PR #3784 (`b33cdb3c8`, 2026-03-27). Follow-up `35fa31fee` (2026-04-08) "use getNodeDir for cashu multimint keys" landed inside the multimint PR #3773 (`70e362781`, 2026-06-05), so master never wrote multimint keys under `lnd` either. No first-parent master commit and no tag ever wrote LDK Cashu data under the `lnd` prefix.
+- **Removed migration:** #3773 also added `MigrationUtils.migrateLegacyCashuKeysToNodeDir`, which was meant to copy four `cashu-*` suffixes from `lnd-` keys to node-dir keys. Its guard compared `Storage.getItem` against `null`/`undefined`, but `getItem` returns `false` on a miss, so it never copied anything (#4912). It was deleted rather than fixed: on released installs the `lnd` namespace belongs to remote wallets and embedded LND wallets without an `lndDir`, so a working copy would have moved those wallets' tokens, history and seed into LDK wallets. `stores/CashuStore.nodeDir.test.ts` checks that `initializeWallets` for an LDK node never touches `lnd-cashu-*` keys.
 
-**Lesson:** namespace per-wallet data with `CashuStore.getNodeDir()` (never the raw lndDir getter), and migrate by copying — leave legacy keys in place (same no-delete doctrine as FA-1).
+**Lesson:** namespace per-wallet data with `CashuStore.getNodeDir()` (never the raw lndDir getter). Before writing a copy migration, check with `git tag --contains` which releases actually wrote the old keys, and whether the source namespace is shared with other wallets. If a migration is needed, copy and leave legacy keys in place (same no-delete doctrine as FA-1), and test it with `getItem` returning `false` on a miss.
 
 ---
 
@@ -241,10 +244,23 @@ Background: **Cashu** is a Chaumian ecash protocol; Zeus embeds the CDK (Cashu D
 Background: **bimodal pathfinding** is an lnd payment-routing probability model (alternative to the default "apriori" estimator).
 
 - **Root cause:** upstream bug lightningnetwork/lnd#9085 made bimodal mode unsafe for users who had it enabled; rather than change the fresh-install default, Zeus force-disabled it only for existing users.
-- **Evidence (verified in source):** `stores/SettingsStore.ts` default `bimodalPathfinding: true` (fresh installs); `utils/MigrationUtils.ts` MOD_KEY7 = `'bimodal-bug-9085'` sets `bimodalPathfinding = false` for migrated users, with the lnd issue URL in a comment.
+- **Evidence (verified in source):** `stores/SettingsStore.ts` default `bimodalPathfinding: true` (fresh installs); `utils/MigrationUtils.ts` `legacySettingsMigrations` reads the flag `'bimodal-bug-9085'` as `mod7` and, when it is unset, sets `bimodalPathfinding = false` for users upgrading from the legacy blob, with the lnd issue URL in a comment. Since #4477 the flag is never written.
 - **Consequence:** new and upgraded installs behave differently by design. Same divergence pattern exists for `showMillisatoshiAmounts` (see zeus-config-and-flags for the full new-vs-migrated list).
 
-**Lesson:** when an upstream bug forces a behavior change, decide explicitly whether fresh installs and migrated users should diverge — and record the upstream issue number in the MOD_KEY name.
+**Lesson:** when an upstream bug forces a behavior change, decide explicitly whether fresh installs and migrated users should diverge, and record the upstream issue number in the migration function's comment (MOD_KEY flag names did this before #4477).
+
+---
+
+## FA-13: iOS keychain overwrite was not atomic, wiping all wallet configs
+
+**Dates:** 2026-10-23 → 2026-10-24. **Status: settled (patch merged), one suspected cause still open.**
+
+- **Symptom:** TestFlight report: on iOS the app restarts on the intro screen with every wallet configuration gone, while node data is still on disk.
+- **Root cause (confirmed for one path):** react-native-keychain 10.0.0 overwrites an iOS item by deleting every match and then calling `SecItemAdd`. If the process dies between the two calls (embedded LND crash, jetsam, watchdog) during a settings flush, `zeus-settings-v2` is gone. A `SecItemAdd` failure after the delete has the same result. Android is not affected (single DataStore edit).
+- **Fix:** `patches/patch-keychain-atomic-update.mjs` (`fdd63e398`, PR #5413, merge `639142116`) makes `setInternetCredentialsForServer` and `setGenericPasswordForOptions` try `SecItemUpdate` first; it throws at postinstall if the source stops matching, like the cloudSync patch. Recovery: PR #5412 (merge `6ba50dbae`) shows Tools > Export/Import Wallet Configurations on the intro screen and lets the Keychain Recovery scan offer a cloud copy that still lists wallets.
+- **Still open:** PR #5414 (`ClearKeychainIfNecessary` in `ios/zeus/AppDelegate.mm` may wipe the keychain on a background launch before first unlock) is a second suspected cause, not verified on a physical device.
+
+**Lesson:** a keychain "write" can be a delete plus add underneath. Treat any react-native-keychain bump as maintainer-gated and keep the postinstall patches' match checks.
 
 ---
 
@@ -262,13 +278,17 @@ Verified revert pairs:
 | #3432 NWC txlist (`285da755a`, 2025-12-15) | #3444 (`28bc50f5e`, revert `1c8400515`, 2025-12-15) | same day |
 | #1568 sat rounding (`4c0b2ad48`, 2023-08-04) | #1587 (`3d4377935`, revert `cd7b30479`, 2023-08-05) | 1 day |
 | #1679 app-lock timeout (`3c1634710`, 2023-10-10) | #1773 (`4dd71b8da`, revert `c0dc4e1f8`, 2023-10-16) | 6 days |
+| #5283 pod-install 0.1.38 → 1.2.1 (`b5c800265`, 2026-10-21) | #5416 from branch `fix/pod-install-system-bundler` (`815ad6f69`, revert `99b876551`, 2026-10-23; body explains the Xcode Cloud failure) | 2 days |
 
 **Before trusting any merged fix** (especially in storage/keychain/NWC territory), run:
 
 ```bash
 git log --oneline --grep='revert-<PR#>'           # revert merge, if any
 git log --oneline --grep='Revert' --since=<merge-date> | head
+git log --oneline -i --grep='revert' --since=<merge-date> | head   # hand-written reverts (e.g. #5416)
 ```
+
+Not every revert uses an auto-revert branch: #5416 reverted #5283 from a normal branch with a lowercase `build: revert ...` subject, so the `revert-<PR#>` grep misses it.
 
 **Lesson:** always check for a `revert-<PR#>` branch/merge before citing, extending, or reintroducing a merged change.
 
@@ -278,21 +298,21 @@ git log --oneline --grep='Revert' --since=<merge-date> | head
 
 **Status: open** (each branch is unfinished work, not abandoned-by-decision unless noted).
 
-Caveat: these are **local branches in the primary development clone** (hundreds exist); a fresh fork won't have them. Verify with `git branch --list <name>` (or `git branch -r` against the ZeusLN remote). Counts below are commits not reachable from `c5fd094fb`.
+Caveat: these are **local branches in the primary development clone** (hundreds exist); a fresh fork won't have them. Verify with `git branch --list <name>` (or `git branch -r` against the ZeusLN remote). Counts below are commits not reachable from `c5fd094fb` (rows marked Landed: from `3dc9f83e6`). A squash-merged branch still shows commits under `git log HEAD..<branch>`; use `git cherry HEAD <branch>` (lines starting `+` are patches not in HEAD) before calling a branch stalled.
 
 | Branch | Tip (verified) | Unmerged | What it is |
 |---|---|---|---|
-| `android-16kb-page-size` | `fa2212457`, 2025-10-10, "config: Android: 16 KB page size" | 1 | Android 16KB-page-size compliance; note `android/check_elf_alignment.sh` already exists on master but is invoked by nothing |
+| `android-16kb-page-size` | `fa2212457`, 2025-10-10, "config: Android: 16 KB page size" | 1 | Android 16KB-page-size compliance. **Landed** via PR #3565 (merge `06bdd0b59`, 2026-03-26); the commit count is squash noise (`git cherry` still shows `+` because the merged change differs from the branch tip). NOT stalled. `android/check_elf_alignment.sh` is on master but no CI workflow or build script runs it |
 | `bip-321` | `3c1210922`, 2025-08-20, "feat: BIP-321" | 1 | BIP-321 (unified bitcoin payment URIs) support |
-| `cdk-init-remote-nodes` | `62437d4c8`, 2026-05-01 | 4 | Cashu (CDK) redemption for remote-node backends |
+| `cdk-init-remote-nodes` | `62437d4c8`, 2026-05-01 | 4 | **Landed** via PR #4039 (merge `d3ba9ff65`, 2026-05-04): `git cherry HEAD cdk-init-remote-nodes` shows 0 unmerged patches. NOT stalled |
 | `cashu-backup` | `34228aac7`, 2025-04-04 | 73 | Large stalled effort (ecash backup / ZEUS Pay-adjacent) — oldest and biggest |
 | `zeus-rgs` | `10cc63b7b`, 2026-05-12 | **0** | Fully contained in master as of `c5fd094fb` — NOT stalled, safe to ignore |
 | `deps-react-native-0.76.9` / `deps-react-native-0.78.2` / `react-native-0.76.2` | see FA-2 | 1–3 | Dead RN upgrade attempts, superseded by the 0.83.1 jump |
-| `rn-v0.86.0` | `203cb9147`, 2026-06-26 | 6 | Candidate next RN bump — open |
+| `rn-v0.86.0` | `752d3ef58`, 2026-07-13 | 9 | **Landed** via PR #4185 (squash, 2026-08-31); the commit count is squash noise. NOT stalled |
 
 **`backup-*` and `*-backup-*` branches** (`backup-before-rebase`, `backup-pre-squash`, `ldk-node-backup-0326-*`) are pre-rebase safety copies of work that already landed — **not** stalled work. Don't mine them for "lost" features.
 
-**Lesson:** before starting 16KB-page-size, BIP-321, remote-node Cashu, or cashu-backup work, diff the graveyard branch first — someone already broke ground.
+**Lesson:** before starting BIP-321 or cashu-backup work, diff the graveyard branch first; someone already broke ground.
 
 ---
 
@@ -300,7 +320,7 @@ Caveat: these are **local branches in the primary development clone** (hundreds 
 
 1. **FA-1:** Never delete keychain data in a migration — namespace and retain orphans.
 2. **FA-2:** Treat pre-2026 Animated/layout code as Fabric-suspect; never freeze the RN version for months.
-3. **FA-3:** `await settingsStore.setSettings(realObject)` — never stringified — and enumerate every historical settings shape.
+3. **FA-3:** Never stringify into `setSettings`; enumerate every historical settings shape; settings migrations go in version-gated blocks.
 4. **FA-4:** Lifecycle refactors in boot paths are behavior changes; test cold start on both platforms.
 5. **FA-5:** TLS cert bypass only for HTTPS `.onion`; treat HTTP ≥ 300 over Tor as errors.
 6. **FA-6:** Use `popTo` for back-navigation and `NativeStackNavigationProp` for types.
@@ -308,15 +328,18 @@ Caveat: these are **local branches in the primary development clone** (hundreds 
 8. **FA-8:** A storage-engine default is per-wallet state, not a global flag.
 9. **FA-9:** Length-cap inputs before regexing under Hermes.
 10. **FA-10/MP-1:** Check for `revert-<PR#>` before trusting any merged fix.
-11. **FA-11:** Namespace per-wallet data via `getNodeDir()`; migrate by copy, never move.
-12. **FA-12:** Record upstream issue numbers in MOD_KEY names; decide fresh-vs-migrated divergence explicitly.
-13. **MP-2:** Diff the graveyard branch before restarting stalled work.
+11. **FA-11:** Namespace per-wallet data via `getNodeDir()`. Check which releases wrote the old keys before migrating; when migrating, copy, never move.
+12. **FA-12:** Record upstream issue numbers in the migration comment; decide fresh-vs-migrated divergence explicitly.
+13. **FA-13:** Keychain writes can be delete-then-add; keep the postinstall patch guards and gate keychain library bumps.
+14. **MP-2:** Diff the graveyard branch before restarting stalled work.
 
 ---
 
 ## Provenance and maintenance
 
-Facts verified 2026-07-06 against master snapshot `c5fd094fb` (`git describe --tags` = `v13.1.2-3-gc5fd094fb`; package.json version `13.1.3-alpha`). Every hash above passed `git log -1 <hash>` and `git merge-base --is-ancestor <hash> c5fd094fb`. Dates are author dates from `git log --date=short`. Not independently verifiable from the repo: GitHub PR *bodies* (revert reasons confirmed absent only in commit bodies) and the maintainer's revert-first policy statement (2026-07-06, authoritative).
+FA-1 current state, FA-2 timeline, FA-5/FA-6 versions, FA-13, the MP-1 table and the MP-2 `cdk-init-remote-nodes`/`rn-v0.86.0` rows re-verified 2026-10-24 against master `3dc9f83e6` (package.json `13.2.4-alpha`). All other facts verified 2026-07-06 against master snapshot `c5fd094fb` (`git describe --tags` = `v13.1.2-3-gc5fd094fb`; package.json version `13.1.3-alpha`). Every hash above passed `git log -1 <hash>` and `git merge-base --is-ancestor <hash> c5fd094fb`. Dates are author dates from `git log --date=short`. Not independently verifiable from the repo: GitHub PR *bodies* (revert reasons confirmed absent only in commit bodies) and the maintainer's revert-first policy statement (2026-07-06, authoritative).
+
+FA-3 (background, item 3, lesson) and FA-12 (evidence, lesson) re-verified 2026-10-24 against master `3dc9f83e6`.
 
 Re-verification one-liners for volatile facts:
 
@@ -324,9 +347,9 @@ Re-verification one-liners for volatile facts:
 |---|---|
 | Any cited hash exists + subject/date | `git log -1 --format='%h %ad %s' --date=short <hash>` |
 | Hash is on master lineage | `git merge-base --is-ancestor <hash> HEAD && echo ok` |
-| RN version (0.85.3 as of 2026-07) | `grep '"react-native"' package.json` |
+| RN version (0.87.1 as of 2026-10-24) | `grep '"react-native"' package.json` |
 | New Architecture still ON | `grep newArchEnabled android/gradle.properties` |
-| nitro-tor version (0.6.0) | `grep react-native-nitro-tor package.json` |
+| nitro-tor version (1.1.0 as of 2026-10-29) | `grep react-native-nitro-tor package.json` |
 | Keychain deletion still disabled | `grep -n 'Skipping delete' utils/MigrationUtils.ts` |
 | Orphan-retention comment intact | `grep -n 'DISABLED' utils/MigrationUtils.ts` |
 | `zeus:`-prefix + `cloudSync: false` writes | `grep -n 'cloudSync' storage/index.ts` |
@@ -334,7 +357,8 @@ Re-verification one-liners for volatile facts:
 | Bimodal default (true) + migration off-switch | `grep -n bimodalPathfinding stores/SettingsStore.ts utils/MigrationUtils.ts` |
 | Cashu node-dir logic | `grep -n -A6 'getNodeDir = ' stores/CashuStore.ts` |
 | Expiry-repair MOD key (`...-fix-v2`) | `grep -n 'invoices-expiry-display-fix' utils/MigrationUtils.ts` |
-| New reverts since this was written | `git log --oneline --grep='revert-' --since=2026-07-06` |
+| New reverts since this was written | `git log --oneline -i --grep='revert' --since=2026-10-24` |
+| Atomic keychain patch still applied | `grep -n keychain-atomic patches/index.mjs` |
 | Graveyard branch still unmerged | `git log --oneline HEAD..<branch> \| wc -l` |
 | react-navigation major (7.x) | `grep '@react-navigation/native' package.json` |
 

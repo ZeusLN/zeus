@@ -4,7 +4,7 @@ import TransactionRequest from '../models/TransactionRequest';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import VersionUtils from '../utils/VersionUtils';
 import Base64Utils from '../utils/Base64Utils';
-import { Hash as sha256Hash } from 'fast-sha256';
+import { sha256Bytes, sha256Hex } from '../utils/HashingUtils';
 import BigNumber from 'bignumber.js';
 import {
     getBalance,
@@ -15,7 +15,9 @@ import {
     listClosedChannels,
     listPeerChannels
 } from './CoreLightningRequestHandler';
+import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { markHttpStatus, markJsonRpcCode } from '../utils/PaymentLookupUtils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import {
     doTorRequest,
@@ -23,8 +25,21 @@ import {
     RequestMethod
 } from '../utils/TorUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
+import { inFlightRequestKey } from '../utils/InFlightRequestUtils';
 
 const calls = new Map<string, Promise<any>>();
+
+// CLN's feerate takes an integer before the perkb suffix. Float math turns
+// 2.01 sat/vB into 2009.9999999999998perkb, so multiply with BigNumber and
+// round to a whole sat/kB. Number() first keeps the old output for a
+// missing or empty rate, which BigNumber would throw on.
+export const satPerVbyteToPerkb = (
+    satPerVbyte: string | number | null | undefined
+): string =>
+    `${new BigNumber(Number(satPerVbyte))
+        .times(1000)
+        .integerValue(BigNumber.ROUND_HALF_UP)
+        .toFixed()}perkb`;
 
 export default class CLNRest {
     private defaultTimeout: number = 30000;
@@ -62,9 +77,7 @@ export default class CLNRest {
         useTor?: boolean,
         timeout?: number
     ) => {
-        // use body data as an identifier too, we don't want to cancel when we
-        // are making multiples calls to get all the node names, for example
-        const id = data ? `${url}${JSON.stringify(data)}` : url;
+        const id = inFlightRequestKey(headers, url, data);
         if (calls.has(id)) {
             return calls.get(id);
         }
@@ -87,10 +100,18 @@ export default class CLNRest {
                     // undefined keeps doTorRequest's own default; only
                     // request-scoped deadlines (payments) override it
                     timeout
-                ).then((response: any) => {
-                    calls.delete(id);
-                    return response;
-                })
+                )
+                    .then((response: any) => {
+                        calls.delete(id);
+                        return response;
+                    })
+                    .catch((error: any) => {
+                        // evict rejected requests too, otherwise every
+                        // subsequent identical call gets the same cached
+                        // rejection until the next reconnect clears the map
+                        calls.delete(id);
+                        throw error;
+                    })
             );
         } else {
             const timeoutPromise = new Promise((_, reject) => {
@@ -102,6 +123,8 @@ export default class CLNRest {
 
             const fetchPromise = ReactNativeBlobUtil.config({
                 trusty: !certVerification,
+                // never replay the macaroon / rune headers to a redirect target
+                followRedirect: false,
                 // RNBlobUtil's native default is 60s; without this a
                 // payment request holding the connection open longer than
                 // that dies natively no matter what the race below allows
@@ -120,26 +143,48 @@ export default class CLNRest {
                         }
                         return response.json();
                     } else {
+                        // a response from clnrest, or a proxy in front of
+                        // it; the status tells which kind of failure it is
+                        const status = response.info().status;
+                        let errorInfo: any;
                         try {
-                            const errorInfo = response.json();
-                            throw new Error(
-                                (errorInfo.error && errorInfo.error.message) ||
-                                    errorInfo.message ||
-                                    errorInfo.error
-                            );
+                            errorInfo = response.json();
                         } catch (e) {
-                            if (
-                                response.data &&
-                                typeof response.data === 'string'
-                            ) {
-                                throw new Error(response.data);
-                            } else {
-                                throw new Error(
+                            // not JSON: fall back to the raw body below
+                        }
+                        const errorMessage = [
+                            errorInfo?.error?.message,
+                            errorInfo?.message,
+                            errorInfo?.error
+                        ].find(
+                            (message: any) =>
+                                typeof message === 'string' && message
+                        );
+                        if (errorMessage) {
+                            throw markJsonRpcCode(
+                                markHttpStatus(new Error(errorMessage), status),
+                                errorInfo
+                            );
+                        } else if (
+                            response.data &&
+                            typeof response.data === 'string'
+                        ) {
+                            throw markJsonRpcCode(
+                                markHttpStatus(
+                                    new Error(response.data),
+                                    status
+                                ),
+                                errorInfo
+                            );
+                        } else {
+                            throw markHttpStatus(
+                                new Error(
                                     localeString(
                                         'backends.LND.restReq.connectionError'
                                     )
-                                );
-                            }
+                                ),
+                                status
+                            );
                         }
                     }
                 });
@@ -264,14 +309,14 @@ export default class CLNRest {
         if (data.utxos) {
             request = {
                 destination: data.addr,
-                feerate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
+                feerate: satPerVbyteToPerkb(data.sat_per_vbyte),
                 satoshi: data.amount,
                 utxos: data.utxos
             };
         } else {
             request = {
                 destination: data.addr,
-                feerate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
+                feerate: satPerVbyteToPerkb(data.sat_per_vbyte),
                 satoshi: data.amount
             };
         }
@@ -297,9 +342,11 @@ export default class CLNRest {
     // Poll lookupInvoice for the watched payment hash instead of scanning
     // the invoice list: getInvoices includes unpaid invoices, so on busy
     // nodes the watched invoice can be pushed out of the window before
-    // it is paid. rHash arrives hex encoded from the Receive view
+    // it is paid. rHash arrives hex encoded from the Receive view. A paid
+    // invoice is the signal, with no amount check: CLN does not mark a
+    // fixed-amount invoice paid for less
     watchInvoicePaid = (
-        { rHash, value }: { rHash: string; value?: string | number },
+        { rHash }: { rHash: string },
         onPaid: (payload: {
             amountSat: number;
             tx?: string;
@@ -311,11 +358,7 @@ export default class CLNRest {
                 .then((result: any) => {
                     const invoice = new Invoice(result);
                     const amountPaid = invoice.getAmount;
-                    if (
-                        invoice.isPaid &&
-                        Number(amountPaid) >= Number(value) &&
-                        Number(amountPaid) !== 0
-                    ) {
+                    if (invoice.isPaid && Number(amountPaid) !== 0) {
                         clearInterval(interval);
                         onPaid({
                             amountSat: Number(amountPaid),
@@ -378,9 +421,15 @@ export default class CLNRest {
             exposeprivatechannels: true
         });
 
+    // A payment group can mix part statuses: an MPP retry leaves the failed
+    // parts beside the pending ones. Rank complete over pending over failed
+    // so a group still in flight is not reported as failed. amount_msat
+    // and amount_sent_msat both count every part that has not failed, so
+    // an in-flight payment shows its amount and the fee stays consistent
+    // while some parts are complete and others pending.
     getPayments = () =>
         this.postRequest('/v1/sql', {
-            query: "select sp.payment_hash, sp.groupid, min(sp.status) as status, min(sp.destination) as destination, min(sp.created_at) as created_at, min(sp.description) as description, min(sp.bolt11) as bolt11, min(sp.bolt12) as bolt12, sum(case when sp.status = 'complete' then sp.amount_sent_msat else null end) as amount_sent_msat, sum(case when sp.status = 'complete' then sp.amount_msat else 0 end) as amount_msat, max(sp.payment_preimage) as preimage from sendpays sp group by sp.payment_hash, sp.groupid order by created_index desc limit 150"
+            query: "select sp.payment_hash, sp.groupid, case when sum(sp.status = 'complete') > 0 then 'complete' when sum(sp.status = 'pending') > 0 then 'pending' else 'failed' end as status, min(sp.destination) as destination, min(sp.created_at) as created_at, min(sp.description) as description, min(sp.bolt11) as bolt11, min(sp.bolt12) as bolt12, sum(case when sp.status != 'failed' then sp.amount_sent_msat else null end) as amount_sent_msat, sum(case when sp.status != 'failed' then sp.amount_msat else 0 end) as amount_msat, max(sp.payment_preimage) as preimage from sendpays sp group by sp.payment_hash, sp.groupid order by created_index desc limit 150"
         }).then((data: any) => {
             const paymentList: any[] = [];
             data.rows.forEach((pay: any) => {
@@ -401,6 +450,42 @@ export default class CLNRest {
 
             return {
                 payments: paymentList
+            };
+        });
+
+    // targeted lookup via listpays' payment_hash filter. listpays returns
+    // one entry per retry group, so prefer a settled attempt, then a
+    // pending one, over stale failed groups from earlier retries. The
+    // status is mapped to LND's enum strings so trackPaymentToTerminal
+    // and the NWC reconcile helpers read it uniformly.
+    lookupPayment = (data: { payment_hash: string }) =>
+        this.postRequest('/v1/listpays', {
+            payment_hash: data.payment_hash
+        }).then((response: any) => {
+            const pays = response?.pays || [];
+            if (pays.length === 0) return null;
+            const pay =
+                pays.find((p: any) => p.status === 'complete') ||
+                pays.find((p: any) => p.status === 'pending') ||
+                pays[pays.length - 1];
+            return {
+                payment_hash: pay.payment_hash,
+                status:
+                    pay.status === 'complete'
+                        ? 'SUCCEEDED'
+                        : pay.status === 'failed'
+                        ? 'FAILED'
+                        : 'IN_FLIGHT',
+                destination: pay.destination,
+                // creation_date is what the send tracker's stale-attempt
+                // check and models/Payment read first
+                creation_date: pay.created_at?.toString(),
+                created_at: pay.created_at?.toString(),
+                bolt11: pay.bolt11,
+                bolt12: pay.bolt12,
+                amount_msat: pay.amount_msat,
+                amount_sent_msat: pay.amount_sent_msat,
+                preimage: pay.preimage
             };
         });
 
@@ -425,9 +510,7 @@ export default class CLNRest {
 
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any;
-        const feeRate = `${new BigNumber(data.sat_per_vbyte || 0)
-            .times(1000)
-            .toString()}perkb`;
+        const feeRate = satPerVbyteToPerkb(data.sat_per_vbyte || 0);
 
         request = {
             id: data.id,
@@ -459,10 +542,10 @@ export default class CLNRest {
     // maxfeepercent. fee_limit_sat is the source of truth: FeeLimit
     // already emits the percent-derived sat amount as fee_limit_sat in
     // percent mode, so the cap always matches what the fee UI displays.
-    // Returning undefined leaves the cap to xpay's default of
-    // max(5000msat, 1%).
+    // A limit of 0 is a real cap of zero. Returning undefined leaves the
+    // cap to xpay's default of max(5000msat, 1%).
     private getMaxFeeMsat = (data: any) =>
-        data.fee_limit_sat ? Number(data.fee_limit_sat) * 1000 : undefined;
+        feeLimitSatsToMaxRoutingFeeMsat(data.fee_limit_sat);
 
     // xpay and xkeysend results omit status and payment_hash: synthesize
     // both so handlePayment success detection and payment note keys
@@ -472,12 +555,8 @@ export default class CLNRest {
     private formatXpayResult = (result: any) => {
         const formatted: any = { ...result, status: 'complete' };
         if (result?.payment_preimage) {
-            formatted.payment_hash = Base64Utils.bytesToHex(
-                Array.from(
-                    new sha256Hash()
-                        .update(Base64Utils.hexToBytes(result.payment_preimage))
-                        .digest()
-                )
+            formatted.payment_hash = sha256Hex(
+                Base64Utils.hexToBytes(result.payment_preimage)
             );
         }
         return formatted;
@@ -516,27 +595,32 @@ export default class CLNRest {
             forcedTimeout((timeoutSeconds + 1) * 1000, {
                 payment_error: localeString(
                     'views.SendingLightning.paymentTimedOut'
-                )
+                ),
+                // outcome unknown on the node: lets the caller track the
+                // payment to a terminal state instead of reporting failure
+                payment_timed_out: true
             }),
             call
         ]);
     };
 
     payLightningInvoice = async (data: any) => {
+        const maxfee = this.getMaxFeeMsat(data);
+
         // pay is deprecated in CLN v26.06 and removed in v27.03; use xpay
         // (available since v24.11) when the node has it
         if (!this.supports('v24.11')) {
             const legacyRequest: any = {
                 bolt11: data.payment_request,
-                amount_msat: Number(data.amt && data.amt * 1000),
                 retry_for: data.timeout_seconds
             };
+            if (data.amt) legacyRequest.amount_msat = Number(data.amt) * 1000;
             // pay takes either a percent cap or an absolute maxfee, not
             // both. maxfee predates clnrest itself, so no version gate.
             // Prefer fee_limit_sat so the cap matches the fee UI, same
             // as the xpay path.
-            if (data.fee_limit_sat) {
-                legacyRequest.maxfee = Number(data.fee_limit_sat) * 1000;
+            if (maxfee !== undefined) {
+                legacyRequest.maxfee = maxfee;
             } else if (data.max_fee_percent) {
                 legacyRequest.maxfeepercent = data.max_fee_percent;
             }
@@ -548,7 +632,6 @@ export default class CLNRest {
             retry_for: data.timeout_seconds
         };
         if (data.amt) request.amount_msat = Number(data.amt) * 1000;
-        const maxfee = this.getMaxFeeMsat(data);
         if (maxfee !== undefined) request.maxfee = maxfee;
 
         return this.payWithTimeout(
@@ -559,42 +642,55 @@ export default class CLNRest {
         );
     };
     sendKeysend = async (data: any) => {
+        const maxfee = this.getMaxFeeMsat(data);
+
         // keysend is deprecated in CLN v26.06 and removed in v27.03; use
         // xkeysend (introduced alongside the deprecation in v26.06) when
         // the node has it
         if (!this.supports('v26.06')) {
             const legacyRequest: any = {
                 destination: data.pubkey,
-                amount_msat: Number(data.amt && data.amt * 1000),
                 retry_for: data.timeout_seconds
             };
+            if (data.amt) legacyRequest.amount_msat = Number(data.amt) * 1000;
             // keysend takes either a percent cap or an absolute maxfee,
             // not both, and only gained maxfee in v24.11: on older nodes
             // express the fixed cap as the equivalent percent of the
-            // keysend amount (capped at CLN's 100% param limit)
-            if (data.max_fee_percent) {
+            // keysend amount (capped at CLN's 100% param limit). CLN
+            // reads the percent to whole ppm and floors the budget, so
+            // round up to 4 decimals to keep the cap at or above the
+            // fixed limit. Prefer fee_limit_sat so the cap matches the fee
+            // UI, same as pay, xpay and xkeysend: in percent mode it holds
+            // the rounded-up sat amount the UI shows, and the raw percent
+            // would cap below it.
+            if (maxfee !== undefined && this.supports('v24.11')) {
+                legacyRequest.maxfee = maxfee;
+            } else if (maxfee !== undefined && data.amt) {
+                legacyRequest.maxfeepercent = BigNumber.min(
+                    new BigNumber(data.fee_limit_sat)
+                        .times(100)
+                        .dividedBy(data.amt)
+                        .decimalPlaces(4, BigNumber.ROUND_CEIL),
+                    100
+                ).toNumber();
+            } else if (data.max_fee_percent) {
                 legacyRequest.maxfeepercent = data.max_fee_percent;
-            } else if (data.fee_limit_sat) {
-                if (this.supports('v24.11')) {
-                    legacyRequest.maxfee = Number(data.fee_limit_sat) * 1000;
-                } else if (data.amt) {
-                    legacyRequest.maxfeepercent = BigNumber.min(
-                        new BigNumber(data.fee_limit_sat)
-                            .times(100)
-                            .dividedBy(data.amt),
-                        100
-                    ).toNumber();
-                }
+            }
+            // With maxfeepercent, keysend raises any budget below
+            // exemptfee (default 5000 msat) to exemptfee. Send 0 so the
+            // percent is the whole cap. Not allowed alongside maxfee,
+            // which already sets the exemption to 0.
+            if (legacyRequest.maxfeepercent !== undefined) {
+                legacyRequest.exemptfee = 0;
             }
             return this.payWithTimeout('/v1/keysend', legacyRequest, data);
         }
 
         const request: any = {
             destination: data.pubkey,
-            amount_msat: Number(data.amt && data.amt * 1000),
             retry_for: data.timeout_seconds
         };
-        const maxfee = this.getMaxFeeMsat(data);
+        if (data.amt) request.amount_msat = Number(data.amt) * 1000;
         if (maxfee !== undefined) request.maxfee = maxfee;
 
         return this.payWithTimeout(
@@ -634,9 +730,9 @@ export default class CLNRest {
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
-            signature: new sha256Hash()
-                .update(Base64Utils.stringToUint8Array(signed.signature))
-                .digest()
+            signature: sha256Bytes(
+                Base64Utils.stringToUint8Array(signed.signature)
+            )
         };
     };
 
@@ -664,7 +760,8 @@ export default class CLNRest {
         description: string;
     }) => {
         return this.postRequest('/v1/invoicerequest', {
-            amount: Number(amount),
+            // invoicerequest reads a bare number as msat
+            amount: Number(amount) * 1000,
             description
         });
     };
@@ -823,6 +920,7 @@ export default class CLNRest {
     supportsUnconfirmedTransactionOrigin = () => false;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
+    supportsPaymentLookup = () => true;
     supportsChannelManagement = () => true;
     supportsCircularRebalancing = () => true;
     supportsForceClose = () => false;
@@ -851,6 +949,7 @@ export default class CLNRest {
     supportsCustomPreimages = () => false;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => true;
+    supportsChannelMemo = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsChannelFundMax = () => true;

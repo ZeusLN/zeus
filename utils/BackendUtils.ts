@@ -1,5 +1,6 @@
 import { settingsStore } from '../stores/Stores';
 import { parseLdkNodeError } from './ErrorUtils';
+import { isReservedSigningMessage } from './LnurlAuthUtils';
 // LND
 import LND from '../backends/LND';
 import LightningNodeConnect from '../backends/LightningNodeConnect';
@@ -65,7 +66,13 @@ class BackendUtils {
         ) {
             return result.catch((error: any) => {
                 const parsed = parseLdkNodeError(error);
-                const cleanError = new Error(parsed);
+                const cleanError: any = new Error(parsed);
+                // Keep properties the backend set on the error, such as
+                // channelClosed, which callers check after a failed close
+                if (typeof error === 'object') {
+                    Object.assign(cleanError, error);
+                }
+                cleanError.message = parsed;
                 cleanError.name = error?.name || 'Error';
                 throw cleanError;
             });
@@ -95,6 +102,7 @@ class BackendUtils {
     getInvoices = (...args: any[]) => this.call('getInvoices', args);
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);
+    lookupPayment = (...args: any[]) => this.call('lookupPayment', args);
     getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
     getNewChangeAddress = (...args: any[]) =>
         this.call('getNewChangeAddress', args);
@@ -124,7 +132,18 @@ class BackendUtils {
     listAccounts = (...args: any[]) => this.call('listAccounts', args);
     importAccount = (...args: any[]) => this.call('importAccount', args);
     listAddresses = (...args: any[]) => this.call('listAddresses', args);
-    signMessage = (...args: any[]) => this.call('signMessage', args);
+    // Backstop for every caller that signs with the node key through
+    // BackendUtils. Each backend's lnurlAuth calls its own signMessage
+    // directly, so LNURL-auth is not affected. The Olympus restore flow in
+    // ChannelMigrationUtils signs through lndmobile and checks separately.
+    signMessage = (...args: any[]) =>
+        isReservedSigningMessage(args[0])
+            ? Promise.reject(
+                  new Error(
+                      'Refusing to sign the LNURL-auth key derivation phrase'
+                  )
+              )
+            : this.call('signMessage', args);
     verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
     signMessageWithAddr = (...args: any[]) =>
         this.call('signMessageWithAddr', args);
@@ -133,6 +152,8 @@ class BackendUtils {
     lnurlAuth = (...args: any[]) => this.call('lnurlAuth', args);
 
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
+    releaseOutput = (...args: any[]) => this.call('releaseOutput', args);
+    abandonChannel = (...args: any[]) => this.call('abandonChannel', args);
     signPsbt = (...args: any[]) => this.call('signPsbt', args);
     finalizePsbt = (...args: any[]) => this.call('finalizePsbt', args);
     publishTransaction = (...args: any[]) =>
@@ -152,6 +173,9 @@ class BackendUtils {
         this.call('subscribeInvoices', args);
     subscribeTransactions = (...args: any[]) =>
         this.call('subscribeTransactions', args);
+    // returns an unsubscribe function
+    watchActivityUpdates = (...args: any[]) =>
+        this.call('watchActivityUpdates', args);
     initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
     rescan = (...args: any[]) => this.call('rescan', args);
 
@@ -225,6 +249,7 @@ class BackendUtils {
         this.call('supportsUnconfirmedTransactionOrigin');
     supportsLightningSends = () => this.call('supportsLightningSends');
     supportsKeysend = () => this.call('supportsKeysend');
+    supportsPaymentLookup = () => this.call('supportsPaymentLookup');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
     supportsCircularRebalancing = () =>
         this.call('supportsCircularRebalancing');
@@ -257,6 +282,7 @@ class BackendUtils {
     supportsCustomPreimages = () => this.call('supportsCustomPreimages');
     supportsSweep = () => this.call('supportsSweep');
     supportsOnchainSendMax = () => this.call('supportsOnchainSendMax');
+    supportsChannelMemo = () => this.call('supportsChannelMemo');
     supportsWithdrawalRequests = () => this.call('supportsWithdrawalRequests');
     supportsOnchainBatching = () => this.call('supportsOnchainBatching');
     supportsChannelBatching = () => this.call('supportsChannelBatching');

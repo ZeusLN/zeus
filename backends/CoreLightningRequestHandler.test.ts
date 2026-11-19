@@ -19,6 +19,7 @@ jest.mock('./CLNRest', () => ({
 jest.mock('../utils/AddressUtils', () => ({ __esModule: true, default: {} }));
 
 import {
+    getBalance,
     getOffchainBalance,
     getUTXOs,
     listClosedChannels,
@@ -37,6 +38,70 @@ const respond = (funds: any, info?: any) =>
                 : Promise.reject(new Error('getinfo failed'));
         return Promise.reject(new Error(`unexpected route ${route}`));
     });
+
+describe('CoreLightningRequestHandler.getBalance', () => {
+    const output = (amountMsat: number, status: string, reserved: boolean) => ({
+        amount_msat: amountMsat,
+        status,
+        reserved
+    });
+
+    it('leaves out outputs spent by an unconfirmed transaction', () => {
+        // listfunds right after a fund max channel open on regtest (#4840)
+        const result = getBalance(
+            listfunds([
+                // spent earlier by the unconfirmed 8714ec
+                output(25_000_000, 'confirmed', true),
+                // both spent by the funding transaction
+                output(100_000_000, 'confirmed', true),
+                output(24_888_000, 'unconfirmed', true),
+                // change of the funding transaction
+                output(25_000_000, 'unconfirmed', false)
+            ])
+        );
+
+        expect(result).toEqual({
+            total_balance: 25_000,
+            confirmed_balance: 0,
+            unconfirmed_balance: 25_000
+        });
+    });
+
+    it('does not count a channel funding input next to its change', () => {
+        // 500,000 sat channel opened from a single 1,000,000 sat output,
+        // before the funding transaction confirms. The channel itself is
+        // reported by getOffchainBalance as pending_open_balance
+        const result = getBalance(
+            listfunds([
+                output(1_000_000_000, 'confirmed', true),
+                output(499_845_000, 'unconfirmed', false)
+            ])
+        );
+
+        expect(result).toEqual({
+            total_balance: 499_845,
+            confirmed_balance: 0,
+            unconfirmed_balance: 499_845
+        });
+    });
+
+    it('counts outputs that are not reserved', () => {
+        const result = getBalance(
+            listfunds([
+                output(100_000_000, 'confirmed', false),
+                output(50_000_000, 'unconfirmed', false),
+                // older nodes may leave out the reserved key
+                { amount_msat: 20_000_000, status: 'confirmed' }
+            ])
+        );
+
+        expect(result).toEqual({
+            total_balance: 170_000,
+            confirmed_balance: 120_000,
+            unconfirmed_balance: 50_000
+        });
+    });
+});
 
 describe('CoreLightningRequestHandler.getOffchainBalance', () => {
     const channel = (state: string, ourMsat: number, connected = true) => ({
@@ -142,6 +207,37 @@ describe('CoreLightningRequestHandler.getUTXOs', () => {
         expect(channels).toEqual([]);
     });
 
+    it('leaves out outputs that are reserved', async () => {
+        respond(
+            listfunds([
+                // spent by an unconfirmed transaction
+                { txid: 'a', blockheight: 108, reserved: true },
+                { txid: 'b', blockheight: 108, reserved: false },
+                // older nodes may leave out the reserved key
+                { txid: 'c', blockheight: 108 }
+            ]),
+            { blockheight: 200 }
+        );
+
+        const { outputs } = await getUTXOs();
+
+        expect(outputs.map((output: any) => output.txid)).toEqual(['b', 'c']);
+    });
+
+    it('leaves out reserved outputs when the tip is unknown', async () => {
+        // getinfo fails, so the tip is unknown
+        respond(
+            listfunds([
+                { txid: 'a', blockheight: 108, reserved: true },
+                { txid: 'b', blockheight: 108, reserved: false }
+            ])
+        );
+
+        const { outputs } = await getUTXOs();
+
+        expect(outputs.map((output: any) => output.txid)).toEqual(['b']);
+    });
+
     it('rejects when listfunds fails', async () => {
         mockPostRequest.mockImplementation((route: string) =>
             route === '/v1/listfunds'
@@ -205,6 +301,16 @@ describe('CoreLightningRequestHandler.listPeerChannels', () => {
             total_satoshis_sent: '20',
             total_satoshis_received: '5'
         });
+    });
+
+    it('reports our to_self_delay as the CSV delay', async () => {
+        const { channels } = await listPeerChannels({
+            channels: [
+                channel({ our_to_self_delay: 144, their_to_self_delay: 2016 })
+            ]
+        });
+
+        expect(channels[0].csv_delay).toBe(144);
     });
 
     it('drops channels that are closed or not yet locked in', async () => {

@@ -1,6 +1,7 @@
 import {
     deriveVssSigningKey,
-    deriveVssSigningKeyFromSeed
+    deriveVssSigningKeyFromSeed,
+    generateVssAuthHeaders
 } from './VssAuthUtils';
 
 const h = (hex: string): Buffer => Buffer.from(hex, 'hex');
@@ -76,5 +77,34 @@ describe('VssAuthUtils', () => {
             expect(toHex(seedPath.privateKey)).toBe(expected.privateKey);
             expect(toHex(seedPath.publicKey)).toBe(expected.publicKey);
         });
+    });
+});
+
+// Authorization = hex(pubkey) || hex(compact low-S ECDSA signature of
+// sha256(SIGNING_CONSTANT || pubkey || timestamp)) || timestamp. Expected value
+// computed with Node's crypto and @noble/curves.
+describe('generateVssAuthHeaders', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    it('signs the constant, public key and timestamp', () => {
+        jest.spyOn(Date, 'now').mockReturnValue(1760000000123);
+        const { mnemonic } = MNEMONIC_VECTORS[0];
+
+        expect(generateVssAuthHeaders(mnemonic).authorization).toBe(
+            '036cfad5b223bae7981eed0548ef85908f8ad38817cc055d8b7ee8967902273842' +
+                '888ca4fbefa98c610f4177436f6c1c7967e3331ef3bc13a79bc87884b0482f64' +
+                '354d40649396833e1230c6004caf1b2a1bb3aab9e4bbe7c4d8f38b805877aefd' +
+                '1760000000'
+        );
+    });
+
+    it('uses a precomputed key instead of deriving one', () => {
+        jest.spyOn(Date, 'now').mockReturnValue(1760000000123);
+        const { mnemonic } = MNEMONIC_VECTORS[0];
+        const key = deriveVssSigningKey(mnemonic);
+
+        expect(generateVssAuthHeaders('', undefined, key).authorization).toBe(
+            generateVssAuthHeaders(mnemonic).authorization
+        );
     });
 });

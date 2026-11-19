@@ -2,13 +2,13 @@ import BIP32Factory from 'bip32';
 import ecc from '../zeus_modules/noble_ecc';
 
 import { BIP39_WORD_LIST } from './Bip39Utils';
+import { hashScryptAsync } from './HashingUtils';
 
 // You must wrap a tiny-secp256k1 compatible implementation
 const bip32 = BIP32Factory(ecc);
 
 const aez = require('aez');
 const crc32 = require('fast-crc32c/impls/js_crc32c');
-const scrypt = require('scrypt-js').scrypt;
 
 const AEZEED_DEFAULT_PASSPHRASE = 'aezeed',
     AEZEED_VERSION = 0,
@@ -86,14 +86,12 @@ export async function decodeAezeedEntropy(
     const password = Buffer.from(AEZEED_DEFAULT_PASSPHRASE, 'utf8');
     const cipherSeed = seed.slice(1, SALT_OFFSET);
 
-    const key = await scrypt(
-        password,
-        salt,
-        SCRYPT_N,
-        SCRYPT_R,
-        SCRYPT_P,
-        SCRYPT_KEY_LENGTH
-    );
+    const key = await hashScryptAsync(password, salt, {
+        N: SCRYPT_N,
+        r: SCRYPT_R,
+        p: SCRYPT_P,
+        dkLen: SCRYPT_KEY_LENGTH
+    });
 
     const plainSeedBytes = aez.decrypt(
         key,

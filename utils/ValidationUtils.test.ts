@@ -232,6 +232,51 @@ describe('isValidServerAddress', () => {
             })
         ).toBe(true);
     });
+
+    it('accepts every path character the old pattern allowed', () => {
+        expect(
+            ValidationUtils.isValidServerAddress(
+                "example.com/a-._~!$&'()*+,;=/b/"
+            )
+        ).toBe(true);
+        expect(
+            ValidationUtils.isValidServerAddress('example.com:8080/lnd/', {
+                allowPort: true
+            })
+        ).toBe(true);
+    });
+
+    it('rejects empty path segments', () => {
+        expect(ValidationUtils.isValidServerAddress('example.com/a//b')).toBe(
+            false
+        );
+        expect(
+            ValidationUtils.isValidServerAddress('example.com:8080//lnd', {
+                allowPort: true
+            })
+        ).toBe(false);
+    });
+
+    // $ without the m flag matches only at the end of the input
+    it('rejects a trailing newline after the path', () => {
+        expect(ValidationUtils.isValidServerAddress('example.com/lnd\n')).toBe(
+            false
+        );
+    });
+
+    // The old pattern /^\/([...]+\/?)*$/ took time exponential in the length
+    // of a path that does not match: seconds for 28 characters. The new check
+    // takes well under 1 ms, so the limit leaves room for a busy CI worker.
+    // No longer input here: on a pattern like the old one it would block the
+    // event loop, and Jest cannot interrupt a synchronous regex
+    it('rejects an invalid path of 28 characters in under 500 ms', () => {
+        const address = `example.com/${'a'.repeat(28)}@`;
+        const start = Date.now();
+        const valid = ValidationUtils.isValidServerAddress(address);
+        const elapsed = Date.now() - start;
+        expect(valid).toBe(false);
+        expect(elapsed).toBeLessThan(500);
+    });
 });
 
 describe('isValidPort', () => {
@@ -246,6 +291,64 @@ describe('isValidPort', () => {
         expect(ValidationUtils.isValidPort('65536')).toBe(false);
         expect(ValidationUtils.isValidPort('-1')).toBe(false);
         expect(ValidationUtils.isValidPort('a')).toBe(false);
+    });
+
+    it('rejects anything other than digits before a path', () => {
+        expect(ValidationUtils.isValidPort('')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080@evil.com')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080@evil.com/')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080#')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080?')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080\\@evil.com')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080 ')).toBe(false);
+        expect(ValidationUtils.isValidPort('80.80')).toBe(false);
+        expect(ValidationUtils.isValidPort('1e3')).toBe(false);
+        expect(ValidationUtils.isValidPort('/lnd')).toBe(false);
+    });
+
+    // Saved wallets combine a port with a path this way, since the
+    // backends append the port after any path in the server address
+    it('accepts a path after the port', () => {
+        expect(ValidationUtils.isValidPort('8080/')).toBe(true);
+        expect(ValidationUtils.isValidPort('8443/lnd')).toBe(true);
+        expect(ValidationUtils.isValidPort('8443/lnd/v1/')).toBe(true);
+    });
+
+    it('checks the range of a port with a path', () => {
+        expect(ValidationUtils.isValidPort('0/lnd')).toBe(false);
+        expect(ValidationUtils.isValidPort('65536/lnd')).toBe(false);
+    });
+
+    // the same rule as the path of a server address
+    it('rejects empty path segments after the port', () => {
+        expect(ValidationUtils.isValidPort('8080//')).toBe(false);
+        expect(ValidationUtils.isValidPort('8443//lnd')).toBe(false);
+        expect(ValidationUtils.isValidPort('8443/lnd//v1')).toBe(false);
+    });
+
+    // $ without the m flag matches only at the end of the input
+    it('rejects a trailing newline after the path', () => {
+        expect(ValidationUtils.isValidPort('8080/lnd\n')).toBe(false);
+    });
+
+    it('rejects a path that could change the host or query', () => {
+        expect(ValidationUtils.isValidPort('8080/x@evil.com')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080/x?y')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080/x#y')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080/x\\y')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080/x%2F')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080/x:1')).toBe(false);
+    });
+
+    // 28 characters, as for isValidServerAddress: the path goes through
+    // PATH_REGEX, and a longer input would block the event loop if a
+    // backtracking pattern came back
+    it('rejects a long invalid path without backtracking', () => {
+        const start = Date.now();
+        const valid = ValidationUtils.isValidPort(`8080/${'a'.repeat(28)}@`);
+        const elapsed = Date.now() - start;
+        expect(valid).toBe(false);
+        expect(elapsed).toBeLessThan(500);
     });
 });
 
@@ -664,5 +767,100 @@ describe('validateNodeHost', () => {
 
     it('accepts empty string', () => {
         expect(ValidationUtils.validateNodeHost('')).toBe(false);
+    });
+});
+
+describe('isValidNwcServiceRelayUrl', () => {
+    it('accepts wss:// relays', () => {
+        for (const relay of [
+            'wss://relay.damus.io',
+            'wss://relay.getalby.com/v1',
+            'wss://relay.example.com:7777/path',
+            'WSS://relay.example.com',
+            'wss://localhost:7777'
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(true);
+        }
+    });
+
+    it('rejects ws:// relays on clearnet hosts', () => {
+        for (const relay of [
+            'ws://relay.example.com',
+            'ws://relay.example.com:7777/path',
+            'ws://localhost:7777',
+            'ws://127.0.0.1:7777',
+            'ws://relay.onion.example.com',
+            'ws://relay.example.com/x.onion'
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(
+                false
+            );
+        }
+    });
+
+    it('accepts ws:// relays on .onion hosts', () => {
+        const onion =
+            '2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion';
+        expect(ValidationUtils.isValidNwcServiceRelayUrl(`ws://${onion}`)).toBe(
+            true
+        );
+        expect(
+            ValidationUtils.isValidNwcServiceRelayUrl(`ws://${onion}:8080/`)
+        ).toBe(true);
+    });
+
+    // URL accepts these and normalizes them to wss://relay.example.com/, but
+    // the raw string is what gets stored, and nostr-tools' normalizeURL turns
+    // wss:relay.example.com into an invalid URL and wss:/relay.example.com
+    // into a relay on host "wss".
+    it('rejects relays without exactly two slashes after the scheme', () => {
+        const onion =
+            '2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion';
+        for (const relay of [
+            'wss:relay.example.com',
+            'wss:/relay.example.com',
+            'wss:///relay.example.com',
+            'wss:\\\\relay.example.com',
+            'wss://\\relay.example.com',
+            `ws:${onion}`,
+            `ws:/${onion}`
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(
+                false
+            );
+        }
+    });
+
+    // These pass the "://" check above, so only the URL parse rejects them
+    it('rejects relays the URL parser cannot read', () => {
+        for (const relay of [
+            'wss://relay.example.com:99999',
+            'wss://relay.example.com:65536',
+            'wss://[::1'
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(
+                false
+            );
+        }
+    });
+
+    it('rejects anything that is not a relay URL', () => {
+        for (const relay of [
+            '',
+            'relay.example.com',
+            'not a url',
+            'https://relay.example.com',
+            'http://relay.example.onion',
+            'wss://',
+            'wss:// relay.example.com',
+            ' wss://relay.example.com',
+            'wss://relay.example.com\n',
+            undefined as any,
+            null as any
+        ]) {
+            expect(ValidationUtils.isValidNwcServiceRelayUrl(relay)).toBe(
+                false
+            );
+        }
     });
 });

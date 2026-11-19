@@ -21,7 +21,6 @@ import KeyValue from '../components/KeyValue';
 import Screen from '../components/Screen';
 import Button from '../components/Button';
 import { Row } from '../components/layout/Row';
-import AttestationButton from '../components/AttestationButton';
 import LoadingIndicator from '../components/LoadingIndicator';
 
 import Invoice from '../models/Invoice';
@@ -277,16 +276,6 @@ export default class InvoiceView extends React.Component<
                                 <View style={{ paddingRight: 15 }}>
                                     <LoadingIndicator size={31} />
                                 </View>
-                            )}
-                            {invoice.isZeusPay && (
-                                <AttestationButton
-                                    hash={invoice.payment_hash || getRHash}
-                                    amount_msat={
-                                        invoice.amt_paid_msat ||
-                                        invoice.getAmount * 1000
-                                    }
-                                    navigation={navigation}
-                                />
                             )}
                             <EditNotesButton />
                             {!!getPaymentRequest && <QRButton />}

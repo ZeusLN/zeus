@@ -12,6 +12,7 @@ import Switch from '../../../components/Switch';
 
 import SettingsStore from '../../../stores/SettingsStore';
 
+import { deleteNeutrinoFiles } from '../../../utils/LndMobileUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { sleep } from '../../../utils/SleepUtils';
@@ -379,7 +380,7 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                                                 }
 
                                                 try {
-                                                    await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
+                                                    await deleteNeutrinoFiles(
                                                         lndDir || 'lnd',
                                                         embeddedLndNetwork ===
                                                             'Mainnet'
@@ -581,15 +582,15 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                                                         resetGraphLoading:
                                                             false,
                                                         resetGraphSuccess: true,
-                                                        resetGraphResult: `${
-                                                            graphInfo.channelCount
-                                                        } ${localeString(
-                                                            'views.Wallet.Wallet.channels'
-                                                        ).toLowerCase()}, ${
-                                                            graphInfo.nodeCount
-                                                        } ${localeString(
-                                                            'general.nodes'
-                                                        ).toLowerCase()}`
+                                                        resetGraphResult:
+                                                            localeString(
+                                                                'views.Settings.EmbeddedNode.Troubleshooting.graphInfo',
+                                                                {
+                                                                    channels:
+                                                                        graphInfo.channelCount,
+                                                                    nodes: graphInfo.nodeCount
+                                                                }
+                                                            )
                                                     });
                                                     setTimeout(() => {
                                                         this.setState({

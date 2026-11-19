@@ -17,7 +17,7 @@ class CashuDevKitModule: RCTEventEmitter {
     // MARK: - Properties
 
     private var repo: WalletRepository?
-    private var db: WalletSqliteDatabase?
+    private var db: WalletDatabase?
     private var walletUnit: CurrencyUnit = .sat
     private var wallets: [String: Wallet] = [:]
     private var preparedSends: [String: PreparedSend] = [:]
@@ -340,6 +340,19 @@ class CashuDevKitModule: RCTEventEmitter {
         }
     }
 
+    private func transactionStatusToString(_ status: TransactionStatus) -> String {
+        switch status {
+        case .pending:
+            return "Pending"
+        case .completed:
+            return "Completed"
+        case .failed:
+            return "Failed"
+        @unknown default:
+            return "Unknown"
+        }
+    }
+
     private func currencyUnitToString(_ unit: CurrencyUnit) -> String {
         switch unit {
         case .sat:
@@ -369,6 +382,10 @@ class CashuDevKitModule: RCTEventEmitter {
             return (legacyErrorCode(protocolCode: code, message: errorMessage), errorMessage)
         case let .Internal(errorMessage):
             return (legacyErrorCode(protocolCode: nil, message: errorMessage), errorMessage)
+        // 0.18.0 NUT-18 transport failure; unreachable until the bridge
+        // exposes preparePayRequest
+        case let .PaymentRequestDeliveryFailed(_, errorMessage):
+            return ("PAYMENT_FAILED", errorMessage)
         @unknown default:
             return ("UNKNOWN_ERROR", "Unknown error occurred")
         }
@@ -445,6 +462,11 @@ class CashuDevKitModule: RCTEventEmitter {
         if let preimage = quote.paymentProof {
             result["payment_preimage"] = preimage
         }
+        // Set while a melt saga still holds the quote, which is when CDK
+        // reports a melt the mint has not settled as Unpaid
+        if let operation = quote.usedByOperation {
+            result["used_by_operation"] = operation
+        }
         return result
     }
 
@@ -486,11 +508,17 @@ class CashuDevKitModule: RCTEventEmitter {
     ]
     do {
         // Only resolve proofs through a wallet the mint is already part
-        // of; decoding a foreign token must not add its mint or contact it
-        if let repo = walletQueue.sync(execute: { isInitialized ? self.repo : nil }) {
-            if await repo.hasMint(mintUrl: MintUrl(url: normalizeMintUrl(mintUrl.url))) {
-                let wallet = try await getWallet(mintUrl.url)
-                let keysets = try await wallet.getMintKeysets(filter: .all)
+        // of; decoding a foreign token must not add its mint or contact
+        // it, so read the cached keysets straight from the database
+        // (0.18 removed Wallet.getMintKeysets)
+        let handles: (WalletRepository, WalletDatabase)? = walletQueue.sync {
+            guard isInitialized, let repo = self.repo, let db = self.db else { return nil }
+            return (repo, db)
+        }
+        if let (repo, db) = handles {
+            let normalizedUrl = MintUrl(url: normalizeMintUrl(mintUrl.url))
+            if await repo.hasMint(mintUrl: normalizedUrl) {
+                let keysets = try await db.getMintKeysets(mintUrl: normalizedUrl) ?? []
                 let proofs = try token.proofs(mintKeysets: keysets)
                 result["proofs"] = proofs.map { encodeProof($0) }
             }
@@ -526,13 +554,30 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             do {
                 let dbPath = getDatabasePath(for: mnemonic)
-                let sqliteDb = try WalletSqliteDatabase(filePath: dbPath)
+                // createWalletDb returns a Rust-backed WalletDatabaseImpl,
+                // which WalletStore.custom hands to Rust by cloning its
+                // handle, so CDK's own database calls stay in Rust. A
+                // Swift-constructed WalletSqliteDatabase would be passed as
+                // a foreign callback object instead: every CDK database call
+                // would round-trip through a Swift Task, and CDK's rate
+                // limiter writer task could release the last reference on a
+                // tokio thread, running the Swift deinit and its try! there.
+                // Before CDK 0.18.3 (cashubtc/cdk#2731) that deinit freed the
+                // database's owned tokio runtime inside an async context,
+                // which panicked and crashed the app on wallet switch.
+                //
+                // The direct database calls below go through the
+                // WalletDatabase protocol, which the bindings poll outside
+                // tokio. That needs CDK 0.18.3 or later (cashubtc/cdk#2769):
+                // before it, a transaction that failed there (removeProofs)
+                // skipped its rollback and returned the connection to the
+                // pool with the write lock held
+                let sqliteDb = try createWalletDb(backend: .sqlite(path: dbPath))
 
                 let currencyUnit = parseCurrencyUnit(unit)
 
-                // WalletSqliteDatabase conforms to WalletDatabase; passing
-                // it via WalletStore.custom keeps the same handle available
-                // for the direct database methods below
+                // Passing the same handle via WalletStore.custom keeps it
+                // available for the direct database methods below
                 let newRepo = try WalletRepository(
                     mnemonic: mnemonic,
                     store: .custom(db: sqliteDb)
@@ -626,7 +671,7 @@ class CashuDevKitModule: RCTEventEmitter {
                     )
                 }
                 _ = walletQueue.sync { wallets.removeValue(forKey: normalized) }
-                let dbHandle: WalletSqliteDatabase? = walletQueue.sync { self.db }
+                let dbHandle: WalletDatabase? = walletQueue.sync { self.db }
                 if let db = dbHandle {
                     try await db.removeMint(mintUrl: url)
                 } else {
@@ -680,9 +725,14 @@ class CashuDevKitModule: RCTEventEmitter {
                 // wallet's unit; other units must not count toward the total
                 let unit = walletQueue.sync { walletUnit }
                 let balances = try await repo.getBalances()
+                // CDK 0.18.1 already rejects balances whose total passes
+                // the i64 range, so this sum cannot overflow today. If a
+                // later CDK stops doing that, `+=` would trap here and end
+                // the process at startup, so clamp instead.
                 var total: UInt64 = 0
                 for (key, amount) in balances where key.unit == unit {
-                    total += amount.value
+                    let (sum, overflow) = total.addingReportingOverflow(amount.value)
+                    total = overflow ? UInt64.max : sum
                 }
                 resolve(NSNumber(value: total))
             } catch let error as FfiError {
@@ -768,11 +818,19 @@ class CashuDevKitModule: RCTEventEmitter {
                         resolve: @escaping RCTPromiseResolveBlock,
                         reject: @escaping RCTPromiseRejectBlock) {
         guard getInitializedRepo(reject: reject) != nil else { return }
+        guard let db = walletQueue.sync(execute: { self.db }) else {
+            reject("NO_WALLET", "Wallet not initialized", nil)
+            return
+        }
 
         Task {
             do {
-                let wallet = try await getWallet(mintUrl)
-                let keysets = try await wallet.getMintKeysets(filter: .all)
+                // Cached keysets from the database only. The pre-0.18
+                // Wallet.getMintKeysets(filter: .all) fell back to fetching
+                // from the mint when none were stored; this read returns an
+                // empty list instead and never contacts the mint
+                let keysets = try await db.getMintKeysets(
+                    mintUrl: MintUrl(url: normalizeMintUrl(mintUrl))) ?? []
                 let encoded = keysets.map { encodeKeyset($0) }
                 resolve(encodeToJson(encoded))
             } catch let error as FfiError {
@@ -832,6 +890,92 @@ class CashuDevKitModule: RCTEventEmitter {
         }
     }
 
+    /// Reject loopback, private (RFC1918), link-local and other internal hosts
+    /// for server-supplied mint URLs. Matches on the literal host only (no DNS
+    /// resolution) to avoid a rebinding/latency side channel; this is
+    /// defense-in-depth on top of the JS-side configured-mint binding.
+    private static func isDisallowedMintHost(_ host: String) -> Bool {
+        var h = host.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+            .lowercased()
+        // A single trailing dot is the fully qualified spelling of the same
+        // host (localhost., 127.0.0.1.), so drop it before matching
+        if h.hasSuffix(".") { h.removeLast() }
+        if h.isEmpty { return true }
+        if h == "localhost" || h.hasSuffix(".localhost") { return true }
+        // A host containing ":" can only be an IPv6 literal (hostnames
+        // cannot contain it), so parse it numerically instead of
+        // prefix-matching one spelling: mapped (::ffff:127.0.0.1),
+        // hex-mapped (::ffff:7f00:1) and zero-expanded (0:0:0:0:0:0:0:1)
+        // forms of the same internal address all normalize to the same
+        // bytes. inet_pton involves no DNS.
+        if h.contains(":") { return isDisallowedIPv6Literal(h) }
+        return isDisallowedIPv4(h)
+    }
+
+    // Internal / non-routable IPv4 ranges as (network, prefix length):
+    // 0/8 this network, 10/8 private, 100.64/10 shared CGNAT,
+    // 127/8 loopback, 169.254/16 link-local, 172.16/12 private,
+    // 192.0.0/24 IETF protocol assignments, 192.168/16 private,
+    // 198.18/15 benchmarking, 224/4 multicast, 240/4 reserved
+    private static let disallowedIPv4Ranges: [(UInt32, UInt32)] = [
+        (0x0000_0000, 8),
+        (0x0a00_0000, 8),
+        (0x6440_0000, 10),
+        (0x7f00_0000, 8),
+        (0xa9fe_0000, 16),
+        (0xac10_0000, 12),
+        (0xc000_0000, 24),
+        (0xc0a8_0000, 16),
+        (0xc612_0000, 15),
+        (0xe000_0000, 4),
+        (0xf000_0000, 4)
+    ]
+
+    // Parse the host with inet_aton, the same parser the OS resolver
+    // applies, so decimal (2130706433), hex (0x7f.1), octal (0177.0.0.1)
+    // and shortened (127.1) spellings of an internal address are caught as
+    // well as the dotted-quad one. A host that does not parse is a hostname
+    // and is not an internal literal.
+    private static func isDisallowedIPv4(_ h: String) -> Bool {
+        var addr = in_addr()
+        guard inet_aton(h, &addr) == 1 else { return false }
+        return isDisallowedIPv4(UInt32(bigEndian: addr.s_addr))
+    }
+
+    private static func isDisallowedIPv4(_ addr: UInt32) -> Bool {
+        return disallowedIPv4Ranges.contains { network, prefix in
+            let mask: UInt32 = prefix == 0 ? 0 : ~UInt32(0) << (32 - prefix)
+            return addr & mask == network
+        }
+    }
+
+    private static func isDisallowedIPv6Literal(_ literal: String) -> Bool {
+        var addr = in6_addr()
+        guard inet_pton(AF_INET6, literal, &addr) == 1 else {
+            // Not parseable as an IPv6 literal and not a valid hostname
+            // either: fail closed
+            return true
+        }
+        let bytes = withUnsafeBytes(of: addr) { Array($0) }
+        // IPv4-mapped (::ffff:a.b.c.d in any spelling): hold the embedded
+        // address to the same rules as a dotted host
+        if bytes[0...9].allSatisfy({ $0 == 0 }) && bytes[10] == 0xff &&
+            bytes[11] == 0xff {
+            let v4 = UInt32(bytes[12]) << 24 | UInt32(bytes[13]) << 16 |
+                UInt32(bytes[14]) << 8 | UInt32(bytes[15])
+            return isDisallowedIPv4(v4)
+        }
+        // ::1 loopback and :: unspecified
+        if bytes[0...14].allSatisfy({ $0 == 0 }) &&
+            (bytes[15] == 0 || bytes[15] == 1) {
+            return true
+        }
+        // fe80::/10 link-local, fec0::/10 site-local (deprecated)
+        if bytes[0] == 0xfe && (bytes[1] & 0x80) == 0x80 { return true }
+        // fc00::/7 unique-local
+        return (bytes[0] & 0xfe) == 0xfc
+    }
+
     /// Check mint quote status directly from the mint's HTTP API.
     /// This bypasses the local database check and works for external quotes
     /// (e.g., quotes created by ZeusPay server).
@@ -843,7 +987,36 @@ class CashuDevKitModule: RCTEventEmitter {
             do {
                 // Normalize mint URL and construct the quote endpoint
                 let normalizedUrl = mintUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                let quoteUrlStr = "\(normalizedUrl)/v1/mint/quote/bolt11/\(quoteId)"
+
+                // Security: this issues a raw HTTP GET against a mint URL that
+                // originates from a ZEUS Pay socket event. Refuse cleartext and
+                // internal/loopback/link-local targets so a forged event cannot
+                // downgrade the fetch or drive the device into an SSRF against
+                // the local network. quoteId is percent-encoded so it cannot
+                // alter the request path.
+                guard let baseUrl = URL(string: normalizedUrl),
+                      baseUrl.scheme?.lowercased() == "https",
+                      let host = baseUrl.host,
+                      !CashuDevKitModule.isDisallowedMintHost(host)
+                else {
+                    reject("UNSAFE_MINT_URL", "Refusing to contact non-HTTPS or internal mint host: \(mintUrl)", nil)
+                    return
+                }
+
+                // Path-segment encoding, not path encoding: .urlPathAllowed
+                // is scoped to a whole path so it permits "/", which would
+                // let a forged quoteId traverse to a different endpoint.
+                // Subtract it to match Android's URLEncoder behavior, and
+                // fail closed instead of falling back to the raw id.
+                let segmentAllowed = CharacterSet.urlPathAllowed
+                    .subtracting(CharacterSet(charactersIn: "/"))
+                guard let encodedQuoteId = quoteId.addingPercentEncoding(
+                    withAllowedCharacters: segmentAllowed
+                ) else {
+                    reject("INVALID_QUOTE_ID", "Quote id cannot be percent-encoded", nil)
+                    return
+                }
+                let quoteUrlStr = "\(normalizedUrl)/v1/mint/quote/bolt11/\(encodedQuoteId)"
 
                 guard let quoteUrl = URL(string: quoteUrlStr) else {
                     reject("INVALID_URL", "Invalid mint URL: \(mintUrl)", nil)
@@ -901,7 +1074,7 @@ class CashuDevKitModule: RCTEventEmitter {
                                secretKey: String?,
                                resolve: @escaping RCTPromiseResolveBlock,
                                reject: @escaping RCTPromiseRejectBlock) {
-        let dbHandle: WalletSqliteDatabase? = walletQueue.sync {
+        let dbHandle: WalletDatabase? = walletQueue.sync {
             guard isInitialized else { return nil }
             return self.db
         }
@@ -927,7 +1100,9 @@ class CashuDevKitModule: RCTEventEmitter {
                 case "ISSUED":
                     quoteState = .issued
                 default:
-                    quoteState = .paid // Default to PAID for external quotes
+                    // Fail closed: never assume PAID for an unrecognized state.
+                    reject("INVALID_QUOTE_STATE", "Unrecognized mint quote state: \(state)", nil)
+                    return
                 }
 
                 // Storing a key equal to cdk's seed prefix on the quote
@@ -950,6 +1125,10 @@ class CashuDevKitModule: RCTEventEmitter {
                         mintUrl: url,
                         amountIssued: quoteState == .issued ? amt : zeroAmount,
                         amountPaid: (quoteState == .paid || quoteState == .issued) ? amt : zeroAmount,
+                        // Insert as oldest-possible so any later saga update
+                        // (which drops stale responses by timestamp)
+                        // supersedes this externally sourced row
+                        updatedAt: 0,
                         estimatedBlocks: nil,
                         paymentMethod: .bolt11,
                         secretKey: storedSecretKey,
@@ -1133,35 +1312,20 @@ class CashuDevKitModule: RCTEventEmitter {
                     extra: nil
                 )
 
-                // Step 2: Gather this mint's unspent proofs —
-                // the mint knows the MPP partial amount from the quote
-                let dbHandle: WalletSqliteDatabase? = walletQueue.sync { self.db }
-                guard let db = dbHandle else {
-                    reject("NO_WALLET", "Wallet not initialized", nil)
-                    return
-                }
-                let url = MintUrl(url: normalizeMintUrl(mintUrl))
-                let proofInfos = try await db.getProofs(
-                    mintUrl: url,
-                    unit: .sat,
-                    state: [.unspent],
-                    spendingConditions: nil
-                )
-                let mintProofs = proofInfos.map { $0.proof }
-
-                guard !mintProofs.isEmpty else {
-                    reject("NO_PROOFS", "No proofs found for mint \(mintUrl)", nil)
-                    return
-                }
-
-                // Step 3: Two-phase melt with the selected proofs
-                let prepared = try await wallet.prepareMeltProofs(
-                    quoteId: quote.id,
-                    proofs: mintProofs
-                )
+                // Step 2: Two-phase melt. As in melt(), CDK selects proofs for
+                // the quoted partial amount plus fee reserve; every proof
+                // handed in stays pending while the payment is in flight
+                let prepared = try await wallet.prepareMelt(quoteId: quote.id)
                 let melted = try await prepared.confirm()
 
-                resolve(encodeToJson(encodeMelted(melted)))
+                // Return the id, fee reserve and expiry of the quote this
+                // part was paid with so the caller can record that quote.
+                var result = encodeMelted(melted)
+                result["quote_id"] = quote.id
+                result["fee_reserve"] = quote.feeReserve.value
+                result["expiry"] = quote.expiry
+
+                resolve(encodeToJson(result))
             } catch let error as FfiError {
                 let (code, message) = mapFfiError(error)
                 reject(code, message, error)
@@ -1277,36 +1441,6 @@ class CashuDevKitModule: RCTEventEmitter {
                 reject(code, message, error)
             } catch {
                 reject("CONFIRM_SEND_ERROR", error.localizedDescription, error)
-            }
-        }
-    }
-
-    @objc(cancelSend:resolver:rejecter:)
-    func cancelSend(_ preparedSendId: String,
-                    resolve: @escaping RCTPromiseResolveBlock,
-                    reject: @escaping RCTPromiseRejectBlock) {
-        let prepared: PreparedSend? = walletQueue.sync { preparedSends[preparedSendId] }
-        guard let prepared else {
-            resolve(nil)
-            return
-        }
-
-        Task {
-            defer {
-                // Always clean up prepared send, whether success or failure
-                _ = walletQueue.sync {
-                    self.preparedSends.removeValue(forKey: preparedSendId)
-                }
-            }
-
-            do {
-                try await prepared.cancel()
-                resolve(nil)
-            } catch let error as FfiError {
-                let (code, message) = mapFfiError(error)
-                reject(code, message, error)
-            } catch {
-                reject("CANCEL_SEND_ERROR", error.localizedDescription, error)
             }
         }
     }
@@ -1457,6 +1591,31 @@ class CashuDevKitModule: RCTEventEmitter {
         }
     }
 
+    @objc(recoverIncompleteSagas:resolver:rejecter:)
+    func recoverIncompleteSagas(_ mintUrl: String,
+                                resolve: @escaping RCTPromiseResolveBlock,
+                                reject: @escaping RCTPromiseRejectBlock) {
+        guard getInitializedRepo(reject: reject) != nil else { return }
+
+        Task {
+            do {
+                let wallet = try await getWallet(mintUrl)
+                let report = try await wallet.recoverIncompleteSagas()
+                resolve(encodeToJson([
+                    "recovered": NSNumber(value: report.recovered),
+                    "compensated": NSNumber(value: report.compensated),
+                    "skipped": NSNumber(value: report.skipped),
+                    "failed": NSNumber(value: report.failed)
+                ]))
+            } catch let error as FfiError {
+                let (code, message) = mapFfiError(error)
+                reject(code, message, error)
+            } catch {
+                reject("RECOVER_SAGAS_ERROR", error.localizedDescription, error)
+            }
+        }
+    }
+
     // MARK: - Proof Management
 
     @objc(checkProofsState:proofsJson:resolver:rejecter:)
@@ -1594,7 +1753,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func listTransactions(_ direction: String?,
                           resolve: @escaping RCTPromiseResolveBlock,
                           reject: @escaping RCTPromiseRejectBlock) {
-        let dbHandle: WalletSqliteDatabase? = walletQueue.sync {
+        let dbHandle: WalletDatabase? = walletQueue.sync {
             guard isInitialized else { return nil }
             return self.db
         }
@@ -1606,8 +1765,10 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             do {
                 var txDirection: TransactionDirection? = nil
-                if let dir = direction {
-                    txDirection = dir == "incoming" ? .incoming : .outgoing
+                if direction == "incoming" {
+                    txDirection = .incoming
+                } else if direction == "outgoing" {
+                    txDirection = .outgoing
                 }
 
                 let transactions = try await db.listTransactions(
@@ -1623,10 +1784,33 @@ class CashuDevKitModule: RCTEventEmitter {
                         "amount": tx.amount.value,
                         "mint_url": tx.mintUrl.url,
                         "timestamp": tx.timestamp,
-                        "fee": tx.fee.value
+                        "fee": tx.fee.value,
+                        "state": transactionStatusToString(tx.status),
+                        "unit": currencyUnitToString(tx.unit)
                     ]
                     if let memo = tx.memo {
                         result["memo"] = memo
+                    }
+                    if let quoteId = tx.quoteId {
+                        result["quote_id"] = quoteId
+                    }
+                    if let paymentRequest = tx.paymentRequest {
+                        result["payment_request"] = paymentRequest
+                    }
+                    if let paymentProof = tx.paymentProof {
+                        result["payment_proof"] = paymentProof
+                    }
+                    if let paymentMethod = tx.paymentMethod {
+                        switch paymentMethod {
+                        case .bolt11:
+                            result["payment_method"] = "bolt11"
+                        case .bolt12:
+                            result["payment_method"] = "bolt12"
+                        case .onchain:
+                            result["payment_method"] = "onchain"
+                        case .custom(let method):
+                            result["payment_method"] = method
+                        }
                     }
                     return result
                 }
@@ -1647,7 +1831,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func getUnspentProofs(_ mintUrl: String,
                           resolve: @escaping RCTPromiseResolveBlock,
                           reject: @escaping RCTPromiseRejectBlock) {
-        let dbHandle: WalletSqliteDatabase? = walletQueue.sync { self.db }
+        let dbHandle: WalletDatabase? = walletQueue.sync { self.db }
         guard let db = dbHandle else {
             reject("NO_WALLET", "Wallet not initialized", nil)
             return
@@ -1687,7 +1871,7 @@ class CashuDevKitModule: RCTEventEmitter {
     func removeProofs(_ proofsYJson: String,
                       resolve: @escaping RCTPromiseResolveBlock,
                       reject: @escaping RCTPromiseRejectBlock) {
-        let dbHandle: WalletSqliteDatabase? = walletQueue.sync { self.db }
+        let dbHandle: WalletDatabase? = walletQueue.sync { self.db }
         guard let db = dbHandle else {
             reject("NO_WALLET", "Wallet not initialized", nil)
             return

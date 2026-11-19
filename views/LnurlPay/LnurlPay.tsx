@@ -1,7 +1,6 @@
 import url from 'url';
 import * as React from 'react';
 import BigNumber from 'bignumber.js';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import querystring from 'querystring-es3';
@@ -30,10 +29,12 @@ import LnurlPayMetadata from './Metadata';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getRawAmountFromSats, getSatAmount } from '../../utils/AmountUtils';
+import Bolt11Utils from '../../utils/Bolt11Utils';
 import {
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed
 } from '../../utils/LnurlPayUtils';
+import { fetchLnurlUrl } from '../../utils/LnurlFetchUtils';
 import { ScrollView } from 'react-native-gesture-handler';
 
 interface LnurlPayProps {
@@ -296,7 +297,7 @@ export default class LnurlPay extends React.Component<
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        ReactNativeBlobUtil.fetch('get', url.format(u))
+        fetchLnurlUrl(url.format(u))
             .then((response: any) => {
                 try {
                     const data = response.json();
@@ -390,19 +391,19 @@ export default class LnurlPay extends React.Component<
                     tag: 'noop'
                 };
 
-                // Zaplocker data
-                const pmthash_sig = data.pmthash_sig;
-                const user_pubkey = data.user_pubkey;
-                const relays = data.relays;
-                const relays_sig = data.relays_sig;
-
                 if (ecash) {
                     // load up both the payment routes
                     InvoicesStore.getPayReq(pr);
                     CashuStore.getPayReq(pr).then(() => {
                         this.setState({ loading: false });
 
-                        const payReqError = CashuStore.getPayReqError;
+                        // CashuStore is shared with the NWC service and a
+                        // superseded getPayReq resolves silently, so the store
+                        // may hold another invoice by now. Use pr from here on.
+                        const payReqError =
+                            CashuStore.paymentRequest === pr
+                                ? CashuStore.getPayReqError
+                                : undefined;
                         const isInsufficientFunds =
                             typeof payReqError === 'string' &&
                             payReqError
@@ -430,14 +431,10 @@ export default class LnurlPay extends React.Component<
                             return;
                         }
 
-                        const payment_hash: string =
-                            (CashuStore.payReq &&
-                                CashuStore.payReq.payment_hash) ||
-                            '';
+                        const decoded = Bolt11Utils.decode(pr);
+                        const payment_hash: string = decoded.payment_hash || '';
                         const description_hash: string =
-                            (CashuStore.payReq &&
-                                CashuStore.payReq.description_hash) ||
-                            '';
+                            decoded.description_hash || '';
 
                         LnurlPayStore.keep(
                             payment_hash,
@@ -446,23 +443,31 @@ export default class LnurlPay extends React.Component<
                             lnurl.metadata,
                             description_hash,
                             successAction,
-                            // Zaplocker
-                            pmthash_sig,
-                            user_pubkey,
-                            relays,
-                            relays_sig,
-                            pr,
                             lightningAddress
                         );
 
                         navigation.navigate('ChoosePaymentMethod', {
-                            lightning: CashuStore.paymentRequest,
+                            lightning: pr,
                             locked: true
                         });
                     });
                 } else {
                     InvoicesStore.getPayReq(pr).then(() => {
                         this.setState({ loading: false });
+
+                        // a newer decode (deep link, NFC tap) replaced this
+                        // one: getPayReq dropped our answer, so pay_req and
+                        // getPayReqError are unset or belong to the other
+                        // invoice. Don't bind this LNURL's metadata and
+                        // success action to it; the newer request has its
+                        // own PaymentRequest
+                        if (
+                            InvoicesStore.paymentRequest !== pr ||
+                            (!InvoicesStore.pay_req &&
+                                !InvoicesStore.getPayReqError)
+                        ) {
+                            return;
+                        }
 
                         if (InvoicesStore.getPayReqError) {
                             Alert.alert(
@@ -497,12 +502,6 @@ export default class LnurlPay extends React.Component<
                             lnurl.metadata,
                             description_hash,
                             successAction,
-                            // Zaplocker
-                            pmthash_sig,
-                            user_pubkey,
-                            relays,
-                            relays_sig,
-                            pr,
                             lightningAddress
                         );
                         navigation.navigate('PaymentRequest');
@@ -740,8 +739,9 @@ export default class LnurlPay extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.LnurlPay.LnurlPay.comment'
-                                    ) + ` (${lnurl.commentAllowed} char)`}
+                                        'views.LnurlPay.LnurlPay.commentWithLimit',
+                                        { count: lnurl.commentAllowed }
+                                    )}
                                 </Text>
                                 <TextInput
                                     value={comment}

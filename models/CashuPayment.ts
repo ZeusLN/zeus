@@ -6,6 +6,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { Proof } from './CashuToken';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { decodeMemo } from '../utils/MemoUtils';
+import type { CDKTransaction } from '../cashu-cdk';
 
 // Quote structure used in meltResponse
 export interface MeltQuote {
@@ -30,12 +31,45 @@ export interface MeltResponse {
 
 export default class CashuPayment extends Payment {
     public meltResponse: MeltResponse;
-    public fee: number;
     public mintUrl: string;
     public proofs: Proof[];
+    // Set when the payment is known to be paid but not what the mint spent
+    // on fees, e.g. one reconcile settled from its melt quote
+    public fee_unknown?: boolean;
+
+    // CDK transaction fields (for melts recovered from CDK history)
+    public fromCDK?: boolean;
+    public cdkTransactionId?: string;
+    public cdkQuoteId?: string;
 
     constructor(data?: any) {
         super(data);
+    }
+
+    /**
+     * Create CashuPayment from CDK transaction (outgoing melt)
+     */
+    static fromCDKTransaction(tx: CDKTransaction): CashuPayment {
+        return new CashuPayment({
+            payment_request: tx.payment_request,
+            payment_preimage: tx.payment_proof,
+            amount: tx.amount,
+            fee: tx.fee || 0,
+            mintUrl: tx.mint_url,
+            timestamp: tx.timestamp,
+            // state is absent before CDK 0.18, when every recorded
+            // transaction is completed. An unrecognised state stays in
+            // transit so it cannot show as paid.
+            status:
+                tx.state === undefined || tx.state === 'Completed'
+                    ? undefined
+                    : tx.state === 'Failed'
+                    ? 'FAILED'
+                    : 'IN_FLIGHT',
+            fromCDK: true,
+            cdkTransactionId: tx.id,
+            cdkQuoteId: tx.quote_id
+        });
     }
 
     @computed public get model(): string {
@@ -56,6 +90,11 @@ export default class CashuPayment extends Payment {
     }
 
     @computed public get getFee(): string {
+        // The mint has not settled the melt, so there is no fee yet, or it
+        // has and did not say what it spent. A 0 here would read as a free
+        // payment.
+        if (this.isInTransit || this.fee_unknown) return '';
+
         const feeMsat = Number(this.fee_msat);
         if (!Number.isNaN(feeMsat) && feeMsat !== 0) {
             return (feeMsat / 1000).toString();

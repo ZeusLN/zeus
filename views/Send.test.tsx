@@ -2,23 +2,27 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
+// the pay screens render PaymentInFlightNotice, which reads screen focus
+jest.mock('@react-navigation/native', () => ({ useIsFocused: () => true }));
 jest.mock('@rneui/themed', () => ({ Chip: 'Chip', Icon: 'Icon' }));
 jest.mock('@react-native-clipboard/clipboard', () => ({
     getString: jest.fn()
 }));
 jest.mock('react-native-nfc-manager', () => ({ isSupported: jest.fn() }));
+// Send validates its destination on mount; resolving to nothing keeps it
+// on this screen
 jest.mock('../utils/handleAnything', () => ({
     __esModule: true,
-    default: jest.fn(),
+    default: jest.fn(() => Promise.resolve(undefined)),
     isClipboardValue: jest.fn()
 }));
 jest.mock('../utils/BackendUtils', () => ({
     supportsOnchainSends: () => true,
     supportsOnchainSendMax: () => true,
     supportsOnchainSendFeeRate: () => false,
-    supportsOnchainBatching: () => false,
+    supportsOnchainBatching: jest.fn(() => false),
     supportsCoinControl: () => false,
-    supportsKeysend: () => false,
+    supportsKeysend: jest.fn(() => false),
     supportsAMP: () => false,
     supportsOffersDirectPay: jest.fn(() => false),
     decodeOffer: jest.fn(),
@@ -28,15 +32,15 @@ jest.mock('../utils/AddressUtils', () => ({
     extractBolt12Offer: (value: string) =>
         value.startsWith('lno1') ? value : undefined
 }));
-jest.mock('../utils/ErrorUtils', () => ({ errorToUserFriendly: jest.fn() }));
 jest.mock('../utils/NFCUtils', () => ({ scanNfcTag: jest.fn() }));
-jest.mock('../utils/AmountUtils', () => ({ getRawAmountFromSats: jest.fn() }));
+jest.mock('../utils/AmountUtils', () => ({
+    getRawAmountFromSats: jest.fn(),
+    isWholeSatAmount: (sats: string | number) => Number.isInteger(Number(sats))
+}));
 jest.mock('../utils/GraphSyncUtils', () => ({
     clearPendingPaymentData: jest.fn()
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));
@@ -50,7 +54,10 @@ jest.mock('../components/SuccessErrorMessage', () => ({
 }));
 jest.mock('../components/Header', () => 'Header');
 jest.mock('../components/OnchainFeeInput', () => 'OnchainFeeInput');
-jest.mock('../components/Screen', () => 'Screen');
+jest.mock('../components/Screen', () => {
+    const { View } = require('react-native');
+    return ({ children }: any) => <View>{children}</View>;
+});
 jest.mock('../components/Switch', () => 'Switch');
 jest.mock('../components/SwipeButton', () => 'SwipeButton');
 jest.mock('../components/TextInput', () => 'TextInput');
@@ -66,122 +73,334 @@ jest.mock('../stores/SettingsStore', () => ({
 }));
 
 import * as React from 'react';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import type { TestInstance } from 'test-renderer';
+import NfcManager from 'react-native-nfc-manager';
 import Send from './Send';
 import BackendUtils from '../utils/BackendUtils';
-import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { scanNfcTag } from '../utils/NFCUtils';
+import { getRawAmountFromSats } from '../utils/AmountUtils';
 
 const BALANCE = 500000;
 
-const childrenOf = (element: any): any[] =>
-    React.Children.toArray(element?.props?.children);
+const renderView = async ({
+    params = {
+        destination: 'bcrt1qexample',
+        transactionType: 'On-chain',
+        isValid: true
+    },
+    TransactionsStore = {},
+    InvoicesStore = {},
+    settings = {},
+    storeSettings = {},
+    lightningBalance = 0
+}: {
+    params?: any;
+    TransactionsStore?: any;
+    InvoicesStore?: any;
+    settings?: any;
+    // SettingsStore.settings, which render reads synchronously
+    storeSettings?: any;
+    lightningBalance?: number;
+} = {}) => {
+    const navigation = {
+        navigate: jest.fn(),
+        addListener: jest.fn(() => jest.fn())
+    };
+    const BalanceStore = {
+        confirmedBlockchainBalance: BALANCE,
+        totalBlockchainBalanceAccounts: BALANCE,
+        lightningBalance,
+        getLightningBalance: jest.fn()
+    };
+    await render(
+        <Send
+            {...({
+                navigation,
+                route: { params },
+                BalanceStore,
+                ContactStore: { contacts: [] },
+                InvoicesStore,
+                ModalStore: {},
+                NodeInfoStore: { supportsOffers: true },
+                SettingsStore: {
+                    implementation: 'lnd',
+                    settings: storeSettings,
+                    getSettings: jest.fn(async () => settings)
+                },
+                TransactionsStore,
+                UTXOsStore: {}
+            } as any)}
+        />
+    );
+    return { navigation, BalanceStore };
+};
 
-// first element in the tree, depth first, that matches
-const findElement = (node: any, match: (element: any) => boolean): any => {
-    if (!React.isValidElement(node)) return undefined;
-    if (match(node)) return node;
-    for (const child of childrenOf(node)) {
-        const found = findElement(child, match);
-        if (found) return found;
+const hosts = (type: string) =>
+    screen.container.queryAll((n) => n.type === type);
+
+const button = (title: string) =>
+    hosts('Button').find((n) => n.props.title === title)!;
+
+const amountInput = () => hosts('AmountInput')[0];
+
+const enterAmount = (amount: string, sats: number) =>
+    fireEvent(amountInput(), 'amountChange', amount, sats);
+
+// the Switch in the row labelled `text`
+const switchNextTo = (text: string) => {
+    let node: TestInstance | null = screen.getByText(text);
+    while (node && !node.queryAll((n) => n.type === 'Switch').length) {
+        node = node.parent;
     }
-    return undefined;
+    return node!.queryAll((n) => n.type === 'Switch')[0];
 };
 
-const findByType = (tree: any, type: string, title?: string) =>
-    findElement(
-        tree,
-        (element) =>
-            element.type === type &&
-            (title === undefined || element.props.title === title)
-    );
-
-// the Switch whose label is a sibling showing `text`
-const findSwitchNextTo = (tree: any, text: string) => {
-    const parent = findElement(tree, (element) =>
-        childrenOf(element).some(
-            (child: any) => child?.props?.children === text
-        )
-    );
-    return childrenOf(parent).find((child: any) => child.type === 'Switch');
-};
-
-const makeView = (
-    overrides: { TransactionsStore?: any; InvoicesStore?: any } = {}
-) => {
-    const view = new Send({
-        navigation: { navigate: jest.fn() },
-        route: {
-            params: {
-                destination: 'bcrt1qexample',
-                transactionType: 'On-chain',
-                isValid: true
-            }
-        },
-        BalanceStore: {
-            confirmedBlockchainBalance: BALANCE,
-            totalBlockchainBalanceAccounts: BALANCE,
-            lightningBalance: 0
-        },
-        ContactStore: { contacts: [] },
-        InvoicesStore: overrides.InvoicesStore ?? {},
-        ModalStore: {},
-        NodeInfoStore: {},
-        SettingsStore: { implementation: 'lnd', settings: {} },
-        TransactionsStore: overrides.TransactionsStore ?? {},
-        UTXOsStore: {}
-    } as unknown as React.ComponentProps<typeof Send>);
-    // setState on a class that was never mounted does nothing, so apply it
-    // directly to see what the screen would render next
-    jest.spyOn(view, 'setState').mockImplementation((update: any) => {
-        view.state = { ...view.state, ...update };
-    });
-    return view;
-};
-
-const amountInputProps = (view: Send) =>
-    findByType(view.render(), 'AmountInput').props;
-
-const toggleSendMax = (view: Send) =>
-    findSwitchNextTo(
-        view.render(),
-        'views.OpenChannel.fundMax'
-    ).props.onValueChange();
+const toggleSendMax = () =>
+    fireEvent(switchNextTo('views.OpenChannel.fundMax'), 'valueChange');
 
 // AmountInput reports the balance once when send max turns on (forceUnit
 // changes to sats) and stays silent when it turns off
-const turnSendMaxOn = (view: Send) => {
-    toggleSendMax(view);
-    amountInputProps(view).onAmountChange(String(BALANCE), BALANCE);
+const turnSendMaxOn = async () => {
+    await toggleSendMax();
+    await enterAmount(String(BALANCE), BALANCE);
 };
 
-const isProceedDisabled = (view: Send) =>
-    findByType(view.render(), 'Button', 'general.proceed').props.disabled;
+const isProceedDisabled = () => button('general.proceed').props.disabled;
 
 describe('Send send max toggle', () => {
-    it('restores the entered amount when send max is turned off', () => {
-        const view = makeView();
-        amountInputProps(view).onAmountChange('50000', 50000);
+    it('restores the entered amount when send max is turned off', async () => {
+        await renderView();
+        await enterAmount('50000', 50000);
 
-        turnSendMaxOn(view);
-        toggleSendMax(view);
+        await turnSendMaxOn();
+        expect(amountInput().props.locked).toBe(true);
+        await toggleSendMax();
 
-        expect(view.state.amount).toBe('50000');
-        expect(view.state.satAmount).toBe(50000);
-        expect(isProceedDisabled(view)).toBe(false);
+        expect(amountInput().props.amount).toBe('50000');
+        expect(amountInput().props.locked).toBe(false);
+        expect(isProceedDisabled()).toBe(false);
     });
 
-    it('keeps a cleared amount empty when send max is turned off again', () => {
-        const view = makeView();
-        amountInputProps(view).onAmountChange('50000', 50000);
-        turnSendMaxOn(view);
-        toggleSendMax(view);
+    it('keeps a cleared amount empty when send max is turned off again', async () => {
+        await renderView();
+        await enterAmount('50000', 50000);
+        await turnSendMaxOn();
+        await toggleSendMax();
 
-        amountInputProps(view).onAmountChange('', 0);
-        turnSendMaxOn(view);
-        toggleSendMax(view);
+        await enterAmount('', 0);
+        await turnSendMaxOn();
+        await toggleSendMax();
 
-        expect(view.state.amount).toBe('');
-        expect(amountInputProps(view).amount).toBe('');
-        expect(isProceedDisabled(view)).toBe(true);
+        expect(amountInput().props.amount).toBe('');
+        expect(isProceedDisabled()).toBe(true);
+    });
+
+    it('passes the restored amount on when Proceed is pressed', async () => {
+        const { navigation } = await renderView();
+        await enterAmount('50000', 50000);
+        await turnSendMaxOn();
+        await toggleSendMax();
+
+        await fireEvent.press(button('general.proceed'));
+
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'VerifyOnChain',
+            expect.objectContaining({
+                destination: 'bcrt1qexample',
+                amount: '50000',
+                satAmount: 50000,
+                fundMax: false
+            })
+        );
+    });
+});
+
+describe('Send on-chain fractional sats', () => {
+    afterEach(() => {
+        (BackendUtils.supportsOnchainBatching as jest.Mock).mockReturnValue(
+            false
+        );
+    });
+
+    // the sats keypad allows 3 decimals, which on-chain outputs cannot carry
+    it('disables Proceed for a fractional sat amount', async () => {
+        await renderView();
+
+        await enterAmount('1000000.5', 1000000.5);
+        expect(isProceedDisabled()).toBe(true);
+
+        await enterAmount('1000000', 1000000);
+        expect(isProceedDisabled()).toBe(false);
+    });
+
+    it('allows Proceed with send max even if the amount was fractional', async () => {
+        await renderView();
+        await enterAmount('1000000.5', 1000000.5);
+
+        await turnSendMaxOn();
+
+        expect(isProceedDisabled()).toBe(false);
+    });
+
+    it('disables Proceed for a fractional sat amount on an added output', async () => {
+        (BackendUtils.supportsOnchainBatching as jest.Mock).mockReturnValue(
+            true
+        );
+        await renderView();
+        await enterAmount('50000', 50000);
+        await fireEvent.press(button('views.Send.addOutput'));
+
+        const outputAddress = hosts('TextInput').at(-1)!;
+        await fireEvent.changeText(outputAddress, 'bcrt1qother');
+        await fireEvent(hosts('AmountInput')[1], 'amountChange', '0.5', 0.5);
+        expect(isProceedDisabled()).toBe(true);
+
+        await fireEvent(hosts('AmountInput')[1], 'amountChange', '1000', 1000);
+        expect(isProceedDisabled()).toBe(false);
+    });
+});
+
+describe('Send request arriving on the open screen', () => {
+    // what navigate('Send', params) does to a Send that is already mounted:
+    // the same instance gets new route params
+    const renderOpenView = async () => {
+        const ref = React.createRef<any>();
+        const { navigation, BalanceStore } = await renderView();
+        const props = {
+            navigation,
+            BalanceStore,
+            ContactStore: { contacts: [] },
+            InvoicesStore: {},
+            ModalStore: {},
+            NodeInfoStore: { supportsOffers: true },
+            SettingsStore: {
+                implementation: 'lnd',
+                settings: {},
+                getSettings: jest.fn(async () => ({}))
+            },
+            TransactionsStore: {},
+            UTXOsStore: {}
+        };
+        const show = (params: any) =>
+            screen.rerender(
+                <Send {...({ ...props, route: { params } } as any)} ref={ref} />
+            );
+        await show({
+            destination: 'bcrt1qexample',
+            transactionType: 'On-chain',
+            isValid: true
+        });
+        return { navigation, ref, receiveParams: show };
+    };
+
+    beforeEach(() => {
+        (getRawAmountFromSats as jest.Mock).mockImplementation((sats) => ({
+            amount: String(sats)
+        }));
+    });
+
+    const proceedParams = async (navigation: any) => {
+        await fireEvent.press(button('general.proceed'));
+        return navigation.navigate.mock.calls.find(
+            ([route]: [string]) => route === 'VerifyOnChain'
+        )[1];
+    };
+
+    it('turns send max off when another request replaces the one under review', async () => {
+        const { navigation, receiveParams } = await renderOpenView();
+        await turnSendMaxOn();
+
+        await receiveParams({
+            destination: 'bcrt1qother',
+            satAmount: '50000',
+            transactionType: 'On-chain',
+            isValid: true
+        });
+
+        expect(amountInput().props.amount).toBe('50000');
+        expect(await proceedParams(navigation)).toMatchObject({
+            destination: 'bcrt1qother',
+            satAmount: '50000',
+            fundMax: false
+        });
+    });
+
+    it('turns send max off when the same destination comes back with an amount', async () => {
+        const { navigation, receiveParams } = await renderOpenView();
+        await turnSendMaxOn();
+
+        await receiveParams({
+            destination: 'bcrt1qexample',
+            satAmount: '50000',
+            transactionType: 'On-chain',
+            isValid: true
+        });
+
+        expect(await proceedParams(navigation)).toMatchObject({
+            satAmount: '50000',
+            fundMax: false
+        });
+    });
+
+    it('starts over when a request for another destination names no amount', async () => {
+        const { ref, receiveParams } = await renderOpenView();
+        await enterAmount('250000', 250000);
+        await act(async () =>
+            ref.current.setState({
+                message: 'for the first destination',
+                additionalOutputs: [
+                    { address: 'bcrt1qsecond', amount: '1000', satAmount: 1000 }
+                ]
+            })
+        );
+        const { swipeButtonKey } = ref.current.state;
+
+        await receiveParams({
+            destination: '03'.padEnd(66, 'b'),
+            transactionType: 'Keysend',
+            isValid: true
+        });
+
+        expect(ref.current.state.amount).toBe('');
+        expect(ref.current.state.satAmount).toBe('0');
+        expect(ref.current.state.message).toBe('');
+        expect(ref.current.state.additionalOutputs).toEqual([]);
+        expect(ref.current.state.swipeButtonKey).not.toBe(swipeButtonKey);
+    });
+
+    it('keeps what was entered when the request under review is validated again', async () => {
+        const { ref, receiveParams } = await renderOpenView();
+        await enterAmount('250000', 250000);
+
+        await receiveParams({
+            destination: 'bcrt1qexample',
+            transactionType: 'On-chain'
+        });
+
+        expect(ref.current.state.amount).toBe('250000');
+        expect(ref.current.state.satAmount).toBe(250000);
+    });
+
+    it('keeps an amount handed in before any destination', async () => {
+        const { ref, receiveParams } = await renderOpenView();
+        await act(async () =>
+            ref.current.setState({
+                destination: '',
+                transactionType: undefined,
+                amount: '250000',
+                satAmount: '250000'
+            })
+        );
+
+        await receiveParams({
+            destination: '03'.padEnd(66, 'b'),
+            transactionType: 'Keysend',
+            isValid: true
+        });
+
+        expect(ref.current.state.amount).toBe('250000');
+        expect(ref.current.state.satAmount).toBe('250000');
     });
 });
 
@@ -195,19 +414,56 @@ describe('Send BOLT 12 Proceed', () => {
     const fetchInvoiceFromOffer =
         BackendUtils.fetchInvoiceFromOffer as jest.Mock;
 
-    const makeOfferView = (paymentInFlight = false) => {
+    // Opens Send on an offer the way handleAnything routes one, with a
+    // 45 s payment timeout in settings, then enters the amount and a 25 sat
+    // fee limit where the backend shows the fee limit
+    const renderOffer = async ({
+        bolt12 = offer,
+        satAmount = 2500,
+        paymentInFlight = false,
+        decodedSats
+    }: {
+        bolt12?: string;
+        satAmount?: number | string;
+        paymentInFlight?: boolean;
+        // amount the fetched invoice decodes to, as InvoicesStore sets it
+        decodedSats?: number;
+    } = {}) => {
         const TransactionsStore = { paymentInFlight, sendPayment: jest.fn() };
-        const InvoicesStore = { getPayReq: jest.fn() };
-        const view = makeView({ TransactionsStore, InvoicesStore });
-        view.state = {
-            ...view.state,
-            bolt12: offer,
-            satAmount: 2500,
-            feeLimitSat: '25',
-            timeoutSeconds: '45'
-        } as any;
-        return { view, TransactionsStore, InvoicesStore };
+        const InvoicesStore: any = {
+            pay_req: null,
+            getPayReq: jest.fn(async () => {
+                if (decodedSats !== undefined) {
+                    InvoicesStore.pay_req = { getRequestAmount: decodedSats };
+                }
+            }),
+            clearPayReq: jest.fn(() => {
+                InvoicesStore.pay_req = null;
+            })
+        };
+        const { navigation } = await renderView({
+            params: {
+                destination: offer,
+                bolt12,
+                transactionType: 'BOLT 12',
+                isValid: true
+            },
+            TransactionsStore,
+            InvoicesStore,
+            settings: { payments: { timeoutSeconds: '45' } }
+        });
+        await enterAmount(String(satAmount), satAmount as number);
+        const [feeLimit] = hosts('FeeLimit');
+        if (feeLimit) await fireEvent(feeLimit, 'feeLimitSatChange', '25');
+        return { navigation, TransactionsStore, InvoicesStore };
     };
+
+    // Proceed is mocked as a plain host, so a press reaches payBolt12 even
+    // when the button renders disabled, which exercises its own guards
+    const proceed = () => fireEvent.press(button('general.proceed'));
+
+    const errorShown = () =>
+        hosts('ErrorMessage').map((n) => n.props.message)[0];
 
     beforeEach(() => {
         supportsOffersDirectPay.mockReset();
@@ -218,71 +474,426 @@ describe('Send BOLT 12 Proceed', () => {
     it('only decodes the offer and opens the review screen on a direct-pay backend', async () => {
         supportsOffersDirectPay.mockReturnValue(true);
         decodeOffer.mockResolvedValue(decodedOffer);
-        const { view, TransactionsStore } = makeOfferView();
+        const { navigation, TransactionsStore } = await renderOffer();
 
-        await view.payBolt12();
+        await proceed();
 
         expect(decodeOffer).toHaveBeenCalledWith({ offer });
         expect(fetchInvoiceFromOffer).not.toHaveBeenCalled();
         expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
-        expect(view.props.navigation.navigate).toHaveBeenCalledTimes(1);
-        expect(view.props.navigation.navigate).toHaveBeenCalledWith(
-            'Bolt12OfferReview',
-            {
-                offer,
-                decodedOffer,
-                satAmount: '2500',
-                timeoutSeconds: '45',
-                feeLimitSat: '25'
-            }
-        );
-        expect(view.state.loading).toBe(false);
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
+        expect(navigation.navigate).toHaveBeenCalledWith('Bolt12OfferReview', {
+            offer,
+            decodedOffer,
+            satAmount: '2500',
+            timeoutSeconds: '45',
+            feeLimitSat: '25'
+        });
+        expect(button('general.proceed').props.disabled).toBe(false);
     });
 
     it('shows the decode error and stays on Send when the offer cannot be decoded', async () => {
         supportsOffersDirectPay.mockReturnValue(true);
-        const error = new Error('bad offer');
-        decodeOffer.mockRejectedValue(error);
-        (errorToUserFriendly as jest.Mock).mockReturnValue('bad offer');
-        const { view, TransactionsStore } = makeOfferView();
+        // a PascalCase code, so the assertion below shows the message went
+        // through errorToUserFriendly rather than being shown raw
+        decodeOffer.mockRejectedValue(new Error('InvalidBech32'));
+        const { navigation, TransactionsStore } = await renderOffer();
 
-        await view.payBolt12();
+        await proceed();
 
         expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
-        expect(view.props.navigation.navigate).not.toHaveBeenCalled();
-        expect(view.state.loading).toBe(false);
-        expect(errorToUserFriendly).toHaveBeenCalledWith(error);
-        expect(view.state.error_msg).toBe('bad offer');
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(button('general.proceed').props.disabled).toBe(false);
+        expect(errorShown()).toBe('Invalid bech32');
     });
 
     it('does nothing while another payment is in flight', async () => {
         supportsOffersDirectPay.mockReturnValue(true);
-        const { view } = makeOfferView(true);
+        const { navigation } = await renderOffer({ paymentInFlight: true });
+        expect(button('general.proceed').props.disabled).toBe(true);
 
-        await view.payBolt12();
+        await proceed();
 
         expect(decodeOffer).not.toHaveBeenCalled();
-        expect(view.props.navigation.navigate).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    // The review screen only re-checks offer blockers, so this guard is
+    // what keeps a zero amount from reaching an amountless offer (#4972)
+    describe.each([true, false])(
+        'with supportsOffersDirectPay %s',
+        (directPay) => {
+            it.each(['0', '', 0])(
+                'rejects amount %p before decoding or fetching',
+                async (satAmount) => {
+                    supportsOffersDirectPay.mockReturnValue(directPay);
+                    const { navigation, TransactionsStore, InvoicesStore } =
+                        await renderOffer({ satAmount });
+
+                    await proceed();
+
+                    expect(errorShown()).toBe(
+                        'views.Send.payBolt12.specifyAmount'
+                    );
+                    expect(button('general.proceed').props.disabled).toBe(
+                        false
+                    );
+                    expect(decodeOffer).not.toHaveBeenCalled();
+                    expect(fetchInvoiceFromOffer).not.toHaveBeenCalled();
+                    expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
+                    expect(
+                        TransactionsStore.sendPayment
+                    ).not.toHaveBeenCalled();
+                    expect(navigation.navigate).not.toHaveBeenCalled();
+                }
+            );
+        }
+    );
+
+    it('rejects an amount never entered, before decoding', async () => {
+        supportsOffersDirectPay.mockReturnValue(true);
+        const TransactionsStore = { paymentInFlight: false };
+        const { navigation } = await renderView({
+            params: {
+                destination: offer,
+                bolt12: offer,
+                transactionType: 'BOLT 12',
+                isValid: true
+            },
+            TransactionsStore
+        });
+
+        await proceed();
+
+        expect(errorShown()).toBe('views.Send.payBolt12.specifyAmount');
+        expect(decodeOffer).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('reports a missing offer before checking the amount', async () => {
+        supportsOffersDirectPay.mockReturnValue(true);
+        const { navigation } = await renderOffer({
+            bolt12: '',
+            satAmount: '0'
+        });
+
+        await proceed();
+
+        expect(errorShown()).toBe('views.Send.payBolt12.offerFetchFailure');
+        expect(decodeOffer).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('rejects input that is not an offer without calling the backend', async () => {
+        supportsOffersDirectPay.mockReturnValue(true);
+        const { navigation } = await renderOffer({
+            bolt12: 'bitcoin:?sp=sp1qabc'
+        });
+
+        await proceed();
+
+        expect(errorShown()).toBe('views.Send.payBolt12.invalidOffer');
+        expect(button('general.proceed').props.disabled).toBe(false);
+        expect(decodeOffer).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
     });
 
     it('fetches an invoice for PaymentRequest on a backend without direct offer pay', async () => {
         supportsOffersDirectPay.mockReturnValue(false);
         fetchInvoiceFromOffer.mockResolvedValue({ invoice: 'lnbcrt1...' });
-        const { view, TransactionsStore, InvoicesStore } = makeOfferView();
+        const { navigation, TransactionsStore, InvoicesStore } =
+            await renderOffer();
 
-        await view.payBolt12();
+        // the fee limit is set on PaymentRequest on this backend
+        expect(hosts('FeeLimit')).toHaveLength(0);
+        await proceed();
 
         expect(decodeOffer).not.toHaveBeenCalled();
         expect(fetchInvoiceFromOffer).toHaveBeenCalledWith(
             offer,
             2500,
             '45',
-            '25'
+            '100'
         );
         expect(InvoicesStore.getPayReq).toHaveBeenCalledWith('lnbcrt1...');
-        expect(view.props.navigation.navigate).toHaveBeenCalledWith(
-            'PaymentRequest'
-        );
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest');
         expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
+    });
+
+    it('opens PaymentRequest when the invoice is for the amount entered', async () => {
+        supportsOffersDirectPay.mockReturnValue(false);
+        fetchInvoiceFromOffer.mockResolvedValue({ invoice: 'lni1...' });
+        const { navigation, InvoicesStore } = await renderOffer({
+            decodedSats: 2500
+        });
+
+        await proceed();
+
+        expect(InvoicesStore.getPayReq).toHaveBeenCalledWith('lni1...');
+        expect(InvoicesStore.clearPayReq).not.toHaveBeenCalled();
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest');
+        expect(errorShown()).toBeUndefined();
+    });
+
+    it.each([250000, 2499, 0])(
+        'refuses an invoice for %p sats when 2500 were entered',
+        async (decodedSats) => {
+            supportsOffersDirectPay.mockReturnValue(false);
+            fetchInvoiceFromOffer.mockResolvedValue({ invoice: 'lni1...' });
+            const { navigation, TransactionsStore, InvoicesStore } =
+                await renderOffer({ decodedSats });
+
+            await proceed();
+
+            expect(InvoicesStore.getPayReq).toHaveBeenCalledWith('lni1...');
+            expect(InvoicesStore.clearPayReq).toHaveBeenCalled();
+            expect(InvoicesStore.pay_req).toBeNull();
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
+            expect(errorShown()).toBe(
+                'views.Send.payBolt12.invoiceAmountMismatch'
+            );
+            expect(button('general.proceed').props.disabled).toBe(false);
+        }
+    );
+
+    it.each([
+        [
+            'resolves without an invoice',
+            () => fetchInvoiceFromOffer.mockResolvedValue({}),
+            'views.Send.payBolt12.invoiceFetchFailure'
+        ],
+        [
+            // a PascalCase code, so the assertion shows the message went
+            // through errorToUserFriendly rather than being shown raw
+            'rejects',
+            () =>
+                fetchInvoiceFromOffer.mockRejectedValue(
+                    new Error('InvalidBech32')
+                ),
+            'Invalid bech32'
+        ]
+    ])(
+        'shows an error and stays on Send when the invoice fetch %s',
+        async (_case, mockFetch, message) => {
+            supportsOffersDirectPay.mockReturnValue(false);
+            mockFetch();
+            const { navigation, TransactionsStore, InvoicesStore } =
+                await renderOffer();
+
+            await proceed();
+
+            expect(fetchInvoiceFromOffer).toHaveBeenCalledTimes(1);
+            expect(errorShown()).toBe(message);
+            expect(button('general.proceed').props.disabled).toBe(false);
+            expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
+        }
+    );
+});
+
+describe('Send mount', () => {
+    it('refreshes the lightning balance on mount without awaiting settings', async () => {
+        const navigation = {
+            navigate: jest.fn(),
+            addListener: jest.fn(() => jest.fn())
+        };
+        const getLightningBalance = jest.fn();
+        // never resolves: the refresh must be kicked off before settings load
+        await render(
+            <Send
+                {...({
+                    navigation,
+                    route: { params: {} },
+                    BalanceStore: {
+                        lightningBalance: 0,
+                        getLightningBalance
+                    },
+                    ContactStore: { contacts: [] },
+                    InvoicesStore: {},
+                    ModalStore: {},
+                    NodeInfoStore: {},
+                    SettingsStore: {
+                        implementation: 'lnd',
+                        settings: {},
+                        getSettings: jest.fn(() => new Promise(() => {}))
+                    },
+                    TransactionsStore: {},
+                    UTXOsStore: {}
+                } as any)}
+            />
+        );
+
+        expect(getLightningBalance).toHaveBeenCalledWith(true);
+    });
+});
+
+describe('Send payment in flight notice', () => {
+    const CHECKING = 'components.PaymentInFlightNotice.checking';
+    const supportsKeysend = BackendUtils.supportsKeysend as jest.Mock;
+
+    afterEach(() => supportsKeysend.mockReturnValue(false));
+
+    it('explains the disabled keysend control while an earlier payment is checked', async () => {
+        supportsKeysend.mockReturnValue(true);
+        await renderView({
+            params: {
+                destination: '02' + 'ab'.repeat(32),
+                transactionType: 'Keysend',
+                isValid: true
+            },
+            TransactionsStore: { paymentInFlight: true }
+        });
+
+        expect(screen.getByText(CHECKING)).toBeOnTheScreen();
+    });
+
+    it('explains the disabled BOLT 12 Proceed while an earlier payment is checked', async () => {
+        await renderView({
+            params: {
+                destination:
+                    'lno1qgsyxjtl6luzd9t3pr62xr7eemp6awnejusgf6gw45q75vcfqqqqqqq',
+                transactionType: 'BOLT 12',
+                isValid: true
+            },
+            TransactionsStore: { paymentInFlight: true }
+        });
+
+        expect(screen.getByText(CHECKING)).toBeOnTheScreen();
+        expect(isProceedDisabled()).toBe(true);
+    });
+
+    it('shows no notice when no payment is in flight', async () => {
+        await renderView({
+            params: {
+                destination:
+                    'lno1qgsyxjtl6luzd9t3pr62xr7eemp6awnejusgf6gw45q75vcfqqqqqqq',
+                transactionType: 'BOLT 12',
+                isValid: true
+            },
+            TransactionsStore: { paymentInFlight: false }
+        });
+
+        expect(screen.queryByText(CHECKING)).not.toBeOnTheScreen();
+    });
+});
+
+describe('Send keysend fee limit', () => {
+    afterEach(() =>
+        (BackendUtils.supportsKeysend as jest.Mock).mockReturnValue(false)
+    );
+
+    it('sends the default fee percentage when percent mode is picked without retyping it', async () => {
+        (BackendUtils.supportsKeysend as jest.Mock).mockReturnValue(true);
+        const TransactionsStore = {
+            paymentInFlight: false,
+            sendPayment: jest.fn()
+        };
+        await renderView({
+            params: {
+                destination: '02' + 'cd'.repeat(32),
+                transactionType: 'Keysend',
+                isValid: true
+            },
+            TransactionsStore,
+            settings: { payments: { defaultFeePercentage: '0.5' } }
+        });
+
+        await enterAmount('1000', 1000);
+        // what FeeLimit reports when its percent field is tapped
+        const feeLimit = hosts('FeeLimit')[0];
+        await fireEvent(feeLimit, 'feeLimitSatChange', '5');
+        await fireEvent(feeLimit, 'feeOptionChange', 'percent');
+        await fireEvent.press(button('general.send'));
+
+        expect(TransactionsStore.sendPayment).toHaveBeenCalledWith(
+            expect.objectContaining({
+                amount: '1000',
+                fee_limit_sat: '5',
+                max_fee_percent: '0.5'
+            })
+        );
+    });
+});
+
+describe('Send keysend slide to pay', () => {
+    const supportsKeysend = BackendUtils.supportsKeysend as jest.Mock;
+    const PUBKEY = '02' + 'ef'.repeat(32);
+
+    beforeEach(() => supportsKeysend.mockReturnValue(true));
+    afterEach(() => supportsKeysend.mockReturnValue(false));
+
+    const renderKeysend = async (paymentInFlight = false) => {
+        const TransactionsStore = { paymentInFlight, sendPayment: jest.fn() };
+        const { navigation } = await renderView({
+            params: {
+                destination: PUBKEY,
+                transactionType: 'Keysend',
+                isValid: true
+            },
+            TransactionsStore,
+            storeSettings: { payments: { slideToPayThreshold: 1000 } },
+            lightningBalance: 100000
+        });
+        return { TransactionsStore, navigation };
+    };
+
+    const swipeButton = () => hosts('SwipeButton')[0];
+
+    it('shows the swipe button at the threshold, without a side margin of its own', async () => {
+        await renderKeysend();
+        await enterAmount('1000', 1000);
+
+        expect(swipeButton()).toBeDefined();
+        expect(button('general.send')).toBeUndefined();
+        // the ScrollView already pads the sides
+        expect(swipeButton().props.containerStyle).toEqual(
+            expect.objectContaining({ marginHorizontal: 0 })
+        );
+        expect(swipeButton().props.disabled).toBe(false);
+    });
+
+    it('sends the keysend payment when the swipe completes', async () => {
+        const { TransactionsStore, navigation } = await renderKeysend();
+        await enterAmount('5000', 5000);
+
+        swipeButton().props.onSwipeSuccess();
+
+        expect(TransactionsStore.sendPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ amount: '5000', pubkey: PUBKEY })
+        );
+        expect(navigation.navigate).toHaveBeenCalledWith('SendingLightning');
+    });
+
+    it('shows the Send button below the threshold', async () => {
+        await renderKeysend();
+        await enterAmount('999', 999);
+
+        expect(swipeButton()).toBeUndefined();
+        expect(button('general.send').props.disabled).toBe(false);
+    });
+
+    it('disables the swipe button while a payment is in flight', async () => {
+        await renderKeysend(true);
+        await enterAmount('5000', 5000);
+
+        expect(swipeButton().props.disabled).toBe(true);
+    });
+});
+
+describe('Send NFC scan', () => {
+    afterEach(() => (NfcManager.isSupported as jest.Mock).mockReset());
+
+    it('asks for the pay record of a tag that can also be withdrawn from', async () => {
+        (NfcManager.isSupported as jest.Mock).mockResolvedValue(true);
+        (scanNfcTag as jest.Mock).mockResolvedValue(undefined);
+        await renderView();
+        // Header is mocked, so draw its buttons on their own
+        await render(hosts('Header')[0].props.rightComponent);
+
+        await fireEvent.press(hosts('NFC')[0]);
+
+        expect(scanNfcTag).toHaveBeenCalledWith(expect.anything(), 'pay');
     });
 });

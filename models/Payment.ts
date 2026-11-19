@@ -1,7 +1,6 @@
 import { computed } from 'mobx';
 import BigNumber from 'bignumber.js';
 import humanizeDuration from 'humanize-duration';
-import { sha256 } from 'js-sha256';
 
 import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
@@ -9,6 +8,7 @@ import { getFeePercentage } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import Base64Utils from '../utils/Base64Utils';
+import { sha256Hex } from '../utils/HashingUtils';
 import { decodeMemo } from '../utils/MemoUtils';
 import { lnrpc } from '../proto/lightning';
 import { notesStore } from '../stores/Stores';
@@ -31,7 +31,9 @@ export default class Payment extends BaseModel {
     payment_preimage: string;
     path: Array<string>;
     bolt: string;
-    status: string;
+    // embedded LND returns the numeric lnrpc enum
+    status: string | lnrpc.Payment.PaymentStatus;
+    state?: string; // NWC (NIP-47): settled, pending, failed
     payment_request: string;
     failure_reason?: string | number;
     // c-lightning
@@ -51,6 +53,9 @@ export default class Payment extends BaseModel {
     amount?: number;
     fees_paid?: number;
     invoice?: string;
+    // LndHub
+    fee?: string | number;
+    payment_route?: { total_fees?: string | number };
 
     constructor(data?: any, nodes?: any) {
         super(data);
@@ -84,7 +89,7 @@ export default class Payment extends BaseModel {
         }
 
         if (!this.isIncomplete) {
-            return sha256(Base64Utils.hexToBytes(this.getPreimage));
+            return sha256Hex(Base64Utils.hexToBytes(this.getPreimage));
         }
 
         return undefined;
@@ -178,7 +183,28 @@ export default class Payment extends BaseModel {
 
     @computed public get isInTransit(): boolean {
         if (!this.isIncomplete) return false;
+        // CLN ('pending'), LDK Node ('IN_FLIGHT') and NWC (state) report
+        // in-flight payments by status only, without htlcs, as does LND
+        // (INITIATED) before its first htlc attempt. Embedded LND returns
+        // the numeric enums.
+        if (
+            !this.htlcs?.length &&
+            (this.status === 'pending' ||
+                this.status === 'IN_FLIGHT' ||
+                this.status === lnrpc.Payment.PaymentStatus.IN_FLIGHT ||
+                this.status === 'INITIATED' ||
+                this.status === lnrpc.Payment.PaymentStatus.INITIATED ||
+                this.state === 'pending')
+        )
+            return true;
         if (!this.htlcs) return false;
+        // lnd keeps the payment IN_FLIGHT while it retries, including
+        // between attempts when no HTLC is out
+        if (
+            this.status === 'IN_FLIGHT' ||
+            Number(this.status) === lnrpc.Payment.PaymentStatus.IN_FLIGHT
+        )
+            return true;
         let inTransit = false;
         for (const htlc of this.htlcs) {
             if (
@@ -194,6 +220,9 @@ export default class Payment extends BaseModel {
 
     @computed public get isFailed(): boolean {
         if (!this.isIncomplete) return false;
+        // lnd lists failed HTLC attempts next to a retry that can still
+        // settle, so a payment in transit has not failed
+        if (this.isInTransit) return false;
         let isFailed = false;
         if (this.htlcs) {
             for (const htlc of this.htlcs) {
@@ -211,6 +240,14 @@ export default class Payment extends BaseModel {
             this.failure_reason !== 'FAILURE_REASON_NONE' &&
             this.failure_reason !==
                 lnrpc.PaymentFailureReason.FAILURE_REASON_NONE
+        )
+            isFailed = true;
+        // CLN sendpays status and NWC state; these backends carry no
+        // htlcs or failure_reason for the checks above
+        if (
+            this.status === 'failed' ||
+            this.status === 'FAILED' ||
+            this.state === 'failed'
         )
             isFailed = true;
         return isFailed;
@@ -294,9 +331,11 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getFee(): string {
-        // lnd - prefer fee_msat for precision when available, regardless of fee_sat
+        // lnd - prefer fee_msat for precision when available, regardless of fee_sat.
+        // LNbits' LndHub extension also sends fee_msat (and fee), but as a
+        // negative number for an outgoing payment, so the magnitude is read
         if (this.fee_msat && this.fee_msat !== '0') {
-            const feeInSats = Number(this.fee_msat) / 1000;
+            const feeInSats = Math.abs(Number(this.fee_msat)) / 1000;
             const result = feeInSats.toString();
             return result;
         }
@@ -320,6 +359,15 @@ export default class Payment extends BaseModel {
         // NWC
         if (this.fees_paid) {
             return this.fees_paid.toString();
+        }
+
+        // LndHub: fee on /gettxs rows, payment_route.total_fees on the
+        // /payinvoice response. LNbits reports fee negative
+        const lndhubFee = Math.abs(
+            Number(this.fee ?? this.payment_route?.total_fees)
+        );
+        if (lndhubFee > 0) {
+            return lndhubFee.toString();
         }
 
         return '0';
@@ -373,7 +421,10 @@ export default class Payment extends BaseModel {
                             route.push(enhancedHop);
                         });
                 }
-                enhancedPath.push(route);
+                // Only attempts that succeeded and have hops are paths. An
+                // empty path for a failed or in-flight attempt crashed
+                // PaymentPath, and one in first place hid the Path button.
+                if (route.length > 0) enhancedPath.push(route);
             });
 
         return enhancedPath;

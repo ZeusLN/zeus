@@ -15,19 +15,24 @@ import {
     CDKMintQuote,
     CDKMeltQuote,
     CDKMelted,
+    CDKPartialMelted,
     CDKSpendingConditions,
     CDKSendKind,
     CDKSendOptions,
     CDKPreparedSend,
     CDKReceiveOptions,
     CDKProofState,
+    CDKRecoveryReport,
+    CDKOnDemandMintRecovery,
     CDKTransaction,
     CDKTransactionDirection,
     CDKErrorType,
     CDKError,
     CashuDevKitNativeModule
 } from './types';
+import { sha256StringToHex } from '../utils/HashingUtils';
 import { parseCashuDevKitError } from '../utils/ErrorUtils';
+import MintOperationGate, { normalizeMintKey } from './MintOperationGate';
 
 const { CashuDevKitModule } = NativeModules as unknown as {
     CashuDevKitModule: CashuDevKitNativeModule;
@@ -36,7 +41,7 @@ const { CashuDevKitModule } = NativeModules as unknown as {
 /**
  * Map native error messages to CDK error types
  */
-function mapCDKError(error: any): CDKError {
+export function mapCDKError(error: any): CDKError {
     const message = parseCashuDevKitError(error);
     const normalizedMessage = message.toLowerCase();
 
@@ -65,7 +70,17 @@ function mapCDKError(error: any): CDKError {
     ) {
         return { type: CDKErrorType.InvalidToken, message };
     }
-    if (message.includes('network') || message.includes('connection')) {
+    // CDK reports a request that got no usable HTTP response as
+    // "Http transport error None: error sending request for url (...)",
+    // which contains neither word below and would fall through to the
+    // 'url' check. The native modules already tag those NETWORK_ERROR via
+    // the rejection code; the text match covers errors that lost the code.
+    if (
+        error?.code === 'NETWORK_ERROR' ||
+        normalizedMessage.includes('http transport error none') ||
+        normalizedMessage.includes('network') ||
+        normalizedMessage.includes('connection')
+    ) {
         return { type: CDKErrorType.Network, message };
     }
     if (message.includes('database') || message.includes('sqlite')) {
@@ -99,6 +114,14 @@ function mapCDKError(error: any): CDKError {
 class CashuDevKit {
     private initialized: boolean = false;
 
+    // Operations that create or drive CDK sagas run through this gate so
+    // that saga recovery never runs alongside them on the same mint
+    private gate = new MintOperationGate();
+    // One gate per wallet database, keyed by a hash of the mnemonic: the
+    // native module derives the database path from the mnemonic, so
+    // initializing the same wallet again reopens the same sagas
+    private gates = new Map<string, MintOperationGate>();
+
     /**
      * Check if native module is available
      */
@@ -128,6 +151,16 @@ class CashuDevKit {
     ): Promise<void> {
         try {
             await CashuDevKitModule.initializeWallet(mnemonic, unit);
+            // Operations still running on this wallet's database keep
+            // holding off recovery after it is initialized again, while
+            // those on another wallet do not hold up recovery on this one
+            const walletKey = sha256StringToHex(mnemonic);
+            let gate = this.gates.get(walletKey);
+            if (!gate) {
+                gate = new MintOperationGate();
+                this.gates.set(walletKey, gate);
+            }
+            this.gate = gate;
             this.initialized = true;
         } catch (error) {
             throw mapCDKError(error);
@@ -224,7 +257,9 @@ class CashuDevKit {
     }
 
     /**
-     * Get keysets for a mint
+     * Get the keysets stored locally for a mint. Does not contact the mint:
+     * an empty array means no keysets are stored (e.g. the mint was never
+     * added), not that the mint has no keysets.
      * @param mintUrl - The mint's URL
      */
     async getMintKeysets(mintUrl: string): Promise<CDKKeyset[]> {
@@ -264,7 +299,8 @@ class CashuDevKit {
     }
 
     /**
-     * Check status of a mint quote
+     * Check status of a mint quote. For a quote a mint saga holds, CDK
+     * resumes that saga, so this goes through the gate like a mint.
      * @param mintUrl - The mint's URL
      * @param quoteId - The quote ID
      */
@@ -272,15 +308,17 @@ class CashuDevKit {
         mintUrl: string,
         quoteId: string
     ): Promise<CDKMintQuote> {
-        try {
-            const json = await CashuDevKitModule.checkMintQuote(
-                mintUrl,
-                quoteId
-            );
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.checkMintQuote(
+                    mintUrl,
+                    quoteId
+                );
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     /**
@@ -353,16 +391,18 @@ class CashuDevKit {
         quoteId: string,
         amount: number
     ): Promise<CDKProof[]> {
-        try {
-            const json = await CashuDevKitModule.mintExternal(
-                mintUrl,
-                quoteId,
-                amount
-            );
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.mintExternal(
+                    mintUrl,
+                    quoteId,
+                    amount
+                );
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     /**
@@ -376,16 +416,18 @@ class CashuDevKit {
         quoteId: string,
         conditions?: CDKSpendingConditions
     ): Promise<CDKProof[]> {
-        try {
-            const json = await CashuDevKitModule.mint(
-                mintUrl,
-                quoteId,
-                conditions ? JSON.stringify(conditions) : undefined
-            );
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.mint(
+                    mintUrl,
+                    quoteId,
+                    conditions ? JSON.stringify(conditions) : undefined
+                );
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     // ========================================================================
@@ -416,7 +458,8 @@ class CashuDevKit {
     }
 
     /**
-     * Check status of a melt quote
+     * Check status of a melt quote. For a quote a melt saga holds, CDK
+     * resumes that saga, so this goes through the gate like a melt.
      * @param mintUrl - The mint's URL
      * @param quoteId - The quote ID
      */
@@ -424,15 +467,17 @@ class CashuDevKit {
         mintUrl: string,
         quoteId: string
     ): Promise<CDKMeltQuote> {
-        try {
-            const json = await CashuDevKitModule.checkMeltQuote(
-                mintUrl,
-                quoteId
-            );
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.checkMeltQuote(
+                    mintUrl,
+                    quoteId
+                );
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     /**
@@ -441,18 +486,22 @@ class CashuDevKit {
      * @param quoteId - The melt quote ID (from createMeltQuote)
      */
     async melt(mintUrl: string, quoteId: string): Promise<CDKMelted> {
-        try {
-            const json = await CashuDevKitModule.melt(mintUrl, quoteId);
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.melt(mintUrl, quoteId);
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     /**
      * Execute a partial melt from a specific mint.
-     * Creates its own melt quote directly with the mint API
-     * to get the actual fee, then sends all proofs.
+     * Creates its own MPP melt quote with the mint to get the actual fee,
+     * then lets CDK select proofs for the partial amount plus fee reserve.
+     * The result carries that quote's id as quote_id, plus its fee_reserve
+     * and expiry.
      * @param mintUrl - The mint to melt from
      * @param bolt11 - The BOLT11 invoice to pay
      * @param mppAmountMsat - Partial amount in millisats for this mint
@@ -461,17 +510,19 @@ class CashuDevKit {
         mintUrl: string,
         bolt11: string,
         mppAmountMsat: number
-    ): Promise<CDKMelted> {
-        try {
-            const json = await CashuDevKitModule.meltPartial(
-                mintUrl,
-                bolt11,
-                mppAmountMsat
-            );
-            return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+    ): Promise<CDKPartialMelted> {
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.meltPartial(
+                    mintUrl,
+                    bolt11,
+                    mppAmountMsat
+                );
+                return JSON.parse(json);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     // ========================================================================
@@ -479,13 +530,15 @@ class CashuDevKit {
     // ========================================================================
 
     /**
-     * Prepare a send operation (creates proofs for sending)
+     * Prepare a send operation (creates proofs for sending). Private so that
+     * prepare and confirm only run together inside send's gated operation:
+     * recovery compensates a send saga left between the two.
      * @param mintUrl - The mint's URL
      * @param amount - Amount in sats to send
      * @param options - Send options (memo, conditions, etc.)
      * @returns Prepared send info (id, amount, fee)
      */
-    async prepareSend(
+    private async prepareSend(
         mintUrl: string,
         amount: number,
         options?: CDKSendOptions
@@ -513,7 +566,7 @@ class CashuDevKit {
      * @param preparedSendId - ID from prepareSend
      * @param memo - Optional memo to include in token
      */
-    async confirmSend(
+    private async confirmSend(
         preparedSendId: string,
         memo?: string
     ): Promise<CDKToken> {
@@ -523,18 +576,6 @@ class CashuDevKit {
                 memo
             );
             return JSON.parse(json);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
-    }
-
-    /**
-     * Cancel a prepared send (returns proofs to wallet)
-     * @param preparedSendId - ID from prepareSend
-     */
-    async cancelSend(preparedSendId: string): Promise<void> {
-        try {
-            await CashuDevKitModule.cancelSend(preparedSendId);
         } catch (error) {
             throw mapCDKError(error);
         }
@@ -565,8 +606,12 @@ class CashuDevKit {
             memo: memo ? { memo, include_memo: true } : undefined
         };
 
-        const prepared = await this.prepareSend(mintUrl, amount, options);
-        return await this.confirmSend(prepared.id, memo);
+        // Recovery compensates a send saga left between prepare and
+        // confirm, so both steps run as one operation
+        return this.gate.runOperation(mintUrl, async () => {
+            const prepared = await this.prepareSend(mintUrl, amount, options);
+            return await this.confirmSend(prepared.id, memo);
+        });
     }
 
     /**
@@ -604,14 +649,25 @@ class CashuDevKit {
         encodedToken: string,
         options?: CDKReceiveOptions
     ): Promise<number> {
+        const receive = async () => {
+            try {
+                return await CashuDevKitModule.receive(
+                    encodedToken,
+                    options ? JSON.stringify(options) : undefined
+                );
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        };
+
+        // The receive saga belongs to the token's mint
+        let mintUrl: string | undefined;
         try {
-            return await CashuDevKitModule.receive(
-                encodedToken,
-                options ? JSON.stringify(options) : undefined
-            );
-        } catch (error) {
-            throw mapCDKError(error);
+            mintUrl = (await this.decodeToken(encodedToken)).mint_url;
+        } catch (_e) {
+            // CDK rejects a token it cannot decode without creating a saga
         }
+        return mintUrl ? this.gate.runOperation(mintUrl, receive) : receive();
     }
 
     // ========================================================================
@@ -653,11 +709,13 @@ class CashuDevKit {
      * @returns Amount restored in sats
      */
     async restore(mintUrl: string): Promise<number> {
-        try {
-            return await CashuDevKitModule.restore(mintUrl);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                return await CashuDevKitModule.restore(mintUrl);
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
     }
 
     /**
@@ -667,11 +725,99 @@ class CashuDevKit {
      * @returns Amount restored in sats
      */
     async restoreFromSeed(mintUrl: string, seedHex: string): Promise<number> {
-        try {
-            return await CashuDevKitModule.restoreFromSeed(mintUrl, seedHex);
-        } catch (error) {
-            throw mapCDKError(error);
-        }
+        return this.gate.runOperation(mintUrl, async () => {
+            try {
+                return await CashuDevKitModule.restoreFromSeed(
+                    mintUrl,
+                    seedHex
+                );
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
+    }
+
+    // ========================================================================
+    // Saga Recovery
+    // ========================================================================
+
+    /**
+     * Resume or roll back the CDK operations an app kill or crash left
+     * unfinished on a mint (swap, send, receive, mint, melt). Needs the mint.
+     * @param mintUrl - The mint's URL
+     * @returns The recovery counts, or null when recovery did not run because
+     * an operation or another recovery was in flight on the mint
+     */
+    async recoverIncompleteSagas(
+        mintUrl: string
+    ): Promise<CDKRecoveryReport | null> {
+        const outcome = await this.gate.tryRunRecovery(mintUrl, async () => {
+            try {
+                const json = await CashuDevKitModule.recoverIncompleteSagas(
+                    mintUrl
+                );
+                return JSON.parse(json) as CDKRecoveryReport;
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
+        return outcome.ran ? outcome.result : null;
+    }
+
+    /**
+     * Recover a mint the wallet added on demand (see
+     * CashuStore.onDemandMintUrls), then remove it from CDK if nothing is
+     * left on it. Removing the mint drops its wallet and keysets but not
+     * its proofs or sagas, so it is only removed once recovery has settled
+     * every saga and the wallet holds no balance there.
+     *
+     * Recovery, the balance read and the removal run as one recovery on the
+     * gate, so an operation that starts on the mint meanwhile waits for all
+     * three. One that outlasts the wait keeps the mint.
+     * @param mintUrl - The mint's URL
+     * @param canRemove - Asked right before the removal, after the awaits
+     * @returns null when an operation or another recovery was in flight on
+     * the mint. Otherwise the recovery counts, whether the mint was removed,
+     * and its balance when that was read (recovery settled everything)
+     */
+    async recoverOnDemandMint(
+        mintUrl: string,
+        canRemove: () => boolean = () => true
+    ): Promise<CDKOnDemandMintRecovery | null> {
+        const gate = this.gate;
+        const outcome = await gate.tryRunRecovery(mintUrl, async () => {
+            try {
+                const report = JSON.parse(
+                    await CashuDevKitModule.recoverIncompleteSagas(mintUrl)
+                ) as CDKRecoveryReport;
+                if (report.failed > 0 || report.skipped > 0) {
+                    return { report, removed: false };
+                }
+
+                const key = normalizeMintKey(mintUrl);
+                const balances = Object.entries(await this.getBalances())
+                    .filter(([url]) => normalizeMintKey(url) === key)
+                    .map(([, amount]) => amount);
+                // Recovery loaded the mint's wallet, so CDK reports a
+                // balance for it. No entry means the balance is unknown
+                if (balances.length === 0) return { report, removed: false };
+                const balance = balances.reduce((sum, n) => sum + n, 0);
+
+                // Not zero also covers NaN
+                if (
+                    balance !== 0 ||
+                    gate.hasOperations(mintUrl) ||
+                    !canRemove()
+                ) {
+                    return { report, removed: false, balance };
+                }
+                await CashuDevKitModule.removeMint(mintUrl);
+                return { report, removed: true, balance };
+            } catch (error) {
+                throw mapCDKError(error);
+            }
+        });
+        return outcome.ran ? outcome.result : null;
     }
 
     // ========================================================================

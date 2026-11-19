@@ -21,6 +21,8 @@ jest.mock('../zeus_modules/@lightninglabs/lnc-core', () => ({
     walletrpc: {}
 }));
 
+jest.mock('../utils/LocaleUtils');
+
 jest.mock('./LNC/credentialStore', () => {
     class MockCredentialStore {
         pairingPhrase = '';
@@ -32,7 +34,8 @@ jest.mock('./LNC/credentialStore', () => {
     return {
         __esModule: true,
         default: MockCredentialStore,
-        hash: (value: string) => `ns-${value}`
+        hash: (value: string) => `ns-${value}`,
+        rememberCredentials: jest.fn()
     };
 });
 
@@ -49,9 +52,12 @@ jest.mock('../zeus_modules/@lightninglabs/lnc-rn', () => {
         disposed = false;
         lnd = {
             lightning: {
-                getInfo: jest.fn(() => Promise.reject(new Error('gbn exited')))
+                getInfo: jest.fn(() => Promise.reject(new Error('gbn exited'))),
+                getTransactions: jest.fn()
             }
         };
+        // lnc-rn's subscribe returns the RPC method as event name
+        subscribe = jest.fn((method: string) => method);
         constructor(config: any) {
             this._namespace = config.namespace;
             this.credentials = config.credentialStore;
@@ -80,8 +86,13 @@ jest.mock('../zeus_modules/@lightninglabs/lnc-rn', () => {
     return { __esModule: true, default: MockLNC };
 });
 
+import { NativeEventEmitter, NativeModules } from 'react-native';
+
 import LightningNodeConnect from './LightningNodeConnect';
-import { settingsStore } from '../stores/Stores';
+import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
+import { isRequestNotSent } from '../utils/PaymentLookupUtils';
+import { nodeInfoStore, settingsStore } from '../stores/Stores';
+import { rememberCredentials } from './LNC/credentialStore';
 
 const mockSettings = settingsStore as any;
 
@@ -97,6 +108,7 @@ describe('LightningNodeConnect', () => {
     beforeEach(() => {
         mockInstances.length = 0;
         mockSettings.pairingPhrase = 'phrase-a';
+        mockSettings.implementation = 'lightning-node-connect';
         mockSettings.mailboxServer = 'mailbox.example.com:443';
         mockSettings.customMailboxServer = '';
     });
@@ -110,6 +122,13 @@ describe('LightningNodeConnect', () => {
 
             expect(a._namespace).toBe('ns-phrase-a');
             expect(b._namespace).toBe('ns-phrase-b');
+        });
+
+        it('allows credential writes for the wallet it opens', async () => {
+            const backend = new LightningNodeConnect();
+            await openWallet(backend, 'phrase-a');
+
+            expect(rememberCredentials).toHaveBeenCalledWith('phrase-a');
         });
 
         it('keeps a dial in progress instead of re-initializing', async () => {
@@ -203,6 +222,37 @@ describe('LightningNodeConnect', () => {
     });
 
     describe('isConnected', () => {
+        it.each(['phrase', 'mailbox', 'implementation'])(
+            'rejects a connected client after the selected %s changes',
+            async (changed) => {
+                const backend = new LightningNodeConnect();
+                const lnc = await openWallet(backend, 'phrase-a');
+                lnc.connected = true;
+                if (changed === 'phrase')
+                    mockSettings.pairingPhrase = 'phrase-b';
+                if (changed === 'mailbox')
+                    mockSettings.mailboxServer = 'other:443';
+                if (changed === 'implementation')
+                    mockSettings.implementation = 'lnd';
+
+                expect(await backend.isConnected()).toBe(false);
+                await expect(backend.getMyNodeInfo()).rejects.toThrow(
+                    'stores.SettingsStore.lncConnectError'
+                );
+                expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
+            }
+        );
+
+        it('tags the error for a send without a session as not sent', async () => {
+            const backend = new LightningNodeConnect();
+            const error = await backend
+                .sendCoins({ addr: 'bc1q', amount: '1000' } as any)
+                .catch((e: any) => e);
+
+            expect(error.message).toBe('stores.SettingsStore.lncConnectError');
+            expect(isRequestNotSent(error)).toBe(true);
+        });
+
         it('is false without a client', async () => {
             expect(await new LightningNodeConnect().isConnected()).toBe(false);
         });
@@ -221,6 +271,21 @@ describe('LightningNodeConnect', () => {
 
             expect(await backend.isConnected()).toBe(true);
         });
+
+        it.each([true, false])(
+            'rechecks ownership after a status probe (rejects: %s)',
+            async (rejects) => {
+                const backend = new LightningNodeConnect();
+                const lnc = await openWallet(backend, 'phrase-a');
+                lnc.connected = true;
+                lnc.status.mockImplementation(async () => {
+                    mockSettings.pairingPhrase = 'phrase-b';
+                    if (rejects) throw new Error('bridge error');
+                    return 'Connected';
+                });
+                expect(await backend.isConnected()).toBe(false);
+            }
+        );
 
         it('is false when the mailbox session has died', async () => {
             // native IsConnected is lndConn != nil and stays true after the
@@ -300,5 +365,1487 @@ describe('LightningNodeConnect', () => {
             expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
             expect(lnc.connect).toHaveBeenCalledTimes(1);
         });
+    });
+
+    describe('closeChannel', () => {
+        const EVENT = 'lnrpc.Lightning.CloseChannel';
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+
+        // the request id the backend passed for its nth close
+        const requestIdOf = (n = -1) => lnc.subscribe.mock.calls.at(n)[2];
+
+        // the native module reports every update as a JSON string, and
+        // errors as plain text, tagged with the stream's request id
+        const emit = (
+            result: string,
+            request_id: string | null = requestIdOf()
+        ) =>
+            listeners
+                .filter((l) => l.name === EVENT && !l.removed)
+                .forEach((l) =>
+                    l.handler(
+                        request_id === null
+                            ? { result }
+                            : { result, request_id }
+                    )
+                );
+        const listening = () =>
+            listeners.some((l) => l.name === EVENT && !l.removed);
+
+        // Tracks the close without awaiting it, so tests can check that it
+        // is still waiting
+        const track = (close: Promise<any>) => {
+            const state: { settled: boolean; error?: any } = {
+                settled: false
+            };
+            close.then(
+                () => (state.settled = true),
+                (error) => {
+                    state.settled = true;
+                    state.error = error;
+                }
+            );
+            return state;
+        };
+        const flush = () => jest.advanceTimersByTimeAsync(0);
+
+        let backend: LightningNodeConnect;
+        let lnc: any;
+
+        beforeEach(async () => {
+            listeners = [];
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+            jest.restoreAllMocks();
+        });
+
+        it('resolves once the stream reports close_pending', async () => {
+            const close = track(backend.closeChannel(['txid', '1', '']));
+
+            emit(JSON.stringify({ close_pending: { txid: 'closing-txid' } }));
+            await flush();
+
+            expect(close.settled).toBe(true);
+            expect(close.error).toBeUndefined();
+            expect(listening()).toBe(false);
+        });
+
+        it('rejects with the error text the stream reports', async () => {
+            const close = track(backend.closeChannel(['txid', '1', '']));
+
+            emit(
+                'rpc error: code = Unknown desc = unable to gracefully close channel while peer is offline'
+            );
+            await flush();
+
+            expect(close.error?.message).toContain(
+                'unable to gracefully close channel while peer is offline'
+            );
+            expect(listening()).toBe(false);
+        });
+
+        it('keeps waiting on EOF and on chan_close from an earlier close', async () => {
+            const close = track(backend.closeChannel(['txid', '1', '']));
+
+            emit('EOF');
+            emit(
+                JSON.stringify({
+                    chan_close: { closing_txid: 'earlier-close', success: true }
+                })
+            );
+            await flush();
+
+            expect(close.settled).toBe(false);
+            expect(listening()).toBe(true);
+        });
+
+        it("ignores another close's updates and errors", async () => {
+            const first = track(backend.closeChannel(['txid', '1', '']));
+            const firstId = requestIdOf();
+            const second = track(backend.closeChannel(['txid', '2', '']));
+            const secondId = requestIdOf();
+            expect(secondId).not.toEqual(firstId);
+
+            emit('rpc error: code = Unknown desc = peer offline', secondId);
+            await flush();
+
+            expect(second.error?.message).toContain('peer offline');
+            expect(first.settled).toBe(false);
+
+            // untagged events come from streams started without an id
+            emit(JSON.stringify({ close_pending: { txid: 'other' } }), null);
+            await flush();
+            expect(first.settled).toBe(false);
+
+            emit(JSON.stringify({ close_pending: { txid: 'first' } }), firstId);
+            await flush();
+            expect(first.settled).toBe(true);
+            expect(first.error).toBeUndefined();
+        });
+
+        it('resolves after a minute without a reply', async () => {
+            const close = track(backend.closeChannel(['txid', '1', '']));
+
+            await jest.advanceTimersByTimeAsync(59_999);
+            expect(close.settled).toBe(false);
+
+            await jest.advanceTimersByTimeAsync(1);
+            expect(close.settled).toBe(true);
+            expect(close.error).toBeUndefined();
+            expect(listening()).toBe(false);
+        });
+
+        it('passes the fee rate and delivery address for a cooperative close', async () => {
+            track(backend.closeChannel(['txid', '1', '', '10', 'bcrt1qdest']));
+
+            expect(lnc.subscribe).toHaveBeenCalledWith(
+                EVENT,
+                {
+                    channel_point: {
+                        funding_txid_str: 'txid',
+                        output_index: 1
+                    },
+                    force: '',
+                    sat_per_vbyte: 10,
+                    delivery_address: 'bcrt1qdest'
+                },
+                expect.any(String)
+            );
+        });
+
+        it('drops the fee rate for a force close', async () => {
+            track(backend.closeChannel(['txid', '1', 'true', '10']));
+
+            expect(lnc.subscribe).toHaveBeenCalledWith(
+                EVENT,
+                {
+                    channel_point: {
+                        funding_txid_str: 'txid',
+                        output_index: 1
+                    },
+                    force: 'true'
+                },
+                expect.any(String)
+            );
+        });
+    });
+
+    describe('openChannelStream', () => {
+        const EVENT = 'lnrpc.Lightning.OpenChannel';
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+
+        const requestIdOf = (n = -1) => lnc.subscribe.mock.calls.at(n)[2];
+        const emit = (result: string, request_id: string) =>
+            listeners
+                .filter((l) => l.name === EVENT && !l.removed)
+                .forEach((l) => l.handler({ result, request_id }));
+        const psbtFund = (funding_address: string) =>
+            JSON.stringify({
+                psbt_fund: { funding_address, funding_amount: '100000' }
+            });
+
+        const track = (open: Promise<any>) => {
+            const state: { settled: boolean; result?: any; error?: any } = {
+                settled: false
+            };
+            open.then(
+                (result) => {
+                    state.settled = true;
+                    state.result = result;
+                },
+                (error) => {
+                    state.settled = true;
+                    state.error = error;
+                }
+            );
+            return state;
+        };
+        const flush = () => jest.advanceTimersByTimeAsync(0);
+        const openRequest = (node_pubkey_string: string) =>
+            ({
+                node_pubkey_string,
+                local_funding_amount: '100000',
+                funding_shim: { psbt_shim: { base_psbt: '' } }
+            } as any);
+
+        let backend: LightningNodeConnect;
+        let lnc: any;
+
+        beforeEach(async () => {
+            listeners = [];
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+            jest.restoreAllMocks();
+        });
+
+        // A batch open of 3+ channels runs the later opens concurrently.
+        // Each open must remove only its own listener, or the other open
+        // never sees its psbt_fund.
+        it('settles concurrent opens with their own psbt_fund', async () => {
+            const first = track(
+                backend.openChannelStream(openRequest('02' + 'aa'.repeat(32)))
+            );
+            const firstId = requestIdOf();
+            const second = track(
+                backend.openChannelStream(openRequest('02' + 'bb'.repeat(32)))
+            );
+            const secondId = requestIdOf();
+            expect(secondId).not.toEqual(firstId);
+
+            emit(psbtFund('first-address'), firstId);
+            await flush();
+            expect(first.result?.result.psbt_fund.funding_address).toBe(
+                'first-address'
+            );
+            expect(second.settled).toBe(false);
+
+            emit(psbtFund('second-address'), secondId);
+            await flush();
+            expect(second.result?.result.psbt_fund.funding_address).toBe(
+                'second-address'
+            );
+            expect(listeners.some((l) => l.name === EVENT && !l.removed)).toBe(
+                false
+            );
+        });
+
+        it('sends the close address, as openChannelSync does', () => {
+            backend.openChannelStream({
+                node_pubkey_string: '02ab',
+                local_funding_amount: '500000',
+                close_address: 'bc1qclose',
+                funding_shim: { psbt_shim: { pending_chan_id: 'id' } }
+            } as any);
+
+            expect(lnc.subscribe).toHaveBeenCalledWith(
+                EVENT,
+                expect.objectContaining({ close_address: 'bc1qclose' }),
+                expect.any(String)
+            );
+        });
+    });
+
+    describe('payLightningInvoice', () => {
+        const EVENT = 'routerrpc.Router.SendPaymentV2';
+        const HASH_A = 'aa'.repeat(32);
+        const HASH_B = 'bb'.repeat(32);
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+
+        const requestIdOf = (n = -1) => lnc.subscribe.mock.calls.at(n)[2];
+        // null sends an untagged event, as from a stream started without an id
+        const emit = (result: string, request_id: string | null) =>
+            listeners
+                .filter((l) => l.name === EVENT && !l.removed)
+                .forEach((l) =>
+                    l.handler(
+                        request_id === null
+                            ? { result }
+                            : { result, request_id }
+                    )
+                );
+
+        const track = (payment: Promise<any>) => {
+            const state: { settled: boolean; result?: any; error?: any } = {
+                settled: false
+            };
+            payment.then(
+                (result) => {
+                    state.settled = true;
+                    state.result = result;
+                },
+                (error) => {
+                    state.settled = true;
+                    state.error = error;
+                }
+            );
+            return state;
+        };
+        const flush = () => jest.advanceTimersByTimeAsync(0);
+
+        let backend: LightningNodeConnect;
+        let lnc: any;
+
+        beforeEach(async () => {
+            listeners = [];
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+            jest.restoreAllMocks();
+        });
+
+        it('starts the stream with a request id', () => {
+            track(backend.payLightningInvoice({ payment_hash: HASH_A }));
+
+            expect(lnc.subscribe).toHaveBeenCalledWith(
+                EVENT,
+                { payment_hash: HASH_A, allow_self_payment: true },
+                expect.any(String)
+            );
+        });
+
+        it("does not reject on another payment's stream error", async () => {
+            const a = track(
+                backend.payLightningInvoice({ payment_hash: HASH_A })
+            );
+            const aId = requestIdOf();
+            const b = track(
+                backend.payLightningInvoice({ payment_hash: HASH_B })
+            );
+            const bId = requestIdOf();
+
+            emit('rpc error: code = Unknown desc = no route', bId);
+            await flush();
+
+            expect(b.error?.message).toContain('no route');
+            expect(a.settled).toBe(false);
+
+            emit(
+                JSON.stringify({ status: 'SUCCEEDED', payment_hash: HASH_A }),
+                aId
+            );
+            await flush();
+
+            expect(a.result).toEqual({
+                status: 'SUCCEEDED',
+                payment_hash: HASH_A
+            });
+        });
+
+        it('ignores untagged events', async () => {
+            const a = track(
+                backend.payLightningInvoice({ payment_hash: HASH_A })
+            );
+
+            emit('rpc error: code = Unknown desc = no route', null);
+            emit(
+                JSON.stringify({ status: 'FAILED', payment_hash: HASH_A }),
+                null
+            );
+            await flush();
+
+            expect(a.settled).toBe(false);
+        });
+
+        it('resolves an outcome-unknown result when the stream goes quiet', async () => {
+            let result: any;
+            backend
+                .payLightningInvoice({
+                    payment_hash: 'ab'.repeat(32),
+                    timeout_seconds: 60
+                })
+                .then((r: any) => (result = r));
+
+            await jest.advanceTimersByTimeAsync(119_999);
+            expect(result).toBeUndefined();
+
+            await jest.advanceTimersByTimeAsync(1);
+            // without payment_timed_out the store reports a failure and
+            // releases the send guard while the payment may still settle
+            expect(result.payment_timed_out).toBe(true);
+            // the stream is never cancelled, so the request can still reach
+            // the node: no deadline after which a missing record is proof
+            expect(result).not.toHaveProperty('dispatch_deadline_ms');
+        });
+    });
+
+    describe('lookupPayment', () => {
+        const EVENT = 'routerrpc.Router.TrackPaymentV2';
+        const HASH = 'ab'.repeat(32);
+        const NOT_FOUND =
+            "rpc error: code = NotFound desc = payment isn't initiated";
+        let backend: LightningNodeConnect;
+        let lnc: any;
+        let emit: (result: string, request_id?: string) => void;
+
+        const trackCalls = () =>
+            lnc.subscribe.mock.calls.filter(
+                ([method]: [string]) => method === EVENT
+            );
+        // the request id the latest track stream was started with
+        const trackRequestId = () => trackCalls().at(-1)[2];
+
+        const paymentEvent = (status: string) =>
+            JSON.stringify({ payment_hash: HASH, status });
+
+        beforeEach(async () => {
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            const listeners: Array<(event: any) => void> = [];
+            emit = (result, request_id) =>
+                listeners.forEach((cb) => cb({ result, request_id }));
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((_name: string, cb: any) => {
+                listeners.push(cb);
+                return {
+                    remove: () => listeners.splice(listeners.indexOf(cb), 1)
+                } as any;
+            });
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.lightning.listPayments = jest.fn();
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+            jest.useRealTimers();
+        });
+
+        it('shares one stream between lookups of a held payment', async () => {
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            emit(paymentEvent('IN_FLIGHT'));
+            await expect(first).resolves.toMatchObject({
+                status: 'IN_FLIGHT'
+            });
+
+            await expect(
+                backend.lookupPayment({ payment_hash: HASH })
+            ).resolves.toMatchObject({ status: 'IN_FLIGHT' });
+            expect(trackCalls()).toHaveLength(1);
+            expect(lnc.lnd.lightning.listPayments).not.toHaveBeenCalled();
+        });
+
+        it('starts the stream with the hash and a request id', async () => {
+            const lookup = backend.lookupPayment({ payment_hash: HASH });
+
+            expect(lnc.subscribe).toHaveBeenCalledWith(
+                EVENT,
+                {
+                    payment_hash: Buffer.from(HASH, 'hex').toString('base64'),
+                    no_inflight_updates: false
+                },
+                expect.any(String)
+            );
+            emit(paymentEvent('SUCCEEDED'), trackRequestId());
+            await lookup;
+        });
+
+        it("answers a held payment's lookup despite another stream's NOT_FOUND", async () => {
+            const held = backend.lookupPayment({ payment_hash: HASH });
+            const heldId = trackRequestId();
+            lnc.lnd.lightning.listPayments.mockResolvedValue({ payments: [] });
+            const unknown = backend.lookupPayment({
+                payment_hash: 'cd'.repeat(32)
+            });
+            expect(trackRequestId()).not.toEqual(heldId);
+
+            emit(NOT_FOUND, trackRequestId());
+            await expect(unknown).resolves.toBeNull();
+
+            emit(paymentEvent('IN_FLIGHT'));
+            await expect(held).resolves.toMatchObject({
+                status: 'IN_FLIGHT'
+            });
+            // only the unknown hash fell back to the scan
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledTimes(1);
+        });
+
+        it('rejects when the scan confirming a NOT_FOUND fails', async () => {
+            // a failed scan must not read as no record
+            lnc.lnd.lightning.listPayments.mockRejectedValue(
+                new Error('rpc error')
+            );
+            const lookup = backend.lookupPayment({ payment_hash: HASH });
+            emit(NOT_FOUND, trackRequestId());
+            await expect(lookup).rejects.toThrow('rpc error');
+        });
+
+        it('answers null when NOT_FOUND and the scan agrees', async () => {
+            lnc.lnd.lightning.listPayments.mockResolvedValue({ payments: [] });
+            const lookup = backend.lookupPayment({ payment_hash: HASH });
+            emit(NOT_FOUND, trackRequestId());
+            await expect(lookup).resolves.toBeNull();
+        });
+
+        it('scans once when NOT_FOUND meets a full page that missed', async () => {
+            lnc.lnd.lightning.listPayments
+                .mockResolvedValueOnce({
+                    payments: Array.from({ length: 50 }, (_, i) => ({
+                        payment_hash: i.toString(16).padStart(64, '0')
+                    }))
+                })
+                .mockResolvedValue({ payments: [] });
+            const lookup = backend.lookupPayment({
+                payment_hash: HASH,
+                creation_date_start: 1700000000
+            });
+            emit(NOT_FOUND, trackRequestId());
+            await expect(lookup).rejects.toMatchObject({
+                name: 'PaymentLookupInconclusive'
+            });
+            // the bounded page and the newest page, once each
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledTimes(2);
+        });
+
+        it('ends a stream on its EOF, so the next lookup reopens', async () => {
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            const firstId = trackRequestId();
+            emit(paymentEvent('IN_FLIGHT'), firstId);
+            await first;
+
+            // closed without a terminal update: its in-flight state is stale
+            emit('EOF', firstId);
+            const next = backend.lookupPayment({ payment_hash: HASH });
+            expect(trackCalls()).toHaveLength(2);
+            emit(paymentEvent('SUCCEEDED'), trackRequestId());
+            await expect(next).resolves.toMatchObject({
+                status: 'SUCCEEDED'
+            });
+            expect(lnc.lnd.lightning.listPayments).not.toHaveBeenCalled();
+        });
+
+        it('settles a lookup waiting on a stream that sends EOF by the scan', async () => {
+            lnc.lnd.lightning.listPayments.mockResolvedValue({ payments: [] });
+            const lookup = backend.lookupPayment({ payment_hash: HASH });
+            emit('EOF', trackRequestId());
+            await expect(lookup).resolves.toBeNull();
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledTimes(1);
+        });
+
+        it('ends a stream taken back by an update on its own EOF', async () => {
+            jest.useFakeTimers();
+            const OTHER_HASH = 'cd'.repeat(32);
+            lnc.lnd.lightning.listPayments.mockResolvedValue({ payments: [] });
+            // another held payment keeps the shared listener attached, so
+            // events still arrive once this hash's streams are all forgotten
+            const other = backend.lookupPayment({ payment_hash: OTHER_HASH });
+            emit(
+                JSON.stringify({
+                    payment_hash: OTHER_HASH,
+                    status: 'IN_FLIGHT'
+                }),
+                trackRequestId()
+            );
+            await other;
+
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            const firstId = trackRequestId();
+            emit(paymentEvent('IN_FLIGHT'), firstId);
+            await first;
+
+            // past the max age a lookup replaces the stream, and the
+            // replacement fails, so the registry forgets the hash
+            jest.advanceTimersByTime(60000);
+            const replacement = backend.lookupPayment({ payment_hash: HASH });
+            expect(trackCalls()).toHaveLength(3);
+            emit(
+                'rpc error: code = Unavailable desc = reset',
+                trackRequestId()
+            );
+            await replacement;
+
+            // the first stream is still open: its update takes it back
+            emit(paymentEvent('IN_FLIGHT'), firstId);
+            await expect(
+                backend.lookupPayment({ payment_hash: HASH })
+            ).resolves.toMatchObject({ status: 'IN_FLIGHT' });
+            expect(trackCalls()).toHaveLength(3);
+
+            // its EOF names it, so it ends and the next lookup reopens
+            emit('EOF', firstId);
+            const next = backend.lookupPayment({ payment_hash: HASH });
+            expect(trackCalls()).toHaveLength(4);
+            emit(paymentEvent('SUCCEEDED'), trackRequestId());
+            await expect(next).resolves.toMatchObject({
+                status: 'SUCCEEDED'
+            });
+        });
+
+        it('opens a new stream after disconnecting', async () => {
+            const first = backend.lookupPayment({ payment_hash: HASH });
+            emit(paymentEvent('IN_FLIGHT'));
+            await first;
+
+            await backend.disconnect();
+            lnc.connected = true;
+            const next = backend.lookupPayment({ payment_hash: HASH });
+            expect(trackCalls()).toHaveLength(2);
+            emit(paymentEvent('SUCCEEDED'));
+            await expect(next).resolves.toMatchObject({
+                status: 'SUCCEEDED'
+            });
+        });
+    });
+
+    describe('getPayments', () => {
+        it('passes creation_date_start through to ListPayments', async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.lightning.listPayments = jest.fn(async () => ({
+                payments: []
+            }));
+            // no track stream, so the lookup goes straight to the scan
+            lnc.subscribe.mockImplementation(() => {
+                throw new Error('not connected');
+            });
+
+            await backend.lookupPayment({
+                payment_hash: 'ab'.repeat(32),
+                creation_date_start: 1700000000
+            });
+
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledWith({
+                include_incomplete: true,
+                max_payments: 50,
+                reversed: false,
+                creation_date_start: 1700000000
+            });
+        });
+
+        it('omits creation_date_start without a bound', async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.lightning.listPayments = jest.fn(async () => ({
+                payments: []
+            }));
+            // no track stream, so the lookup goes straight to the scan
+            lnc.subscribe.mockImplementation(() => {
+                throw new Error('not connected');
+            });
+
+            await backend.lookupPayment({ payment_hash: 'ab'.repeat(32) });
+
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledWith({
+                include_incomplete: true,
+                max_payments: 50,
+                reversed: true
+            });
+        });
+
+        // the mocked Stores leave nodeInfo as {}, i.e. no version, which is
+        // what NodeInfoStore holds after a failed getNodeInfo. lnd drops
+        // unknown protobuf fields, so the bound is sent regardless.
+        it('keeps the lookupPayment scan bounded without a node version', async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.lightning.listPayments = jest.fn(async () => ({
+                payments: []
+            }));
+
+            // the track stream never answers, so the lookup falls back to
+            // the scan once it times out
+            jest.useFakeTimers();
+            try {
+                const lookup = backend.lookupPayment({
+                    payment_hash: 'ab'.repeat(32),
+                    creation_date_start: 1700000000
+                });
+                await jest.advanceTimersByTimeAsync(10000);
+                await lookup;
+            } finally {
+                jest.useRealTimers();
+            }
+
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenNthCalledWith(1, {
+                include_incomplete: true,
+                max_payments: 50,
+                reversed: false,
+                creation_date_start: 1700000000
+            });
+        });
+    });
+
+    describe('getTransactions', () => {
+        // lnc-rn answers with camelCase fields, sorted by confirmations
+        const tx = (txHash: string, numConfirmations: number) => ({
+            txHash,
+            numConfirmations
+        });
+        const NEWEST = [tx('tx2', 1), tx('tx1', 2)];
+        const PENDING = [tx('pending0', 0)];
+
+        let lnc: any;
+        let backend: LightningNodeConnect;
+
+        beforeEach(async () => {
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.lightning.getTransactions.mockImplementation(
+                async (request: any) => ({
+                    transactions: request.endHeight === 1 ? NEWEST : PENDING
+                })
+            );
+        });
+
+        afterEach(() => {
+            nodeInfoStore.nodeInfo = {};
+        });
+
+        it('requests the newest mined page, then the unconfirmed ones when it is full', async () => {
+            const { transactions } = await backend.getTransactions({
+                max_transactions: 2
+            });
+
+            expect(
+                lnc.lnd.lightning.getTransactions.mock.calls.map(
+                    ([request]: any[]) => request
+                )
+            ).toEqual([
+                { startHeight: -1, endHeight: 1, maxTransactions: 2 },
+                { startHeight: -1, endHeight: -1, maxTransactions: 0 }
+            ]);
+            // oldest first: TransactionsStore reverses it again
+            expect(transactions.map((t: any) => t.tx_hash)).toEqual([
+                'tx2',
+                'pending0'
+            ]);
+        });
+
+        it('makes one request with the default limit when the page is short', async () => {
+            const { transactions } = await backend.getTransactions();
+
+            expect(lnc.lnd.lightning.getTransactions).toHaveBeenCalledTimes(1);
+            expect(lnc.lnd.lightning.getTransactions).toHaveBeenCalledWith({
+                startHeight: -1,
+                endHeight: 1,
+                maxTransactions: 500
+            });
+            expect(transactions.map((t: any) => t.tx_hash)).toEqual([
+                'tx1',
+                'tx2'
+            ]);
+        });
+
+        it('reads the recent blocks forwards, then older ones backwards, when the newest page has no mined ones', async () => {
+            // lnd on a SQL database answers a backwards range from -1 with
+            // only the unconfirmed transactions
+            lnc.lnd.lightning.getInfo.mockResolvedValue({
+                blockHeight: 900_000
+            });
+            lnc.lnd.lightning.getTransactions.mockImplementation(
+                async (request: any) => ({
+                    transactions:
+                        request.startHeight === -1
+                            ? PENDING
+                            : request.maxTransactions === 1
+                            ? [tx('tx1', 5000)]
+                            : request.endHeight === -1
+                            ? [...PENDING, tx('tx2', 1)]
+                            : [tx('tx1', 5000)]
+                })
+            );
+
+            const { transactions } = await backend.getTransactions();
+
+            expect(
+                lnc.lnd.lightning.getTransactions.mock.calls.map(
+                    ([request]: any[]) => request
+                )
+            ).toEqual([
+                { startHeight: -1, endHeight: 1, maxTransactions: 500 },
+                { startHeight: 0, endHeight: -1, maxTransactions: 1 },
+                { startHeight: 895_969, endHeight: -1, maxTransactions: 0 },
+                { startHeight: 895_968, endHeight: 1, maxTransactions: 198 }
+            ]);
+            expect(transactions.map((t: any) => t.tx_hash)).toEqual([
+                'tx1',
+                'tx2',
+                'pending0'
+            ]);
+        });
+
+        it('uses the block height NodeInfoStore already holds', async () => {
+            nodeInfoStore.nodeInfo = { currentBlockHeight: 900_000 };
+            lnc.lnd.lightning.getTransactions.mockImplementation(
+                async (request: any) => ({
+                    transactions:
+                        request.startHeight === -1 ? PENDING : [tx('tx1', 5000)]
+                })
+            );
+
+            await backend.getTransactions();
+
+            expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
+            expect(lnc.lnd.lightning.getTransactions).toHaveBeenCalledWith({
+                startHeight: 895_969,
+                endHeight: -1,
+                maxTransactions: 0
+            });
+        });
+
+        it('makes two requests for a wallet with no mined transactions', async () => {
+            lnc.lnd.lightning.getTransactions.mockResolvedValue({
+                transactions: PENDING
+            });
+
+            const { transactions } = await backend.getTransactions();
+
+            expect(
+                lnc.lnd.lightning.getTransactions.mock.calls.map(
+                    ([request]: any[]) => request
+                )
+            ).toEqual([
+                { startHeight: -1, endHeight: 1, maxTransactions: 500 },
+                { startHeight: 0, endHeight: -1, maxTransactions: 1 }
+            ]);
+            expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
+            expect(transactions.map((t: any) => t.tx_hash)).toEqual([
+                'pending0'
+            ]);
+        });
+
+        it('makes one uncapped request when max_transactions is 0', async () => {
+            await backend.getTransactions({ max_transactions: 0 });
+
+            expect(lnc.lnd.lightning.getTransactions).toHaveBeenCalledTimes(1);
+            expect(lnc.lnd.lightning.getTransactions).toHaveBeenCalledWith({
+                startHeight: -1,
+                endHeight: 1,
+                maxTransactions: 0
+            });
+        });
+
+        it('passes an explicit range through as one request', async () => {
+            await backend.getTransactions({ start_height: 100 });
+            await backend.getTransactions({
+                start_height: 100,
+                end_height: 200,
+                max_transactions: 0
+            });
+
+            expect(
+                lnc.lnd.lightning.getTransactions.mock.calls.map(
+                    ([request]: any[]) => request
+                )
+            ).toEqual([
+                {
+                    startHeight: 100,
+                    endHeight: undefined,
+                    maxTransactions: 500
+                },
+                { startHeight: 100, endHeight: 200, maxTransactions: 0 }
+            ]);
+        });
+
+        it('returns an empty list when lnd omits transactions', async () => {
+            lnc.lnd.lightning.getTransactions.mockResolvedValue({});
+
+            const { transactions } = await backend.getTransactions();
+
+            expect(transactions).toEqual([]);
+        });
+    });
+
+    // Native LNC streams cannot be cancelled and every stream of a method
+    // emits under the method name. A stream per Activity or Receive visit
+    // stayed open for the whole session, and each one's events reached
+    // every listener, so updates ran once per earlier visit.
+    describe('shared subscriptions', () => {
+        const TRANSACTIONS = 'lnrpc.Lightning.SubscribeTransactions';
+        const INVOICES = 'lnrpc.Lightning.SubscribeInvoices';
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+
+        // the streams of a method started on a client, as subscribe() calls
+        const started = (client: any, method: string) =>
+            client.subscribe.mock.calls.filter(
+                ([name]: [string]) => name === method
+            );
+        // the request id of the newest stream of a method on a client
+        const idOf = (client: any, method: string) =>
+            started(client, method).at(-1)[2];
+
+        // one native event, delivered to every live JS listener of the
+        // name and tagged with the request id of the stream it came from
+        const emit = (
+            name: string,
+            result: string,
+            request_id: string = idOf(lnc, name)
+        ) =>
+            listeners
+                .filter((l) => l.name === name && !l.removed)
+                .forEach((l) => l.handler({ result, request_id }));
+
+        const tx = (address: string) =>
+            JSON.stringify({
+                dest_addresses: [address],
+                num_confirmations: 0,
+                amount: '1000',
+                tx_hash: 'txid'
+            });
+
+        let backend: LightningNodeConnect;
+        let lnc: any;
+
+        beforeEach(async () => {
+            listeners = [];
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('starts each stream once for repeated Activity visits', () => {
+            const watchers = [1, 2, 3].map(() => ({
+                onTransaction: jest.fn(),
+                onInvoice: jest.fn()
+            }));
+            watchers.forEach(({ onTransaction, onInvoice }) =>
+                backend.watchActivityUpdates(onTransaction, onInvoice)
+            );
+
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
+            expect(started(lnc, INVOICES)).toHaveLength(1);
+
+            emit(TRANSACTIONS, tx('bc1qa'));
+            emit(INVOICES, JSON.stringify({ settled: true }));
+
+            watchers.forEach(({ onTransaction, onInvoice }) => {
+                expect(onTransaction).toHaveBeenCalledTimes(1);
+                expect(onInvoice).toHaveBeenCalledTimes(1);
+            });
+        });
+
+        it('stops calling a watcher after it unsubscribes', () => {
+            const left = jest.fn();
+            const stayed = jest.fn();
+            const unsubscribe = backend.watchActivityUpdates(left, jest.fn());
+            backend.watchActivityUpdates(stayed, jest.fn());
+
+            unsubscribe();
+            emit(TRANSACTIONS, tx('bc1qa'));
+
+            expect(left).not.toHaveBeenCalled();
+            expect(stayed).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps the stream for the next visit after every watcher left', () => {
+            backend.watchActivityUpdates(jest.fn(), jest.fn())();
+            const onTransaction = jest.fn();
+            backend.watchActivityUpdates(onTransaction, jest.fn());
+
+            emit(TRANSACTIONS, tx('bc1qa'));
+
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
+            expect(onTransaction).toHaveBeenCalledTimes(1);
+        });
+
+        it('reuses the transactions stream for on-chain receive watchers', () => {
+            const onTransaction = jest.fn();
+            const onReceivedA = jest.fn();
+            const onReceivedB = jest.fn();
+            backend.watchActivityUpdates(onTransaction, jest.fn());
+            backend.watchOnchainReceived(
+                { address: 'bc1qa', numConfPreference: 0 },
+                onReceivedA
+            );
+            backend.watchOnchainReceived(
+                { address: 'bc1qb', numConfPreference: 0 },
+                onReceivedB
+            );
+
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
+
+            emit(TRANSACTIONS, tx('bc1qa'));
+            emit(TRANSACTIONS, tx('bc1qa'));
+
+            expect(onReceivedA).toHaveBeenCalledTimes(1);
+            expect(onReceivedA).toHaveBeenCalledWith({
+                amountSat: 1000,
+                txid: 'txid'
+            });
+            expect(onReceivedB).not.toHaveBeenCalled();
+            expect(onTransaction).toHaveBeenCalledTimes(2);
+        });
+
+        it('starts a new stream once the previous one ended', () => {
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+
+            emit(TRANSACTIONS, 'rpc error: code = Unavailable desc = gone');
+            emit(INVOICES, 'EOF');
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(2);
+            expect(started(lnc, INVOICES)).toHaveLength(2);
+        });
+
+        it('starts fresh streams on a new LNC client', async () => {
+            const first = jest.fn();
+            backend.watchActivityUpdates(first, jest.fn());
+
+            const next = await openWallet(backend, 'phrase-b');
+            const second = jest.fn();
+            backend.watchActivityUpdates(second, jest.fn());
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+
+            expect(next).not.toBe(lnc);
+            expect(started(lnc, TRANSACTIONS)).toHaveLength(1);
+            expect(started(next, TRANSACTIONS)).toHaveLength(1);
+            expect(started(next, INVOICES)).toHaveLength(1);
+
+            emit(TRANSACTIONS, tx('bc1qa'), idOf(next, TRANSACTIONS));
+
+            expect(second).toHaveBeenCalledTimes(1);
+        });
+
+        it('ignores a late end from the previous client stream', async () => {
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+            const next = await openWallet(backend, 'phrase-b');
+            backend.watchActivityUpdates(jest.fn(), jest.fn());
+
+            // the old client's stream closes after the new one started
+            emit(
+                TRANSACTIONS,
+                'rpc error: code = Canceled desc = grpc: the client connection is closing'
+            );
+            const onTransaction = jest.fn();
+            backend.watchActivityUpdates(onTransaction, jest.fn());
+
+            expect(started(next, TRANSACTIONS)).toHaveLength(1);
+
+            // and its last updates do not reach the new wallet's watchers
+            emit(TRANSACTIONS, tx('bc1qa'));
+            expect(onTransaction).not.toHaveBeenCalled();
+            emit(TRANSACTIONS, tx('bc1qa'), idOf(next, TRANSACTIONS));
+            expect(onTransaction).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('watchInvoicePaid', () => {
+        const EVENT = 'invoicesrpc.Invoices.SubscribeSingleInvoice';
+        // contains both characters that differ between base64 and base64url
+        const WATCHED = Buffer.from('fb'.repeat(16) + 'ff'.repeat(16), 'hex');
+        const EARLIER = Buffer.from('aa'.repeat(32), 'hex');
+
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+        const emit = (event: any) =>
+            listeners
+                .filter((l) => l.name === EVENT && !l.removed)
+                .forEach((l) => l.handler(event));
+        const listenerCount = () =>
+            listeners.filter((l) => l.name === EVENT && !l.removed).length;
+        const update = (hash: Buffer, fields: any) => ({
+            result: JSON.stringify({
+                r_hash: hash.toString('base64'),
+                ...fields
+            })
+        });
+
+        const watch = async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.invoices = { subscribeSingleInvoice: jest.fn(() => EVENT) };
+            const onPaid = jest.fn();
+            const stop = backend.watchInvoicePaid(
+                {
+                    rHash: WATCHED.toString('base64')
+                        .replace(/\+/g, '-')
+                        .replace(/\//g, '_')
+                },
+                onPaid
+            );
+            return { onPaid, stop };
+        };
+
+        beforeEach(() => {
+            listeners = [];
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
+            jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('reports the settlement of the watched invoice', async () => {
+            const { onPaid } = await watch();
+
+            emit(update(WATCHED, { settled: false }));
+            expect(onPaid).not.toHaveBeenCalled();
+
+            emit(
+                update(WATCHED, {
+                    settled: true,
+                    amt_paid_sat: '300000',
+                    payment_request: 'lnbc3m1watched',
+                    r_preimage: 'cHJlaW1hZ2U='
+                })
+            );
+
+            expect(onPaid).toHaveBeenCalledTimes(1);
+            expect(onPaid).toHaveBeenCalledWith({
+                amountSat: 300000,
+                tx: 'lnbc3m1watched',
+                preimage: 'cHJlaW1hZ2U='
+            });
+            expect(listenerCount()).toBe(0);
+        });
+
+        it('skips the settlement of an invoice watched earlier', async () => {
+            const { onPaid } = await watch();
+
+            emit(
+                update(EARLIER, {
+                    settled: true,
+                    amt_paid_sat: '100',
+                    payment_request: 'lnbc1u1earlier'
+                })
+            );
+            emit({
+                result: JSON.stringify({ settled: true, amt_paid_sat: '100' })
+            });
+
+            expect(onPaid).not.toHaveBeenCalled();
+            expect(listenerCount()).toBe(1);
+            // an update without r_hash is skipped, not left to throw
+            expect(console.warn).not.toHaveBeenCalled();
+        });
+
+        it('keeps watching, without a warning, when an earlier invoice is cancelled or expires', async () => {
+            const { onPaid } = await watch();
+
+            // lnd ends the stream of a cancelled or expired invoice with its
+            // CANCELED update and then EOF, not with a Canceled error
+            emit(update(EARLIER, { settled: false, state: 'CANCELED' }));
+            emit({ result: 'EOF' });
+
+            expect(listenerCount()).toBe(1);
+            expect(console.warn).not.toHaveBeenCalled();
+
+            emit(update(WATCHED, { settled: true, amt_paid_sat: '300000' }));
+            expect(onPaid).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps watching when the stream of an earlier invoice ends', async () => {
+            const errorSpy = jest.spyOn(console, 'error');
+            const { onPaid } = await watch();
+
+            emit({ result: 'EOF' });
+            emit({
+                result: 'rpc error: code = Unknown desc = there are no existing invoices'
+            });
+            emit(update(WATCHED, { settled: true, amt_paid_sat: '300000' }));
+
+            expect(onPaid).toHaveBeenCalledTimes(1);
+            // expected and handled, so no LogBox error in dev builds
+            expect(errorSpy).not.toHaveBeenCalled();
+            expect(console.warn).toHaveBeenCalledWith(
+                'SubscribeSingleInvoice:',
+                'rpc error: code = Unknown desc = there are no existing invoices'
+            );
+        });
+
+        it('stops when the session is closed or the caller unsubscribes', async () => {
+            await watch();
+            emit({
+                result: 'rpc error: code = Canceled desc = context canceled'
+            });
+            expect(listenerCount()).toBe(0);
+
+            const { stop } = await watch();
+            stop();
+            expect(listenerCount()).toBe(0);
+        });
+    });
+});
+
+describe('LightningNodeConnect on-chain sends', () => {
+    // RPCs read the selected session through the lnc getter, so open a
+    // wallet the normal way and stub sendCoins on its client
+    const makeBackend = async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        lnc.lnd.lightning.sendCoins = jest.fn(async () => ({ txid: 'abc' }));
+        return backend;
+    };
+
+    it('passes the send label to lnd', async () => {
+        const backend = await makeBackend();
+        await backend.sendCoins({
+            addr: 'bc1qrecipient',
+            amount: '100000',
+            label: 'ZEUS send 0011223344556677'
+        });
+
+        expect(backend.lnc.lnd.lightning.sendCoins).toHaveBeenCalledWith(
+            expect.objectContaining({
+                addr: 'bc1qrecipient',
+                label: 'ZEUS send 0011223344556677'
+            })
+        );
+    });
+});
+
+describe('LightningNodeConnect.abandonChannel', () => {
+    const abandonWith = async (params: Array<string | boolean | undefined>) => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        (lnc.lnd.lightning as any).abandonChannel = jest.fn(async () => ({}));
+
+        await backend.abandonChannel(params);
+
+        return (lnc.lnd.lightning as any).abandonChannel.mock.calls[0][0];
+    };
+
+    // as ChannelsStore abandons a PSBT channel lnd verified but never
+    // funded: lnd refuses pending_funding_shim_only for it
+    it('abandons a verified PSBT channel with iKnowWhatIAmDoing only', async () => {
+        expect(await abandonWith(['ab'.repeat(32), '2', false, true])).toEqual({
+            channelPoint: {
+                fundingTxidStr: 'ab'.repeat(32),
+                fundingTxidBytes: undefined,
+                outputIndex: 2
+            },
+            iKnowWhatIAmDoing: true
+        });
+    });
+
+    // as Developer Tools passes the flags the user ticked
+    it('sends pendingFundingShimOnly when asked for it', async () => {
+        expect(
+            await abandonWith(['ab'.repeat(32), '2', true, undefined])
+        ).toEqual({
+            channelPoint: {
+                fundingTxidStr: 'ab'.repeat(32),
+                fundingTxidBytes: undefined,
+                outputIndex: 2
+            },
+            pendingFundingShimOnly: true
+        });
+    });
+});
+
+describe('LightningNodeConnect.releaseOutput', () => {
+    it('releases a leased output through the wallet kit', async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        (lnc.lnd as any).walletKit = {
+            releaseOutput: jest.fn(async () => ({ status: 'released' }))
+        };
+        const request = {
+            id: 'bG9jay1pZA==',
+            outpoint: { txid_str: 'aa', output_index: 1 }
+        };
+
+        await expect(backend.releaseOutput(request)).resolves.toEqual({
+            status: 'released'
+        });
+        expect((lnc.lnd as any).walletKit.releaseOutput).toHaveBeenCalledWith(
+            request
+        );
+    });
+});
+
+describe('LightningNodeConnect.releaseOutput with a fundPsbt lease', () => {
+    // lnc-rn resolves a response with camelCase keys, as lnd's JSON names
+    const TXID =
+        '9693dd6cb6d04f538647e26d54e722bc097ec2952f3ab871939e630da95bcd50';
+    const TXID_BYTES = Buffer.from(TXID, 'hex').reverse().toString('base64');
+    const LOCK_ID = Buffer.alloc(32, 7).toString('base64');
+
+    it('sends the lease back with proto field names lnd reads', async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        (lnc.lnd as any).walletKit = {
+            fundPsbt: jest.fn(async () => ({
+                fundedPsbt: 'cHNidP8BAFICAAAAAQ==',
+                changeOutputIndex: 1,
+                lockedUtxos: [
+                    {
+                        id: LOCK_ID,
+                        outpoint: {
+                            txidBytes: TXID_BYTES,
+                            txidStr: TXID,
+                            outputIndex: 3
+                        },
+                        expiration: '1700000600'
+                    }
+                ]
+            })),
+            releaseOutput: jest.fn(async () => ({
+                status: `output ${TXID}:3 released`
+            }))
+        };
+
+        const funded: any = await backend.fundPsbt({} as any);
+        // as ChannelsStore releases each entry of locked_utxos
+        const { id, outpoint } = funded.locked_utxos[0];
+        await backend.releaseOutput({ id, outpoint });
+
+        // lnc-rn sends the request as JSON without renaming keys, and lnd's
+        // JSON parser takes the proto field names
+        const [request] = (lnc.lnd as any).walletKit.releaseOutput.mock
+            .calls[0];
+        expect(JSON.parse(JSON.stringify(request))).toEqual({
+            id: LOCK_ID,
+            outpoint: {
+                txid_bytes: TXID_BYTES,
+                txid_str: TXID,
+                output_index: 3
+            }
+        });
+    });
+});
+
+describe('LightningNodeConnect channel opens', () => {
+    it('passes the channel memo to lnd', async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        lnc.lnd.lightning.openChannelSync = jest.fn(async () => ({}));
+
+        await backend.openChannelSync({
+            node_pubkey_string: '02peer',
+            local_funding_amount: '100000',
+            memo: 'ZEUS open 0011223344556677'
+        } as any);
+
+        expect(backend.lnc.lnd.lightning.openChannelSync).toHaveBeenCalledWith(
+            expect.objectContaining({
+                node_pubkey_string: '02peer',
+                memo: 'ZEUS open 0011223344556677'
+            })
+        );
+    });
+});
+
+// LNURL-auth hashing key: sha256 of the node's signature string, one byte
+// per code point (Base64Utils.stringToUint8Array). Expected value computed
+// with Node's crypto; a changed value would change every LNURL-auth identity.
+describe('LightningNodeConnect.lnurlAuth', () => {
+    it('returns sha256 of the node signature as the hashing key', async () => {
+        const backend: any = new LightningNodeConnect();
+        backend.signMessage = jest.fn().mockResolvedValue({
+            signature:
+                'd7xkpk3e8zfm6rjd9x6zgttdqohkxyqgcxkxrg4uhhrbg5fh1sx7kwsfdr6pmsxjhb9pwftgj8uznsyqdbj4ri8p3bp9m6ux8kqxoaz'
+        });
+
+        const { signature } = await backend.lnurlAuth(
+            LNURLAUTH_CANONICAL_PHRASE
+        );
+
+        expect(backend.signMessage).toHaveBeenCalledWith(
+            LNURLAUTH_CANONICAL_PHRASE
+        );
+        expect(Buffer.from(signature).toString('hex')).toBe(
+            '974844ab2f50a8fc85ca54a9fc686854e902ad46f1b72219d05e0f371f29bb8c'
+        );
     });
 });

@@ -7,7 +7,7 @@ import Amount from './Amount';
 import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
-import { getSatAmount } from '../utils/AmountUtils';
+import { getRawAmountFromSats, getSatAmount } from '../utils/AmountUtils';
 import {
     SATS_PER_BTC,
     formatBitcoinWithSpaces,
@@ -26,6 +26,9 @@ import NavigationService from '../NavigationService';
 
 interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
+    // called before the keypad screen opens, so the parent can tell that
+    // navigation apart from the user leaving the screen
+    onNavigateAway?: () => void;
     amount?: string;
     sats?: string;
     locked?: boolean;
@@ -93,6 +96,17 @@ export default class AmountInput extends React.Component<
     AmountInputProps,
     AmountInputState
 > {
+    // The unit (and fiat currency) the `amount` prop was last converted to
+    // sats in. render() shows the digits in whatever unit UnitsStore holds,
+    // so a unit change made outside of this input has to be caught here.
+    private amountUnits: string;
+    // The sats to convert from on the next outside unit change. Follows
+    // state.satAmount, except when the digits were kept because there was
+    // no fiat rate: their 0 sats are reported, but the amount they were
+    // converted from is kept here so a change back does not lose it. Any
+    // edit to the digits replaces it, even when they convert to 0 sats.
+    private unitChangeSats: string | number;
+
     constructor(props: any) {
         super(props);
 
@@ -105,31 +119,73 @@ export default class AmountInput extends React.Component<
         this.state = {
             satAmount
         };
+        this.amountUnits = this.getDisplayUnits();
+        this.unitChangeSats = satAmount;
     }
+
+    setSatAmount = (satAmount: string | number) => {
+        this.unitChangeSats = satAmount;
+        this.setState({ satAmount });
+    };
+
+    getDisplayUnits = (): string => {
+        const { forceUnit, SettingsStore, UnitsStore } = this.props;
+        const units = forceUnit || UnitsStore?.units || '';
+        return units === 'fiat'
+            ? `${units}-${SettingsStore?.settings?.fiat}`
+            : units;
+    };
 
     componentDidUpdate(prevProps: Readonly<AmountInputProps>): void {
         const { amount, forceUnit, onAmountChange } = this.props;
+        const displayUnits = this.getDisplayUnits();
+        const unitsChanged = displayUnits !== this.amountUnits;
+        this.amountUnits = displayUnits;
         if (amount !== prevProps.amount || forceUnit !== prevProps.forceUnit) {
             if (forceUnit === 'sats' && forceUnit !== prevProps.forceUnit) {
                 const currentSatAmount = getSatAmount(amount || '', forceUnit);
-                this.setState({ satAmount: currentSatAmount });
+                this.setSatAmount(currentSatAmount);
 
                 onAmountChange(currentSatAmount.toString(), currentSatAmount);
             } else {
                 const satAmount = getSatAmount(amount || '', forceUnit);
+                this.unitChangeSats = satAmount;
                 if (satAmount !== this.state.satAmount) {
                     this.setState({ satAmount });
                 }
             }
+        } else if (unitsChanged && amount) {
+            // The unit was changed elsewhere, such as by a toggleable
+            // Amount. The digits are now shown in the new unit, so convert
+            // the sat amount into it, or the field no longer matches what
+            // the parent will use. A change made in the keypad has already
+            // cleared the amount through onUnitsChange.
+            const converted = getRawAmountFromSats(
+                this.unitChangeSats,
+                forceUnit
+            );
+            if (converted.error) {
+                // with no fiat rate, keep the digits; they convert to 0
+                // sats, but unitChangeSats keeps the amount to convert
+                // from if the unit changes again
+                const satAmount = getSatAmount(amount, forceUnit);
+                onAmountChange(amount, satAmount);
+                this.setState({ satAmount });
+                return;
+            }
+            const satAmount = getSatAmount(converted.amount, forceUnit);
+            onAmountChange(converted.amount, satAmount);
+            this.setSatAmount(satAmount);
         }
     }
 
     onChangeUnits = () => {
         const { amount, onAmountChange, UnitsStore }: any = this.props;
         UnitsStore.changeUnits();
+        this.amountUnits = this.getDisplayUnits();
         const satAmount = getSatAmount(amount, this.props.forceUnit);
         onAmountChange(amount, satAmount);
-        this.setState({ satAmount });
+        this.setSatAmount(satAmount);
     };
 
     getDisplayValue = (): string => {
@@ -155,6 +211,7 @@ export default class AmountInput extends React.Component<
                     .replace(/\.$/, '');
             }
 
+            this.props.onNavigateAway?.();
             // Navigate to keypad view with callback
             NavigationService.navigate('AmountKeypad', {
                 initialAmount: displayValue || '0',
@@ -162,9 +219,18 @@ export default class AmountInput extends React.Component<
                 forceUnit: this.props.forceUnit,
                 onConfirm: (newAmount: string) => {
                     const { onAmountChange, forceUnit } = this.props;
+                    // the keypad's digits are in the unit it was left in
+                    this.amountUnits = this.getDisplayUnits();
                     const satAmount = getSatAmount(newAmount, forceUnit);
                     onAmountChange(newAmount, satAmount);
-                    this.setState({ satAmount });
+                    this.setSatAmount(satAmount);
+                },
+                // the keypad clears its digits when its unit changes, so
+                // clear the field too: leaving the keypad with the back
+                // arrow then shows the 0 the keypad showed
+                onUnitsChange: () => {
+                    this.props.onAmountChange('0', 0);
+                    this.setSatAmount(0);
                 }
             });
         }

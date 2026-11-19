@@ -196,19 +196,21 @@ RCT_EXPORT_METHOD(invokeRPC:(NSString *)nameSpace
 -(void)stopObserving {}
 
 RCT_EXPORT_METHOD(initListener:(NSString *)nameSpace
-                  eventName:(NSString *)eventName
-                  request:(NSString *)request)
+                  method:(NSString *)method
+                  request:(NSString *)request
+                  requestId:(NSString *)requestId)
 {
     StreamingCallback * gocb = [[StreamingCallback alloc] init];
     gocb.delegate = self;
-    [gocb setEventName:eventName];
+    [gocb setEventName:method];
+    gocb.requestId = requestId;
     NSError *error;
-    LndmobileInvokeRPC(nameSpace, eventName, request, gocb, &error);
+    LndmobileInvokeRPC(nameSpace, method, request, gocb, &error);
     if (error) {
         // Same synchronous-failure path as invokeRPC. Emit the message on the
         // stream's own event so subscribers reject rather than wait forever;
         // they already treat a non-JSON result as a raw Go error string.
-        NSLog(@"%@ error   %@", eventName, error);
+        NSLog(@"%@ error   %@", method, error);
         [gocb sendResult:error.localizedDescription];
     }
 }
@@ -297,7 +299,9 @@ RCT_EXPORT_METHOD(createClaimTransaction:(NSString *)endpoint
     }
 }
 
-RCT_EXPORT_METHOD(createReverseClaimTransaction:(NSString *)endpoint
+// Builds and signs a reverse swap claim and returns its hex without
+// broadcasting it; the app stores it and broadcasts it itself
+RCT_EXPORT_METHOD(buildReverseClaimTransaction:(NSString *)endpoint
                  swapId:(NSString *)swapId
                  claimLeaf:(NSString *)claimLeaf
                  refundLeaf:(NSString *)refundLeaf
@@ -309,21 +313,23 @@ RCT_EXPORT_METHOD(createReverseClaimTransaction:(NSString *)endpoint
                  destinationAddress:(NSString *)destinationAddress
                  feeRate:(NSInteger)feeRate
                  minerFee:(NSInteger)minerFee
-                 isTestnet:(BOOL)isTestnet
+                 network:(NSString *)network
                  resolver:(RCTPromiseResolveBlock)resolve
                  rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSError *error;
-    LndmobileCreateReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, minerFee, isTestnet, &error);
+    NSString *txHex = LndmobileBuildReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, (int32_t)feeRate, (int32_t)minerFee, network, &error);
     if (error) {
-        NSLog(@"createReverseClaimTransaction error   %@",   error);
-        reject(@"createReverseClaimTransaction_error", error.localizedDescription, error);
+        NSLog(@"buildReverseClaimTransaction error   %@",   error);
+        reject(@"buildReverseClaimTransaction_error", error.localizedDescription, error);
     } else {
-        resolve(@"Success");
+        resolve(txHex);
     }
 }
 
-RCT_EXPORT_METHOD(createRefundTransaction:(NSString *)endpoint
+// Builds and signs a submarine swap refund and returns its hex without
+// broadcasting it
+RCT_EXPORT_METHOD(buildRefundTransaction:(NSString *)endpoint
                  swapId:(NSString *)swapId
                  claimLeaf:(NSString *)claimLeaf
                  refundLeaf:(NSString *)refundLeaf
@@ -331,21 +337,22 @@ RCT_EXPORT_METHOD(createRefundTransaction:(NSString *)endpoint
                  privateKey:(NSString *)privateKey
                  servicePubKey:(NSString *)servicePubKey
                  feeRate:(NSInteger)feeRate
+                 minerFee:(NSInteger)minerFee
                  timeoutBlockHeight:(NSInteger)timeoutBlockHeight
                  destinationAddress:(NSString *)destinationAddress
                  lockupAddress:(NSString *)lockupAddress
                  cooperative:(BOOL)cooperative
-                 isTestnet:(BOOL)isTestnet
+                 network:(NSString *)network
                  resolver:(RCTPromiseResolveBlock)resolve
                  rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSError *error;
-    NSString *txid = LndmobileCreateRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative, isTestnet, &error);
+    NSString *txHex = LndmobileBuildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, (int32_t)feeRate, (int32_t)minerFee, (int32_t)timeoutBlockHeight, destinationAddress, lockupAddress, cooperative, network, &error);
     if (error) {
-        NSLog(@"createRefundTransaction error   %@",   error);
-        reject(@"createRefundTransaction_error", error.localizedDescription, error);
+        NSLog(@"buildRefundTransaction error   %@",   error);
+        reject(@"buildRefundTransaction_error", error.localizedDescription, error);
     } else {
-        resolve(txid); 
+        resolve(txHex);
     }
 }
 

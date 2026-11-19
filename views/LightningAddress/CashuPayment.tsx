@@ -8,7 +8,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { ListItem } from '@rneui/themed';
-import moment from 'moment';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
@@ -17,6 +16,7 @@ import { Row } from '../../components/layout/Row';
 
 import { cashuStore, lightningAddressStore } from '../../stores/Stores';
 
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -26,7 +26,10 @@ export default function CashuPayment(props: any) {
     const { item, index } = props;
     const { redeemCashu, deletePayment } = lightningAddressStore;
 
-    const date = moment(item.updated_at).format('ddd, MMM DD, hh:mm a');
+    const date = DateTimeUtils.formatDateTimeShort(item.updated_at);
+    // mint_url comes from the ZEUS Pay status response; an object here
+    // would crash the list, so render only strings
+    const mintUrl = typeof item.mint_url === 'string' ? item.mint_url : '';
 
     const confirmDelete = () => {
         Alert.alert(
@@ -68,7 +71,7 @@ export default function CashuPayment(props: any) {
                     <ListItem.Title>
                         <Amount sats={item.amount_msat / 1000} />{' '}
                     </ListItem.Title>
-                    {item.comment && (
+                    {!!item.comment && (
                         <ListItem.Subtitle>
                             <Text
                                 style={{
@@ -81,19 +84,20 @@ export default function CashuPayment(props: any) {
                             </Text>
                         </ListItem.Subtitle>
                     )}
-                    <ListItem.Subtitle>
-                        <Text
-                            style={{
-                                color: cashuStore.cashuWallets[item.mint_url]
-                                    ?.errorConnecting
-                                    ? themeColor('warning')
-                                    : themeColor('secondaryText')
-                            }}
-                        >
-                            {cashuStore.mintInfos[item.mint_url]?.name ||
-                                item.mint_url}
-                        </Text>
-                    </ListItem.Subtitle>
+                    {!!mintUrl && (
+                        <ListItem.Subtitle>
+                            <Text
+                                style={{
+                                    color: cashuStore.cashuWallets[mintUrl]
+                                        ?.errorConnecting
+                                        ? themeColor('warning')
+                                        : themeColor('secondaryText')
+                                }}
+                            >
+                                {cashuStore.mintInfos[mintUrl]?.name || mintUrl}
+                            </Text>
+                        </ListItem.Subtitle>
+                    )}
                     <ListItem.Subtitle>
                         <Text
                             style={{

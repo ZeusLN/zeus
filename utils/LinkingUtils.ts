@@ -4,26 +4,30 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { localeString } from './LocaleUtils';
 import handleAnything from './handleAnything';
 import { processSharedQRImageFast } from './ShareIntentProcessor';
+import { startedByInAppRestart } from './InAppRestartUtils';
 import { settingsStore } from '../stores/Stores';
 
 // Payment status screens that must never be popped out from under an
-// in-flight payment by a deep link. Mirrors App.tsx
+// in-flight payment by a deep link or share intent. Mirrors App.tsx
 // SCREENS_WITH_CUSTOM_BACK_HANDLER's payment entries.
-const SENDING_SCREENS = [
+export const SENDING_SCREENS = [
     'SendingLightning',
     'SendingOnChain',
-    'CashuSendingLightning'
+    'CashuSendingLightning',
+    'MultimintPayment'
 ];
 
 class LinkingUtils {
     private shareIntentProcessed = false;
     private pendingDeepLink: string | null = null;
     // Linking.getInitialURL() returns the same URL for the lifetime of the
-    // activity (and on Android, onNewIntent + setIntent refreshes it with
-    // each warm deep link), while the Wallet view — which consumes it — can
+    // process (and on Android, onNewIntent + setIntent refreshes it with
+    // each warm deep link), while the Wallet view, which consumes it, can
     // mount more than once, e.g. when 'Select wallet on start-up' is
-    // enabled. Track the last URL actually processed so it is only ever
-    // handled once.
+    // enabled. Track the last URL actually processed so it is handled once
+    // per JS runtime. A JS reload resets this field, and on iOS an in-app
+    // restart reloads JS without ending the process, so handleInitialUrl
+    // also checks startedByInAppRestart().
     private lastHandledUrl: string | null = null;
 
     processPendingDeepLink = (
@@ -50,14 +54,9 @@ class LinkingUtils {
                 if (shareIntentResult && shareIntentResult.success) {
                     this.shareIntentProcessed = true;
 
-                    try {
-                        await NativeModules.MobileTools.clearSharedIntent();
-                    } catch (e) {
-                        console.warn('Failed to clear intent', e);
-                    }
-
-                    // the gates ride on the params from
-                    // processSharedQRImageFast
+                    // processSharedQRImageFast has already cleared the
+                    // intent; clearing again here could discard a newer
+                    // share that arrived since. The gates ride on its params
                     navigation.navigate(
                         'ShareIntentProcessing',
                         shareIntentResult.params
@@ -67,7 +66,17 @@ class LinkingUtils {
             }
 
             if (url) {
-                if (url !== this.lastHandledUrl) {
+                // After an in-app restart on iOS this is still the URL that
+                // launched the process, possibly from before a data wipe.
+                // It is skipped even if the previous JS runtime restarted
+                // before handling it (channel migration lock, a restart
+                // from Settings after a failed connection, Lockscreen
+                // wipes). Android drops it the same way, since
+                // ProcessPhoenix relaunches without the URL
+                if (
+                    url !== this.lastHandledUrl &&
+                    !(await startedByInAppRestart())
+                ) {
                     this.handleDeepLink(url, navigation);
                 }
                 return;
@@ -92,16 +101,8 @@ class LinkingUtils {
             if (shareIntentResult && shareIntentResult.success) {
                 this.shareIntentProcessed = true;
 
-                // Clear the Android share intent immediately to prevent reprocessing
-                try {
-                    await NativeModules.MobileTools.clearSharedIntent();
-                } catch (clearError) {
-                    console.warn(
-                        '[LinkingUtils] Failed to clear share intent:',
-                        clearError
-                    );
-                }
-
+                // processSharedQRImageFast has already cleared the intent;
+                // clearing again here could discard a newer share.
                 // Always show processing screen immediately for share intents
                 // Background sync and authentication will be handled by the
                 // processing screen, on the gates that ride along with the
@@ -153,6 +154,12 @@ class LinkingUtils {
                         routes.some((r) => r.name === 'PaymentRequest')
                     ) {
                         navigation.popTo(route, props);
+                    } else if (route === focusedRoute) {
+                        // navigate() would keep the focused screen and only
+                        // swap its route params, which screens that copy the
+                        // request into state on mount do not pick up. Mount
+                        // a fresh screen for the new request instead.
+                        navigation.replace(route, props);
                     } else {
                         navigation.navigate(route, props);
                     }

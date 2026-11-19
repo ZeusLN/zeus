@@ -1,3 +1,4 @@
+const bitcoin = require('bitcoinjs-lib');
 import { action, observable, reaction, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
 // leave as is, do not do tree-shaking
@@ -20,6 +21,12 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { getCooperativeCloses, getForceCloses } from '../utils/BalanceUtils';
+import {
+    findChannelByMemo,
+    getFundingOutpoints,
+    makeOpenMemo
+} from '../utils/ChannelOpenUtils';
+import { isRequestTimeout } from '../utils/RequestTimeoutUtils';
 
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
@@ -34,6 +41,111 @@ interface PendingHTLC {
     forwarding_channel?: number;
     forwarding_htlc_index?: number;
 }
+
+// openChannelStream has no request timeout on LND REST (WebSocket),
+// embedded LND or LNC (stream listeners), unlike openChannelSync. A stream
+// that never yields psbt_fund would keep its open counted in
+// syncOpensInFlight for good, so it is given up after this long. Nothing
+// is spent before ZEUS funds the PSBT, so a late psbt_fund is dropped and
+// its shim cancelled.
+const OPEN_CHANNEL_STREAM_TIMEOUT_MS = 60000;
+
+// Ends lnd's PSBT funding flow for a shim ZEUS will not fund, so the node
+// and the peer drop the pending channel instead of waiting for lnd's own
+// PSBT timeout. Best effort: lnd refuses it when it holds no funding
+// intent for the id (the flow already ended or has not started), and it
+// never spends anything.
+const cancelShim = (pending_chan_id: string) =>
+    Promise.resolve()
+        .then(() =>
+            BackendUtils.fundingStateStep({ shim_cancel: { pending_chan_id } })
+        )
+        .catch((error: any) =>
+            console.log('Could not cancel the funding shim', error)
+        );
+
+// Gives inputs fundPsbt leased back to the wallet instead of leaving them
+// locked until the lease expires. Best effort: lnd makes an output
+// spendable again only if it is still unspent.
+const releaseLeases = (lockedUtxos: Array<any>) =>
+    lockedUtxos.forEach(({ id, outpoint }) =>
+        Promise.resolve()
+            .then(() => BackendUtils.releaseOutput({ id, outpoint }))
+            .catch((error: any) =>
+                console.log('Could not release a leased input', error)
+            )
+    );
+
+// A channel that passed psbt_verify is no longer a funding intent, so
+// shim_cancel does not reach it: lnd keeps it pending, waiting for a
+// funding transaction ZEUS will not publish, and each one adds to the
+// anchor reserve while peers that allow one pending channel refuse new
+// ones. lnd rejects pending_funding_shim_only for these channels ("not
+// externally funded or not pending"), because it counts only channels
+// with a thaw height as shim funded and a PSBT shim sets none. So this
+// sends i_know_what_i_am_doing instead, which removes the channel from
+// this node only; the peer drops it on its own timeout. That is safe
+// only while no funding transaction can exist: callers run it before
+// psbt_finalize, and until then the signed PSBT never leaves ZEUS.
+// Best effort.
+const abandonVerifiedChannels = (
+    psbt: string,
+    fundingAddresses: Array<string>
+) => {
+    let outpoints: Array<{ funding_txid_str: string; output_index: number }>;
+    try {
+        outpoints = getFundingOutpoints(psbt, fundingAddresses);
+    } catch (error: any) {
+        console.log('Could not read the funding outpoints', error);
+        return;
+    }
+    outpoints.forEach(({ funding_txid_str, output_index }) =>
+        Promise.resolve()
+            .then(() =>
+                BackendUtils.abandonChannel([
+                    funding_txid_str,
+                    String(output_index),
+                    // pending_funding_shim_only
+                    false,
+                    // i_know_what_i_am_doing
+                    true
+                ])
+            )
+            .catch((error: any) =>
+                console.log('Could not abandon a verified channel', error)
+            )
+    );
+};
+
+const openChannelStreamWithTimeout = (request: OpenChannelRequest) => {
+    // the request object is reused for every stream of a batch
+    const pendingChanId: string | undefined =
+        request.funding_shim?.psbt_shim?.pending_chan_id;
+    return new Promise<any>((resolve, reject) => {
+        let timedOut = false;
+        const timeoutId = setTimeout(() => {
+            timedOut = true;
+            reject(
+                new Error(
+                    localeString('stores.ChannelsStore.openStreamTimeout')
+                )
+            );
+        }, OPEN_CHANNEL_STREAM_TIMEOUT_MS);
+        BackendUtils.openChannelStream(request).then(
+            (data: any) => {
+                clearTimeout(timeoutId);
+                // the funding intent exists now, so a cancel sent at the
+                // timeout may have come too early
+                if (timedOut && pendingChanId) cancelShim(pendingChanId);
+                resolve(data);
+            },
+            (error: any) => {
+                clearTimeout(timeoutId);
+                reject(error);
+            }
+        );
+    });
+};
 
 export enum ChannelsType {
     Open = 0,
@@ -53,6 +165,39 @@ interface aliases {
 const fixedAliases: aliases = {
     '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581':
         'Olympus by ZEUS'
+};
+
+// Keys for what a PSBT or raw transaction spends and pays, or null if it does
+// not parse: a sorted "txid:vout" per outpoint spent, then an
+// "out:script:value" per output. Outputs stay in transaction order, since the
+// output index is part of the channel's funding outpoint.
+const fundingTxKeys = (
+    tx: { psbt: string } | { txHex: string }
+): Array<string> | null => {
+    try {
+        let inputs: Array<{ hash: Uint8Array; index: number }>;
+        let outputs: Array<{ script: Uint8Array; value: number }>;
+        if ('psbt' in tx) {
+            const psbt = bitcoin.Psbt.fromBase64(tx.psbt);
+            inputs = psbt.txInputs;
+            outputs = psbt.txOutputs;
+        } else {
+            const transaction = bitcoin.Transaction.fromHex(tx.txHex);
+            inputs = transaction.ins;
+            outputs = transaction.outs;
+        }
+        const hex = (bytes: Uint8Array) => Buffer.from(bytes).toString('hex');
+        return [
+            ...inputs
+                .map((input) => `${hex(input.hash)}:${input.index}`)
+                .sort(),
+            ...outputs.map(
+                (output) => `out:${hex(output.script)}:${output.value}`
+            )
+        ];
+    } catch (e) {
+        return null;
+    }
 };
 ChannelsView;
 
@@ -77,8 +222,26 @@ export default class ChannelsStore {
     @observable public errorOpenChannel = false;
     @observable public peerSuccess = false;
     @observable public channelSuccess = false;
+    // an open timed out and the channel was not found; it may still have
+    // been opened, so OpenChannel does not submit again
+    @observable public openOutcomeUnknown = false;
+    // id of the current open; resetOpenChannel() and the next open change
+    // it, so a late result (e.g. a timeout lookup) for an earlier open is
+    // dropped
+    private openChannelSeq = 0;
+    // opens that have not settled yet: openChannelSync requests, including
+    // the lookup after a timeout, and streamed opens until their funding
+    // flow ends (opened, failed, or the PSBT handed to the user to sign).
+    // resetOpenChannel() leaves this alone: leaving the screen does not stop
+    // the node from opening the channel, so OpenChannel does not submit
+    // again until they settle
+    @observable public syncOpensInFlight = 0;
     @observable public closeChannelErr: string | null;
     @observable public closingChannel = false;
+    // channel point of a channel the node closed although the close request
+    // reported an error (LDK Node force closes when a cooperative close
+    // fails). The channel is gone, so it can't be closed again
+    @observable public closedByFailedCloseChannelPoint: string | null = null;
     @observable channelRequest: any;
     @observable public peers: Array<Peer> = [];
     // redesign
@@ -120,7 +283,9 @@ export default class ChannelsStore {
     @observable public aliasMap = observable.map({});
     // external account funding
     @observable public funded_psbt: string = '';
-    @observable public pending_chan_ids: Array<string>;
+    @observable public pending_chan_ids: Array<string> = [];
+    // inputs and outputs of the funding PSBT handed to the user for signing
+    @observable public pending_funding_tx_keys: Array<string> = [];
     // pending HTLCs
     @observable public pendingHTLCs: Array<PendingHTLC> = [];
     @observable public haveAnnouncedChannels = false;
@@ -182,6 +347,7 @@ export default class ChannelsStore {
 
     @action
     public resetOpenChannel = (silent?: boolean) => {
+        this.openChannelSeq++;
         this.loading = false;
         this.error = false;
         if (!silent) {
@@ -195,10 +361,48 @@ export default class ChannelsStore {
         this.funding_txid_str = null;
         this.openingChannel = false;
         this.errorOpenChannel = false;
+        this.openOutcomeUnknown = false;
         this.channelSuccess = false;
         this.channelRequest = null;
         this.funded_psbt = '';
+    };
+
+    // Kept out of resetOpenChannel: the PSBT and TxHex screens read it to
+    // hand a signed funding transaction back to LND, so it has to survive
+    // form resets until the funding flow ends.
+    @action
+    public resetPendingChannels = () => {
         this.pending_chan_ids = [];
+        this.pending_funding_tx_keys = [];
+    };
+
+    // Ends the funding flow of the pending channels LND has finalized.
+    // Another open can start while psbt_finalize is pending. Then the store
+    // holds that open's channels, or none yet, and nothing is reset: a reset
+    // would drop the newer open or the funding PSBT it handed out.
+    @action
+    public resetFinalizedChannels = (pending_chan_ids: Array<string>) => {
+        if (pending_chan_ids.join() !== this.pending_chan_ids.join()) return;
+        this.resetOpenChannel();
+        this.resetPendingChannels();
+    };
+
+    // The pending channels a signed PSBT or raw transaction funds, or none.
+    // The PSBT and TxHex screens also show unrelated transactions (a send
+    // from an external account, a scanned PSBT, a sweep), and an abandoned
+    // funding flow leaves its IDs behind. Only a transaction with the inputs
+    // and outputs of the PSBT we handed out goes back to LND's funding
+    // flow; LND requires the signed transaction to be that one. A send can
+    // spend the same inputs, so the outputs are compared too.
+    public pendingChanIdsFor = (
+        tx: { psbt: string } | { txHex: string }
+    ): Array<string> => {
+        if (this.pending_funding_tx_keys.length === 0) return [];
+        const keys = fundingTxKeys(tx);
+        if (!keys || keys.join() !== this.pending_funding_tx_keys.join()) {
+            return [];
+        }
+        return this.pending_chan_ids;
     };
 
     public clearCloseChannelErr = () => {
@@ -208,6 +412,7 @@ export default class ChannelsStore {
     @action
     public reset = () => {
         this.resetOpenChannel();
+        this.resetPendingChannels();
         this.hasChannelData = false;
         this.haveAnnouncedChannels = false;
         this.nodes = {};
@@ -448,15 +653,7 @@ export default class ChannelsStore {
 
             if (setPendingHtlcs) this.pendingHTLCs = [];
 
-            let haveAnnouncedChannels = false;
             for (const channel of channels) {
-                if (
-                    !haveAnnouncedChannels &&
-                    !channel.private &&
-                    channel.isActive
-                ) {
-                    haveAnnouncedChannels = true;
-                }
                 if (channel.alias == null) {
                     channel.alias =
                         this.nodes[channel.remotePubkey]?.alias ||
@@ -476,8 +673,6 @@ export default class ChannelsStore {
                     this.pendingHTLCs.push(...channel.pending_htlcs);
                 }
             }
-            this.haveAnnouncedChannels = haveAnnouncedChannels;
-
             if (this.pendingHTLCs.length > 0) {
                 console.log('Pending HTLCs', this.pendingHTLCs);
             }
@@ -545,7 +740,14 @@ export default class ChannelsStore {
                 let totalOutbound = new BigNumber(0);
                 let totalOutboundOffline = new BigNumber(0);
                 let totalOffline = new BigNumber(0);
+                // Set here rather than after alias enrichment, which waits on
+                // node info lookups (up to 10s each) and also runs for the
+                // pending and closed lists. Receive reads this flag once when
+                // it mounts to decide whether to add private route hints.
+                let haveAnnouncedChannels = false;
                 channels.forEach((channel: Channel) => {
+                    if (!channel.private && channel.isActive)
+                        haveAnnouncedChannels = true;
                     const channelRemoteBalance = new BigNumber(
                         channel.receivingCapacity
                     );
@@ -571,6 +773,7 @@ export default class ChannelsStore {
                     this.totalOutbound = totalOutbound.toNumber();
                     this.totalOutboundOffline = totalOutboundOffline.toNumber();
                     this.totalOffline = totalOffline.toNumber();
+                    this.haveAnnouncedChannels = haveAnnouncedChannels;
                     this.channels = channels;
                     this.hasChannelData = true;
                 });
@@ -704,6 +907,18 @@ export default class ChannelsStore {
         forceClose?: boolean | string,
         deliveryAddress?: string
     ) => {
+        const closingChannelPoint = channelPoint
+            ? `${channelPoint.funding_txid_str}:${channelPoint.output_index}`
+            : null;
+        // Another request would replace the error that explains the force
+        // close with the backend's channel not found error
+        if (
+            closingChannelPoint &&
+            closingChannelPoint === this.closedByFailedCloseChannelPoint
+        ) {
+            return true;
+        }
+
         this.closeChannelErr = null;
         this.closingChannel = true;
 
@@ -726,8 +941,30 @@ export default class ChannelsStore {
             ];
         }
 
-        if (implementation === 'lightning-node-connect') {
-            return BackendUtils.closeChannel(urlParams);
+        if (
+            implementation === 'lightning-node-connect' ||
+            implementation === 'ldk-node'
+        ) {
+            // the LNC backend settles on close_pending, on an error, or after
+            // its own timeout, and the LDK Node backend on the channelClosed
+            // event or after its own timeout, so no forced resolution is
+            // needed here. Forcing one would drop a cooperative close that
+            // LDK turned into a force close after six seconds
+            return await BackendUtils.closeChannel(urlParams)
+                .then(() => {
+                    this.handleChannelClose();
+                    return true;
+                })
+                .catch((error: any) => {
+                    if (error?.channelClosed) {
+                        runInAction(() => {
+                            this.closedByFailedCloseChannelPoint =
+                                closingChannelPoint;
+                        });
+                    }
+                    this.handleChannelCloseError(error);
+                    return true;
+                });
         } else {
             let settled = false;
             return await Promise.race([
@@ -769,14 +1006,28 @@ export default class ChannelsStore {
         this.closeChannelErr = null;
         this.error = false;
         this.closingChannel = false;
+        this.refreshAfterCloseAttempt();
     };
 
     @action
     public handleChannelCloseError = (error: Error) => {
         this.closeChannelErr = errorToUserFriendly(error);
-        // a failed close request doesn't invalidate the channel list,
-        // so don't call getChannelsError here - it would wipe channels
         this.closingChannel = false;
+        // The node can still close the channel after reporting an error,
+        // e.g. when it negotiates the closing fee with the peer itself.
+        // A failed close request says nothing about the channel list, so
+        // it isn't cleared here. If the node is unreachable, the refresh
+        // fails as well and clears it, like any failed channel fetch
+        this.refreshAfterCloseAttempt();
+    };
+
+    // A close moves the channel from the open to the pending channels and
+    // its funds from the lightning balance to the pending close balance.
+    // Reloading only the channels would show those funds under both until
+    // the next balance refresh.
+    private refreshAfterCloseAttempt = () => {
+        this.getChannels();
+        this.balanceStore.getCombinedBalance();
     };
 
     @action
@@ -786,9 +1037,17 @@ export default class ChannelsStore {
         connectPeerOnly?: boolean,
         silent?: boolean
     ) => {
-        this.resetOpenChannel(silent);
-        this.channelRequest = undefined;
-        if (!silent) this.connectingToPeer = true;
+        // a silent connect is one ZEUS makes on its own (an LSP), so it
+        // leaves the user's peer and open channel state alone, and does not
+        // supersede the user's connect or open
+        if (!silent) {
+            this.resetOpenChannel();
+            this.channelRequest = undefined;
+            this.connectingToPeer = true;
+        }
+        // a connect that lands after the next reset must not start an open
+        const seq = this.openChannelSeq;
+        const isCurrent = () => seq === this.openChannelSeq;
 
         // additional channels only matter when opening, the connect-peer-only
         // mode hides them from the form
@@ -840,7 +1099,8 @@ export default class ChannelsStore {
                             this.errorMsgPeer = null;
                             this.peerSuccess = true;
                         }
-                        if (!connectPeerOnly) this.channelRequest = request;
+                        if (!silent && !connectPeerOnly && isCurrent())
+                            this.channelRequest = request;
                     });
                     resolve(true);
                 })
@@ -849,8 +1109,8 @@ export default class ChannelsStore {
                         if (!silent) {
                             this.connectingToPeer = false;
                             this.peerSuccess = false;
+                            this.channelSuccess = false;
                         }
-                        this.channelSuccess = false;
                         // handle error
                         if (
                             error &&
@@ -858,7 +1118,8 @@ export default class ChannelsStore {
                             error.toString().includes('already')
                         ) {
                             if (!connectPeerOnly) {
-                                this.channelRequest = request;
+                                if (!silent && isCurrent())
+                                    this.channelRequest = request;
                             } else {
                                 if (!silent) {
                                     this.errorMsgPeer =
@@ -868,11 +1129,12 @@ export default class ChannelsStore {
                             }
                             resolve(true);
                         } else {
+                            const errorMsg = errorToUserFriendly(error);
                             if (!silent) {
-                                this.errorMsgPeer = errorToUserFriendly(error);
+                                this.errorMsgPeer = errorMsg;
                                 this.errorPeerConnect = true;
                             }
-                            reject(this.errorMsgPeer);
+                            reject(errorMsg);
                         }
                     });
                 });
@@ -950,7 +1212,15 @@ export default class ChannelsStore {
         }
     };
 
-    private handleChannelOpen = (request: any, outputs?: any) => {
+    private handleChannelOpen = (
+        request: any,
+        outputs: any,
+        // the funding address lnd gave each pending_chan_id
+        fundingAddresses: { [pendingChanId: string]: string },
+        pendingChanIds: Array<string>,
+        isCurrent: () => boolean,
+        finish: () => void
+    ) => {
         const { account, sat_per_vbyte, utxos } = request;
 
         const inputs: any = [];
@@ -975,8 +1245,39 @@ export default class ChannelsStore {
             account
         };
 
+        // the inputs fundPsbt leased for the funding transaction
+        let lockedUtxos: Array<any> = [];
+        // the PSBT lnd accepted in a psbt_verify, if any, and the funding
+        // addresses of the channels whose psbt_verify succeeded
+        let verifiedPsbt: string | undefined;
+        let verifiedAddresses: Array<string> = [];
+        const markVerified = (psbt: string, pending_chan_id: string) => {
+            verifiedPsbt = psbt;
+            const address = fundingAddresses[pending_chan_id];
+            if (address) verifiedAddresses.push(address);
+        };
+        // set just before psbt_finalize is called. From then on the
+        // funding transaction may have been published and the PSBT may be
+        // handed to the user, so nothing may be released or abandoned
+        let finalizeSent = false;
+        // a flow that ends before psbt_finalize has published nothing:
+        // give the inputs back, end lnd's PSBT flow for the channels still
+        // waiting for one, and abandon the channels lnd already verified
+        const abandon = () => {
+            if (finalizeSent) return;
+            releaseLeases(lockedUtxos);
+            lockedUtxos = [];
+            pendingChanIds.forEach(cancelShim);
+            if (verifiedPsbt && verifiedAddresses.length > 0) {
+                abandonVerifiedChannels(verifiedPsbt, verifiedAddresses);
+            }
+            verifiedPsbt = undefined;
+            verifiedAddresses = [];
+        };
+
         BackendUtils.fundPsbt(fundPsbtRequest)
             .then(async (data: any) => {
+                lockedUtxos = data.locked_utxos || [];
                 let funded_psbt: string = new FundedPsbt(
                     data.funded_psbt
                 ).getFormatted();
@@ -991,40 +1292,36 @@ export default class ChannelsStore {
                         return;
                     });
 
-                for (let i = 0; i < this.pending_chan_ids.length - 1; i++) {
-                    const pending_chan_id = this.pending_chan_ids[i];
+                for (let i = 0; i < pendingChanIds.length - 1; i++) {
+                    const pending_chan_id = pendingChanIds[i];
                     await BackendUtils.fundingStateStep({
                         psbt_verify: {
                             funded_psbt,
                             pending_chan_id,
                             skip_finalize: true
                         }
-                    })
-                        .then((data: any) => {
-                            console.log(`fundingStateStep - data ${i}`, data);
-                            return;
-                        })
-                        .catch((e: any) => {
-                            console.log(`fundingStateStep - err ${i}`, e);
-                            return;
-                        });
+                    });
+                    markVerified(funded_psbt, pending_chan_id);
                 }
 
+                const lastPendingChanId =
+                    pendingChanIds[pendingChanIds.length - 1];
                 BackendUtils.fundingStateStep({
                     psbt_verify: {
                         funded_psbt,
-                        pending_chan_id:
-                            this.pending_chan_ids[
-                                this.pending_chan_ids.length - 1
-                            ]
+                        pending_chan_id: lastPendingChanId
                     }
                 })
                     .then((data: any) => {
+                        markVerified(funded_psbt, lastPendingChanId);
                         if (data.publish_error) {
                             const errorMsg = errorToUserFriendly(
                                 data.publish_error
                             );
+                            abandon();
                             runInAction(() => {
+                                finish();
+                                if (!isCurrent()) return;
                                 this.errorMsgChannel = errorMsg;
                                 this.output_index = null;
                                 this.funding_txid_str = null;
@@ -1033,26 +1330,41 @@ export default class ChannelsStore {
                                 this.channelRequest = null;
                                 this.peerSuccess = false;
                                 this.channelSuccess = false;
+                                this.resetPendingChannels();
                             });
                         } else {
                             const formattedPsbt = new FundedPsbt(
                                 funded_psbt
                             ).getFormatted();
 
+                            // no abandon() past this point, also when the
+                            // call below throws
+                            finalizeSent = true;
+                            verifiedPsbt = undefined;
+                            verifiedAddresses = [];
+
                             // Attempt finalize here
                             BackendUtils.fundingStateStep({
                                 psbt_finalize: {
                                     signed_psbt: formattedPsbt,
                                     pending_chan_id:
-                                        this.pending_chan_ids[
-                                            this.pending_chan_ids.length - 1
+                                        pendingChanIds[
+                                            pendingChanIds.length - 1
                                         ]
                                 }
                             })
                                 .then((data: any) => {
+                                    // a superseded open's PSBT is not
+                                    // handed to the user. Its transaction
+                                    // may have been published, so the shim
+                                    // stays and only the leases go back
+                                    if (data.publish_error && !isCurrent())
+                                        releaseLeases(lockedUtxos);
                                     runInAction(() => {
+                                        finish();
+                                        if (!isCurrent()) return;
                                         if (data.publish_error) {
-                                            this.funded_psbt = formattedPsbt;
+                                            this.setFundedPsbt(formattedPsbt);
                                             this.output_index = null;
                                             this.funding_txid_str = null;
                                             this.errorOpenChannel = true;
@@ -1067,12 +1379,17 @@ export default class ChannelsStore {
                                             this.errorMsgChannel = null;
                                             this.channelRequest = null;
                                             this.channelSuccess = true;
+                                            this.resetPendingChannels();
                                         }
                                     });
                                 })
-                                .catch(() =>
+                                .catch(() => {
+                                    if (!isCurrent())
+                                        releaseLeases(lockedUtxos);
                                     runInAction(() => {
-                                        this.funded_psbt = formattedPsbt;
+                                        finish();
+                                        if (!isCurrent()) return;
+                                        this.setFundedPsbt(formattedPsbt);
                                         this.output_index = null;
                                         this.funding_txid_str = null;
                                         this.errorOpenChannel = true;
@@ -1080,13 +1397,16 @@ export default class ChannelsStore {
                                         this.channelRequest = null;
                                         this.peerSuccess = false;
                                         this.channelSuccess = false;
-                                    })
-                                );
+                                    });
+                                });
                         }
                     })
                     .catch((error: any) => {
                         const errorMsg = errorToUserFriendly(error);
+                        abandon();
                         runInAction(() => {
+                            finish();
+                            if (!isCurrent()) return;
                             this.errorMsgChannel = errorMsg;
                             this.output_index = null;
                             this.funding_txid_str = null;
@@ -1095,12 +1415,18 @@ export default class ChannelsStore {
                             this.channelRequest = null;
                             this.peerSuccess = false;
                             this.channelSuccess = false;
+                            this.resetPendingChannels();
                         });
                     });
             })
             .catch((error: any) => {
+                // fundPsbt failed (nothing leased), or a step before the
+                // last psbt_verify did
                 const errorMsg = errorToUserFriendly(error);
+                abandon();
                 runInAction(() => {
+                    finish();
+                    if (!isCurrent()) return;
                     this.errorMsgChannel = errorMsg;
                     this.output_index = null;
                     this.funding_txid_str = null;
@@ -1109,12 +1435,27 @@ export default class ChannelsStore {
                     this.channelRequest = null;
                     this.peerSuccess = false;
                     this.channelSuccess = false;
+                    this.resetPendingChannels();
                 });
             });
     };
 
+    // The PSBT goes to the user for signing: remember what it spends and
+    // pays so the signed transaction can be matched to the pending channels
     @action
-    private handleChannelOpenError = (error: Error) => {
+    private setFundedPsbt = (psbt: string) => {
+        this.funded_psbt = psbt;
+        this.pending_funding_tx_keys = fundingTxKeys({ psbt }) || [];
+    };
+
+    @action
+    private handleChannelOpenError = (
+        error: Error,
+        isCurrent: () => boolean,
+        finish: () => void
+    ) => {
+        finish();
+        if (!isCurrent()) return;
         this.errorMsgChannel = errorToUserFriendly(error);
         this.output_index = null;
         this.funding_txid_str = null;
@@ -1124,6 +1465,7 @@ export default class ChannelsStore {
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.connectingToPeer = false;
+        this.resetPendingChannels();
     };
 
     @action
@@ -1144,26 +1486,70 @@ export default class ChannelsStore {
 
         this.peerSuccess = false;
         this.channelSuccess = false;
+        this.openOutcomeUnknown = false;
         this.openingChannel = true;
+        this.resetPendingChannels();
+
+        const seq = ++this.openChannelSeq;
+        const isCurrent = () => seq === this.openChannelSeq;
 
         if (request?.account !== 'default' || multipleChans) {
             const outputs: any = {};
+            // the funding address lnd gave each of this open's channels
+            const fundingAddresses: { [pendingChanId: string]: string } = {};
+            // resetPendingChannels() above gave this open a new list, so an
+            // open it superseded keeps funding its own channels and stays
+            // out of this open's list
+            const pendingChanIds = this.pending_chan_ids;
+            // counted once per open, also for a batch, until its funding
+            // flow ends: funded, failed, handed to the user to sign, or
+            // stopped before funding started
+            this.syncOpensInFlight++;
+            let finished = false;
+            const finish = () => {
+                if (finished) return;
+                finished = true;
+                runInAction(() => {
+                    this.syncOpensInFlight--;
+                });
+            };
+            // the pending_chan_ids ZEUS put in this open's funding shims
+            const shimIds: string[] = [];
+            const newShimId = () => {
+                const pending_chan_id = randomBytes(32).toString('base64');
+                shimIds.push(pending_chan_id);
+                return pending_chan_id;
+            };
             if (multipleChans) {
+                // the first stream error or timeout stops the batch before
+                // anything is funded: its shims are cancelled and it ends
+                // with that error. The final channel, which starts the
+                // funding, is opened only after every earlier one answered
+                let stopped = false;
+                const stopBatch = (error: Error) => {
+                    if (stopped) return;
+                    stopped = true;
+                    shimIds.forEach(cancelShim);
+                    this.handleChannelOpenError(error, isCurrent, finish);
+                };
+
                 let base_psbt = '';
                 request.funding_shim = {
                     psbt_shim: {
                         base_psbt,
-                        pending_chan_id: randomBytes(32).toString('base64'),
+                        pending_chan_id: newShimId(),
                         no_publish: true
                     }
                 };
 
-                BackendUtils.openChannelStream(request)
-                    .then((data: any) => {
+                openChannelStreamWithTimeout(request)
+                    .then(async (data: any) => {
                         const { psbt_fund, pending_chan_id } = data.result;
-                        this.pending_chan_ids.push(pending_chan_id);
+                        pendingChanIds.push(pending_chan_id);
                         outputs[psbt_fund.funding_address] =
                             psbt_fund.funding_amount;
+                        fundingAddresses[pending_chan_id] =
+                            psbt_fund.funding_address;
 
                         base_psbt = psbt_fund.psbt;
                         for (
@@ -1178,8 +1564,7 @@ export default class ChannelsStore {
                                 request.funding_shim = {
                                     psbt_shim: {
                                         base_psbt,
-                                        pending_chan_id:
-                                            randomBytes(32).toString('base64'),
+                                        pending_chan_id: newShimId(),
                                         no_publish: true
                                     }
                                 };
@@ -1192,27 +1577,33 @@ export default class ChannelsStore {
                                         i
                                     ].satAmount.toString();
 
-                                BackendUtils.openChannelStream(request)
-                                    .then((data: any) => {
-                                        const { psbt_fund, pending_chan_id } =
-                                            data.result;
-                                        this.pending_chan_ids.push(
-                                            pending_chan_id
+                                // open one at a time, so the final channel
+                                // starts the funding flow only after every
+                                // earlier channel has its funding output
+                                try {
+                                    const data: any =
+                                        await openChannelStreamWithTimeout(
+                                            request
                                         );
-                                        outputs[psbt_fund.funding_address] =
-                                            psbt_fund.funding_amount;
-                                        base_psbt = psbt_fund.psbt;
-                                    })
-                                    .catch((error: Error) => {
-                                        this.handleChannelOpenError(error);
-                                    });
+                                    const { psbt_fund, pending_chan_id } =
+                                        data.result;
+                                    pendingChanIds.push(pending_chan_id);
+                                    outputs[psbt_fund.funding_address] =
+                                        psbt_fund.funding_amount;
+                                    fundingAddresses[pending_chan_id] =
+                                        psbt_fund.funding_address;
+                                    base_psbt = psbt_fund.psbt;
+                                } catch (error: any) {
+                                    // stop the batch here
+                                    stopBatch(error);
+                                    return;
+                                }
                             } else if (request.additionalChannels) {
                                 // final chan
                                 request.funding_shim = {
                                     psbt_shim: {
                                         base_psbt,
-                                        pending_chan_id:
-                                            randomBytes(32).toString('base64'),
+                                        pending_chan_id: newShimId(),
                                         no_publish: false
                                     }
                                 };
@@ -1225,67 +1616,127 @@ export default class ChannelsStore {
                                         i
                                     ].satAmount.toString();
 
-                                BackendUtils.openChannelStream(request)
+                                openChannelStreamWithTimeout(request)
                                     .then((data: any) => {
                                         const { psbt_fund, pending_chan_id } =
                                             data.result;
-                                        this.pending_chan_ids.push(
-                                            pending_chan_id
-                                        );
+                                        pendingChanIds.push(pending_chan_id);
                                         outputs[psbt_fund.funding_address] =
                                             psbt_fund.funding_amount;
+                                        fundingAddresses[pending_chan_id] =
+                                            psbt_fund.funding_address;
                                         this.handleChannelOpen(
                                             request,
-                                            outputs
+                                            outputs,
+                                            fundingAddresses,
+                                            pendingChanIds,
+                                            isCurrent,
+                                            finish
                                         );
                                     })
-                                    .catch((error: Error) => {
-                                        this.handleChannelOpenError(error);
-                                    });
+                                    // the stream failed, or
+                                    // handleChannelOpen threw before its
+                                    // first request: nothing funds
+                                    .catch(stopBatch);
                             }
                         }
                     })
-                    .catch((error: Error) => {
-                        this.handleChannelOpenError(error);
-                    });
+                    .catch(stopBatch);
             } else {
                 request.funding_shim = {
                     psbt_shim: {
                         base_psbt: '',
-                        pending_chan_id: randomBytes(32).toString('base64')
+                        pending_chan_id: newShimId()
                     }
                 };
-                BackendUtils.openChannelStream(request)
+                openChannelStreamWithTimeout(request)
                     .then((data: any) => {
                         const { psbt_fund, pending_chan_id } = data.result;
-                        this.pending_chan_ids.push(pending_chan_id);
+                        pendingChanIds.push(pending_chan_id);
                         if (psbt_fund?.funding_address) {
                             outputs[psbt_fund.funding_address] =
                                 psbt_fund.funding_amount;
+                            fundingAddresses[pending_chan_id] =
+                                psbt_fund.funding_address;
                         }
-                        this.handleChannelOpen(request, outputs);
+                        this.handleChannelOpen(
+                            request,
+                            outputs,
+                            fundingAddresses,
+                            pendingChanIds,
+                            isCurrent,
+                            finish
+                        );
                     })
                     .catch((error: Error) => {
-                        this.handleChannelOpenError(error);
+                        shimIds.forEach(cancelShim);
+                        this.handleChannelOpenError(error, isCurrent, finish);
                     });
             }
         } else {
+            // lets a timed out open be found among the node's channels
+            const memo =
+                BackendUtils.isLNDBased() && BackendUtils.supportsChannelMemo()
+                    ? makeOpenMemo()
+                    : undefined;
+            if (memo) request.memo = memo;
+
+            this.syncOpensInFlight++;
+
+            const onOpened = (data: any) =>
+                runInAction(() => {
+                    if (!isCurrent()) return;
+                    this.output_index = data.output_index;
+                    this.funding_txid_str = data.funding_txid_str;
+                    this.errorOpenChannel = false;
+                    this.openingChannel = false;
+                    this.errorMsgChannel = null;
+                    this.channelRequest = null;
+                    this.channelSuccess = true;
+                    this.connectingToPeer = false;
+                });
+
             BackendUtils.openChannelSync(request)
-                .then((data: any) =>
-                    runInAction(() => {
-                        this.output_index = data.output_index;
-                        this.funding_txid_str = data.funding_txid_str;
-                        this.errorOpenChannel = false;
-                        this.openingChannel = false;
-                        this.errorMsgChannel = null;
-                        this.channelRequest = null;
-                        this.channelSuccess = true;
-                        this.connectingToPeer = false;
-                    })
-                )
-                .catch((error: Error) => {
+                .then(onOpened)
+                .catch(async (error: Error) => {
+                    // a timed out open may still have gone through on any
+                    // backend (e.g. CLN past the 30s REST timeout); only
+                    // opens that carry a memo can be looked up
+                    if (isRequestTimeout(error)) {
+                        // the screen has moved on, so a lookup result
+                        // would be dropped anyway
+                        if (!isCurrent()) return;
+                        const opened = memo
+                            ? await findChannelByMemo(
+                                  () => BackendUtils.getPendingChannels(),
+                                  () => BackendUtils.getChannels(),
+                                  memo
+                              )
+                            : undefined;
+                        if (opened) {
+                            onOpened(opened);
+                            return;
+                        }
+                        runInAction(() => {
+                            if (!isCurrent()) return;
+                            this.errorMsgChannel = localeString(
+                                'stores.ChannelsStore.openOutcomeUnknown'
+                            );
+                            this.output_index = null;
+                            this.funding_txid_str = null;
+                            this.errorOpenChannel = true;
+                            this.openOutcomeUnknown = true;
+                            this.openingChannel = false;
+                            this.connectingToPeer = false;
+                            this.channelRequest = null;
+                            this.peerSuccess = false;
+                            this.channelSuccess = false;
+                        });
+                        return;
+                    }
                     const errorMsg = errorToUserFriendly(error);
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.errorMsgChannel = errorMsg;
                         this.output_index = null;
                         this.funding_txid_str = null;
@@ -1296,7 +1747,12 @@ export default class ChannelsStore {
                         this.peerSuccess = false;
                         this.channelSuccess = false;
                     });
-                });
+                })
+                .finally(() =>
+                    runInAction(() => {
+                        this.syncOpensInFlight--;
+                    })
+                );
         }
     };
 

@@ -2,6 +2,7 @@ const reactNativeConfig = require('@react-native/eslint-config/flat');
 const importPlugin = require('eslint-plugin-import');
 const prettierPlugin = require('eslint-plugin-prettier');
 const noNegativeLayoutOffset = require('./eslint-rules/no-negative-layout-offset');
+const noThemeColorInStaticStyleSheet = require('./eslint-rules/no-themecolor-in-static-stylesheet');
 
 module.exports = [
     // Ignore patterns (must be first for ESLint 9 global ignores)
@@ -16,7 +17,9 @@ module.exports = [
             'babel.config.js',
             'metro.config.js',
             'react-native.config.js',
-            'index.js'
+            'index.js',
+            // generated per-run files (Metro config, logs) of the regtest rig
+            'tools/regtest-rig/state/**'
         ]
     },
 
@@ -113,6 +116,7 @@ module.exports = [
             'no-control-regex': 'off',
             'no-undef': 'error',
             'no-unused-vars': 'off',
+            'no-const-assign': 'error',
             'object-shorthand': ['error', 'always'],
             'prefer-spread': 'off',
 
@@ -128,7 +132,6 @@ module.exports = [
             'dot-notation': 'off',
             eqeqeq: 'off',
             'no-bitwise': 'off',
-            'no-const-assign': 'off',
             'no-div-regex': 'off',
             'no-lone-blocks': 'off',
             'no-void': 'off',
@@ -140,6 +143,21 @@ module.exports = [
         },
         plugins: {
             prettier: prettierPlugin
+        }
+    },
+
+    // Test files: fail on focused or disabled tests so an accidental
+    // it.only or xit cannot silently shrink the suite. The jest plugin is
+    // registered globally by @react-native/eslint-config, which sets these
+    // rules to 'warn'; registering the root eslint-plugin-jest copy under
+    // the same name would be a redefinition error, so only rules are set.
+    {
+        files: ['**/*.test.js', '**/*.test.ts', '**/*.test.tsx'],
+        rules: {
+            'jest/no-focused-tests': 'error',
+            'jest/no-disabled-tests': 'error',
+            'jest/no-identical-title': 'error',
+            'jest/valid-expect': 'error'
         }
     },
 
@@ -157,12 +175,15 @@ module.exports = [
         plugins: {
             zeus: {
                 rules: {
-                    'no-negative-layout-offset': noNegativeLayoutOffset
+                    'no-negative-layout-offset': noNegativeLayoutOffset,
+                    'no-themecolor-in-static-stylesheet':
+                        noThemeColorInStaticStyleSheet
                 }
             }
         },
         rules: {
-            'zeus/no-negative-layout-offset': 'error'
+            'zeus/no-negative-layout-offset': 'error',
+            'zeus/no-themecolor-in-static-stylesheet': 'error'
         }
     }
 ];

@@ -1,9 +1,9 @@
 import BigNumber from 'bignumber.js';
 import { observable, computed } from 'mobx';
-const { chanFormat } = require('bolt07');
 
 import BaseModel from './BaseModel';
 import { lnrpc } from '../proto/lightning';
+import { formatNonZeroScid, formatScid } from '../utils/ScidUtils';
 
 interface HTLC {
     hash_lock: string;
@@ -94,7 +94,12 @@ export default class Channel extends BaseModel {
             this.confirmations_required > 0
         ) {
             return {
-                current: this.confirmations,
+                // The channel stays pending until it is ready, so the count
+                // can go past the required depth
+                current: Math.min(
+                    this.confirmations,
+                    this.confirmations_required
+                ),
                 total: this.confirmations_required
             };
         }
@@ -108,6 +113,20 @@ export default class Channel extends BaseModel {
             current,
             total: current + this.confirmations_until_active
         };
+    }
+
+    // LDK Node lists a channel as pending open until channel_ready messages
+    // have been exchanged. Once the funding transaction has the required
+    // confirmations, that usually means it waits for the peer's channel_ready
+    @computed
+    public get isWaitingForPeer(): boolean {
+        return (
+            !!this.pendingOpen &&
+            this.confirmations != null &&
+            this.confirmations_required != null &&
+            this.confirmations_required > 0 &&
+            this.confirmations >= this.confirmations_required
+        );
     }
 
     @computed
@@ -244,13 +263,7 @@ export default class Channel extends BaseModel {
     @computed
     public get shortChannelId(): string | undefined {
         if (this.short_channel_id) return this.short_channel_id;
-        if (this.chan_id) {
-            try {
-                return chanFormat({ number: this.chan_id }).channel;
-            } catch (e) {
-                return undefined;
-            }
-        }
+        if (this.chan_id) return formatScid(this.chan_id);
         return undefined;
     }
 
@@ -258,27 +271,19 @@ export default class Channel extends BaseModel {
     public get aliasScids(): Array<string> {
         const scids: Array<string> = [];
         this.alias_scids?.forEach((scid) => {
-            try {
-                const formatted = chanFormat({ number: scid }).channel;
-                if (formatted !== '0x0x0') scids.push(formatted);
-            } catch (e) {}
+            const formatted = formatNonZeroScid(scid);
+            if (formatted) scids.push(formatted);
         });
         return scids;
     }
 
     @computed
     public get peerScidAlias(): string | undefined {
-        const scid = this.peer_scid_alias
-            ? chanFormat({ number: this.peer_scid_alias }).channel
-            : undefined;
-        return scid !== '0x0x0' ? scid : undefined;
+        return formatNonZeroScid(this.peer_scid_alias);
     }
 
     @computed get zeroConfConfirmedScid(): string | undefined {
-        const scid = this.zero_conf_confirmed_scid
-            ? chanFormat({ number: this.zero_conf_confirmed_scid }).channel
-            : undefined;
-        return scid !== '0x0x0' ? scid : undefined;
+        return formatNonZeroScid(this.zero_conf_confirmed_scid);
     }
 
     @computed

@@ -7,7 +7,10 @@ import {
     getFormattedAmount,
     getFeePercentage,
     getSatAmount,
-    feeLimitSatsToMaxRoutingFeeMsat
+    feeLimitSatsToMaxRoutingFeeMsat,
+    getFeeLimitSatsFromPercent,
+    defaultMaxRoutingFeeMsat,
+    isWholeSatAmount
 } from './AmountUtils';
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
 import { SATS_PER_BTC } from './UnitsUtils';
@@ -1200,6 +1203,27 @@ describe('AmountUtils', () => {
         });
     });
 
+    describe('isWholeSatAmount', () => {
+        it('accepts whole sat amounts as strings or numbers', () => {
+            expect(isWholeSatAmount('100000')).toBe(true);
+            expect(isWholeSatAmount(100000)).toBe(true);
+            expect(isWholeSatAmount('100000.000')).toBe(true);
+            expect(isWholeSatAmount('0')).toBe(true);
+        });
+
+        it('rejects fractional sat amounts', () => {
+            expect(isWholeSatAmount('1000000.5')).toBe(false);
+            expect(isWholeSatAmount('100000.001')).toBe(false);
+            expect(isWholeSatAmount(0.5)).toBe(false);
+        });
+
+        it('rejects values that are not numbers', () => {
+            expect(isWholeSatAmount('abc')).toBe(false);
+            expect(isWholeSatAmount('1,5')).toBe(false);
+            expect(isWholeSatAmount('Infinity')).toBe(false);
+        });
+    });
+
     describe('feeLimitSatsToMaxRoutingFeeMsat', () => {
         it('converts a sat fee limit to millisats', () => {
             expect(feeLimitSatsToMaxRoutingFeeMsat('100')).toBe(100000);
@@ -1212,12 +1236,9 @@ describe('AmountUtils', () => {
             expect(feeLimitSatsToMaxRoutingFeeMsat('')).toBeUndefined();
         });
 
-        it('treats a numeric 0 as "no limit", matching the previous behavior', () => {
-            expect(feeLimitSatsToMaxRoutingFeeMsat(0)).toBeUndefined();
-        });
-
-        it('treats an explicit "0" string as a real cap of zero', () => {
+        it('treats a limit of 0 as a real cap of zero', () => {
             expect(feeLimitSatsToMaxRoutingFeeMsat('0')).toBe(0);
+            expect(feeLimitSatsToMaxRoutingFeeMsat(0)).toBe(0);
         });
 
         it('returns undefined rather than forwarding an unusable value', () => {
@@ -1230,6 +1251,72 @@ describe('AmountUtils', () => {
         it('floors fractional sats to a whole millisat value', () => {
             expect(feeLimitSatsToMaxRoutingFeeMsat('1.5')).toBe(1500);
             expect(feeLimitSatsToMaxRoutingFeeMsat('1.0005')).toBe(1000);
+        });
+    });
+
+    describe('getFeeLimitSatsFromPercent', () => {
+        it('computes the percent of the amount in whole sats', () => {
+            expect(getFeeLimitSatsFromPercent('5.0', '1000')).toBe('50');
+            expect(getFeeLimitSatsFromPercent('5', 1000)).toBe('50');
+            expect(getFeeLimitSatsFromPercent('0.5', '100000')).toBe('500');
+        });
+
+        it('rounds up so a small amount does not get a 0 sat limit', () => {
+            // 5% of 9 sats is 0.45 sats, which used to round to 0
+            expect(getFeeLimitSatsFromPercent('5.0', '9')).toBe('1');
+            expect(getFeeLimitSatsFromPercent('5.0', '1')).toBe('1');
+            // 5% of 30 sats is 1.5 sats
+            expect(getFeeLimitSatsFromPercent('5.0', '30')).toBe('2');
+            // 5% of 21 sats is 1.05 sats
+            expect(getFeeLimitSatsFromPercent('5.0', '21')).toBe('2');
+        });
+
+        it('accepts a comma as the decimal separator', () => {
+            expect(getFeeLimitSatsFromPercent('5,0', '1000')).toBe('50');
+            expect(getFeeLimitSatsFromPercent('0,5', '1000')).toBe('5');
+        });
+
+        it('returns 0 for a 0 percent limit', () => {
+            expect(getFeeLimitSatsFromPercent('0', '1000')).toBe('0');
+        });
+
+        it('returns an empty limit when there is no amount', () => {
+            expect(getFeeLimitSatsFromPercent('5.0', undefined)).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', '')).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', 0)).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', '0')).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', '-9')).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', -9)).toBe('');
+        });
+
+        it('returns an empty limit, not a 0 sat cap, for an unusable input', () => {
+            expect(getFeeLimitSatsFromPercent('', '1000')).toBe('');
+            expect(getFeeLimitSatsFromPercent('abc', '1000')).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', 'abc')).toBe('');
+            expect(getFeeLimitSatsFromPercent('-5', '1000')).toBe('');
+            // A negative fraction of a sat rounds up to -0, which must not
+            // become a 0 sat cap
+            expect(getFeeLimitSatsFromPercent('-5', '9')).toBe('');
+            expect(getFeeLimitSatsFromPercent('-0.1', '100')).toBe('');
+            expect(getFeeLimitSatsFromPercent('Infinity', '1000')).toBe('');
+        });
+
+        it('does not use exponent notation for large amounts', () => {
+            expect(
+                getFeeLimitSatsFromPercent('5.0', '2100000000000000000000000')
+            ).toBe('105000000000000000000000');
+        });
+    });
+
+    describe('defaultMaxRoutingFeeMsat', () => {
+        it("matches LDK's default cap of 1% plus 50 sats", () => {
+            expect(defaultMaxRoutingFeeMsat(1_000_000)).toBe(60_000);
+            expect(defaultMaxRoutingFeeMsat(5_000_000)).toBe(100_000);
+            expect(defaultMaxRoutingFeeMsat(0)).toBe(50_000);
+        });
+
+        it('rounds down to a whole millisat value', () => {
+            expect(defaultMaxRoutingFeeMsat(1_000_099)).toBe(60_000);
         });
     });
 });

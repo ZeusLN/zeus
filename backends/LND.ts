@@ -10,8 +10,23 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
-import { toLnrpcAddressType } from './../utils/LndUtils';
-import { Hash as sha256Hash } from 'fast-sha256';
+import {
+    LndInvoiceListParams,
+    LndPaymentListParams,
+    toLnrpcAddressType
+} from './../utils/LndUtils';
+import {
+    findPaymentByHash,
+    grpcErrorCode,
+    markRestErrorResponse
+} from './../utils/PaymentLookupUtils';
+import {
+    DEFAULT_MAX_TRANSACTIONS,
+    getNewestTransactions,
+    TransactionPageRequest
+} from './../utils/OnchainTransactionUtils';
+import { sha256Bytes } from './../utils/HashingUtils';
+import { inFlightRequestKey } from './../utils/InFlightRequestUtils';
 import BigNumber from 'bignumber.js';
 
 interface Headers {
@@ -23,6 +38,10 @@ interface Headers {
 
 // keep track of all active calls so we can cancel when appropriate
 const calls = new Map<string, Promise<any>>();
+
+// how long lookupPayment holds TrackPaymentV2's stream open waiting for
+// a terminal update before concluding the payment is still in flight
+const TRACK_PAYMENT_TIMEOUT_MS = 10000;
 
 export default class LND {
     torSocksPort?: number = undefined;
@@ -38,9 +57,7 @@ export default class LND {
         useTor?: boolean,
         timeout?: number
     ) => {
-        // use body data as an identifier too, we don't want to cancel when we
-        // are making multiples calls to get all the node names, for example
-        const id = data ? `${url}${JSON.stringify(data)}` : url;
+        const id = inFlightRequestKey(headers, url, data);
         if (calls.has(id)) {
             return calls.get(id);
         }
@@ -86,6 +103,8 @@ export default class LND {
 
             const fetchPromise = ReactNativeBlobUtil.config({
                 trusty: !certVerification,
+                // never replay the macaroon / rune headers to a redirect target
+                followRedirect: false,
                 // RNBlobUtil's native default is 60s; without this a
                 // payment request holding the connection open longer than
                 // that dies natively no matter what the race below allows
@@ -104,24 +123,39 @@ export default class LND {
                         }
                         return response.json();
                     } else {
+                        let grpcCode: unknown;
                         try {
                             const errorInfo = response.json();
-                            throw new Error(
-                                (errorInfo.error && errorInfo.error.message) ||
-                                    errorInfo.message ||
-                                    errorInfo.error
+                            grpcCode = grpcErrorCode(errorInfo);
+                            throw markRestErrorResponse(
+                                new Error(
+                                    (errorInfo.error &&
+                                        errorInfo.error.message) ||
+                                        errorInfo.message ||
+                                        errorInfo.error
+                                ),
+                                grpcCode,
+                                response.info().status
                             );
                         } catch (e) {
                             if (
                                 response.data &&
                                 typeof response.data === 'string'
                             ) {
-                                throw new Error(response.data);
+                                throw markRestErrorResponse(
+                                    new Error(response.data),
+                                    grpcCode,
+                                    response.info().status
+                                );
                             } else {
-                                throw new Error(
-                                    localeString(
-                                        'backends.LND.restReq.connectionError'
-                                    )
+                                throw markRestErrorResponse(
+                                    new Error(
+                                        localeString(
+                                            'backends.LND.restReq.connectionError'
+                                        )
+                                    ),
+                                    grpcCode,
+                                    response.info().status
                                 );
                             }
                         }
@@ -191,7 +225,14 @@ export default class LND {
             });
 
             ws.addEventListener('close', () => {
-                // connection closed
+                // connection closed; nothing catches what a listener throws,
+                // so don't parse a response that never came
+                if (resp === undefined) {
+                    reject(
+                        localeString('backends.LND.restReq.connectionError')
+                    );
+                    return;
+                }
                 resolve(JSON.parse(resp));
             });
         });
@@ -269,20 +310,49 @@ export default class LND {
         );
     };
 
-    getRequest = (route: string, data?: any) =>
-        this.request(route, 'get', null, data);
+    getRequest = (route: string, data?: any, timeout?: number) =>
+        this.request(route, 'get', null, data, timeout);
     postRequest = (route: string, data?: any, timeout?: number) =>
         this.request(route, 'post', data, null, timeout);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
 
-    getTransactions = (data: any) =>
+    getTransactionsPage = (data?: TransactionPageRequest | null) =>
         this.getRequest(
-            `/v1/transactions?end_height=-1${
+            `/v1/transactions?end_height=${data?.end_height ?? -1}${
                 data?.start_height ? `&start_height=${data.start_height}` : ''
-            }&max_transactions=${data?.max_transactions || 500}`
+            }&max_transactions=${
+                data?.max_transactions ?? DEFAULT_MAX_TRANSACTIONS
+            }`
         ).then((data: any) => ({
-            transactions: data.transactions
+            transactions: data.transactions || []
         }));
+    getTransactions = async (data?: Partial<TransactionPageRequest> | null) => {
+        // callers that pick their own range get exactly that range
+        if (
+            data?.start_height !== undefined ||
+            data?.end_height !== undefined
+        ) {
+            return await this.getTransactionsPage({
+                start_height: data.start_height,
+                end_height: data.end_height,
+                max_transactions:
+                    data.max_transactions ?? DEFAULT_MAX_TRANSACTIONS
+            });
+        }
+        const transactions = await getNewestTransactions({
+            fetchPage: (request) =>
+                this.getTransactionsPage(request).then(
+                    (page: any) => page.transactions
+                ),
+            // a stale height only widens the recent blocks, which are read
+            // to the top
+            getTipHeight: async () =>
+                Number(nodeInfoStore.nodeInfo?.currentBlockHeight) ||
+                this.getMyNodeInfo().then((info: any) => info.block_height),
+            limit: data?.max_transactions ?? DEFAULT_MAX_TRANSACTIONS
+        });
+        return { transactions };
+    };
     getChannels = () => this.getRequest('/v1/channels');
     getPendingChannels = () => this.getRequest('/v1/channels/pending');
     getClosedChannels = () => this.getRequest('/v1/channels/closed');
@@ -298,7 +368,8 @@ export default class LND {
             amount: data.amount,
             spend_unconfirmed: data.spend_unconfirmed,
             send_all: data.send_all,
-            outpoints: data.outpoints
+            outpoints: data.outpoints,
+            label: data.label
         });
     sendCustomMessage = (data: any) =>
         this.postRequest('/v1/custommessage', {
@@ -350,20 +421,27 @@ export default class LND {
             // ws closed
             console.log('subscribeCustomMessages ws close');
         });
+
+        return ws;
     };
     getNetworkInfo = () => this.getRequest('/v1/graph/info');
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
-    getInvoices = (
-        params: { limit?: number; reversed?: boolean } = {
-            limit: 500,
-            reversed: true
-        }
-    ) =>
-        this.getRequest(
-            `/v1/invoices?reversed=${
-                params?.reversed !== undefined ? params.reversed : true
-            }${params?.limit ? `&num_max_invoices=${params.limit}` : ''}`
+    getInvoices = (params: LndInvoiceListParams = {}) => {
+        const limit = params.limit ?? 500;
+        const reversed = params.reversed ?? true;
+
+        return this.getRequest(
+            `/v1/invoices?reversed=${reversed}&num_max_invoices=${limit}${
+                params.creationDateStart !== undefined
+                    ? `&creation_date_start=${params.creationDateStart}`
+                    : ''
+            }${
+                params.creationDateEnd !== undefined
+                    ? `&creation_date_end=${params.creationDateEnd}`
+                    : ''
+            }`
         );
+    };
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoices', {
             memo: data.memo,
@@ -377,19 +455,22 @@ export default class LND {
                 : undefined,
             route_hints: data.route_hints
         });
-    getPayments = (
-        params: { maxPayments?: number; reversed?: boolean } = {
-            maxPayments: 500,
-            reversed: true
-        }
-    ) =>
-        this.getRequest(
-            `/v1/payments?include_incomplete=true${
-                params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
-            }&reversed=${
-                params?.reversed !== undefined ? params.reversed : true
+    getPayments = (params: LndPaymentListParams = {}) => {
+        const maxPayments = params.maxPayments ?? 500;
+        const reversed = params.reversed ?? true;
+
+        return this.getRequest(
+            `/v1/payments?include_incomplete=true&max_payments=${maxPayments}&reversed=${reversed}${
+                params.creationDateStart !== undefined
+                    ? `&creation_date_start=${params.creationDateStart}`
+                    : ''
+            }${
+                params.creationDateEnd !== undefined
+                    ? `&creation_date_end=${params.creationDateEnd}`
+                    : ''
             }`
         );
+    };
 
     getNewAddress = (data: any) => {
         const { type, ...rest } = data;
@@ -410,7 +491,8 @@ export default class LND {
             node_pubkey_string: data.node_pubkey_string,
             sat_per_vbyte: data.sat_per_vbyte,
             spend_unconfirmed: data.spend_unconfirmed,
-            close_address: data.close_address
+            close_address: data.close_address,
+            memo: data.memo
         };
 
         if (data.fundMax) {
@@ -443,7 +525,8 @@ export default class LND {
             min_confs: data.min_confs,
             node_pubkey_string: data.node_pubkey_string,
             sat_per_vbyte: data.sat_per_vbyte,
-            spend_unconfirmed: data.spend_unconfirmed
+            spend_unconfirmed: data.spend_unconfirmed,
+            close_address: data.close_address
         };
 
         if (data.fundMax) {
@@ -518,7 +601,14 @@ export default class LND {
             });
 
             ws.addEventListener('close', () => {
-                // connection closed
+                // connection closed; nothing catches what a listener throws,
+                // so don't parse a response that never came
+                if (resp === undefined) {
+                    reject(
+                        localeString('backends.LND.restReq.connectionError')
+                    );
+                    return;
+                }
                 resolve(JSON.parse(resp));
             });
         });
@@ -530,11 +620,29 @@ export default class LND {
         if (data.pubkey) delete data.pubkey;
 
         const timeoutSeconds = Number(data.timeout_seconds) || 60;
+        // native transport deadline for the send request, past the
+        // forcedTimeout below
+        const requestTimeoutMs = (timeoutSeconds + 5) * 1000;
+        const dispatchDeadline = Date.now() + requestTimeoutMs;
 
         const forcedTimeout = async (time_ms: number, response: any) => {
             await new Promise((res) => setTimeout(res, time_ms));
             return response;
         };
+
+        // payment_timed_out marks the outcome as unknown on the node (the
+        // client gave up, not the payment), so the caller can track the
+        // payment to its terminal state instead of reporting failure.
+        // dispatch_deadline_ms is when the request is torn down natively;
+        // before then it may still reach the node, so a lookup finding no
+        // record isn't proof the payment was never sent.
+        const timedOutResponse = () => ({
+            payment_error: localeString(
+                'views.SendingLightning.paymentTimedOut'
+            ),
+            payment_timed_out: true,
+            dispatch_deadline_ms: dispatchDeadline
+        });
 
         // The request timeout must exceed the forcedTimeout below, or the
         // generic transport rejection wins the race and the user sees a
@@ -547,20 +655,76 @@ export default class LND {
                     ...data,
                     allow_self_payment: true
                 },
-                (timeoutSeconds + 5) * 1000
-            );
+                requestTimeoutMs
+            ).catch((err: any) => {
+                // safety net if the transport deadline ever fires first:
+                // a client-side timeout is outcome-unknown, not a failure
+                if (err?.message === 'Request timeout')
+                    return timedOutResponse();
+                throw err;
+            });
 
         const result: any = await Promise.race([
-            forcedTimeout((timeoutSeconds + 1) * 1000, {
-                payment_error: localeString(
-                    'views.SendingLightning.paymentTimedOut'
-                )
-            }),
+            forcedTimeout((timeoutSeconds + 1) * 1000, timedOutResponse()),
             call()
         ]);
 
         return result;
     };
+    // lnd's NOT_FOUND (code 5) answer from TrackPaymentV2, surfaced
+    // either as a parsed {error} stream message or a thrown Error
+    protected isPaymentNotFound = (err: any) => {
+        const code = err?.grpc_code ?? err?.code;
+        const message = typeof err === 'string' ? err : err?.message;
+        return code === 5 || !!message?.includes("payment isn't initiated");
+    };
+    // ListPayments fallback; see findPaymentByHash for when a miss counts
+    // as no record
+    protected scanForPayment = (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) =>
+        findPaymentByHash(
+            (request) => this.getPayments(request),
+            data.payment_hash,
+            data.creation_date_start
+        );
+    // LND has no unary per-payment lookup, but TrackPaymentV2's REST
+    // stream closes right after emitting the update for a payment already
+    // in a terminal state, so the buffered transport resolves it like one:
+    // a targeted query for exactly the two states the trackers act on,
+    // with NOT_FOUND as an authoritative no-record answer (no scan-page
+    // eviction caveat). A payment still in flight holds the stream open
+    // instead (no_inflight_updates suppresses its updates and the
+    // transport can't read partial bodies anyway), so a timeout means
+    // "exists, not terminal": resolve it via the scan, which also backs
+    // up any other transport failure before it propagates as unobservable.
+    // trackTimeoutMs shortens that wait for callers answering a client
+    // with its own reply deadline (the NWC service)
+    lookupPayment = (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+        trackTimeoutMs?: number;
+    }) =>
+        this.getRequest(
+            // base64url with its padding kept: lnd's REST gateway rejects
+            // an unpadded 32-byte hash with "illegal base64 data"
+            `/v2/router/track/${Base64Utils.hexToBase64(data.payment_hash)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')}`,
+            { no_inflight_updates: true },
+            data.trackTimeoutMs ?? TRACK_PAYMENT_TIMEOUT_MS
+        ).then(
+            (response: any) => {
+                if (response?.result) return response.result;
+                if (this.isPaymentNotFound(response?.error)) return null;
+                return this.scanForPayment(data);
+            },
+            (error: any) => {
+                if (this.isPaymentNotFound(error)) return null;
+                return this.scanForPayment(data);
+            }
+        );
     closeChannel = (urlParams?: Array<string>) => {
         let requestString = `/v1/channels/${urlParams && urlParams[0]}/${
             urlParams && urlParams[1]
@@ -702,6 +866,8 @@ export default class LND {
     };
     // Coin Control
     fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
+    releaseOutput = (data: any) =>
+        this.postRequest('/v2/wallet/utxos/release', data);
     signPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/sign', data);
     finalizePsbt = (data: any) =>
         this.postRequest('/v2/wallet/psbt/finalize', data);
@@ -746,9 +912,9 @@ export default class LND {
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
-            signature: new sha256Hash()
-                .update(Base64Utils.stringToUint8Array(signed.signature))
-                .digest()
+            signature: sha256Bytes(
+                Base64Utils.stringToUint8Array(signed.signature)
+            )
         };
     };
     lookupInvoice = (data: any) =>
@@ -759,9 +925,12 @@ export default class LND {
     // Poll lookupInvoice for the watched payment hash instead of scanning
     // the invoice list, which can push the watched invoice out of the
     // window on busy nodes. rHash arrives base64url encoded from the
-    // Receive view; the REST lookup endpoint expects hex
+    // Receive view; the REST lookup endpoint expects hex. A settled
+    // invoice is the signal, with no amount check: LND does not settle a
+    // fixed-amount invoice for less, and with the Flow LSP the node invoice
+    // is for the Receive amount minus the LSP fee
     watchInvoicePaid = (
-        { rHash, value }: { rHash: string; value?: string | number },
+        { rHash }: { rHash: string },
         onPaid: (payload: {
             amountSat: number;
             tx?: string;
@@ -775,11 +944,7 @@ export default class LND {
                 .then((result: any) => {
                     const invoice = new Invoice(result);
                     const amountPaid = invoice.getAmount;
-                    if (
-                        invoice.isPaid &&
-                        Number(amountPaid) >= Number(value) &&
-                        Number(amountPaid) !== 0
-                    ) {
+                    if (invoice.isPaid && Number(amountPaid) !== 0) {
                         clearInterval(interval);
                         onPaid({
                             amountSat: Number(amountPaid),
@@ -797,12 +962,12 @@ export default class LND {
     watchOnchainReceived = (
         {
             address,
-            value,
+            expectedAmountSat,
             numConfPreference,
             blockHeight
         }: {
             address: string;
-            value?: string | number;
+            expectedAmountSat?: string | number;
             numConfPreference: number;
             blockHeight?: number;
         },
@@ -826,7 +991,8 @@ export default class LND {
                             for (let j = 0; j < output_details.length; j++) {
                                 const output = output_details[j];
                                 if (
-                                    Number(output.amount) >= Number(value) &&
+                                    Number(output.amount) >=
+                                        Number(expectedAmountSat ?? 0) &&
                                     output.address === address
                                 ) {
                                     clearInterval(interval);
@@ -866,7 +1032,9 @@ export default class LND {
         // keep pulling in responses until the socket closes
         let resp: any;
 
-        const { zeroConfPeers, lspPubkey } = data;
+        // read per request: the socket can outlive the settings and the LSP
+        // info it was opened with
+        const { getZeroConfPeers, getLspPubkey } = data;
 
         ws.addEventListener('open', (e: any) => {
             console.log('channel acceptor opened', e);
@@ -883,13 +1051,15 @@ export default class LND {
                 const requestPubkey = Base64Utils.base64ToHex(resp.node_pubkey);
                 const pending_chan_id = resp.pending_chan_id;
 
+                const lspPubkey = getLspPubkey();
+                const zeroConfPeers = getZeroConfPeers();
                 const isZeroConfAllowed =
                     lspPubkey === requestPubkey ||
                     (zeroConfPeers && zeroConfPeers.includes(requestPubkey));
 
                 const acceptData = {
                     accept: !resp.wants_zero_conf || isZeroConfAllowed,
-                    zero_conf: isZeroConfAllowed,
+                    zero_conf: isZeroConfAllowed && resp.wants_zero_conf,
                     pending_chan_id
                 };
                 ws.send(JSON.stringify(acceptData)); // send a message
@@ -907,6 +1077,8 @@ export default class LND {
         ws.addEventListener('close', () => {
             console.log('channel acceptor close');
         });
+
+        return ws;
     };
 
     listPeers = async () => {
@@ -1016,6 +1188,7 @@ export default class LND {
     supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
+    supportsPaymentLookup = () => true;
     supportsChannelManagement = () => true;
     supportsCircularRebalancing = () => true;
     supportsForceClose = () => true;
@@ -1047,6 +1220,7 @@ export default class LND {
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => this.supports('v0.18.3');
+    supportsChannelMemo = () => this.supports('v0.17.0');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     supportsChannelFundMax = () => true;

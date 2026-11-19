@@ -104,3 +104,76 @@ describe('js-lnurl helpers', () => {
         });
     });
 });
+
+// getParams parses login and withdrawRequest queries locally (no fetch), via
+// query-string and decode-uri-component. decode-uri-component 0.2.2 hangs or
+// throws on malformed escapes (GHSA-vcc3-ghjq-m6fr, GHSA-qr28-fpjm-wq7f), so
+// package.json pins js-lnurl's query-string to 9.x, which uses 0.5.1.
+describe('js-lnurl getParams query parsing', () => {
+    const CALLBACK = 'https://service.com/withdraw?id=1';
+    const withdrawLnurl = (extra = '') =>
+        `lnurlw://service.com/api?tag=withdrawRequest&k1=abc&callback=${encodeURIComponent(
+            CALLBACK
+        )}&maxWithdrawable=100000&minWithdrawable=1000&defaultDescription=Hello+World${extra}`;
+
+    it('parses a login lnurl without fetching', async () => {
+        const k1 =
+            '3fc3645b439ce8e7f2553a69e5267081d96dcd340693afabe04be7b0ccd178df';
+        await expect(
+            getParams(`keyauth://service.com/login?tag=login&k1=${k1}`)
+        ).resolves.toEqual({
+            tag: 'login',
+            k1,
+            callback: `https://service.com/login?tag=login&k1=${k1}`,
+            domain: 'service.com'
+        });
+    });
+
+    it('parses a withdrawRequest lnurl without fetching', async () => {
+        await expect(getParams(withdrawLnurl())).resolves.toEqual({
+            tag: 'withdrawRequest',
+            k1: 'abc',
+            callback: CALLBACK,
+            maxWithdrawable: '100000',
+            minWithdrawable: '1000',
+            defaultDescription: 'Hello World',
+            domain: 'service.com'
+        });
+    });
+
+    it('decodes UTF-8 escapes', async () => {
+        const params: any = await getParams(withdrawLnurl('&memo=caf%C3%A9'));
+        expect(params.memo).toBe('café');
+    });
+
+    it('survives `$` replacement patterns in malformed escapes', async () => {
+        // 0.2.2 fed `$\`` and `$'` to String#replace as patterns, so the
+        // string grew until it threw RangeError: Invalid string length
+        const params: any = await getParams(
+            withdrawLnurl('&x=' + '%24%60x%24%27y'.repeat(150) + '%')
+        );
+        expect(params.k1).toBe('abc');
+        expect(params.x.length).toBeLessThan(2000);
+    });
+
+    it('parses malformed escapes quickly', async () => {
+        const runs = Array.from(
+            { length: 500 },
+            (_, i) =>
+                `%${(i >> 8).toString(16).padStart(2, '0')}%${(i & 0xff)
+                    .toString(16)
+                    .padStart(2, '0')}x`
+        ).join('');
+        for (const extra of [
+            // 0.2.2 is cubic here: 800 escapes took 65 s under jest
+            '&x=' + '%C0'.repeat(300),
+            // many distinct runs plus a malformed one
+            '&x=' + runs + '%zz'
+        ]) {
+            const start = Date.now();
+            const params: any = await getParams(withdrawLnurl(extra));
+            expect(params.k1).toBe('abc');
+            expect(Date.now() - start).toBeLessThan(1000);
+        }
+    });
+});

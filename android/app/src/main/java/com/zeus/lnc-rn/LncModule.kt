@@ -164,15 +164,6 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
      }
   }
 
-  private fun sendEvent(event: String, data: String) {
-      val params = Arguments.createMap().apply {
-        putString("result", data)
-      }
-      getReactApplicationContext()
-        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-        .emit(event, params)
-  }
-
   // The key callbacks share one event name across namespaces, and a dial
   // that outlives a wallet switch keeps reporting on it, so they carry the
   // namespace for JS to filter on.
@@ -186,13 +177,26 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
         .emit(event, params)
   }
 
+  // Every stream of a method emits under the method name, so a non-empty
+  // requestId is echoed in each event for JS to tell concurrent streams
+  // apart. Nullable so a stray null from JS counts as no id.
+  private fun sendStreamEvent(event: String, requestId: String?, data: String) {
+      val params = Arguments.createMap().apply {
+        putString("result", data)
+        if (!requestId.isNullOrEmpty()) putString("request_id", requestId)
+      }
+      getReactApplicationContext()
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit(event, params)
+  }
+
   @ReactMethod
-  fun initListener(namespace: String, eventName: String, request: String) {
+  fun initListener(namespace: String, method: String, request: String, requestId: String?) {
      val gocb = AndroidStreamingCallback()
-     gocb.setEventName(eventName)
-     gocb.setCallback(::sendEvent)
+     gocb.setEventName(method)
+     gocb.setCallback { event, data -> sendStreamEvent(event, requestId, data) }
      try {
-        Lndmobile.invokeRPC(namespace, eventName, request, gocb)
+        Lndmobile.invokeRPC(namespace, method, request, gocb)
      } catch(e: Throwable) {
         // Same synchronous-failure path as invokeRPC. Emit the message on the
         // stream's own event so subscribers reject rather than wait forever;
@@ -249,27 +253,27 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
      }
   }
 
+  // Builds and signs a reverse swap claim and returns its hex without
+  // broadcasting it; the app stores it and broadcasts it itself
   @ReactMethod
-  fun createReverseClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, preimageHex: String, transactionHex: String, lockupAddress: String, destinationAddress: String, feeRate: Int, minerFee: Int, isTestnet: Boolean?, promise: Promise) {
-     Log.d("createReverseClaimTransaction called", "");
-
+  fun buildReverseClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, preimageHex: String, transactionHex: String, lockupAddress: String, destinationAddress: String, feeRate: Int, minerFee: Int, network: String, promise: Promise) {
      try {
-         Lndmobile.createReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, minerFee, isTestnet ?: false)
-         promise.resolve(null)
+         val txHex = Lndmobile.buildReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, minerFee, network)
+         promise.resolve(txHex)
      } catch (e: Exception) {
-         promise.reject("CREATE_REVERSE_CLAIM_ERROR", e.toString())
+         promise.reject("BUILD_REVERSE_CLAIM_ERROR", e.toString())
      }
   }
 
+  // Builds and signs a submarine swap refund and returns its hex without
+  // broadcasting it
   @ReactMethod
-  fun createRefundTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, transactionHex: String, privateKey: String, servicePubKey: String, feeRate: Int, timeoutBlockHeight: Int, destinationAddress: String, lockupAddress: String, cooperative: Boolean?, isTestnet: Boolean?, promise: Promise) {
-     Log.d("createRefundTransaction called", "");
-
+  fun buildRefundTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, transactionHex: String, privateKey: String, servicePubKey: String, feeRate: Int, minerFee: Int, timeoutBlockHeight: Int, destinationAddress: String, lockupAddress: String, cooperative: Boolean?, network: String, promise: Promise) {
      try {
-         var txid = Lndmobile.createRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative ?: false, isTestnet ?: false)
-         promise.resolve(txid)
+         val txHex = Lndmobile.buildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, minerFee, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative ?: false, network)
+         promise.resolve(txHex)
      } catch (e: Exception) {
-         promise.reject("CREATE_REFUND_ERROR", e.toString())
+         promise.reject("BUILD_REFUND_ERROR", e.toString())
      }
   }
 }

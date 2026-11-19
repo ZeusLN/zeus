@@ -5,7 +5,9 @@ import {
     FlatList,
     StyleSheet,
     Text,
-    View
+    View,
+    BackHandler,
+    NativeEventSubscription
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -24,14 +26,16 @@ import Screen from '../../components/Screen';
 import { sendingStyles } from '../../components/sendingStyles';
 
 import CashuStore from '../../stores/CashuStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import {
     MintPaymentStatus,
     MintProgressInfo,
     MultinutPaymentStep
 } from '../../utils/CashuUtils';
-import { loadDonationLnurl } from '../../utils/DonationUtils';
+import {
+    calculateTotalWithDonation,
+    loadDonationLnurl
+} from '../../utils/DonationUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -46,12 +50,11 @@ interface MultimintPaymentProps {
         'MultimintPayment',
         {
             paymentAmount?: string;
+            paymentRequest?: string;
             donationAmount?: string;
-            enableDonations?: boolean;
         }
     >;
     CashuStore?: CashuStore;
-    NodeInfoStore?: NodeInfoStore;
 }
 
 interface MultimintPaymentState {
@@ -71,14 +74,16 @@ interface MultimintPaymentState {
     amountDonated: number | null;
 }
 
-@inject('CashuStore', 'NodeInfoStore')
+@inject('CashuStore')
 @observer
 export default class MultimintPayment extends React.Component<
     MultimintPaymentProps,
     MultimintPaymentState
 > {
     private focusListener: (() => void) | undefined;
+    private backPressSubscription: NativeEventSubscription | undefined;
     private paymentAmountSat: number = 0;
+    private donationToSend: number = 0;
     private paymentHash?: string;
 
     constructor(props: MultimintPaymentProps) {
@@ -107,11 +112,26 @@ export default class MultimintPayment extends React.Component<
             CashuStore?.payReq?.getRequestAmount ||
             Number(route.params?.paymentAmount || 0);
         const feeEstimate = Number(CashuStore?.feeEstimate) || 0;
-        const totalNeeded = requestAmount + feeEstimate;
+        // The donation is drawn from the same mints right after the invoice
+        // is paid, so it has to be covered before the payment starts. It is
+        // resolved once here and executePayment sends that same number, so
+        // the coverage check and the send cannot disagree.
+        this.donationToSend = Number(route.params?.donationAmount) || 0;
+        const totalNeeded = calculateTotalWithDonation(
+            requestAmount,
+            feeEstimate,
+            this.donationToSend
+        );
+
+        // The mints listed here are only the ones in the invoice's plan, and
+        // the planner stops once the invoice is covered. getPayReq counted
+        // every mint the invoice and the donation can be drawn from.
+        const spendableBalance =
+            Number(CashuStore?.payReqMintBalance) || totalSelectedBalance;
 
         const hasNoMintsSelected = effectiveMints.length === 0;
         const hasInsufficientBalance =
-            totalNeeded > totalSelectedBalance && totalSelectedBalance > 0;
+            totalNeeded > spendableBalance && spendableBalance > 0;
 
         this.paymentAmountSat = requestAmount;
         this.paymentHash = CashuStore?.payReq?.payment_hash;
@@ -175,6 +195,11 @@ export default class MultimintPayment extends React.Component<
                 });
         });
 
+        this.backPressSubscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            this.handleBackPress
+        );
+
         if (this.state.step !== MultinutPaymentStep.FAILED) {
             this.executePayment();
         }
@@ -184,7 +209,21 @@ export default class MultimintPayment extends React.Component<
         if (this.focusListener) {
             this.focusListener();
         }
+        this.backPressSubscription?.remove();
     }
+
+    // The screen below is the review of the same invoice, which offers to
+    // pay it again. Like the header, which has no back button once the
+    // payment starts, keep this screen while the payment is in flight, and
+    // go to the wallet once it has succeeded. A failed payment may go back.
+    private handleBackPress = (): boolean => {
+        const { step } = this.state;
+        if (step === MultinutPaymentStep.COMPLETE) {
+            this.props.navigation.popTo('Wallet');
+            return true;
+        }
+        return step === MultinutPaymentStep.PROCESSING;
+    };
 
     onProgressUpdate = (progressInfo: {
         step: MultinutPaymentStep;
@@ -211,7 +250,7 @@ export default class MultimintPayment extends React.Component<
     };
 
     executePayment = async () => {
-        const { CashuStore, NodeInfoStore, route } = this.props;
+        const { CashuStore, route } = this.props;
 
         try {
             this.setState((prev) => ({
@@ -228,10 +267,11 @@ export default class MultimintPayment extends React.Component<
 
             const payment = await CashuStore!!.payLnInvoiceFromEcash({
                 amount: route.params?.paymentAmount,
+                paymentRequest: route.params?.paymentRequest,
                 onProgress: this.onProgressUpdate
             });
 
-            if (!payment || CashuStore!!.paymentError) {
+            if (!payment) {
                 this.setState({
                     step: MultinutPaymentStep.FAILED,
                     isProcessing: false,
@@ -248,19 +288,12 @@ export default class MultimintPayment extends React.Component<
                 error: undefined
             });
 
-            this.paymentAmountSat =
-                CashuStore?.payReq?.getRequestAmount ||
-                Number(route.params?.paymentAmount || 0);
-            this.paymentHash =
-                CashuStore?.payReq?.payment_hash || this.paymentHash;
-
-            const { donationAmount, enableDonations } = route.params || {};
-            if (
-                NodeInfoStore?.nodeInfo?.isMainNet &&
-                enableDonations &&
-                donationAmount
-            ) {
-                void this.handleDonationPayment(donationAmount);
+            // Send exactly what the coverage check in the constructor
+            // counted, rather than deciding again here: re-reading the
+            // store could send a donation the balance was never checked
+            // against.
+            if (this.donationToSend > 0) {
+                void this.handleDonationPayment(this.donationToSend.toString());
             }
         } catch (error: any) {
             this.setState({
@@ -292,6 +325,7 @@ export default class MultimintPayment extends React.Component<
             await CashuStore?.getPayReq(paymentRequest, isDonationPayment);
             const donationPayment = await CashuStore?.payLnInvoiceFromEcash({
                 amount: donationAmount,
+                paymentRequest,
                 isDonationPayment
             });
 
@@ -352,6 +386,11 @@ export default class MultimintPayment extends React.Component<
                     item.error || item.mintUrl
                 }`;
             }
+            if (item.status === MintPaymentStatus.IN_FLIGHT) {
+                return `${localeString(
+                    'views.Cashu.MultimintPayment.inFlight'
+                )} | ${item.mintUrl}`;
+            }
             if (item.status === MintPaymentStatus.PAYING && isProcessing) {
                 return `${localeString(
                     'views.Cashu.MultimintPayment.paying'
@@ -394,6 +433,15 @@ export default class MultimintPayment extends React.Component<
                     <Icon
                         name="error"
                         color={themeColor('error')}
+                        size={20}
+                        style={{ marginRight: 10 }}
+                    />
+                )}
+
+                {item.status === MintPaymentStatus.IN_FLIGHT && (
+                    <Icon
+                        name="schedule"
+                        color={themeColor('warning')}
                         size={20}
                         style={{ marginRight: 10 }}
                     />
@@ -498,6 +546,11 @@ export default class MultimintPayment extends React.Component<
                 ? CashuStore?.paymentErrorMsg
                 : undefined);
         const isComplete = step === MultinutPaymentStep.COMPLETE;
+        // The mint may still pay a part in flight, and with it the invoice:
+        // paying again could pay it twice
+        const mayStillSettle = mints.some(
+            (m) => m.status === MintPaymentStatus.IN_FLIGHT
+        );
 
         return (
             <Screen>
@@ -708,18 +761,20 @@ export default class MultimintPayment extends React.Component<
 
                     {hasError && (
                         <>
-                            <Button
-                                title={localeString(
-                                    'views.SendingLightning.tryAgain'
-                                )}
-                                icon={{
-                                    name: 'rotate-ccw',
-                                    type: 'feather',
-                                    size: 25
-                                }}
-                                onPress={() => navigation.goBack()}
-                                secondary
-                            />
+                            {!mayStillSettle && (
+                                <Button
+                                    title={localeString(
+                                        'views.SendingLightning.tryAgain'
+                                    )}
+                                    icon={{
+                                        name: 'rotate-ccw',
+                                        type: 'feather',
+                                        size: 25
+                                    }}
+                                    onPress={() => navigation.goBack()}
+                                    secondary
+                                />
+                            )}
                             <Button
                                 title={localeString(
                                     'views.Settings.Ecash.cashuTroubleshooting'

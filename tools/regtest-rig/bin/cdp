@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# cdp: evaluate JS inside the running Zeus app through Metro's CDP inspector.
+#
+# usage: bin/cdp '<expression>'            sync; prints the value
+#        bin/cdp --async '<body>'          async function body; prints the
+#                                          JSON of what it returns
+#        bin/cdp -f file.js [--async]      code from a file
+#        bin/cdp --targets                 list Metro's debug targets
+#        options: --timeout MS (default 60000), --raw
+#
+# globalThis.Z (lib/prelude.js) is installed first. Highlights:
+#   Z.S()                stores (Z.S().settingsStore, .nodeInfoStore, ...)
+#   Z.nav()              NavigationService; Z.go(route, params); Z.home()
+#   Z.mod('path/x.ts')   any module by its bundle path; Z.def() = .default
+#   Z.settings({...})    merge into settings (async)
+#   Z.status() Z.nodes() Z.route() Z.screenText() Z.hasText(s) Z.press(label)
+#   Z.inst('Receive')    class component instances; Z.walk(fn) raw fibers
+#   Z.wrap(obj,'m','tag') + Z.log(clear)   trace calls; Z.captureConsole()
+#   Z.logbox()           hide LogBox and collect its messages into Z.log()
+#   Z.handle(str)        handleAnything + navigate
+# Examples:
+#   bin/cdp 'JSON.stringify(Z.status())'
+#   bin/cdp --async 'await Z.S().invoicesStore.createUnifiedInvoice({memo:"x",value:"1000"}); return Z.S().invoicesStore.payment_request'
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+case "${1:-}" in -h|--help) usage_if_help "$1" ;; esac
+exec node "$RIG_DIR/lib/cdp.js" "$@"

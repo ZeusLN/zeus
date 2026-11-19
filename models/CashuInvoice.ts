@@ -2,6 +2,7 @@ import { observable, computed } from 'mobx';
 import humanizeDuration from 'humanize-duration';
 
 import BaseModel from './BaseModel';
+import type { CDKTransaction } from '../cashu-cdk';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { localeString } from '../utils/LocaleUtils';
@@ -31,31 +32,35 @@ export default class CashuInvoice extends BaseModel {
     public cdkAmount?: number;
     public cdkMemo?: string;
     public cdkFee?: number;
+    public cdkQuoteId?: string;
 
     /**
      * Create CashuInvoice from CDK transaction (incoming)
      */
-    static fromCDKTransaction(tx: {
-        id: string;
-        amount: number;
-        fee?: number;
-        mint_url: string;
-        timestamp: number;
-        memo?: string;
-        state: string;
-    }): CashuInvoice {
+    static fromCDKTransaction(tx: CDKTransaction): CashuInvoice {
+        // state is absent before CDK 0.18, when every recorded transaction is
+        // completed. Only a completed record is paid; an unrecognised state
+        // (the iOS bridge reports "Unknown" for a status it does not know)
+        // stays unpaid so it cannot show as received without being in the
+        // balance
+        const completed = tx.state === undefined || tx.state === 'Completed';
         const invoice = new CashuInvoice({
             quote: tx.id,
-            request: '',
-            state: tx.state === 'Pending' ? 'UNPAID' : 'PAID',
-            paid: tx.state !== 'Pending' && tx.state !== 'Failed',
+            request: tx.payment_request || '',
+            state: completed
+                ? 'PAID'
+                : tx.state === 'Failed'
+                ? 'FAILED'
+                : 'UNPAID',
+            paid: completed,
             mintUrl: tx.mint_url,
             expires_at: tx.timestamp,
             fromCDK: true,
             cdkTimestamp: tx.timestamp,
             cdkAmount: tx.amount,
             cdkMemo: tx.memo,
-            cdkFee: tx.fee || 0
+            cdkFee: tx.fee || 0,
+            cdkQuoteId: tx.quote_id
         });
         return invoice;
     }
@@ -76,9 +81,19 @@ export default class CashuInvoice extends BaseModel {
 
     @computed public get isPaid(): boolean {
         if (this.fromCDK) {
-            return this.state !== 'UNPAID' && this.state !== 'Failed';
+            return this.state !== 'UNPAID' && this.state !== 'FAILED';
         }
         return this.paid || this.state === 'PAID' || false;
+    }
+
+    @computed public get isFailed(): boolean {
+        return !!this.fromCDK && this.state === 'FAILED';
+    }
+
+    // CDK history records carry a transaction id, not a mint quote id, so
+    // there is no quote to poll the mint with
+    @computed public get shouldPollMint(): boolean {
+        return !this.isPaid && !this.fromCDK;
     }
 
     @computed public get key(): string {
@@ -93,6 +108,10 @@ export default class CashuInvoice extends BaseModel {
     @computed public get getAmount(): number {
         if (this.fromCDK) return this.cdkAmount || 0;
         return this.decoded?.satoshis ? this.decoded.satoshis : 0;
+    }
+
+    @computed public get getFee(): number {
+        return this.cdkFee || 0;
     }
 
     // return amount in satoshis
@@ -155,8 +174,9 @@ export default class CashuInvoice extends BaseModel {
     }
 
     @computed public get isExpired(): boolean {
-        // CDK transactions from history are completed, not expired
-        if (this.fromCDK) return false;
+        // CDK transactions from history are not expired; a failed one is
+        // closed out like an expired request so it does not render as pending
+        if (this.fromCDK) return this.isFailed;
 
         const getExpiryTimestamp = this.getExpiryUnixTimestamp();
 
@@ -196,7 +216,10 @@ export default class CashuInvoice extends BaseModel {
             this.originalTimeUntilExpiryInSeconds;
 
         if (originalTimeUntilExpiryInSeconds == null) {
-            return localeString('models.Invoice.never');
+            this.formattedOriginalTimeUntilExpiry = localeString(
+                'models.Invoice.never'
+            );
+            return;
         }
 
         const originalTimeUntilExpiryInMs =

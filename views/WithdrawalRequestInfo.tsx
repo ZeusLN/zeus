@@ -63,9 +63,13 @@ export default class WithdrawalRequestInfo extends React.Component<
         const { route, InvoicesStore } = this.props;
         const { bolt12 } = route.params;
         this.setState({ loading: true });
-        await InvoicesStore.getWithdrawalReq(bolt12);
+        // use the returned decode, not withdrawal_req: a getPayReq started
+        // during the decode leaves withdrawal_req null
+        const withdrawalReqResult = await InvoicesStore.getWithdrawalReq(
+            bolt12
+        );
         this.setState({
-            withdrawalReqResult: InvoicesStore.withdrawal_req,
+            withdrawalReqResult,
             loading: false
         });
     }

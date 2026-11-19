@@ -107,22 +107,17 @@ export class ReverseClaimTransaction extends ClaimTransaction {
     destinationAddress: string;
     feeRate: number;
     minerFee: number;
-    isTestnet: boolean;
 
     static build({
         swap,
-        endpoint,
         transactionHex,
         feeRate,
-        minerFee,
-        isTestnet
+        minerFee
     }: {
         swap: Swap;
-        endpoint: string;
         transactionHex: string;
         feeRate: number;
         minerFee: number;
-        isTestnet: boolean;
     }): ReverseClaimTransaction | null {
         const privateKey = privateKeyFromKeys(swap.keys);
         const claimLeaf = swap.swapTreeDetails?.claimLeaf?.output;
@@ -151,7 +146,13 @@ export class ReverseClaimTransaction extends ClaimTransaction {
         }
 
         return new ReverseClaimTransaction({
-            endpoint,
+            // No endpoint, so the native claim skips the co-signing
+            // request to the host. That request carries the preimage, is
+            // made before the broadcast, and is waited on with no timeout.
+            // The claim is then signed on the script path, which needs
+            // nothing from the host, and the preimage is first sent in
+            // the broadcast claim.
+            endpoint: '',
             swapId: swap.id,
             claimLeaf,
             refundLeaf,
@@ -162,8 +163,7 @@ export class ReverseClaimTransaction extends ClaimTransaction {
             lockupAddress,
             destinationAddress,
             feeRate,
-            minerFee,
-            isTestnet
+            minerFee
         });
     }
 }

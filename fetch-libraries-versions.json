@@ -1,20 +1,19 @@
 {
     "embedded-lnd": {
-        "version": "v0.21.4-beta-zeus.1",
-        "androidSha256": "653c97ff8e19a76a826205b1f4fbf4c9dc64e16058836348a49c80fca86b6b2b",
-        "iosSha256": "d7e3646711f333b290f6b26052e63d9f6e7e7f4fc336279363f902408fc01f3e"
+        "version": "v0.21.8-beta-zeus",
+        "androidSha256": "2afde0d7cd2d1040c14463fc3a0880c62ac06451df3dc155b06bfbc200f889ca",
+        "iosSha256": "2acc8eb31106e15f5fc27caccc30c9667a541e505922c312abef1f27b258674b"
     },
     "ldk-node": {
-        "version": "v0.7.0-zeus-rl-0.2.7",
-        "androidSha256": "9b8a565863ba187a2b2aeb3e0c6edd69fc9fef0d277df2476c7e5196d3c8480d",
-        "iosSha256": "51721f2b37e8b7c99d7213e24c0cd57969cb836e9c663857d1c157e26a63ea6d"
+        "version": "v0.7.1-zeus-rl-0.2.8",
+        "androidSha256": "1945448f7ad4be2458dd4b31792689e23ec4b474c2503849f2ea8fc53f7ff870",
+        "iosSha256": "fd1435801cce73731f6e824e4f6fdbfaeac86429be5d9eb3f4c52c58454f6fb5"
     },
     "cdk": {
-        "version": "0.17.4",
-        "androidSha256": "9717f92f62ae9c9e044b5f40f5831a2bd0d9fc3bb9dd63739468500bfe70f4cd",
-        "androidBindingsSha256": "520bdd3ff49d7f0b5376b4313720665d7208634a1c463620d3959437484d8260",
-        "iosSha256": "0908c519ee72a0d80713dbb96d787fd5a3bd8ee1fb38074cc2e562b417911c96",
-        "iosBindingsSha256": "7ebcce2363c346daaae4c01c090d34a6d73bf168ddef0395a5eae9aab36bf53f"
+        "version": "0.18.3",
+        "androidSha256": "307a0f9fa90b4df17ec01dc59080996a0b7cfb5a7b6f66d75309cdb18e5f7bb8",
+        "iosSha256": "459f01c5e8282b3815f14e452db533a2a814112732a1c196ff5117f02c6407c3",
+        "iosBindingsSha256": "dcc3e6a79f0ab2673074ec49b320e14cf30ab6d6881580676a291d33b325a259"
     },
     "zeus-cashu-restore": {
         "version": "0.1.0",

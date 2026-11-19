@@ -50,7 +50,11 @@ const TAP_COUNT_OPTIONS = [
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import StealthModeUtils, { StealthApp } from '../../utils/StealthModeUtils';
+import StealthModeUtils, {
+    StealthApp,
+    DECOY_APP_NAMES,
+    getUnlockInstructionText
+} from '../../utils/StealthModeUtils';
 
 // Stealth app icons
 const CalculatorIcon = require('../../assets/images/stealth/calculator.png');
@@ -72,28 +76,23 @@ interface StealthModeState {
 }
 
 const STEALTH_APPS: {
-    key: StealthApp;
-    translateKey: string;
+    key: Exclude<StealthApp, 'zeus'>;
     icon: any;
 }[] = [
     {
         key: 'calculator',
-        translateKey: 'views.Settings.StealthMode.calculator',
         icon: CalculatorIcon
     },
     {
         key: 'vpn',
-        translateKey: 'views.Settings.StealthMode.vpn',
         icon: VPNIcon
     },
     {
         key: 'qrscanner',
-        translateKey: 'views.Settings.StealthMode.qrscanner',
         icon: QRScannerIcon
     },
     {
         key: 'notepad',
-        translateKey: 'views.Settings.StealthMode.notepad',
         icon: NotepadIcon
     }
 ];
@@ -202,38 +201,6 @@ export default class StealthMode extends React.Component<
     getSelectedAppInfo = () => {
         const { selectedApp } = this.state;
         return STEALTH_APPS.find((app) => app.key === selectedApp);
-    };
-
-    getUnlockInstructionText = () => {
-        const {
-            selectedApp,
-            stealthPinLength,
-            stealthVpnCountry,
-            stealthVpnServer
-        } = this.state;
-
-        switch (selectedApp) {
-            case 'vpn':
-                return localeString(
-                    'views.Settings.StealthMode.unlockVPNCustom'
-                )
-                    .replace('{country}', stealthVpnCountry)
-                    .replace('{server}', stealthVpnServer);
-            case 'calculator':
-                return localeString(
-                    'views.Settings.StealthMode.unlockCalculatorCustom'
-                ).replace('{count}', String(stealthPinLength));
-            case 'notepad':
-                return localeString(
-                    'views.Settings.StealthMode.unlockNotepadCustom'
-                ).replace('{count}', String(stealthPinLength));
-            case 'qrscanner':
-                return localeString(
-                    'views.Settings.StealthMode.unlockQRScannerCustom'
-                ).replace('{count}', String(stealthPinLength));
-            default:
-                return '';
-        }
     };
 
     handleUpdateVpnCountry = async (country: string) => {
@@ -397,7 +364,7 @@ export default class StealthMode extends React.Component<
                             }}
                         >
                             {selectedAppInfo
-                                ? localeString(selectedAppInfo.translateKey)
+                                ? DECOY_APP_NAMES[selectedAppInfo.key]
                                 : ''}
                         </Text>
 
@@ -432,7 +399,7 @@ export default class StealthMode extends React.Component<
                                             textAlign: 'center'
                                         }}
                                     >
-                                        {localeString(app.translateKey)}
+                                        {DECOY_APP_NAMES[app.key]}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
@@ -556,7 +523,12 @@ export default class StealthMode extends React.Component<
                                     fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
-                                {this.getUnlockInstructionText()}
+                                {getUnlockInstructionText(
+                                    selectedApp,
+                                    stealthPinLength,
+                                    stealthVpnCountry,
+                                    stealthVpnServer
+                                )}
                             </Text>
                         </View>
 

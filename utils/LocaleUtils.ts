@@ -82,6 +82,8 @@ const JAVA_LAYER_STRINGS = [
     'androidNotification.nwcShutdown'
 ];
 
+const PLACEHOLDER_REGEX = /\{\{([^{}]+)\}\}/g;
+
 export function localeString(
     localeString: string,
     substitutions?: { [key: string]: string | number }
@@ -167,13 +169,11 @@ export function localeString(
     translation = getString();
 
     if (substitutions && translation) {
-        Object.keys(substitutions).forEach((subKey) => {
-            const regex = new RegExp(`{{${subKey}}}`, 'g');
-            translation = translation.replace(
-                regex,
-                String(substitutions[subKey])
-            );
-        });
+        translation = translation.replace(PLACEHOLDER_REGEX, (match, key) =>
+            Object.prototype.hasOwnProperty.call(substitutions, key)
+                ? String(substitutions[key])
+                : match
+        );
     }
 
     return translation;

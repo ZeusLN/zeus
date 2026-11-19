@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     Alert,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -167,7 +168,9 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
         }
 
         handleExportChannels({
-            isSqlite: SettingsStore.isSqlite ?? true,
+            // Configs saved before v0.12.3 have no isSqlite and run on
+            // Bolt (see writeLndConfig)
+            isSqlite: SettingsStore.isSqlite ?? false,
             lndDir: SettingsStore.lndDir || 'lnd',
             // nodeInfo is empty when the node isn't running, so read the
             // network from the persisted wallet config instead
@@ -745,47 +748,46 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                             </View>
                         )}
 
-                    {selectedNode && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
+                    {/* Shown without a wallet too: import and the lost
+                        configuration scan are how a user on the intro screen
+                        gets an existing wallet back */}
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() =>
+                                navigation.navigate('NodeConfigExportImport')
+                            }
                         >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'NodeConfigExportImport'
-                                    )
-                                }
+                            <View style={styles.icon}>
+                                <ExportImportIcon
+                                    stroke={themeColor('text')}
+                                    width={18}
+                                    height={18}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
                             >
-                                <View style={styles.icon}>
-                                    <ExportImportIcon
-                                        stroke={themeColor('text')}
-                                        width={18}
-                                        height={18}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Tools.nodeConfigExportImport.title'
-                                    )}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                {localeString(
+                                    'views.Tools.nodeConfigExportImport.title'
+                                )}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
 
                     <View
                         style={{
@@ -815,9 +817,13 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString(
-                                    'views.Tools.keychainCleanup.title'
-                                )}
+                                {Platform.OS === 'android'
+                                    ? localeString(
+                                          'views.Tools.keychainCleanup.title.android'
+                                      )
+                                    : localeString(
+                                          'views.Tools.keychainCleanup.title'
+                                      )}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon stroke={forwardArrowColor} />

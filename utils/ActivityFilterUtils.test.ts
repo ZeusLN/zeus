@@ -9,8 +9,10 @@ jest.mock('../stores/Stores', () => ({
 }));
 
 import Payment from '../models/Payment';
+import CashuPayment from '../models/CashuPayment';
 import Invoice from '../models/Invoice';
 import Transaction from '../models/Transaction';
+import CashuToken from '../models/CashuToken';
 import { Filter } from '../stores/ActivityStore';
 import ActivityFilterUtils from './ActivityFilterUtils';
 
@@ -123,6 +125,71 @@ describe('ActivityFilterUtils', () => {
             3,
             '5'
         ]);
+    });
+
+    it.each([
+        ['month end', [2000, 0, 31], [2000, 1, 1]],
+        ['year end', [1999, 11, 31], [2000, 0, 1]],
+        ['leap day', [2000, 1, 29], [2000, 2, 1]]
+    ])(
+        'includes the whole end date and nothing after it at %s',
+        (_label, [y, m, d], [nextY, nextM, nextD]) => {
+            const txAt = (amount: number, date: Date) =>
+                new Transaction({
+                    amount,
+                    time_stamp: (date.getTime() / 1000).toString()
+                });
+            const activities: any[] = [
+                txAt(1, new Date(y, m, d, 0, 0, 0)),
+                txAt(2, new Date(y, m, d, 23, 59, 59)),
+                txAt(3, new Date(nextY, nextM, nextD, 0, 0, 0)),
+                txAt(4, new Date(nextY, nextM, nextD, 12, 0, 0))
+            ];
+            const filter = getDefaultFilter();
+            filter.endDate = new Date(y, m, d, 12, 0, 0);
+
+            const filteredActivities = ActivityFilterUtils.filterActivities(
+                activities,
+                filter
+            );
+
+            expect(filteredActivities.map((a) => a.getAmount)).toEqual([
+                '1',
+                '2'
+            ]);
+        }
+    );
+
+    it('supports filtering Cashu tokens by start and end date', () => {
+        const activities: any[] = [
+            new CashuToken({
+                value: 1,
+                sent: true,
+                created_at: new Date(2000, 1, 1, 3, 4, 5).getTime() / 1000
+            }),
+            new CashuToken({
+                value: 2,
+                received: true,
+                pendingClaim: true,
+                received_at: new Date(2000, 1, 2, 3, 4, 4).getTime() / 1000
+            })
+        ];
+
+        const startFilter = getDefaultFilter();
+        startFilter.startDate = new Date(2000, 1, 2, 3, 4, 5);
+        expect(
+            ActivityFilterUtils.filterActivities(activities, startFilter).map(
+                (a) => a.getAmount
+            )
+        ).toEqual([2]);
+
+        const endFilter = getDefaultFilter();
+        endFilter.endDate = new Date(2000, 1, 1, 3, 4, 5);
+        expect(
+            ActivityFilterUtils.filterActivities(activities, endFilter).map(
+                (a) => a.getAmount
+            )
+        ).toEqual([1]);
     });
 
     it('supports filtering unconfirmed transactions', () => {
@@ -446,6 +513,45 @@ describe('ActivityFilterUtils', () => {
             '600',
             700
         ]);
+    });
+
+    it('hides in-flight CDK melts unless in-transit payments are shown', () => {
+        const cdkMelt = {
+            direction: 'outgoing' as const,
+            fee: 1,
+            mint_url: 'https://mint.example.com',
+            timestamp: 1756200000,
+            quote_id: 'quote-1'
+        };
+        const activities: any[] = [
+            CashuPayment.fromCDKTransaction({
+                ...cdkMelt,
+                id: 'settled',
+                amount: 200,
+                state: 'Completed'
+            }),
+            CashuPayment.fromCDKTransaction({
+                ...cdkMelt,
+                id: 'in-flight',
+                amount: 300,
+                state: 'Pending'
+            })
+        ];
+
+        const filter = getDefaultFilter();
+        filter.inTransit = false;
+        expect(
+            ActivityFilterUtils.filterActivities(activities, filter).map(
+                (a) => a.getAmount
+            )
+        ).toEqual([200]);
+
+        filter.inTransit = true;
+        expect(
+            ActivityFilterUtils.filterActivities(activities, filter).map(
+                (a) => a.getAmount
+            )
+        ).toEqual([200, 300]);
     });
 
     const getDefaultFilter = () =>

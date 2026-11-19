@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -61,9 +61,18 @@ export default class KeychainCleanup extends React.Component<
         (scan.hasLegacyEncryptedSettings ? 1 : 0);
 
     confirmPurge = () => {
+        const android = Platform.OS === 'android';
         Alert.alert(
-            localeString('views.Tools.keychainCleanup.confirmTitle'),
-            localeString('views.Tools.keychainCleanup.confirmMessage'),
+            android
+                ? localeString(
+                      'views.Tools.keychainCleanup.confirmTitle.android'
+                  )
+                : localeString('views.Tools.keychainCleanup.confirmTitle'),
+            android
+                ? localeString(
+                      'views.Tools.keychainCleanup.confirmMessage.android'
+                  )
+                : localeString('views.Tools.keychainCleanup.confirmMessage'),
             [
                 {
                     text: localeString('general.cancel'),
@@ -130,13 +139,19 @@ export default class KeychainCleanup extends React.Component<
         const { loading, purging, scan, result } = this.state;
 
         const candidates = scan ? this.candidateCount(scan) : 0;
+        // Android has no iCloud-synced keychain, so it gets its own wording
+        const android = Platform.OS === 'android';
 
         return (
             <Screen>
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.Tools.keychainCleanup.title'),
+                        text: android
+                            ? localeString(
+                                  'views.Tools.keychainCleanup.title.android'
+                              )
+                            : localeString('views.Tools.keychainCleanup.title'),
                         style: { color: themeColor('text') }
                     }}
                     navigation={navigation}
@@ -148,7 +163,13 @@ export default class KeychainCleanup extends React.Component<
                             color: themeColor('text')
                         }}
                     >
-                        {localeString('views.Tools.keychainCleanup.explainer1')}
+                        {android
+                            ? localeString(
+                                  'views.Tools.keychainCleanup.explainer1.android'
+                              )
+                            : localeString(
+                                  'views.Tools.keychainCleanup.explainer1'
+                              )}
                     </Text>
                     {loading && <LoadingIndicator />}
 
@@ -159,9 +180,13 @@ export default class KeychainCleanup extends React.Component<
                                 color: themeColor('text')
                             }}
                         >
-                            {localeString(
-                                'views.Tools.keychainCleanup.nothingFound'
-                            )}
+                            {android
+                                ? localeString(
+                                      'views.Tools.keychainCleanup.nothingFound.android'
+                                  )
+                                : localeString(
+                                      'views.Tools.keychainCleanup.nothingFound'
+                                  )}
                         </Text>
                     )}
 
@@ -218,9 +243,15 @@ export default class KeychainCleanup extends React.Component<
 
                     {!loading && scan && candidates > 0 && (
                         <Button
-                            title={localeString(
-                                'views.Tools.keychainCleanup.purgeButton'
-                            )}
+                            title={
+                                android
+                                    ? localeString(
+                                          'views.Tools.keychainCleanup.purgeButton.android'
+                                      )
+                                    : localeString(
+                                          'views.Tools.keychainCleanup.purgeButton'
+                                      )
+                            }
                             onPress={this.confirmPurge}
                             warning
                             disabled={purging}

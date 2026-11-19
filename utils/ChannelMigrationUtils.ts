@@ -7,16 +7,71 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { localeString } from './LocaleUtils';
 import { stopLnd } from './LndMobileUtils';
 import BackendUtils from './BackendUtils';
+import { isValidAuthChallenge } from './AuthChallengeUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import Base64Utils from './Base64Utils';
+import { isReservedSigningMessage } from './LnurlAuthUtils';
+import { IN_APP_RESTART } from './InAppRestartUtils';
 import { sleep } from './SleepUtils';
 import { zipFolder, unzipFile, encryptFile, decryptFile } from './ZipUtils';
 
 import { BACKUPS_HOST } from '../stores/ChannelBackupStore';
+import { settingsStore } from '../stores/Stores';
 
 import Storage from '../storage';
 
 export const CHANNEL_MIGRATION_ACTIVE = 'channel_migration_active';
+
+/**
+ * The lndDirs of all wallets that are locked after a channel export. Records
+ * written by versions that could lock only one wallet hold a single lndDir.
+ */
+const getMigrationLockedDirs = async (): Promise<string[]> => {
+    const stored = await Storage.getItem(CHANNEL_MIGRATION_ACTIVE);
+    if (!stored) return [];
+    try {
+        const migrationData = JSON.parse(stored);
+        if (!migrationData?.migrationStatus) return [];
+        if (Array.isArray(migrationData.lndDirs)) return migrationData.lndDirs;
+        return migrationData.lndDir ? [migrationData.lndDir] : [];
+    } catch (e) {
+        console.error('Failed to parse migration data:', e);
+        return [];
+    }
+};
+
+// lndDir repeats the last entry of lndDirs so that older app versions, which
+// only read lndDir, still lock the most recently exported wallet
+const setMigrationLockedDirs = async (lndDirs: string[]): Promise<void> => {
+    if (lndDirs.length === 0) {
+        await Storage.removeItem(CHANNEL_MIGRATION_ACTIVE);
+        return;
+    }
+    await Storage.setItem(
+        CHANNEL_MIGRATION_ACTIVE,
+        JSON.stringify({
+            migrationStatus: true,
+            lndDir: lndDirs[lndDirs.length - 1],
+            lndDirs
+        })
+    );
+};
+
+const lockWalletForMigration = async (lndDir: string): Promise<void> => {
+    const otherDirs = (await getMigrationLockedDirs()).filter(
+        (dir) => dir !== lndDir
+    );
+    await setMigrationLockedDirs([...otherDirs, lndDir]);
+};
+
+export const unlockWalletFromMigration = async (
+    lndDir: string
+): Promise<void> => {
+    const otherDirs = (await getMigrationLockedDirs()).filter(
+        (dir) => dir !== lndDir
+    );
+    await setMigrationLockedDirs(otherDirs);
+};
 
 const VALID_CHANNEL_DB_EXTENSIONS = ['.zip'];
 
@@ -60,6 +115,16 @@ const stopLndSafely = async (): Promise<void> => {
     }
 };
 
+// Best-effort removal of temporary files a flow created in the cache
+// dir. Errors are ignored so they never replace the flow's own error.
+const removeStagingFiles = async (paths: string[]): Promise<void> => {
+    for (const path of paths) {
+        try {
+            if (await RNFS.exists(path)) await RNFS.unlink(path);
+        } catch (e) {}
+    }
+};
+
 const resolveToLocalPath = async (uri: string): Promise<string> => {
     const ext = uri.toLowerCase().endsWith('.db') ? '.db' : '.zip';
     const tempPath = `${RNFS.CachesDirectoryPath}/zeus-import-temp${ext}`;
@@ -90,6 +155,34 @@ const resolveToLocalPath = async (uri: string): Promise<string> => {
     }
 
     return uri;
+};
+
+/**
+ * lnd opens only the channel database of its configured backend
+ * (channel.db for bolt, channel.sqlite for SQLite) and creates an empty
+ * one when that file is missing. Check that the unzipped backup provided
+ * it, so a backup of the other type, or one with no database, is reported
+ * as an error instead of a restore with no channels.
+ */
+const assertChannelDbRestored = async (
+    graphDir: string,
+    isSqlite: boolean
+): Promise<void> => {
+    const file = isSqlite ? 'channel.sqlite' : 'channel.db';
+    if (await RNFS.exists(`${graphDir}/${file}`)) return;
+
+    const otherFile = isSqlite ? 'channel.db' : 'channel.sqlite';
+    if (await RNFS.exists(`${graphDir}/${otherFile}`)) {
+        throw new Error(
+            localeString('views.Tools.migration.import.databaseMismatch', {
+                backupType: isSqlite ? 'Bolt' : 'SQLite',
+                selectedType: isSqlite ? 'SQLite' : 'Bolt'
+            })
+        );
+    }
+    throw new Error(
+        localeString('views.Tools.migration.import.databaseMissing', { file })
+    );
 };
 
 /**
@@ -172,7 +265,10 @@ export const uploadChannelBackupToOlympus = async (
         }
 
         const statusAuth = statusAuthResponse.json();
-        if (!statusAuth.success || !statusAuth.verification)
+        if (
+            !statusAuth.success ||
+            !isValidAuthChallenge(statusAuth.verification)
+        )
             throw new Error('Invalid auth response');
 
         console.log('Signing status challenge...');
@@ -209,6 +305,7 @@ export const uploadChannelBackupToOlympus = async (
         const last_backup_at = statusJson.last_backup_at;
 
         const proceedToUpload = async () => {
+            const stagingPaths: string[] = [];
             try {
                 if (setStatus)
                     setStatus(
@@ -229,7 +326,10 @@ export const uploadChannelBackupToOlympus = async (
                 }
 
                 const uploadAuth = uploadAuthResponse.json();
-                if (!uploadAuth.success || !uploadAuth.verification)
+                if (
+                    !uploadAuth.success ||
+                    !isValidAuthChallenge(uploadAuth.verification)
+                )
                     throw new Error('Invalid auth response');
 
                 console.log('Signing upload challenge...');
@@ -266,6 +366,7 @@ export const uploadChannelBackupToOlympus = async (
                 const timestamp = Date.now();
                 const tempZipPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-backup-${timestamp}.zip`;
                 const tempEncPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-backup-${timestamp}.enc`;
+                stagingPaths.push(tempZipPath, tempEncPath);
                 await zipFolder(graphDir, tempZipPath);
 
                 if (setStatus)
@@ -317,10 +418,7 @@ export const uploadChannelBackupToOlympus = async (
                 if (setStatus) setStatus(null);
 
                 if (status === 200 && json.success) {
-                    await Storage.setItem(
-                        CHANNEL_MIGRATION_ACTIVE,
-                        JSON.stringify({ migrationStatus: true, lndDir })
-                    );
+                    await lockWalletForMigration(lndDir);
 
                     Alert.alert(
                         localeString('views.Tools.migration.export.success'),
@@ -330,7 +428,7 @@ export const uploadChannelBackupToOlympus = async (
                         [
                             {
                                 text: localeString('views.Wallet.restart'),
-                                onPress: () => RNRestart.Restart()
+                                onPress: () => RNRestart.Restart(IN_APP_RESTART)
                             }
                         ],
                         { cancelable: false }
@@ -345,7 +443,7 @@ export const uploadChannelBackupToOlympus = async (
                         [
                             {
                                 text: localeString('views.Wallet.restart'),
-                                onPress: () => RNRestart.Restart()
+                                onPress: () => RNRestart.Restart(IN_APP_RESTART)
                             }
                         ],
                         { cancelable: false }
@@ -360,11 +458,13 @@ export const uploadChannelBackupToOlympus = async (
                     [
                         {
                             text: localeString('views.Wallet.restart'),
-                            onPress: () => RNRestart.Restart()
+                            onPress: () => RNRestart.Restart(IN_APP_RESTART)
                         }
                     ],
                     { cancelable: false }
                 );
+            } finally {
+                await removeStagingFiles(stagingPaths);
             }
         };
 
@@ -409,14 +509,30 @@ export const uploadChannelBackupToOlympus = async (
 };
 
 /**
+ * Signs an Olympus auth challenge with the node key. The restore flow calls
+ * lndmobile directly, so it does not go through the reserved-phrase check in
+ * BackendUtils.signMessage and has to apply it here.
+ */
+const signOlympusChallenge = async (challenge: string) => {
+    if (isReservedSigningMessage(challenge)) {
+        throw new Error(
+            'Refusing to sign the LNURL-auth key derivation phrase'
+        );
+    }
+    return await signMessageNodePubkey(Base64Utils.utf8ToBytes(challenge));
+};
+
+/**
  * Downloads and restores the graph data from Olympus
  */
 export const restoreChannelBackupFromOlympus = async (
     lndDir: string,
     isTestnet: boolean,
     pubkey: string,
-    seedArray: string
+    seedArray: string,
+    isSqlite: boolean
 ): Promise<boolean> => {
+    const stagingPaths: string[] = [];
     try {
         // 1. Authentication for status to check for existing backup
         console.log('Authenticating for status check...');
@@ -432,12 +548,15 @@ export const restoreChannelBackupFromOlympus = async (
         }
 
         const statusAuth = statusAuthResponse.json();
-        if (!statusAuth.success || !statusAuth.verification)
+        if (
+            !statusAuth.success ||
+            !isValidAuthChallenge(statusAuth.verification)
+        )
             throw new Error('Invalid auth response');
 
         console.log('Signing status challenge...');
-        const statusSignData = await signMessageNodePubkey(
-            Base64Utils.stringToUint8Array(statusAuth.verification)
+        const statusSignData = await signOlympusChallenge(
+            statusAuth.verification
         );
         const statusSignature = statusSignData.signature;
 
@@ -527,12 +646,15 @@ export const restoreChannelBackupFromOlympus = async (
         }
 
         const restoreAuth = restoreAuthResponse.json();
-        if (!restoreAuth.success || !restoreAuth.verification)
+        if (
+            !restoreAuth.success ||
+            !isValidAuthChallenge(restoreAuth.verification)
+        )
             throw new Error('Invalid auth response');
 
         console.log('Signing restore challenge...');
-        const restoreSignData = await signMessageNodePubkey(
-            Base64Utils.stringToUint8Array(restoreAuth.verification)
+        const restoreSignData = await signOlympusChallenge(
+            restoreAuth.verification
         );
         const restoreSignature = restoreSignData.signature;
 
@@ -567,6 +689,7 @@ export const restoreChannelBackupFromOlympus = async (
         // (it was uploaded as base64 inside a JSON body). Decode it
         // back to raw binary before decrypting.
         const encryptedBase64Response = await restoreResponse.text();
+        stagingPaths.push(tempEncPath, tempZipPath);
         await ReactNativeBlobUtil.fs.writeFile(
             tempEncPath,
             encryptedBase64Response,
@@ -612,20 +735,23 @@ export const restoreChannelBackupFromOlympus = async (
             await RNFS.mkdir(destFolder);
         }
 
-        try {
-            const existing = await RNFS.readDir(destFolder);
-            for (const item of existing) {
-                if (item.isFile()) await RNFS.unlink(item.path);
-            }
-        } catch (e) {}
+        // A file left behind here could pass assertChannelDbRestored in
+        // place of the backup's database, so a failed clear fails the restore
+        const existing = await RNFS.readDir(destFolder);
+        for (const item of existing) {
+            if (item.isFile()) await RNFS.unlink(item.path);
+        }
 
         await unzipFile(tempZipPath, destFolder);
         await RNFS.unlink(tempZipPath);
+        await assertChannelDbRestored(destFolder, isSqlite);
 
         return true;
     } catch (error: any) {
         console.error('Restore Flow Failed', error);
         throw error;
+    } finally {
+        await removeStagingFiles(stagingPaths);
     }
 };
 
@@ -688,10 +814,7 @@ export const exportChannelDb = async (
 
         const finishExport = async () => {
             if (setStatus) setStatus(null);
-            await Storage.setItem(
-                CHANNEL_MIGRATION_ACTIVE,
-                JSON.stringify({ migrationStatus: true, lndDir })
-            );
+            await lockWalletForMigration(lndDir);
             Alert.alert(
                 localeString('views.Tools.migration.export.success'),
                 localeString(
@@ -702,7 +825,7 @@ export const exportChannelDb = async (
                 [
                     {
                         text: localeString('views.Wallet.restart'),
-                        onPress: () => RNRestart.Restart()
+                        onPress: () => RNRestart.Restart(IN_APP_RESTART)
                     }
                 ],
                 { cancelable: false }
@@ -714,6 +837,34 @@ export const exportChannelDb = async (
             await RNFS.copyFile(stagingPath, downloadPath);
             await RNFS.unlink(stagingPath);
             await finishExport();
+            return;
+        }
+
+        // Stopping lnd and zipping take long enough for the user to leave
+        // the app and for it to lock in the meantime (or to be suspended
+        // and only get here once reopened). The share sheet is presented on
+        // top of the Lockscreen, so the archive must not be offered to a
+        // locked app.
+        if (settingsStore.loginRequired()) {
+            // A failed delete must not replace the cancellation notice
+            // with the generic export error
+            try {
+                await RNFS.unlink(stagingPath);
+            } catch (e) {
+                console.error('Failed to delete the staged export:', e);
+            }
+            if (setStatus) setStatus(null);
+            Alert.alert(
+                localeString('views.Tools.migration.export.cancelled'),
+                localeString('views.Tools.migration.export.cancelled.text'),
+                [
+                    {
+                        text: localeString('views.Wallet.restart'),
+                        onPress: () => RNRestart.Restart(IN_APP_RESTART)
+                    }
+                ],
+                { cancelable: false }
+            );
             return;
         }
 
@@ -737,7 +888,7 @@ export const exportChannelDb = async (
                     [
                         {
                             text: localeString('views.Wallet.restart'),
-                            onPress: () => RNRestart.Restart()
+                            onPress: () => RNRestart.Restart(IN_APP_RESTART)
                         }
                     ],
                     { cancelable: false }
@@ -763,7 +914,7 @@ export const exportChannelDb = async (
                     [
                         {
                             text: localeString('views.Wallet.restart'),
-                            onPress: () => RNRestart.Restart()
+                            onPress: () => RNRestart.Restart(IN_APP_RESTART)
                         }
                     ],
                     { cancelable: false }
@@ -782,7 +933,7 @@ export const exportChannelDb = async (
             [
                 {
                     text: localeString('views.Wallet.restart'),
-                    onPress: () => RNRestart.Restart()
+                    onPress: () => RNRestart.Restart(IN_APP_RESTART)
                 }
             ],
             { cancelable: false }
@@ -871,13 +1022,15 @@ export const handleExportChannels = ({
 
 /**
  * Imports a channel backup zip file (works for both SQLite and bolt DB).
- * Clears existing files in the graph directory and unzips the backup.
+ * Clears existing files in the graph directory and unzips the backup,
+ * which must contain the channel database of the wallet's DB backend.
  */
 export const importChannelDb = async (
     sourceUri: string,
     fileName: string,
     lndDir: string,
-    isTestnet: boolean
+    isTestnet: boolean,
+    isSqlite: boolean
 ) => {
     const validation = await validateChannelBackupFile(sourceUri, fileName);
     if (!validation.valid) {
@@ -891,14 +1044,25 @@ export const importChannelDb = async (
         await RNFS.mkdir(destFolder);
     }
 
-    try {
-        const existing = await RNFS.readDir(destFolder);
-        for (const item of existing) {
-            if (item.isFile()) {
-                await RNFS.unlink(item.path);
-            }
+    // A file left behind here could pass assertChannelDbRestored in place of
+    // the backup's database, so a failed clear fails the import
+    const existing = await RNFS.readDir(destFolder);
+    for (const item of existing) {
+        if (item.isFile()) {
+            await RNFS.unlink(item.path);
         }
-    } catch (e) {}
+    }
 
-    await unzipFile(localPath, destFolder);
+    try {
+        await unzipFile(localPath, destFolder);
+    } finally {
+        // Remove the copy resolveToLocalPath made, whether or not the unzip
+        // worked, but never the file the user picked
+        if (
+            localPath.startsWith(`${RNFS.CachesDirectoryPath}/zeus-import-temp`)
+        ) {
+            await RNFS.unlink(localPath).catch(() => {});
+        }
+    }
+    await assertChannelDbRestored(destFolder, isSqlite);
 };

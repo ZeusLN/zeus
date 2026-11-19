@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# pay: pay a bolt11 from an lnd node (default bob) and print the result JSON.
+#
+# usage: bin/pay <bolt11> [--from bob|alice|carol] [--amt SATS] [--async]
+#   --amt    amount for zero-amount invoices
+#   --async  return immediately (for hold invoices); result goes to
+#            state/<RIG_NAME>/logs/pay-<hash prefix>.json
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+[ $# -ge 1 ] || die "usage: bin/pay <bolt11> [--from node] [--amt sats] [--async]"
+PR="$1"; shift
+FROM=bob; AMT=(); ASYNC=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --from) FROM="$2"; shift 2 ;;
+        --amt) AMT=(--amt "$2"); shift 2 ;;
+        --async) ASYNC=1; shift ;;
+        *) die "unknown arg $1" ;;
+    esac
+done
+PR="${PR#lightning:}"
+if [ "$ASYNC" = 1 ]; then
+    H=$(lncli "$FROM" decodepayreq "$PR" | jq -r .payment_hash | cut -c1-16)
+    OUT="$STATE/logs/pay-$H.json"
+    nohup docker exec "$(container "$FROM")" lncli --network=regtest --tlscertpath=/tls/tls.cert --macaroonpath=/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon \
+        payinvoice --force --json ${AMT[@]+"${AMT[@]}"} "$PR" >"$OUT" 2>&1 </dev/null &
+    echo "$OUT"
+else
+    lncli "$FROM" payinvoice --force --json ${AMT[@]+"${AMT[@]}"} "$PR" | jq '{status, payment_hash, payment_preimage, fee_sat, value_sat, failure_reason}'
+fi

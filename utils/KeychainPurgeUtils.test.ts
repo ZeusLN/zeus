@@ -349,6 +349,90 @@ describe('KeychainPurgeUtils', () => {
             expect(result.skipped).toEqual([]);
         });
 
+        it('deletes retired cashu seed bytes once the seed phrase is migrated', async () => {
+            // CashuStore deletes zeus:lnd-cashu-seed on every CDK start, so
+            // the seed phrase is the only counterpart that can still exist
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string) =>
+                    server === 'zeus:lnd-cashu-seed-phrase' ||
+                    server === 'lnd-cashu-seed'
+                        ? 'value'
+                        : null
+            );
+
+            const result = await executePurge({
+                syncServers: ['lnd-cashu-seed'],
+                legacyLocalServers: ['lnd-cashu-seed'],
+                hasLegacyEncryptedSettings: false
+            });
+
+            expect(StorageModule.removeRawItem.mock.calls).toEqual([
+                ['lnd-cashu-seed', false],
+                ['lnd-cashu-seed', true]
+            ]);
+            expect(result.deleted).toBe(2);
+            expect(result.skipped).toEqual([]);
+        });
+
+        it('still deletes cashu seed bytes whose own migrated copy exists', async () => {
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string) =>
+                    server === 'zeus:lnd-cashu-seed' ||
+                    server === 'lnd-cashu-seed'
+                        ? 'value'
+                        : null
+            );
+
+            const result = await executePurge({
+                syncServers: ['lnd-cashu-seed'],
+                legacyLocalServers: [],
+                hasLegacyEncryptedSettings: false
+            });
+
+            expect(StorageModule.removeRawItem).toHaveBeenCalledWith(
+                'lnd-cashu-seed',
+                true
+            );
+            expect(result.skipped).toEqual([]);
+        });
+
+        it('skips cashu seed bytes with neither a copy nor a seed phrase', async () => {
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string) =>
+                    server.startsWith('zeus:') ? null : 'orphan-value'
+            );
+
+            const result = await executePurge({
+                syncServers: ['lnd-cashu-seed'],
+                legacyLocalServers: [],
+                hasLegacyEncryptedSettings: false
+            });
+
+            expect(StorageModule.removeRawItem).not.toHaveBeenCalled();
+            expect(result.skipped).toEqual(['lnd-cashu-seed']);
+        });
+
+        it('deletes the legacy xprv cache without a counterpart', async () => {
+            // Never migrated, and derived from the wallet seed
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string) =>
+                    server.startsWith('zeus:') ? null : 'xprv-cache'
+            );
+
+            const result = await executePurge({
+                syncServers: ['02aa-extended-private-keys'],
+                legacyLocalServers: ['02bb-extended-private-keys'],
+                hasLegacyEncryptedSettings: false
+            });
+
+            expect(StorageModule.removeRawItem.mock.calls).toEqual([
+                ['02bb-extended-private-keys', false],
+                ['02aa-extended-private-keys', true]
+            ]);
+            expect(result.deleted).toBe(2);
+            expect(result.skipped).toEqual([]);
+        });
+
         it('counts deletions of existing entries, not attempts', async () => {
             // Counterpart exists but the entry itself is already gone:
             // resetInternetCredentials would still succeed, and that must
@@ -425,6 +509,18 @@ describe('KeychainPurgeUtils', () => {
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
 
+        it('runs again on installs flagged done by the v1 pass', async () => {
+            EncryptedStorage.getItem.mockImplementation(async (key: string) =>
+                key === 'keychain-desync-v1' || key === 'keychain-autopurge-v1'
+                    ? 'true'
+                    : null
+            );
+
+            await autoPurgeLegacyKeychain();
+
+            expect(StorageModule.getInternetPasswordServers).toHaveBeenCalled();
+        });
+
         it('sets the done flag without deleting when nothing is found', async () => {
             EncryptedStorage.getItem.mockImplementation(async (key: string) =>
                 key === 'keychain-desync-v1' ? 'true' : null
@@ -434,7 +530,7 @@ describe('KeychainPurgeUtils', () => {
 
             expect(StorageModule.removeRawItem).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
-                'keychain-autopurge-v1',
+                'keychain-autopurge-v2',
                 'true'
             );
         });
@@ -494,7 +590,7 @@ describe('KeychainPurgeUtils', () => {
                 true
             );
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
-                'keychain-autopurge-v1',
+                'keychain-autopurge-v2',
                 'true'
             );
         });

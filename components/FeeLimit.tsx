@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import BigNumber from 'bignumber.js';
 
 import Amount from './Amount';
 import TextInput from './TextInput';
@@ -12,6 +11,8 @@ import SettingsStore from '../stores/SettingsStore';
 import InvoicesStore from '../stores/InvoicesStore';
 
 import BackendUtils from '../utils/BackendUtils';
+import FeeUtils from '../utils/FeeUtils';
+import { getFeeLimitSatsFromPercent } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -137,20 +138,14 @@ export default class FeeLimit extends React.Component<
     }
 
     calculatePercentAmount = (satAmount?: string | number) => {
-        const { maxFeePercent } = this.state;
-        // handle fee percents that use commas
-        const maxFeePercentFormatted = maxFeePercent.replace(/,/g, '.');
-
-        const percentAmount = satAmount
-            ? new BigNumber(maxFeePercentFormatted)
-                  .div(100)
-                  .times(satAmount)
-                  .toNumber()
-                  .toFixed()
-                  .toString()
-            : '0';
-
-        return percentAmount === 'NaN' ? '0' : percentAmount;
+        const percentAmount = getFeeLimitSatsFromPercent(
+            this.state.maxFeePercent,
+            satAmount
+        );
+        // An empty or unusable percent falls back to the default fee limit,
+        // so the amount shown is the cap that is sent on every payment path
+        if (percentAmount || !(Number(satAmount) > 0)) return percentAmount;
+        return FeeUtils.calculateDefaultRoutingFee(Number(satAmount));
     };
 
     feeRecommendation = () => {
@@ -215,7 +210,7 @@ export default class FeeLimit extends React.Component<
                                     opacity: feeOption == 'percent' ? 1 : 0.25
                                 }}
                             >
-                                <Amount sats={percentAmount} />
+                                <Amount sats={percentAmount || '0'} />
                             </Text>
                         </Row>
                         {displayFeeRecommendation && this.feeRecommendation()}

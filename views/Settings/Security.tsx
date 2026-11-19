@@ -13,6 +13,10 @@ import SettingsStore, { Settings } from '../../stores/SettingsStore';
 import ModalStore from '../../stores/ModalStore';
 
 import { verifyBiometry } from '../../utils/BiometricUtils';
+import {
+    getLockMethod,
+    hasLockCredential
+} from '../../utils/LockVerifierUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -42,14 +46,27 @@ interface SecurityState {
 const buildSecurityItems = (
     settings: Pick<
         Settings,
-        'passphrase' | 'pin' | 'duressPassphrase' | 'duressPin'
+        | 'passphraseVerifier'
+        | 'pinVerifier'
+        | 'duressPassphraseVerifier'
+        | 'duressPinVerifier'
+        | 'passphrase'
+        | 'pin'
+        | 'duressPassphrase'
+        | 'duressPin'
     >
 ): SecurityItem[] => {
+    // the method the Lockscreen asks for (see getLockMethod), so the rows
+    // match the lock even with the other method's records from before a
+    // downgrade
+    const lockMethod = getLockMethod(settings);
+    const passphraseSet = lockMethod === 'passphrase';
+    const pinSet = lockMethod === 'pin';
     // Three cases:
     // 1) If no passphrase or pin is set, allow user to set passphrase or pin
     // 2) If passphrase is set, allow user to change passphrase or set/change duress passphrase
     // 3) If pin is set, allow user to change pin, delete pin, set/change duress pin
-    if (!settings.passphrase && !settings.pin) {
+    if (!passphraseSet && !pinSet) {
         return [
             {
                 translateKey: 'views.Settings.SetPassword.title',
@@ -61,7 +78,11 @@ const buildSecurityItems = (
             }
         ];
     }
-    if (settings.passphrase) {
+    if (passphraseSet) {
+        const duressPassphraseSet = hasLockCredential(
+            settings,
+            'duressPassphrase'
+        );
         const items: SecurityItem[] = [
             {
                 translateKey: 'views.Settings.ChangePassword.title',
@@ -72,13 +93,13 @@ const buildSecurityItems = (
                 action: 'DeletePassword'
             },
             {
-                translateKey: settings.duressPassphrase
+                translateKey: duressPassphraseSet
                     ? 'views.Settings.ChangeDuressPassword.title'
                     : 'views.Settings.SetDuressPassword.title',
                 screen: 'SetDuressPassword'
             }
         ];
-        if (settings.duressPassphrase) {
+        if (duressPassphraseSet) {
             items.push({
                 translateKey: 'views.Settings.SetDuressPassword.deletePassword',
                 action: 'DeleteDuressPassword'
@@ -87,6 +108,7 @@ const buildSecurityItems = (
         return items;
     }
     // Remaining case: pin is set (branch 1 handled neither; branch 2 handled passphrase)
+    const duressPinSet = hasLockCredential(settings, 'duressPin');
     const items: SecurityItem[] = [
         {
             translateKey: 'views.Settings.ChangePin.title',
@@ -97,13 +119,13 @@ const buildSecurityItems = (
             action: 'DeletePin'
         },
         {
-            translateKey: settings.duressPin
+            translateKey: duressPinSet
                 ? 'views.Settings.ChangeDuressPin.title'
                 : 'views.Settings.SetDuressPin.title',
             screen: 'SetDuressPin'
         }
     ];
-    if (settings.duressPin) {
+    if (duressPinSet) {
         items.push({
             translateKey: 'views.Settings.Security.deleteDuressPIN',
             action: 'DeleteDuressPin'
@@ -122,8 +144,8 @@ const deriveStateFromSettings = (
     scramblePin: settings.scramblePin ?? true,
     loginBackground: settings.loginBackground ?? false,
     displaySecurityItems: buildSecurityItems(settings),
-    pinExists: !!settings.pin,
-    passphraseExists: !!settings.passphrase,
+    pinExists: getLockMethod(settings) === 'pin',
+    passphraseExists: getLockMethod(settings) === 'passphrase',
     supportedBiometryType:
         biometrics?.supportedBiometryType ?? settings.supportedBiometryType,
     isBiometryEnabled:
@@ -174,9 +196,13 @@ export default class Security extends React.Component<
 
     async handleBiometricsSwitchChange(value: boolean): Promise<void> {
         const { SettingsStore, ModalStore, navigation } = this.props;
-        const { pin, passphrase } = SettingsStore.settings;
+        const { settings } = SettingsStore;
 
-        if (value && !pin && !passphrase) {
+        if (
+            value &&
+            !hasLockCredential(settings, 'pin') &&
+            !hasLockCredential(settings, 'passphrase')
+        ) {
             ModalStore.toggleInfoModal({
                 text: localeString(
                     'views.Settings.Security.BiometryRequiresPinOrPassword'
@@ -230,7 +256,12 @@ export default class Security extends React.Component<
         const { isBiometryEnabled } = this.state;
 
         if (!('action' in item)) {
-            if (!(settings.passphrase || settings.pin)) {
+            if (
+                !(
+                    hasLockCredential(settings, 'passphrase') ||
+                    hasLockCredential(settings, 'pin')
+                )
+            ) {
                 navigation.navigate(item.screen);
             } else {
                 // if we already have a pin/password set, make user authenticate in order to change

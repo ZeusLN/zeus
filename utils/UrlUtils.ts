@@ -23,6 +23,8 @@ const withScheme = (host: string): string =>
 const getMempoolApiUrl = (nodeInfo: {
     isMutinynet: boolean;
     isTestNet: boolean;
+    isTestNet4?: boolean;
+    isSigNet?: boolean;
 }): string => {
     const privacy = settingsStore?.settings?.privacy;
     // No stored selection resolves to DEFAULT_MEMPOOL_INSTANCE. This
@@ -43,8 +45,12 @@ const getMempoolApiUrl = (nodeInfo: {
         );
         return `${host}/api`;
     }
+    // LDK Node sets isSigNet on Mutinynet too, so Mutinynet must be checked first
     if (nodeInfo.isMutinynet) return 'https://mutinynet.com/api';
-    // electrs.zeusln.com is mainnet-only; testnet3 lives at mempool.space/testnet
+    // electrs.zeusln.com is mainnet-only; signet, testnet4 and testnet3 use
+    // mempool.space
+    if (nodeInfo.isSigNet) return 'https://mempool.space/signet/api';
+    if (nodeInfo.isTestNet4) return 'https://mempool.space/testnet4/api';
     if (nodeInfo.isTestNet) return 'https://mempool.space/testnet/api';
     return `https://${
         instance === 'mempool.space'
@@ -54,11 +60,30 @@ const getMempoolApiUrl = (nodeInfo: {
 };
 
 /**
+ * Whether getMempoolApiUrl points at an instance for the node's network.
+ * Regtest falls through to the mainnet instance unless a custom one is set,
+ * so anything sent there would go to the wrong chain.
+ */
+const mempoolServesNetwork = (nodeInfo: {
+    isMutinynet: boolean;
+    isTestNet: boolean;
+    isRegTest?: boolean;
+    isSigNet?: boolean;
+}): boolean => {
+    const privacy = settingsStore?.settings?.privacy;
+    if (privacy?.mempoolInstance === 'Custom' && privacy?.customMempoolInstance)
+        return true;
+    return !nodeInfo.isRegTest;
+};
+
+/**
  * Hostname of the effective mempool instance, for display purposes.
  */
 const getMempoolInstanceHost = (nodeInfo: {
     isMutinynet: boolean;
     isTestNet: boolean;
+    isTestNet4?: boolean;
+    isSigNet?: boolean;
 }): string => {
     try {
         return new URL(getMempoolApiUrl(nodeInfo)).host;
@@ -75,17 +100,22 @@ const goToBlockExplorer = (
     const { settings } = settingsStore;
     const { privacy } = settings;
     const custom = privacy && privacy.defaultBlockExplorer === 'Custom';
-    const { isMutinynet } = nodeInfoStore.nodeInfo;
+    const { isMutinynet, isSigNet, isTestNet4 } = nodeInfoStore.nodeInfo;
     const host =
         custom && privacy.customBlockExplorer
             ? privacy.customBlockExplorer
             : isMutinynet
             ? 'mutinynet.com'
             : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
-    const network =
-        !isMutinynet && (nodeInfoStore.nodeInfo.isTestNet || testnet)
-            ? 'testnet/'
-            : '';
+    const network = isMutinynet
+        ? ''
+        : isSigNet
+        ? 'signet/'
+        : isTestNet4
+        ? 'testnet4/'
+        : nodeInfoStore.nodeInfo.isTestNet || testnet
+        ? 'testnet/'
+        : '';
 
     // Read the convention hint off the raw host, before it is stripped below.
     // Currently '...#mempool.space' is the only meaningful hint: it tells us
@@ -128,24 +158,32 @@ const isValidUrl = (url: string): boolean => {
     }
 };
 
-// Returns true when an explicit http:// scheme would carry traffic across
+// Returns true when an explicit http scheme would carry traffic across
 // the network in cleartext. Onion services are authenticated and encrypted
 // at the Tor layer and loopback never leaves the device, so neither counts.
 // Parses with URL so hosts hidden behind userinfo (http://127.0.0.1@evil.com),
 // fragments (http://evil.com#foo.onion), or spoofed prefixes
-// (http://127.0.0.1.evil.com) are not mistaken for exempt hosts.
+// (http://127.0.0.1.evil.com) are not mistaken for exempt hosts. The scheme
+// is read from the parsed URL too: URL reads http:mint.com, http:/mint.com
+// and http:\\mint.com as http://mint.com/, which an http:// prefix check
+// misses.
 const isCleartextHttpTransport = (urlString?: string): boolean => {
     if (!urlString) return false;
     const trimmed = urlString.trim();
-    if (!trimmed.toLowerCase().startsWith('http://')) return false;
 
-    let hostname: string;
+    let url: URL;
     try {
-        hostname = new URL(trimmed).hostname;
+        url = new URL(trimmed);
     } catch {
-        // Unparseable http:// input: fail closed and warn.
-        return true;
+        // Unparseable http input: fail closed and warn. Scheme-less hosts
+        // (192.168.1.5, example.com) also land here; the backends send
+        // those over HTTPS, so they are not flagged. URL ignores tabs and
+        // newlines anywhere in the input, so drop them before matching.
+        return /^http:/i.test(trimmed.replace(/[\t\n\r]/g, ''));
     }
+    if (url.protocol !== 'http:') return false;
+
+    const { hostname } = url;
 
     if (hostname.endsWith('.onion')) return false;
 
@@ -226,6 +264,7 @@ export default {
     withScheme,
     isCleartextHttpTransport,
     getMempoolApiUrl,
+    mempoolServesNetwork,
     getMempoolInstanceHost,
     goToBlockExplorerTXID,
     goToBlockExplorerAddress,

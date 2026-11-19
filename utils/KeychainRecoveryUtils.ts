@@ -30,6 +30,18 @@ import {
 
 // Legacy storage key used before v0.10.0
 const LEGACY_STORAGE_KEY = 'zeus-settings';
+const SETTINGS_KEYS = [STORAGE_KEY, LEGACY_STORAGE_KEY];
+
+// Whether a settings payload lists at least one wallet. Unparseable
+// payloads count as none, so they never hide another copy.
+const hasNodes = (data: string): boolean => {
+    try {
+        const nodes = JSON.parse(data)?.nodes;
+        return Array.isArray(nodes) && nodes.length > 0;
+    } catch {
+        return false;
+    }
+};
 
 export interface RecoveryResult {
     key: string;
@@ -46,6 +58,14 @@ export interface RecoveryResult {
 export interface RecoveryScanResult {
     settingsFound: RecoveryResult[];
     otherDataFound: RecoveryResult[];
+    /**
+     * Legacy copies of a key that current storage can read, whose data differs
+     * from the live value. The app may have rewritten a key after losing it
+     * (a new swaps rescue key, an emptied swap list), leaving the only copy of
+     * the old data here. For the user to review; restoreOtherData must never
+     * be handed these automatically, since that would overwrite live data.
+     */
+    divergentDataFound: RecoveryResult[];
     hasCurrentSettings: boolean;
     error?: string;
 }
@@ -56,8 +76,64 @@ const CRITICAL_KEYS = [
     { key: LEGACY_STORAGE_KEY, description: 'Legacy Wallet Configurations' }
 ];
 
-const OTHER_KEYS = [
-    { key: CONTACTS_KEY, description: 'Contacts' },
+// The legacy prefixed-cloud copy is usually a snapshot from the day the desync
+// migration ran (it never deletes it), and these lists change in normal use.
+// So a legacy list is worth reviewing only when it holds an entry the live
+// list lacks: an older snapshot of the same entries is noise. A copy that
+// doesn't parse is reported, since it can't be checked.
+const hasEntryMissingFromLive =
+    (idOf: (entry: any) => unknown) =>
+    (legacy: string, live: string): boolean => {
+        let legacyList: unknown;
+        try {
+            legacyList = JSON.parse(legacy);
+        } catch (e) {
+            return true;
+        }
+        if (!Array.isArray(legacyList)) return true;
+
+        let liveIds = new Set<unknown>();
+        try {
+            const liveList = JSON.parse(live);
+            if (Array.isArray(liveList)) liveIds = new Set(liveList.map(idOf));
+        } catch (e) {
+            // An unreadable live value holds nothing to match against.
+        }
+        return legacyList.some((entry) => {
+            const id = idOf(entry);
+            return id === undefined || !liveIds.has(id);
+        });
+    };
+const anyDifference = (legacy: string, live: string) => legacy !== live;
+const byId = (entry: any) => entry?.id;
+// LSPS orders are stored as an array of JSON strings.
+const lspsOrderId = (entry: any) => {
+    try {
+        const stored = typeof entry === 'string' ? JSON.parse(entry) : entry;
+        return stored?.order?.order_id || stored?.order?.result?.order_id;
+    } catch (e) {
+        return undefined;
+    }
+};
+
+// reviewDivergence: when current storage can read the key, decides whether a
+// legacy copy is still worth showing the user (divergentDataFound). Only for
+// keys whose old data can matter after the app rewrote them; keys that change
+// in normal use (backup time, units, filters, ...) have none. Notes are left
+// out: NOTES_KEY only indexes the note keys, and the scan doesn't read bodies.
+const OTHER_KEYS: Array<{
+    key: string;
+    description: string;
+    reviewDivergence?: (legacy: string, live: string) => boolean;
+}> = [
+    {
+        key: CONTACTS_KEY,
+        description: 'Contacts',
+        // Contacts saved before 01656c594 only have `id` (see Contact.getContactId).
+        reviewDivergence: hasEntryMissingFromLive(
+            (entry) => entry?.contactId || entry?.id
+        )
+    },
     { key: NOTES_KEY, description: 'Notes' },
     { key: LAST_CHANNEL_BACKUP_STATUS, description: 'Channel Backup Status' },
     { key: LAST_CHANNEL_BACKUP_TIME, description: 'Channel Backup Time' },
@@ -65,17 +141,41 @@ const OTHER_KEYS = [
     { key: HASHES_STORAGE_STRING, description: 'Lightning Address Hashes' },
     { key: POS_HIDDEN_KEY, description: 'POS Hidden Key' },
     { key: POS_STANDALONE_KEY, description: 'POS Standalone Key' },
-    { key: CATEGORY_KEY, description: 'POS Categories' },
-    { key: PRODUCT_KEY, description: 'POS Products' },
+    {
+        key: CATEGORY_KEY,
+        description: 'POS Categories',
+        reviewDivergence: hasEntryMissingFromLive(byId)
+    },
+    {
+        key: PRODUCT_KEY,
+        description: 'POS Products',
+        reviewDivergence: hasEntryMissingFromLive(byId)
+    },
     { key: UNIT_KEY, description: 'Unit Preferences' },
     { key: HIDDEN_ACCOUNTS_KEY, description: 'Hidden Accounts' },
     { key: CURRENCY_CODES_KEY, description: 'Currency Codes' },
     { key: ACTIVITY_FILTERS_KEY, description: 'Activity Filters' },
     { key: IS_BACKED_UP_KEY, description: 'Backup Status' },
-    { key: LSPS_ORDERS_KEY, description: 'LSP Orders' },
-    { key: SWAPS_KEY, description: 'Swaps' },
-    { key: REVERSE_SWAPS_KEY, description: 'Reverse Swaps' },
-    { key: SWAPS_RESCUE_KEY, description: 'Swap Rescue Data' },
+    {
+        key: LSPS_ORDERS_KEY,
+        description: 'LSP Orders',
+        reviewDivergence: hasEntryMissingFromLive(lspsOrderId)
+    },
+    {
+        key: SWAPS_KEY,
+        description: 'Swaps',
+        reviewDivergence: hasEntryMissingFromLive(byId)
+    },
+    {
+        key: REVERSE_SWAPS_KEY,
+        description: 'Reverse Swaps',
+        reviewDivergence: hasEntryMissingFromLive(byId)
+    },
+    {
+        key: SWAPS_RESCUE_KEY,
+        description: 'Swap Rescue Data',
+        reviewDivergence: anyDifference
+    },
     { key: SWAPS_LAST_USED_KEY, description: 'Last Used Swap Provider' }
 ];
 
@@ -208,7 +308,8 @@ class KeychainRecoveryUtils {
      */
     private async scanKey(
         key: string,
-        description: string
+        description: string,
+        includeShadowedCloud = false
     ): Promise<RecoveryResult[]> {
         const results: RecoveryResult[] = [];
         const sources = this.getStorageSources();
@@ -218,10 +319,22 @@ class KeychainRecoveryUtils {
             // read misses (i.e. the desync migration never completed). After
             // a completed desync the local copy is the fresher of the two,
             // and offering the stale synchronizable copy as a restore source
-            // would invite overwriting live data with it.
+            // would invite overwriting live data with it. Current settings
+            // with no wallets do not count: ZEUS writes that blob at
+            // startup, so a user whose wallets vanished always has
+            // one, and the cloud copy may be the only place left that holds
+            // their wallets.
+            //
+            // includeShadowedCloud reads it anyway so the caller can compare it
+            // with the live value instead of offering it as a restore source.
             if (
                 source === 'prefixed-cloud' &&
-                results.some((r) => r.source === 'current')
+                !includeShadowedCloud &&
+                results.some(
+                    (r) =>
+                        r.source === 'current' &&
+                        !(SETTINGS_KEYS.includes(key) && !hasNodes(r.data))
+                )
             ) {
                 continue;
             }
@@ -244,6 +357,7 @@ class KeychainRecoveryUtils {
         const result: RecoveryScanResult = {
             settingsFound: [],
             otherDataFound: [],
+            divergentDataFound: [],
             hasCurrentSettings: false
         };
 
@@ -260,18 +374,44 @@ class KeychainRecoveryUtils {
             );
 
             // Scan other data keys
-            for (const { key, description } of OTHER_KEYS) {
-                const keyResults = await this.scanKey(key, description);
-                // Only add results that are NOT from current storage
-                // (we're looking for orphaned/lost data)
-                const orphanedResults = keyResults.filter(
-                    (r) => r.source !== 'current'
+            for (const { key, description, reviewDivergence } of OTHER_KEYS) {
+                const keyResults = await this.scanKey(
+                    key,
+                    description,
+                    !!reviewDivergence
                 );
-                result.otherDataFound.push(...orphanedResults);
+                // A key current storage can read is live, not orphaned, so
+                // none of its copies are restore candidates. For the keys
+                // that opt in, a legacy copy that reviewDivergence accepts is
+                // still reported, for review only: the app rewrites some keys
+                // after losing them, and the old data may exist nowhere else.
+                // One entry per distinct value, from the highest-ranked source
+                // holding it.
+                const live = keyResults.find((r) => r.source === 'current');
+                if (live) {
+                    if (!reviewDivergence) continue;
+                    const seen = new Set<string>([live.data]);
+                    const legacy = keyResults
+                        .filter((r) => r.source !== 'current')
+                        .sort(
+                            (a, b) =>
+                                KeychainRecoveryUtils.rankSource(a.source) -
+                                KeychainRecoveryUtils.rankSource(b.source)
+                        );
+                    for (const r of legacy) {
+                        if (seen.has(r.data)) continue;
+                        seen.add(r.data);
+                        if (reviewDivergence(r.data, live.data)) {
+                            result.divergentDataFound.push(r);
+                        }
+                    }
+                    continue;
+                }
+                result.otherDataFound.push(...keyResults);
             }
 
             console.log(
-                `[Recovery] Scan complete. Settings found: ${result.settingsFound.length}, Other data: ${result.otherDataFound.length}`
+                `[Recovery] Scan complete. Settings found: ${result.settingsFound.length}, Other data: ${result.otherDataFound.length}, Divergent: ${result.divergentDataFound.length}`
             );
         } catch (error) {
             console.error('[Recovery] Error during scan:', error);
@@ -319,9 +459,10 @@ class KeychainRecoveryUtils {
                 };
             }
 
-            // Verify the write
+            // See restoreDataKey: a read-back is only evidence of a
+            // successful write if it matches what was written.
             const verifyData = await Storage.getItem(STORAGE_KEY);
-            if (!verifyData) {
+            if (verifyData !== recoveryResult.data) {
                 return {
                     success: false,
                     error: 'Verification failed after write'
@@ -370,9 +511,15 @@ class KeychainRecoveryUtils {
                 };
             }
 
-            // Verify the write
+            // Verify the write by reading the value back and comparing it
+            // against what was sent. A truthiness check cannot tell the value
+            // just written from an older copy the key is still holding, so it
+            // reports success while the data on disk is the data being
+            // replaced. It catches the unwritten case only incidentally,
+            // because Storage.getItem resolves `false` for a missing key
+            // rather than throwing.
             const verifyData = await Storage.getItem(recoveryResult.key);
-            if (!verifyData) {
+            if (verifyData !== recoveryResult.data) {
                 return {
                     success: false,
                     error: 'Verification failed after write'
@@ -394,6 +541,106 @@ class KeychainRecoveryUtils {
                 error: String(error)
             };
         }
+    }
+
+    /**
+     * Order in which legacy sources are trusted when the same key was found in
+     * more than one of them.
+     *
+     * `scanKey` returns one result per source, so `otherDataFound` can hold up
+     * to four copies of a key, written at different times. Restoring them all
+     * would write the key several times and leave whichever came last in the
+     * array, which is arbitrary.
+     *
+     * Newest writer first, from git history:
+     * - EncryptedStorage: v0.7.1 to v0.9.4. It never held any of the
+     *   `OTHER_KEYS` names, so it can't produce a result here.
+     * - Unprefixed keychain: from v0.9.5, which also renamed the keys.
+     * - `zeus:` prefix: from v0.12.2. As a restore candidate,
+     *   `prefixed-cloud` only shows up when the current read misses (the
+     *   stuck-desync case), and then it is newer than the unprefixed copies.
+     *   For opted-in keys the scan reads it even when current storage has the
+     *   key, but only to compare (divergentDataFound), never to restore.
+     *
+     * Whether `unprefixed-local` should rank above `unprefixed-cloud` is
+     * unverified: before v0.12.2 `Storage` wrote with `cloudSync: false`, but
+     * on iOS that flag may not have controlled which partition was used.
+     * Local stays first to match `migrateKey`, which reads local first.
+     */
+    private static readonly SOURCE_PRECEDENCE: Array<RecoveryResult['source']> =
+        [
+            'prefixed-cloud',
+            'unprefixed-local',
+            'unprefixed-cloud',
+            'encrypted-storage'
+        ];
+
+    /**
+     * Position of a source in SOURCE_PRECEDENCE. An unranked source sorts last
+     * rather than first, so adding a source without updating the list cannot
+     * silently win.
+     */
+    private static rankSource(source: RecoveryResult['source']): number {
+        const index = KeychainRecoveryUtils.SOURCE_PRECEDENCE.indexOf(source);
+        return index === -1
+            ? KeychainRecoveryUtils.SOURCE_PRECEDENCE.length
+            : index;
+    }
+
+    /**
+     * Groups recovery results by key: one group per key, most trusted first.
+     *
+     * Results for a key are returned newest-trusted-first, so `[0]` is the
+     * copy `restoreOtherData` would write and the rest are what a UI can offer
+     * as alternatives.
+     */
+    public groupByKey(
+        results: RecoveryResult[]
+    ): Map<string, RecoveryResult[]> {
+        const grouped = new Map<string, RecoveryResult[]>();
+
+        for (const result of results) {
+            const existing = grouped.get(result.key);
+            if (existing) {
+                existing.push(result);
+            } else {
+                grouped.set(result.key, [result]);
+            }
+        }
+
+        const rank = KeychainRecoveryUtils.rankSource;
+
+        for (const [, group] of grouped) {
+            group.sort((a, b) => rank(a.source) - rank(b.source));
+        }
+
+        return grouped;
+    }
+
+    /**
+     * Restores one entry per key, taking the most trusted source for each.
+     *
+     * Returns a result per key rather than a single boolean: one key failing
+     * to write says nothing about the others, and the caller needs to be able
+     * to tell the user which came back.
+     */
+    public async restoreOtherData(results: RecoveryResult[]): Promise<{
+        restored: string[];
+        failed: Array<{ key: string; error: string }>;
+    }> {
+        const restored: string[] = [];
+        const failed: Array<{ key: string; error: string }> = [];
+
+        for (const [key, group] of this.groupByKey(results)) {
+            const result = await this.restoreDataKey(group[0]);
+            if (result.success) {
+                restored.push(key);
+            } else {
+                failed.push({ key, error: result.error ?? 'Unknown error' });
+            }
+        }
+
+        return { restored, failed };
     }
 
     /**

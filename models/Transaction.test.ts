@@ -1,7 +1,5 @@
-jest.mock('../stores/Stores', () => ({}));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../stores/Stores');
+jest.mock('../utils/LocaleUtils');
 
 import Transaction from './Transaction';
 
@@ -18,6 +16,22 @@ describe('Transaction.isConfirmed', () => {
             true
         );
         expect(new Transaction({ status: 'confirmed' }).isConfirmed).toBe(true);
+    });
+});
+
+describe('Transaction.getNumConfirmations', () => {
+    it('is 0 when num_confirmations is missing', () => {
+        // embedded LND drops a num_confirmations of 0 (protobuf default)
+        expect(new Transaction({}).getNumConfirmations).toBe(0);
+    });
+
+    it('returns the backend value when present', () => {
+        expect(
+            new Transaction({ num_confirmations: 0 }).getNumConfirmations
+        ).toBe(0);
+        expect(
+            new Transaction({ num_confirmations: 3 }).getNumConfirmations
+        ).toBe(3);
     });
 });
 

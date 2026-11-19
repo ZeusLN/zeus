@@ -10,17 +10,6 @@ jest.mock('react-native-blob-util', () => ({
 }));
 // SwapUtils' rescue-key export pulls these in at import time; neither is
 // covered by transformIgnorePatterns. The tests below never reach them.
-jest.mock('react-native-fs', () => ({
-    __esModule: true,
-    default: {
-        DownloadDirectoryPath: '/public-downloads',
-        DocumentDirectoryPath: '/docs',
-        CachesDirectoryPath: '/cache',
-        exists: jest.fn().mockResolvedValue(false),
-        unlink: jest.fn(),
-        writeFile: jest.fn()
-    }
-}));
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
 }));
@@ -33,7 +22,7 @@ jest.mock('../storage', () => ({
     __esModule: true,
     default: { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn() }
 }));
-jest.mock('../utils/LocaleUtils', () => ({ localeString: (k: string) => k }));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/BackendUtils', () => ({}));
 jest.mock('../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
 // the real UrlUtils imports the whole store graph via Stores
@@ -41,6 +30,9 @@ jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
     default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
 }));
+// models/Swap formats dates with DateTimeUtils, which reads display
+// settings from the store graph
+jest.mock('./Stores', () => ({}));
 jest.mock('ecpair', () => ({ ECPairFactory: () => ({}) }));
 jest.mock('@bitcoinerlab/secp256k1', () => ({ __esModule: true, default: {} }));
 jest.mock('bitcoinjs-lib', () => ({
@@ -87,6 +79,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import Storage from '../storage';
 import SwapStore from './SwapStore';
 import { SwapState, SwapType } from '../models/Swap';
+import { REVERSE_SWAPS_KEY, SWAPS_KEY } from '../utils/SwapUtils';
 
 const SWAP_ID = 'swap-abc';
 const LOCKUP = {
@@ -96,10 +89,10 @@ const LOCKUP = {
     timeoutEta: 1700000000
 };
 
-const buildStore = () =>
+const buildStore = (swaps: any = {}, isTestNet = false) =>
     new SwapStore(
-        { nodeInfo: { isTestNet: false } } as any,
-        { settings: { swaps: {} } } as any
+        { nodeInfo: { isTestNet } } as any,
+        { settings: { swaps } } as any
     );
 
 /** Returns the swap array handed to Storage.setItem by the call. */
@@ -226,14 +219,8 @@ describe('SwapStore.getLockupTransaction', () => {
 describe('SwapStore Pro referral gating', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    const store = (swaps: any, isTestNet = false) =>
-        new SwapStore(
-            { nodeInfo: { isTestNet } } as any,
-            { settings: { swaps } } as any
-        );
-
     it('sends the Referral header on a pro host', () => {
-        const s = store({ hostMainnet: 'Custom', proEnabled: true });
+        const s = buildStore({ hostMainnet: 'Custom', proEnabled: true });
 
         expect(s.isProHost).toBe(true);
         expect(s.getHeaders).toEqual({
@@ -247,7 +234,7 @@ describe('SwapStore Pro referral gating', () => {
         // A migration can move a user onto a non-pro host without clearing
         // proEnabled, and the Pro switch only renders for pro hosts, so the
         // stale flag would otherwise be both live and unreachable.
-        const s = store({
+        const s = buildStore({
             hostMainnet: 'https://satsrouting.exchange/v2',
             proEnabled: true
         });
@@ -258,7 +245,7 @@ describe('SwapStore Pro referral gating', () => {
     });
 
     it('resolves an unset host to the default, which has no pro tier', () => {
-        const s = store({ proEnabled: true });
+        const s = buildStore({ proEnabled: true });
 
         expect(s.isProHost).toBe(false);
         expect(s.getHeaders).toBeUndefined();
@@ -274,16 +261,46 @@ describe('SwapStore Pro referral gating', () => {
             proEnabled: true
         };
 
-        expect(store(swaps, true).isProHost).toBe(true);
-        expect(store(swaps, false).isProHost).toBe(false);
+        expect(buildStore(swaps, true).isProHost).toBe(true);
+        expect(buildStore(swaps, false).isProHost).toBe(false);
     });
 
     it('withholds the header when proEnabled is off, pro host or not', () => {
-        const s = store({ hostMainnet: 'Custom', proEnabled: false });
+        const s = buildStore({ hostMainnet: 'Custom', proEnabled: false });
 
         expect(s.isProHost).toBe(true);
         expect(s.getHeaders).toBeUndefined();
         expect(s.referralId).toBeUndefined();
+    });
+});
+
+describe('SwapStore host selection', () => {
+    const CUSTOM_HOST = 'https://my-boltz.local/v2';
+
+    it('uses the custom host only on the network that selected it', () => {
+        // customHost is one value shared across networks, and the settings
+        // screen only shows the active network's selection.
+        const testnetCustom = {
+            hostMainnet: 'https://satsrouting.exchange/v2',
+            hostTestnet: 'Custom',
+            customHost: CUSTOM_HOST
+        };
+
+        expect(buildStore(testnetCustom, true).getHost).toBe(CUSTOM_HOST);
+        expect(buildStore(testnetCustom, false).getHost).toBe(
+            'https://satsrouting.exchange/v2'
+        );
+
+        const mainnetCustom = {
+            hostMainnet: 'Custom',
+            hostTestnet: 'https://api.testnet.boltz.exchange/v2',
+            customHost: CUSTOM_HOST
+        };
+
+        expect(buildStore(mainnetCustom, false).getHost).toBe(CUSTOM_HOST);
+        expect(buildStore(mainnetCustom, true).getHost).toBe(
+            'https://api.testnet.boltz.exchange/v2'
+        );
     });
 });
 
@@ -338,5 +355,269 @@ describe('SwapStore host-change rate refetch', () => {
         });
 
         expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+    });
+});
+
+describe('SwapStore.getSwapFees', () => {
+    beforeEach(() => jest.clearAllMocks());
+    // drop queued responses a superseded call never asked for
+    afterEach(() => (ReactNativeBlobUtil.fetch as jest.Mock).mockReset());
+
+    const ratesResponse = (claim: number) => ({
+        info: () => ({ status: 200 }),
+        json: () => ({
+            BTC: {
+                BTC: {
+                    fees: { percentage: 0.5, minerFees: { claim, lockup: 400 } }
+                }
+            }
+        })
+    });
+
+    it('ignores an earlier call that finishes after a later one', async () => {
+        const store = buildStore();
+        const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
+
+        // the first call's submarine request stays open
+        let releaseFirst: (value: any) => void = () => {};
+        fetchMock.mockImplementationOnce(
+            () => new Promise((resolve) => (releaseFirst = resolve))
+        );
+        const first = store.getSwapFees();
+
+        fetchMock
+            .mockResolvedValueOnce(ratesResponse(300))
+            .mockResolvedValueOnce(ratesResponse(300));
+        await store.getSwapFees();
+        expect(store.reverseInfo.fees?.minerFees?.claim).toBe(300);
+        expect(store.loading).toBe(false);
+
+        // the first call now completes with another quote
+        fetchMock.mockResolvedValueOnce(ratesResponse(-97800));
+        releaseFirst(ratesResponse(-97800));
+        await first;
+
+        expect(store.reverseInfo.fees?.minerFees?.claim).toBe(300);
+        expect(store.loading).toBe(false);
+        // it stopped before asking for the reverse rates again
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('ignores the error of an earlier call that fails after a later one', async () => {
+        const store = buildStore();
+        const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
+
+        let failFirst: (reason: any) => void = () => {};
+        fetchMock.mockImplementationOnce(
+            () => new Promise((_, reject) => (failFirst = reject))
+        );
+        const first = store.getSwapFees();
+
+        fetchMock
+            .mockResolvedValueOnce(ratesResponse(300))
+            .mockResolvedValueOnce(ratesResponse(300));
+        await store.getSwapFees();
+
+        failFirst(new Error('timeout'));
+        await first;
+
+        expect(store.apiError).toBe('');
+        expect(store.reverseInfo.fees?.minerFees?.claim).toBe(300);
+    });
+});
+
+describe('SwapStore swap status from the host', () => {
+    const STORED_SWAP = {
+        id: SWAP_ID,
+        type: SwapType.Submarine,
+        status: SwapState.InvoiceSet,
+        createdAt: 1700000000
+    };
+    const stored: { [key: string]: string } = {};
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        for (const key of Object.keys(stored)) delete stored[key];
+        stored[SWAPS_KEY] = JSON.stringify([STORED_SWAP]);
+        (Storage.getItem as jest.Mock).mockImplementation(
+            async (key: string) => stored[key] ?? null
+        );
+        (Storage.setItem as jest.Mock).mockImplementation(
+            async (key: string, value: string) => {
+                stored[key] = value;
+                return true;
+            }
+        );
+    });
+
+    const storedSwaps = () => JSON.parse(stored[SWAPS_KEY]);
+
+    const pollAnswer = (body: any) =>
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+            json: () => body
+        });
+
+    // The first cannot be converted to the object key the Activity filter
+    // uses a status as, the second makes BaseModel take it for a Long.
+    const NOT_A_STATUS: any[] = [
+        { toString: 1 },
+        { high: 0, low: 0, toString: 0 },
+        ['invoice.settled'],
+        200,
+        true
+    ];
+
+    it('stores a polled status that is a string, known or not', async () => {
+        pollAnswer({ status: 'no.such.status' });
+        const store = buildStore();
+        await store.fetchAndUpdateSwaps();
+
+        expect(storedSwaps()[0].status).toBe('no.such.status');
+        expect(store.swaps.map((s: any) => s.status)).toEqual([
+            'no.such.status'
+        ]);
+    });
+
+    it.each(NOT_A_STATUS)(
+        'ignores a polled status that is not a string: %j',
+        async (status) => {
+            pollAnswer({ status });
+            const store = buildStore();
+            await store.fetchAndUpdateSwaps();
+
+            expect(storedSwaps()).toEqual([STORED_SWAP]);
+            expect(store.swaps.map((s: any) => s.status)).toEqual([
+                STORED_SWAP.status
+            ]);
+        }
+    );
+
+    it.each(NOT_A_STATUS)(
+        'drops a stored status that is not a string: %j',
+        async (status) => {
+            stored[SWAPS_KEY] = JSON.stringify([{ ...STORED_SWAP, status }]);
+            (ReactNativeBlobUtil.fetch as jest.Mock).mockRejectedValue(
+                new Error('offline')
+            );
+            const store = buildStore();
+            await store.fetchAndUpdateSwaps();
+
+            expect(storedSwaps()).toHaveLength(1);
+            expect(storedSwaps()[0]).not.toHaveProperty('status');
+            expect(store.swaps.map((s: any) => s.id)).toEqual([SWAP_ID]);
+        }
+    );
+
+    it.each(NOT_A_STATUS)(
+        'ignores a status update that is not a string: %j',
+        async (status) => {
+            await buildStore().updateSwapStatus(SWAP_ID, status, true);
+
+            expect(storedSwaps()).toEqual([STORED_SWAP]);
+        }
+    );
+
+    it.each(NOT_A_STATUS)(
+        'does not store a failure reason that is not a string: %j',
+        async (failureReason) => {
+            await buildStore().updateSwapStatus(
+                SWAP_ID,
+                SwapState.InvoiceFailedToPay,
+                true,
+                failureReason
+            );
+
+            expect(storedSwaps()).toEqual([
+                { ...STORED_SWAP, status: SwapState.InvoiceFailedToPay }
+            ]);
+        }
+    );
+});
+
+describe('SwapStore.fetchAndUpdateSwaps', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    });
+    afterEach(() => {
+        jest.useRealTimers();
+        jest.restoreAllMocks();
+    });
+
+    const SILENT_HOST = 'https://silent.example/v2';
+    const HOST = 'https://host.example/v2';
+
+    const storeSwaps = (submarineSwaps: any[], reverseSwaps: any[]) =>
+        (Storage.getItem as jest.Mock).mockImplementation(async (key: string) =>
+            JSON.stringify(
+                key === REVERSE_SWAPS_KEY ? reverseSwaps : submarineSwaps
+            )
+        );
+
+    // the silent host accepts the request and never answers; the other
+    // one answers at once. Like RNBlobUtil, cancel() rejects the request
+    // synchronously.
+    const cancel = jest.fn();
+    const heldRequest = () => {
+        let rejectRequest!: (err: Error) => void;
+        const request = new Promise((_, reject) => {
+            rejectRequest = reject;
+        });
+        return Object.assign(request, {
+            cancel: () => {
+                cancel();
+                rejectRequest(new Error('canceled'));
+            }
+        });
+    };
+    const mockHosts = () =>
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockImplementation(
+            (_method: string, url: string) =>
+                url.startsWith(SILENT_HOST)
+                    ? heldRequest()
+                    : Promise.resolve({
+                          json: () => ({ status: SwapState.InvoicePaid })
+                      })
+        );
+
+    it('does not wait for hosts that hold the status poll', async () => {
+        storeSwaps(
+            [
+                { id: 'held-1', endpoint: SILENT_HOST },
+                { id: 'held-2', endpoint: SILENT_HOST },
+                { id: 'answered', endpoint: HOST }
+            ].map((swap) => ({
+                ...swap,
+                type: SwapType.Submarine,
+                status: SwapState.InvoiceSet
+            })),
+            []
+        );
+        mockHosts();
+
+        const store = buildStore();
+        const done = store.fetchAndUpdateSwaps();
+        // one timeout in total, not one per swap
+        await jest.advanceTimersByTimeAsync(10000);
+        await done;
+
+        expect(store.swapsLoading).toBe(false);
+        expect(cancel).toHaveBeenCalledTimes(2);
+        // logged as a timeout, not as the cancel that follows it
+        const warned = (console.warn as jest.Mock).mock.calls.map(
+            ([message, err]) => [message, err?.message]
+        );
+        expect(warned).toEqual([
+            ['Failed to fetch status for swap held-1', 'Request timeout'],
+            ['Failed to fetch status for swap held-2', 'Request timeout']
+        ]);
+        expect(
+            Object.fromEntries(store.swaps.map((s: any) => [s.id, s.status]))
+        ).toEqual({
+            'held-1': SwapState.InvoiceSet,
+            'held-2': SwapState.InvoiceSet,
+            answered: SwapState.InvoicePaid
+        });
     });
 });

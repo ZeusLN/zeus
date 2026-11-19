@@ -1,7 +1,7 @@
 import { computed } from 'mobx';
-import moment from 'moment';
 
 import BaseModel from './BaseModel';
+import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { orderPaymentInfo } from '../stores/PosStore';
 import { fiatStore } from '../stores/Stores';
@@ -38,10 +38,9 @@ export default class Order extends BaseModel {
     }
 
     @computed public get getDisplayTime(): string {
-        const date = moment(this.updated_at || this.created_at);
-        const year =
-            date.year() !== moment().year() ? `, '${date.format('YY')}` : '';
-        return `${date.format('hh:mm a | ddd, MMM DD')}${year}`;
+        return DateTimeUtils.listFormattedDateOrder(
+            new Date(this.updated_at || this.created_at)
+        );
     }
 
     @computed public get getItemCount(): number {

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# shot: screenshot the rig emulator.
+#
+# usage: bin/shot <name>
+# Writes state/<RIG_NAME>/screenshots/<name>.png and a 1000px-tall preview
+# state/<RIG_NAME>/screenshots/view.png (small enough to read back).
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+[ $# -ge 1 ] || die "usage: bin/shot <name>"
+d="$STATE/screenshots"; mkdir -p "$(dirname "$d/$1")"
+adb_ exec-out screencap -p >"$d/$1.png"
+cp "$d/$1.png" "$d/view.png"
+sips -Z 1000 "$d/view.png" >/dev/null 2>&1 || true
+echo "$d/$1.png"

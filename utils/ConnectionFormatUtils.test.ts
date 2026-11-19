@@ -66,6 +66,19 @@ describe('ConnectionFormatUtils', () => {
                 enableTor: true
             });
         });
+
+        it('drops a trailing slash after the port', () => {
+            expect(
+                ConnectionFormatUtils.processLndConnectUrl(
+                    'lndconnect://8.8.0.0:2056/?macaroon=0201b6'
+                ).port
+            ).toEqual('2056');
+            expect(
+                ConnectionFormatUtils.processLndConnectUrl(
+                    'lndconnect://[2604:2000::]:2056/?macaroon=0201b6'
+                ).port
+            ).toEqual('2056');
+        });
     });
 
     describe('processLncUrl', () => {
@@ -206,6 +219,69 @@ describe('ConnectionFormatUtils', () => {
                 enableTor: true,
                 implementation: 'cln-rest'
             });
+        });
+
+        it('drops a trailing slash after the port', () => {
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    'clnrest+https://cln.local:3010/?rune=8hJ6ZKFvRune'
+                ).port
+            ).toEqual('3010');
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    'clnrest+https://[2604:2000::]:3010/?rune=8hJ6ZKFvRune'
+                ).port
+            ).toEqual('3010');
+        });
+    });
+
+    describe('redactConnectionString', () => {
+        it('masks the lndhub login and password', () => {
+            expect(
+                ConnectionFormatUtils.redactConnectionString(
+                    'lndhub://alice:secret@https://lndhub.example.com'
+                )
+            ).toEqual('lndhub://********@https://lndhub.example.com');
+            expect(
+                ConnectionFormatUtils.redactConnectionString(
+                    'lndhub://alice:secret'
+                )
+            ).toEqual('lndhub://********');
+        });
+
+        it('masks the rune and client certs', () => {
+            expect(
+                ConnectionFormatUtils.redactConnectionString(
+                    'clnrest://cln.local:3010?rune=8hJ6ZKFvRune=='
+                )
+            ).toEqual('clnrest://cln.local:3010?rune=********');
+            expect(
+                ConnectionFormatUtils.redactConnectionString(
+                    'clnrest+https://cln.local:3010?rune=8hJ6ZKFvRune&certs=LS0tLS1CRUdJTi'
+                )
+            ).toEqual(
+                'clnrest+https://cln.local:3010?rune=********&certs=********'
+            );
+        });
+
+        it('masks the macaroon', () => {
+            expect(
+                ConnectionFormatUtils.redactConnectionString(
+                    'lndconnect://8.8.0.0:2056?cert=MIICuD&macaroon=0201b6'
+                )
+            ).toEqual(
+                'lndconnect://8.8.0.0:2056?cert=********&macaroon=********'
+            );
+        });
+
+        it('keeps a string without credentials', () => {
+            expect(
+                ConnectionFormatUtils.redactConnectionString(
+                    'bluewallet:setlndhuburl?url=https%3A%2F%2Flndhub.example.com'
+                )
+            ).toEqual(
+                'bluewallet:setlndhuburl?url=https%3A%2F%2Flndhub.example.com'
+            );
         });
     });
 });

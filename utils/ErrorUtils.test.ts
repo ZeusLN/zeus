@@ -2,7 +2,8 @@ import {
     errorToUserFriendly,
     parseLdkNodeError,
     parseCashuDevKitError,
-    cashuErrorForDisplay
+    cashuErrorForDisplay,
+    restErrorMessage
 } from './ErrorUtils';
 
 jest.mock('./LocaleUtils', () => ({
@@ -186,6 +187,33 @@ describe('ErrorUtils', () => {
         it('Return string if error is sent as a string', () => {
             expect(errorToUserFriendly(new Error('Payment timed out'))).toEqual(
                 'Payment timed out'
+            );
+        });
+
+        it('Gives the same result for a CLN JSON-RPC body and its extracted message', () => {
+            // CLNRest.restReq used to reject with the raw body and now
+            // rejects with the message inside it
+            const cases = [
+                [
+                    '{"error":{"code":210,"message":"Destination unknown"}}',
+                    'Destination unknown'
+                ],
+                ['{"code":-32602,"message":"bad param"}', 'bad param'],
+                [
+                    '{"code":204,"message":"Payment details incorrect"}',
+                    'Payment details incorrect'
+                ]
+            ];
+            cases.forEach(([body, message]) => {
+                expect(errorToUserFriendly(new Error(message))).toEqual(
+                    errorToUserFriendly(new Error(body))
+                );
+                expect(errorToUserFriendly(message as any)).toEqual(
+                    errorToUserFriendly(body as any)
+                );
+            });
+            expect(errorToUserFriendly(new Error('bad param'))).toEqual(
+                'bad param'
             );
         });
 
@@ -626,6 +654,50 @@ describe('ErrorUtils', () => {
                     `CDK Error: Unknown error response: ${body}`
                 )
             ).toEqual('Quote amount not as requested');
+        });
+    });
+
+    describe('restErrorMessage', () => {
+        it('prefers a nested message over a top-level one', () => {
+            expect(
+                restErrorMessage({
+                    message: 'outer',
+                    error: { code: 210, message: 'inner' }
+                })
+            ).toBe('inner');
+        });
+
+        it('returns a top-level message', () => {
+            expect(restErrorMessage({ code: 2, message: 'bad param' })).toBe(
+                'bad param'
+            );
+        });
+
+        it('returns a string error', () => {
+            expect(restErrorMessage({ error: 'Not authorized' })).toBe(
+                'Not authorized'
+            );
+        });
+
+        it('skips an empty or non-string nested message', () => {
+            expect(
+                restErrorMessage({ message: 'outer', error: { message: '' } })
+            ).toBe('outer');
+            expect(
+                restErrorMessage({ message: 'outer', error: { message: 123 } })
+            ).toBe('outer');
+        });
+
+        it('returns undefined when the body carries no message', () => {
+            expect(restErrorMessage({ error: { code: 1 } })).toBeUndefined();
+            expect(restErrorMessage({ code: 1, message: '' })).toBeUndefined();
+            expect(restErrorMessage({})).toBeUndefined();
+        });
+
+        it('returns undefined for a body that is not an object', () => {
+            expect(restErrorMessage('Bad Gateway')).toBeUndefined();
+            expect(restErrorMessage(undefined)).toBeUndefined();
+            expect(restErrorMessage(null)).toBeUndefined();
         });
     });
 });

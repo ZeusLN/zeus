@@ -1,0 +1,1680 @@
+jest.mock('mobx-react', () => ({
+    inject: () => (component: any) => component,
+    observer: (component: any) => component
+}));
+jest.mock('@react-native-clipboard/clipboard', () => ({
+    getString: jest.fn(() => Promise.resolve('')),
+    setString: jest.fn()
+}));
+jest.mock('../../backends/LNC/credentialStore', () => ({
+    hash: jest.fn(),
+    LNC_STORAGE_KEY: 'lnc'
+}));
+jest.mock('../../stores/Stores');
+jest.mock('../../stores/SettingsStore', () => ({
+    INTERFACE_KEYS: [],
+    LNC_MAILBOX_KEYS: [],
+    EMBEDDED_NODE_NETWORK_KEYS: [],
+    BLOCK_EXPLORER_KEYS: [],
+    DEFAULT_MEMPOOL_INSTANCE: 'https://mempool.space',
+    MEMPOOL_INSTANCE_KEYS: [],
+    getLspConfigForNetwork: jest.fn(() => ({}))
+}));
+jest.mock('../../utils/BackendUtils', () => ({
+    disconnect: jest.fn(() => Promise.resolve())
+}));
+jest.mock('../../utils/LocaleUtils');
+jest.mock('../../utils/ThemeUtils', () => ({
+    themeColor: (color: string) => (color === 'error' ? '#ff0000' : '#000000')
+}));
+jest.mock('../../utils/ActionUtils', () => ({
+    confirmAction: jest.fn()
+}));
+jest.mock('../../utils/NavigationUtils', () => ({
+    reAuthNavigation: jest.fn()
+}));
+jest.mock('../../utils/PhotoUtils', () => ({ getPhoto: jest.fn() }));
+jest.mock('../../utils/DataClearUtils', () => ({
+    clearNodeKeychainData: jest.fn(() => Promise.resolve()),
+    clearCDKDatabase: jest.fn(() => Promise.resolve()),
+    clearCDKDatabaseForNode: jest.fn(() => Promise.resolve()),
+    deleteNodeDataDirectoryWithRetry: jest.fn(() => Promise.resolve(true))
+}));
+jest.mock('../../utils/LndMobileUtils', () => ({}));
+jest.mock('../../utils/LdkNodeUtils', () => ({
+    getDefaultEsploraServer: jest.fn(() => ''),
+    getDefaultRgsServer: jest.fn(() => ''),
+    DEFAULT_VSS_SERVER: '',
+    DEFAULT_SCORER_URL: 'https://scorer.default',
+    createLdkNodeWallet: jest.fn(() => Promise.resolve({})),
+    stopLdkNode: jest.fn(() => Promise.resolve())
+}));
+jest.mock('../../storage', () => ({
+    getItem: jest.fn(() => Promise.resolve(null))
+}));
+jest.mock('../../components/Button', () => {
+    const { Pressable, Text } = require('react-native');
+    return ({ title, onPress, disabled }: any) => (
+        <Pressable role="button" onPress={onPress} disabled={disabled}>
+            <Text>{title}</Text>
+        </Pressable>
+    );
+});
+jest.mock('../../components/CollapsedQR', () => 'CollapsedQR');
+jest.mock('../../components/DropdownSetting', () => 'DropdownSetting');
+jest.mock('../../components/Header', () => 'Header');
+jest.mock('../../components/KeyValue', () => 'KeyValue');
+jest.mock('../../components/LoadingIndicator', () => 'LoadingIndicator');
+jest.mock('../../components/Pill', () => 'Pill');
+jest.mock('../../components/Screen', () => 'Screen');
+jest.mock('../../components/SuccessErrorMessage', () => ({
+    ErrorMessage: 'ErrorMessage',
+    WarningMessage: 'WarningMessage'
+}));
+jest.mock('../../components/Switch', () => 'Switch');
+jest.mock('../../components/TextInput', () => {
+    const { TextInput } = require('react-native');
+    return (props: any) => <TextInput {...props} />;
+});
+jest.mock('../../components/Accordion', () => 'Accordion');
+jest.mock('../../components/VssServerPicker', () => ({
+    __esModule: true,
+    default: 'VssServerPicker',
+    isVssServerValid: () => true
+}));
+jest.mock('../../components/layout/Row', () => ({ Row: 'Row' }));
+jest.mock('../../components/ShowHideToggle', () => 'ShowHideToggle');
+jest.mock('../../assets/images/SVG/Scan.svg', () => 'Scan');
+jest.mock('../../assets/images/SVG/Add.svg', () => 'AddIcon');
+
+import * as React from 'react';
+import { Alert } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import WalletConfiguration from './WalletConfiguration';
+import { confirmAction } from '../../utils/ActionUtils';
+import { createLdkNodeWallet } from '../../utils/LdkNodeUtils';
+import Storage from '../../storage';
+import { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
+import { clearNodeKeychainData } from '../../utils/DataClearUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { reAuthNavigation } from '../../utils/NavigationUtils';
+
+const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
+const LNDCONNECT_IMPORT =
+    'lndconnect://new-node.example.com:8080?macaroon=AgEDbG5k';
+const CLNREST_IMPORT = 'clnrest+https://new-cln.example.com:3010?rune=newrune';
+
+// Opens the screen on an existing node at index 1, so a save neither
+// reconnects (the active node is 0) nor creates a new entry. saved: true
+// is how Wallets opens a saved wallet.
+const renderView = async (
+    node: any,
+    {
+        clipboard = false,
+        saved = false,
+        params = {}
+    }: { clipboard?: boolean; saved?: boolean; params?: any } = {}
+) => {
+    const updateSettings = jest.fn(() => Promise.resolve());
+    const SettingsStore = {
+        settings: { privacy: { clipboard }, selectedNode: 0 },
+        updateSettings,
+        setConnectingStatus: jest.fn()
+    };
+    const navigation = {
+        goBack: jest.fn(),
+        navigate: jest.fn(),
+        reset: jest.fn()
+    };
+    await render(
+        <WalletConfiguration
+            {...({
+                navigation,
+                route: { params: { node, index: 1, saved, ...params } },
+                SettingsStore
+            } as any)}
+        />
+    );
+    return { updateSettings, navigation };
+};
+
+// The node the last save writes into slot 1 of the saved nodes
+const savedNode = (updateSettings: jest.Mock) => {
+    const calls = updateSettings.mock.calls as any[];
+    const update = calls[calls.length - 1][0];
+    return update({ nodes: [{}, {}] }).nodes[1];
+};
+
+const pressButton = (name: string) =>
+    fireEvent.press(screen.getByRole('button', { name }));
+
+const save = () => pressButton('views.Settings.WalletConfiguration.saveWallet');
+
+// Save on a config without certificate verification asks first
+const saveWithoutCertVerification = async () => {
+    await save();
+    await pressButton(
+        'views.Settings.WalletConfiguration.certificateUnderstand'
+    );
+};
+
+const interfaceDropdown = () =>
+    screen.container.queryAll(
+        (n) =>
+            n.type === 'DropdownSetting' &&
+            n.props.title ===
+                'views.Settings.WalletConfiguration.walletInterface'
+    )[0];
+
+const LND_NODE = {
+    implementation: 'lnd',
+    host: 'https://node.example.com',
+    port: '8080',
+    macaroonHex: 'deadbeef',
+    rune: 'rune',
+    certVerification: true
+};
+
+describe('WalletConfiguration', () => {
+    beforeEach(() => {
+        (confirmAction as jest.Mock).mockClear();
+        (Clipboard.getString as jest.Mock).mockClear().mockResolvedValue('');
+    });
+
+    describe('lndhub clipboard import', () => {
+        it('offers a copied lndhub address and clears REST fields left over from a previous config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(LNDHUB_IMPORT);
+            const { updateSettings } = await renderView(
+                { ...LND_NODE, host: 'http://192.168.1.50' },
+                { clipboard: true }
+            );
+            expect(
+                screen.getByText('lndhub://********@https://lndhub.example.com')
+            ).toBeOnTheScreen();
+
+            await pressButton('views.Settings.AddEditNode.import');
+            expect(
+                screen.queryByText(
+                    'lndhub://********@https://lndhub.example.com'
+                )
+            ).not.toBeOnTheScreen();
+            expect(interfaceDropdown().props.selectedValue).toBe('lndhub');
+            expect(screen.getByPlaceholderText('https://')).toHaveDisplayValue(
+                'https://lndhub.example.com'
+            );
+
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lndhub',
+                lndhubUrl: 'https://lndhub.example.com',
+                username: 'alice',
+                password: 'secret',
+                host: '',
+                port: '',
+                macaroonHex: '',
+                rune: ''
+            });
+        });
+
+        it('does not read the clipboard when clipboard reading is off', async () => {
+            await renderView(LND_NODE);
+
+            expect(Clipboard.getString).not.toHaveBeenCalled();
+            expect(
+                screen.queryByRole('button', {
+                    name: 'views.Settings.AddEditNode.import'
+                })
+            ).not.toBeOnTheScreen();
+        });
+    });
+
+    describe('clipboard import banner', () => {
+        it('does not show the lndhub login and password', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(LNDHUB_IMPORT);
+            await renderView(LND_NODE, { clipboard: true });
+
+            expect(
+                screen.getByText('lndhub://********@https://lndhub.example.com')
+            ).toBeOnTheScreen();
+            expect(screen.queryByText(/secret/)).not.toBeOnTheScreen();
+        });
+
+        it('does not show the clnrest rune', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                'clnrest://cln.local:3010?rune=8hJ6ZKFvRune'
+            );
+            await renderView(LND_NODE, { clipboard: true });
+
+            expect(
+                screen.getByText('clnrest://cln.local:3010?rune=********')
+            ).toBeOnTheScreen();
+            expect(screen.queryByText(/8hJ6ZKFvRune/)).not.toBeOnTheScreen();
+        });
+
+        it('imports the unredacted lndhub password', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(LNDHUB_IMPORT);
+            await renderView(LND_NODE, { clipboard: true });
+
+            await pressButton('views.Settings.AddEditNode.import');
+
+            const [username, password] = screen.getAllByPlaceholderText('...');
+            expect(username).toHaveDisplayValue('alice');
+            expect(password).toHaveDisplayValue('secret');
+        });
+    });
+
+    describe('LNC keys', () => {
+        const PAIRING_PHRASE =
+            'cherry truth mask employ box silver mass bunker fiscal vote';
+        const LOCAL_KEY = 'd1'.repeat(32);
+        const REMOTE_KEY = '02' + 'd2'.repeat(32);
+
+        beforeEach(() => {
+            (Storage.getItem as jest.Mock).mockResolvedValue(
+                JSON.stringify({ localKey: LOCAL_KEY, remoteKey: REMOTE_KEY })
+            );
+        });
+
+        afterEach(() => {
+            (Storage.getItem as jest.Mock).mockResolvedValue(null);
+        });
+
+        it('masks the local and remote keys like the pairing phrase', async () => {
+            await renderView({
+                implementation: 'lightning-node-connect',
+                pairingPhrase: PAIRING_PHRASE
+            });
+
+            expect(
+                screen.getByDisplayValue(PAIRING_PHRASE).props.secureTextEntry
+            ).toBe(true);
+            expect(
+                screen.getByDisplayValue(LOCAL_KEY).props.secureTextEntry
+            ).toBe(true);
+            expect(
+                screen.getByDisplayValue(REMOTE_KEY).props.secureTextEntry
+            ).toBe(true);
+        });
+
+        it('shows the keys after the show/hide toggle is pressed', async () => {
+            await renderView({
+                implementation: 'lightning-node-connect',
+                pairingPhrase: PAIRING_PHRASE
+            });
+
+            const [toggle] = screen.container.queryAll(
+                (n) => n.type === 'ShowHideToggle'
+            );
+            await act(async () => toggle.props.onPress());
+
+            expect(
+                screen.getByDisplayValue(LOCAL_KEY).props.secureTextEntry
+            ).toBe(false);
+            expect(
+                screen.getByDisplayValue(REMOTE_KEY).props.secureTextEntry
+            ).toBe(false);
+        });
+    });
+
+    describe('lndhub account creation', () => {
+        const createAccount = jest.fn(() => Promise.resolve({}));
+
+        // A new lndhub wallet with Use Tor on and no account yet
+        const renderForm = async (lndhubUrl: string) => {
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation: { goBack: jest.fn(), navigate: jest.fn() },
+                        route: {
+                            params: {
+                                node: {
+                                    implementation: 'lndhub',
+                                    lndhubUrl,
+                                    certVerification: true,
+                                    enableTor: true
+                                },
+                                newEntry: true
+                            }
+                        },
+                        SettingsStore: {
+                            settings: { privacy: { clipboard: false } },
+                            createAccount
+                        }
+                    } as any)}
+                />
+            );
+        };
+
+        beforeEach(() => {
+            createAccount.mockClear();
+        });
+
+        it('passes Use Tor for a custom server', async () => {
+            await renderForm('https://lndhub.example.com');
+
+            await pressButton('views.Settings.AddEditNode.createLndhub');
+
+            expect(createAccount).toHaveBeenCalledWith(
+                'https://lndhub.example.com',
+                true,
+                true
+            );
+        });
+
+        it('passes Use Tor for a listed custodial server after the warning', async () => {
+            const custodialUrl = CUSTODIAL_LNDHUBS[0];
+            await renderForm(custodialUrl);
+
+            await pressButton('views.Settings.AddEditNode.createLndhub');
+            expect(createAccount).not.toHaveBeenCalled();
+
+            await pressButton('views.Settings.AddEditNode.lndhubUnderstand');
+
+            expect(createAccount).toHaveBeenCalledWith(
+                custodialUrl,
+                true,
+                true
+            );
+        });
+    });
+
+    describe('deleting an LNC wallet', () => {
+        const LNC_NODE = {
+            implementation: 'lightning-node-connect',
+            nickname: 'Node at home',
+            pairingPhrase:
+                'cherry truth mask employ box silver mass bunker fiscal vote'
+        };
+
+        // Deletes the wallet at index 1 of nodes through the Delete button
+        const deleteSecondWallet = async (nodes: any[]) => {
+            const SettingsStore = {
+                settings: { privacy: { clipboard: false }, nodes },
+                updateSettings: jest.fn((update: any) =>
+                    Promise.resolve(update({ nodes }))
+                ),
+                setConnectingStatus: jest.fn()
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation: {
+                            goBack: jest.fn(),
+                            navigate: jest.fn(),
+                            popTo: jest.fn(),
+                            reset: jest.fn()
+                        },
+                        route: {
+                            params: { node: nodes[1], index: 1, saved: true }
+                        },
+                        SettingsStore
+                    } as any)}
+                />
+            );
+
+            await pressButton(
+                'views.Settings.WalletConfiguration.deleteWallet'
+            );
+            const [, , proceed] = (confirmAction as jest.Mock).mock.calls[0];
+            await act(async () => proceed.onPress());
+        };
+
+        beforeEach(() => {
+            (clearNodeKeychainData as jest.Mock).mockClear();
+        });
+
+        it('keeps the LNC credentials while a copy uses the same pairing phrase', async () => {
+            const copy = { ...LNC_NODE, nickname: 'Node at home copy' };
+            await deleteSecondWallet([LNC_NODE, copy]);
+
+            expect(clearNodeKeychainData).toHaveBeenCalledWith(copy, {
+                keepLncCredentials: true
+            });
+        });
+
+        it('clears the LNC credentials of the last wallet with the pairing phrase', async () => {
+            const other = {
+                ...LNC_NODE,
+                nickname: 'Other node',
+                pairingPhrase:
+                    'ozone ozone ozone ozone ozone ozone ozone ozone ozone ozone'
+            };
+            await deleteSecondWallet([LNC_NODE, other]);
+
+            expect(clearNodeKeychainData).toHaveBeenCalledWith(other, {
+                keepLncCredentials: false
+            });
+        });
+    });
+
+    describe('replacing an LNC pairing phrase', () => {
+        const OLD_PHRASE =
+            'cherry truth mask employ box silver mass bunker fiscal vote';
+        const NEW_PHRASE =
+            'ozone ozone ozone ozone ozone ozone ozone ozone ozone ozone';
+        const LNC_NODE = {
+            implementation: 'lightning-node-connect',
+            nickname: 'Node at home',
+            pairingPhrase: OLD_PHRASE
+        };
+
+        // Opens the wallet at `index` of nodes, pastes `phrase` into the
+        // pairing phrase field and saves
+        const saveWithPhrase = async (
+            nodes: any[],
+            index: number,
+            phrase: string,
+            // What the settings update resolves with; the saved nodes by
+            // default
+            resolveWith: (saved: any) => any = (saved) => saved
+        ) => {
+            const SettingsStore = {
+                settings: {
+                    privacy: { clipboard: false },
+                    nodes,
+                    selectedNode: 0
+                },
+                updateSettings: jest.fn((update: any) =>
+                    Promise.resolve(resolveWith(update({ nodes })))
+                ),
+                setConnectingStatus: jest.fn()
+            };
+            const navigation = {
+                goBack: jest.fn(),
+                navigate: jest.fn(),
+                reset: jest.fn()
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation,
+                        route: {
+                            params: { node: nodes[index], index, saved: true }
+                        },
+                        SettingsStore
+                    } as any)}
+                />
+            );
+
+            await act(async () =>
+                fireEvent.changeText(
+                    screen.getByDisplayValue(OLD_PHRASE),
+                    phrase
+                )
+            );
+            await save();
+            return { navigation, SettingsStore };
+        };
+
+        beforeEach(() => {
+            (clearNodeKeychainData as jest.Mock).mockReset();
+            (clearNodeKeychainData as jest.Mock).mockResolvedValue(undefined);
+            (BackendUtils.disconnect as jest.Mock).mockClear();
+        });
+
+        it('clears the credentials of the replaced phrase', async () => {
+            await saveWithPhrase([{}, LNC_NODE], 1, NEW_PHRASE);
+
+            expect(clearNodeKeychainData).toHaveBeenCalledTimes(1);
+            expect(clearNodeKeychainData).toHaveBeenCalledWith({
+                pairingPhrase: OLD_PHRASE
+            });
+        });
+
+        it('clears them after the active wallet is disconnected', async () => {
+            await saveWithPhrase([LNC_NODE], 0, NEW_PHRASE);
+
+            expect(clearNodeKeychainData).toHaveBeenCalledWith({
+                pairingPhrase: OLD_PHRASE
+            });
+            expect(
+                (BackendUtils.disconnect as jest.Mock).mock
+                    .invocationCallOrder[0]
+            ).toBeLessThan(
+                (clearNodeKeychainData as jest.Mock).mock.invocationCallOrder[0]
+            );
+        });
+
+        it('keeps the credentials when the phrase is unchanged', async () => {
+            await saveWithPhrase([{}, LNC_NODE], 1, `  ${OLD_PHRASE}`);
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+        });
+
+        it('keeps the credentials while a copy uses the replaced phrase', async () => {
+            const copy = { ...LNC_NODE, nickname: 'Node at home copy' };
+            await saveWithPhrase([copy, LNC_NODE], 1, NEW_PHRASE);
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+        });
+
+        it('keeps the credentials when the save does not return the nodes', async () => {
+            const { navigation } = await saveWithPhrase(
+                [{}, LNC_NODE],
+                1,
+                NEW_PHRASE,
+                () => undefined
+            );
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+            expect(navigation.goBack).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps them when the saved nodes are not a list', async () => {
+            await saveWithPhrase([{}, LNC_NODE], 1, NEW_PHRASE, () => ({
+                nodes: undefined
+            }));
+
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+        });
+
+        describe('when clearing the credentials fails', () => {
+            let consoleError: jest.SpyInstance;
+
+            beforeEach(() => {
+                (clearNodeKeychainData as jest.Mock).mockRejectedValue(
+                    new Error('keychain unavailable')
+                );
+                consoleError = jest
+                    .spyOn(console, 'error')
+                    .mockImplementation(() => undefined);
+            });
+
+            afterEach(() => {
+                consoleError.mockRestore();
+                (clearNodeKeychainData as jest.Mock).mockResolvedValue(
+                    undefined
+                );
+            });
+
+            it('still reconnects the active wallet', async () => {
+                const { navigation, SettingsStore } = await saveWithPhrase(
+                    [LNC_NODE],
+                    0,
+                    NEW_PHRASE
+                );
+
+                expect(clearNodeKeychainData).toHaveBeenCalledTimes(1);
+                expect(SettingsStore.setConnectingStatus).toHaveBeenCalledWith(
+                    true
+                );
+                expect(navigation.reset).toHaveBeenCalledWith({
+                    index: 0,
+                    routes: [{ name: 'Wallet' }]
+                });
+            });
+
+            it('still leaves the screen of an inactive wallet', async () => {
+                const { navigation } = await saveWithPhrase(
+                    [{}, LNC_NODE],
+                    1,
+                    NEW_PHRASE
+                );
+
+                expect(clearNodeKeychainData).toHaveBeenCalledTimes(1);
+                expect(navigation.goBack).toHaveBeenCalledTimes(1);
+            });
+        });
+    });
+
+    describe('deleting a wallet', () => {
+        const NWC_A = {
+            implementation: 'nostr-wallet-connect',
+            nostrWalletConnectUrl: 'nostr+walletconnect://a'
+        };
+        const NWC_B = {
+            implementation: 'nostr-wallet-connect',
+            nostrWalletConnectUrl: 'nostr+walletconnect://b'
+        };
+
+        // Deletes the first of two NWC wallets through the Delete button
+        const deleteFirstWallet = async (active: boolean) => {
+            const nodes = [NWC_A, NWC_B];
+            const SettingsStore = {
+                settings: {
+                    privacy: { clipboard: false },
+                    nodes,
+                    selectedNode: active ? 0 : 1
+                },
+                updateSettings: jest.fn((update: any) =>
+                    Promise.resolve(update({ nodes }))
+                ),
+                setConnectingStatus: jest.fn(),
+                invalidateConnection: jest.fn()
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation: {
+                            goBack: jest.fn(),
+                            navigate: jest.fn(),
+                            popTo: jest.fn(),
+                            reset: jest.fn()
+                        },
+                        route: {
+                            params: {
+                                node: NWC_A,
+                                index: 0,
+                                saved: true,
+                                active
+                            }
+                        },
+                        SettingsStore,
+                        NostrWalletConnectStore: {
+                            deleteCurrentWalletConnections: jest.fn(() =>
+                                Promise.resolve()
+                            ),
+                            deleteWalletConfigConnections: jest.fn(() =>
+                                Promise.resolve()
+                            ),
+                            deleteAllConnectionData: jest.fn(() =>
+                                Promise.resolve()
+                            )
+                        }
+                    } as any)}
+                />
+            );
+
+            await pressButton(
+                'views.Settings.WalletConfiguration.deleteWallet'
+            );
+            const [, , proceed] = (confirmAction as jest.Mock).mock.calls[0];
+            await act(async () => proceed.onPress());
+            return SettingsStore;
+        };
+
+        beforeEach(() => {
+            (confirmAction as jest.Mock).mockClear();
+        });
+
+        // The next wallet takes the deleted one's index without a
+        // reconnect, and two NWC wallets look the same to the guard
+        it('ends the connection of the active wallet it deletes', async () => {
+            const SettingsStore = await deleteFirstWallet(true);
+
+            expect(SettingsStore.invalidateConnection).toHaveBeenCalledTimes(1);
+            expect(SettingsStore.updateSettings).toHaveBeenCalled();
+        });
+
+        it('keeps the connection when the wallet it deletes is not active', async () => {
+            const SettingsStore = await deleteFirstWallet(false);
+
+            expect(SettingsStore.invalidateConnection).not.toHaveBeenCalled();
+            expect(SettingsStore.updateSettings).toHaveBeenCalled();
+        });
+    });
+
+    describe('Tor route param', () => {
+        // handleAnything opens a scanned BTCPay config with the Tor hint as
+        // a route param; the node itself carries no enableTor
+        const BTCPAY_NODE = {
+            implementation: 'lnd',
+            host: 'http://abcdefghijklmnop.onion/lnd-rest/btc/',
+            macaroonHex: 'deadbeef',
+            certVerification: true
+        };
+
+        it('saves a scanned onion config with Tor on', async () => {
+            const { updateSettings } = await renderView(BTCPAY_NODE, {
+                params: { enableTor: true }
+            });
+            await save();
+
+            expect(savedNode(updateSettings).enableTor).toBe(true);
+        });
+
+        it('keeps Tor off without the param', async () => {
+            const { updateSettings } = await renderView(LND_NODE);
+            await save();
+
+            expect(savedNode(updateSettings).enableTor).toBeFalsy();
+        });
+    });
+
+    describe('lndconnect clipboard import', () => {
+        it('switches to LND and clears the credentials of a previous config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            const { updateSettings } = await renderView(
+                {
+                    implementation: 'cln-rest',
+                    host: 'https://my-cln.example.com',
+                    port: '3010',
+                    rune: 'rune',
+                    lndhubUrl: 'https://lndhub.example.com',
+                    username: 'alice',
+                    password: 'secret',
+                    pairingPhrase: 'pairing phrase',
+                    customMailboxServer: 'mailbox.example.com:443',
+                    nostrWalletConnectUrl: 'nostr+walletconnect://abc',
+                    certVerification: true
+                },
+                { clipboard: true }
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+            expect(interfaceDropdown().props.selectedValue).toBe('lnd');
+
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lnd',
+                host: 'https://new-node.example.com',
+                port: '8080',
+                macaroonHex: '0201036c6e64',
+                certVerification: true,
+                rune: '',
+                lndhubUrl: '',
+                username: '',
+                password: '',
+                pairingPhrase: '',
+                customMailboxServer: '',
+                nostrWalletConnectUrl: ''
+            });
+        });
+
+        it('asks about the certificate after an import over an lndhub config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            // lndhub forces certVerification on
+            const { updateSettings } = await renderView(
+                {
+                    implementation: 'lndhub',
+                    lndhubUrl: 'https://lndhub.example.com',
+                    username: 'alice',
+                    password: 'secret',
+                    existingAccount: true,
+                    certVerification: true
+                },
+                { clipboard: true }
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+            await save();
+
+            expect(
+                screen.getByText(
+                    'views.Settings.AddEditNode.certificateWarning1'
+                )
+            ).toBeOnTheScreen();
+            expect(updateSettings).not.toHaveBeenCalled();
+        });
+
+        // Only lndhub forces certVerification. Elsewhere it is the user's
+        // choice, and the interface dropdown is the only place that resets it.
+        it.each([
+            ['lndconnect', LNDCONNECT_IMPORT, 'lnd'],
+            ['clnrest', CLNREST_IMPORT, 'cln-rest']
+        ])(
+            'keeps certificate verification on after a %s import',
+            async (_, importString, implementation) => {
+                (Clipboard.getString as jest.Mock).mockResolvedValue(
+                    importString
+                );
+                const { updateSettings } = await renderView(
+                    {
+                        implementation: 'cln-rest',
+                        host: 'https://my-cln.example.com',
+                        port: '3010',
+                        rune: 'rune',
+                        certVerification: true
+                    },
+                    { clipboard: true }
+                );
+
+                await pressButton('views.Settings.AddEditNode.import');
+                await save();
+
+                expect(
+                    screen.queryByText(
+                        'views.Settings.AddEditNode.certificateWarning1'
+                    )
+                ).not.toBeOnTheScreen();
+                expect(savedNode(updateSettings)).toMatchObject({
+                    implementation,
+                    certVerification: true
+                });
+            }
+        );
+
+        it('can be saved on a saved wallet', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            const { updateSettings } = await renderView(LND_NODE, {
+                clipboard: true,
+                saved: true
+            });
+            expect(
+                screen.queryByRole('button', {
+                    name: 'views.Settings.WalletConfiguration.saveWallet'
+                })
+            ).not.toBeOnTheScreen();
+
+            await pressButton('views.Settings.AddEditNode.import');
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lnd',
+                host: 'https://new-node.example.com',
+                port: '8080',
+                macaroonHex: '0201036c6e64'
+            });
+        });
+
+        it('clears an input error of a previous config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            const { updateSettings } = await renderView(
+                {
+                    implementation: 'cln-rest',
+                    host: 'https://my-cln.example.com',
+                    port: '3010',
+                    rune: ''
+                },
+                { clipboard: true }
+            );
+            // A pasted rune with invalid characters sets runeError
+            await fireEvent.changeText(
+                screen.getByPlaceholderText('Lt1c...'),
+                'not a rune!'
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+            await saveWithoutCertVerification();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lnd',
+                rune: ''
+            });
+        });
+
+        it.each([
+            [
+                'an LDK Node',
+                { implementation: 'ldk-node', ldkMnemonic: 'abandon' }
+            ],
+            [
+                'an embedded LND',
+                { implementation: 'embedded-lnd', adminMacaroon: 'beef' }
+            ]
+        ])('is not offered on %s wallet that is set up', async (_, node) => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            await renderView(node, { clipboard: true, saved: true });
+
+            expect(
+                screen.queryByRole('button', {
+                    name: 'views.Settings.AddEditNode.import'
+                })
+            ).not.toBeOnTheScreen();
+        });
+    });
+
+    describe('clnrest clipboard import', () => {
+        it('clears the macaroon and lndhub login of a previous config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                CLNREST_IMPORT
+            );
+            const { updateSettings } = await renderView(
+                {
+                    ...LND_NODE,
+                    lndhubUrl: 'https://lndhub.example.com',
+                    username: 'alice',
+                    password: 'secret'
+                },
+                { clipboard: true }
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+            expect(interfaceDropdown().props.selectedValue).toBe('cln-rest');
+
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'cln-rest',
+                host: 'https://new-cln.example.com',
+                port: '3010',
+                rune: 'newrune',
+                macaroonHex: '',
+                lndhubUrl: '',
+                username: '',
+                password: ''
+            });
+        });
+    });
+
+    describe('port field', () => {
+        const portField = () => screen.getByPlaceholderText('443/8080');
+        const saveButton = () =>
+            screen.getByRole('button', {
+                name: 'views.Settings.WalletConfiguration.saveWallet'
+            });
+
+        it('marks an invalid port of a saved wallet', async () => {
+            await renderView({ ...LND_NODE, port: '8080@evil.example' });
+
+            expect(portField().props.textColor).toBe('#ff0000');
+            expect(saveButton()).toBeDisabled();
+        });
+
+        it('keeps a saved port with a path', async () => {
+            const { updateSettings } = await renderView({
+                ...LND_NODE,
+                port: '8443/lnd'
+            });
+
+            expect(portField().props.textColor).toBe('#000000');
+            expect(saveButton()).toBeEnabled();
+
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                port: '8443/lnd'
+            });
+        });
+
+        it.each([
+            [
+                'lndconnect',
+                'lndconnect://new-node.example.com:8080@evil.example?macaroon=AgEDbG5k'
+            ],
+            [
+                'clnrest',
+                'clnrest+https://new-cln.example.com:3010@evil.example?rune=newrune'
+            ]
+        ])(
+            'marks an invalid port from a %s import',
+            async (_label, importString) => {
+                (Clipboard.getString as jest.Mock).mockResolvedValue(
+                    importString
+                );
+                await renderView(LND_NODE, { clipboard: true });
+
+                await pressButton('views.Settings.AddEditNode.import');
+
+                expect(portField().props.textColor).toBe('#ff0000');
+                expect(saveButton()).toBeDisabled();
+            }
+        );
+
+        it('clears the mark when a valid config is imported', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            await renderView(
+                { ...LND_NODE, port: '8080@evil.example' },
+                { clipboard: true }
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+
+            expect(portField()).toHaveDisplayValue('8080');
+            expect(portField().props.textColor).toBe('#000000');
+            expect(saveButton()).toBeEnabled();
+        });
+    });
+
+    describe('implementation dropdown', () => {
+        it('clears the previous server address and credentials', async () => {
+            // existingAccount shows the username and password fields
+            // certVerification starts false so the switch to lndhub has
+            // to set it
+            const { updateSettings } = await renderView({
+                ...LND_NODE,
+                certVerification: false,
+                lndhubUrl: 'https://old-lndhub.example.com',
+                existingAccount: true
+            });
+
+            await fireEvent(interfaceDropdown(), 'valueChange', 'lndhub');
+
+            expect(interfaceDropdown().props.selectedValue).toBe('lndhub');
+            expect(screen.getByPlaceholderText('https://')).toHaveDisplayValue(
+                ''
+            );
+
+            await fireEvent.changeText(
+                screen.getByPlaceholderText('https://'),
+                'https://lndhub.example.com'
+            );
+            const [username, password] = screen.getAllByPlaceholderText('...');
+            await fireEvent.changeText(username, 'alice');
+            await fireEvent.changeText(password, 'secret');
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lndhub',
+                certVerification: true,
+                lndhubUrl: 'https://lndhub.example.com',
+                host: '',
+                port: '',
+                macaroonHex: '',
+                rune: ''
+            });
+        });
+    });
+
+    describe('wallet deletion', () => {
+        const OTHER_NODE = { ...LND_NODE, host: 'https://other.example.com' };
+
+        // Opens the saved wallet at index 0 and confirms "Delete Wallet"
+        const deleteWallet = async (
+            nodes: any[],
+            active: boolean,
+            nwcOverrides: Record<string, jest.Mock> = {}
+        ) => {
+            const calls: string[] = [];
+            const settings = { nodes, selectedNode: 0, privacy: {} };
+            const SettingsStore = {
+                settings,
+                updateSettings: jest.fn(async (update: any) => {
+                    calls.push('updateSettings');
+                    return {
+                        ...settings,
+                        ...(typeof update === 'function'
+                            ? update(settings)
+                            : update)
+                    };
+                }),
+                setConnectingStatus: jest.fn(),
+                invalidateConnection: jest.fn()
+            };
+            const NostrWalletConnectStore = {
+                deleteCurrentWalletConnections: jest.fn(async () => {
+                    calls.push('deleteCurrentWalletConnections');
+                }),
+                deleteWalletConfigConnections: jest.fn(async () => {
+                    calls.push('deleteWalletConfigConnections');
+                }),
+                deleteAllConnectionData: jest.fn(async () => {
+                    calls.push('deleteAllConnectionData');
+                }),
+                ...nwcOverrides
+            };
+            const navigation = {
+                goBack: jest.fn(),
+                navigate: jest.fn(),
+                popTo: jest.fn(),
+                reset: jest.fn()
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation,
+                        route: {
+                            params: {
+                                node: nodes[0],
+                                index: 0,
+                                active,
+                                saved: true
+                            }
+                        },
+                        SettingsStore,
+                        NostrWalletConnectStore
+                    } as any)}
+                />
+            );
+            await pressButton(
+                'views.Settings.WalletConfiguration.deleteWallet'
+            );
+            const [, , confirm] = (confirmAction as jest.Mock).mock.calls[0];
+            await act(async () => confirm.onPress());
+            return { calls, navigation, NostrWalletConnectStore };
+        };
+
+        it("deletes the active wallet's NWC connections before removing its config", async () => {
+            const { calls, navigation } = await deleteWallet(
+                [LND_NODE, OTHER_NODE],
+                true
+            );
+
+            expect(calls).toEqual([
+                'deleteCurrentWalletConnections',
+                'updateSettings'
+            ]);
+            expect(navigation.popTo).toHaveBeenCalledWith('Wallets');
+        });
+
+        it('removes all NWC connection data with the last wallet', async () => {
+            const { calls, navigation } = await deleteWallet([LND_NODE], true);
+
+            expect(calls).toEqual([
+                'deleteCurrentWalletConnections',
+                'updateSettings',
+                'deleteAllConnectionData'
+            ]);
+            expect(navigation.reset).toHaveBeenCalled();
+        });
+
+        it("deletes an inactive wallet's NWC connections by its config, not the current wallet's", async () => {
+            const { calls, NostrWalletConnectStore } = await deleteWallet(
+                [LND_NODE, OTHER_NODE],
+                false
+            );
+
+            expect(calls).toEqual([
+                'deleteWalletConfigConnections',
+                'updateSettings'
+            ]);
+            expect(
+                NostrWalletConnectStore.deleteWalletConfigConnections
+            ).toHaveBeenCalledWith(LND_NODE, [OTHER_NODE]);
+        });
+
+        it('moves NWC connections to the new config id when a saved wallet is edited', async () => {
+            const nodes = [LND_NODE, OTHER_NODE];
+            const settings = { nodes, selectedNode: 1, privacy: {} };
+            const NostrWalletConnectStore = {
+                rekeyWalletConfigConnections: jest.fn(() => Promise.resolve())
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation: {
+                            goBack: jest.fn(),
+                            navigate: jest.fn(),
+                            popTo: jest.fn(),
+                            reset: jest.fn()
+                        },
+                        route: {
+                            params: {
+                                node: LND_NODE,
+                                index: 0,
+                                active: false,
+                                saved: true
+                            }
+                        },
+                        SettingsStore: {
+                            settings,
+                            updateSettings: jest.fn(async (update: any) =>
+                                typeof update === 'function'
+                                    ? update(settings)
+                                    : update
+                            ),
+                            setConnectingStatus: jest.fn()
+                        },
+                        NostrWalletConnectStore
+                    } as any)}
+                />
+            );
+
+            await fireEvent.changeText(
+                screen.getByPlaceholderText('443/8080'),
+                '9090'
+            );
+            await save();
+
+            expect(
+                NostrWalletConnectStore.rekeyWalletConfigConnections
+            ).toHaveBeenCalledWith(
+                LND_NODE,
+                expect.objectContaining({ host: LND_NODE.host, port: '9090' }),
+                [OTHER_NODE]
+            );
+        });
+
+        it('still deletes an inactive wallet when its NWC connections cannot be deleted', async () => {
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            const { calls, navigation } = await deleteWallet(
+                [LND_NODE, OTHER_NODE],
+                false,
+                {
+                    deleteWalletConfigConnections: jest.fn(() =>
+                        Promise.reject(new Error('storage failure'))
+                    )
+                }
+            );
+
+            expect(calls).toEqual(['updateSettings']);
+            expect(navigation.popTo).toHaveBeenCalledWith('Wallets');
+            consoleError.mockRestore();
+        });
+
+        it('still deletes the wallet when its NWC connections cannot be deleted', async () => {
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            const { calls, navigation } = await deleteWallet(
+                [LND_NODE, OTHER_NODE],
+                true,
+                {
+                    deleteCurrentWalletConnections: jest.fn(() =>
+                        Promise.reject(new Error('storage failure'))
+                    )
+                }
+            );
+
+            expect(calls).toEqual(['updateSettings']);
+            expect(navigation.popTo).toHaveBeenCalledWith('Wallets');
+            consoleError.mockRestore();
+        });
+
+        it('still leaves the screen when NWC data cannot be removed with the last wallet', async () => {
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            const { calls, navigation } = await deleteWallet([LND_NODE], true, {
+                deleteAllConnectionData: jest.fn(() =>
+                    Promise.reject(new Error('storage failure'))
+                )
+            });
+
+            expect(calls).toEqual([
+                'deleteCurrentWalletConnections',
+                'updateSettings'
+            ]);
+            expect(navigation.reset).toHaveBeenCalled();
+            consoleError.mockRestore();
+        });
+    });
+
+    describe('deleting an on-device wallet', () => {
+        const LDK_NODE = {
+            implementation: 'ldk-node',
+            ldkNodeDir: 'ldk-1',
+            nickname: 'LDK wallet'
+        };
+        const EMBEDDED_NODE = {
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-1',
+            nickname: 'Embedded wallet'
+        };
+
+        let alertSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+        });
+
+        afterEach(() => {
+            alertSpy.mockRestore();
+        });
+
+        // Opens the saved wallet at index 0 and confirms "Delete Wallet"
+        const confirmDelete = async (
+            node: any,
+            {
+                active = true,
+                channels = [],
+                pendingChannels = [],
+                confirmedBlockchainBalance = 0,
+                unconfirmedBlockchainBalance = 0,
+                vssError = null
+            }: {
+                active?: boolean;
+                channels?: any[];
+                pendingChannels?: any[];
+                confirmedBlockchainBalance?: number;
+                unconfirmedBlockchainBalance?: number;
+                vssError?: string | null;
+            } = {}
+        ) => {
+            const nodes = [node, LND_NODE];
+            const settings = { nodes, selectedNode: 0, privacy: {} };
+            const SettingsStore = {
+                settings,
+                updateSettings: jest.fn(async (update: any) => ({
+                    ...settings,
+                    ...(typeof update === 'function'
+                        ? update(settings)
+                        : update)
+                })),
+                setConnectingStatus: jest.fn(),
+                invalidateConnection: jest.fn()
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation: {
+                            goBack: jest.fn(),
+                            navigate: jest.fn(),
+                            popTo: jest.fn(),
+                            reset: jest.fn()
+                        },
+                        route: {
+                            params: { node, index: 0, active, saved: true }
+                        },
+                        SettingsStore,
+                        AlertStore: { vssError },
+                        ChannelsStore: { channels, pendingChannels },
+                        BalanceStore: {
+                            confirmedBlockchainBalance,
+                            unconfirmedBlockchainBalance
+                        },
+                        NostrWalletConnectStore: {
+                            deleteCurrentWalletConnections: jest.fn(() =>
+                                Promise.resolve()
+                            ),
+                            deleteAllConnectionData: jest.fn(() =>
+                                Promise.resolve()
+                            )
+                        },
+                        SyncStore: { reset: jest.fn() }
+                    } as any)}
+                />
+            );
+            await pressButton(
+                'views.Settings.WalletConfiguration.deleteWallet'
+            );
+            const [, , confirm] = (confirmAction as jest.Mock).mock.calls[0];
+            await act(async () => confirm.onPress());
+            return SettingsStore;
+        };
+
+        const alertMessage = () => alertSpy.mock.calls[0][1];
+
+        it('asks to make an inactive LDK Node wallet active instead of deleting it', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                active: false
+            });
+
+            expect(alertSpy).toHaveBeenCalledTimes(1);
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.inactiveWarningLdk'
+            );
+            expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('warns before deleting an LDK Node wallet with open channels', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                channels: [{ channelId: 'a' }]
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdk'
+            );
+            expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('warns before deleting an LDK Node wallet with pending channels', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                pendingChannels: [{ channelId: 'a' }]
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdk'
+            );
+            expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('warns that channel state is local only when VSS is failing', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                channels: [{ channelId: 'a' }],
+                vssError: 'connection refused'
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdkVssError'
+            );
+            expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('keeps the balance warning for an LDK Node wallet without channels when VSS is failing', async () => {
+            await confirmDelete(LDK_NODE, {
+                confirmedBlockchainBalance: 1000,
+                vssError: 'connection refused'
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.balanceWarning'
+            );
+        });
+
+        it('offers the seed backup from the LDK Node channels warning', async () => {
+            await confirmDelete(LDK_NODE, {
+                channels: [{ channelId: 'a' }]
+            });
+
+            const buttons = alertSpy.mock.calls[0][2];
+            const backup = buttons.find(
+                (b: any) => b.text === 'views.Settings.Seed.title'
+            );
+            backup.onPress();
+            expect(reAuthNavigation).toHaveBeenCalledWith(
+                expect.anything(),
+                'Seed',
+                { skipWarning: true, implementation: 'ldk-node' }
+            );
+        });
+
+        it('warns before deleting an LDK Node wallet with an on-chain balance', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                unconfirmedBlockchainBalance: 1000
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.balanceWarning'
+            );
+            expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('deletes the LDK Node wallet after the balance warning is accepted', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                confirmedBlockchainBalance: 1000
+            });
+
+            const [proceed] = alertSpy.mock.calls[0][2];
+            await act(async () => proceed.onPress());
+            expect(SettingsStore.updateSettings).toHaveBeenCalled();
+        });
+
+        it('deletes an empty active LDK Node wallet without a warning', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE);
+
+            expect(alertSpy).not.toHaveBeenCalled();
+            expect(SettingsStore.updateSettings).toHaveBeenCalled();
+        });
+
+        it('keeps the embedded LND inactive and channels messages', async () => {
+            await confirmDelete(EMBEDDED_NODE, { active: false });
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
+            );
+
+            alertSpy.mockClear();
+            (confirmAction as jest.Mock).mockClear();
+            await confirmDelete(EMBEDDED_NODE, {
+                channels: [{ channelId: 'a' }]
+            });
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
+            );
+        });
+    });
+
+    describe('cleartext HTTP gate', () => {
+        // LndHub requests go to lndhubUrl only, so a stale host on an
+        // lndhub config decides nothing
+        const LNDHUB_NODE = {
+            implementation: 'lndhub',
+            username: 'alice',
+            password: 'secret',
+            existingAccount: true,
+            certVerification: true
+        };
+
+        it('warns on lndhub with an http:// lndhubUrl behind a stale https:// host', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
+                host: 'https://node.example.com',
+                lndhubUrl: 'http://lndhub.example.com'
+            });
+            await save();
+
+            expect(confirmAction).toHaveBeenCalledTimes(1);
+            expect(updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('saves after the warning is accepted', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
+                lndhubUrl: 'http://lndhub.example.com'
+            });
+            await save();
+
+            const [, , proceed] = (confirmAction as jest.Mock).mock.calls[0];
+            await act(async () => proceed.onPress());
+            expect(savedNode(updateSettings).lndhubUrl).toBe(
+                'http://lndhub.example.com'
+            );
+        });
+
+        it('ignores a stale http:// host on an lndhub config', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
+                host: 'http://192.168.1.50',
+                lndhubUrl: 'https://lndhub.example.com'
+            });
+            await save();
+
+            expect(confirmAction).not.toHaveBeenCalled();
+            expect(updateSettings).toHaveBeenCalled();
+        });
+
+        it('warns on lndhub with an http:// lndhubUrl and no host', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
+                host: '',
+                lndhubUrl: 'http://lndhub.example.com'
+            });
+            await save();
+
+            expect(confirmAction).toHaveBeenCalledTimes(1);
+            expect(updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('does not warn on lndhub with an https:// lndhubUrl', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
+                host: '',
+                lndhubUrl: 'https://lndhub.example.com'
+            });
+            await save();
+
+            expect(confirmAction).not.toHaveBeenCalled();
+            expect(updateSettings).toHaveBeenCalled();
+        });
+
+        it('does not warn on lndhub over an http:// onion host', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
+                host: '',
+                lndhubUrl: 'http://abcdefghijklmnop.onion'
+            });
+            await save();
+
+            expect(confirmAction).not.toHaveBeenCalled();
+            expect(updateSettings).toHaveBeenCalled();
+        });
+
+        it('ignores a stale http:// lndhubUrl on an lnd config', async () => {
+            const { updateSettings } = await renderView({
+                ...LND_NODE,
+                lndhubUrl: 'http://lndhub.example.com'
+            });
+            await save();
+
+            expect(confirmAction).not.toHaveBeenCalled();
+            expect(updateSettings).toHaveBeenCalled();
+        });
+
+        it('warns on lnd with an http:// host', async () => {
+            const { updateSettings } = await renderView({
+                ...LND_NODE,
+                host: 'http://192.168.1.50'
+            });
+            await save();
+
+            expect(confirmAction).toHaveBeenCalledTimes(1);
+            expect(updateSettings).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('restoring an embedded LND wallet', () => {
+        // Wallet A was restored earlier and its recovery has not run yet
+        const restore = async (recoveryCipherSeed?: string) => {
+            const updateSettings = jest.fn(() => Promise.resolve());
+            const view: any = new WalletConfiguration({
+                navigation: { reset: jest.fn(), navigate: jest.fn() },
+                route: { params: { newEntry: true } },
+                SettingsStore: {
+                    settings: { privacy: {}, selectedNode: 0 },
+                    updateSettings,
+                    setConnectingStatus: jest.fn()
+                }
+            } as any);
+            view.setState = (update: any) => Object.assign(view.state, update);
+            Object.assign(view.state, {
+                implementation: 'embedded-lnd',
+                lndDir: 'walletB'
+            });
+
+            view.saveWalletConfiguration(recoveryCipherSeed, true);
+            await new Promise(setImmediate);
+
+            const current = {
+                nodes: [{}],
+                recovery: true,
+                recoveryWalletDirs: ['walletA']
+            };
+            return (updateSettings.mock.calls as any[]).map(([update]) =>
+                typeof update === 'function' ? update(current) : update
+            );
+        };
+
+        it('keeps wallet A pending when wallet B is restored from an aezeed', async () => {
+            const updates = await restore('aezeed words');
+
+            // One write: a kill after the node is saved cannot leave
+            // wallet B without its recovery
+            expect(updates).toHaveLength(1);
+            expect(updates[0]).toMatchObject({
+                selectedNode: 1,
+                recovery: true,
+                recoveryWalletDirs: ['walletA', 'walletB']
+            });
+            expect(updates[0].nodes[1]).toMatchObject({ lndDir: 'walletB' });
+        });
+
+        it('leaves the recovery settings alone without a cipher seed', async () => {
+            const updates = await restore();
+
+            expect(updates.length).toBeGreaterThan(0);
+            for (const update of updates) {
+                expect(update).not.toHaveProperty('recovery');
+                expect(update).not.toHaveProperty('recoveryWalletDirs');
+            }
+        });
+    });
+
+    describe('new LDK Node wallet', () => {
+        it('builds the node with the default scorer URL', async () => {
+            const view: any = new WalletConfiguration({
+                navigation: {},
+                route: { params: { newEntry: true } },
+                SettingsStore: { settings: { privacy: {} } }
+            } as any);
+            view.setState = (update: any) => Object.assign(view.state, update);
+            view.saveLdkNodeWalletConfiguration = jest.fn();
+
+            await view.createLdkNodeNewWallet('mainnet');
+
+            expect(createLdkNodeWallet).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    scorerUrl: 'https://scorer.default'
+                })
+            );
+        });
+    });
+});

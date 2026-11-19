@@ -1,5 +1,4 @@
 import * as React from 'react';
-import moment from 'moment';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View, FlatList, TouchableOpacity, Text } from 'react-native';
@@ -10,6 +9,7 @@ import Amount from '../../components/Amount';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import { WarningMessage } from '../../components/SuccessErrorMessage';
 
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -304,9 +304,7 @@ export default class OrdersPane extends React.Component<
                             fontSize: 16
                         }}
                     >
-                        {moment(item.createdAt).format(
-                            'MMM Do YYYY, h:mm:ss a'
-                        )}
+                        {DateTimeUtils.formatDateTimeShort(item.createdAt)}
                     </Text>
                 </View>
                 {item.fundedAt && (
@@ -327,9 +325,7 @@ export default class OrdersPane extends React.Component<
                                 fontSize: 16
                             }}
                         >
-                            {moment(item.fundedAt).format(
-                                'MMM Do YYYY, h:mm:ss a'
-                            )}
+                            {DateTimeUtils.formatDateTimeShort(item.fundedAt)}
                         </Text>
                     </View>
                 )}

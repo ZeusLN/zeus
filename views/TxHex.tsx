@@ -79,15 +79,17 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
         const { txHex } = this.state;
         const { navigation, SettingsStore, TransactionsStore, ChannelsStore } =
             this.props;
-        const { pending_chan_ids } = ChannelsStore;
+        const pending_chan_ids = ChannelsStore.pendingChanIdsFor({ txHex });
 
         try {
             if (pending_chan_ids.length > 0) {
-                await TransactionsStore.finalizeTxHexAndBroadcastChannel(
-                    txHex,
-                    pending_chan_ids
-                );
-                navigation.navigate('SendingOnChain');
+                const applied =
+                    await TransactionsStore.finalizeTxHexAndBroadcastChannel(
+                        txHex,
+                        pending_chan_ids
+                    );
+                // a result dropped as superseded is not on SendingOnChain
+                if (applied) navigation.navigate('SendingOnChain');
                 return;
             }
 
@@ -139,10 +141,10 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
     render() {
         const { ChannelsStore, NodeInfoStore, TransactionsStore, navigation } =
             this.props;
-        const { pending_chan_ids } = ChannelsStore;
         const { testnet } = NodeInfoStore;
         const { loading } = TransactionsStore;
         const { infoIndex, txHex, txDecoded } = this.state;
+        const pending_chan_ids = ChannelsStore.pendingChanIdsFor({ txHex });
 
         const qrButton = () => (
             <Text

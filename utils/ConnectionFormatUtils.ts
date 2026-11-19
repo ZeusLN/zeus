@@ -29,6 +29,8 @@ class ConnectionFormatUtils {
                 lndconnect.split(':')[1] &&
                 lndconnect.split(':')[1].split('?')[0];
         }
+        // host:port/?macaroon=...
+        port = port && port.replace(/\/$/, '');
         const macaroonHex =
             result.macaroon && Base64Utils.base64UrlToHex(result.macaroon);
 
@@ -114,6 +116,8 @@ class ConnectionFormatUtils {
                 const portPart = connectionPart.split(':')[1];
                 port = portPart ? portPart.split('?')[0] : '';
             }
+            // host:port/?rune=...
+            port = port.replace(/\/$/, '');
         }
 
         const rune = result.rune;
@@ -137,6 +141,13 @@ class ConnectionFormatUtils {
             implementation
         };
     };
+
+    // For showing a connection string on screen: keeps scheme, host and port
+    // and masks the credentials, which the forms only show on request
+    redactConnectionString = (input: string) =>
+        input
+            .replace(/(lndhub:\/\/)[^@\s]*/g, '$1********')
+            .replace(/([?&](?:macaroon|rune|certs?)=)[^&\s]*/gi, '$1********');
 }
 
 const connectionFormatUtils = new ConnectionFormatUtils();

@@ -1,0 +1,1166 @@
+// Shared request core of CLNRest (request -> restReq), its error
+// fallback, the payment timeout race in payWithTimeout, and the
+// capability flags. Kept apart from CLNRest.test.ts so open PRs editing
+// that file do not conflict. CoreLightningRequestHandler is stubbed for
+// the import cycle described in CLNRest.test.ts.
+const mockFetch = jest.fn();
+const mockConfig = jest.fn(() => ({ fetch: mockFetch }));
+jest.mock('react-native-blob-util', () => ({
+    __esModule: true,
+    default: { config: (...args: any[]) => (mockConfig as any)(...args) }
+}));
+
+const mockSettingsStore: any = {};
+const mockNodeInfoStore: any = { nodeInfo: {} };
+// getters: the factory runs when CLNRest is imported, which is hoisted
+// above the const declarations
+jest.mock('../stores/Stores', () => ({
+    get settingsStore() {
+        return mockSettingsStore;
+    },
+    get nodeInfoStore() {
+        return mockNodeInfoStore;
+    }
+}));
+
+const mockDoTorRequest = jest.fn();
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequest: (...args: any[]) => mockDoTorRequest(...args),
+    isOnionHttpsUrl: (url: string) => url.includes('.onion'),
+    RequestMethod: {}
+}));
+jest.mock('./CoreLightningRequestHandler', () => ({
+    getBalance: jest.fn(),
+    getChainTransactions: jest.fn(),
+    getOffchainBalance: jest.fn(),
+    listPeers: jest.fn(),
+    listClosedChannels: jest.fn(),
+    listPeerChannels: jest.fn()
+}));
+jest.mock('../utils/LocaleUtils');
+
+import CLNRest, { satPerVbyteToPerkb } from './CLNRest';
+
+const CONNECTION_ERROR = 'backends.LND.restReq.connectionError';
+const PAYMENT_TIMED_OUT = 'views.SendingLightning.paymentTimedOut';
+const TIMED_OUT = {
+    payment_error: PAYMENT_TIMED_OUT,
+    payment_timed_out: true
+};
+
+// Shape of a react-native-blob-util FetchBlobResponse: data is the raw
+// body string, json() parses it (and throws on non-JSON).
+const blobResponse = (status: number, data: any) => ({
+    info: () => ({ status }),
+    data,
+    json: () => JSON.parse(data)
+});
+
+// fetch arguments of the nth call: [method, url, headers, body]
+const fetchArgs = (n = 0) => mockFetch.mock.calls[n];
+
+const cln = new CLNRest();
+
+// Fake timers throughout: restReq never clears its own timeout timer, so
+// real timers would keep jest alive for 30s after every request.
+beforeEach(() => {
+    jest.useFakeTimers();
+    cln.clearCachedCalls();
+    mockFetch.mockReset();
+    mockConfig.mockClear();
+    mockDoTorRequest.mockReset();
+    Object.keys(mockSettingsStore).forEach(
+        (key) => delete mockSettingsStore[key]
+    );
+    Object.assign(mockSettingsStore, {
+        host: 'node.example.com',
+        port: '3010',
+        rune: 'rune-abc',
+        certVerification: false,
+        enableTor: false
+    });
+    mockNodeInfoStore.nodeInfo = { version: 'v25.02' };
+});
+
+afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+});
+
+describe('CLNRest.request', () => {
+    it('posts JSON to the node URL with the rune header', async () => {
+        mockFetch.mockResolvedValue(blobResponse(200, '{"id":"02ab"}'));
+
+        const result = await cln.postRequest('/v1/getinfo', { a: 1 });
+
+        expect(result).toEqual({ id: '02ab' });
+        expect(fetchArgs()).toEqual([
+            'post',
+            'https://node.example.com:3010/v1/getinfo',
+            { Rune: 'rune-abc', 'Content-Type': 'application/json' },
+            '{"a":1}'
+        ]);
+    });
+
+    it('sends no body when there is no data', async () => {
+        mockFetch.mockResolvedValue(blobResponse(200, '{}'));
+
+        await cln.postRequest('/v1/listfunds');
+
+        expect(fetchArgs()[3]).toBeUndefined();
+    });
+
+    it('appends params as a query string', async () => {
+        mockFetch.mockResolvedValue(blobResponse(200, '{}'));
+
+        await cln.request('/v1/x', 'get', undefined, { a: 1, b: 'two' });
+
+        expect(fetchArgs()[0]).toBe('get');
+        expect(fetchArgs()[1]).toBe(
+            'https://node.example.com:3010/v1/x?a=1&b=two'
+        );
+    });
+
+    it('maps certVerification to trusty and applies the 30s default timeout', async () => {
+        mockFetch.mockResolvedValue(blobResponse(200, '{}'));
+
+        await cln.postRequest('/v1/getinfo');
+        mockSettingsStore.certVerification = true;
+        await cln.postRequest('/v1/listfunds', undefined, 12000);
+
+        expect(mockConfig.mock.calls).toEqual([
+            [{ trusty: true, followRedirect: false, timeout: 30000 }],
+            [{ trusty: false, followRedirect: false, timeout: 12000 }]
+        ]);
+    });
+
+    it('parses the last complete line of a newline-delimited body', async () => {
+        mockFetch.mockResolvedValue(blobResponse(200, '{"n":1}\n{"n":2}\n'));
+
+        await expect(cln.postRequest('/v1/stream')).resolves.toEqual({
+            n: 2
+        });
+    });
+
+    it('shares one in-flight request between identical calls', async () => {
+        let resolve: (v: any) => void = () => {};
+        mockFetch.mockReturnValue(new Promise((r) => (resolve = r)));
+
+        const first = cln.postRequest('/v1/listnodes', { id: 'a' });
+        const second = cln.postRequest('/v1/listnodes', { id: 'a' });
+        resolve(blobResponse(200, '{"ok":true}'));
+
+        await expect(first).resolves.toEqual({ ok: true });
+        await expect(second).resolves.toEqual({ ok: true });
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not share requests whose bodies differ', async () => {
+        mockFetch.mockResolvedValue(blobResponse(200, '{}'));
+
+        await Promise.all([
+            cln.postRequest('/v1/listnodes', { id: 'a' }),
+            cln.postRequest('/v1/listnodes', { id: 'b' })
+        ]);
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not share requests made with different runes', async () => {
+        const pending: Array<(v: any) => void> = [];
+        mockFetch.mockImplementation(() => new Promise((r) => pending.push(r)));
+
+        const first = cln.postRequest('/v1/listfunds');
+        mockSettingsStore.rune = 'rune-def';
+        const second = cln.postRequest('/v1/listfunds');
+
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(fetchArgs(1)[2].Rune).toBe('rune-def');
+        pending[0](blobResponse(200, '{"wallet":"a"}'));
+        pending[1](blobResponse(200, '{"wallet":"b"}'));
+        await expect(first).resolves.toEqual({ wallet: 'a' });
+        await expect(second).resolves.toEqual({ wallet: 'b' });
+    });
+
+    it('does not share Tor requests made with different runes', async () => {
+        mockSettingsStore.enableTor = true;
+        mockDoTorRequest
+            .mockResolvedValueOnce({ wallet: 'a' })
+            .mockResolvedValueOnce({ wallet: 'b' });
+
+        const first = cln.postRequest('/v1/listfunds');
+        mockSettingsStore.rune = 'rune-def';
+        const second = cln.postRequest('/v1/listfunds');
+
+        await expect(first).resolves.toEqual({ wallet: 'a' });
+        await expect(second).resolves.toEqual({ wallet: 'b' });
+        expect(mockDoTorRequest).toHaveBeenCalledTimes(2);
+    });
+
+    it('issues a fresh request after a failed one', async () => {
+        mockFetch
+            .mockResolvedValueOnce(blobResponse(500, 'boom'))
+            .mockResolvedValueOnce(blobResponse(200, '{"ok":true}'));
+
+        await expect(cln.postRequest('/v1/getinfo')).rejects.toThrow('boom');
+        await expect(cln.postRequest('/v1/getinfo')).resolves.toEqual({
+            ok: true
+        });
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('rejects with "Request timeout" when the node does not answer in time', async () => {
+        mockFetch.mockReturnValue(new Promise(() => {}));
+
+        const error = cln
+            .postRequest('/v1/getinfo', undefined, 5000)
+            .catch((e: Error) => e);
+        await jest.advanceTimersByTimeAsync(5000);
+
+        expect(await error).toEqual(new Error('Request timeout'));
+
+        // the timed-out call is evicted from the cache, so a retry
+        // reaches the node again
+        mockFetch.mockResolvedValue(blobResponse(200, '{"ok":true}'));
+        await expect(cln.postRequest('/v1/getinfo')).resolves.toEqual({
+            ok: true
+        });
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('routes through Tor with the request timeout when enableTor is set', async () => {
+        mockSettingsStore.enableTor = true;
+        mockSettingsStore.host = 'abc.onion';
+        mockDoTorRequest.mockResolvedValue({ ok: true });
+
+        const result = await cln.postRequest('/v1/getinfo', { a: 1 }, 7000);
+
+        expect(result).toEqual({ ok: true });
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(mockDoTorRequest).toHaveBeenCalledWith(
+            'https://abc.onion:3010/v1/getinfo',
+            'post',
+            '{"a":1}',
+            { Rune: 'rune-abc', 'Content-Type': 'application/json' },
+            true,
+            7000
+        );
+    });
+
+    it('keeps TLS validation for a clearnet host over Tor', async () => {
+        mockSettingsStore.enableTor = true;
+        mockDoTorRequest.mockResolvedValue({ ok: true });
+
+        await cln.postRequest('/v1/getinfo');
+
+        expect(mockDoTorRequest).toHaveBeenCalledWith(
+            'https://node.example.com:3010/v1/getinfo',
+            'post',
+            undefined,
+            { Rune: 'rune-abc', 'Content-Type': 'application/json' },
+            false,
+            undefined
+        );
+    });
+
+    it('issues a fresh Tor request after a failed one', async () => {
+        mockSettingsStore.enableTor = true;
+        mockDoTorRequest
+            .mockRejectedValueOnce(new Error('tor down'))
+            .mockResolvedValueOnce({ ok: true });
+
+        await expect(cln.postRequest('/v1/getinfo')).rejects.toThrow(
+            'tor down'
+        );
+        await expect(cln.postRequest('/v1/getinfo')).resolves.toEqual({
+            ok: true
+        });
+        expect(mockDoTorRequest).toHaveBeenCalledTimes(2);
+    });
+
+    it('shares one in-flight failed Tor request, then drops it from the cache', async () => {
+        mockSettingsStore.enableTor = true;
+        let reject: (e: Error) => void = () => {};
+        mockDoTorRequest
+            .mockReturnValueOnce(new Promise((_, r) => (reject = r)))
+            .mockResolvedValueOnce({ ok: true });
+
+        const first = cln.postRequest('/v1/getinfo');
+        const second = cln.postRequest('/v1/getinfo');
+        reject(new Error('tor down'));
+
+        await expect(first).rejects.toThrow('tor down');
+        await expect(second).rejects.toThrow('tor down');
+        expect(mockDoTorRequest).toHaveBeenCalledTimes(1);
+
+        await expect(cln.postRequest('/v1/getinfo')).resolves.toEqual({
+            ok: true
+        });
+        expect(mockDoTorRequest).toHaveBeenCalledTimes(2);
+    });
+});
+
+// restReq's non-2xx branch throws the JSON-RPC error message from the
+// body (error.message, then message, then a string error), falling back
+// to the raw body when it carries no message, and to the generic
+// connection error when there is no usable body.
+describe('CLNRest.request error fallback', () => {
+    const rejectWith = async (status: number, data: any) => {
+        mockFetch.mockResolvedValue(blobResponse(status, data));
+        const error = await cln.postRequest('/v1/pay').catch((e) => e);
+        expect(error).toBeInstanceOf(Error);
+        return error.message;
+    };
+
+    it('throws the message of a nested JSON-RPC error object', async () => {
+        const body = JSON.stringify({
+            error: { code: 210, message: 'Destination unknown' }
+        });
+        expect(await rejectWith(500, body)).toBe('Destination unknown');
+    });
+
+    it('throws a top-level message', async () => {
+        const body = JSON.stringify({ code: -32602, message: 'bad param' });
+        expect(await rejectWith(400, body)).toBe('bad param');
+    });
+
+    it('throws a string error field', async () => {
+        const body = JSON.stringify({ error: 'Not authorized' });
+        expect(await rejectWith(401, body)).toBe('Not authorized');
+    });
+
+    it('prefers the nested message over a top-level one', async () => {
+        const body = JSON.stringify({
+            message: 'outer',
+            error: { message: 'inner' }
+        });
+        expect(await rejectWith(500, body)).toBe('inner');
+    });
+
+    it('skips an empty nested message for a top-level one', async () => {
+        const body = JSON.stringify({
+            message: 'bad param',
+            error: { message: '' }
+        });
+        expect(await rejectWith(500, body)).toBe('bad param');
+    });
+
+    it('skips a non-string nested message for a top-level one', async () => {
+        const body = JSON.stringify({
+            message: 'bad param',
+            error: { message: 123 }
+        });
+        expect(await rejectWith(500, body)).toBe('bad param');
+    });
+
+    it('throws the raw body for an empty nested message alone', async () => {
+        const body = JSON.stringify({ error: { message: '' } });
+        expect(await rejectWith(500, body)).toBe(body);
+    });
+
+    it('throws the raw body for JSON with no message', async () => {
+        const body = JSON.stringify({ code: 1 });
+        expect(await rejectWith(500, body)).toBe(body);
+    });
+
+    it('throws the raw body for an error object with no message', async () => {
+        const body = JSON.stringify({ error: { code: 1 } });
+        expect(await rejectWith(500, body)).toBe(body);
+    });
+
+    it('throws a non-JSON string body as is', async () => {
+        expect(await rejectWith(502, 'Bad Gateway')).toBe('Bad Gateway');
+    });
+
+    it('fails a 302 instead of following it', async () => {
+        expect(await rejectWith(302, '')).toBe(CONNECTION_ERROR);
+    });
+
+    it('treats status 300 as an error', async () => {
+        expect(await rejectWith(300, 'Multiple Choices')).toBe(
+            'Multiple Choices'
+        );
+    });
+
+    it('falls back to the connection error for an empty body', async () => {
+        expect(await rejectWith(500, '')).toBe(CONNECTION_ERROR);
+    });
+
+    it('falls back to the connection error for a missing body', async () => {
+        expect(await rejectWith(500, undefined)).toBe(CONNECTION_ERROR);
+    });
+
+    it('propagates a transport failure unchanged', async () => {
+        mockFetch.mockRejectedValue(new Error('Network request failed'));
+
+        await expect(cln.postRequest('/v1/getinfo')).rejects.toThrow(
+            'Network request failed'
+        );
+    });
+
+    it.each([
+        ['a JSON-RPC error', 500, JSON.stringify({ code: 301, message: 'x' })],
+        ['a non-JSON body', 502, 'Bad Gateway'],
+        ['an empty body', 500, '']
+    ])('records the HTTP status of %s', async (_, status, body) => {
+        mockFetch.mockResolvedValue(blobResponse(status, body));
+        const error = await cln.postRequest('/v1/withdraw').catch((e) => e);
+
+        expect(error.httpStatus).toBe(status);
+    });
+
+    it.each([
+        ['a top-level', { code: 301, message: 'Could not afford' }, 301],
+        ['a nested', { error: { code: -32602, message: 'bad' } }, -32602]
+    ])('records %s JSON-RPC code', async (_, body, code) => {
+        mockFetch.mockResolvedValue(blobResponse(500, JSON.stringify(body)));
+        const error = await cln.postRequest('/v1/withdraw').catch((e) => e);
+
+        expect(error.jsonRpcCode).toBe(code);
+    });
+
+    it("records no JSON-RPC code for a proxy's page", async () => {
+        mockFetch.mockResolvedValue(blobResponse(520, 'error code: 520'));
+        const error = await cln.postRequest('/v1/withdraw').catch((e) => e);
+
+        expect(error.jsonRpcCode).toBeUndefined();
+        expect(error.httpStatus).toBe(520);
+    });
+
+    it('records no HTTP status for a transport failure', async () => {
+        mockFetch.mockRejectedValue(new Error('unexpected end of stream'));
+        const error = await cln.postRequest('/v1/withdraw').catch((e) => e);
+
+        expect(error.httpStatus).toBeUndefined();
+    });
+});
+
+describe('CLNRest payment timeout race', () => {
+    // 32 zero bytes and its SHA256
+    const PREIMAGE = '00'.repeat(32);
+    const PREIMAGE_HASH =
+        '66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925';
+
+    const hangingFetch = () => {
+        let resolve: (v: any) => void = () => {};
+        let reject: (e: any) => void = () => {};
+        mockFetch.mockReturnValue(
+            new Promise((res, rej) => {
+                resolve = res;
+                reject = rej;
+            })
+        );
+        return {
+            resolve: (v: any) => resolve(v),
+            reject: (e: any) => reject(e)
+        };
+    };
+
+    const settled = (promise: Promise<any>) => {
+        const state: { done: boolean; value?: any } = { done: false };
+        promise.then((value) => {
+            state.done = true;
+            state.value = value;
+        });
+        return state;
+    };
+
+    it('returns the payment-timed-out shape one second after retry_for', async () => {
+        hangingFetch();
+
+        const result = settled(
+            cln.payLightningInvoice({
+                payment_request: 'lnbc1',
+                timeout_seconds: '30'
+            })
+        );
+
+        await jest.advanceTimersByTimeAsync(30999);
+        expect(result.done).toBe(false);
+        await jest.advanceTimersByTimeAsync(1);
+        expect(result.done).toBe(true);
+        // no status: complete, so the timed-out shape is never read as
+        // a success
+        expect(result.value).toEqual(TIMED_OUT);
+    });
+
+    it('gives the transport four seconds of headroom past the race', async () => {
+        hangingFetch();
+
+        cln.payLightningInvoice({
+            payment_request: 'lnbc1',
+            timeout_seconds: '30'
+        });
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(mockConfig).toHaveBeenCalledWith({
+            trusty: true,
+            followRedirect: false,
+            timeout: 35000
+        });
+    });
+
+    it('defaults to a 60 second deadline without timeout_seconds', async () => {
+        hangingFetch();
+
+        const result = settled(
+            cln.payLightningInvoice({ payment_request: 'lnbc1' })
+        );
+
+        await jest.advanceTimersByTimeAsync(60999);
+        expect(result.done).toBe(false);
+        await jest.advanceTimersByTimeAsync(1);
+        expect(result.value).toEqual(TIMED_OUT);
+        expect(mockConfig).toHaveBeenCalledWith({
+            trusty: true,
+            followRedirect: false,
+            timeout: 65000
+        });
+    });
+
+    it('returns the xpay result with synthesized status and hash when payment wins', async () => {
+        const fetch = hangingFetch();
+
+        const result = settled(
+            cln.payLightningInvoice({
+                payment_request: 'lnbc1',
+                timeout_seconds: '30'
+            })
+        );
+        await jest.advanceTimersByTimeAsync(10000);
+        fetch.resolve(
+            blobResponse(
+                200,
+                JSON.stringify({
+                    payment_preimage: PREIMAGE,
+                    amount_msat: 1000
+                })
+            )
+        );
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(result.value).toEqual({
+            payment_preimage: PREIMAGE,
+            amount_msat: 1000,
+            status: 'complete',
+            payment_hash: PREIMAGE_HASH
+        });
+        // the losing timer must not replace the result
+        await jest.advanceTimersByTimeAsync(60000);
+        expect(result.value.status).toBe('complete');
+    });
+
+    it('ignores a payment that lands after the timeout', async () => {
+        const fetch = hangingFetch();
+
+        const result = settled(
+            cln.payLightningInvoice({
+                payment_request: 'lnbc1',
+                timeout_seconds: '10'
+            })
+        );
+        await jest.advanceTimersByTimeAsync(11000);
+        fetch.resolve(
+            blobResponse(200, JSON.stringify({ payment_preimage: PREIMAGE }))
+        );
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(result.value).toEqual(TIMED_OUT);
+    });
+
+    it('rejects with the node error when the payment fails before the deadline', async () => {
+        const fetch = hangingFetch();
+
+        const error = cln
+            .payLightningInvoice({
+                payment_request: 'lnbc1',
+                timeout_seconds: '30'
+            })
+            .catch((e: Error) => e);
+        fetch.resolve(blobResponse(500, 'route not found'));
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(await error).toEqual(new Error('route not found'));
+    });
+
+    it('races the xkeysend call the same way', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v26.06' };
+        const fetch = hangingFetch();
+
+        const timedOut = settled(
+            cln.sendKeysend({ pubkey: '02ab', amt: 100, timeout_seconds: 5 })
+        );
+        await jest.advanceTimersByTimeAsync(6000);
+        expect(timedOut.value).toEqual(TIMED_OUT);
+        expect(fetchArgs()[1]).toBe(
+            'https://node.example.com:3010/v1/xkeysend'
+        );
+
+        fetch.resolve(blobResponse(200, '{}'));
+        cln.clearCachedCalls();
+        mockFetch.mockResolvedValue(
+            blobResponse(200, JSON.stringify({ payment_preimage: PREIMAGE }))
+        );
+        const paid = settled(
+            cln.sendKeysend({ pubkey: '02ab', amt: 100, timeout_seconds: 5 })
+        );
+        await jest.advanceTimersByTimeAsync(0);
+        expect(paid.value).toEqual({
+            payment_preimage: PREIMAGE,
+            status: 'complete',
+            payment_hash: PREIMAGE_HASH
+        });
+    });
+
+    it('does not add status to a legacy pay result', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+        mockFetch.mockResolvedValue(
+            blobResponse(200, JSON.stringify({ status: 'failed' }))
+        );
+
+        const result = await cln.payLightningInvoice({
+            payment_request: 'lnbc1',
+            timeout_seconds: 30
+        });
+
+        expect(result).toEqual({ status: 'failed' });
+    });
+});
+
+describe('CLNRest payment request bodies', () => {
+    const sentBody = () => ({
+        url: fetchArgs()[1],
+        body: JSON.parse(fetchArgs()[3])
+    });
+
+    beforeEach(() => {
+        mockFetch.mockResolvedValue(blobResponse(200, '{}'));
+    });
+
+    it('uses xpay from v24.11 with an absolute fee cap', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.11' };
+
+        await cln.payLightningInvoice({
+            payment_request: 'lnbc1',
+            amt: 5,
+            fee_limit_sat: 2,
+            max_fee_percent: 3,
+            timeout_seconds: 30
+        });
+
+        expect(sentBody()).toEqual({
+            url: 'https://node.example.com:3010/v1/xpay',
+            body: {
+                invstring: 'lnbc1',
+                retry_for: 30,
+                amount_msat: 5000,
+                maxfee: 2000
+            }
+        });
+    });
+
+    it('uses pay before v24.11, preferring maxfee over maxfeepercent', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.payLightningInvoice({
+            payment_request: 'lnbc1',
+            fee_limit_sat: 2,
+            max_fee_percent: 3,
+            timeout_seconds: 30
+        });
+
+        expect(sentBody().url).toBe('https://node.example.com:3010/v1/pay');
+        expect(sentBody().body).toMatchObject({
+            bolt11: 'lnbc1',
+            retry_for: 30,
+            maxfee: 2000
+        });
+        expect(sentBody().body).not.toHaveProperty('maxfeepercent');
+    });
+
+    it('sends maxfeepercent on legacy pay when only a percent is set', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.payLightningInvoice({
+            payment_request: 'lnbc1',
+            max_fee_percent: 3
+        });
+
+        expect(sentBody().body.maxfeepercent).toBe(3);
+        expect(sentBody().body).not.toHaveProperty('maxfee');
+    });
+
+    it('uses keysend before v26.06 with maxfee from v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v25.02' };
+
+        await cln.sendKeysend({ pubkey: '02ab', amt: 100, fee_limit_sat: 5 });
+
+        // toEqual also pins that exemptfee is absent: CLN rejects it
+        // together with maxfee
+        expect(sentBody()).toEqual({
+            url: 'https://node.example.com:3010/v1/keysend',
+            body: { destination: '02ab', amount_msat: 100000, maxfee: 5000 }
+        });
+    });
+
+    it('omits amount_msat on legacy pay when no amount is given', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.payLightningInvoice({ payment_request: 'lnbc1' });
+
+        expect(fetchArgs()[3]).not.toContain('amount_msat');
+    });
+
+    it('sends amount_msat on legacy pay for an amountless invoice', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.payLightningInvoice({ payment_request: 'lnbc1', amt: 7 });
+
+        expect(sentBody().body.amount_msat).toBe(7000);
+    });
+
+    it('omits amount_msat on keysend and xkeysend when no amount is given', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v25.02' };
+        await cln.sendKeysend({ pubkey: '02ab' });
+        expect(fetchArgs()[3]).not.toContain('amount_msat');
+
+        cln.clearCachedCalls();
+        mockFetch.mockClear();
+        mockNodeInfoStore.nodeInfo = { version: 'v26.06' };
+        await cln.sendKeysend({ pubkey: '02ab', amt: '' });
+        expect(sentBody().url).toBe(
+            'https://node.example.com:3010/v1/xkeysend'
+        );
+        expect(fetchArgs()[3]).not.toContain('amount_msat');
+    });
+
+    it('sends amount_msat on xkeysend', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v26.06' };
+
+        await cln.sendKeysend({ pubkey: '02ab', amt: 100 });
+
+        expect(sentBody().body).toEqual({
+            destination: '02ab',
+            amount_msat: 100000
+        });
+    });
+
+    it('converts the fee cap to a percent on keysend before v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({ pubkey: '02ab', amt: 200, fee_limit_sat: 5 });
+        expect(sentBody().body.maxfeepercent).toBe(2.5);
+        expect(sentBody().body.exemptfee).toBe(0);
+
+        cln.clearCachedCalls();
+        mockFetch.mockClear();
+        await cln.sendKeysend({ pubkey: '02ab', amt: 2, fee_limit_sat: 5 });
+        expect(sentBody().body.maxfeepercent).toBe(100);
+        expect(sentBody().body.exemptfee).toBe(0);
+    });
+
+    // CLN truncates maxfeepercent to whole ppm and floors the budget, so
+    // 33.333...% of 3000 msat would be a 999 msat cap
+    it('rounds the converted percent up on keysend before v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({ pubkey: '02ab', amt: 3, fee_limit_sat: 1 });
+        expect(sentBody().body.maxfeepercent).toBe(33.3334);
+
+        cln.clearCachedCalls();
+        mockFetch.mockClear();
+        // 1 sat of 2 BTC is 0.0000005%, which JSON would write as 5e-7
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            amt: 200_000_000,
+            fee_limit_sat: 1
+        });
+        expect(sentBody().body.maxfeepercent).toBe(0.0001);
+    });
+
+    // In percent mode FeeLimit rounds the sat limit up (5% of 50 sats
+    // shows 3), so the raw 5% would cap below the limit the UI shows
+    it('caps a percent-mode keysend at the shown sat limit from v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v25.02' };
+
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            amt: 50,
+            fee_limit_sat: 3,
+            max_fee_percent: '5'
+        });
+
+        expect(sentBody().body.maxfee).toBe(3000);
+        expect(sentBody().body).not.toHaveProperty('maxfeepercent');
+        expect(sentBody().body).not.toHaveProperty('exemptfee');
+    });
+
+    it('converts the shown sat limit of a percent-mode keysend before v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            amt: 50,
+            fee_limit_sat: 3,
+            max_fee_percent: '5'
+        });
+
+        expect(sentBody().body).toMatchObject({
+            maxfeepercent: 6,
+            exemptfee: 0
+        });
+        expect(sentBody().body).not.toHaveProperty('maxfee');
+    });
+
+    it.each(['v24.08', 'v25.02'])(
+        'falls back to the percent with exemptfee 0 on keysend on %s when no sat limit is set',
+        async (version) => {
+            mockNodeInfoStore.nodeInfo = { version };
+
+            await cln.sendKeysend({
+                pubkey: '02ab',
+                amt: 200,
+                max_fee_percent: '3'
+            });
+
+            expect(sentBody().body).toMatchObject({
+                maxfeepercent: '3',
+                exemptfee: 0
+            });
+            expect(sentBody().body).not.toHaveProperty('maxfee');
+        }
+    );
+
+    it('leaves the fee cap and exemption to the node on keysend with no limit', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({ pubkey: '02ab', amt: 200 });
+
+        expect(sentBody().body).not.toHaveProperty('maxfeepercent');
+        expect(sentBody().body).not.toHaveProperty('exemptfee');
+    });
+
+    // TransactionsStore passes the fee limit as a number, so a limit of
+    // '0' arrives here as 0
+    it.each([
+        ['payLightningInvoice', 'v24.11', '/v1/xpay'],
+        ['payLightningInvoice', 'v24.08', '/v1/pay'],
+        ['sendKeysend', 'v26.06', '/v1/xkeysend'],
+        ['sendKeysend', 'v25.02', '/v1/keysend']
+    ] as const)(
+        '%s on %s sends a fee limit of 0 as maxfee 0',
+        async (method, version, route) => {
+            mockNodeInfoStore.nodeInfo = { version };
+
+            await cln[method]({
+                payment_request: 'lnbc1',
+                pubkey: '02ab',
+                amt: 100,
+                fee_limit_sat: 0
+            });
+
+            expect(sentBody().url).toBe(
+                `https://node.example.com:3010${route}`
+            );
+            expect(sentBody().body.maxfee).toBe(0);
+        }
+    );
+
+    it('sends a fee limit of 0 as 0 percent on keysend before v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({ pubkey: '02ab', amt: 200, fee_limit_sat: 0 });
+
+        expect(sentBody().body.maxfeepercent).toBe(0);
+        // without this keysend still allows up to 5 sats in fees
+        expect(sentBody().body.exemptfee).toBe(0);
+        expect(sentBody().body).not.toHaveProperty('maxfee');
+    });
+
+    // Send passes FeeLimit's fee_limit_sat through as a string
+    it('sends a fee limit of string 0 as maxfee 0 on keysend from v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v25.02' };
+
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            amt: 200,
+            fee_limit_sat: '0',
+            max_fee_percent: '5.0'
+        });
+
+        expect(sentBody().body.maxfee).toBe(0);
+        expect(sentBody().body).not.toHaveProperty('maxfeepercent');
+    });
+
+    it('sends a fee limit of string 0 as 0 percent on keysend before v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            amt: 200,
+            fee_limit_sat: '0',
+            max_fee_percent: '5.0'
+        });
+
+        expect(sentBody().body).toMatchObject({
+            maxfeepercent: 0,
+            exemptfee: 0
+        });
+        expect(sentBody().body).not.toHaveProperty('maxfee');
+    });
+
+    it.each([
+        ['v25.02', null],
+        ['v25.02', ''],
+        ['v25.02', '-1'],
+        ['v25.02', 'abc'],
+        ['v24.08', '-1'],
+        ['v24.08', 'abc']
+    ])(
+        'falls back to the percent on keysend on %s for a sat limit of %p',
+        async (version, limit) => {
+            mockNodeInfoStore.nodeInfo = { version };
+
+            await cln.sendKeysend({
+                pubkey: '02ab',
+                amt: 200,
+                fee_limit_sat: limit,
+                max_fee_percent: '0.5'
+            });
+
+            expect(sentBody().body).toMatchObject({
+                maxfeepercent: '0.5',
+                exemptfee: 0
+            });
+            expect(sentBody().body).not.toHaveProperty('maxfee');
+        }
+    );
+
+    // the sat limit cannot be turned into a percent without an amount
+    it('falls back to the percent on keysend before v24.11 without an amount', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            fee_limit_sat: 5,
+            max_fee_percent: '0.5'
+        });
+
+        expect(sentBody().body).toMatchObject({
+            maxfeepercent: '0.5',
+            exemptfee: 0
+        });
+        expect(sentBody().body).not.toHaveProperty('maxfee');
+    });
+
+    it.each([
+        ['v24.11', '/v1/xpay'],
+        ['v24.08', '/v1/pay']
+    ])(
+        'leaves the fee cap to the node on %s when no limit is set',
+        async (version, route) => {
+            mockNodeInfoStore.nodeInfo = { version };
+
+            await cln.payLightningInvoice({ payment_request: 'lnbc1' });
+
+            expect(sentBody().url).toBe(
+                `https://node.example.com:3010${route}`
+            );
+            expect(sentBody().body).not.toHaveProperty('maxfee');
+            expect(sentBody().body).not.toHaveProperty('maxfeepercent');
+        }
+    );
+});
+
+describe('CLNRest on-chain fee rate', () => {
+    const sentBody = () => JSON.parse(fetchArgs()[3]);
+
+    beforeEach(() => {
+        mockFetch.mockResolvedValue(blobResponse(200, '{}'));
+    });
+
+    describe('satPerVbyteToPerkb', () => {
+        it('converts sat/vB to sat/kB', () => {
+            expect(satPerVbyteToPerkb('1')).toBe('1000perkb');
+            expect(satPerVbyteToPerkb(12)).toBe('12000perkb');
+            expect(satPerVbyteToPerkb('0.5')).toBe('500perkb');
+        });
+
+        it('avoids float error', () => {
+            // 2.01 * 1000 is 2009.9999999999998 in floating point
+            expect(satPerVbyteToPerkb('2.01')).toBe('2010perkb');
+            expect(satPerVbyteToPerkb(2.01)).toBe('2010perkb');
+            expect(satPerVbyteToPerkb('4.35')).toBe('4350perkb');
+        });
+
+        it('rounds to a whole sat/kB', () => {
+            expect(satPerVbyteToPerkb('1.0005')).toBe('1001perkb');
+            expect(satPerVbyteToPerkb('1.0004')).toBe('1000perkb');
+        });
+
+        it('keeps the old output for missing and empty rates', () => {
+            expect(satPerVbyteToPerkb('')).toBe('0perkb');
+            expect(satPerVbyteToPerkb(null)).toBe('0perkb');
+            expect(satPerVbyteToPerkb(undefined)).toBe('NaNperkb');
+        });
+    });
+
+    it('sends an integer feerate to withdraw', async () => {
+        await cln.sendCoins({
+            addr: 'bcrt1qdest',
+            amount: '5000',
+            sat_per_vbyte: '2.01'
+        } as any);
+
+        expect(fetchArgs()[1]).toBe(
+            'https://node.example.com:3010/v1/withdraw'
+        );
+        expect(sentBody()).toEqual({
+            destination: 'bcrt1qdest',
+            feerate: '2010perkb',
+            satoshi: '5000'
+        });
+    });
+
+    it('sends an integer feerate to withdraw with selected utxos', async () => {
+        await cln.sendCoins({
+            addr: 'bcrt1qdest',
+            amount: '5000',
+            sat_per_vbyte: '2.01',
+            utxos: ['abcd:0']
+        } as any);
+
+        expect(sentBody()).toEqual({
+            destination: 'bcrt1qdest',
+            feerate: '2010perkb',
+            satoshi: '5000',
+            utxos: ['abcd:0']
+        });
+    });
+
+    it('sends an integer feerate to fundchannel', async () => {
+        await cln.openChannelSync({
+            id: '02ab',
+            satoshis: '100000',
+            sat_per_vbyte: '1.0005',
+            privateChannel: false
+        } as any);
+
+        expect(fetchArgs()[1]).toBe(
+            'https://node.example.com:3010/v1/fundchannel'
+        );
+        expect(sentBody().feerate).toBe('1001perkb');
+    });
+
+    it('sends 0perkb to fundchannel without a rate, as before', async () => {
+        await cln.openChannelSync({
+            id: '02ab',
+            satoshis: '100000',
+            privateChannel: false
+        } as any);
+
+        expect(sentBody().feerate).toBe('0perkb');
+    });
+});
+
+describe('CLNRest capability flags', () => {
+    // Every supports*/requires*/is*/single* flag with its expected value.
+    // CLNRest is standalone (it does not extend LND), so each flag is
+    // declared here and nothing is inherited.
+    const expected: { [flag: string]: boolean } = {
+        supportsPeers: true,
+        supportsMessageSigning: true,
+        supportsMessageVerification: true,
+        requiresVerifyPubkey: false,
+        supportsAddressMessageSigning: false,
+        supportsLnurlAuth: true,
+        supportsOnchainBalance: true,
+        supportsOnchainSends: true,
+        supportsOnchainReceiving: true,
+        supportsUnconfirmedTransactionOrigin: false,
+        supportsLightningSends: true,
+        supportsKeysend: true,
+        supportsChannelManagement: true,
+        supportsCircularRebalancing: true,
+        supportsForceClose: false,
+        supportsPendingChannels: false,
+        supportsClosedChannels: true,
+        supportsMPP: false,
+        supportsAMP: false,
+        supportsCoinControl: true,
+        supportsChannelCoinControl: true,
+        supportsHopPicking: false,
+        supportsWithdrawalRequests: true,
+        supportsAccounts: false,
+        supportsRouting: true,
+        supportsNodeInfo: true,
+        singleFeesEarnedTotal: false,
+        supportsAddressTypeSelection: true,
+        supportsNestedSegWit: false,
+        supportsTaproot: true,
+        supportsBumpFee: false,
+        supportsOnchainSendFeeRate: true,
+        supportsChannelOpenFeeRate: true,
+        supportsChannelOpenMinConfs: true,
+        supportsFlowLSP: false,
+        supportsNetworkInfo: false,
+        supportsSimpleTaprootChannels: false,
+        supportsCustomPreimages: false,
+        supportsSweep: true,
+        supportsOnchainSendMax: true,
+        supportsOnchainBatching: false,
+        supportsChannelBatching: false,
+        supportsChannelFundMax: true,
+        supportsLSPScustomMessage: false,
+        supportsLSPS1rest: true,
+        supportsBolt11BlindedRoutes: false,
+        supportsAddressesWithDerivationPaths: false,
+        supportsOffers: true,
+        supportsOffersDirectPay: false,
+        supportsListingOffers: true,
+        supportsBolt12Address: true,
+        supportsCustomFeeLimit: true,
+        isLNDBased: false,
+        supportsForwardingHistory: true,
+        supportInboundFees: false,
+        supportsDevTools: true,
+        supportsCashuWallet: false,
+        supportsSettingInvoiceExpiration: true,
+        supportsNostrWalletConnectService: true,
+        supportsPaymentLookup: true,
+        supportsChannelMemo: false
+    };
+
+    it.each(Object.entries(expected))('%s() returns %s', (flag, value) => {
+        expect((cln as any)[flag]()).toBe(value);
+    });
+
+    it('has no flag missing from the table', () => {
+        const flags = Object.keys(cln).filter(
+            (key) =>
+                /^(supports?[A-Z]|requires|isLNDBased|single)/.test(key) &&
+                typeof (cln as any)[key] === 'function'
+        );
+        expect(flags.sort()).toEqual(Object.keys(expected).sort());
+    });
+});
+
+describe('CLNRest.supports', () => {
+    it('compares the node version against the minimum', () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.11' };
+        expect(cln.supports('v24.11')).toBe(true);
+        expect(cln.supports('v26.06')).toBe(false);
+    });
+
+    it('honors an end-of-support version', () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v25.05' };
+        expect(cln.supports('v24.11', 'v25.02')).toBe(false);
+        expect(cln.supports('v24.11', 'v25.05')).toBe(true);
+    });
+
+    it('also requires the API version when one is given', () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v25.02', api_version: '1.2' };
+        expect(cln.supports('v24.11', undefined, '1.2')).toBe(true);
+        expect(cln.supports('v24.11', undefined, '1.3')).toBe(false);
+    });
+});

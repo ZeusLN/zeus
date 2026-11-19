@@ -16,6 +16,7 @@ import { ButtonGroup } from '@rneui/themed';
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
+import PaymentInFlightNotice from '../components/PaymentInFlightNotice';
 import SwipeButton from '../components/SwipeButton';
 import Conversion from '../components/Conversion';
 import FeeLimit from '../components/FeeLimit';
@@ -40,13 +41,11 @@ import InvoicesStore from '../stores/InvoicesStore';
 import TransactionsStore, { SendPaymentReq } from '../stores/TransactionsStore';
 import UnitsStore from '../stores/UnitsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
-import LnurlPayStore from '../stores/LnurlPayStore';
 import SettingsStore from '../stores/SettingsStore';
 
 import FeeUtils from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
-import LinkingUtils from '../utils/LinkingUtils';
 import { sleep } from '../utils/SleepUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { numberWithCommas } from '../utils/UnitsUtils';
@@ -60,12 +59,6 @@ import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import QR from '../assets/images/SVG/QR.svg';
 
-const zaplockerDestinations = [
-    // OLYMPUS
-    '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581'
-    // TODO add Zaplocker.com
-];
-
 interface InvoiceProps {
     exitSetup: any;
     navigation: NativeStackNavigationProp<any, any>;
@@ -76,7 +69,6 @@ interface InvoiceProps {
     UnitsStore: UnitsStore;
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
-    LnurlPayStore: LnurlPayStore;
     SettingsStore: SettingsStore;
 }
 
@@ -93,7 +85,6 @@ interface InvoiceState {
     timeoutSeconds: string;
     outgoingChanId: string | any;
     lastHopPubkey: string | any;
-    zaplockerToggle: boolean;
     lightningReadyToSend: boolean;
     slideToPayThreshold: number;
     donationsToggle: boolean;
@@ -111,7 +102,6 @@ interface InvoiceState {
     'UnitsStore',
     'ChannelsStore',
     'NodeInfoStore',
-    'LnurlPayStore',
     'SettingsStore'
 )
 @observer
@@ -120,6 +110,7 @@ export default class PaymentRequest extends React.Component<
     InvoiceState
 > {
     focusListener: any;
+    beforeRemoveListener: any;
     donationDisposer: any;
     swipeResetDisposer: any;
     donationLockRequest?: string;
@@ -138,7 +129,6 @@ export default class PaymentRequest extends React.Component<
         timeoutSeconds: '60',
         outgoingChanId: null,
         lastHopPubkey: null,
-        zaplockerToggle: false,
         lightningReadyToSend: false,
         slideToPayThreshold: 10000,
         donationsToggle: false,
@@ -151,8 +141,22 @@ export default class PaymentRequest extends React.Component<
 
     async componentDidMount() {
         this.isComponentMounted = true;
-        const { SettingsStore, InvoicesStore, route } = this.props;
+        const { SettingsStore, InvoicesStore, BalanceStore, route } =
+            this.props;
+
+        // Clear the decode on every way of leaving (header Back, Android
+        // hardware back, iOS swipe, popTo after a payment), not only the
+        // header Back: a decode still in flight would otherwise land after
+        // the user left and start route queries or LDK probes. Registered
+        // before the first await so an early back is not missed
+        this.beforeRemoveListener = this.props.navigation.addListener(
+            'beforeRemove',
+            () => InvoicesStore.clearPayReq()
+        );
         const { getSettings, implementation } = SettingsStore;
+        // balance is not refreshed elsewhere after channel changes, so
+        // the no-balance warning could otherwise be stale
+        BalanceStore.getLightningBalance(true);
         const settings = await getSettings();
 
         if (route?.params?.fromGraphSync) {
@@ -272,6 +276,9 @@ export default class PaymentRequest extends React.Component<
         if (this.focusListener) {
             this.focusListener();
         }
+        if (this.beforeRemoveListener) {
+            this.beforeRemoveListener();
+        }
         if (this.donationDisposer) {
             this.donationDisposer();
         }
@@ -282,18 +289,22 @@ export default class PaymentRequest extends React.Component<
 
     checkIfLndReady = async () => {
         const { BalanceStore, NodeInfoStore } = this.props;
-        const noBalance = BalanceStore.lightningBalance === 0;
         const { isLightningReadyToSend } = NodeInfoStore;
-        while (
-            !this.state.lightningReadyToSend &&
-            this.isComponentMounted &&
-            !noBalance
-        ) {
-            const isReady = await isLightningReadyToSend();
-            if (isReady) {
-                this.setState({
-                    lightningReadyToSend: true
-                });
+        // re-read the balance each pass: the refresh started on mount may
+        // land after this loop begins, so it idles (no RPCs) while it is 0
+        while (!this.state.lightningReadyToSend && this.isComponentMounted) {
+            if (BalanceStore.lightningBalance !== 0) {
+                try {
+                    const isReady = await isLightningReadyToSend();
+                    if (isReady) {
+                        this.setState({
+                            lightningReadyToSend: true
+                        });
+                    }
+                } catch (e) {
+                    // RPC can fail while LND is still starting; keep polling
+                    console.log('Embedded LND readiness check failed', e);
+                }
             }
             await sleep(3000);
         }
@@ -339,8 +350,6 @@ export default class PaymentRequest extends React.Component<
         const { InvoicesStore, TransactionsStore, SettingsStore, navigation } =
             this.props;
 
-        TransactionsStore.donationIsPaid = false;
-
         const { settings } = SettingsStore;
 
         const enableDonations =
@@ -357,7 +366,7 @@ export default class PaymentRequest extends React.Component<
             );
         }
 
-        TransactionsStore.sendPayment({
+        const paymentSequence = TransactionsStore.sendPayment({
             payment_request,
             amount,
             max_parts,
@@ -371,6 +380,7 @@ export default class PaymentRequest extends React.Component<
         });
 
         navigation.navigate('SendingLightning', {
+            paymentSequence,
             enableDonations,
             ...(enableDonations &&
                 donationAmount > 0 && {
@@ -379,17 +389,23 @@ export default class PaymentRequest extends React.Component<
         });
     };
 
+    // true when the invoice carries no amount and none has been entered
+    isMissingAmount = () => {
+        const requestAmount =
+            this.props.InvoicesStore.pay_req?.getRequestAmount;
+        return !requestAmount && !(Number(this.state.satAmount) > 0);
+    };
+
     triggerPayment = () => {
-        const {
-            InvoicesStore,
-            LnurlPayStore,
-            SettingsStore,
-            TransactionsStore
-        } = this.props;
+        const { InvoicesStore, SettingsStore, TransactionsStore } = this.props;
 
         // Guard against double-submission: bail if a payment is already in
         // flight so a rapid double-tap or re-fired swipe can't dispatch twice.
         if (TransactionsStore.paymentInFlight) return;
+
+        // a no-amount invoice can't be paid without an amount: the node
+        // would only reject it after the send guard was taken
+        if (this.isMissingAmount()) return;
 
         const {
             enableMultiPathPayment,
@@ -437,12 +453,6 @@ export default class PaymentRequest extends React.Component<
 
         const isCLightning: boolean = implementation === 'cln-rest';
 
-        // Zaplocker
-        const { isZaplocker } = LnurlPayStore;
-
-        // Broadcast attestation if Zaplocker is enabled
-        if (isZaplocker) LnurlPayStore.broadcastAttestation();
-
         // handle fee percents that use commas
         const maxFeePercentFormatted = maxFeePercent.replace(/,/g, '.');
 
@@ -462,7 +472,10 @@ export default class PaymentRequest extends React.Component<
         // Call sendPayment with the freshest values
         this.sendPayment({
             payment_request: paymentRequest,
-            amount: satAmount ? satAmount.toString() : undefined,
+            amount:
+                !pay_req?.getRequestAmount && satAmount
+                    ? satAmount.toString()
+                    : undefined,
             max_parts: enableMultiPathPayment ? maxParts : '16',
             max_shard_amt: enableMultiPathPayment ? maxShardAmt : '',
             fee_limit_sat: feeLimitSat,
@@ -484,7 +497,6 @@ export default class PaymentRequest extends React.Component<
             InvoicesStore,
             UnitsStore,
             ChannelsStore,
-            LnurlPayStore,
             SettingsStore,
             NodeInfoStore,
             TransactionsStore,
@@ -497,7 +509,6 @@ export default class PaymentRequest extends React.Component<
             maxShardAmt,
             feeOption,
             customAmount,
-            zaplockerToggle,
             timeoutSeconds,
             lightningReadyToSend,
             slideToPayThreshold,
@@ -512,19 +523,8 @@ export default class PaymentRequest extends React.Component<
             loading,
             loadingFeeEstimate,
             successProbability,
-            feeEstimate,
-            clearPayReq
+            feeEstimate
         } = InvoicesStore;
-
-        // Zaplocker
-        const {
-            isZaplocker,
-            isPmtHashSigValid,
-            isRelaysSigValid,
-            zaplockerNpub
-        } = LnurlPayStore;
-
-        const isZaplockerValid = isPmtHashSigValid && isRelaysSigValid;
 
         const locale = SettingsStore.settings.locale;
         if (pay_req) pay_req.determineFormattedOriginalTimeUntilExpiry(locale);
@@ -629,6 +629,7 @@ export default class PaymentRequest extends React.Component<
         const isNoAmountInvoice: boolean = !requestAmount;
 
         const noBalance = this.props.BalanceStore.lightningBalance === 0;
+        const missingAmount = this.isMissingAmount();
 
         // The screen renders whatever invoice is in the shared InvoicesStore,
         // so when the store no longer matches the pinned invoice the user has
@@ -640,13 +641,6 @@ export default class PaymentRequest extends React.Component<
             this.state.reviewedPaymentRequest !== '' &&
             !!paymentRequest &&
             paymentRequest !== this.state.reviewedPaymentRequest;
-
-        const showZaplockerWarning =
-            isZaplocker ||
-            (destination &&
-                zaplockerDestinations.includes(destination) &&
-                cltv_expiry &&
-                Number(cltv_expiry) > 200);
 
         const QRButton = () => (
             <TouchableOpacity
@@ -665,9 +659,6 @@ export default class PaymentRequest extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={() => {
-                        clearPayReq();
-                    }}
                     centerComponent={{
                         text: localeString('views.PaymentRequest.title'),
                         style: {
@@ -726,21 +717,6 @@ export default class PaymentRequest extends React.Component<
                                             />
                                         </View>
                                     )}
-                                    {showZaplockerWarning &&
-                                        implementation === 'embedded-lnd' && (
-                                            <View
-                                                style={{
-                                                    paddingTop: 10,
-                                                    paddingBottom: 10
-                                                }}
-                                            >
-                                                <WarningMessage
-                                                    message={localeString(
-                                                        'views.Send.zaplockerWarning'
-                                                    )}
-                                                />
-                                            </View>
-                                        )}
                                     {!BackendUtils.supportsLightningSends() && (
                                         <View
                                             style={{
@@ -788,10 +764,13 @@ export default class PaymentRequest extends React.Component<
                                         />
                                     ) : (
                                         <View style={styles.center}>
+                                            {/* show the exact invoice amount
+                                            even with msat display off */}
                                             <Amount
                                                 sats={requestAmount}
                                                 jumboText
                                                 toggleable
+                                                forceMsats
                                             />
                                             <View style={{ top: 10 }}>
                                                 <Conversion
@@ -801,139 +780,6 @@ export default class PaymentRequest extends React.Component<
                                         </View>
                                     )}
                                 </>
-
-                                {isZaplocker && (
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            this.setState({
-                                                zaplockerToggle:
-                                                    !zaplockerToggle
-                                            });
-                                        }}
-                                    >
-                                        <View
-                                            style={{
-                                                marginTop: 10,
-                                                marginBottom: 10
-                                            }}
-                                        >
-                                            <Row justify="space-between">
-                                                <View style={{ flex: 1 }}>
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.Settings.LightningAddress.zaplockerVerification'
-                                                        )}
-                                                        color={
-                                                            isZaplockerValid
-                                                                ? themeColor(
-                                                                      'success'
-                                                                  )
-                                                                : themeColor(
-                                                                      'error'
-                                                                  )
-                                                        }
-                                                    />
-                                                </View>
-                                                {zaplockerToggle ? (
-                                                    <CaretDown
-                                                        fill={
-                                                            isZaplockerValid
-                                                                ? themeColor(
-                                                                      'success'
-                                                                  )
-                                                                : themeColor(
-                                                                      'error'
-                                                                  )
-                                                        }
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                ) : (
-                                                    <CaretRight
-                                                        fill={
-                                                            isZaplockerValid
-                                                                ? themeColor(
-                                                                      'success'
-                                                                  )
-                                                                : themeColor(
-                                                                      'error'
-                                                                  )
-                                                        }
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                )}
-                                            </Row>
-                                        </View>
-                                    </TouchableOpacity>
-                                )}
-
-                                {zaplockerToggle && (
-                                    <>
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'views.PaymentRequest.isPmtHashSigValid'
-                                            )}
-                                            value={
-                                                isPmtHashSigValid
-                                                    ? localeString(
-                                                          'general.valid'
-                                                      )
-                                                    : localeString(
-                                                          'general.invalid'
-                                                      )
-                                            }
-                                            color={
-                                                isPmtHashSigValid
-                                                    ? themeColor('success')
-                                                    : themeColor('error')
-                                            }
-                                        />
-
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'views.PaymentRequest.isRelaysSigValid'
-                                            )}
-                                            value={
-                                                isRelaysSigValid
-                                                    ? localeString(
-                                                          'general.valid'
-                                                      )
-                                                    : localeString(
-                                                          'general.invalid'
-                                                      )
-                                            }
-                                            color={
-                                                isRelaysSigValid
-                                                    ? themeColor('success')
-                                                    : themeColor('error')
-                                            }
-                                        />
-
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'nostr.npub'
-                                            )}
-                                            value={zaplockerNpub}
-                                            sensitive
-                                            showCopyIcon
-                                        />
-
-                                        <View style={styles.button}>
-                                            <Button
-                                                title={localeString(
-                                                    'nostr.loadProfileExternal'
-                                                )}
-                                                onPress={() =>
-                                                    LinkingUtils.handleDeepLink(
-                                                        `nostr:${zaplockerNpub}`,
-                                                        this.props.navigation
-                                                    )
-                                                }
-                                            />
-                                        </View>
-                                    </>
-                                )}
 
                                 {getNameDescReceiver && (
                                     <KeyValue
@@ -1587,6 +1433,10 @@ export default class PaymentRequest extends React.Component<
                                         this.setState({
                                             reviewedPaymentRequest:
                                                 InvoicesStore.paymentRequest,
+                                            // the typed amount was for the
+                                            // previous request
+                                            customAmount: '',
+                                            satAmount: '',
                                             swipeButtonKey:
                                                 this.state.swipeButtonKey + 1
                                         })
@@ -1622,12 +1472,16 @@ export default class PaymentRequest extends React.Component<
                                     <LoadingIndicator size={30} />
                                 </>
                             )}
+                            <PaymentInFlightNotice
+                                TransactionsStore={TransactionsStore}
+                            />
                             {requestAmount &&
                             requestAmount >= slideToPayThreshold ? (
                                 <SwipeButton
                                     key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
                                     disabled={
+                                        !lightningReadyToSend ||
                                         TransactionsStore.paymentInFlight ||
                                         noBalance
                                     }
@@ -1644,6 +1498,22 @@ export default class PaymentRequest extends React.Component<
                                 />
                             ) : (
                                 <View style={styles.button}>
+                                    {missingAmount && !noBalance && (
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                alignSelf: 'center',
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.PaymentRequest.enterAmount'
+                                            )}
+                                        </Text>
+                                    )}
                                     <Button
                                         title={localeString(
                                             'views.PaymentRequest.payInvoice'
@@ -1656,7 +1526,8 @@ export default class PaymentRequest extends React.Component<
                                         disabled={
                                             !lightningReadyToSend ||
                                             TransactionsStore.paymentInFlight ||
-                                            noBalance
+                                            noBalance ||
+                                            missingAmount
                                         }
                                     />
                                 </View>

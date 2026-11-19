@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# mine: mine N regtest blocks (default 1) to the bitcoind "rig" wallet.
+#
+# usage: bin/mine [N]
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+btc -rpcwallet=rig generatetoaddress "${1:-1}" "$(btc -rpcwallet=rig getnewaddress)" >/dev/null
+btc getblockcount

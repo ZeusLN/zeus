@@ -22,6 +22,7 @@ jest.mock('../stores/Stores', () => ({
 }));
 
 import AddressUtils from './AddressUtils';
+import NodeInfo from '../models/NodeInfo';
 import { nodeInfoStore } from '../stores/Stores';
 import { walletrpc } from '../proto/lightning';
 
@@ -99,6 +100,18 @@ describe('AddressUtils', () => {
     });
 
     describe('processBIP21Uri', () => {
+        it('ignores whitespace before the bitcoin: scheme', () => {
+            // the swap QR scanners pass the raw scan without trimming
+            expect(
+                AddressUtils.processBIP21Uri(
+                    '\n bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            });
+        });
+
         it('processes all BIP-21 URI variations', () => {
             // with fee
             expect(
@@ -138,6 +151,19 @@ describe('AddressUtils', () => {
                 value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
                 satAmount: undefined
             });
+
+            // fractional sats, negative amounts and Infinity are ignored
+            ['0.00100000001', '0.000000001', '-0.001', 'Infinity'].forEach(
+                (amount) =>
+                    expect(
+                        AddressUtils.processBIP21Uri(
+                            `bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=${amount}`
+                        )
+                    ).toEqual({
+                        value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                        satAmount: undefined
+                    })
+            );
 
             // without fee
             expect(
@@ -251,6 +277,80 @@ describe('AddressUtils', () => {
                 value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
                 clinkNoffer:
                     'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
+            });
+        });
+    });
+
+    describe('processBIP21Uri scheme handling', () => {
+        it('accepts the bitcoin: scheme in any case', () => {
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'Bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            });
+        });
+
+        it('only treats bitcoin: as a scheme at the start of the input', () => {
+            const embedded =
+                'https://example.com/pay?uri=bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003';
+            expect(AddressUtils.processBIP21Uri(embedded)).toEqual({
+                value: embedded
+            });
+
+            const prefixed =
+                'note bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu';
+            expect(AddressUtils.processBIP21Uri(prefixed)).toEqual({
+                value: prefixed
+            });
+        });
+
+        it('parses a bitcoin: URI wrapped in a zeusln: deep link', () => {
+            const expected = {
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            };
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln:bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln:Bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
+            // the wrapper is a scheme too, so its case does not matter
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'ZEUSLN:bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
+            // nor does a // after it
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln://bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(expected);
+            // a bare value behind zeusln: is still returned as is
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'zeusln:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                )
+            ).toEqual({ value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu' });
+        });
+
+        it('splits on the scheme the input starts with, not one in a parameter', () => {
+            // 'BITCOIN:' in the label used to be taken as the scheme
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003&label=BITCOIN:SALE'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
             });
         });
     });
@@ -624,6 +724,20 @@ describe('AddressUtils', () => {
             );
         });
 
+        it('accepts only test network addresses on a CLN testnet4 node', () => {
+            setNodeInfo(new NodeInfo({ network: 'testnet4' }));
+            testNetworks.forEach((address) =>
+                expect(AddressUtils.isValidBitcoinAddressForNode(address)).toBe(
+                    true
+                )
+            );
+            mainnet.forEach((address) =>
+                expect(AddressUtils.isValidBitcoinAddressForNode(address)).toBe(
+                    false
+                )
+            );
+        });
+
         it('accepts regtest addresses on a regtest node', () => {
             setNodeInfo({ isRegTest: true });
             expect(
@@ -641,6 +755,106 @@ describe('AddressUtils', () => {
             expect(
                 AddressUtils.isValidBitcoinAddressForNode(testNetworks[0])
             ).toBe(false);
+        });
+    });
+
+    describe('isAddressForNodeNetwork', () => {
+        const MAINNET_NODE = {
+            isTestNet: false,
+            isRegTest: false,
+            isSigNet: false,
+            isMutinynet: false
+        };
+        const mainnet = [
+            'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+            'BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4',
+            'bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297',
+            '1AY6gTALH7bGrbN73qqTRnkW271JvBJc9o',
+            '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy'
+        ];
+        const TB1 = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
+        const BCRT1 = 'bcrt1qqgdrlt97x4847rf85utak8gre5q7k83uwh3ajj';
+        // testnet, signet and regtest share base58 version bytes
+        const testBase58 = [
+            'mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn',
+            '2MzQwSSnBHWHqSAqtTVQ6v47XtaisrJa1Vc'
+        ];
+
+        it('accepts only mainnet addresses on a mainnet node', () => {
+            mainnet.forEach((address) =>
+                expect(
+                    AddressUtils.isAddressForNodeNetwork(address, MAINNET_NODE)
+                ).toBe(true)
+            );
+            [TB1, BCRT1, ...testBase58].forEach((address) =>
+                expect(
+                    AddressUtils.isAddressForNodeNetwork(address, MAINNET_NODE)
+                ).toBe(false)
+            );
+        });
+
+        it('accepts tb1 but not bcrt1 on testnet, signet and Mutinynet', () => {
+            [
+                { isTestNet: true },
+                { isSigNet: true },
+                { isSigNet: true, isMutinynet: true },
+                { isMutinynet: true }
+            ].forEach((nodeInfo) => {
+                [TB1, ...testBase58].forEach((address) =>
+                    expect(
+                        AddressUtils.isAddressForNodeNetwork(address, nodeInfo)
+                    ).toBe(true)
+                );
+                [BCRT1, ...mainnet].forEach((address) =>
+                    expect(
+                        AddressUtils.isAddressForNodeNetwork(address, nodeInfo)
+                    ).toBe(false)
+                );
+            });
+        });
+
+        it('accepts bcrt1 but not tb1 on regtest', () => {
+            const nodeInfo = { isRegTest: true };
+            [BCRT1, ...testBase58].forEach((address) =>
+                expect(
+                    AddressUtils.isAddressForNodeNetwork(address, nodeInfo)
+                ).toBe(true)
+            );
+            [TB1, ...mainnet].forEach((address) =>
+                expect(
+                    AddressUtils.isAddressForNodeNetwork(address, nodeInfo)
+                ).toBe(false)
+            );
+        });
+
+        it('refuses a bad checksum, a public key and other non-addresses', () => {
+            [
+                // last character of a valid address changed
+                'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwv',
+                '1AY6gTALH7bGrbN73qqTRnkW271JvBJc9p',
+                '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
+                'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                ' bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                ''
+            ].forEach((input) =>
+                expect(
+                    AddressUtils.isAddressForNodeNetwork(input, MAINNET_NODE)
+                ).toBe(false)
+            );
+        });
+
+        it('treats a node whose info has not loaded as mainnet', () => {
+            expect(AddressUtils.isAddressForNodeNetwork(mainnet[0], {})).toBe(
+                true
+            );
+            expect(AddressUtils.isAddressForNodeNetwork(TB1, {})).toBe(false);
+        });
+
+        it("reads the connected node's info when called without one", () => {
+            withNodeInfo({ isRegTest: true }, () => {
+                expect(AddressUtils.isAddressForNodeNetwork(BCRT1)).toBe(true);
+                expect(AddressUtils.isAddressForNodeNetwork(TB1)).toBe(false);
+            });
         });
     });
 
@@ -1123,6 +1337,27 @@ describe('AddressUtils', () => {
 
                 expect(
                     AddressUtils.isValidLightningAddress('⚡️@test@example.com')
+                ).toBeFalsy();
+            });
+
+            it('rejects quoted local parts and bracketed domain literals', () => {
+                // callers split on '@', so the first two would be fetched
+                // from evil.com while the address ends in @good.com
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        '"x@evil.com@"@good.com'
+                    )
+                ).toBeFalsy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        '"x@evil.com/"@good.com'
+                    )
+                ).toBeFalsy();
+                expect(
+                    AddressUtils.isValidLightningAddress('"x"@good.com')
+                ).toBeFalsy();
+                expect(
+                    AddressUtils.isValidLightningAddress('x@[1.2.3.4]')
                 ).toBeFalsy();
             });
         });
@@ -1715,6 +1950,11 @@ describe('AddressUtils', () => {
             // CLN reports signet as network: 'signet'
             ['signet', { isSigNet: true }, testnetAddresses],
             [
+                'CLN testnet4',
+                new NodeInfo({ network: 'testnet4' }),
+                testnetAddresses
+            ],
+            [
                 'regtest',
                 { isRegTest: true },
                 [
@@ -1781,6 +2021,37 @@ describe('AddressUtils', () => {
             expect(
                 AddressUtils.isValidWithdrawalRequest(invalidString)
             ).toBeFalsy();
+        });
+    });
+
+    describe('regex backtracking', () => {
+        // These run synchronously on whatever is on the clipboard, so a
+        // non-match must not cost more than one pass over the input
+        it.each([
+            [
+                'isValidLightningPaymentRequest',
+                AddressUtils.isValidLightningPaymentRequest,
+                `lnbc${'1'.repeat(40000)}!`
+            ],
+            [
+                'isValidLightningOffer',
+                AddressUtils.isValidLightningOffer,
+                `lno${'1'.repeat(40000)}!`
+            ],
+            [
+                'isValidLNDHubAddress',
+                AddressUtils.isValidLNDHubAddress,
+                `lndhub://a:b@https://${'a'.repeat(40000)}!`
+            ],
+            [
+                'isValidLightningAddress',
+                AddressUtils.isValidLightningAddress,
+                `a@[1.1.1.a:${'\\a'.repeat(28)}!`
+            ]
+        ])('%s rejects a hostile non-match quickly', (_, isValid, input) => {
+            const start = Date.now();
+            expect(isValid(input)).toBeFalsy();
+            expect(Date.now() - start).toBeLessThan(1000);
         });
     });
 });

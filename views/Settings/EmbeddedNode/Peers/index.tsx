@@ -77,17 +77,10 @@ export default class Peers extends React.Component<PeersProps, {}> {
                                     }}
                                 >
                                     {neutrinoPeers && neutrinoPeers.length > 0
-                                        ? `${neutrinoPeers.length} ${
-                                              neutrinoPeers.length > 1
-                                                  ? localeString(
-                                                        'general.peers'
-                                                    ).toLowerCase()
-                                                  : localeString(
-                                                        'general.peer'
-                                                    ).toLowerCase()
-                                          } ${localeString(
-                                              'general.selected'
-                                          ).toLowerCase()}.`
+                                        ? localeString(
+                                              'views.Settings.EmbeddedNode.Peers.peersSelectedCount',
+                                              { count: neutrinoPeers.length }
+                                          )
                                         : `${localeString(
                                               'general.noneSelected'
                                           )}. ${localeString(
@@ -146,17 +139,10 @@ export default class Peers extends React.Component<PeersProps, {}> {
                                     }}
                                 >
                                     {zeroConfPeers && zeroConfPeers.length > 0
-                                        ? `${zeroConfPeers.length} ${
-                                              zeroConfPeers.length > 1
-                                                  ? localeString(
-                                                        'general.peers'
-                                                    ).toLowerCase()
-                                                  : localeString(
-                                                        'general.peer'
-                                                    ).toLowerCase()
-                                          } ${localeString(
-                                              'general.selected'
-                                          ).toLowerCase()}.`
+                                        ? localeString(
+                                              'views.Settings.EmbeddedNode.Peers.peersSelectedCount',
+                                              { count: zeroConfPeers.length }
+                                          )
                                         : `${localeString(
                                               'general.noneSelected'
                                           )}.`}

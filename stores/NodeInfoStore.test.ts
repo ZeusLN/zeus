@@ -1,5 +1,6 @@
 import NodeInfoStore from './NodeInfoStore';
 import BackendUtils from '../utils/BackendUtils';
+import Storage from '../storage';
 
 jest.mock('./ChannelsStore', () => ({
     __esModule: true,
@@ -15,15 +16,13 @@ jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
         getMyNodeInfo: jest.fn(),
+        getNetworkInfo: jest.fn(),
         supportsOffers: jest.fn(() => false),
         supportsListingOffers: jest.fn(() => false)
     }
 }));
 
-jest.mock('../utils/ErrorUtils', () => ({
-    __esModule: true,
-    errorToUserFriendly: (error: string) => error
-}));
+jest.mock('../utils/LocaleUtils');
 
 jest.mock('../storage', () => ({
     __esModule: true,
@@ -35,6 +34,7 @@ jest.mock('../storage', () => ({
 }));
 
 const getMyNodeInfoMock = BackendUtils.getMyNodeInfo as jest.Mock;
+const getNetworkInfoMock = BackendUtils.getNetworkInfo as jest.Mock;
 
 // Resolves to { settled: true } if the promise settles within `ms`,
 // { settled: false } otherwise. Used to detect orphaned promises
@@ -110,7 +110,7 @@ describe('NodeInfoStore.getNodeInfo', () => {
         const supersededSettled = settlesWithin(superseded, 200);
         const currentSettled = settlesWithin(current, 200);
 
-        rejectBackend(new Error('connection refused'));
+        rejectBackend(new Error('SOCKS: Connection refused'));
         await jest.advanceTimersByTimeAsync(200);
 
         const supersededResult = await supersededSettled;
@@ -119,5 +119,45 @@ describe('NodeInfoStore.getNodeInfo', () => {
         const currentResult = await currentSettled;
         expect(currentResult.settled).toBe(true);
         expect((currentResult as any).error).toBeDefined();
+        expect(store.errorMsg).toBe('error.connectionRefused');
+    });
+
+    it('purges the legacy xprv cache on connect, with and without a pubkey', async () => {
+        getMyNodeInfoMock.mockResolvedValue({
+            identity_pubkey: 'pk1',
+            version: '0.18.0-beta'
+        });
+
+        await new NodeInfoStore({} as any, {} as any).getNodeInfo();
+
+        expect(Storage.removeItem).toHaveBeenCalledWith(
+            'pk1-extended-private-keys'
+        );
+        // Older builds exporting before node info had loaded wrote this one
+        expect(Storage.removeItem).toHaveBeenCalledWith(
+            'undefined-extended-private-keys'
+        );
+    });
+});
+
+describe('NodeInfoStore.getNetworkInfo', () => {
+    beforeEach(() => {
+        getNetworkInfoMock.mockReset();
+    });
+
+    it('maps the error and resets state when the request fails', async () => {
+        getNetworkInfoMock.mockRejectedValue(
+            new Error('SOCKS: Host unreachable')
+        );
+
+        const store = new NodeInfoStore({} as any, {} as any);
+        // Seed stale data so the assertion below proves the reset runs.
+        store.networkInfo = { num_nodes: 1 };
+
+        await expect(store.getNetworkInfo()).resolves.toBeUndefined();
+        expect(store.errorMsg).toBe('error.hostUnreachable');
+        expect(store.error).toBe(true);
+        expect(store.loading).toBe(false);
+        expect(store.networkInfo).toEqual({});
     });
 });

@@ -1,15 +1,18 @@
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import SystemNavigationBar from 'react-native-system-navigation-bar';
+
+import ClockIcon from '../../assets/images/SVG/Clock.svg';
+import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 
 import SettingsStore, {
     DEFAULT_VIEW_KEYS,
     THEME_KEYS
 } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
-import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { applySystemNavigationBarTheme } from '../../utils/SystemNavigationBarUtils';
 
 import Text from '../../components/Text';
 import DropdownSetting from '../../components/DropdownSetting';
@@ -129,13 +132,7 @@ export default class Display extends React.Component<
                             await updateSettingsGroup('display', {
                                 theme: value
                             });
-                            SystemNavigationBar.setNavigationColor(
-                                themeColor('background'),
-                                isLightTheme() ? 'dark' : 'light'
-                            );
-                            SystemNavigationBar.setNavigationBarDividerColor(
-                                themeColor('secondary')
-                            );
+                            applySystemNavigationBarTheme();
                         }}
                         values={THEME_KEYS}
                     />
@@ -325,6 +322,40 @@ export default class Display extends React.Component<
                             />
                         </View>
                     </View>
+
+                    <TouchableOpacity
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 20,
+                            alignItems: 'center'
+                        }}
+                        onPress={() => navigation.navigate('DateTime')}
+                    >
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                alignItems: 'center'
+                            }}
+                        >
+                            <ClockIcon
+                                color={themeColor('secondaryText')}
+                                width={24}
+                                height={24}
+                                style={{ marginRight: 10 }}
+                            />
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString('views.Settings.DateTime.title')}
+                            </Text>
+                        </View>
+                        <ForwardIcon stroke={themeColor('secondaryText')} />
+                    </TouchableOpacity>
                 </ScrollView>
             </Screen>
         );

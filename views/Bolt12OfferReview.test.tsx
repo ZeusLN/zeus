@@ -2,17 +2,23 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
+// the pay screens render PaymentInFlightNotice, which reads screen focus
+jest.mock('@react-navigation/native', () => ({ useIsFocused: () => true }));
 jest.mock('../components/Amount', () => 'Amount');
 jest.mock('../components/Button', () => 'Button');
 jest.mock('../components/Conversion', () => 'Conversion');
 jest.mock('../components/Header', () => 'Header');
 jest.mock('../components/KeyValue', () => 'KeyValue');
-jest.mock('../components/Screen', () => 'Screen');
+jest.mock('../components/Screen', () => {
+    const { View } = require('react-native');
+    return ({ children }: any) => <View>{children}</View>;
+});
 jest.mock('../components/SwipeButton', () => 'SwipeButton');
 jest.mock('../components/SuccessErrorMessage', () => ({
     ErrorMessage: 'ErrorMessage'
 }));
 jest.mock('../stores/FiatStore', () => ({}));
+jest.mock('../stores/Stores', () => ({}));
 jest.mock('../stores/TransactionsStore', () => ({}));
 jest.mock('../stores/SettingsStore', () => ({
     __esModule: true,
@@ -22,9 +28,7 @@ jest.mock('../stores/SettingsStore', () => ({
 jest.mock('../utils/DateTimeUtils', () => ({
     listFormattedDate: () => 'date'
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));
@@ -33,6 +37,7 @@ jest.mock('../utils/UnitsUtils', () => ({
 }));
 
 import * as React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import Bolt12OfferReview from './Bolt12OfferReview';
 
 import type { DecodedOffer } from '../ldknode/LdkNodeInjection';
@@ -47,71 +52,79 @@ const payableOffer: DecodedOffer = {
     expectsQuantity: false
 };
 
-const childrenOf = (element: any): any[] =>
-    React.Children.toArray(element?.props?.children);
-
-const findByType = (node: any, type: string): any => {
-    if (!React.isValidElement(node)) return undefined;
-    if ((node as any).type === type) return node;
-    for (const child of childrenOf(node)) {
-        const found = findByType(child, type);
-        if (found) return found;
-    }
-    return undefined;
-};
-
-const makeView = ({
+const renderView = async ({
     decodedOffer = payableOffer,
     satAmount = '2500',
     feeLimitSat = '25',
-    timeoutSeconds = '45'
+    timeoutSeconds = '45',
+    paymentInFlight = false,
+    paymentInFlightConfirmed = false
 }: {
     decodedOffer?: DecodedOffer;
     satAmount?: string;
     feeLimitSat?: string;
     timeoutSeconds?: string;
+    paymentInFlight?: boolean;
+    paymentInFlightConfirmed?: boolean;
 } = {}) => {
     // sendPayment takes the in-flight guard like the real store does, so a
     // second tap sees paymentInFlight
     const TransactionsStore: any = {
-        paymentInFlight: false,
+        paymentInFlight,
+        paymentInFlightConfirmed,
         sendPayment: jest.fn(() => {
             TransactionsStore.paymentInFlight = true;
         })
     };
     const navigation = { navigate: jest.fn(), addListener: jest.fn() };
-    const view = new Bolt12OfferReview({
-        navigation,
-        route: {
-            key: 'Bolt12OfferReview',
-            name: 'Bolt12OfferReview',
-            params: {
-                offer,
-                decodedOffer,
-                satAmount,
-                timeoutSeconds,
-                feeLimitSat
-            }
-        },
-        FiatStore: { symbolLookup: () => ({ decimalPlaces: 2 }) },
-        SettingsStore: { settings: { payments: {} } },
-        TransactionsStore
-    } as unknown as React.ComponentProps<typeof Bolt12OfferReview>);
-    return { view, TransactionsStore, navigation };
+    await render(
+        <Bolt12OfferReview
+            {...({
+                navigation,
+                route: {
+                    key: 'Bolt12OfferReview',
+                    name: 'Bolt12OfferReview',
+                    params: {
+                        offer,
+                        decodedOffer,
+                        satAmount,
+                        timeoutSeconds,
+                        feeLimitSat
+                    }
+                },
+                FiatStore: { symbolLookup: () => ({ decimalPlaces: 2 }) },
+                SettingsStore: { settings: { payments: {} } },
+                TransactionsStore
+            } as any)}
+        />
+    );
+    return { TransactionsStore, navigation };
 };
 
-// the control the user confirms with: Button below the slide-to-pay
-// threshold, SwipeButton at or above it
-const payControl = (view: Bolt12OfferReview) => {
-    const tree = view.render();
-    const swipe = findByType(tree, 'SwipeButton');
+const hostOfType = (type: string) =>
+    screen.container.queryAll((n) => n.type === type)[0];
+
+const expiredMessageShown = () =>
+    screen.container
+        .queryAll((n) => n.type === 'ErrorMessage')
+        .some((n) => n.props.message === 'views.Bolt12OfferReview.expired');
+
+// The control the user confirms with: Button below the slide-to-pay
+// threshold, SwipeButton at or above it. Both are mocked as plain hosts, so
+// a confirm reaches the handler even when the control renders disabled,
+// which exercises the screen's own guards.
+const payControl = () => {
+    const swipe = hostOfType('SwipeButton');
     if (swipe)
         return {
             disabled: swipe.props.disabled,
-            confirm: swipe.props.onSwipeSuccess
+            confirm: () => fireEvent(swipe, 'swipeSuccess')
         };
-    const button = findByType(tree, 'Button');
-    return { disabled: button.props.disabled, confirm: button.props.onPress };
+    const button = hostOfType('Button');
+    return {
+        disabled: button.props.disabled,
+        confirm: () => fireEvent.press(button)
+    };
 };
 
 describe('Bolt12OfferReview confirmation', () => {
@@ -124,14 +137,14 @@ describe('Bolt12OfferReview confirmation', () => {
         jest.useRealTimers();
     });
 
-    it('dispatches the offer payment once with the reviewed amount, fee limit and timeout', () => {
-        const { view, TransactionsStore, navigation } = makeView();
+    it('dispatches the offer payment once with the reviewed amount, fee limit and timeout', async () => {
+        const { TransactionsStore, navigation } = await renderView();
 
-        const control = payControl(view);
+        const control = payControl();
         expect(control.disabled).toBe(false);
-        control.confirm();
-        // a rapid second tap before the screen re-renders
-        control.confirm();
+        await control.confirm();
+        // a rapid second tap on the control the user already saw
+        await control.confirm();
 
         expect(TransactionsStore.sendPayment).toHaveBeenCalledTimes(1);
         expect(TransactionsStore.sendPayment).toHaveBeenCalledWith({
@@ -144,28 +157,41 @@ describe('Bolt12OfferReview confirmation', () => {
         expect(navigation.navigate).toHaveBeenCalledWith('SendingLightning');
     });
 
-    it('falls back to the default routing fee when no fee limit was set', () => {
-        const { view, TransactionsStore } = makeView({
+    it('falls back to the default routing fee when no fee limit was set', async () => {
+        const { TransactionsStore } = await renderView({
             satAmount: '100000',
             feeLimitSat: ''
         });
 
-        payControl(view).confirm();
+        await payControl().confirm();
 
         expect(TransactionsStore.sendPayment).toHaveBeenCalledWith(
             expect.objectContaining({ amount: '100000', fee_limit_sat: '5000' })
         );
     });
 
-    it('requires a swipe at or above the slide-to-pay threshold and dispatches once', () => {
-        const { view, TransactionsStore } = makeView({ satAmount: '10000' });
+    it('keeps an explicit 0 sat fee limit', async () => {
+        const { TransactionsStore } = await renderView({
+            satAmount: '100000',
+            feeLimitSat: '0'
+        });
 
-        expect(findByType(view.render(), 'SwipeButton')).toBeDefined();
-        expect(findByType(view.render(), 'Button')).toBeUndefined();
+        await payControl().confirm();
 
-        const control = payControl(view);
-        control.confirm();
-        control.confirm();
+        expect(TransactionsStore.sendPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ amount: '100000', fee_limit_sat: '0' })
+        );
+    });
+
+    it('requires a swipe at or above the slide-to-pay threshold and dispatches once', async () => {
+        const { TransactionsStore } = await renderView({ satAmount: '10000' });
+
+        expect(hostOfType('SwipeButton')).toBeDefined();
+        expect(hostOfType('Button')).toBeUndefined();
+
+        const control = payControl();
+        await control.confirm();
+        await control.confirm();
 
         expect(TransactionsStore.sendPayment).toHaveBeenCalledTimes(1);
         expect(TransactionsStore.sendPayment).toHaveBeenCalledWith(
@@ -173,15 +199,50 @@ describe('Bolt12OfferReview confirmation', () => {
         );
     });
 
-    it('disables the pay control while another payment is in flight', () => {
-        const { view, TransactionsStore } = makeView();
-        TransactionsStore.paymentInFlight = true;
+    it('disables the pay control while another payment is in flight', async () => {
+        const { TransactionsStore } = await renderView({
+            paymentInFlight: true
+        });
 
-        const control = payControl(view);
+        const control = payControl();
         expect(control.disabled).toBe(true);
-        control.confirm();
+        await control.confirm();
 
         expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
+    });
+
+    it.each(['1,000', '0,5', '-1', '.'])(
+        'cannot dispatch with the unusable fee limit %s',
+        async (feeLimitSat) => {
+            const { TransactionsStore, navigation } = await renderView({
+                feeLimitSat
+            });
+
+            expect(
+                screen.container
+                    .queryAll((n) => n.type === 'ErrorMessage')
+                    .map((n) => n.props.message)
+            ).toContain('views.PaymentRequest.invalidFeeLimit');
+
+            const control = payControl();
+            expect(control.disabled).toBe(true);
+            await control.confirm();
+
+            expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        }
+    );
+
+    it('dispatches with a fee limit of 0', async () => {
+        const { TransactionsStore } = await renderView({ feeLimitSat: '0' });
+
+        const control = payControl();
+        expect(control.disabled).toBe(false);
+        await control.confirm();
+
+        expect(TransactionsStore.sendPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ fee_limit_sat: '0' })
+        );
     });
 
     it.each([
@@ -204,39 +265,101 @@ describe('Bolt12OfferReview confirmation', () => {
         ['underpaid', { amountType: 'bitcoin', amountMsats: 5_000_000 }, '4999']
     ] as const)(
         'cannot dispatch an offer %s',
-        (_label, overrides, satAmount) => {
-            const { view, TransactionsStore, navigation } = makeView({
+        async (_label, overrides, satAmount) => {
+            const { TransactionsStore, navigation } = await renderView({
                 decodedOffer: { ...payableOffer, ...overrides } as DecodedOffer,
                 satAmount
             });
 
-            const control = payControl(view);
+            const control = payControl();
             expect(control.disabled).toBe(true);
-            control.confirm();
+            await control.confirm();
 
             expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
             expect(navigation.navigate).not.toHaveBeenCalled();
         }
     );
 
-    it('refuses to dispatch when the offer expires after the screen rendered', () => {
-        const { view, TransactionsStore, navigation } = makeView({
+    it('says an offer that expired before the screen opened has expired', async () => {
+        await renderView({
+            decodedOffer: { ...payableOffer, isExpired: true }
+        });
+
+        expect(expiredMessageShown()).toBe(true);
+    });
+
+    it('refuses to dispatch when the offer expires after the screen rendered', async () => {
+        const { TransactionsStore, navigation } = await renderView({
             decodedOffer: {
                 ...payableOffer,
                 absoluteExpirySeconds: NOW_SECONDS + 30
             }
         });
 
-        const control = payControl(view);
+        const control = payControl();
         expect(control.disabled).toBe(false);
 
         // the user leaves the screen open past the offer's expiry, then taps
         // the control that was rendered enabled
         jest.setSystemTime((NOW_SECONDS + 31) * 1000);
-        control.confirm();
+        await control.confirm();
 
         expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
         expect(navigation.navigate).not.toHaveBeenCalled();
-        expect(payControl(view).disabled).toBe(true);
+    });
+
+    it('currently leaves the control enabled and silent when the offer expires on screen', async () => {
+        await renderView({
+            decodedOffer: {
+                ...payableOffer,
+                absoluteExpirySeconds: NOW_SECONDS + 30
+            }
+        });
+
+        jest.setSystemTime((NOW_SECONDS + 31) * 1000);
+        await payControl().confirm();
+
+        // payOffer returns without a state change, so nothing re-renders:
+        // the tap does nothing and the expired message does not appear (#5063)
+        expect(payControl().disabled).toBe(false);
+        expect(expiredMessageShown()).toBe(false);
+    });
+});
+
+describe('Bolt12OfferReview payment in flight notice', () => {
+    it('explains the disabled pay control while an earlier payment is checked', async () => {
+        await renderView({ paymentInFlight: true });
+
+        expect(
+            screen.getByText('components.PaymentInFlightNotice.checking')
+        ).toBeOnTheScreen();
+    });
+
+    it('offers Pay anyway once the node reports the earlier payment in flight', async () => {
+        await renderView({
+            paymentInFlight: true,
+            paymentInFlightConfirmed: true
+        });
+
+        expect(
+            screen.getByText('components.PaymentInFlightNotice.pending')
+        ).toBeOnTheScreen();
+        expect(
+            screen.container
+                .queryAll((n) => n.type === 'Button')
+                .some(
+                    (n) =>
+                        n.props.title ===
+                        'components.PaymentInFlightNotice.payAnyway'
+                )
+        ).toBe(true);
+    });
+
+    it('shows no notice when no payment is in flight', async () => {
+        await renderView();
+
+        expect(
+            screen.queryByText('components.PaymentInFlightNotice.checking')
+        ).not.toBeOnTheScreen();
     });
 });

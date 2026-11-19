@@ -1,5 +1,6 @@
 package app.zeusln.zeus;
 
+import android.app.Activity;
 import android.nfc.Tag;
 import android.nfc.NfcAdapter;
 import android.nfc.NdefMessage;
@@ -40,61 +41,88 @@ class MobileTools extends ReactContextBaseJavaModule {
   @ReactMethod
   public void getIntentNfcData(Promise promise) {
     // https://code.tutsplus.com/tutorials/reading-nfc-tags-with-android--mobile-17278
+    // Read and clear the same intent: MainActivity.onNewIntent can replace
+    // the activity's intent on the UI thread while this runs, and a second
+    // getIntent() could clear a newer tag than the one read here.
+    Activity activity = getReactApplicationContext().getCurrentActivity();
+    if (activity == null) {
+      promise.resolve(null);
+      return;
+    }
+    Intent intent = activity.getIntent();
+    if (intent == null) {
+      promise.resolve(null);
+      return;
+    }
+
     Tag tag;
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      tag = getReactApplicationContext()
-        .getCurrentActivity().getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag.class);
+      tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag.class);
     } else {
-      tag = getReactApplicationContext()
-        .getCurrentActivity().getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG);
+      tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
     }
     if (tag == null) {
       promise.resolve(null);
       return;
     }
 
+    // Consume the tag. The activity keeps its intent until Android delivers
+    // another one, and this is called again on every resume.
+    intent.removeExtra(NfcAdapter.EXTRA_TAG);
+    intent.removeExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+
     Ndef ndef = Ndef.get(tag);
     if (ndef == null) {
       promise.resolve(null);
+      return;
     }
 
     NdefMessage ndefMessage = ndef.getCachedNdefMessage();
+    if (ndefMessage == null) {
+      promise.resolve(null);
+      return;
+    }
 
     NdefRecord[] records = ndefMessage.getRecords();
     if (records.length > 0) {
       // Get first record and ignore the rest
       NdefRecord record = records[0];
       if (record.getTnf() == NdefRecord.TNF_WELL_KNOWN && Arrays.equals(record.getType(), NdefRecord.RTD_TEXT)) {
-        /*
-         * See NFC forum specification for "Text Record Type Definition" at 3.2.1
-         *
-         * http://www.nfc-forum.org/specs/
-         *
-         * bit_7 defines encoding
-         * bit_6 reserved for future use, must be 0
-         * bit_5..0 length of IANA language code
-        */
-        byte[] payload = record.getPayload();
-
-        // Get the Text Encoding
-        String textEncoding = ((payload[0] & 128) == 0) ? "UTF-8" : "UTF-16";
-
-        // Get the Language Code
-        int languageCodeLength = payload[0] & 0063;
-
-        // String languageCode = new String(payload, 1, languageCodeLength, "US-ASCII");
-        // e.g. "en"
-
-        try {
-          String s = new String(payload, languageCodeLength + 1, payload.length - languageCodeLength - 1, textEncoding);
-          promise.resolve(s);
+        String text = textRecordText(record.getPayload());
+        if (text != null) {
+          promise.resolve(text);
           return;
-        } catch (UnsupportedEncodingException e) {
-          // ignore
         }
       }
     }
     promise.resolve(null);
+  }
+
+  /*
+   * Returns the text of an NFC Forum Text record payload ("Text Record Type
+   * Definition" 3.2.1), or null if the payload is malformed.
+   *
+   * The status byte holds the encoding in bit 7 (0 UTF-8, 1 UTF-16) and the
+   * length of the IANA language code in bits 5..0. The language code follows
+   * the status byte and the text follows the language code.
+   */
+  static String textRecordText(byte[] payload) {
+    if (payload == null || payload.length == 0) {
+      return null;
+    }
+
+    String textEncoding = ((payload[0] & 0x80) == 0) ? "UTF-8" : "UTF-16";
+    int languageCodeLength = payload[0] & 0x3F;
+    int textStart = 1 + languageCodeLength;
+    if (textStart > payload.length) {
+      return null;
+    }
+
+    try {
+      return new String(payload, textStart, payload.length - textStart, textEncoding);
+    } catch (UnsupportedEncodingException e) {
+      return null;
+    }
   }
 
   @ReactMethod

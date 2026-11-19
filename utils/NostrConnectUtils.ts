@@ -1,10 +1,11 @@
 import { Platform } from 'react-native';
 import { Notifications } from 'react-native-notifications';
 import { Relay, generateSecretKey, getPublicKey } from 'nostr-tools';
-import { bytesToHex } from '@noble/hashes/utils';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 import {
     Nip47NotificationType,
-    Nip47SingleMethod,
+    Nip47Method,
     Nip47Transaction,
     Nip47ListTransactionsRequest,
     Nip47LookupInvoiceRequest,
@@ -39,7 +40,7 @@ export interface PermissionOption {
 }
 
 export interface IndividualPermissionOption {
-    key: Nip47SingleMethod;
+    key: Nip47Method;
     title: string;
     description: string;
 }
@@ -126,9 +127,83 @@ export enum Nip47ErrorCode {
     OTHER = 'OTHER'
 }
 
+export interface WalletConfigFields {
+    implementation?: string;
+    host?: string;
+    port?: string;
+    url?: string;
+    lndhubUrl?: string;
+    username?: string;
+    password?: string;
+    pairingPhrase?: string;
+    nostrWalletConnectUrl?: string;
+    lndDir?: string;
+    ldkNodeDir?: string;
+}
+
 export default class NostrConnectUtils {
+    /**
+     * Identifies a wallet config by the fields that select its node or
+     * account, so NWC connections can be matched to a config that is not
+     * the current wallet (the config does not store the node pubkey).
+     * Hashed because the fields include LNC pairing phrases and LndHub
+     * passwords. Applies the same default node dirs as SettingsStore and
+     * getNodeDir. Returns undefined when the config has none of these
+     * fields.
+     */
+    static getWalletConfigId(node?: WalletConfigFields): string | undefined {
+        if (!node) return undefined;
+        const implementation = node.implementation || 'lnd';
+        let fields: Array<string | undefined>;
+        switch (implementation) {
+            case 'embedded-lnd':
+                fields = [node.lndDir || 'lnd'];
+                break;
+            case 'ldk-node':
+                fields = [node.ldkNodeDir || 'ldk'];
+                break;
+            case 'lndhub':
+                // On LNbits every wallet logs in as "admin" (or "invoice")
+                // and the password, the wallet's API key, selects the
+                // wallet.
+                fields = [
+                    node.lndhubUrl,
+                    node.username && node.password
+                        ? bytesToHex(
+                              sha256(
+                                  utf8ToBytes(
+                                      `${node.username}:${node.password}`
+                                  )
+                              )
+                          )
+                        : node.username
+                ];
+                break;
+            case 'lightning-node-connect':
+                fields = [node.pairingPhrase];
+                break;
+            case 'nostr-wallet-connect':
+                fields = [node.nostrWalletConnectUrl];
+                break;
+            default:
+                fields = [node.host, node.port, node.url];
+        }
+        if (!fields.some(Boolean)) return undefined;
+        return bytesToHex(
+            sha256(
+                utf8ToBytes(
+                    JSON.stringify([
+                        implementation,
+                        ...fields.map((field) => field || '')
+                    ])
+                )
+            )
+        );
+    }
+
     static getNotifications(): Nip47NotificationType[] {
-        return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
+        // Only types we actually publish
+        return ['payment_received', 'payment_sent'];
     }
 
     static get TIME_UNITS(): TimeUnit[] {
@@ -356,8 +431,8 @@ export default class NostrConnectUtils {
      * Methods this wallet service implements (NIP-47 info event).
      * Includes `sign_message`; that method is not part of the default grant.
      */
-    static getWalletServiceMethods(): Nip47SingleMethod[] {
-        const methods: Nip47SingleMethod[] = [
+    static getWalletServiceMethods(): Nip47Method[] {
+        const methods: Nip47Method[] = [
             ...NostrConnectUtils.getFullAccessPermissions()
         ];
         if (BackendUtils.supportsMessageSigning()) {
@@ -372,8 +447,8 @@ export default class NostrConnectUtils {
      * advertised methods match the registered handlers.
      */
     static advertisedConnectionMethods(
-        permissions: Nip47SingleMethod[] = []
-    ): Nip47SingleMethod[] {
+        permissions: Nip47Method[] = []
+    ): Nip47Method[] {
         if (BackendUtils.supportsMessageSigning()) {
             return permissions;
         }
@@ -385,7 +460,7 @@ export default class NostrConnectUtils {
      * arbitrary text with the Lightning node identity key and must be
      * opted into per connection, on top of a preset.
      */
-    static getFullAccessPermissions(): Nip47SingleMethod[] {
+    static getFullAccessPermissions(): Nip47Method[] {
         return [
             'get_info',
             'get_balance',
@@ -400,7 +475,7 @@ export default class NostrConnectUtils {
         return typeof message === 'string' && message.length > 0;
     }
 
-    static getReadOnlyPermissions(): Nip47SingleMethod[] {
+    static getReadOnlyPermissions(): Nip47Method[] {
         return [
             'get_info',
             'get_balance',
@@ -430,27 +505,22 @@ export default class NostrConnectUtils {
         );
     }
 
-    static withoutSignMessage(
-        permissions: Nip47SingleMethod[]
-    ): Nip47SingleMethod[] {
+    static withoutSignMessage(permissions: Nip47Method[]): Nip47Method[] {
         return permissions.filter(
             (permission) => permission !== 'sign_message'
         );
     }
 
     static withPreservedSignMessage(
-        base: Nip47SingleMethod[],
-        current: Nip47SingleMethod[] = []
-    ): Nip47SingleMethod[] {
+        base: Nip47Method[],
+        current: Nip47Method[] = []
+    ): Nip47Method[] {
         return current.includes('sign_message')
             ? [...base, 'sign_message']
             : base;
     }
 
-    static samePermissionSet(
-        a: Nip47SingleMethod[],
-        b: Nip47SingleMethod[]
-    ): boolean {
+    static samePermissionSet(a: Nip47Method[], b: Nip47Method[]): boolean {
         if (a.length !== b.length) return false;
         const sortedA = a.slice().sort();
         const sortedB = b.slice().sort();
@@ -459,9 +529,7 @@ export default class NostrConnectUtils {
         );
     }
 
-    static getPermissionShortDescription(
-        permission: Nip47SingleMethod
-    ): string {
+    static getPermissionShortDescription(permission: Nip47Method): string {
         const descriptions: { [key: string]: string } = {
             get_info: localeString(
                 'views.Settings.NostrWalletConnect.permissions.getInfoShort'
@@ -490,8 +558,8 @@ export default class NostrConnectUtils {
 
     static getPermissionsForType(
         permissionType: PermissionType,
-        currentPermissions: Nip47SingleMethod[] = []
-    ): { permissions: Nip47SingleMethod[] } {
+        currentPermissions: Nip47Method[] = []
+    ): { permissions: Nip47Method[] } {
         switch (permissionType) {
             case PermissionType.FullAccess:
                 return {
@@ -518,9 +586,7 @@ export default class NostrConnectUtils {
         }
     }
 
-    static determinePermissionType(
-        permissions: Nip47SingleMethod[]
-    ): PermissionType {
+    static determinePermissionType(permissions: Nip47Method[]): PermissionType {
         const walletPermissions =
             NostrConnectUtils.withoutSignMessage(permissions);
         if (
@@ -543,7 +609,7 @@ export default class NostrConnectUtils {
     }
 
     /** True when `pay_invoice` is among granted methods (budget / payment UI applies). */
-    static hasPaymentPermissions(permissions: Nip47SingleMethod[]): boolean {
+    static hasPaymentPermissions(permissions: Nip47Method[]): boolean {
         return permissions.includes('pay_invoice');
     }
 
@@ -628,6 +694,7 @@ export default class NostrConnectUtils {
         descriptionHash: string;
         description: string;
         amount: number;
+        amountMsat?: number;
         expiryTime: number;
         createdAt: number;
         isExpired: boolean;
@@ -660,6 +727,7 @@ export default class NostrConnectUtils {
                 decoded.satoshis ||
                 millisatsToSats(Number(decoded?.millisatoshis)) ||
                 0,
+            amountMsat: Number(decoded?.millisatoshis) || 0,
             expiryTime: expireTime,
             createdAt,
             isExpired,
@@ -697,9 +765,9 @@ export default class NostrConnectUtils {
     }
 
     /**
-     * NIP-47 payment hashes are hex, but some clients send them base64-encoded
-     * — ZEUS's own NWC backend does. Stored hashes are hex, so a request value
-     * has to be normalized before any exact comparison.
+     * NIP-47 payment hashes are hex, but some clients send them
+     * base64-encoded. Stored hashes are hex, so a request value has to be
+     * normalized before any exact comparison.
      */
     static normalizePaymentHash(paymentHash?: string): string | undefined {
         const hash = paymentHash?.trim();
@@ -715,6 +783,16 @@ export default class NostrConnectUtils {
         if (invoice instanceof Invoice) return invoice;
         if (invoice instanceof CashuInvoice) return undefined;
         return new Invoice(invoice as any);
+    }
+
+    /** Wrap a persisted plain-object invoice as a CashuInvoice when needed. */
+    static coerceCashuInvoice(
+        invoice: Invoice | CashuInvoice | null | undefined
+    ): CashuInvoice | undefined {
+        if (!invoice) return undefined;
+        if (invoice instanceof CashuInvoice) return invoice;
+        if (invoice instanceof Invoice) return undefined;
+        return new CashuInvoice(invoice as any);
     }
 
     /** Resolve a lookup hash from payment_hash and/or invoice on the request. */
@@ -930,7 +1008,7 @@ export default class NostrConnectUtils {
      * Creates a NIP-47 transaction object with sensible defaults
      * @param params - Transaction parameters
      * @param params.type - Transaction type: 'incoming' or 'outgoing'
-     * @param params.state - Transaction state: 'pending', 'settled', or 'failed'
+     * @param params.state - Transaction state: 'pending', 'settled', 'failed' or 'expired'
      * @param params.invoice - Payment request/invoice string
      * @param params.payment_hash - Payment hash
      * @param params.amount - Amount in millisatoshis
@@ -946,7 +1024,7 @@ export default class NostrConnectUtils {
      */
     static createNip47Transaction(params: {
         type: 'incoming' | 'outgoing';
-        state: 'pending' | 'settled' | 'failed';
+        state: 'pending' | 'settled' | 'failed' | 'expired';
         invoice: string;
         payment_hash: string;
         amount: number;
@@ -964,7 +1042,8 @@ export default class NostrConnectUtils {
 
         return {
             type: params.type,
-            state: params.state,
+            // NIP-47 lists "expired" for invoices; the SDK's type lacks it
+            state: params.state as Nip47Transaction['state'],
             invoice: params.invoice || '',
             description: params.description || '',
             description_hash: params.description_hash || '',
@@ -1015,23 +1094,101 @@ export default class NostrConnectUtils {
         );
     }
 
-    /** Max hold when the node never lists the payment (LndHub, paginated history). */
-    static readonly UNRESOLVED_PAY_INVOICE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-
-    /** Grace after bolt11 expiry before abandoning an unresolved hold. */
-    static readonly UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS =
-        24 * 60 * 60 * 1000;
-
-    static resolveBolt11ExpiryTimeMs(invoice: string): number | undefined {
-        try {
-            const decoded = Bolt11Utils.decode(invoice);
-            const expiry = decoded.timeExpireDate;
-            if (expiry == null || expiry <= 0) return undefined;
-            return expiry * 1000;
-        } catch {
-            return undefined;
+    /**
+     * True when a payment failed for lack of a route, the failure a lower
+     * fee cap can cause. Locale keys and their translations cover the
+     * mapped LND and LDK Node reasons; English substrings cover raw
+     * Core Lightning errors. LND's timeout reason mentions "routes to try"
+     * and is excluded.
+     */
+    static isRouteFailureMessage(message?: string | null): boolean {
+        if (!message) return false;
+        const text = message.replace(/\.$/, '');
+        const isKey = (key: string) =>
+            text === key || text === localeString(key).replace(/\.$/, '');
+        if (
+            isKey('error.failureReasonTimeout') ||
+            NostrConnectUtils.isPaymentTimedOutMessage(message)
+        ) {
+            return false;
         }
+        if (
+            isKey('error.failureReasonNoRoute') ||
+            isKey('error.ldk.routeNotFound') ||
+            isKey('error.ldk.retriesExhausted')
+        ) {
+            return true;
+        }
+        const normalized = message.toLowerCase();
+        return [
+            'no route',
+            'route not found',
+            'find a route',
+            'ran out of routes',
+            'find a path',
+            'usable set of paths'
+        ].some((phrase) => normalized.includes(phrase));
     }
+
+    /**
+     * How far a pay request's created_at may lie from now, either way.
+     * NIP-47 clients wait about a minute for a reply (the Alby SDK client
+     * gives up after 60 s) and Zeus queues a payment for at most 30 s, so
+     * a request older than that has no client waiting for it. 10 minutes
+     * leaves room for clocks that are a few minutes off while still
+     * refusing a request delivered long after it was signed.
+     */
+    static readonly PAY_REQUEST_MAX_CLOCK_DIFFERENCE_SECONDS = 10 * 60;
+
+    static readonly PAY_REQUEST_METHODS: string[] = [
+        'pay_invoice',
+        'pay_keysend',
+        'multi_pay_invoice',
+        'multi_pay_keysend'
+    ];
+
+    /**
+     * True when a request event carries a NIP-40 expiration tag that has
+     * passed. An expiration that is not a number counts as passed.
+     */
+    static isRequestEventExpired(
+        event: { tags?: string[][] },
+        nowSeconds: number = Math.floor(Date.now() / 1000)
+    ): boolean {
+        const tag = event?.tags?.find((t) => t?.[0] === 'expiration');
+        if (!tag) return false;
+        const expiration = Number(tag[1]);
+        if (!tag[1] || !Number.isFinite(expiration)) return true;
+        return expiration <= nowSeconds;
+    }
+
+    /**
+     * True when a request event's created_at is within
+     * PAY_REQUEST_MAX_CLOCK_DIFFERENCE_SECONDS of now.
+     */
+    static isRequestEventRecent(
+        event: { created_at?: number },
+        nowSeconds: number = Math.floor(Date.now() / 1000)
+    ): boolean {
+        const createdAt = event?.created_at;
+        if (typeof createdAt !== 'number' || !Number.isFinite(createdAt)) {
+            return false;
+        }
+        return (
+            Math.abs(nowSeconds - createdAt) <=
+            NostrConnectUtils.PAY_REQUEST_MAX_CLOCK_DIFFERENCE_SECONDS
+        );
+    }
+
+    /**
+     * Max hold when the node never lists the payment (LndHub, paginated
+     * history). Must outlast an outgoing HTLC: LND and Core Lightning allow
+     * a route time lock of up to 2016 blocks (about two weeks) by default.
+     * The invoice expiry is not used, since it does not limit how long an
+     * HTLC that was already sent stays unresolved.
+     */
+    static readonly UNRESOLVED_PAY_INVOICE_MAX_AGE_MS =
+        21 * 24 * 60 * 60 * 1000;
 
     /** True when an unresolved pay_invoice hold should be released. */
     static isPayInvoiceHoldAbandoned(
@@ -1049,30 +1206,19 @@ export default class NostrConnectUtils {
         const createdAt = activity.createdAt?.getTime();
         if (!createdAt) return false;
 
-        if (
+        return (
             nowMs >=
             createdAt + NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS
-        ) {
-            return true;
-        }
-
-        const expiryMs =
-            activity.expiresAt?.getTime() ??
-            NostrConnectUtils.resolveBolt11ExpiryTimeMs(activity.id);
-        if (
-            expiryMs &&
-            nowMs >=
-                expiryMs +
-                    NostrConnectUtils.UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS
-        ) {
-            return true;
-        }
-
-        return false;
+        );
     }
 
     static isSettledPayment(payment: Payment): boolean {
         return !payment.isIncomplete && !payment.isFailed;
+    }
+
+    /** LND fills payment_preimage with zeros until the payment settles. */
+    static getSettledPreimage(payment?: Payment | null): string {
+        return payment && !payment.isIncomplete ? payment.getPreimage : '';
     }
 
     static isListedPaymentInTransit(payment: Payment): boolean {
@@ -1111,13 +1257,24 @@ export default class NostrConnectUtils {
         return FAILURE_REASON_LOCALE_KEYS[name] || 'error.paymentFailed';
     }
 
+    // CLN lists one entry per pay/xpay call, so an invoice retried after a
+    // failure has the old failed attempt next to the live one. Return the
+    // attempt that decides the outcome: settled, else in flight, else the
+    // first match.
     static findPaymentForInvoice<T extends Payment>(
         invoice: string,
         payments: T[],
         paymentHash?: string | null
     ): T | undefined {
-        return payments.find((p) =>
+        const attempts = payments.filter((p) =>
             NostrConnectUtils.matchesPaymentRequest(p, invoice, paymentHash)
+        );
+        return (
+            attempts.find((p) => NostrConnectUtils.isSettledPayment(p)) ||
+            attempts.find((p) =>
+                NostrConnectUtils.isListedPaymentInTransit(p)
+            ) ||
+            attempts[0]
         );
     }
 
@@ -1189,7 +1346,13 @@ export default class NostrConnectUtils {
         payment_error: string | null;
         loading: boolean;
     }): boolean {
-        if (NostrConnectUtils.isInFlightPaymentStatus(state.status)) {
+        // CLN's /v1/pay answers 'pending' while its HTLCs are out.
+        // getPaymentOutcome flags any status other than complete, SUCCEEDED
+        // or IN_FLIGHT as an error, but the payment can still settle.
+        if (
+            NostrConnectUtils.isInFlightPaymentStatus(state.status) ||
+            state.status === 'pending'
+        ) {
             return true;
         }
 
@@ -1203,12 +1366,13 @@ export default class NostrConnectUtils {
 
     /**
      * Whole-sat budget debit for a fee that may be fractional (msat / 1000).
-     * Round to nearest sat; do not use for NIP-47 fees_paid.
+     * Rounds up so the budget never counts less than was spent; do not use
+     * for NIP-47 fees_paid.
      */
     static resolveFeeSats(fee: string | number | null | undefined): number {
         const raw = Number(fee);
         if (!Number.isFinite(raw) || raw <= 0) return 0;
-        return Math.round(raw);
+        return Math.ceil(raw);
     }
 
     static resolveLightningPaymentInTransit({
@@ -1224,6 +1388,9 @@ export default class NostrConnectUtils {
             status: string | number | null;
             isIncomplete: boolean | null;
             error: boolean;
+            // the send request was rejected without the node's own answer,
+            // so it may have reached the node
+            mayHaveBeenSent?: boolean;
             payment_error: string | null;
             loading: boolean;
         };
@@ -1255,16 +1422,23 @@ export default class NostrConnectUtils {
                 paymentState.payment_error
             ) || paymentState.loading;
 
-        if (timedOutOrStillLoading || paymentState.isIncomplete) {
+        // A send request rejected without the node's own answer (connection
+        // dropped, response closed by a proxy) says nothing about an HTLC
+        // that is already out either, so the node's list decides there too.
+        // After the node's own refusal (e.g. LND's "payment is in
+        // transition") this request sent nothing, and a payment listed for
+        // the invoice was started by the wallet or by another connection.
+        if (
+            timedOutOrStillLoading ||
+            paymentState.isIncomplete ||
+            paymentState.mayHaveBeenSent
+        ) {
             const listed = NostrConnectUtils.findPaymentForInvoice(
                 invoice,
                 payments,
                 paymentHash
             );
             if (listed && NostrConnectUtils.isSettledPayment(listed)) {
-                return { inTransit: false, payment: listed };
-            }
-            if (listed && NostrConnectUtils.isListedPaymentFailed(listed)) {
                 return { inTransit: false, payment: listed };
             }
             // Timeout / still-loading with no listed outcome: the HTLC may
@@ -1278,6 +1452,11 @@ export default class NostrConnectUtils {
             }
             if (listed && NostrConnectUtils.isListedPaymentInTransit(listed)) {
                 return { inTransit: true, payment: listed };
+            }
+            // Checked after in-transit so a payment the node still lists as
+            // in flight keeps its budget hold
+            if (listed && NostrConnectUtils.isListedPaymentFailed(listed)) {
+                return { inTransit: false, payment: listed };
             }
         }
 
@@ -1388,9 +1567,15 @@ export default class NostrConnectUtils {
     private static extractExpiresAtFromActivity(
         activity: ConnectionActivity
     ): number {
-        const explicitExpiresAt = Number(activity?.expiresAt);
-        if (explicitExpiresAt > 0) {
-            return explicitExpiresAt;
+        // activity.expiresAt is a Date (an ISO string once it has been
+        // stored). Number() on a Date gives milliseconds, but NIP-47
+        // timestamps are unix seconds, and a client that reads milliseconds
+        // as seconds shows an expiry tens of thousands of years away.
+        const explicitExpiresAtMs = activity?.expiresAt
+            ? new Date(activity.expiresAt).getTime()
+            : NaN;
+        if (explicitExpiresAtMs > 0) {
+            return Math.floor(explicitExpiresAtMs / 1000);
         }
 
         if (activity.invoice) {
@@ -1474,10 +1659,14 @@ export default class NostrConnectUtils {
         const type: 'incoming' | 'outgoing' =
             activity.type === 'make_invoice' ? 'incoming' : 'outgoing';
 
-        const state: 'settled' | 'pending' | 'failed' =
+        // NIP-47 reserves "failed" for payments and lists "expired" for
+        // invoices
+        const state: 'settled' | 'pending' | 'failed' | 'expired' =
             activity.status === 'success'
                 ? 'settled'
-                : activity.status === 'failed' || activity.status === 'expired'
+                : activity.status === 'expired'
+                ? 'expired'
+                : activity.status === 'failed'
                 ? 'failed'
                 : 'pending';
 
@@ -1490,8 +1679,10 @@ export default class NostrConnectUtils {
         const expires_at =
             NostrConnectUtils.extractExpiresAtFromActivity(activity);
 
+        // LNbits pays recorded before Payment.getFee read its fees as
+        // positive were stored with a negative fees_paid
         const feesPaid = activity.fees_paid
-            ? satsToMillisats(activity.fees_paid)
+            ? satsToMillisats(Math.abs(activity.fees_paid))
             : activity.payment
             ? satsToMillisats(Number(activity.payment.getFee) || 0)
             : 0;
@@ -1508,7 +1699,7 @@ export default class NostrConnectUtils {
 
         const preimage =
             activity.preimage ||
-            activity.payment?.getPreimage ||
+            NostrConnectUtils.getSettledPreimage(activity.payment) ||
             (lightningInvoice?.isPaid ? lightningInvoice.getRPreimage : '') ||
             '';
 
@@ -1564,11 +1755,20 @@ export default class NostrConnectUtils {
             filtered = filtered.filter((tx) => tx.created_at <= request.until!);
         }
 
-        // NIP-47 defines unpaid as "include unpaid invoices, default false", so
-        // it widens the result rather than selecting only unpaid ones
-        if (!request.unpaid) {
-            filtered = filtered.filter((tx) => tx.state === 'settled');
-        }
+        // NIP-47 defines unpaid as "include unpaid invoices, default false",
+        // so only settled transactions are listed unless the app asks for
+        // more. unpaid_incoming / unpaid_outgoing are not in the spec (the
+        // SDK sends them) and take precedence over unpaid for their
+        // direction.
+        const unpaidIncoming =
+            request.unpaid_incoming ?? request.unpaid ?? false;
+        const unpaidOutgoing =
+            request.unpaid_outgoing ?? request.unpaid ?? false;
+        filtered = filtered.filter(
+            (tx) =>
+                tx.state === 'settled' ||
+                (tx.type === 'incoming' ? unpaidIncoming : unpaidOutgoing)
+        );
 
         // Calculate pagination
         const totalCount = filtered.length;
@@ -1735,9 +1935,13 @@ export default class NostrConnectUtils {
         };
     }
 
-    /** Integer sats ≥ 0 from a scalar field on a decoded payreq payload. */
+    /**
+     * Integer sats ≥ 0 from a scalar field on a decoded payreq payload.
+     * Rounds up: the budget is kept in whole sats and must not count less
+     * than the node pays.
+     */
     private static nonNegativeSats(value: unknown): number {
-        return Math.max(0, Math.floor(Number(value) || 0));
+        return Math.max(0, Math.ceil(Number(value) || 0));
     }
 
     /**
@@ -1751,6 +1955,20 @@ export default class NostrConnectUtils {
 
         const { nonNegativeSats: n } = NostrConnectUtils;
 
+        // The msat amount comes first, rounded up: the node pays it exactly,
+        // while the sat fields are rounded down (1999 msat is num_satoshis 1).
+        // num_msat: LND, millisatoshis: bolt11 decode, amount_msat: CLN
+        // (a number, or "500msat" on older versions)
+        for (const msats of [
+            decodedPayReq.num_msat,
+            decodedPayReq.millisatoshis,
+            decodedPayReq.amount_msat
+        ]) {
+            const ms = Number(String(msats ?? '').replace(/msat$/, '')) || 0;
+            if (ms > 0) {
+                return Math.ceil(ms / 1000);
+            }
+        }
         const fromNumSat = n(decodedPayReq.num_satoshis);
         if (fromNumSat > 0) {
             return fromNumSat;
@@ -1759,12 +1977,6 @@ export default class NostrConnectUtils {
             const fromSat = n(decodedPayReq.satoshis);
             if (fromSat > 0) {
                 return fromSat;
-            }
-        }
-        if (decodedPayReq.millisatoshis !== undefined) {
-            const ms = Number(decodedPayReq.millisatoshis) || 0;
-            if (ms > 0) {
-                return millisatsToSats(ms);
             }
         }
         return 0;
@@ -1792,25 +2004,43 @@ export default class NostrConnectUtils {
         if (sats <= 0 && invoice.millisatoshis != null) {
             const ms = Number(invoice.millisatoshis) || 0;
             if (ms > 0) {
-                sats = millisatsToSats(ms);
+                sats = Math.ceil(ms / 1000);
             }
         }
         return sats;
+    }
+
+    private static satsFromRequestedMsat(requestedMsat: unknown): number {
+        if (
+            typeof requestedMsat !== 'number' ||
+            !Number.isFinite(requestedMsat) ||
+            requestedMsat <= 0 ||
+            requestedMsat % 1000 !== 0
+        ) {
+            return 0;
+        }
+        return millisatsToSats(requestedMsat);
     }
 
     /**
      * Single resolver for NWC pay_invoice: Lightning (wallet payreq decode) or
      * Cashu (decoded Invoice / payreq model).
      */
-    static async getPayInvoiceAmountSats(params: {
+    static async resolvePayInvoiceAmount(params: {
         paymentRequest: string;
         /** Lightning: object from decodePaymentRequest */
         lightningDecodedPayReq?: any;
         /** Cashu: Invoice (or similar) from getPayReq */
         decodedInvoice?: any;
-    }): Promise<number> {
-        const { paymentRequest, lightningDecodedPayReq, decodedInvoice } =
-            params;
+        /** Lightning: request `amount` (msat), used for zero-amount invoices */
+        requestedAmountMsat?: number;
+    }): Promise<{ amountSats: number; zeroAmountInvoice: boolean }> {
+        const {
+            paymentRequest,
+            lightningDecodedPayReq,
+            decodedInvoice,
+            requestedAmountMsat
+        } = params;
 
         if (lightningDecodedPayReq) {
             const fromLightning =
@@ -1818,21 +2048,35 @@ export default class NostrConnectUtils {
                     lightningDecodedPayReq
                 );
             if (fromLightning > 0) {
-                return fromLightning;
+                return { amountSats: fromLightning, zeroAmountInvoice: false };
             }
-            const { amount } = await NostrConnectUtils.decodeInvoiceTags(
-                paymentRequest
-            );
-            if (amount > 0) {
+            const { amount, amountMsat } =
+                await NostrConnectUtils.decodeInvoiceTags(paymentRequest);
+            if (amount > 0 || (amountMsat ?? 0) > 0) {
                 if (__DEV__) {
                     console.log(
-                        'NWC: Lightning decode had no amount; using BOLT11 tags:',
-                        amount
+                        'NWC: Lightning decode had no amount; using BOLT11 tags (msat):',
+                        amountMsat ?? amount * 1000
                     );
                 }
-                return amount;
+                // the msat amount rounded up; a sub-sat amount is still an
+                // amount
+                return {
+                    amountSats: Math.max(
+                        1,
+                        amount,
+                        Math.ceil((amountMsat ?? 0) / 1000)
+                    ),
+                    zeroAmountInvoice: false
+                };
             }
-            return 0;
+            return {
+                amountSats:
+                    NostrConnectUtils.satsFromRequestedMsat(
+                        requestedAmountMsat
+                    ),
+                zeroAmountInvoice: true
+            };
         }
 
         const fromDecoded =
@@ -1840,12 +2084,28 @@ export default class NostrConnectUtils {
                 decodedInvoice
             );
         if (fromDecoded > 0) {
-            return fromDecoded;
+            return { amountSats: fromDecoded, zeroAmountInvoice: false };
         }
-        const { amount } = await NostrConnectUtils.decodeInvoiceTags(
-            paymentRequest
-        );
-        return amount > 0 ? amount : 0;
+        const { amount, amountMsat } =
+            await NostrConnectUtils.decodeInvoiceTags(paymentRequest);
+        return {
+            amountSats: Math.max(
+                0,
+                amount,
+                Math.ceil((amountMsat ?? 0) / 1000)
+            ),
+            zeroAmountInvoice: false
+        };
+    }
+
+    static async getPayInvoiceAmountSats(params: {
+        paymentRequest: string;
+        lightningDecodedPayReq?: any;
+        decodedInvoice?: any;
+        requestedAmountMsat?: number;
+    }): Promise<number> {
+        return (await NostrConnectUtils.resolvePayInvoiceAmount(params))
+            .amountSats;
     }
 
     static async pingRelay(relayUrl: string): Promise<{

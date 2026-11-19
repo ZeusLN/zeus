@@ -83,6 +83,9 @@ const encrypted = EncryptedStorage as unknown as {
 const storage = Storage as jest.Mocked<typeof Storage>;
 const rawItem = getRawItem as jest.MockedFunction<typeof getRawItem>;
 
+// Internal to KeychainRecoveryUtils; must match its LEGACY_STORAGE_KEY
+const LEGACY_STORAGE_KEY = 'zeus-settings';
+
 const SETTINGS = JSON.stringify({
     // The first node carries both a nickname and a host so the
     // nickname-before-host fallback order is actually observable.
@@ -159,6 +162,77 @@ describe('KeychainRecoveryUtils', () => {
             );
         });
 
+        // Startup writes a wallet-less blob into current storage, so a user
+        // whose wallets vanished always has one. It must not hide the cloud
+        // copy, which may be the only one left that lists their wallets.
+        // Both settings keys follow the same rule.
+        describe.each([
+            ['current', STORAGE_KEY],
+            ['legacy', LEGACY_STORAGE_KEY]
+        ])('%s settings key', (_label, settingsKey) => {
+            const currentHolds = (data: string) => {
+                storage.getItem.mockImplementation(async (key: string) =>
+                    key === settingsKey ? data : (false as any)
+                );
+                rawItem.mockImplementation(async (key: string) =>
+                    key === `zeus:${settingsKey}` ? SETTINGS : (null as any)
+                );
+            };
+
+            it.each([
+                ['an empty node list', '{"nodes":[]}'],
+                ['no node list', '{}'],
+                ['a payload that does not parse', '{not json']
+            ])(
+                'offers the prefixed-cloud copy when current holds %s',
+                async (_case, data) => {
+                    currentHolds(data);
+
+                    const result = await utils.scanForRecoverableData();
+
+                    expect(result.settingsFound).toContainEqual(
+                        expect.objectContaining({
+                            key: settingsKey,
+                            source: 'prefixed-cloud',
+                            data: SETTINGS
+                        })
+                    );
+                }
+            );
+
+            it('hides the prefixed-cloud copy when current lists wallets', async () => {
+                currentHolds(SETTINGS);
+
+                const result = await utils.scanForRecoverableData();
+                const sources = result.settingsFound
+                    .filter((r) => r.key === settingsKey)
+                    .map((r) => r.source);
+
+                expect(sources).toEqual(['current']);
+                expect(rawItem).not.toHaveBeenCalledWith(
+                    `zeus:${settingsKey}`,
+                    true
+                );
+            });
+        });
+
+        it('reports the prefixed-cloud copy of a live non-settings key for review only', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'contacts' ? '[]' : (false as any)
+            );
+            rawItem.mockResolvedValue('[{"name":"old"}]' as any);
+
+            const result = await utils.scanForRecoverableData();
+
+            const cloudContacts = expect.objectContaining({
+                key: 'contacts',
+                source: 'prefixed-cloud',
+                data: '[{"name":"old"}]'
+            });
+            expect(result.otherDataFound).not.toContainEqual(cloudContacts);
+            expect(result.divergentDataFound).toContainEqual(cloudContacts);
+        });
+
         it('offers the prefixed-cloud copy when current storage misses', async () => {
             rawItem.mockImplementation(async (key: string) =>
                 key === `zeus:${STORAGE_KEY}` ? SETTINGS : (null as any)
@@ -193,19 +267,311 @@ describe('KeychainRecoveryUtils', () => {
             );
         });
 
-        // otherDataFound drives a "recover orphaned data" list. Anything the
-        // app can already read is not orphaned, so including it would offer a
-        // pointless restore of a key over itself.
-        it('lists only orphaned copies of non-settings keys', async () => {
+        // otherDataFound drives a "recover orphaned data" list. A key the app
+        // can already read is live, and its legacy copies are older snapshots,
+        // so none of them may be offered.
+        it('offers nothing for a key current storage can read', async () => {
             storage.getItem.mockResolvedValue('live' as any);
             encrypted.getItem.mockResolvedValue('stale' as any);
 
             const result = await utils.scanForRecoverableData();
 
-            expect(result.otherDataFound.length).toBeGreaterThan(0);
+            expect(result.otherDataFound).toEqual([]);
+        });
+
+        // #4711 part 1b. Stuck desync: the current read missed, so the Swaps
+        // screen made a new rescue key, and the old mnemonic that pending
+        // reverse swaps need survives only in the prefixed-cloud copy. It must
+        // be reported for review, but never as a restore candidate.
+        it('reports a legacy copy that differs from the live value', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'new mnemonic' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === 'zeus:swaps-rescue' ? 'old mnemonic' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({
+                    key: 'swaps-rescue',
+                    source: 'prefixed-cloud',
+                    data: 'old mnemonic'
+                })
+            ]);
+            expect(result.otherDataFound).toEqual([]);
+        });
+
+        it('does not report a legacy copy identical to the live value', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps' ? '[{"id":1}]' : (false as any)
+            );
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps' ? '[{"id":1}]' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
+        it('reports only the legacy copies of a live key that differ from it', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'new mnemonic' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === 'zeus:swaps-rescue' ? 'old mnemonic' : (null as any)
+            );
+            keychain.getInternetCredentials.mockImplementation(
+                async (key: string, opts?: any) => {
+                    if (key !== 'swaps-rescue') return false as any;
+                    return {
+                        password: opts?.cloudSync
+                            ? 'new mnemonic'
+                            : 'older mnemonic'
+                    } as any;
+                }
+            );
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'new mnemonic' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
             expect(
-                result.otherDataFound.every((r) => r.source !== 'current')
-            ).toBe(true);
+                result.divergentDataFound.map((r) => [r.source, r.data])
+            ).toEqual([
+                ['prefixed-cloud', 'old mnemonic'],
+                ['unprefixed-local', 'older mnemonic']
+            ]);
+            expect(result.otherDataFound).toEqual([]);
+        });
+
+        it('reports one entry per distinct legacy value, from the highest-ranked source', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'new mnemonic' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === 'zeus:swaps-rescue' ? 'old mnemonic' : (null as any)
+            );
+            keychain.getInternetCredentials.mockImplementation(
+                async (key: string) =>
+                    key === 'swaps-rescue'
+                        ? ({ password: 'old mnemonic' } as any)
+                        : (false as any)
+            );
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'old mnemonic' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(
+                result.divergentDataFound.map((r) => [r.source, r.data])
+            ).toEqual([['prefixed-cloud', 'old mnemonic']]);
+        });
+
+        it('does not report a differing copy of a key that changes in normal use', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'units' ? 'sats' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === 'zeus:units' ? 'BTC' : (null as any)
+            );
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'units' ? 'fiat' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+            expect(rawItem).not.toHaveBeenCalledWith('zeus:units', true);
+        });
+
+        // Live in current storage, an older snapshot in the prefixed-cloud copy.
+        const liveAndCloud = (key: string, live: string, cloud: string) => {
+            storage.getItem.mockImplementation(async (k: string) =>
+                k === key ? live : (false as any)
+            );
+            rawItem.mockImplementation(async (k: string) =>
+                k === `zeus:${key}` ? cloud : (null as any)
+            );
+        };
+
+        it('does not report a legacy swaps list whose ids are all still live', async () => {
+            liveAndCloud(
+                'swaps',
+                JSON.stringify([
+                    { id: 'a', status: 'transaction.claimed' },
+                    { id: 'b', status: 'swap.created' }
+                ]),
+                JSON.stringify([{ id: 'a', status: 'swap.created' }])
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
+        it('reports a legacy swaps list with an id live lacks', async () => {
+            liveAndCloud(
+                'swaps',
+                JSON.stringify([{ id: 'b', status: 'swap.created' }]),
+                JSON.stringify([{ id: 'a', status: 'swap.created' }])
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({
+                    key: 'swaps',
+                    source: 'prefixed-cloud'
+                })
+            ]);
+        });
+
+        it('reports a legacy copy that does not parse', async () => {
+            liveAndCloud('reverse-swaps', '[]', '{not json');
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({
+                    key: 'reverse-swaps',
+                    data: '{not json'
+                })
+            ]);
+        });
+
+        it('still reports any difference in the rescue key', async () => {
+            liveAndCloud('swaps-rescue', 'new mnemonic', 'old mnemonic');
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({
+                    key: 'swaps-rescue',
+                    data: 'old mnemonic'
+                })
+            ]);
+        });
+
+        it('matches LSPS orders by their nested order_id', async () => {
+            const order = (id: string, state: string) =>
+                JSON.stringify({ order: { order_id: id, order_state: state } });
+            liveAndCloud(
+                'lsps-orders',
+                JSON.stringify([order('o1', 'COMPLETED')]),
+                JSON.stringify([order('o1', 'CREATED')])
+            );
+            expect(
+                (await utils.scanForRecoverableData()).divergentDataFound
+            ).toEqual([]);
+
+            liveAndCloud(
+                'lsps-orders',
+                JSON.stringify([order('o1', 'COMPLETED')]),
+                JSON.stringify([order('o2', 'CREATED')])
+            );
+            expect(
+                (await utils.scanForRecoverableData()).divergentDataFound
+            ).toEqual([expect.objectContaining({ key: 'lsps-orders' })]);
+        });
+
+        it('matches contacts by contactId', async () => {
+            liveAndCloud(
+                'contacts',
+                JSON.stringify([{ contactId: 'c1', name: 'Bob B.' }]),
+                JSON.stringify([{ contactId: 'c1', name: 'Bob' }])
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
+        it('matches old contacts that only have an id', async () => {
+            liveAndCloud(
+                'contacts',
+                JSON.stringify([{ id: 'c1', name: 'Bob B.' }]),
+                JSON.stringify([{ id: 'c1', name: 'Bob' }])
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
+        it('matches LSPS orders stored as a full JSON-RPC response', async () => {
+            const order = (id: string, state: string) =>
+                JSON.stringify({
+                    order: { result: { order_id: id, order_state: state } }
+                });
+            liveAndCloud(
+                'lsps-orders',
+                JSON.stringify([order('o1', 'COMPLETED')]),
+                JSON.stringify([order('o1', 'CREATED')])
+            );
+            expect(
+                (await utils.scanForRecoverableData()).divergentDataFound
+            ).toEqual([]);
+
+            liveAndCloud(
+                'lsps-orders',
+                JSON.stringify([order('o1', 'COMPLETED')]),
+                JSON.stringify([order('o2', 'CREATED')])
+            );
+            expect(
+                (await utils.scanForRecoverableData()).divergentDataFound
+            ).toEqual([expect.objectContaining({ key: 'lsps-orders' })]);
+        });
+
+        it('reports a legacy list when the live value does not parse', async () => {
+            liveAndCloud('swaps', '{not json', JSON.stringify([{ id: 'a' }]));
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({
+                    key: 'swaps',
+                    source: 'prefixed-cloud'
+                })
+            ]);
+        });
+
+        it('reports a legacy value that parses but is not a list', async () => {
+            liveAndCloud('swaps', '[]', '{}');
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({ key: 'swaps', data: '{}' })
+            ]);
+        });
+
+        it('does not report notes, whose bodies the scan does not read', async () => {
+            liveAndCloud('notes', '["note-1"]', '["note-0"]');
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
+        it('keeps offering legacy copies of a key current storage cannot read', async () => {
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'contacts' ? '[{"name":"bob"}]' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.otherDataFound).toContainEqual(
+                expect.objectContaining({
+                    key: 'contacts',
+                    source: 'encrypted-storage'
+                })
+            );
+            expect(result.divergentDataFound).toEqual([]);
         });
 
         it('does not set hasCurrentSettings from the legacy key alone', async () => {
@@ -247,7 +613,11 @@ describe('KeychainRecoveryUtils', () => {
 
         it('writes the recovered payload verbatim and counts the nodes', async () => {
             storage.setItem.mockResolvedValue(true as any);
-            storage.getItem.mockResolvedValue(SETTINGS as any);
+            // Keyed, not blanket: the read-back has to hit the key that was
+            // written, or the verification is reading someone else's value.
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === STORAGE_KEY ? SETTINGS : (false as any)
+            );
 
             const result = await utils.restoreSettings(recovered(SETTINGS));
 
@@ -285,6 +655,82 @@ describe('KeychainRecoveryUtils', () => {
             storageMiss();
 
             const result = await utils.restoreSettings(recovered(SETTINGS));
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Verification failed after write'
+            });
+        });
+
+        // The dangerous case is not an empty read-back but a plausible one.
+        // A key still holding an older copy reads as truthy, so a check that
+        // only asks "is something there" reports the restore succeeded while
+        // the wallet configs on disk are still the ones being replaced.
+        it('reports failure when the read-back is a stale value', async () => {
+            const stale = JSON.stringify({ nodes: [{ nickname: 'old' }] });
+            storage.setItem.mockResolvedValue(true as any);
+            storage.getItem.mockResolvedValue(stale as any);
+
+            const result = await utils.restoreSettings(recovered(SETTINGS));
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Verification failed after write'
+            });
+        });
+    });
+
+    describe('restoreDataKey', () => {
+        const recovered = (data: string): RecoveryResult => ({
+            key: 'contacts',
+            source: 'encrypted-storage',
+            data,
+            description: 'Contacts'
+        });
+
+        it('writes the payload under the recovered key', async () => {
+            storage.setItem.mockResolvedValue(true as any);
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'contacts' ? '["alice"]' : (false as any)
+            );
+
+            const result = await utils.restoreDataKey(recovered('["alice"]'));
+
+            expect(result).toEqual({ success: true });
+            expect(storage.setItem).toHaveBeenCalledWith(
+                'contacts',
+                '["alice"]'
+            );
+        });
+
+        it('reports failure when the write is rejected', async () => {
+            storage.setItem.mockResolvedValue(false as any);
+
+            const result = await utils.restoreDataKey(recovered('["alice"]'));
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Failed to write to storage'
+            });
+        });
+
+        it('reports failure when the read-back is a stale value', async () => {
+            storage.setItem.mockResolvedValue(true as any);
+            storage.getItem.mockResolvedValue('["bob"]' as any);
+
+            const result = await utils.restoreDataKey(recovered('["alice"]'));
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Verification failed after write'
+            });
+        });
+
+        it('reports failure when the key cannot be read back at all', async () => {
+            storage.setItem.mockResolvedValue(true as any);
+            storageMiss();
+
+            const result = await utils.restoreDataKey(recovered('["alice"]'));
 
             expect(result).toEqual({
                 success: false,
@@ -461,6 +907,191 @@ describe('KeychainRecoveryUtils', () => {
                 cleared: expect.any(Array),
                 error: 'Current settings were lost and could not be restored'
             });
+        });
+    });
+    describe('groupByKey', () => {
+        const at = (
+            key: string,
+            source: RecoveryResult['source'],
+            data = `${key}@${source}`
+        ): RecoveryResult => ({ key, source, data, description: key });
+
+        it('keeps one group per key', () => {
+            const grouped = utils.groupByKey([
+                at('contacts', 'unprefixed-local'),
+                at('notes', 'encrypted-storage'),
+                at('contacts', 'encrypted-storage')
+            ]);
+
+            expect([...grouped.keys()].sort()).toEqual(['contacts', 'notes']);
+            expect(grouped.get('contacts')).toHaveLength(2);
+            expect(grouped.get('notes')).toHaveLength(1);
+        });
+
+        it('puts the most trusted source first, whatever the input order', () => {
+            const grouped = utils.groupByKey([
+                at('contacts', 'prefixed-cloud'),
+                at('contacts', 'unprefixed-cloud'),
+                at('contacts', 'encrypted-storage'),
+                at('contacts', 'unprefixed-local')
+            ]);
+
+            expect(grouped.get('contacts')!.map((r) => r.source)).toEqual([
+                'prefixed-cloud',
+                'unprefixed-local',
+                'unprefixed-cloud',
+                'encrypted-storage'
+            ]);
+        });
+
+        it('sorts an unranked source last, so it cannot silently win', () => {
+            const grouped = utils.groupByKey([
+                at('contacts', 'current'),
+                at('contacts', 'unprefixed-cloud')
+            ]);
+
+            expect(grouped.get('contacts')!.map((r) => r.source)).toEqual([
+                'unprefixed-cloud',
+                'current'
+            ]);
+        });
+
+        it('returns an empty map for no results', () => {
+            expect(utils.groupByKey([]).size).toBe(0);
+        });
+    });
+
+    describe('restoreOtherData', () => {
+        const at = (
+            key: string,
+            source: RecoveryResult['source'],
+            data: string
+        ): RecoveryResult => ({ key, source, data, description: key });
+
+        // Round-trips like the real store, so restoreDataKey's read-back
+        // verification compares against what was actually written.
+        const installStore = () => {
+            const store: Record<string, string> = {};
+            storage.setItem.mockImplementation(
+                async (key: string, value: string) => {
+                    store[key] = value;
+                    return true as any;
+                }
+            );
+            storage.getItem.mockImplementation(
+                async (key: string) => store[key] ?? (false as any)
+            );
+            return store;
+        };
+
+        it('writes each key once, from its most trusted source', async () => {
+            const store = installStore();
+
+            const result = await utils.restoreOtherData([
+                at('contacts', 'unprefixed-cloud', '["stale"]'),
+                at('contacts', 'prefixed-cloud', '["fresh"]'),
+                at('notes', 'unprefixed-local', '["note"]')
+            ]);
+
+            expect(result).toEqual({
+                restored: ['contacts', 'notes'],
+                failed: []
+            });
+            expect(store.contacts).toBe('["fresh"]');
+            expect(store.notes).toBe('["note"]');
+            // One write per key, not one per copy: restoring every copy
+            // would leave whichever came last in the array.
+            expect(storage.setItem).toHaveBeenCalledTimes(2);
+        });
+
+        it('reports a failing key without abandoning the others', async () => {
+            const store = installStore();
+            storage.setItem.mockImplementation(
+                async (key: string, value: string) => {
+                    if (key === 'contacts') return false as any;
+                    store[key] = value;
+                    return true as any;
+                }
+            );
+
+            const result = await utils.restoreOtherData([
+                at('contacts', 'encrypted-storage', '["alice"]'),
+                at('notes', 'encrypted-storage', '["note"]')
+            ]);
+
+            expect(result.restored).toEqual(['notes']);
+            expect(result.failed).toEqual([
+                { key: 'contacts', error: 'Failed to write to storage' }
+            ]);
+            expect(store.notes).toBe('["note"]');
+        });
+
+        it('does nothing for no results', async () => {
+            installStore();
+
+            await expect(utils.restoreOtherData([])).resolves.toEqual({
+                restored: [],
+                failed: []
+            });
+            expect(storage.setItem).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('scan -> restoreOtherData', () => {
+        const roundTrip = (store: Record<string, string>) => {
+            storage.getItem.mockImplementation(
+                async (key: string) => store[key] ?? (false as any)
+            );
+            storage.setItem.mockImplementation(
+                async (key: string, value: string) => {
+                    store[key] = value;
+                    return true as any;
+                }
+            );
+        };
+
+        it('does not overwrite a live key with a stale legacy copy', async () => {
+            setPlatform('android');
+            const store: Record<string, string> = { contacts: '["live"]' };
+            roundTrip(store);
+            keychain.getInternetCredentials.mockImplementation(
+                async (key: string) =>
+                    key === 'contacts'
+                        ? ({ password: '["jan-2026"]' } as any)
+                        : (false as any)
+            );
+
+            const scan = await utils.scanForRecoverableData();
+            await utils.restoreOtherData(scan.otherDataFound);
+
+            expect(store.contacts).toBe('["live"]');
+            expect(scan.divergentDataFound).toContainEqual(
+                expect.objectContaining({
+                    key: 'contacts',
+                    data: '["jan-2026"]'
+                })
+            );
+        });
+
+        it('restores the newer prefixed-cloud copy over the older unprefixed one', async () => {
+            const store: Record<string, string> = {};
+            roundTrip(store);
+            rawItem.mockImplementation(async (server: string, cloud: any) =>
+                server === 'zeus:contacts' && cloud
+                    ? '["2026-08"]'
+                    : (null as any)
+            );
+            keychain.getInternetCredentials.mockImplementation(
+                async (key: string, opts?: any) =>
+                    key === 'contacts' && !opts
+                        ? ({ password: '["2026-01"]' } as any)
+                        : (false as any)
+            );
+
+            const scan = await utils.scanForRecoverableData();
+            await utils.restoreOtherData(scan.otherDataFound);
+
+            expect(store.contacts).toBe('["2026-08"]');
         });
     });
 });

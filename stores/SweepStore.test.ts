@@ -1,11 +1,9 @@
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores');
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
     default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 
 import * as bitcoin from 'bitcoinjs-lib';
 
@@ -19,9 +17,14 @@ bitcoin.initEccLib(ecc);
 beforeEach(() => jest.spyOn(console, 'error').mockImplementation(() => {}));
 afterEach(() => jest.restoreAllMocks());
 
-// Private key 1 (mainnet compressed WIF). The key's network version byte is
-// ignored; the node's network decides which addresses are derived.
-const WIF = 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
+// Private key 1 (compressed WIF), encoded for mainnet and for the test
+// networks. The node's network decides which addresses are derived.
+const MAINNET_WIF = 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
+const WIF = 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA';
+// The same private key as an uncompressed WIF
+const MAINNET_UNCOMPRESSED_WIF =
+    '5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAnchuDf';
+const UNCOMPRESSED_WIF = '91avARGdfge8E4tZfYLoxeJ5sGBdNJQH4kvjJoQFacbgwmaKkrx';
 
 const queriedAddresses = (fetchMock: jest.Mock) =>
     fetchMock.mock.calls.map(
@@ -29,13 +32,13 @@ const queriedAddresses = (fetchMock: jest.Mock) =>
             url.replace('https://mempool.test/api/address/', '').split('/')[0]
     );
 
-const prepare = async (nodeInfo: any) => {
+const prepare = async (nodeInfo: any, wif = WIF) => {
     const fetchMock = jest.fn(() =>
         Promise.resolve({ ok: true, json: () => Promise.resolve([]) })
     );
     (global as any).fetch = fetchMock;
     const store = new SweepStore({ nodeInfo } as any);
-    await store.prepareSweepInputs(WIF);
+    await store.prepareSweepInputs(wif);
     return { store, addresses: queriedAddresses(fetchMock) };
 };
 
@@ -46,7 +49,7 @@ describe('SweepStore.prepareSweepInputs network selection', () => {
     });
 
     it('uses mainnet params on mainnet', async () => {
-        const { store, addresses } = await prepare({});
+        const { store, addresses } = await prepare({}, MAINNET_WIF);
         expect(store.network.bech32).toBe('bc');
         expect(addresses).toEqual([
             '1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH',
@@ -87,10 +90,27 @@ describe('SweepStore.prepareSweepInputs network selection', () => {
         expect(store.network.bech32).toBe('tb');
     });
 
+    it('derives only the legacy address of an uncompressed key', async () => {
+        const { addresses } = await prepare({}, MAINNET_UNCOMPRESSED_WIF);
+        expect(addresses).toEqual(['1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm']);
+    });
+
     it('reports no UTXOs found when every derived address is empty', async () => {
-        const { store } = await prepare({});
+        const { store } = await prepare({}, MAINNET_WIF);
         expect(store.sweepError).toBe(true);
         expect(store.sweepErrorMsg).toBe('views.Wif.noUtxosFound');
+    });
+
+    it.each([
+        ['testnet', 'mainnet', {}, WIF],
+        ['mainnet', 'testnet', { isTestNet: true }, MAINNET_WIF],
+        ['mainnet', 'regtest', { isRegTest: true }, MAINNET_WIF],
+        ['mainnet', 'signet', { isSigNet: true }, MAINNET_WIF]
+    ])('refuses a %s key on %s', async (_key, _node, nodeInfo, wif) => {
+        const { store, addresses } = await prepare(nodeInfo, wif);
+        expect(store.sweepError).toBe(true);
+        expect(addresses).toEqual([]);
+        expect(store.privateKey).toBeUndefined();
     });
 });
 
@@ -114,7 +134,11 @@ describe('SweepStore end-to-end sweep', () => {
     };
 
     // Mock mempool API with one UTXO on `fundedAddress`
-    const mockMempool = (fundedAddress: string, tx: bitcoin.Transaction) => {
+    const mockMempool = (
+        fundedAddress: string,
+        tx: bitcoin.Transaction,
+        listedValue = UTXO_VALUE
+    ) => {
         const txid = tx.getId();
         const scriptpubkey = tx.outs[0].script.toString('hex');
         const fetchMock = jest.fn((url: string) => {
@@ -123,7 +147,7 @@ describe('SweepStore end-to-end sweep', () => {
                 const address = path.split('/')[2];
                 const utxos =
                     address === fundedAddress
-                        ? [{ txid, vout: 0, value: UTXO_VALUE }]
+                        ? [{ txid, vout: 0, value: listedValue }]
                         : [];
                 return Promise.resolve({
                     ok: true,
@@ -202,6 +226,174 @@ describe('SweepStore end-to-end sweep', () => {
         });
     });
 
+    it('ignores the listed value of a p2pkh UTXO', async () => {
+        // A legacy signature stays valid whatever value the listing claims,
+        // so an understated one would turn the difference into miner fees
+        const payment = cases[0].payment;
+        mockMempool(payment.address!, fundingTx(payment.output!), 1_000);
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        await store.prepareSweepInputs(WIF);
+        expect(store.onChainBalance).toBe(UTXO_VALUE);
+
+        store.destination = DESTINATION;
+        await store.finalizeSweepTransaction('2');
+
+        expect(store.sweepError).toBe(false);
+        const tx = bitcoin.Transaction.fromHex(store.txHex!);
+        expect(tx.outs[0].value).toBe(UTXO_VALUE - store.fee);
+    });
+
+    it('reports a p2pkh UTXO missing from its funding transaction', async () => {
+        const payment = cases[0].payment;
+        const fetchMock = mockMempool(
+            payment.address!,
+            fundingTx(payment.output!)
+        );
+        const lookup = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (url: string) => {
+            const res: any = await lookup(url);
+            if (!url.includes('/address/')) return res;
+            const utxos = await res.json();
+            return {
+                ok: true,
+                json: () =>
+                    Promise.resolve(
+                        utxos.map((utxo: any) => ({ ...utxo, vout: 1 }))
+                    )
+            };
+        });
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+
+        await store.prepareSweepInputs(WIF);
+
+        expect(store.sweepError).toBe(true);
+        expect(store.sweepErrorMsg).toBe('views.Wif.outputIndexNotFound');
+    });
+
+    it('refuses a p2pkh funding transaction that does not match its txid', async () => {
+        // The p2pkh amount is read from the downloaded funding transaction,
+        // so an explorer that serves another transaction paying more must
+        // not get that amount into the balance
+        const payment = cases[0].payment;
+        const tx = fundingTx(payment.output!);
+        const forged = new bitcoin.Transaction();
+        forged.addInput(Buffer.alloc(32, 1), 0);
+        forged.addOutput(payment.output!, UTXO_VALUE * 10);
+        const fetchMock = mockMempool(payment.address!, tx);
+        const lookup = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (url: string) =>
+            url.endsWith(`/tx/${tx.getId()}/hex`)
+                ? { ok: true, text: () => Promise.resolve(forged.toHex()) }
+                : lookup(url)
+        );
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+
+        await store.prepareSweepInputs(WIF);
+
+        expect(store.sweepError).toBe(true);
+        expect(store.sweepErrorMsg).toBe('views.Wif.fundingTxMismatch');
+        expect(store.onChainBalance).toBeFalsy();
+        expect(store.psbt).toBeUndefined();
+    });
+
+    it('keeps the inputs of overlapping calls out of each other', async () => {
+        const payment = cases[2].payment;
+        const firstTx = fundingTx(payment.output!);
+        const secondTx = fundingTx(payment.output!);
+        secondTx.locktime = 1;
+        const first = mockMempool(
+            payment.address!,
+            firstTx
+        ).getMockImplementation()!;
+        const second = mockMempool(
+            payment.address!,
+            secondTx
+        ).getMockImplementation()!;
+
+        // Lists a different UTXO to each call and holds the first call's
+        // funding transaction until the second call has finished
+        let release = () => {};
+        const held = new Promise<void>((resolve) => (release = resolve));
+        let listed = 0;
+        (global as any).fetch = jest.fn(async (url: string) => {
+            if (url.includes(`/address/${payment.address}/`))
+                return listed++ === 0 ? first(url) : second(url);
+            if (url.includes(`/tx/${firstTx.getId()}`)) {
+                await held;
+                return first(url);
+            }
+            return second(url);
+        });
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+
+        const firstCall = store.prepareSweepInputs(WIF);
+        await store.prepareSweepInputs(WIF);
+        release();
+        await firstCall;
+
+        expect(store.sweepError).toBe(false);
+        expect(store.psbt.inputCount).toBe(1);
+        expect(store.onChainBalance).toBe(UTXO_VALUE);
+    });
+
+    it('sweeps the p2pkh UTXO of an uncompressed key', async () => {
+        const uncompressedPubkey = Buffer.from(
+            ecc.pointFromScalar(privateKey, false)!
+        );
+        const payment = bitcoin.payments.p2pkh({
+            pubkey: uncompressedPubkey,
+            network
+        });
+        const funding = fundingTx(payment.output!);
+        mockMempool(payment.address!, funding);
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+
+        await store.prepareSweepInputs(UNCOMPRESSED_WIF);
+        expect(store.sweepError).toBe(false);
+        expect(store.addressType).toBe('p2pkh');
+
+        store.destination = DESTINATION;
+        await store.finalizeSweepTransaction('2');
+        expect(store.sweepError).toBe(false);
+
+        const tx = bitcoin.Transaction.fromHex(store.txHex!);
+        expect(tx.ins).toHaveLength(1);
+        expect(Buffer.from(tx.ins[0].hash).reverse().toString('hex')).toBe(
+            funding.getId()
+        );
+        expect(bitcoin.script.decompile(tx.ins[0].script)![1]).toEqual(
+            uncompressedPubkey
+        );
+        expect(tx.outs[0].value).toBe(UTXO_VALUE - store.fee);
+    });
+
+    it('does not sweep the compressed key addresses of an uncompressed WIF', async () => {
+        const payment = cases[0].payment;
+        mockMempool(payment.address!, fundingTx(payment.output!));
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+
+        await store.prepareSweepInputs(UNCOMPRESSED_WIF);
+
+        expect(store.sweepError).toBe(true);
+        expect(store.sweepErrorMsg).toBe('views.Wif.noUtxosFound');
+    });
+
+    it('signs with the compressed key again after an uncompressed one', async () => {
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        mockMempool('', fundingTx(cases[0].payment.output!));
+        await store.prepareSweepInputs(UNCOMPRESSED_WIF);
+        store.resetSweepError();
+
+        const payment = cases[0].payment;
+        mockMempool(payment.address!, fundingTx(payment.output!));
+        await store.prepareSweepInputs(WIF);
+        store.destination = DESTINATION;
+        await store.finalizeSweepTransaction('2');
+
+        expect(store.sweepError).toBe(false);
+        expect(store.txHex).not.toBeNull();
+    });
+
     it('refuses taproot UTXOs, which sweeps do not support yet', async () => {
         const payment = bitcoin.payments.p2tr({
             internalPubkey: pubkey.subarray(1, 33),
@@ -233,6 +425,52 @@ describe('SweepStore end-to-end sweep', () => {
         expect(store.txHex).toBeNull();
     });
 
+    it('drops the previous transaction when a later attempt fails', async () => {
+        const payment = cases[2].payment;
+        mockMempool(payment.address!, fundingTx(payment.output!));
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        await store.prepareSweepInputs(WIF);
+        store.destination = DESTINATION;
+        await store.finalizeSweepTransaction('2');
+        expect(store.sweepError).toBe(false);
+        expect(store.txHex).not.toBeNull();
+
+        store.resetSweepError();
+        await store.finalizeSweepTransaction('10000');
+
+        expect(store.sweepError).toBe(true);
+        expect(store.txHex).toBeNull();
+        expect(store.txId).toBeNull();
+    });
+
+    it('signs again after the destination and fee rate change', async () => {
+        const payment = cases[2].payment;
+        mockMempool(payment.address!, fundingTx(payment.output!));
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        await store.prepareSweepInputs(WIF);
+        store.destination = DESTINATION;
+        await store.finalizeSweepTransaction('2');
+        expect(store.sweepError).toBe(false);
+        const firstTxId = store.txId;
+
+        const otherDestination = bitcoin.payments.p2wpkh({
+            hash: Buffer.alloc(20, 2),
+            network
+        }).address!;
+        store.destination = otherDestination;
+        await store.finalizeSweepTransaction('5');
+
+        expect(store.sweepError).toBe(false);
+        const tx = bitcoin.Transaction.fromHex(store.txHex!);
+        expect(store.txId).not.toBe(firstTxId);
+        expect(tx.outs).toHaveLength(1);
+        expect(
+            bitcoin.address.fromOutputScript(tx.outs[0].script, network)
+        ).toBe(otherDestination);
+        expect(store.fee).toBe(Math.ceil(store.vBytes * 5));
+        expect(tx.outs[0].value).toBe(UTXO_VALUE - store.fee);
+    });
+
     it('fails when the destination is for another network', async () => {
         const payment = cases[2].payment;
         mockMempool(payment.address!, fundingTx(payment.output!));
@@ -250,7 +488,7 @@ describe('SweepStore end-to-end sweep', () => {
         (global as any).fetch = jest.fn(() => Promise.resolve({ ok: false }));
         const store = new SweepStore({ nodeInfo: {} } as any);
 
-        await store.prepareSweepInputs(WIF);
+        await store.prepareSweepInputs(MAINNET_WIF);
 
         expect(store.sweepError).toBe(true);
         expect(store.sweepErrorMsg).toBe('views.Wif.errorFetchingUtxos');

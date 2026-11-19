@@ -26,6 +26,7 @@ export default class SweepStore {
     @observable utxos: any[] = [];
     @observable psbt: bitcoin.Psbt;
     @observable privateKey: string;
+    @observable compressed: boolean = true;
     @observable wif: string;
     @observable network: bitcoin.Network;
     @observable vBytes: number;
@@ -69,29 +70,35 @@ export default class SweepStore {
                 .address!
         });
 
-        addresses.push({
-            type: 'p2sh-p2wpkh',
-            address: bitcoin.payments.p2sh({
-                redeem: bitcoin.payments.p2wpkh({ pubkey: publicKey, network }),
-                network
-            }).address!
-        });
+        // Segwit and taproot outputs need a compressed public key
+        if (publicKey.length === 33) {
+            addresses.push({
+                type: 'p2sh-p2wpkh',
+                address: bitcoin.payments.p2sh({
+                    redeem: bitcoin.payments.p2wpkh({
+                        pubkey: publicKey,
+                        network
+                    }),
+                    network
+                }).address!
+            });
 
-        addresses.push({
-            type: 'p2wpkh',
-            address: bitcoin.payments.p2wpkh({ pubkey: publicKey, network })
-                .address!
-        });
+            addresses.push({
+                type: 'p2wpkh',
+                address: bitcoin.payments.p2wpkh({ pubkey: publicKey, network })
+                    .address!
+            });
 
-        // For taproot, use the x-only public key
-        const internalPubkey = toXOnly(publicKey);
-        addresses.push({
-            type: 'p2tr',
-            address: bitcoin.payments.p2tr({
-                internalPubkey,
-                network
-            }).address!
-        });
+            // For taproot, use the x-only public key
+            const internalPubkey = toXOnly(publicKey);
+            addresses.push({
+                type: 'p2tr',
+                address: bitcoin.payments.p2tr({
+                    internalPubkey,
+                    network
+                }).address!
+            });
+        }
 
         for (const { type, address } of addresses) {
             const utxos = await this.getUtxosFromAddress(address);
@@ -111,9 +118,16 @@ export default class SweepStore {
         );
 
         try {
-            const { privateKey } = wifDecode(this.wif);
+            // Refuse keys encoded for another network; the sweep signs on
+            // the node's network
+            // the WIF says which form of the public key its addresses use
+            const { privateKey, compressed } = wifDecode(
+                this.wif,
+                this.network.wif
+            );
             this.privateKey = Buffer.from(privateKey).toString('hex');
-            const publicKey = Buffer.from(getPublicKey(privateKey, true));
+            this.compressed = compressed;
+            const publicKey = Buffer.from(getPublicKey(privateKey, compressed));
 
             const result = await this.detectAddressWithUtxos(
                 publicKey,
@@ -124,7 +138,9 @@ export default class SweepStore {
             this.utxos = result.utxos;
             let totalSats = 0;
 
-            this.psbt = new bitcoin.Psbt({ network: this.network });
+            // Built locally and published together with its balance below, so
+            // overlapping calls cannot add inputs to each other's PSBT
+            const psbt = new bitcoin.Psbt({ network: this.network });
 
             // P2TR sweeps are not yet supported — ZEUS-3276
             if (this.addressType === 'p2tr') {
@@ -138,7 +154,6 @@ export default class SweepStore {
             if (this.addressType === 'p2pkh') {
                 for (const utxo of this.utxos) {
                     const { txid, vout } = utxo;
-                    totalSats += utxo.value;
                     const res = await fetch(
                         `${UrlUtils.getMempoolApiUrl(
                             this.nodeInfoStore.nodeInfo
@@ -153,8 +168,32 @@ export default class SweepStore {
                         );
 
                     const rawTxHex = await res.text();
+                    const fundingTx = bitcoin.Transaction.fromHex(rawTxHex);
 
-                    this.psbt.addInput({
+                    // A legacy signature does not commit to the input value,
+                    // so take it from the funding transaction, not from the
+                    // explorer's listing, once that transaction is known to
+                    // be the one the UTXO belongs to
+                    if (fundingTx.getId() !== txid)
+                        throw new Error(
+                            localeString('views.Wif.fundingTxMismatch', {
+                                txid
+                            })
+                        );
+
+                    const output = fundingTx.outs[vout];
+
+                    if (!output)
+                        throw new Error(
+                            localeString('views.Wif.outputIndexNotFound', {
+                                vout,
+                                txid
+                            })
+                        );
+
+                    totalSats += output.value;
+
+                    psbt.addInput({
                         hash: txid,
                         index: vout,
                         nonWitnessUtxo: Buffer.from(rawTxHex, 'hex')
@@ -193,7 +232,7 @@ export default class SweepStore {
                     const scriptPubKeyHex = output.scriptpubkey;
                     const script = Buffer.from(scriptPubKeyHex, 'hex');
 
-                    this.psbt.addInput({
+                    psbt.addInput({
                         hash: txid,
                         index: vout,
                         witnessUtxo: {
@@ -244,7 +283,7 @@ export default class SweepStore {
 
                     const pubkey = Buffer.from(fullPub);
 
-                    this.psbt.addInput({
+                    psbt.addInput({
                         hash: txid,
                         index: vout,
                         witnessUtxo: {
@@ -258,6 +297,7 @@ export default class SweepStore {
                     });
                 }
             }
+            this.psbt = psbt;
             this.onChainBalance = totalSats;
         } catch (err: any) {
             console.error(err);
@@ -268,11 +308,13 @@ export default class SweepStore {
 
     @action
     async finalizeSweepTransaction(feeRate: string) {
+        this.txHex = null;
+        this.txId = null;
         try {
             this.feeRate = feeRate;
             const privateKey = Buffer.from(this.privateKey, 'hex');
 
-            const fullPub = ecc.pointFromScalar(privateKey, true);
+            const fullPub = ecc.pointFromScalar(privateKey, this.compressed);
             if (!fullPub)
                 throw new Error(localeString('views.Wif.failedToDerivePubkey'));
 
@@ -309,17 +351,23 @@ export default class SweepStore {
                     localeString('views.Wif.insufficientFundsAfterFees')
                 );
 
-            this.psbt.addOutput({
+            // Sign a copy so the prepared PSBT can be reused if the user goes
+            // back and changes the destination or fee rate
+            const signedPsbt = bitcoin.Psbt.fromBuffer(this.psbt.toBuffer(), {
+                network: this.network
+            });
+
+            signedPsbt.addOutput({
                 address: this.destination,
                 value: this.valueToSend
             });
 
-            for (let i = 0; i < this.psbt.inputCount; i++) {
-                this.psbt.signInput(i, signer);
+            for (let i = 0; i < signedPsbt.inputCount; i++) {
+                signedPsbt.signInput(i, signer);
             }
 
-            this.psbt.finalizeAllInputs();
-            const tx = this.psbt.extractTransaction();
+            signedPsbt.finalizeAllInputs();
+            const tx = signedPsbt.extractTransaction();
 
             this.txHex = tx.toHex();
             this.bytes = this.txHex.length / 2;

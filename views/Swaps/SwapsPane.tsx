@@ -3,7 +3,6 @@ import { Text, TouchableOpacity, View, FlatList } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import moment from 'moment';
 
 import { WarningMessage } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
@@ -13,6 +12,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import Button from '../../components/Button';
 
 import { themeColor } from '../../utils/ThemeUtils';
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
 import SwapStore from '../../stores/SwapStore';
@@ -60,6 +60,10 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
 
     renderSwap = ({ item }: { item: Swap }) => {
         const { SwapStore } = this.props;
+        // a legacy rescue's reverse amount came from the host
+        const showAmount =
+            !(item.isReverseSwap && item.imported) &&
+            (item.expectedAmount || item.isReverseSwap);
 
         return (
             <TouchableOpacity
@@ -147,7 +151,7 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         {item.id}
                     </Text>
                 </View>
-                {(item.expectedAmount || item.isReverseSwap) && (
+                {showAmount && (
                     <View
                         style={{
                             flexDirection: 'row',
@@ -211,8 +215,8 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                                 fontSize: 16
                             }}
                         >
-                            {moment(item.createdAtFormatted).format(
-                                'MMM Do YYYY, h:mm:ss a'
+                            {DateTimeUtils.formatDateTimeShort(
+                                item.createdAtFormatted
                             )}
                         </Text>
                     </View>

@@ -9,20 +9,36 @@ import NodeInfoStore from './NodeInfoStore';
 import lndMobile from '../lndmobile/LndMobileInjection';
 const { index, channel } = lndMobile;
 
-import { LSPOrderState, LSPService } from '../models/LSP';
+import { isValidOrderResponse, LSPOrderState, LSPService } from '../models/LSP';
 
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { getClientInfo } from '../utils/ClientInfoUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { verifyWrappedInvoice } from '../utils/LspUtils';
+import {
+    OrderTerms,
+    OrderTermsCheck,
+    verifyOrderTerms,
+    verifyWrappedInvoice
+} from '../utils/LspUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 import Storage from '../storage';
 
 export const LEGACY_LSPS1_ORDERS_KEY = 'orderResponses';
 export const LSPS_ORDERS_KEY = 'zeus-lsps1-orders';
+
+// One /api/v1/fee answer. The proposal has to send the id of the quote the
+// invoice was priced with, so callers keep this rather than reading the
+// shared zeroConfFee/feeId, which a newer request or a reset can replace.
+export interface ZeroConfFeeQuote {
+    feeSats: number | undefined;
+    feeId: string | undefined;
+}
+
+// The quote an invoice is priced with, with a missing fee counted as 0.
+export type PricedZeroConfFeeQuote = ZeroConfFeeQuote & { feeSats: number };
 
 const CUSTOM_MESSAGE_TYPE = 37913;
 const JSON_RPC_VERSION = '2.0';
@@ -33,13 +49,22 @@ const CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS = 7000;
 
 const FREE_ORDER_POLL_INTERVAL_MS = 5000;
 
+// The fields of an lsps7.get_extendable_channels entry that the channel views
+// read while rendering. The answer is LSP-controlled, so only keep entries the
+// views can draw.
+const isBlockCount = (value: any) => value == null || Number.isFinite(value);
+const isExtendableChannel = (extendableChannel: any) =>
+    typeof extendableChannel?.short_channel_id === 'string' &&
+    isBlockCount(extendableChannel.expiration_block) &&
+    isBlockCount(extendableChannel.max_channel_extension_expiry_blocks);
+
 export default class LSPStore {
     @observable public info: any = {};
     @observable public zeroConfFee: number | undefined;
     @observable public feeId: string | undefined;
     @observable public pubkey: string;
     @observable public loadingLSPS1: boolean = true;
-    @observable public loadingLSPS7: boolean = true;
+    @observable public loadingLSPS7: boolean = false;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
     @observable public flow_error: boolean = false;
@@ -47,6 +72,9 @@ export default class LSPStore {
     @observable public showLspSettings: boolean = false;
     @observable public channelAcceptor: any;
     @observable public customMessagesSubscriber: any;
+    // bumped by reset() and by every Flow info request, so only the latest
+    // request for the current connection writes its reply
+    private flowInfoGeneration = 0;
     // LSPS1
     @observable public getInfoId: string;
     @observable public createOrderId: string;
@@ -54,9 +82,13 @@ export default class LSPStore {
     @observable public getInfoData: any = {};
     @observable public createOrderResponse: any = {};
     @observable public getOrderResponse: any = {};
+    // terms sent with the in-flight custom-message create_order, checked
+    // against the LSP's reply in handleCustomMessages
+    private createOrderRequestTerms: OrderTerms = {};
     // LSPS7
     @observable public getExtendableChannelsId: string;
     @observable public getExtendableChannelsData: any = [];
+    @observable public getExtendableChannelsError: boolean = false;
     @observable public createExtensionOrderId: string;
     @observable public createExtensionOrderResponse: any = {};
     @observable public getExtensionOrderId: string;
@@ -70,9 +102,28 @@ export default class LSPStore {
     private getInfoResponseResolver: (() => void) | null = null;
     private createOrderResponseResolver: (() => void) | null = null;
     private getOrderResponseResolver: (() => void) | null = null;
-    private getExtendableChannelsResponseResolver: (() => void) | null = null;
+    private getExtendableChannelsResponseResolver:
+        | ((failed?: boolean) => void)
+        | null = null;
     private createExtensionOrderResponseResolver: (() => void) | null = null;
     private getExtensionOrderResponseResolver: (() => void) | null = null;
+
+    // Id of the custom-message request whose timeout set the error. The LSP
+    // can still answer after the timeout, and a successful late reply clears
+    // that error so it is not shown over the order or info. Another error
+    // set since then is left alone.
+    private timedOutRequestId = '';
+    // The error text that timeout set. Kept so the check for "still shown"
+    // does not depend on the language being the same when the reply lands.
+    private timedOutErrorMsg = '';
+
+    // The peer each in-flight custom-message request was sent to, keyed by
+    // request id. handleCustomMessages drops a reply whose id matches a
+    // request but whose sender does not, so a connected peer that is not
+    // the LSP can't answer in the LSP's place. Entries are removed when a
+    // reply is consumed, when a new request replaces the id, and when a
+    // reset invalidates the id.
+    private customMessageRequestPeers: { [requestId: string]: string } = {};
 
     // Free orders have no payment step, so they never pass through the LSPPaymentAwait polling screen.
     // Without this poll the post-creation view would stay on the
@@ -84,6 +135,18 @@ export default class LSPStore {
     // Incremented on every start/stop so an in-flight poll that resumes after an
     // await can tell whether its session is still the active one.
     private freeOrderPollSessionId = 0;
+    // Incremented on every native LSPS7 extendable channels call so a call
+    // that settles after a newer one can't overwrite its result.
+    private getExtendableChannelsNativeRequestId = 0;
+    // Set while the custom message subscription can deliver replies.
+    private customMessagesReady = false;
+    // Incremented by reset(), so a subscription that settles afterwards can
+    // tell it belongs to the previous connection.
+    private customMessagesGeneration = 0;
+    // Incremented on every Flow fee request and fee reset, so an answer to a
+    // fee request that is no longer the latest one is dropped instead of
+    // replacing the quote an invoice was priced with.
+    private feeRequestId = 0;
 
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
@@ -100,31 +163,81 @@ export default class LSPStore {
 
         reaction(
             () => this.channelsStore.channels,
-            () => {
-                const lspPubkey = this.getLSPSPubkey();
-                if (
-                    (BackendUtils.supportsLSPScustomMessage() ||
-                        BackendUtils.supportsLSPS7native()) &&
-                    lspPubkey &&
-                    this.channelsStore.channels.some(
-                        (channel: { remotePubkey: string }) =>
-                            channel.remotePubkey === lspPubkey
-                    )
-                ) {
-                    this.getExtendableChannels();
-                    this.nodeInfoStore.getNodeInfo();
-                }
-            }
+            () => this.fetchLeasesIfLspChannel()
         );
     }
+
+    // Fetches LSPS7 lease data when there is a channel with the LSP. Over
+    // custom messages the reply only reaches the app once the subscription
+    // is open, and the wallet loads channels before it subscribes, so the
+    // fetch waits for onCustomMessagesReady instead of timing out into a
+    // fetch error.
+    private fetchLeasesIfLspChannel = () => {
+        const native = BackendUtils.supportsLSPS7native();
+        if (
+            (native ||
+                (BackendUtils.supportsLSPScustomMessage() &&
+                    this.customMessagesReady)) &&
+            this.hasLspChannel()
+        ) {
+            this.getExtendableChannels();
+            this.nodeInfoStore.getNodeInfo();
+        }
+    };
+
+    private hasLspChannel = () => {
+        const lspPubkey = this.getLSPSPubkey();
+        return (
+            !!lspPubkey &&
+            this.channelsStore.channels.some(
+                (channel: { remotePubkey: string }) =>
+                    channel.remotePubkey === lspPubkey
+            )
+        );
+    };
+
+    private onCustomMessagesReady = () => {
+        this.customMessagesReady = true;
+        this.fetchLeasesIfLspChannel();
+    };
+
+    // The subscription failed before it could deliver replies, so no lease
+    // fetch will run. Report it like a failed fetch instead of showing
+    // nothing for a channel with the LSP.
+    private onCustomMessagesFailed = () => {
+        this.customMessagesReady = false;
+        if (this.hasLspChannel()) {
+            runInAction(() => {
+                this.getExtendableChannelsError = true;
+            });
+        }
+    };
 
     @action
     public reset = (errorsOnly = false) => {
         if (!errorsOnly) {
+            this.flowInfoGeneration++;
             this.info = {};
             this.resetFee();
+            // close before dropping the references: a remote LND socket
+            // left open keeps answering for the node it was opened on, and
+            // an embedded listener left attached doubles every event once
+            // the next connect adds its own
+            const { channelAcceptor, customMessagesSubscriber } = this;
             this.channelAcceptor = undefined;
             this.customMessagesSubscriber = undefined;
+            this.customMessagesReady = false;
+            this.customMessagesGeneration++;
+            this.closeSubscription(channelAcceptor);
+            this.closeSubscription(customMessagesSubscriber);
+            // lease data and fetch errors belong to the previous node, and a
+            // reply still in flight must not land on the next one
+            this.getExtendableChannelsNativeRequestId++;
+            this.getExtendableChannelsResponseResolver?.();
+            delete this.customMessageRequestPeers[this.getExtendableChannelsId];
+            this.getExtendableChannelsId = '';
+            this.getExtendableChannelsData = [];
+            this.getExtendableChannelsError = false;
         }
         this.error = false;
         this.error_msg = '';
@@ -133,8 +246,31 @@ export default class LSPStore {
         this.showLspSettings = false;
     };
 
+    private closeSubscription = (subscription: any) => {
+        try {
+            if (typeof subscription?.close === 'function') {
+                subscription.close();
+            } else if (typeof subscription?.remove === 'function') {
+                subscription.remove();
+            }
+        } catch (error: any) {
+            console.log('LSPStore: could not close subscription', error);
+        }
+    };
+
+    // Also drops the answer to any fee request still in flight.
     @action
     public resetFee = () => {
+        this.feeRequestId++;
+        this.clearFee();
+    };
+
+    // Clears the shown quote and error but lets a fee request in flight
+    // finish, for invoices that don't use the LSP: one created in the
+    // background (NWC, Cashu) must not stop an LSP invoice that is waiting
+    // for its quote.
+    @action
+    public clearFee = () => {
         this.zeroConfFee = undefined;
         this.feeId = undefined;
         this.flow_error = false;
@@ -147,11 +283,18 @@ export default class LSPStore {
         this.stopFreeOrderStatusPolling();
         this.getInfoResponseResolver?.();
         this.createOrderResponseResolver?.();
+        this.getOrderResponseResolver?.();
         // Invalidate in-flight request ids so a late response or send failure
         // can't write into the next screen's state.
+        delete this.customMessageRequestPeers[this.getInfoId];
+        delete this.customMessageRequestPeers[this.createOrderId];
+        delete this.customMessageRequestPeers[this.getOrderId];
         this.getInfoId = '';
         this.createOrderId = '';
+        this.getOrderId = '';
+        this.createOrderRequestTerms = {};
         this.createOrderResponse = {};
+        this.getOrderResponse = {};
         this.getInfoData = {};
         this.loadingLSPS1 = false;
         this.error = false;
@@ -162,8 +305,15 @@ export default class LSPStore {
     public resetLSPS7Data = () => {
         this.stopFreeOrderStatusPolling();
         this.createExtensionOrderResponseResolver?.();
+        this.getExtensionOrderResponseResolver?.();
+        delete this.customMessageRequestPeers[this.createExtensionOrderId];
+        delete this.customMessageRequestPeers[this.getExtensionOrderId];
         this.createExtensionOrderId = '';
+        // same invalidation as resetLSPS1Data: a late get_order reply must
+        // not match the id of a request the reset left behind
+        this.getExtensionOrderId = '';
         this.createExtensionOrderResponse = {};
+        this.getExtensionOrderResponse = {};
         this.loadingLSPS7 = false;
         this.error = false;
         this.error_msg = '';
@@ -256,6 +406,20 @@ export default class LSPStore {
 
     public getLSPSPubkey = () => this.getLspConfig().lsps1Pubkey;
 
+    // Returns a new request id bound to the peer it is sent to, and drops
+    // the binding of the id it replaces so timed-out requests don't pile up.
+    // The peer is lowercased because handleCustomMessages decodes the
+    // sender to lowercase hex, while the configured pubkey is kept as typed.
+    private newCustomMessageRequestId = (
+        previousId: string,
+        peer: string
+    ): string => {
+        delete this.customMessageRequestPeers[previousId];
+        const requestId = uuidv4();
+        this.customMessageRequestPeers[requestId] = (peer || '').toLowerCase();
+        return requestId;
+    };
+
     public getLSPSHost = () => this.getLspConfig().lsps1Host;
 
     public getLSPS1Rest = () => this.getLspConfig().lsps1Rest;
@@ -292,7 +456,15 @@ export default class LSPStore {
         return `${prefix}: HTTP ${status}`;
     };
 
+    // Rejects without writing anything if reset() ran or a newer request
+    // started while the request was in flight. After reset() the reply
+    // belongs to the previous connection, and the caller no longer waits for
+    // it before the next connect resets the store. Each wallet refresh starts
+    // a request without waiting for the last one, so a timeout from an older
+    // request could otherwise land after a newer success and set flow_error
     public getLSPInfo = () => {
+        const generation = ++this.flowInfoGeneration;
+        const isCurrent = () => this.flowInfoGeneration === generation;
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'get',
@@ -300,6 +472,10 @@ export default class LSPStore {
                 { 'Content-Type': 'application/json' }
             )
                 .then(async (response: any) => {
+                    if (!isCurrent()) {
+                        reject();
+                        return;
+                    }
                     const status = response.info().status;
                     let data: any;
                     try {
@@ -359,6 +535,10 @@ export default class LSPStore {
                     }
                 })
                 .catch(() => {
+                    if (!isCurrent()) {
+                        reject();
+                        return;
+                    }
                     runInAction(() => {
                         this.flow_error = true;
                         this.flow_error_msg = localeString(
@@ -371,11 +551,61 @@ export default class LSPStore {
         });
     };
 
-    @action
-    public getZeroConfFee = (amount_msat: number) => {
-        const { settings } = this.settingsStore;
+    // Flow LSP setup run by the wallet on every fetch. The LSP info request
+    // isn't awaited: a host that drops packets holds it until the 60s
+    // HTTP timeout, and the fetch lock and deep link handling would wait
+    // on it. The channel acceptor reads the LSP pubkey per request, so it
+    // doesn't need the reply first. getLSPInfo rejects when the LSP can't
+    // be reached, answers with an error (including the geoblock reply) or
+    // returns a non-JSON body, and records the error in flow_error for
+    // the UI. Remote LND over Tor skips the request: it goes over
+    // clearnet and would send the device IP to the Flow host on every
+    // startup (#4372)
+    public initFlowLSP = () => {
+        if (!BackendUtils.supportsFlowLSP()) return;
 
-        return new Promise((resolve, reject) => {
+        const { implementation, settings, enableTor } = this.settingsStore;
+        if (
+            settings.enableLSP &&
+            (implementation !== 'lnd' ||
+                (!enableTor &&
+                    !this.nodeInfoStore.flowLspNotConfigured()
+                        .flowLspNotConfigured))
+        ) {
+            this.getLSPInfo().catch(() => {
+                // getLSPInfo rejects without a reason; the message is in
+                // flow_error_msg
+                console.warn(
+                    'Failed to fetch Flow LSP info:',
+                    this.flow_error_msg
+                );
+            });
+        }
+        if (BackendUtils.supportsLSPScustomMessage()) {
+            this.subscribeCustomMessages().catch((error: any) =>
+                console.error(
+                    'Failed to subscribe to custom messages:',
+                    error?.message
+                )
+            );
+        }
+        this.initChannelAcceptor().catch((error: any) =>
+            console.error('Failed to start channel acceptor:', error?.message)
+        );
+    };
+
+    // isCurrent: an invoice request passes whether it is still the
+    // latest one, so a quote or error that arrives after it was superseded
+    // is not stored
+    @action
+    public getZeroConfFee = (
+        amount_msat: number,
+        isCurrent: () => boolean = () => true
+    ) => {
+        const { settings } = this.settingsStore;
+        const requestId = ++this.feeRequestId;
+
+        return new Promise<ZeroConfFeeQuote>((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
                 `${this.getFlowHost()}/api/v1/fee`,
@@ -391,6 +621,12 @@ export default class LSPStore {
                 })
             )
                 .then((response: any) => {
+                    // superseded by a newer fee request, a reset or a newer
+                    // invoice request
+                    if (requestId !== this.feeRequestId || !isCurrent()) {
+                        reject();
+                        return;
+                    }
                     const status = response.info().status;
                     let data: any;
                     try {
@@ -407,8 +643,8 @@ export default class LSPStore {
                         return;
                     }
                     if (status == 200) {
-                        runInAction(() => {
-                            this.zeroConfFee =
+                        const quote: ZeroConfFeeQuote = {
+                            feeSats:
                                 data.fee_amount_msat !== undefined
                                     ? Number.parseInt(
                                           (
@@ -416,11 +652,29 @@ export default class LSPStore {
                                               1000
                                           ).toString()
                                       )
-                                    : undefined;
-                            this.feeId = data.id;
+                                    : undefined,
+                            feeId: data.id
+                        };
+                        // not stored, so no screen shows it as the fee
+                        if (
+                            quote.feeSats !== undefined &&
+                            !(quote.feeSats >= 0)
+                        ) {
+                            runInAction(() => {
+                                this.flow_error = true;
+                                this.flow_error_msg = localeString(
+                                    'stores.LSPStore.getInfoResponseError'
+                                );
+                            });
+                            reject();
+                            return;
+                        }
+                        runInAction(() => {
+                            this.zeroConfFee = quote.feeSats;
+                            this.feeId = quote.feeId;
                             this.flow_error = false;
                         });
-                        resolve(this.zeroConfFee);
+                        resolve(quote);
                     } else {
                         runInAction(() => {
                             this.flow_error = true;
@@ -434,9 +688,11 @@ export default class LSPStore {
                     }
                 })
                 .catch(() => {
-                    runInAction(() => {
-                        this.flow_error = true;
-                    });
+                    if (requestId === this.feeRequestId && isCurrent()) {
+                        runInAction(() => {
+                            this.flow_error = true;
+                        });
+                    }
                     reject();
                 });
         });
@@ -498,28 +754,87 @@ export default class LSPStore {
                 }
             );
 
-            await channel.channelAcceptor();
+            await this.startEmbeddedStream(
+                () => channel.channelAcceptor(),
+                'channelAcceptor'
+            );
         } else {
             // Only allow 0-conf chans from LSP or whitelisted peers
-
-            BackendUtils.initChanAcceptor({
-                zeroConfPeers: this.settingsStore?.settings?.zeroConfPeers,
-                lspPubkey: this.info?.pubkey
+            const ws = BackendUtils.initChanAcceptor({
+                getZeroConfPeers: () =>
+                    this.settingsStore?.settings?.zeroConfPeers,
+                getLspPubkey: () => this.info?.pubkey
             });
+            this.keepSocket(ws, 'channelAcceptor');
         }
     };
 
+    // Remote LND opens a WebSocket per subscription. lnd asks every open
+    // channel acceptor and rejects the channel if any of them does, and
+    // each custom message subscription delivers every message, so keep one
+    // of each and open a new one on the next fetch after it closes
+    private keepSocket = (
+        ws: any,
+        key: 'channelAcceptor' | 'customMessagesSubscriber'
+    ) => {
+        if (!ws?.addEventListener) return;
+        this[key] = ws;
+        let opened = false;
+        ws.addEventListener('open', () => {
+            opened = true;
+        });
+        const release = () => {
+            if (this[key] !== ws) return;
+            this[key] = null;
+            if (key !== 'customMessagesSubscriber') return;
+            if (opened) {
+                this.customMessagesReady = false;
+            } else {
+                this.onCustomMessagesFailed();
+            }
+        };
+        ws.addEventListener('error', release);
+        ws.addEventListener('close', release);
+    };
+
+    // Embedded LND sets the listener before starting the native stream. If
+    // the start fails, remove the listener so the guard doesn't block the
+    // retry on the next fetch
+    private startEmbeddedStream = async (
+        start: () => Promise<any>,
+        key: 'channelAcceptor' | 'customMessagesSubscriber'
+    ) => {
+        const listener = this[key];
+        try {
+            await start();
+        } catch (error) {
+            listener?.remove();
+            if (this[key] === listener) this[key] = null;
+            throw error;
+        }
+    };
+
+    // quote is the one bolt11 was priced with. The caller passes it so a
+    // quote that has replaced zeroConfFee/feeId since can't change the
+    // fee_id sent or move the verification bound. isCurrent: whether the
+    // invoice request is still the latest one; the flow error fields are
+    // only written while it is.
     @action
-    public getZeroConfInvoice = (bolt11: string) => {
-        this.flow_error = false;
-        this.flow_error_msg = '';
-        this.showLspSettings = false;
+    public getZeroConfInvoice = (
+        bolt11: string,
+        quote: PricedZeroConfFeeQuote,
+        isCurrent: () => boolean = () => true
+    ) => {
+        if (isCurrent()) {
+            this.flow_error = false;
+            this.flow_error_msg = '';
+            this.showLspSettings = false;
+        }
+        const setError = (update: () => void) => {
+            if (isCurrent()) runInAction(update);
+        };
 
         const { settings } = this.settingsStore;
-        // snapshot the fee quote the proposal is priced against, so a
-        // quote overwritten while the request is in flight can't move
-        // the verification bound
-        const quotedFeeSats = this.zeroConfFee || 0;
 
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
@@ -533,7 +848,7 @@ export default class LSPStore {
                     : { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     bolt11,
-                    fee_id: this.feeId,
+                    fee_id: quote.feeId,
                     simpleTaproot:
                         settings.requestSimpleTaproot &&
                         BackendUtils.supportsSimpleTaprootChannels(),
@@ -546,7 +861,7 @@ export default class LSPStore {
                     try {
                         data = response.json();
                     } catch (jsonErr) {
-                        runInAction(() => {
+                        setError(() => {
                             this.flow_error = true;
                             this.flow_error_msg = this.formatFlowError(
                                 response,
@@ -561,7 +876,7 @@ export default class LSPStore {
                             !data.jit_bolt11 ||
                             typeof data.jit_bolt11 !== 'string'
                         ) {
-                            runInAction(() => {
+                            setError(() => {
                                 this.flow_error = true;
                                 this.flow_error_msg = localeString(
                                     'stores.LSPStore.missingWrappedInvoice'
@@ -573,10 +888,10 @@ export default class LSPStore {
                         const check = verifyWrappedInvoice(
                             bolt11,
                             data.jit_bolt11,
-                            quotedFeeSats
+                            quote.feeSats
                         );
                         if (!check.valid) {
-                            runInAction(() => {
+                            setError(() => {
                                 this.flow_error = true;
                                 this.flow_error_msg = `${localeString(
                                     'stores.LSPStore.wrappedInvoiceVerificationFailed'
@@ -587,7 +902,7 @@ export default class LSPStore {
                         }
                         resolve(data.jit_bolt11);
                     } else {
-                        runInAction(() => {
+                        setError(() => {
                             this.flow_error = true;
                             this.flow_error_msg = this.formatFlowError(
                                 response,
@@ -605,7 +920,7 @@ export default class LSPStore {
                     }
                 })
                 .catch(() => {
-                    runInAction(() => {
+                    setError(() => {
                         this.flow_error = true;
                     });
                     reject();
@@ -665,9 +980,15 @@ export default class LSPStore {
             );
             return false;
         }
+        // request ids are reset to '' and start out undefined
+        if (!data?.id) return false;
         const peer = Base64Utils.base64ToHex(decoded.peer);
 
         console.log('Received custom message', { peer, data });
+
+        // a reply is only accepted from the peer its request was sent to
+        if (this.customMessageRequestPeers[data.id] !== peer) return false;
+        delete this.customMessageRequestPeers[data.id];
 
         if (data.id === this.getInfoId) {
             if (data.error) {
@@ -679,6 +1000,7 @@ export default class LSPStore {
                     : localeString('stores.LSPStore.getInfoResponseError');
             } else {
                 this.getInfoData = data;
+                this.clearTimeoutError(data.id);
             }
             this.loadingLSPS1 = false;
             this.getInfoResponseResolver?.();
@@ -690,7 +1012,17 @@ export default class LSPStore {
                     ? errorToUserFriendly(data?.error?.data?.message)
                     : '';
             } else {
-                this.createOrderResponse = data;
+                const check = verifyOrderTerms(
+                    this.createOrderRequestTerms,
+                    data
+                );
+                if (check.valid) {
+                    this.createOrderResponse = data;
+                    this.clearTimeoutError(data.id);
+                } else {
+                    this.error = true;
+                    this.error_msg = this.orderTermsMismatchMessage(check);
+                }
             }
             this.loadingLSPS1 = false;
             this.createOrderResponseResolver?.();
@@ -709,15 +1041,28 @@ export default class LSPStore {
             return true;
         } else if (data.id === this.getExtendableChannelsId) {
             if (data.error) {
-                this.error = true;
-                this.error_msg = data?.error?.message
-                    ? errorToUserFriendly(data?.error?.message)
-                    : '';
+                console.error(
+                    'Error fetching LSPS7 extendable channels:',
+                    data.error
+                );
+                this.getExtendableChannelsError = true;
             } else {
-                this.getExtendableChannelsData =
-                    data?.result?.extendable_channels;
+                const extendableChannels = data?.result?.extendable_channels;
+                if (Array.isArray(extendableChannels)) {
+                    this.getExtendableChannelsError = false;
+                    this.getExtendableChannelsData =
+                        extendableChannels.filter(isExtendableChannel);
+                } else {
+                    // an answer without a list has nothing to show, so it
+                    // counts as a failed fetch like an error reply and
+                    // keeps the previous list
+                    console.error(
+                        'LSPS7 extendable channels answer is not a list:',
+                        extendableChannels
+                    );
+                    this.getExtendableChannelsError = true;
+                }
             }
-            this.loadingLSPS7 = false;
             this.getExtendableChannelsResponseResolver?.();
             return true;
         } else if (data.id === this.createExtensionOrderId) {
@@ -728,6 +1073,7 @@ export default class LSPStore {
                     : '';
             } else {
                 this.createExtensionOrderResponse = data;
+                this.clearTimeoutError(data.id);
             }
             this.loadingLSPS7 = false;
             this.createExtensionOrderResponseResolver?.();
@@ -746,6 +1092,14 @@ export default class LSPStore {
             return true;
         }
         return false;
+    };
+
+    private clearTimeoutError = (requestId: string) => {
+        if (!requestId || this.timedOutRequestId !== requestId) return;
+        this.timedOutRequestId = '';
+        if (this.error_msg !== this.timedOutErrorMsg) return;
+        this.error = false;
+        this.error_msg = '';
     };
 
     // Establishes the long-lived custom-message listener for the app session.
@@ -774,19 +1128,55 @@ export default class LSPStore {
                 }
             );
 
-            await index.subscribeCustomMessages();
+            const listener = this.customMessagesSubscriber;
+            const generation = this.customMessagesGeneration;
+            try {
+                await this.startEmbeddedStream(
+                    () => index.subscribeCustomMessages(),
+                    'customMessagesSubscriber'
+                );
+            } catch (error) {
+                // reset() may have run while the stream started
+                if (this.customMessagesGeneration === generation) {
+                    this.onCustomMessagesFailed();
+                }
+                throw error;
+            }
+            // reset() may have dropped this listener while the stream started
+            if (this.customMessagesSubscriber === listener) {
+                this.onCustomMessagesReady();
+            }
         } else {
-            BackendUtils.subscribeCustomMessages(
+            const ws = BackendUtils.subscribeCustomMessages(
                 (response: any) => {
                     const decoded = response.result;
                     runInAction(() => this.handleCustomMessages(decoded));
                 },
+                // LND.ts passes a string (the certificate warning) when the
+                // socket errors, and the stream's error object when the
+                // server sends one.
                 (error: any) => {
                     console.error(
-                        'sub custom messages error: ' + error.message
+                        'sub custom messages error: ' +
+                            (typeof error === 'string' ? error : error?.message)
                     );
                 }
             );
+            if (!ws?.addEventListener) {
+                // LNC delivers through its own native listener; there is no
+                // socket to wait on. Each LSPS1 screen visit subscribes
+                // again, so only the first one starts a lease fetch.
+                if (!this.customMessagesReady) this.onCustomMessagesReady();
+                return;
+            }
+            this.keepSocket(ws, 'customMessagesSubscriber');
+            if (this.customMessagesSubscriber === ws) {
+                ws.addEventListener('open', () => {
+                    if (this.customMessagesSubscriber === ws) {
+                        this.onCustomMessagesReady();
+                    }
+                });
+            }
         }
     };
 
@@ -853,7 +1243,10 @@ export default class LSPStore {
         this.error = false;
         this.error_msg = '';
 
-        this.getInfoId = uuidv4();
+        this.getInfoId = this.newCustomMessageRequestId(
+            this.getInfoId,
+            this.getLSPSPubkey()
+        );
         const requestId = this.getInfoId;
         const method = 'lsps1.get_info';
 
@@ -875,6 +1268,8 @@ export default class LSPStore {
                         this.error_msg = localeString(
                             'views.LSPS1.timeoutError'
                         );
+                        this.timedOutRequestId = requestId;
+                        this.timedOutErrorMsg = this.error_msg;
                         this.loadingLSPS1 = false;
                     });
                 }
@@ -916,10 +1311,16 @@ export default class LSPStore {
         });
     };
 
+    private orderTermsMismatchMessage = (check: OrderTermsCheck) =>
+        localeString('stores.LSPStore.orderTermsMismatch').replace(
+            '{{fields}}',
+            check.mismatches.join(', ')
+        );
+
     @action
     public lsps1CreateOrderREST = (state: any) => {
         this.loadingLSPS1 = true;
-        const data = JSON.stringify({
+        const terms = {
             lsp_balance_sat: state.lspBalanceSat.toString(),
             client_balance_sat: state.clientBalanceSat.toString(),
             required_channel_confirmations: parseInt(
@@ -929,9 +1330,12 @@ export default class LSPStore {
                 state.confirmsWithinBlocks
             ),
             channel_expiry_blocks: parseInt(state.channelExpiryBlocks),
+            announce_channel: state.announceChannel
+        };
+        const data = JSON.stringify({
+            ...terms,
             token: state.token,
             refund_onchain_address: state.refundOnchainAddress,
-            announce_channel: state.announceChannel,
             public_key: this.nodeInfoStore.nodeInfo.nodeId,
             client_info: this.getClientInfo()
         });
@@ -956,8 +1360,15 @@ export default class LSPStore {
                         this.loadingLSPS1 = false;
                     });
                 } else {
+                    const check = verifyOrderTerms(terms, responseData);
                     runInAction(() => {
-                        this.createOrderResponse = responseData;
+                        if (check.valid) {
+                            this.createOrderResponse = responseData;
+                        } else {
+                            this.error = true;
+                            this.error_msg =
+                                this.orderTermsMismatchMessage(check);
+                        }
                         this.loadingLSPS1 = false;
                         console.log('Response received:', responseData);
                     });
@@ -987,9 +1398,25 @@ export default class LSPStore {
         this.error = false;
         this.error_msg = '';
 
-        this.createOrderId = uuidv4();
+        this.createOrderId = this.newCustomMessageRequestId(
+            this.createOrderId,
+            this.getLSPSPubkey()
+        );
         const requestId = this.createOrderId;
         const method = 'lsps1.create_order';
+        const terms = {
+            lsp_balance_sat: state.lspBalanceSat.toString(),
+            client_balance_sat: state.clientBalanceSat.toString(),
+            required_channel_confirmations: parseInt(
+                state.requiredChannelConfirmations
+            ),
+            funding_confirms_within_blocks: parseInt(
+                state.confirmsWithinBlocks
+            ),
+            channel_expiry_blocks: state.channelExpiryBlocks,
+            announce_channel: state.announceChannel
+        };
+        this.createOrderRequestTerms = terms;
 
         return new Promise<void>((resolve) => {
             let settled = false;
@@ -1009,6 +1436,8 @@ export default class LSPStore {
                         this.error_msg = localeString(
                             'views.LSPS1.timeoutError'
                         );
+                        this.timedOutRequestId = requestId;
+                        this.timedOutErrorMsg = this.error_msg;
                         this.loadingLSPS1 = false;
                     });
                 }
@@ -1024,18 +1453,9 @@ export default class LSPStore {
                     jsonrpc: JSON_RPC_VERSION,
                     method,
                     params: {
-                        lsp_balance_sat: state.lspBalanceSat.toString(),
-                        client_balance_sat: state.clientBalanceSat.toString(),
-                        required_channel_confirmations: parseInt(
-                            state.requiredChannelConfirmations
-                        ),
-                        funding_confirms_within_blocks: parseInt(
-                            state.confirmsWithinBlocks
-                        ),
-                        channel_expiry_blocks: state.channelExpiryBlocks,
+                        ...terms,
                         token: state.token,
                         refund_onchain_address: state.refundOnchainAddress,
-                        announce_channel: state.announceChannel,
                         client_info: this.getClientInfo()
                     },
                     id: this.createOrderId
@@ -1102,9 +1522,16 @@ export default class LSPStore {
         orderId: string,
         peer: string
     ): Promise<void> {
-        this.loadingLSPS1 = true;
+        // Settle any earlier get_order request still waiting so its timer
+        // can't clear this request's resolver.
+        this.getOrderResponseResolver?.();
 
-        this.getOrderId = uuidv4();
+        this.loadingLSPS1 = true;
+        this.error = false;
+        this.error_msg = '';
+
+        this.getOrderId = this.newCustomMessageRequestId(this.getOrderId, peer);
+        const requestId = this.getOrderId;
         const method = 'lsps1.get_order';
 
         return new Promise<void>((resolve) => {
@@ -1113,16 +1540,27 @@ export default class LSPStore {
                 if (settled) return;
                 settled = true;
                 clearTimeout(timeoutId);
-                this.getOrderResponseResolver = null;
+                if (this.getOrderResponseResolver === settle) {
+                    this.getOrderResponseResolver = null;
+                }
                 resolve();
             };
-            const timeoutId = setTimeout(
-                settle,
-                CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS
-            );
+            const timeoutId = setTimeout(() => {
+                if (this.getOrderId === requestId) {
+                    runInAction(() => {
+                        this.error = true;
+                        this.error_msg = localeString(
+                            'views.LSPS1.timeoutError'
+                        );
+                        this.loadingLSPS1 = false;
+                    });
+                }
+                settle();
+            }, CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS);
             this.getOrderResponseResolver = settle;
 
             this.sendCustomMessage({
+                isCurrent: () => !settled && this.getOrderId === requestId,
                 peer,
                 type: CUSTOM_MESSAGE_TYPE,
                 data: this.encodeMessage({
@@ -1145,6 +1583,15 @@ export default class LSPStore {
                         `Error sending (${method}) custom message:`,
                         error
                     );
+                    // a late send failure must not overwrite the reply or
+                    // the timeout error of a request that already settled
+                    if (!settled && this.getOrderId === requestId) {
+                        runInAction(() => {
+                            this.error = true;
+                            this.error_msg = errorToUserFriendly(error);
+                            this.loadingLSPS1 = false;
+                        });
+                    }
                     settle();
                 });
         });
@@ -1189,12 +1636,34 @@ export default class LSPStore {
         this.error_msg = '';
 
         try {
-            const response = await BackendUtils.requestLsps1Liquidity({
+            const request = {
                 amount_sat: parseInt(state.lspBalanceSat),
                 client_balance_sat: parseInt(state.clientBalanceSat) || 0,
                 expiry_blocks: parseInt(state.channelExpiryBlocks),
                 announce_channel: state.announceChannel || false
-            });
+            };
+            const response = await BackendUtils.requestLsps1Liquidity(request);
+
+            // LDK Node does not take confirmation targets, and falls back to
+            // its own expiry when expiry_blocks is not a number, so those
+            // terms are not checked
+            const check = verifyOrderTerms(
+                {
+                    lsp_balance_sat: request.amount_sat,
+                    client_balance_sat: request.client_balance_sat,
+                    channel_expiry_blocks: request.expiry_blocks || undefined,
+                    announce_channel: request.announce_channel
+                },
+                response
+            );
+            if (!check.valid) {
+                runInAction(() => {
+                    this.error = true;
+                    this.error_msg = this.orderTermsMismatchMessage(check);
+                    this.loadingLSPS1 = false;
+                });
+                return;
+            }
 
             runInAction(() => {
                 // Transform response to match expected format
@@ -1207,6 +1676,7 @@ export default class LSPStore {
                         funding_confirms_within_blocks:
                             response.funding_confirms_within_blocks,
                         channel_expiry_blocks: response.channel_expiry_blocks,
+                        announce_channel: response.announce_channel,
                         payment: {
                             state: response.payment?.state,
                             fee_total_sat:
@@ -1291,19 +1761,28 @@ export default class LSPStore {
 
     // LSPS7
 
+    // Background fetch run when the channel list changes. Failures only set
+    // getExtendableChannelsError, which the channel view reads, and neither
+    // the shared error nor loadingLSPS7 is touched, so a channel refresh
+    // can't replace or clear an error or spinner the LSPS1 or LSPS7 screens
+    // are showing.
     @action
     public getExtendableChannels = async () => {
-        this.error = false;
-        this.error_msg = '';
-
         // Use native LSPS7 method if available (LDK Node backend)
         if (BackendUtils.supportsLSPS7native()) {
+            // The channels reaction can start a new call before the last one
+            // settles, so only the latest call writes its result
+            const requestId = ++this.getExtendableChannelsNativeRequestId;
+            const isCurrent = () =>
+                requestId === this.getExtendableChannelsNativeRequestId;
             try {
                 const channels =
                     await BackendUtils.lsps7GetExtendableChannels();
+                if (!isCurrent()) return;
                 // Normalize camelCase keys from native module to snake_case
                 // to match the JSON-RPC custom message format
                 runInAction(() => {
+                    this.getExtendableChannelsError = false;
                     this.getExtendableChannelsData = channels.map(
                         (ch: any) => ({
                             short_channel_id: ch.shortChannelId,
@@ -1314,44 +1793,51 @@ export default class LSPStore {
                             extension_order_ids: ch.extensionOrderIds
                         })
                     );
-                    this.loadingLSPS7 = false;
                 });
                 return;
             } catch (error: any) {
+                if (!isCurrent()) return;
+                console.error(
+                    'Error fetching LSPS7 extendable channels:',
+                    error
+                );
                 runInAction(() => {
-                    this.error = true;
-                    this.error_msg =
-                        error?.message ||
-                        localeString('error.getExtendableChannels');
-                    this.loadingLSPS7 = false;
+                    this.getExtendableChannelsError = true;
                 });
                 return;
             }
         }
 
-        // Fall back to custom message for other backends. This is a background
-        // probe with no spinner, so a timeout or send failure settles silently
-        // instead of surfacing an error.
+        // Fall back to custom message for other backends. Starting a new
+        // probe settles the previous one without marking it failed.
         this.getExtendableChannelsResponseResolver?.();
 
-        this.getExtendableChannelsId = uuidv4();
+        this.getExtendableChannelsId = this.newCustomMessageRequestId(
+            this.getExtendableChannelsId,
+            this.getLSPSPubkey()
+        );
         const method = 'lsps7.get_extendable_channels';
 
         await new Promise<void>((resolve) => {
             let settled = false;
-            const settle = () => {
+            const settle = (failed = false) => {
                 if (settled) return;
                 settled = true;
                 clearTimeout(timeoutId);
                 if (this.getExtendableChannelsResponseResolver === settle) {
                     this.getExtendableChannelsResponseResolver = null;
+                    if (failed) {
+                        runInAction(() => {
+                            this.getExtendableChannelsError = true;
+                        });
+                    }
                 }
                 resolve();
             };
-            const timeoutId = setTimeout(
-                settle,
-                CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS
-            );
+            const timeoutId = setTimeout(() => {
+                console.error(`Timed out waiting for (${method}) response`);
+                settle(true);
+            }, CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS);
             this.getExtendableChannelsResponseResolver = settle;
 
             this.sendCustomMessage({
@@ -1373,7 +1859,7 @@ export default class LSPStore {
                         `Error sending (${method}) custom message:`,
                         error
                     );
-                    settle();
+                    settle(true);
                 });
         });
     };
@@ -1414,7 +1900,10 @@ export default class LSPStore {
         // can't fire a stale timeout after this newer request completes.
         this.createExtensionOrderResponseResolver?.();
 
-        this.createExtensionOrderId = uuidv4();
+        this.createExtensionOrderId = this.newCustomMessageRequestId(
+            this.createExtensionOrderId,
+            this.getLSPSPubkey()
+        );
         const requestId = this.createExtensionOrderId;
         const method = 'lsps7.create_order';
 
@@ -1436,6 +1925,8 @@ export default class LSPStore {
                         this.error_msg = localeString(
                             'views.LSPS1.timeoutError'
                         );
+                        this.timedOutRequestId = requestId;
+                        this.timedOutErrorMsg = this.error_msg;
                         this.loadingLSPS7 = false;
                     });
                 }
@@ -1514,7 +2005,18 @@ export default class LSPStore {
         }
 
         // Fall back to custom message for other backends
-        this.getExtensionOrderId = uuidv4();
+        // Settle any earlier get_order request still waiting so its timer
+        // can't fire a stale timeout after this newer request completes.
+        this.getExtensionOrderResponseResolver?.();
+
+        this.error = false;
+        this.error_msg = '';
+
+        this.getExtensionOrderId = this.newCustomMessageRequestId(
+            this.getExtensionOrderId,
+            peer
+        );
+        const requestId = this.getExtensionOrderId;
         const method = 'lsps7.get_order';
 
         await new Promise<void>((resolve) => {
@@ -1523,16 +2025,28 @@ export default class LSPStore {
                 if (settled) return;
                 settled = true;
                 clearTimeout(timeoutId);
-                this.getExtensionOrderResponseResolver = null;
+                if (this.getExtensionOrderResponseResolver === settle) {
+                    this.getExtensionOrderResponseResolver = null;
+                }
                 resolve();
             };
-            const timeoutId = setTimeout(
-                settle,
-                CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS
-            );
+            const timeoutId = setTimeout(() => {
+                if (this.getExtensionOrderId === requestId) {
+                    runInAction(() => {
+                        this.error = true;
+                        this.error_msg = localeString(
+                            'views.LSPS1.timeoutError'
+                        );
+                        this.loadingLSPS7 = false;
+                    });
+                }
+                settle();
+            }, CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS);
             this.getExtensionOrderResponseResolver = settle;
 
             this.sendCustomMessage({
+                isCurrent: () =>
+                    !settled && this.getExtensionOrderId === requestId,
                 peer,
                 type: CUSTOM_MESSAGE_TYPE,
                 data: this.encodeMessage({
@@ -1555,6 +2069,15 @@ export default class LSPStore {
                         `Error sending (${method}) custom message:`,
                         error
                     );
+                    // a late send failure must not overwrite the reply or
+                    // the timeout error of a request that already settled
+                    if (!settled && this.getExtensionOrderId === requestId) {
+                        runInAction(() => {
+                            this.error = true;
+                            this.error_msg = errorToUserFriendly(error);
+                            this.loadingLSPS7 = false;
+                        });
+                    }
                     settle();
                 });
         });
@@ -1612,9 +2135,12 @@ export default class LSPStore {
                     : this.getOrderResponse;
             if (response && Object.keys(response).length > 0) {
                 const result = response?.result || response;
+                // a timeout or error reply leaves an earlier order's
+                // response in place, so only act on this order's own state
                 if (
-                    result?.order_state === LSPOrderState.COMPLETED ||
-                    result?.order_state === LSPOrderState.FAILED
+                    result?.order_id === orderId &&
+                    (result?.order_state === LSPOrderState.COMPLETED ||
+                        result?.order_state === LSPOrderState.FAILED)
                 ) {
                     runInAction(() => {
                         if (service === LSPService.LSPS7) {
@@ -1640,6 +2166,12 @@ export default class LSPStore {
     };
 
     public updateOrderInStorage(order: any) {
+        // the order screens and the Activity list read the stored record;
+        // keep the previous one rather than store a reply they can't read
+        if (!isValidOrderResponse(order)) {
+            console.warn('LSPStore: not storing malformed order response');
+            return;
+        }
         Storage.getItem(LSPS_ORDERS_KEY)
             .then((responseArrayString) => {
                 if (!responseArrayString) return;

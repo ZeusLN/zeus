@@ -33,6 +33,7 @@ import UTXOsStore from '../stores/UTXOsStore';
 
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
+import PaymentInFlightNotice from '../components/PaymentInFlightNotice';
 import FeeLimit from '../components/FeeLimit';
 import LoadingIndicator from '../components/LoadingIndicator';
 import {
@@ -53,7 +54,7 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { scanNfcTag } from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { getRawAmountFromSats } from '../utils/AmountUtils';
+import { getRawAmountFromSats, isWholeSatAmount } from '../utils/AmountUtils';
 import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
 
 import NFC from '../assets/images/SVG/NFC-alt.svg';
@@ -222,6 +223,22 @@ export default class Send extends React.Component<SendProps, SendState> {
                 contactName
             };
 
+            // Whatever was entered here was entered for the request under
+            // review. When another one takes its place, start over and reset
+            // the slider, so none of it ends up paid to the new destination.
+            if (
+                this.state.transactionType &&
+                this.state.destination &&
+                destination !== this.state.destination
+            ) {
+                stateUpdate.amount = '';
+                stateUpdate.satAmount = '0';
+                stateUpdate.fundMax = false;
+                stateUpdate.additionalOutputs = [];
+                stateUpdate.message = '';
+                stateUpdate.swipeButtonKey = this.state.swipeButtonKey + 1;
+            }
+
             if (satAmount) {
                 // must be the raw, unformatted value in the input's unit -
                 // AmountInput's `amount` prop is parsed back into sats, so a
@@ -234,6 +251,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                 );
                 stateUpdate.amount = amount;
                 stateUpdate.satAmount = satAmount;
+                // the request names its amount: send max would send the
+                // balance instead, while VerifyOnChain shows satAmount
+                stateUpdate.fundMax = false;
                 if (error) {
                     stateUpdate.fiatError = error;
                 }
@@ -246,11 +266,15 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     async componentDidMount() {
-        const { SettingsStore, route } = this.props;
+        const { SettingsStore, BalanceStore, route } = this.props;
+        // balance is not refreshed elsewhere after channel changes, so
+        // the no-lightning-balance warning could otherwise be stale
+        BalanceStore.getLightningBalance(true);
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
         this.setState({
+            maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60'
         });
 
@@ -317,7 +341,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     scanNfc = async () => {
-        const str = await scanNfcTag(this.props.ModalStore);
+        const str = await scanNfcTag(this.props.ModalStore, 'pay');
         if (str) this.validateAddress(str);
     };
 
@@ -378,7 +402,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         return additionalOutputs.some((output) => {
             const { hasAddress, hasAmount } =
                 this.validateAdditionalOutputFields(output);
-            return (hasAddress || hasAmount) && !(hasAddress && hasAmount);
+            return (
+                ((hasAddress || hasAmount) && !(hasAddress && hasAmount)) ||
+                (hasAmount && !isWholeSatAmount(output.satAmount))
+            );
         });
     };
 
@@ -501,7 +528,22 @@ export default class Send extends React.Component<SendProps, SendState> {
                 });
                 return;
             }
-            this.props.InvoicesStore.getPayReq(res.invoice);
+            // fetchinvoice succeeds when the issuer answers with an invoice
+            // for another amount than the one requested, so decode it and
+            // refuse it unless it is for the amount entered. A decode
+            // failure is left to PaymentRequest, which shows it.
+            await this.props.InvoicesStore.getPayReq(res.invoice);
+            const { pay_req } = this.props.InvoicesStore;
+            if (pay_req && pay_req.getRequestAmount !== Number(satAmount)) {
+                this.props.InvoicesStore.clearPayReq();
+                this.setState({
+                    loading: false,
+                    error_msg: localeString(
+                        'views.Send.payBolt12.invoiceAmountMismatch'
+                    )
+                });
+                return;
+            }
             this.props.navigation.navigate('PaymentRequest');
             this.setState({
                 loading: false,
@@ -526,7 +568,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             enableAtomicMultiPathPayment,
             feeLimitSat,
             maxFeePercent,
-            feeOption
+            feeOption,
+            timeoutSeconds
         } = this.state;
 
         // Guard against double-submission: bail if a payment is already in
@@ -541,6 +584,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 max_parts: maxParts,
                 max_shard_amt: maxShardAmt,
                 fee_limit_sat: feeLimitSat,
+                timeout_seconds: timeoutSeconds,
                 amp: true
             });
         } else {
@@ -552,6 +596,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 // cap, so only send the percent when that mode is selected
                 max_fee_percent:
                     feeOption === 'percent' ? maxFeePercent : undefined,
+                timeout_seconds: timeoutSeconds,
                 message
             });
         }
@@ -744,6 +789,10 @@ export default class Send extends React.Component<SendProps, SendState> {
             BackendUtils.supportsOnchainSendFeeRate();
         const isInvalidFee =
             supportsOnchainSendFeeRate && (fee === '0' || !fee);
+        // on-chain outputs cannot carry millisats, and VerifyOnChain shows the
+        // amount rounded, so stop here rather than fail after the slide
+        const isFractionalOnchainAmount =
+            !fundMax && !isWholeSatAmount(satAmount);
 
         const slideToPayThreshold =
             SettingsStore.settings?.payments?.slideToPayThreshold ??
@@ -1314,6 +1363,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 totalBlockchainBalanceAccounts ===
                                                     0 ||
                                                 isInvalidFee ||
+                                                isFractionalOnchainAmount ||
                                                 this.hasInvalidAdditionalOutputs() ||
                                                 (fundMax &&
                                                     (!satAmount ||
@@ -1350,6 +1400,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             totalBlockchainBalanceAccounts ===
                                                 0 ||
                                             isInvalidFee ||
+                                            isFractionalOnchainAmount ||
                                             this.hasInvalidAdditionalOutputs() ||
                                             (fundMax &&
                                                 (!satAmount ||
@@ -1619,6 +1670,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </React.Fragment>
                                     )}
                                 <View style={styles.button}>
+                                    <PaymentInFlightNotice
+                                        TransactionsStore={TransactionsStore}
+                                    />
                                     {Number(satAmount) >=
                                     slideToPayThreshold ? (
                                         <SwipeButton
@@ -1634,7 +1688,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             )}
                                             containerStyle={{
                                                 backgroundColor:
-                                                    themeColor('secondaryText')
+                                                    themeColor('secondaryText'),
+                                                // the ScrollView already
+                                                // pads the sides
+                                                marginHorizontal: 0
                                             }}
                                             swipeButtonStyle={{
                                                 backgroundColor:
@@ -1702,6 +1759,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                     )}
                     {destination && transactionType === 'BOLT 12' && (
                         <View style={styles.button}>
+                            <PaymentInFlightNotice
+                                TransactionsStore={TransactionsStore}
+                            />
                             <Button
                                 title={localeString('general.proceed')}
                                 onPress={async () => await this.payBolt12()}

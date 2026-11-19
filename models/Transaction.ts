@@ -87,6 +87,12 @@ export default class Transaction extends BaseModel {
         return this.num_confirmations > 0 || this.status === 'confirmed';
     }
 
+    // embedded LND keeps a num_confirmations of 0 on the protobuf prototype,
+    // which BaseModel does not copy, so a missing value means 0
+    @computed public get getNumConfirmations(): number {
+        return this.num_confirmations ?? 0;
+    }
+
     @computed public get getAmount(): string {
         const amount =
             this.value || this.amount || this.amount_msat / 1000 || 0;

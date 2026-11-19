@@ -19,6 +19,11 @@ import {
     StyleProp,
     LayoutChangeEvent
 } from 'react-native';
+import {
+    EdgeInsets,
+    SafeAreaInsetsContext,
+    initialWindowMetrics
+} from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 
 import SettingsStore from '../stores/SettingsStore';
@@ -84,6 +89,7 @@ interface ModalBoxState {
     containerWidth: number;
     isInitialized: boolean;
     keyboardOffset: number;
+    containerTop: number;
     pan: any;
     isAnimateBackdrop: boolean;
     animBackdrop?: Animated.CompositeAnimation;
@@ -123,6 +129,8 @@ export default class ModalBox extends React.PureComponent<
         children: PropTypes.node
     };
 
+    static contextType = SafeAreaInsetsContext;
+
     static defaultProps = {
         startOpen: false,
         backdropPressToClose: true,
@@ -144,6 +152,7 @@ export default class ModalBox extends React.PureComponent<
     subscriptions: any[] = [];
     backHandlerSubscription: { remove: () => void } | null = null;
     onViewLayoutCalculated: (() => void) | null; // Can be either a function or null
+    containerRef = React.createRef<View>();
 
     constructor(props: ModalBoxProps) {
         super(props);
@@ -185,6 +194,7 @@ export default class ModalBox extends React.PureComponent<
             containerWidth: SCREEN_WIDTH,
             isInitialized: false,
             keyboardOffset: 0,
+            containerTop: 0,
             pan: this.createPanResponder(position),
             isAnimateBackdrop: false,
             animBackdrop: undefined,
@@ -336,12 +346,23 @@ export default class ModalBox extends React.PureComponent<
                     let positionDest = this.calculateModalPosition(
                         this.state.containerHeight - this.state.keyboardOffset
                     );
+                    // A sheet pushed up by the keyboard stops at
+                    // keyboardTopOffset, and a bottom sheet also stays below
+                    // the top inset, as its height clamp does without the
+                    // keyboard
                     if (
                         this.state.keyboardOffset &&
-                        positionDest !== undefined &&
-                        positionDest < (this.props.keyboardTopOffset ?? 0)
+                        positionDest !== undefined
                     ) {
-                        positionDest = this.props.keyboardTopOffset ?? 0;
+                        const minPosition = Math.max(
+                            this.props.keyboardTopOffset ?? 0,
+                            this.props.position === 'bottom'
+                                ? this.topInsetOverlap()
+                                : 0
+                        );
+                        if (positionDest < minPosition) {
+                            positionDest = minPosition;
+                        }
                     }
 
                     // Fallback for undefined positionDest
@@ -555,15 +576,29 @@ export default class ModalBox extends React.PureComponent<
         };
         if (height !== this.state.height) newState.height = height;
         if (width !== this.state.width) newState.width = width;
+        const heightChanged = height !== this.state.height;
         this.setState(newState);
 
-        if (this.onViewLayoutCalculated) this.onViewLayoutCalculated();
+        if (this.onViewLayoutCalculated) {
+            this.onViewLayoutCalculated();
+        } else if (
+            heightChanged &&
+            this.state.isOpen &&
+            !this.state.isAnimateClose
+        ) {
+            // The height changed after the open position was computed, e.g.
+            // once measureContainerTop reports a container below the top
+            // inset, so recompute it or the sheet's bottom runs off the
+            // container
+            this.animateOpen();
+        }
     }
 
     /*
      * Event called when the container view layout is calculated
      */
     onContainerLayout(evt: any) {
+        this.measureContainerTop();
         const height = evt.nativeEvent.layout.height;
         const width = evt.nativeEvent.layout.width;
 
@@ -586,6 +621,27 @@ export default class ModalBox extends React.PureComponent<
             containerHeight: height,
             containerWidth: width
         });
+    }
+
+    /*
+     * Record where the container starts in the window, so a bottom sheet
+     * only gives up the part of the top inset the container overlaps
+     */
+    measureContainerTop() {
+        this.containerRef.current?.measureInWindow((_x, y) => {
+            if (typeof y === 'number' && y !== this.state.containerTop) {
+                this.setState({ containerTop: y });
+            }
+        });
+    }
+
+    /*
+     * The part of the top safe-area inset the container overlaps
+     */
+    topInsetOverlap() {
+        const insets = this.context as EdgeInsets | null;
+        const topInset = insets?.top ?? initialWindowMetrics?.insets.top ?? 0;
+        return Math.max(0, topInset - this.state.containerTop);
     }
 
     /*
@@ -644,6 +700,18 @@ export default class ModalBox extends React.PureComponent<
         // but the result must never exceed the container: calculateModalPosition
         // clamps a bottom sheet's offset at 0, so any excess height spills off
         // the bottom of the screen, taking footer buttons with it.
+        // The coverScreen Modal and the app root start at the top edge of the
+        // screen (Android edge-to-edge, iOS always), so a bottom sheet also has
+        // to leave the top inset free, or its first row sits under the status
+        // bar where it can't be read or tapped. A container that already
+        // starts lower only gives up the part of the inset it overlaps.
+        const maxHeight =
+            this.props.position === 'bottom'
+                ? Math.max(
+                      0,
+                      this.state.containerHeight - this.topInsetOverlap()
+                  )
+                : this.state.containerHeight;
         const customHeightStyle =
             style &&
             typeof style === 'object' &&
@@ -652,7 +720,7 @@ export default class ModalBox extends React.PureComponent<
                 ? {
                       height: Math.min(
                           (style.height as number) * fontScale,
-                          this.state.containerHeight
+                          maxHeight
                       )
                   }
                 : undefined;
@@ -707,6 +775,7 @@ export default class ModalBox extends React.PureComponent<
             >
                 <View
                     style={{ flex: 1, pointerEvents: 'box-none' }}
+                    ref={this.containerRef}
                     onLayout={this.onContainerLayout}
                 >
                     {visible && this.renderBackdrop()}

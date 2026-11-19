@@ -47,6 +47,17 @@ let mockIsValidLNDHubAddress = false;
 let mockIsValidNpub = false;
 let mockProcessLNDHubAddress = jest.fn();
 let mockSupportsOnchainSends = true;
+let mockSupportsChannelManagement = true;
+let mockSupportsPeers = true;
+let mockSupportsAccounts = false;
+let mockSupportsCashuWallet = false;
+let mockSupportsWithdrawalRequests = false;
+let mockSupportsLnurlAuth = false;
+let mockIsPsbt = false;
+let mockIsValidTxHex = false;
+let mockIsValidXpub = false;
+let mockIsJsonWalletExport = false;
+let mockIsValidWithdrawalRequest = false;
 let mockGetLnurlParams = {};
 let mockBlobUtilFetch = jest.fn();
 const mockSimplePool = jest.fn();
@@ -54,7 +65,11 @@ const mockNip19Decode = jest.fn();
 const mockQuerySync = jest.fn();
 
 const ZEUS_ECASH_GIFT_URL = 'https://zeusln.com/e/';
+// The connected node is on regtest unless a test says otherwise
+let mockNodeNetwork = 'regtest';
 jest.mock('./AddressUtils', () => ({
+    bitcoinNetworkForNode: () =>
+        require('bitcoinjs-lib').networks[mockNodeNetwork],
     processBIP21Uri: (...args: string[]) => mockProcessBIP21Uri(...args),
     isValidBitcoinAddress: () => mockIsValidBitcoinAddress,
     isValidBitcoinAddressForNode: () => mockIsValidBitcoinAddress,
@@ -66,8 +81,15 @@ jest.mock('./AddressUtils', () => ({
     isValidLNDHubAddress: () => mockIsValidLNDHubAddress,
     processLNDHubAddress: (...args: any[]) => mockProcessLNDHubAddress(...args),
     isValidNpub: () => mockIsValidNpub,
-    isPsbt: () => false,
-    isValidTxHex: () => false,
+    isPsbt: () => mockIsPsbt,
+    isValidTxHex: () => mockIsValidTxHex,
+    isKeystoreWalletExport: () => false,
+    isJsonWalletExport: () => mockIsJsonWalletExport,
+    isStringWalletExport: () => false,
+    isWpkhDescriptor: () => false,
+    isNestedWpkhDescriptor: () => false,
+    isValidXpub: () => mockIsValidXpub,
+    isValidWithdrawalRequest: () => mockIsValidWithdrawalRequest,
     ZEUS_ECASH_GIFT_URL
 }));
 const mockDoTorRequest = jest.fn();
@@ -77,10 +99,12 @@ jest.mock('./TorUtils', () => ({
 }));
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
-    supportsAccounts: () => false,
-    supportsCashuWallet: () => false,
-    supportsWithdrawalRequests: () => false,
-    supportsLnurlAuth: () => false
+    supportsAccounts: () => mockSupportsAccounts,
+    supportsCashuWallet: () => mockSupportsCashuWallet,
+    supportsWithdrawalRequests: () => mockSupportsWithdrawalRequests,
+    supportsLnurlAuth: () => mockSupportsLnurlAuth,
+    supportsChannelManagement: () => mockSupportsChannelManagement,
+    supportsPeers: () => mockSupportsPeers
 }));
 
 let mockIsValidCashuToken = false;
@@ -127,18 +151,28 @@ jest.mock('../stores/Stores', () => ({
     settingsStore: { settings: { locale: 'en' } }
 }));
 jest.mock('react-native-blob-util', () => ({
-    fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+    config: () => ({
+        fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+    })
 }));
 jest.mock('react-native-encrypted-storage', () => ({}));
-jest.mock('react-native-fs', () => ({}));
 const mockGetLnurlParamsFn = jest.fn();
 const mockFindLnurl = jest.fn();
-jest.mock('js-lnurl', () => ({
-    getParams: (...args: any[]) => mockGetLnurlParamsFn(...args)
+// Undecodable by default, which is what most of these inputs are. js-lnurl
+// decodes before it fetches, so an undecodable value never reaches the
+// network and the lnurl host policy has nothing to police; tests that care
+// about the policy point this at a URL.
+const UNDECODABLE = () => {
+    throw new Error('invalid url');
+};
+let mockDecodeLnurl: (...args: any[]) => any = UNDECODABLE;
+jest.mock('./LnurlFetchUtils', () => ({
+    ...jest.requireActual('./LnurlFetchUtils'),
+    fetchLnurlParams: (...args: any[]) => mockGetLnurlParamsFn(...args)
 }));
 jest.mock('js-lnurl/lib/helpers', () => ({
     findlnurl: (...args: any[]) => mockFindLnurl(...args),
-    decodelnurl: () => null
+    decodelnurl: (...args: any[]) => mockDecodeLnurl(...args)
 }));
 jest.mock('nostr-tools', () => ({
     SimplePool: class {
@@ -148,7 +182,10 @@ jest.mock('nostr-tools', () => ({
         querySync = (...args: any[]) => mockQuerySync(...args);
         close = jest.fn();
     },
-    nip05: { queryProfile: jest.fn() },
+    nip05: {
+        NIP05_REGEX: jest.requireActual('nostr-tools').nip05.NIP05_REGEX,
+        queryProfile: jest.fn()
+    },
     nip19: { decode: (...args: any[]) => mockNip19Decode(...args) }
 }));
 jest.mock('../stores/SettingsStore', () => ({
@@ -166,6 +203,7 @@ describe('handleAnything', () => {
         mockProcessNodeUri.mockReset();
         mockGetLnurlParamsFn.mockReset();
         mockFindLnurl.mockReset();
+        mockDecodeLnurl = UNDECODABLE;
         mockSimplePool.mockReset();
         mockNip19Decode.mockReset();
         mockQuerySync.mockReset();
@@ -178,8 +216,21 @@ describe('handleAnything', () => {
         mockIsValidLightningOffer = false;
         mockIsValidLNDHubAddress = false;
         mockIsValidNodeUri = false;
+        mockSupportsChannelManagement = true;
+        mockSupportsPeers = true;
         mockIsValidCashuToken = false;
         mockDecodedCashuToken = {};
+        mockSupportsOnchainSends = true;
+        mockSupportsAccounts = false;
+        mockSupportsCashuWallet = false;
+        mockSupportsWithdrawalRequests = false;
+        mockSupportsLnurlAuth = false;
+        mockIsPsbt = false;
+        mockIsValidTxHex = false;
+        mockIsValidXpub = false;
+        mockIsJsonWalletExport = false;
+        mockIsValidWithdrawalRequest = false;
+        mockNodeNetwork = 'regtest';
     });
 
     describe('input sanitization', () => {
@@ -519,16 +570,36 @@ describe('handleAnything', () => {
                 expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(
                     'https://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13'
                 );
-                expect(result).toEqual([
+                expect(result).toStrictEqual([
                     'LnurlPay',
                     {
                         lnurlParams: mockGetLnurlParams,
-                        amount: undefined,
+                        satAmount: undefined,
                         ecash: false
                     }
                 ]);
             }
         );
+
+        it('should pass a provided amount through as satAmount', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13'
+            });
+
+            const result = await handleAnything(
+                'LIGHTNING:lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13',
+                '2100'
+            );
+
+            expect(result).toStrictEqual([
+                'LnurlPay',
+                {
+                    lnurlParams: mockGetLnurlParams,
+                    satAmount: '2100',
+                    ecash: false
+                }
+            ]);
+        });
 
         it('should handle LIGHTNING:lnurlp:// with .onion address and convert to http://', async () => {
             const data =
@@ -551,11 +622,11 @@ describe('handleAnything', () => {
             expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(
                 'http://example.onion/api/v1/lnurl/test123'
             );
-            expect(result).toEqual([
+            expect(result).toStrictEqual([
                 'LnurlPay',
                 {
                     lnurlParams: onionParams,
-                    amount: undefined,
+                    satAmount: undefined,
                     ecash: false
                 }
             ]);
@@ -616,6 +687,61 @@ describe('handleAnything', () => {
             ]);
         });
 
+        it('opens a channel request without channel management if peers are supported', async () => {
+            // The server opens the channel, so only connectPeer is needed
+            mockSupportsChannelManagement = false;
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlc://example.com/api/v1/lnurl/channel'
+            });
+            const channelParams = {
+                tag: 'channelRequest',
+                domain: 'example.com',
+                k1: 'test-k1-value',
+                uri: 'node@example.com:9735'
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(channelParams);
+
+            const result = await handleAnything(
+                'LIGHTNING:lnurlc://example.com/api/v1/lnurl/channel'
+            );
+
+            expect(result).toEqual([
+                'LnurlChannel',
+                {
+                    lnurlParams: channelParams
+                }
+            ]);
+        });
+
+        it('shows an error for a channel request without peer support', async () => {
+            mockSupportsPeers = false;
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlc://example.com/api/v1/lnurl/channel'
+            });
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'channelRequest',
+                domain: 'example.com',
+                k1: 'test-k1-value',
+                uri: 'node@example.com:9735'
+            });
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+
+            const result = await handleAnything(
+                'LIGHTNING:lnurlc://example.com/api/v1/lnurl/channel'
+            );
+
+            expect(result).toBeUndefined();
+            expect(alertSpy).toHaveBeenCalledWith(
+                'Error',
+                'Opening channels is not supported by this wallet',
+                expect.any(Array),
+                { cancelable: false }
+            );
+            alertSpy.mockRestore();
+        });
+
         it('should return true if from clipboard', async () => {
             const data =
                 'LIGHTNING:lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13';
@@ -635,6 +761,72 @@ describe('handleAnything', () => {
     // fell through to getlnurlParams (a live HTTP GET of an attacker-controllable
     // target, including RFC1918/link-local literals) and nostrProfileLookup
     // (outbound Nostr relay connections) on every app foreground.
+    // Resolving an lnurl fetches whatever the bech32 decodes to, so the host
+    // policy has to apply before that fetch and not only to the callbacks the
+    // response carries: an lnurl1... encoding a LAN or loopback URL is a
+    // request made from the user's network position with no server, no
+    // service and no callback involved.
+    describe('lnurl endpoint host policy', () => {
+        const lnurlValue = 'lnurl1anything';
+
+        beforeEach(() => {
+            mockProcessBIP21Uri.mockReturnValue({ value: lnurlValue });
+            mockFindLnurl.mockReturnValue(lnurlValue);
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'withdrawRequest',
+                callback: 'https://example.com/cb',
+                k1: 'K1'
+            });
+        });
+
+        it.each([
+            'http://127.0.0.1:8080/lnurl',
+            'https://192.168.1.1/lnurl',
+            'https://169.254.169.254/lnurl',
+            'http://cleartext.example/lnurl'
+        ])('refuses to resolve an lnurl pointing at %s', async (decoded) => {
+            mockDecodeLnurl = () => decoded;
+
+            // the refusal, not the generic invalid-params message
+            await expect(handleAnything(lnurlValue)).rejects.toThrow(
+                'This LNURL points at an unsafe address'
+            );
+            expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
+        });
+
+        // Refused at resolve time, before the user creates an invoice for a
+        // withdraw the service could never pay.
+        it('refuses a withdraw whose callback points at a LAN host', async () => {
+            mockDecodeLnurl = () => 'https://example.com/lnurl';
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'withdrawRequest',
+                callback: 'https://192.168.1.1/cb',
+                k1: 'K1'
+            });
+
+            await expect(handleAnything(lnurlValue)).rejects.toThrow(
+                'This Lightning service asked the wallet to contact an unsafe address'
+            );
+        });
+
+        it('resolves an lnurl pointing at a public https host', async () => {
+            mockDecodeLnurl = () => 'https://example.com/lnurl';
+
+            const result = await handleAnything(lnurlValue);
+
+            expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(lnurlValue);
+            expect(result[0]).toBe('Receive');
+        });
+
+        it('resolves an onion lnurl over cleartext, as the spec allows', async () => {
+            mockDecodeLnurl = () => 'http://abcdefg.onion/lnurl';
+
+            await handleAnything(lnurlValue);
+
+            expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(lnurlValue);
+        });
+    });
+
     describe('clipboard probe must not touch the network', () => {
         it('does not fetch lnurl params for a bech32 LNURL clipboard value', async () => {
             const data =
@@ -1108,6 +1300,105 @@ describe('handleAnything', () => {
             );
         });
 
+        it('encodes URL syntax in the username', async () => {
+            // %2e%2e is an encoded '..': unencoded, the request would be
+            // for /uploads/mallory.json, outside /.well-known/lnurlp/
+            const address = '%2e%2e/%2e%2e/uploads/mallory.json@example.com';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://example.com/callback' })
+            });
+
+            await handleAnything(address);
+
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://example.com/.well-known/lnurlp/%252e%252e%2F%252e%252e%2Fuploads%2Fmallory.json'
+            );
+        });
+
+        it('encodes path syntax in a cryptoqr.net username', async () => {
+            const address = '%2e%2e/%2E%2E/out?x=1#@cryptoqr.net';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://cryptoqr.net/callback' })
+            });
+
+            await handleAnything(address);
+
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://cryptoqr.net/.well-known/lnurlp/%252e%252e%2F%252E%252E%2Fout%3Fx=1%23'
+            );
+        });
+
+        it('treats a domain ending in cryptoqr.net like other domains', async () => {
+            const address = 'A%2Fb@evilcryptoqr.net';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://evilcryptoqr.net/callback' })
+            });
+
+            await handleAnything(address);
+
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://evilcryptoqr.net/.well-known/lnurlp/a%252fb'
+            );
+        });
+
+        // The address grammar admits IP-literal domains, and the well-known
+        // lookup is a request from the user's network position. The BOLT 12
+        // DoH lookup must not run either: it would send the address to the
+        // resolver before the refusal.
+        it.each(['user@192.168.1.1', 'user@127.0.0.1', 'user@169.254.169.254'])(
+            'refuses to resolve %s',
+            async (address) => {
+                mockProcessBIP21Uri.mockReturnValue({ value: address });
+                mockIsValidLightningAddress = true;
+                const originalFetch = global.fetch;
+                const mockDohFetch = jest.fn();
+                global.fetch = mockDohFetch as any;
+
+                try {
+                    await expect(handleAnything(address)).rejects.toThrow(
+                        'This lightning address points at an unsafe host'
+                    );
+                    expect(mockDohFetch).not.toHaveBeenCalled();
+                    expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                } finally {
+                    global.fetch = originalFetch;
+                }
+            }
+        );
+
+        // A public well-known URL can redirect to the LAN; the redirect is
+        // refused and reported instead of falling through to NIP-05, which
+        // would contact the same host again.
+        it('refuses a well-known lookup that redirects to the LAN', async () => {
+            const address = 'user@example.com';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({
+                    status: 302,
+                    headers: { Location: 'http://192.168.1.1/lnurlp' }
+                }),
+                json: () => ({})
+            });
+
+            await expect(handleAnything(address)).rejects.toThrow(
+                'redirected the wallet to an unsafe address'
+            );
+            expect(mockBlobUtilFetch).toHaveBeenCalledTimes(1);
+        });
+
         it('lowercases domain per LUD-16 spec', async () => {
             const address = 'satoshi@EXAMPLE.COM';
             mockProcessBIP21Uri.mockReturnValue({ value: address });
@@ -1194,6 +1485,41 @@ describe('handleAnything', () => {
             expect(result[1].nostrContact.name).toBe('Satoshi');
         });
 
+        it('sends the lookup through Tor when Tor is enabled', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'satoshi@domain.com'
+            });
+            mockDoTorRequest.mockResolvedValue({
+                names: { satoshi: PUBKEY }
+            });
+            mockQuerySync.mockResolvedValue([
+                {
+                    id: 'event',
+                    created_at: 1,
+                    content: JSON.stringify({ name: 'Satoshi' })
+                }
+            ]);
+            (settingsStore as any).enableTor = true;
+
+            try {
+                const result = await handleAnything('satoshi@domain.com');
+
+                expect(mockDoTorRequest).toHaveBeenCalledWith(
+                    'https://domain.com/.well-known/nostr.json?name=satoshi',
+                    'GET'
+                );
+                expect(mockQueryProfile).not.toHaveBeenCalled();
+                expect(global.fetch).not.toHaveBeenCalledWith(
+                    expect.stringContaining('nostr.json'),
+                    expect.anything()
+                );
+                expect(result[0]).toBe('ContactDetails');
+            } finally {
+                (settingsStore as any).enableTor = undefined;
+                mockDoTorRequest.mockReset();
+            }
+        });
+
         it('looks up the address without its lightning: prefix', async () => {
             mockProcessBIP21Uri.mockReturnValue({
                 value: 'SATOSHI@DOMAIN.COM'
@@ -1275,6 +1601,106 @@ describe('handleAnything', () => {
         });
     });
 
+    describe('zeuscontact', () => {
+        const openCard = async (fields: any) => {
+            const card = `zeuscontact:${JSON.stringify(fields)}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: card });
+            return await handleAnything(card);
+        };
+
+        const CARD_DEFAULTS = {
+            description: '',
+            lnAddress: [],
+            bolt12Address: [],
+            bolt12Offer: [],
+            noffer: [],
+            onchainAddress: [],
+            nip05: [],
+            nostrNpub: [],
+            pubkey: [],
+            cashuPubkey: []
+        };
+
+        it('opens the card without the remote images it names', async () => {
+            const result = await openCard({
+                contactId: '1',
+                name: 'Coffee shop',
+                description: '',
+                lnAddress: ['tips@coffee.example'],
+                photo: 'http://192.168.1.1/cgi-bin/reboot',
+                banner: 'https://beacon.example/seen.png'
+            });
+
+            expect(result).toEqual([
+                'ContactDetails',
+                {
+                    nostrContact: {
+                        ...CARD_DEFAULTS,
+                        contactId: '1',
+                        name: 'Coffee shop',
+                        lnAddress: ['tips@coffee.example']
+                    },
+                    isNostrContact: true
+                }
+            ]);
+        });
+
+        it('drops local rnfs:// image paths', async () => {
+            const result = await openCard({
+                contactId: '1',
+                name: 'Coffee shop',
+                photo: 'rnfs://../../Library/Preferences/x.plist',
+                banner: 'rnfs://banner.png'
+            });
+
+            expect(result[1].nostrContact).not.toHaveProperty('photo');
+            expect(result[1].nostrContact).not.toHaveProperty('banner');
+        });
+
+        it('drops fields a card does not carry', async () => {
+            const result = await openCard({
+                contactId: '1',
+                name: 'Coffee shop',
+                id: 'legacy-id',
+                isFavourite: true,
+                isSelected: true
+            });
+
+            expect(result[1].nostrContact).toEqual({
+                ...CARD_DEFAULTS,
+                contactId: '1',
+                name: 'Coffee shop'
+            });
+        });
+
+        it('keeps every member a card carries', async () => {
+            const fields = {
+                contactId: '1',
+                name: 'Coffee shop',
+                description: 'Espresso',
+                lnAddress: ['tips@coffee.example'],
+                bolt12Address: ['tips@bolt12.example'],
+                bolt12Offer: ['lno1offer'],
+                noffer: ['noffer1offer'],
+                onchainAddress: ['bc1qaddress'],
+                nip05: ['coffee@nostr.example'],
+                nostrNpub: ['npub1coffee'],
+                pubkey: ['02pubkey'],
+                cashuPubkey: ['02cashu']
+            };
+
+            const result = await openCard(fields);
+
+            expect(result[1].nostrContact).toEqual(fields);
+        });
+
+        it('falls through when the card has no contactId', async () => {
+            const result = await openCard({ name: 'Coffee shop' });
+
+            expect(result).toBeUndefined();
+        });
+    });
+
     describe('npub', () => {
         const NPUB =
             'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m';
@@ -1323,6 +1749,45 @@ describe('handleAnything', () => {
             await expect(handleAnything(NPUB)).rejects.toThrow(
                 'Error fetching Nostr profile'
             );
+        });
+    });
+
+    describe('PSBT', () => {
+        // A PSBT carries output scripts and previous transactions chosen by
+        // other parties, so its base64 text can contain any substring
+        const scan = (psbt: string) => {
+            mockIsPsbt = true;
+            mockProcessBIP21Uri.mockReturnValue({ value: psbt });
+            return handleAnything(psbt);
+        };
+
+        it('is not taken for an LNURL when its bytes read as one', async () => {
+            const lnurl = 'lnurl1dp68gurn8ghj7etk9e5kcqswryy';
+            const psbt = `cHNidP8BAHEC${lnurl}//AAAA`;
+            mockFindLnurl.mockReturnValue(lnurl);
+
+            expect(await scan(psbt)).toEqual(['PSBT', { psbt }]);
+            expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
+        });
+
+        it.each(['clnrest+', 'lndconnect', '/lnurlp'])(
+            'is not taken for a %s link when its bytes read as one',
+            async (text) => {
+                const psbt = `cHNidP8BAHEC${text}AAAA`;
+
+                expect(await scan(psbt)).toEqual(['PSBT', { psbt }]);
+                expect(mockProcessCLNRestConnectUrl).not.toHaveBeenCalled();
+                expect(mockProcessLndConnectUrl).not.toHaveBeenCalled();
+                expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
+            }
+        );
+
+        it('leaves a Lightning address that starts with psbt alone', async () => {
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockRejectedValue(new Error('offline'));
+
+            await expect(scan('psbt@zeuspay.com')).rejects.toThrow();
+            expect(mockBlobUtilFetch).toHaveBeenCalled();
         });
     });
 
@@ -1919,6 +2384,27 @@ describe('handleAnything', () => {
                 }
             ]);
         });
+
+        it('should reject a SeedQR without sending it to the merchant gateway', async () => {
+            // 12 word BIP 39 seed, four digits per word index
+            const seedQR = '052818190979191606401336164118140553141215261068';
+            mockProcessBIP21Uri.mockImplementation((value: string) => ({
+                value
+            }));
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 404 })
+            });
+            const fetchSpy = jest
+                .spyOn(global, 'fetch')
+                .mockRejectedValue(new Error('DoH'));
+
+            await expect(handleAnything(seedQR)).rejects.toThrow();
+
+            expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+            expect(fetchSpy).not.toHaveBeenCalled();
+            fetchSpy.mockRestore();
+        });
     });
 
     // Regression tests: These tests would have FAILED on master where merchant QR
@@ -2271,6 +2757,43 @@ describe('handleAnything', () => {
         });
     });
 
+    describe('node URI', () => {
+        const nodeUri =
+            '031234567890123456789012345678901234567890123456789012345678901234@mynode.local:9735';
+
+        beforeEach(() => {
+            mockProcessBIP21Uri.mockImplementation((input: string) => ({
+                value: input
+            }));
+            mockIsValidNodeUri = true;
+        });
+
+        it('is offered from the clipboard with channel management', async () => {
+            const result = await handleAnything(nodeUri, undefined, true);
+
+            expect(result).toBe(true);
+        });
+
+        describe('without channel management', () => {
+            beforeEach(() => {
+                mockSupportsChannelManagement = false;
+            });
+
+            it('rejects instead of opening OpenChannel', async () => {
+                await expect(handleAnything(nodeUri)).rejects.toThrow(
+                    'Opening channels is not supported by this wallet'
+                );
+                expect(mockProcessNodeUri).not.toHaveBeenCalled();
+            });
+
+            it('is not offered from the clipboard', async () => {
+                const result = await handleAnything(nodeUri, undefined, true);
+
+                expect(result).toBe(false);
+            });
+        });
+    });
+
     describe('strictUriEncode', () => {
         it('encodes exclamation mark', () => {
             expect(strictUriEncode('unicorn!foobar')).toBe('unicorn%21foobar');
@@ -2369,6 +2892,20 @@ describe('handleAnything', () => {
             expect(isMerchantQR('CRSTPC-1-2-3-4-5')).toBe(true);
         });
 
+        it('returns true for multi-line zap.pe QR codes', () => {
+            expect(isMerchantQR('http://5.zap.pe?t=4&i=test\nline\n')).toBe(
+                true
+            );
+        });
+
+        it('rejects a zap.pe QR code with a carriage return in linear time', () => {
+            // 28 characters before the \r take seconds with a nested
+            // quantifier in the zap.pe tail
+            const start = Date.now();
+            expect(isMerchantQR(`1.zap.pe${'a'.repeat(28)}\rx`)).toBe(false);
+            expect(Date.now() - start).toBeLessThan(500);
+        });
+
         it('returns true for SnapScan QR codes', () => {
             expect(
                 isMerchantQR('https://pos-staging.snapscan.io/qr/N0utvgph')
@@ -2384,8 +2921,31 @@ describe('handleAnything', () => {
                 isMerchantQR('https://app.scantopay.io/qr?qrcode=8784599487')
             ).toBe(true);
             expect(isMerchantQR('0337704903')).toBe(true);
+            expect(isMerchantQR('00020126260008za.co.mp01108472685626')).toBe(
+                true
+            );
             expect(isMerchantQR('UMPQR123456')).toBe(true);
             expect(isMerchantQR('easypay789')).toBe(true);
+        });
+
+        it('returns false for input that merely contains ten digits in a row', () => {
+            // SeedQR, 12 and 24 words
+            const seedQR = '052818190979191606401336164118140553141215261068';
+            expect(isMerchantQR(seedQR)).toBe(false);
+            expect(isMerchantQR(seedQR + seedQR)).toBe(false);
+            // 32 byte secret in hex
+            expect(
+                isMerchantQR(
+                    'a3f1c07b1234567890de5b9c2f4a6e8d0b1c3d5e7f9a0b2c4d6e8f0a1b3c5d7e'
+                )
+            ).toBe(false);
+            // legacy NWC scheme
+            expect(
+                isMerchantQR(
+                    'nostrwalletconnect://abc123?relay=wss://relay.example.com&secret=a3f1c07b1234567890de'
+                )
+            ).toBe(false);
+            expect(isMerchantQR('03377049031')).toBe(false);
         });
 
         it('returns false for null/empty input', () => {
@@ -2696,6 +3256,279 @@ describe('handleAnything', () => {
             const result = await handleAnything(url, undefined, true);
 
             expect(result).toBe(true);
+        });
+    });
+
+    describe('WIF private keys', () => {
+        const MAINNET_WIF =
+            'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
+        const TESTNET_WIF =
+            'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA';
+
+        it('routes a key for the node network to WIFSweeper', async () => {
+            mockProcessBIP21Uri.mockReturnValue({ value: TESTNET_WIF });
+
+            const result = await handleAnything(TESTNET_WIF);
+
+            expect(result).toEqual(['WIFSweeper', { wif: TESTNET_WIF }]);
+        });
+
+        it('says when a key is for another network', async () => {
+            mockProcessBIP21Uri.mockReturnValue({ value: MAINNET_WIF });
+
+            await expect(handleAnything(MAINNET_WIF)).rejects.toThrow(
+                'This private key is for a different Bitcoin network than the connected wallet.'
+            );
+        });
+
+        it('returns false for a key for another network on the clipboard', async () => {
+            mockProcessBIP21Uri.mockReturnValue({ value: MAINNET_WIF });
+
+            const result = await handleAnything(MAINNET_WIF, undefined, true);
+
+            expect(result).toBe(false);
+        });
+
+        it('keeps the generic error for a malformed WIF-like string', async () => {
+            // Right prefix and length, but the checksum does not match
+            const malformed = `${TESTNET_WIF.slice(0, -1)}B`;
+            mockProcessBIP21Uri.mockReturnValue({ value: malformed });
+
+            await expect(handleAnything(malformed)).rejects.toThrow(
+                'Value provided was not a valid Bitcoin address or Lightning Invoice'
+            );
+        });
+
+        it('keeps the generic error for unrecognized input', async () => {
+            mockProcessBIP21Uri.mockReturnValue({ value: 'not a key' });
+
+            await expect(handleAnything('not a key')).rejects.toThrow(
+                'Value provided was not a valid Bitcoin address or Lightning Invoice'
+            );
+        });
+    });
+
+    describe('capability-gated routes', () => {
+        afterEach(() => {
+            delete (settingsStore.settings as any).ecash;
+        });
+
+        it('should route an LNURL-withdraw to ChoosePaymentMethod in ecash mode', async () => {
+            mockSupportsCashuWallet = true;
+            (settingsStore.settings as any).ecash = { enableCashu: true };
+            const url = 'https://example.com/api/v1/lnurl/withdraw';
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            const params = {
+                tag: 'withdrawRequest',
+                domain: 'example.com',
+                k1: 'k1',
+                minWithdrawable: 1000,
+                maxWithdrawable: 100000
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(params);
+
+            const result = await handleAnything(url);
+
+            expect(result).toStrictEqual([
+                'ChoosePaymentMethod',
+                { lnurlParams: params, lightning: url }
+            ]);
+        });
+
+        it('should route an LNURL-auth login to LnurlAuth when supported', async () => {
+            mockSupportsLnurlAuth = true;
+            const url = 'https://example.com/lnurlauth?tag=login&k1=abc';
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            const params = {
+                tag: 'login',
+                domain: 'example.com',
+                k1: 'abc'
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(params);
+
+            const result = await handleAnything(url);
+
+            expect(result).toStrictEqual([
+                'LnurlAuth',
+                { lnurlParams: params }
+            ]);
+        });
+
+        it('should route a PSBT to the PSBT screen', async () => {
+            mockIsPsbt = true;
+            const psbt = 'cHNidP8BAHECAAAAAQ==';
+            mockProcessBIP21Uri.mockReturnValue({ value: psbt });
+
+            const result = await handleAnything(psbt);
+
+            expect(result).toStrictEqual(['PSBT', { psbt }]);
+        });
+
+        it('should route a raw transaction hex to the TxHex screen', async () => {
+            mockIsValidTxHex = true;
+            const txHex = '0200000001abcdef';
+            mockProcessBIP21Uri.mockReturnValue({ value: txHex });
+
+            const result = await handleAnything(txHex);
+
+            expect(result).toStrictEqual(['TxHex', { txHex }]);
+        });
+
+        it('should route an xpub to ImportAccount when accounts are supported', async () => {
+            mockSupportsAccounts = true;
+            mockIsValidXpub = true;
+            const xpub =
+                'xpub6CUGRUonZSQ4TWtTMmzXdrXDtypWKiKrhko4egpiMZbpiaQL2jkwSB1icqYh2cfDfVxdx4df189oLKnC5fSwqPfgyP3hooxujYzAu3fDVmz';
+            mockProcessBIP21Uri.mockReturnValue({ value: xpub });
+
+            const result = await handleAnything(xpub);
+
+            expect(result).toStrictEqual([
+                'ImportAccount',
+                { extended_public_key: xpub }
+            ]);
+        });
+
+        it('should route a JSON wallet export to ImportAccount without an address type', async () => {
+            mockSupportsAccounts = true;
+            mockIsJsonWalletExport = true;
+            const value = JSON.stringify({
+                MasterFingerprint: '73C5DA0A',
+                ExtPubKey:
+                    'zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDGf31mGDtKsAYz2oz2AGutZYs'
+            });
+            mockProcessBIP21Uri.mockReturnValue({ value });
+
+            const result = await handleAnything(value);
+
+            expect(result).toStrictEqual([
+                'ImportAccount',
+                {
+                    extended_public_key:
+                        'zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDGf31mGDtKsAYz2oz2AGutZYs',
+                    master_key_fingerprint: '73C5DA0A'
+                }
+            ]);
+        });
+
+        it.each([
+            ['nested SegWit', 2],
+            ['Taproot', 4]
+        ])(
+            'should pass a %s address type from a JSON wallet export to ImportAccount',
+            async (_name, addressType) => {
+                mockSupportsAccounts = true;
+                mockIsJsonWalletExport = true;
+                const value = JSON.stringify({
+                    MasterFingerprint: '73C5DA0A',
+                    ExtPubKey: 'xpubtest',
+                    AddressType: addressType
+                });
+                mockProcessBIP21Uri.mockReturnValue({ value });
+
+                const result = await handleAnything(value);
+
+                expect(result).toStrictEqual([
+                    'ImportAccount',
+                    {
+                        extended_public_key: 'xpubtest',
+                        master_key_fingerprint: '73C5DA0A',
+                        address_type: addressType
+                    }
+                ]);
+            }
+        );
+
+        it.each([0, 3, 99, '2'])(
+            'should ignore an unsupported address type %p in a JSON wallet export',
+            async (addressType) => {
+                mockSupportsAccounts = true;
+                mockIsJsonWalletExport = true;
+                const value = JSON.stringify({
+                    MasterFingerprint: '73C5DA0A',
+                    ExtPubKey: 'xpubtest',
+                    AddressType: addressType
+                });
+                mockProcessBIP21Uri.mockReturnValue({ value });
+
+                const result = await handleAnything(value);
+
+                expect(result).toStrictEqual([
+                    'ImportAccount',
+                    {
+                        extended_public_key: 'xpubtest',
+                        master_key_fingerprint: '73C5DA0A'
+                    }
+                ]);
+            }
+        );
+
+        it('should route a BOLT 12 withdrawal request to WithdrawalRequestInfo when supported', async () => {
+            mockSupportsWithdrawalRequests = true;
+            mockIsValidWithdrawalRequest = true;
+            const request = 'lnr1qqtestwithdrawalrequest';
+            mockProcessBIP21Uri.mockReturnValue({ value: request });
+
+            const result = await handleAnything(request);
+
+            expect(result).toStrictEqual([
+                'WithdrawalRequestInfo',
+                { bolt12: request }
+            ]);
+        });
+        it('should route an LNURL-withdraw to Receive when Cashu is supported but disabled', async () => {
+            mockSupportsCashuWallet = true;
+            (settingsStore.settings as any).ecash = { enableCashu: false };
+            const url = 'https://example.com/api/v1/lnurl/withdraw';
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            const params = {
+                tag: 'withdrawRequest',
+                domain: 'example.com',
+                k1: 'k1',
+                minWithdrawable: 1000,
+                maxWithdrawable: 100000
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(params);
+
+            const result = await handleAnything(url);
+
+            expect(result).toStrictEqual(['Receive', { lnurlParams: params }]);
+        });
+
+        it('should alert instead of routing an LNURL-auth login when unsupported', async () => {
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+            const url = 'https://example.com/lnurlauth?tag=login&k1=abc';
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'login',
+                domain: 'example.com',
+                k1: 'abc'
+            });
+
+            const result = await handleAnything(url);
+
+            expect(result).toBeUndefined();
+            expect(alertSpy).toHaveBeenCalledTimes(1);
+            alertSpy.mockRestore();
+        });
+
+        it('should not route an xpub to ImportAccount when accounts are unsupported', async () => {
+            mockIsValidXpub = true;
+            const xpub =
+                'xpub6CUGRUonZSQ4TWtTMmzXdrXDtypWKiKrhko4egpiMZbpiaQL2jkwSB1icqYh2cfDfVxdx4df189oLKnC5fSwqPfgyP3hooxujYzAu3fDVmz';
+            mockProcessBIP21Uri.mockReturnValue({ value: xpub });
+
+            await expect(handleAnything(xpub)).rejects.toThrow();
+        });
+
+        it('should not route a BOLT 12 withdrawal request when unsupported', async () => {
+            mockIsValidWithdrawalRequest = true;
+            const request = 'lnr1qqtestwithdrawalrequest';
+            mockProcessBIP21Uri.mockReturnValue({ value: request });
+
+            await expect(handleAnything(request)).rejects.toThrow();
         });
     });
 });

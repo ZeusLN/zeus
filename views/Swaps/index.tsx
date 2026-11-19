@@ -33,6 +33,7 @@ import ModalBox from '../../components/ModalBox';
 import Switch from '../../components/Switch';
 
 import { font } from '../../utils/FontUtils';
+import { isPlausibleSatPerVbyte } from '../../utils/FeeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -45,6 +46,7 @@ import {
     calculateServiceFeeOnSend,
     calculateSendAmount,
     calculateLimit,
+    quoteSwapAmounts,
     SWAPS_RESCUE_KEY
 } from '../../utils/SwapUtils';
 
@@ -106,6 +108,11 @@ interface SwapState {
     showRescueKeyBtn: boolean;
     enableLSP: boolean;
     flowLspNotConfigured: boolean;
+    // the amount field the user set last, kept when the network fee changes
+    lastEditedAmount: 'input' | 'output';
+    // a mempool rate lookup has finished, so an empty rate is now missing
+    // rather than still on its way
+    feeRateLookupDone: boolean;
 }
 
 @inject(
@@ -146,11 +153,97 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         isIntroModalVisible: false,
         showRescueKeyBtn: false,
         enableLSP: true,
-        flowLspNotConfigured: true
+        flowLspNotConfigured: true,
+        lastEditedAmount: 'input' as 'input' | 'output',
+        feeRateLookupDone: false
     };
 
     private isNavigatingAway = false;
     private _unsubscribe?: () => void;
+    // the network fee the current amounts were worked out with
+    private amountsNetworkFee?: number;
+    private feeLookupToken = 0;
+
+    // The claim fee createReverseSwap will store at the rate set below.
+    // Without a usable rate the swap cannot start, and the quote is shown.
+    reverseClaimFeeShown = (): number =>
+        this.props.SwapStore.getReverseClaimMinerFee(this.state.fee) ??
+        (this.props.SwapStore.reverseInfo?.fees?.minerFees?.claim || 0);
+
+    // The miner fees taken from the amount: for a reverse swap the claim
+    // fee above plus the host's lockup fee
+    networkFeeSats = (reverse: boolean): number => {
+        const { subInfo, reverseInfo } = this.props.SwapStore;
+        return reverse
+            ? new BigNumber(this.reverseClaimFeeShown())
+                  .plus(reverseInfo?.fees?.minerFees?.lockup || 0)
+                  .toNumber()
+            : new BigNumber(subInfo?.fees?.minerFees || 0).toNumber();
+    };
+
+    satsDisplay = (sats: BigNumber): string => {
+        if (!sats.isGreaterThan(0)) return '';
+        const { units } = this.props.UnitsStore;
+        if (units === 'fiat') {
+            const { fiat } = this.props.SettingsStore.settings;
+            const { fiatRates } = this.props.FiatStore;
+            const fiatEntry =
+                fiat && fiatRates
+                    ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                    : null;
+            const rate = fiatEntry ? fiatEntry.rate : 0;
+            return sats.div(SATS_PER_BTC).times(rate).toFixed(2);
+        }
+        if (units === 'BTC') return sats.div(SATS_PER_BTC).toFixed(8);
+        if (units === 'sats') return sats.toFixed(0);
+        return '';
+    };
+
+    // Works out the amount the user did not set again, keeping the one they
+    // set, after the network fee changed: a new fee rate, or a mempool rate
+    // or host quote that arrived after the amount was entered
+    recalculateAmounts = () => {
+        const { reverse, lastEditedAmount, inputSats, outputSats } = this.state;
+        const { subInfo, reverseInfo } = this.props.SwapStore;
+        const info: any = reverse ? reverseInfo : subInfo;
+        const serviceFeePct = info?.fees?.percentage || 0;
+        const networkFee = this.networkFeeSats(reverse);
+
+        if (lastEditedAmount === 'output') {
+            const output = new BigNumber(outputSats || 0);
+            const input = calculateSendAmount(
+                output,
+                serviceFeePct,
+                networkFee,
+                reverse
+            );
+            this.setState({
+                inputSats: input,
+                inputDisplay: this.satsDisplay(input),
+                serviceFeeSats: bigCeil(
+                    (reverse ? input : output).times(serviceFeePct).div(100)
+                )
+            });
+        } else {
+            const input = new BigNumber(inputSats || 0);
+            const output = calculateReceiveAmount(
+                input,
+                serviceFeePct,
+                networkFee,
+                reverse
+            );
+            this.setState({
+                outputSats: output,
+                outputDisplay: this.satsDisplay(output),
+                serviceFeeSats: calculateServiceFeeOnSend(
+                    input,
+                    serviceFeePct,
+                    networkFee,
+                    reverse
+                )
+            });
+        }
+    };
 
     checkIsValid = () => {
         const { reverse, invoice, inputSats, outputSats } = this.state;
@@ -167,12 +260,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const info: any = reverse ? reverseInfo : subInfo;
 
         const serviceFeePct = info?.fees?.percentage || 0;
-        const networkFeeBigNum = this.state.reverse
-            ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
-                  info?.fees?.minerFees?.lockup || 0
-              )
-            : new BigNumber(info?.fees?.minerFees || 0);
-        const networkFee = networkFeeBigNum.toNumber();
+        const networkFee = this.networkFeeSats(this.state.reverse);
 
         const minThreshold = info?.limits?.minimal || 0;
         const maxThreshold = info?.limits?.maximal || 0;
@@ -214,14 +302,68 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 ? true
                 : currentInputSatsBN.isLessThanOrEqualTo(maxSendAmount));
 
+        // The reverse claim is broadcast without asking, so its fee is
+        // decided before the swap starts, from the host's quote and a
+        // usable rate from the fee section above
+        const feeRateUsable =
+            !reverse ||
+            SwapStore.getReverseClaimMinerFee(this.state.fee) !== undefined;
+
         const newIsValid =
             invoiceAddressValid &&
             inputAmountValidAndWithinLimits &&
-            outputGreaterThanZero;
+            outputGreaterThanZero &&
+            feeRateUsable;
 
         if (this.state.isValid !== newIsValid) {
             this.setState({ isValid: newIsValid });
         }
+    };
+
+    // createReverseSwap refetched the quote because the provider's fees
+    // changed. Keep the amount the user sends and recompute what they
+    // receive, so a retry is not made against the old receive amount.
+    refreshAmountsForNewQuote = () => {
+        const { SwapStore, UnitsStore, FiatStore, SettingsStore } = this.props;
+        const { reverse, inputSats } = this.state;
+        const info: any = reverse ? SwapStore.reverseInfo : SwapStore.subInfo;
+        const { units } = UnitsStore;
+        const { fiatRates } = FiatStore;
+        const { fiat } = SettingsStore.settings;
+        const fiatEntry =
+            fiat && fiatRates
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+        const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
+
+        const { receiveAmount, serviceFee } = quoteSwapAmounts(
+            new BigNumber(inputSats || 0),
+            info,
+            reverse
+        );
+
+        let outputDisplay = '';
+        if (receiveAmount.isGreaterThan(0)) {
+            if (units === 'fiat' && rate > 0) {
+                outputDisplay = receiveAmount
+                    .div(SATS_PER_BTC)
+                    .times(rate)
+                    .toFixed(2);
+            } else if (units === 'BTC') {
+                outputDisplay = receiveAmount.div(SATS_PER_BTC).toFixed(8);
+            } else if (units === 'sats') {
+                outputDisplay = receiveAmount.toFixed(0);
+            }
+        }
+
+        this.setState(
+            {
+                outputSats: receiveAmount,
+                outputDisplay,
+                serviceFeeSats: serviceFee
+            },
+            () => this.checkIsValid()
+        );
     };
 
     async componentDidMount() {
@@ -345,26 +487,56 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             return;
         }
 
+        const networkFee = this.networkFeeSats(this.state.reverse);
+        const networkFeeChanged =
+            this.amountsNetworkFee !== undefined &&
+            networkFee !== this.amountsNetworkFee &&
+            prevState.reverse === this.state.reverse;
+        this.amountsNetworkFee = networkFee;
+        if (
+            networkFeeChanged &&
+            (new BigNumber(this.state.inputSats || 0).isGreaterThan(0) ||
+                new BigNumber(this.state.outputSats || 0).isGreaterThan(0))
+        ) {
+            this.recalculateAmounts();
+        }
+
         // Existing fee fetching logic
         if (!prevState.reverse && this.state.reverse) {
+            // Capture a token so a stale lookup can't overwrite a newer one.
+            // Also capture the fee at request time so a user-typed fee (or a
+            // fee set by OnchainFeeInput's own fetch) isn't clobbered.
+            const token = ++this.feeLookupToken;
+            const feeAtFetchStart = this.state.fee;
+            this.setState({ feeRateLookupDone: false });
             try {
-                const feesObj: {
-                    economyFee: number;
-                    fastestFee: number;
-                    halfHourFee: number;
-                    hourFee: number;
-                    minimumFee: number;
-                } = await FeeStore.getOnchainFeesviaMempool();
+                const feesObj: { [key: string]: number } | undefined =
+                    await FeeStore.getOnchainFeesviaMempool();
 
-                const preferredMempoolRate =
-                    settings?.payments?.preferredMempoolRate || 'fastestFee';
+                // Only the latest lookup applies its rate; a stale one falls
+                // through to the rest of componentDidUpdate.
+                if (token === this.feeLookupToken) {
+                    const preferredMempoolRate =
+                        settings?.payments?.preferredMempoolRate ||
+                        'fastestFee';
 
-                const feeRate =
-                    feesObj[preferredMempoolRate as keyof typeof feesObj] ??
-                    feesObj.fastestFee;
-                this.setState({ fee: feeRate.toString() });
+                    const feeRate =
+                        feesObj?.[preferredMempoolRate] ?? feesObj?.fastestFee;
+
+                    if (
+                        feeRate !== undefined &&
+                        this.state.fee === feeAtFetchStart
+                    ) {
+                        this.setState({ fee: feeRate.toString() });
+                    }
+                }
             } catch (error) {
                 console.error('Failed to fetch mempool fees:', error);
+            } finally {
+                // Only the latest lookup owns the "done" flag.
+                if (token === this.feeLookupToken) {
+                    this.setState({ feeRateLookupDone: true });
+                }
             }
         }
 
@@ -414,12 +586,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                             ? SwapStore.reverseInfo
                             : SwapStore.subInfo;
                         const serviceFeePct = info?.fees?.percentage || 0;
-                        const networkFeeBigNum = initialReverse
-                            ? new BigNumber(
-                                  info?.fees?.minerFees?.claim || 0
-                              ).plus(info?.fees?.minerFees?.lockup || 0)
-                            : new BigNumber(info?.fees?.minerFees || 0);
-                        const networkFee = networkFeeBigNum.toNumber();
+                        const networkFee = this.networkFeeSats(initialReverse);
 
                         const newOutputSats = new BigNumber(
                             initialAmountSats || 0
@@ -473,6 +640,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                             {
                                 invoice: initialInvoice,
                                 reverse: initialReverse,
+                                lastEditedAmount: 'output',
                                 outputSats: newOutputSats,
                                 outputDisplay: newOutputDisplay,
                                 inputSats: newInputSats,
@@ -491,7 +659,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             prevState.inputSats !== this.state.inputSats ||
             prevState.outputSats !== this.state.outputSats ||
             prevState.invoice !== this.state.invoice ||
-            prevState.reverse !== this.state.reverse
+            prevState.reverse !== this.state.reverse ||
+            prevState.fee !== this.state.fee
         ) {
             this.checkIsValid();
         }
@@ -506,7 +675,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             const { LSPStore } = this.props;
             const outputSats = new BigNumber(this.state.outputSats);
             if (outputSats.isGreaterThan(0)) {
-                LSPStore.getZeroConfFee(outputSats.toNumber() * 1000);
+                // errors are surfaced through LSPStore.flow_error
+                LSPStore.getZeroConfFee(outputSats.toNumber() * 1000).catch(
+                    () => {}
+                );
             } else {
                 LSPStore.resetFee();
             }
@@ -519,6 +691,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         this._unsubscribe?.();
     }
 
+    // The amount keypad and the fee editor are screens of their own:
+    // opening one blurs this one, which must not reset the form
+    markNavigatingAway = () => {
+        this.isNavigatingAway = true;
+    };
+
     resetFields = () => {
         this.setState(
             {
@@ -528,8 +706,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 inputDisplay: '',
                 outputDisplay: '',
                 invoice: '',
-                error: '',
-                paramsProcessed: false
+                error: ''
             },
             () => this.checkIsValid()
         );
@@ -801,7 +978,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             feeSettingToggle,
             showRescueKeyBtn,
             enableLSP,
-            flowLspNotConfigured
+            flowLspNotConfigured,
+            feeRateLookupDone
         } = this.state;
         const { subInfo, reverseInfo, loading, apiError, clearError } =
             SwapStore;
@@ -821,20 +999,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
         const serviceFeePct = info?.fees?.percentage || 0;
-        const networkFeeBigNum = reverse
-            ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
-                  info?.fees?.minerFees?.lockup || 0
-              )
-            : new BigNumber(info?.fees?.minerFees || 0);
-        const networkFee = networkFeeBigNum.toNumber();
+        const networkFee = this.networkFeeSats(reverse);
 
         const SwapsPaneBtn = () => (
             <TouchableOpacity
                 // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                 style={{ marginTop: -10 }}
                 onPress={() => {
-                    // Reset paramsProcessed when navigating to clear previous prefill
-                    this.setState({ paramsProcessed: false });
                     navigation.navigate('SwapsPane');
                 }}
                 accessibilityLabel={localeString('general.add')}
@@ -1011,6 +1182,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     }}
                                                 >
                                                     <AmountInput
+                                                        onNavigateAway={
+                                                            this
+                                                                .markNavigatingAway
+                                                        }
                                                         prefix={
                                                             <TouchableOpacity
                                                                 onPress={() => {
@@ -1156,6 +1331,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                             networkFee,
                                                                             reverse
                                                                         ),
+                                                                    lastEditedAmount:
+                                                                        'input',
                                                                     inputSats:
                                                                         satAmountNew.toNumber(),
                                                                     outputSats,
@@ -1224,6 +1401,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         }}
                                                     >
                                                         <AmountInput
+                                                            onNavigateAway={
+                                                                this
+                                                                    .markNavigatingAway
+                                                            }
                                                             prefix={
                                                                 <TouchableOpacity
                                                                     onPress={() => {
@@ -1399,6 +1580,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                             bigCeil(
                                                                                 serviceFeeSats
                                                                             ),
+                                                                        lastEditedAmount:
+                                                                            'output',
                                                                         inputSats:
                                                                             input,
                                                                         outputSats:
@@ -1772,6 +1955,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     networkFee,
                                                                     reverse
                                                                 ),
+                                                            lastEditedAmount:
+                                                                'input',
                                                             inputSats:
                                                                 satAmountNew.toNumber(),
                                                             outputSats,
@@ -1914,6 +2099,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     networkFee,
                                                                     reverse
                                                                 ),
+                                                            lastEditedAmount:
+                                                                'input',
                                                             inputSats:
                                                                 satAmountNew.toNumber(),
                                                             outputSats,
@@ -2167,7 +2354,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     settings
                                                                         ?.invoices
                                                                         ?.expirySeconds ||
-                                                                    '3600'
+                                                                    '3600',
+                                                                // only where the LSP switch and fee are shown
+                                                                useLsp:
+                                                                    !!enableLSP &&
+                                                                    BackendUtils.supportsFlowLSP() &&
+                                                                    !flowLspNotConfigured &&
+                                                                    !reverse
                                                             }
                                                         );
 
@@ -2281,7 +2474,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         >
                                                             <KeyValue
                                                                 keyValue={localeString(
-                                                                    'views.Swaps.setFeeRate'
+                                                                    'views.Swaps.setClaimFeeRate'
                                                                 )}
                                                             />
                                                         </View>
@@ -2305,6 +2498,27 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     </Row>
                                                 </View>
                                             </TouchableOpacity>
+                                            {!isPlausibleSatPerVbyte(fee) &&
+                                                (fee !== '' ||
+                                                    feeRateLookupDone) && (
+                                                    <ErrorMessage
+                                                        message={localeString(
+                                                            'views.Swaps.reverseClaimFeeRateRequired'
+                                                        )}
+                                                    />
+                                                )}
+                                            {/* a usable rate, but a claim quote
+                                                no plausible fee reaches */}
+                                            {isPlausibleSatPerVbyte(fee) &&
+                                                SwapStore.getReverseClaimMinerFee(
+                                                    fee
+                                                ) === undefined && (
+                                                    <ErrorMessage
+                                                        message={localeString(
+                                                            'views.Swaps.invalidReverseSwapResponse'
+                                                        )}
+                                                    />
+                                                )}
                                             {feeSettingToggle && (
                                                 <>
                                                     <Text
@@ -2327,10 +2541,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 fee: text
                                                             })
                                                         }
-                                                        onNavigateAway={() => {
-                                                            this.isNavigatingAway =
-                                                                true;
-                                                        }}
+                                                        onNavigateAway={
+                                                            this
+                                                                .markNavigatingAway
+                                                        }
                                                         navigation={navigation}
                                                     />
                                                 </>
@@ -2343,21 +2557,26 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                             title={localeString(
                                                 'views.Swaps.initiate'
                                             )}
-                                            onPress={() => {
-                                                reverse
-                                                    ? SwapStore?.createReverseSwap(
-                                                          invoice,
-                                                          Number(
-                                                              this.state
-                                                                  .inputSats
-                                                          ),
-                                                          this.state.fee,
-                                                          navigation
-                                                      )
-                                                    : SwapStore?.createSubmarineSwap(
-                                                          invoice,
-                                                          navigation
-                                                      );
+                                            onPress={async () => {
+                                                if (!reverse) {
+                                                    SwapStore?.createSubmarineSwap(
+                                                        invoice,
+                                                        navigation
+                                                    );
+                                                    return;
+                                                }
+                                                const result =
+                                                    await SwapStore?.createReverseSwap(
+                                                        invoice,
+                                                        Number(
+                                                            this.state.inputSats
+                                                        ),
+                                                        this.state.fee,
+                                                        navigation
+                                                    );
+                                                if (result === 'fees-changed') {
+                                                    this.refreshAmountsForNewQuote();
+                                                }
                                             }}
                                             {...(!reverse
                                                 ? {

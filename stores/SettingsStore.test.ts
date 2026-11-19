@@ -34,9 +34,7 @@ jest.mock('../utils/BackendUtils', () => ({
 jest.mock('../utils/BiometricUtils', () => ({
     getSupportedBiometryType: jest.fn().mockResolvedValue(undefined)
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (s: string) => s
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/MigrationUtils', () => ({
     keychainDesyncMigration: jest.fn().mockResolvedValue(undefined),
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),
@@ -47,6 +45,14 @@ jest.mock('../utils/MigrationUtils', () => ({
     runSettingsMigrations: jest
         .fn()
         .mockImplementation(async (settings: any) => settings),
+    // adopted the same way as runSettingsMigrations
+    migrateLockCredentialsToVerifiers: jest
+        .fn()
+        .mockImplementation(async (settings: any) => settings),
+    restampKeychainAccessibility: jest
+        .fn()
+        .mockImplementation(async (settings: any) => settings),
+    migrateScbBackupFormat: jest.fn().mockResolvedValue(undefined),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
 }));
@@ -60,7 +66,7 @@ jest.mock('./Stores', () => ({
     settingsStore: { settings: {} }
 }));
 jest.mock('../utils/LdkNodeUtils', () => ({
-    DEFAULT_SCORER_URL: '',
+    DEFAULT_SCORER_URL: 'https://scorer.default',
     DEFAULT_VSS_SERVER: '',
     getDefaultEsploraServer: jest.fn().mockReturnValue(''),
     getDefaultRgsServer: jest.fn().mockReturnValue('')
@@ -89,6 +95,8 @@ jest.mock('../storage', () => {
         getRawItem: jest.fn(async () => null)
     };
 });
+
+import { reaction } from 'mobx';
 
 import SettingsStore, {
     DEFAULT_SETTINGS,
@@ -236,6 +244,26 @@ describe('SettingsStore.connect (LNC)', () => {
         expect(store.loading).toBe(false);
     });
 
+    it.each([true, false])(
+        'does not publish a stale dial result (connected: %s)',
+        async (connected) => {
+            const store = new SettingsStore();
+            store.pairingPhrase = 'phrase-a';
+            const result = store.connect();
+            await settle(0);
+            store.pairingPhrase = 'phrase-b';
+            store.setConnectingStatus(true);
+            store.errorMsg = 'new wallet state';
+            BackendUtilsMock.isConnected.mockResolvedValue(connected);
+            await settle(61000);
+            await result;
+            expect(store.errorMsg).toBe('new wallet state');
+            expect(store.error).toBe(false);
+            expect(store.loading).toBe(true);
+            expect(store.connecting).toBe(true);
+        }
+    );
+
     it('reports a timeout without dialing again', async () => {
         const store = new SettingsStore();
 
@@ -247,6 +275,65 @@ describe('SettingsStore.connect (LNC)', () => {
         expect(store.loading).toBe(false);
         expect(BackendUtilsMock.initLNC).toHaveBeenCalledTimes(1);
         expect(BackendUtilsMock.connect).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['implementation', 'mailbox', 'selection', 'reconnect'])(
+        'invalidates an LNC owner when %s changes',
+        async (change) => {
+            const store = new SettingsStore();
+            store.implementation = 'lightning-node-connect';
+            const isCurrent = store.getConnectionGuard();
+            expect(isCurrent()).toBe(true);
+            if (change === 'implementation') store.implementation = 'lnd';
+            if (change === 'mailbox') store.customMailboxServer = 'other:443';
+            if (change === 'selection') store.settings.selectedNode = 3;
+            if (change === 'reconnect') store.setConnectingStatus(true);
+            expect(isCurrent()).toBe(false);
+        }
+    );
+
+    it('ignores a selection change when asked to, but not a reconnect', () => {
+        const store = new SettingsStore();
+        store.settings.selectedNode = 2;
+        const isCurrent = store.getConnectionGuard({
+            ignoreSelectedNode: true
+        });
+
+        store.settings.selectedNode = 1;
+        expect(isCurrent()).toBe(true);
+
+        store.setConnectingStatus(true);
+        expect(isCurrent()).toBe(false);
+    });
+
+    it('does not connect a new backend after selection changes during initialization', async () => {
+        const store = new SettingsStore();
+        BackendUtilsMock.initLNC.mockImplementation(async () => {
+            store.implementation = 'lnd';
+            store.setConnectingStatus(true);
+        });
+        await store.connect();
+        expect(BackendUtilsMock.connect).not.toHaveBeenCalled();
+        expect(store.loading).toBe(true);
+    });
+
+    it('ignores a connection probe that finishes after selection changes', async () => {
+        const store = new SettingsStore();
+        let finish!: (connected: boolean) => void;
+        BackendUtilsMock.isConnected.mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    finish = resolve;
+                })
+        );
+        const pending = store.connect();
+        await settle(500);
+        store.setConnectingStatus(true);
+        store.errorMsg = 'new wallet state';
+        finish(true);
+        await pending;
+        expect(store.errorMsg).toBe('new wallet state');
+        expect(store.loading).toBe(true);
     });
 
     it('waits the full minute before giving up', async () => {
@@ -293,6 +380,226 @@ describe('SettingsStore.connect (LNC)', () => {
         expect(store.error).toBe(false);
         expect(store.errorMsg).toBe('');
         expect(BackendUtilsMock.connect).toHaveBeenCalledTimes(1);
+    });
+});
+
+// The error screen's retry calls setConnectingStatus(true) while an earlier
+// fetchData may still be running, so a reconnect must clear the error and
+// free the lock, and the earlier run must not free the retry's lock.
+describe('SettingsStore reconnect and fetch lock', () => {
+    const BackendUtilsMock: any = jest.requireMock(
+        '../utils/BackendUtils'
+    ).default;
+
+    beforeEach(() => {
+        BackendUtilsMock.clearCachedCalls.mockReset();
+    });
+
+    it('does not hand out the lock twice', () => {
+        const store = new SettingsStore();
+
+        expect(store.acquireFetchLock()).not.toBeNull();
+        expect(store.acquireFetchLock()).toBeNull();
+    });
+
+    it('frees the lock for the owner', () => {
+        const store = new SettingsStore();
+        const seq = store.acquireFetchLock()!;
+
+        store.releaseFetchLock(seq);
+
+        expect(store.fetchLock).toBe(false);
+        expect(store.acquireFetchLock()).not.toBeNull();
+    });
+
+    it('clears the connect error and cached calls on reconnect', () => {
+        const store = new SettingsStore();
+        store.error = true;
+        store.errorMsg = 'connection refused';
+        store.lndFolderMissing = true;
+
+        store.setConnectingStatus(true);
+
+        expect(store.connecting).toBe(true);
+        expect(store.error).toBe(false);
+        expect(store.errorMsg).toBe('');
+        expect(store.lndFolderMissing).toBe(false);
+        expect(BackendUtilsMock.clearCachedCalls).toHaveBeenCalledTimes(1);
+    });
+
+    it('frees a held lock on reconnect', () => {
+        const store = new SettingsStore();
+        store.acquireFetchLock();
+
+        store.setConnectingStatus(true);
+
+        expect(store.fetchLock).toBe(false);
+        expect(store.acquireFetchLock()).not.toBeNull();
+    });
+
+    it('keeps the lock of the run started by the reconnect', () => {
+        const store = new SettingsStore();
+        const staleSeq = store.acquireFetchLock()!;
+
+        store.setConnectingStatus(true);
+        const currentSeq = store.acquireFetchLock()!;
+        store.releaseFetchLock(staleSeq);
+
+        expect(store.fetchLock).toBe(true);
+        expect(store.acquireFetchLock()).toBeNull();
+
+        store.releaseFetchLock(currentSeq);
+        expect(store.fetchLock).toBe(false);
+    });
+
+    it('leaves the error and the lock alone when connecting ends', () => {
+        const store = new SettingsStore();
+        store.acquireFetchLock();
+        store.error = true;
+        store.errorMsg = 'connection refused';
+
+        store.setConnectingStatus(false);
+
+        expect(store.connecting).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.errorMsg).toBe('connection refused');
+        expect(store.fetchLock).toBe(true);
+        expect(BackendUtilsMock.clearCachedCalls).not.toHaveBeenCalled();
+    });
+});
+
+// A persistent node or NWC service keeps this store alive across Android
+// activities; a new App root must start the session as a cold start does.
+describe('SettingsStore.startNewRootSession', () => {
+    const loggedInStore = (settings: any, posStatus = 'inactive') => {
+        const store = new SettingsStore();
+        store.settings = settings;
+        store.setLoginStatus(true);
+        store.setPosStatus(posStatus);
+        return store;
+    };
+
+    it('requires the PIN again when one is set', () => {
+        const store = loggedInStore({
+            pinVerifier: { kdf: 'pbkdf2-sha256', salt: 'aa', hash: 'bb' }
+        });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBe(true);
+        expect(store.sessionStarted()).toBe(false);
+    });
+
+    it('requires the passphrase again when one is set', () => {
+        const store = loggedInStore({
+            passphraseVerifier: {
+                kdf: 'pbkdf2-sha256',
+                salt: 'aa',
+                hash: 'bb'
+            }
+        });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBe(true);
+    });
+
+    // a credential the verifier migration has not hashed yet still locks
+    it('requires the PIN again when it is still in plaintext', () => {
+        const store = loggedInStore({ pin: '1234' });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBe(true);
+    });
+
+    it('requires the passphrase again when it is still in plaintext', () => {
+        const store = loggedInStore({ passphrase: 'open sesame' });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBe(true);
+    });
+
+    // a PIN deleted on v13.2.4 after a downgrade leaves '' beside the
+    // verifier from before
+    it('does not require a PIN deleted by an older build', () => {
+        const store = loggedInStore({
+            pinVerifier: { kdf: 'pbkdf2-sha256', salt: 'aa', hash: 'bb' },
+            pin: ''
+        });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBeFalsy();
+    });
+
+    it('does not count an empty plaintext PIN as a login method', () => {
+        const store = loggedInStore({ pin: '' });
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBeFalsy();
+    });
+
+    it('does not require a login when no login method is configured', () => {
+        const store = loggedInStore({});
+
+        store.startNewRootSession();
+
+        expect(store.loginRequired()).toBeFalsy();
+    });
+
+    it.each(['inactive', 'active'])(
+        'returns POS status %s to unselected so Wallet reopens POS',
+        (posStatus) => {
+            const store = loggedInStore(
+                { pin: '1234', pos: { posEnabled: PosEnabled.Standalone } },
+                posStatus
+            );
+
+            store.startNewRootSession();
+
+            expect(store.posStatus).toBe('unselected');
+            expect(store.sessionStarted()).toBe(false);
+        }
+    );
+});
+
+describe('SettingsStore.posViewActive', () => {
+    const storeWith = (posEnabled: PosEnabled, posStatus: string) => {
+        const store = new SettingsStore();
+        store.settings = { pos: { posEnabled } } as any;
+        store.setPosStatus(posStatus);
+        return store;
+    };
+
+    it.each([
+        [PosEnabled.Standalone, 'active', true],
+        [PosEnabled.Square, 'active', true],
+        // Wallet moves 'unselected' to 'active' when POS is enabled
+        [PosEnabled.Standalone, 'unselected', true],
+        // the owner unlocked the full wallet
+        [PosEnabled.Standalone, 'inactive', false],
+        [PosEnabled.Disabled, 'unselected', false],
+        [PosEnabled.Disabled, 'active', false]
+    ])('POS %s with status %s: %s', (posEnabled, posStatus, expected) => {
+        expect(storeWith(posEnabled, posStatus).posViewActive()).toBe(expected);
+    });
+
+    it('is false before settings load', () => {
+        expect(new SettingsStore().posViewActive()).toBe(false);
+    });
+
+    // A new App root mounts Wallet's tab navigator at once when the node is
+    // still connected, so it must already pick the POS tabs, as a cold start
+    // does once connecting ends
+    it('shows the POS tabs for a new App root after the owner unlocked the wallet', () => {
+        const store = storeWith(PosEnabled.Standalone, 'inactive');
+
+        store.startNewRootSession();
+
+        expect(store.posViewActive()).toBe(true);
     });
 });
 
@@ -556,6 +863,200 @@ describe('SettingsStore.updateSelectedNode', () => {
             await store.updateSelectedNode({ dismissCustodialWarning: true })
         ).toBe(false);
         expect(persistedSettings().nodes).toEqual([]);
+    });
+});
+
+describe('SettingsStore.ldkScorerUrl', () => {
+    const loadWithNode = async (node: any) => {
+        seedSettings({ selectedNode: 0, nodes: [node] });
+        const store = new SettingsStore();
+        await store.getSettings();
+        return store;
+    };
+
+    it('uses the default when the node has no scorer URL', async () => {
+        const store = await loadWithNode({ implementation: 'ldk-node' });
+        expect(store.ldkScorerUrl).toBe('https://scorer.default');
+    });
+
+    it('keeps a custom scorer URL', async () => {
+        const store = await loadWithNode({
+            implementation: 'ldk-node',
+            ldkScorerUrl: 'https://s'
+        });
+        expect(store.ldkScorerUrl).toBe('https://s');
+    });
+
+    it('keeps a blank scorer URL on load and after saving', async () => {
+        const store = await loadWithNode({
+            implementation: 'ldk-node',
+            ldkScorerUrl: ''
+        });
+        expect(store.ldkScorerUrl).toBe('');
+
+        await store.updateSelectedNode({ ldkScorerUrl: 'https://s' });
+        expect(store.ldkScorerUrl).toBe('https://s');
+        await store.updateSelectedNode({ ldkScorerUrl: '' });
+        expect(store.ldkScorerUrl).toBe('');
+    });
+});
+
+describe('SettingsStore LndHub session token', () => {
+    const hubA = {
+        implementation: 'lndhub',
+        lndhubUrl: 'https://hub-a.example.com',
+        username: 'alice',
+        password: 'a'
+    };
+    const hubB = {
+        implementation: 'lndhub',
+        lndhubUrl: 'https://hub-b.example.com',
+        username: 'bob',
+        password: 'b'
+    };
+
+    const loggedIn = async (settings: any) => {
+        seedSettings(settings);
+        const store = new SettingsStore();
+        await store.getSettings();
+        // What login() stores after a successful /auth
+        store.accessToken = 'token-a';
+        store.refreshToken = 'refresh-a';
+        return store;
+    };
+
+    it('keeps the token across a write that does not change the node', async () => {
+        const store = await loggedIn({ selectedNode: 0, nodes: [hubA, hubB] });
+
+        await store.updateSettings({ fiat: 'EUR' });
+
+        expect(store.accessToken).toBe('token-a');
+        expect(store.refreshToken).toBe('refresh-a');
+    });
+
+    it('keeps the token when the selected node is only reordered', async () => {
+        const store = await loggedIn({ selectedNode: 0, nodes: [hubA, hubB] });
+
+        await store.updateSettings({ selectedNode: 1, nodes: [hubB, hubA] });
+
+        expect(store.accessToken).toBe('token-a');
+    });
+
+    it('clears the token when switching to another wallet', async () => {
+        const store = await loggedIn({ selectedNode: 0, nodes: [hubA, hubB] });
+
+        await store.updateSettings({ selectedNode: 1 });
+
+        expect(store.lndhubUrl).toBe('https://hub-b.example.com');
+        expect(store.accessToken).toBe('');
+        expect(store.refreshToken).toBe('');
+    });
+
+    it('clears the token when switching to a non-lndhub wallet', async () => {
+        const store = await loggedIn({
+            selectedNode: 0,
+            nodes: [hubA, { implementation: 'lnd', host: 'node.example.com' }]
+        });
+
+        await store.updateSettings({ selectedNode: 1 });
+
+        expect(store.accessToken).toBe('');
+    });
+
+    // One field at a time, so each comparison in the clear condition is
+    // pinned on its own
+    it.each([
+        ['implementation', 'lnd'],
+        ['host', 'https://node.example.com'],
+        ['port', '8080'],
+        ['lndhubUrl', 'https://hub-c.example.com'],
+        ['username', 'mallory'],
+        ['password', 'changed']
+    ])(
+        'clears the token when the active wallet changes %s',
+        async (field, value) => {
+            const store = await loggedIn({ selectedNode: 0, nodes: [hubA] });
+
+            await store.updateSettings({
+                nodes: [{ ...hubA, [field]: value }]
+            });
+
+            expect(store.accessToken).toBe('');
+            expect(store.refreshToken).toBe('');
+        }
+    );
+
+    it('clears the token when no wallet is left', async () => {
+        const store = await loggedIn({ selectedNode: 0, nodes: [hubA] });
+
+        await store.updateSettings({ nodes: [] });
+
+        expect(store.accessToken).toBe('');
+    });
+
+    // Deleting the active wallet slides the next one into its index with
+    // no reconnect in between, so the index cannot tell the two apart
+    it('drops a login answered after the active wallet was deleted', async () => {
+        seedSettings({ selectedNode: 0, nodes: [hubA, hubB] });
+        const store = new SettingsStore();
+        await store.getSettings();
+        let answer: (data: any) => void = () => {};
+        jest.requireMock('../utils/BackendUtils').default.login = jest.fn(
+            () => new Promise((resolve) => (answer = resolve))
+        );
+
+        const login = store.login({ login: 'alice', password: 'a' } as any);
+        await store.updateSettings({ selectedNode: 0, nodes: [hubB] });
+        answer({ access_token: 'token-a', refresh_token: 'refresh-a' });
+        await login;
+
+        expect(store.lndhubUrl).toBe('https://hub-b.example.com');
+        expect(store.accessToken).toBe('');
+        expect(store.refreshToken).toBe('');
+    });
+
+    it.each([
+        ['lnd', 'host'],
+        ['lnd', 'port'],
+        ['lndhub', 'lndhubUrl'],
+        ['lndhub', 'username'],
+        ['lndhub', 'password']
+    ])(
+        'invalidates the connection guard when an %s wallet with another %s takes the same index',
+        async (implementation, field) => {
+            const deleted = { implementation, [field]: 'a' };
+            const next = { implementation, [field]: 'b' };
+            seedSettings({ selectedNode: 0, nodes: [deleted, next] });
+            const store = new SettingsStore();
+            await store.getSettings();
+            const isCurrent = store.getConnectionGuard();
+
+            await store.updateSettings({ fiat: 'EUR' });
+            expect(isCurrent()).toBe(true);
+
+            await store.updateSettings({ selectedNode: 0, nodes: [next] });
+            expect(isCurrent()).toBe(false);
+        }
+    );
+
+    // Two embedded wallets differ only in their data directory, which
+    // updateNodeProperties does not compare, so deleteNodeConfig ends the
+    // deleted wallet's connection itself
+    it('keeps the connection guard when an embedded wallet takes the same index, until invalidateConnection', async () => {
+        const deleted = { implementation: 'embedded-lnd', lndDir: 'lnd-a' };
+        const next = { implementation: 'embedded-lnd', lndDir: 'lnd-b' };
+        seedSettings({ selectedNode: 0, nodes: [deleted, next] });
+        const store = new SettingsStore();
+        await store.getSettings();
+        const isCurrent = store.getConnectionGuard();
+
+        await store.updateSettings({ selectedNode: 0, nodes: [next] });
+        expect(isCurrent()).toBe(true);
+
+        const connecting = store.connecting;
+        store.invalidateConnection();
+        expect(isCurrent()).toBe(false);
+        expect(store.connecting).toBe(connecting);
     });
 });
 
@@ -881,7 +1382,8 @@ describe('SettingsStore.updateSettings refresh flag', () => {
         ['initialLoad', true, false],
         ['resetExpressGraphSyncOnStartup', true, false],
         ['rescan', true, false],
-        ['recovery', true, false]
+        ['recovery', true, false],
+        ['recoveryWalletDirs', ['a', 'b'], ['a']]
     ])(
         'stays unarmed when only %s changes',
         async (key, storedValue, newValue) => {
@@ -984,6 +1486,163 @@ describe('SettingsStore.getSettings', () => {
         // Read-only fallback: the local partition must not be written
         expect(StorageMock._backing[STORAGE_KEY]).toBeUndefined();
     });
+
+    // getSettings used to reassign this.settings with a fresh JSON.parse
+    // result on every call, so every observer of the settings reference
+    // re-ran on each of the several loads per boot/focus even though
+    // nothing changed. Each no-op swap blocked the JS thread for
+    // 330-480 ms on a Galaxy S20+ (measured in review of #4594).
+    it('does not refire settings reactions when the stored blob is unchanged', async () => {
+        seedSettings({ fiat: 'USD', locale: 'en' });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        let fired = 0;
+        const dispose = reaction(
+            () => store.settings,
+            () => fired++
+        );
+        await store.getSettings();
+        await store.getSettings();
+        dispose();
+
+        expect(fired).toEqual(0);
+    });
+
+    it('still swaps the settings when the stored blob changed', async () => {
+        seedSettings({ fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        let fired = 0;
+        const dispose = reaction(
+            () => store.settings,
+            () => fired++
+        );
+        seedSettings({ fiat: 'EUR' });
+        await store.getSettings();
+        dispose();
+
+        expect(fired).toEqual(1);
+        expect(store.settings.fiat).toEqual('EUR');
+    });
+
+    describe('lock verifier and keychain re-stamp migrations', () => {
+        const MigrationUtilsMock: any = jest.requireMock(
+            '../utils/MigrationUtils'
+        );
+        const verifier = { kdf: 'pbkdf2-sha256', salt: 'aa', hash: 'bb' };
+
+        afterEach(() => {
+            MigrationUtilsMock.migrateLockCredentialsToVerifiers.mockClear();
+            MigrationUtilsMock.restampKeychainAccessibility.mockClear();
+            MigrationUtilsMock.legacySettingsMigrations.mockClear();
+        });
+
+        it('run on the modern path after consolidation, and their results are adopted', async () => {
+            seedSettings({ pin: '1234' });
+            MigrationUtilsMock.migrateLockCredentialsToVerifiers.mockImplementationOnce(
+                async () => ({ pinVerifier: verifier })
+            );
+            const store = new SettingsStore();
+
+            await store.getSettings();
+
+            expect(
+                MigrationUtilsMock.migrateLockCredentialsToVerifiers
+            ).toHaveBeenCalledWith({ pin: '1234' }, false);
+            // the re-stamp sees the lock migration's result, not the snapshot
+            expect(
+                MigrationUtilsMock.restampKeychainAccessibility
+            ).toHaveBeenCalledWith({ pinVerifier: verifier }, false);
+            expect(store.settings).toEqual({ pinVerifier: verifier });
+            expect(store.settingsLoaded).toBe(true);
+        });
+
+        // The first boot after the upgrade: a keychain write in the queued
+        // migration rejects, getSettings logs it and keeps the plaintext
+        // blob it loaded. The app must still ask for the PIN.
+        it.each([
+            ['PIN', { pin: '1234' }],
+            ['passphrase', { passphrase: 'open sesame' }]
+        ])(
+            'still requires the %s when the verifier migration throws',
+            async (_, credential) => {
+                seedSettings({ ...credential, nodes: [{}] });
+                MigrationUtilsMock.migrateLockCredentialsToVerifiers.mockRejectedValueOnce(
+                    new Error('keychain write failed')
+                );
+                const store = new SettingsStore();
+
+                await store.getSettings();
+
+                expect(errorSpy).toHaveBeenCalledWith(
+                    'Could not load settings',
+                    expect.any(Error)
+                );
+                // the suite-wide afterEach fails on this expected error;
+                // clear it so a failure below stays local
+                errorSpy.mockClear();
+                expect(store.settings).toMatchObject(credential);
+                expect(store.loginRequired()).toBe(true);
+            }
+        );
+
+        it('run on the synchronizable-partition fallback', async () => {
+            StorageMock.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    cloudSync && server === `zeus:${STORAGE_KEY}`
+                        ? JSON.stringify({ pin: '1234' })
+                        : null
+            );
+            const store = new SettingsStore();
+
+            await store.getSettings();
+
+            expect(
+                MigrationUtilsMock.migrateLockCredentialsToVerifiers
+            ).toHaveBeenCalledWith({ pin: '1234' }, false);
+            expect(
+                MigrationUtilsMock.restampKeychainAccessibility
+            ).toHaveBeenCalled();
+        });
+
+        it('run in-queue inside updateSettings', async () => {
+            seedSettings({ fiat: 'USD' });
+            const store = new SettingsStore();
+
+            await store.updateSettings({ locale: 'en' });
+
+            expect(
+                MigrationUtilsMock.migrateLockCredentialsToVerifiers
+            ).toHaveBeenCalledWith(expect.anything(), true);
+            expect(
+                MigrationUtilsMock.restampKeychainAccessibility
+            ).toHaveBeenCalledWith(expect.anything(), true);
+        });
+
+        it('are left to legacySettingsMigrations on the legacy path', async () => {
+            const EncryptedStorageMock: any = jest.requireMock(
+                'react-native-encrypted-storage'
+            );
+            EncryptedStorageMock.getItem.mockResolvedValueOnce(
+                JSON.stringify({ pin: '1234' })
+            );
+            const store = new SettingsStore();
+
+            await store.getSettings();
+
+            expect(
+                MigrationUtilsMock.legacySettingsMigrations
+            ).toHaveBeenCalled();
+            expect(
+                MigrationUtilsMock.migrateLockCredentialsToVerifiers
+            ).not.toHaveBeenCalled();
+            expect(
+                MigrationUtilsMock.restampKeychainAccessibility
+            ).not.toHaveBeenCalled();
+        });
+    });
 });
 
 // Clipboard readers gate on settingsLoaded, because until a load completes
@@ -1053,6 +1712,61 @@ describe('SettingsStore.settingsLoaded', () => {
     });
 });
 
+// Require login after the app returns from the background: on for new
+// installs, unchanged for existing ones. A stored blob replaces the
+// defaults wholesale, so only an install with nothing stored picks up
+// the new default.
+describe('SettingsStore loginBackground default', () => {
+    it('is on for a fresh install and persists with the first write', async () => {
+        const store = new SettingsStore();
+
+        await store.getSettings();
+        expect(store.settings.loginBackground).toBe(true);
+
+        await store.updateSettings({ fiat: 'EUR' });
+        expect(persistedSettings().loginBackground).toBe(true);
+    });
+
+    it('stays off for stored settings that never wrote the key', async () => {
+        seedSettings({ fiat: 'USD', scramblePin: true });
+        const store = new SettingsStore();
+
+        await store.getSettings();
+        expect(store.settings.loginBackground).toBeFalsy();
+
+        await store.updateSettings({ fiat: 'EUR' });
+        expect(persistedSettings().loginBackground).toBeUndefined();
+    });
+
+    it.each([true, false])(
+        'keeps a stored value of %s',
+        async (loginBackground) => {
+            seedSettings({ fiat: 'USD', loginBackground });
+            const store = new SettingsStore();
+
+            await store.getSettings();
+            expect(store.settings.loginBackground).toBe(loginBackground);
+
+            await store.updateSettings({ fiat: 'EUR' });
+            expect(persistedSettings().loginBackground).toBe(loginBackground);
+        }
+    );
+
+    // App.handleAppStateChange and Wallet.handleAppStateChange only lock
+    // when loginMethodConfigured() is true, and only show the Lockscreen
+    // when loginRequired() is true
+    it('does not ask for a login on a fresh install without a PIN', async () => {
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        store.setLoginStatus(false);
+
+        expect(store.settings.loginBackground).toBe(true);
+        expect(store.loginMethodConfigured()).toBeFalsy();
+        expect(store.loginRequired()).toBeFalsy();
+    });
+});
+
 // The LSP settings screens decide whether to show Reset by comparing the
 // field against these defaults, so they must never follow the saved value.
 describe('getLspConfigForNetwork', () => {
@@ -1110,7 +1824,9 @@ describe('getLspConfigForNetwork', () => {
 describe('SettingsStore.externalInputAuthRequired', () => {
     const withPin = () => {
         const store = new SettingsStore();
-        store.settings = { pin: '1234' } as any;
+        store.settings = {
+            pinVerifier: { kdf: 'pbkdf2-sha256', salt: 'aa', hash: 'bb' }
+        } as any;
         return store;
     };
 
@@ -1140,6 +1856,42 @@ describe('SettingsStore.externalInputAuthRequired', () => {
         store.settings = {} as any;
         store.setPosStatus('active');
         expect(store.externalInputAuthRequired()).toBe(false);
+    });
+});
+
+describe('SettingsStore.sessionStarted', () => {
+    it('is false on a cold start', () => {
+        expect(new SettingsStore().sessionStarted()).toBe(false);
+    });
+
+    it('is false on a till whose settings loaded before POS mode started', () => {
+        const store = new SettingsStore();
+        store.settings = {
+            pin: '1234',
+            pos: { posEnabled: PosEnabled.Standalone }
+        } as any;
+        expect(store.posStatus).toBe('unselected');
+        expect(store.sessionStarted()).toBe(false);
+    });
+
+    it('is true once logged in', () => {
+        const store = new SettingsStore();
+        store.setLoginStatus(true);
+        expect(store.sessionStarted()).toBe(true);
+    });
+
+    it('is true once POS mode is active, without a login', () => {
+        const store = new SettingsStore();
+        store.setPosStatus('active');
+        expect(store.sessionStarted()).toBe(true);
+    });
+
+    it('is false again after the background lock outside POS', () => {
+        const store = new SettingsStore();
+        store.setLoginStatus(true);
+        store.setPosStatus('inactive');
+        store.setLoginStatus(false);
+        expect(store.sessionStarted()).toBe(false);
     });
 });
 

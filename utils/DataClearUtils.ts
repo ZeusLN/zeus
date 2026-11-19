@@ -2,9 +2,12 @@ import * as Keychain from 'react-native-keychain';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { BackHandler, Platform } from 'react-native';
+import RNFS from 'react-native-fs';
+import { Notifications } from 'react-native-notifications';
+// @ts-ignore: Networking is exported at runtime but missing from the legacy typings
+import { BackHandler, Networking, Platform } from 'react-native';
 import CashuDevKit from '../cashu-cdk';
-import Storage from '../storage';
+import Storage, { getInternetPasswordServers, removeRawItem } from '../storage';
 
 import {
     STORAGE_KEY,
@@ -61,6 +64,7 @@ import {
     NWC_CONNECTIONS_KEY,
     NWC_CLIENT_KEYS,
     NWC_SERVICE_KEYS,
+    NWC_PROCESSED_EVENTS_KEY,
     NWC_CASHU_ENABLED,
     NWC_LUD16_ENABLED,
     NWC_PERSISTENT_SERVICE_ENABLED
@@ -68,16 +72,23 @@ import {
 import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
 import { deleteLndWallet } from './LndMobileUtils';
-import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
+import {
+    deleteLdkNodeWallet,
+    getLdkNodeBaseDirectory,
+    stopLdkNode
+} from './LdkNodeUtils';
+import { isValidNodeDir } from './NodeDirUtils';
 import { sleep } from './SleepUtils';
-import hashjs from 'hash.js';
+import { forgetCredentials } from '../backends/LNC/credentialStore';
+import { sha256StringToHex } from './HashingUtils';
+import { clearTorData } from './TorUtils';
 
 // LNC credentials are persisted by backends/LNC/credentialStore.ts under
 // `lnc-rn:<sha256(pairingPhrase)>` and `...:host`. Reconstruct those keys from
 // each node's pairing phrase so a wipe removes them (clearing the literal
 // `lnc-rn` prefix alone never matches the hashed keys).
 const LNC_STORAGE_KEY = 'lnc-rn';
-const lncHash = (value: string) => hashjs.sha256().update(value).digest('hex');
+const lncHash = (value: string) => sha256StringToHex(value);
 
 const KEY_PREFIX = 'zeus:';
 
@@ -110,6 +121,7 @@ const STORAGE_KEYS = [
     NWC_CONNECTIONS_KEY,
     NWC_CLIENT_KEYS,
     NWC_SERVICE_KEYS,
+    NWC_PROCESSED_EVENTS_KEY,
     NWC_CASHU_ENABLED,
     NWC_LUD16_ENABLED,
     NWC_PERSISTENT_SERVICE_ENABLED,
@@ -118,8 +130,12 @@ const STORAGE_KEYS = [
     RATING_DISMISSED_KEY,
     // LnurlPayStore writes 'lnurlpay:<paymentHash>' entries with no index to
     // enumerate them; at least clear the bare key written when a hash is
-    // undefined. Hash-keyed entries are a documented residual.
+    // undefined. Hash-keyed entries are left to the wholesale keychain
+    // clears in step 8.
     'lnurlpay:',
+    // Legacy xprv cache written before node info had loaded (see
+    // clearNodeKeychainData). Listed here too: its wallet's config may be gone.
+    'undefined-extended-private-keys',
     // Legacy keys
     LEGACY_CONTACTS_KEY,
     LEGACY_NOTES_KEY,
@@ -140,6 +156,48 @@ const STORAGE_KEYS = [
     'backup-complete',
     'backup-complete-v2'
 ];
+
+// Durable record that a wipe has started. Storage's write latch lives in JS
+// memory only, so if the process ends mid-wipe (app killed, crash, OS kill)
+// the next launch would load whatever the wipe had not reached yet,
+// including the settings blob, which is cleared late. Kept in
+// EncryptedStorage: the write latch does not cover it, and on Android a
+// write there cannot re-create the keychain backing store deleted in step 8.
+const WIPE_PENDING_KEY = 'wipe-pending';
+
+// Set while clearAllData() runs in this JS context, so a wipe in progress
+// is not reported as an interrupted one
+let wipeRunning = false;
+
+/**
+ * Saves the pending-wipe record. clearAllData() saves it itself; the
+ * Lockscreen also saves it as soon as it decides to wipe, before anything
+ * on screen changes, so the decision is on disk before the user can see it.
+ */
+export async function markWipePending(): Promise<void> {
+    try {
+        await EncryptedStorage.setItem(WIPE_PENDING_KEY, 'true');
+    } catch (e) {
+        console.warn('[ClearData] Error recording the pending wipe:', e);
+    }
+}
+
+/**
+ * Whether a clearAllData() started by an earlier launch did not finish.
+ * Checked at startup before settings are loaded or a credential is
+ * accepted; the Lockscreen then runs clearAllData() again. Every step is
+ * idempotent, and the settings blob is cleared after the node data it
+ * lists, so a second run finishes what the first one left.
+ */
+export async function isWipePending(): Promise<boolean> {
+    if (wipeRunning) return false;
+    try {
+        return (await EncryptedStorage.getItem(WIPE_PENDING_KEY)) === 'true';
+    } catch (e) {
+        console.warn('[ClearData] Error reading the pending wipe record:', e);
+        return false;
+    }
+}
 
 /**
  * Pins the user to the current screen while a wipe runs. clearAllData()
@@ -232,7 +290,8 @@ async function clearKey(key: string) {
  * (older versions). This is the only way to remove orphaned entries that
  * config-driven clearing can never reach: keys from wallets deleted by older
  * builds and unenumerable hash-keyed dynamic entries. Android-only; on iOS
- * the keychain is system-managed with no file to delete.
+ * the keychain is system-managed with no file to delete (see
+ * clearKeychainEntries).
  *
  * MUST run as the final step of a full wipe: react-native-keychain caches
  * the full preference map in memory, and any keychain write after this
@@ -262,6 +321,69 @@ async function clearKeychainBackingStore(): Promise<void> {
                 e
             );
         }
+    }
+}
+
+/**
+ * iOS counterpart of clearKeychainBackingStore: there is no backing file to
+ * delete, so list every internet-password item the app still owns, in the
+ * device-local and the iCloud partition, and delete each one. This reaches
+ * entries no index names, such as the 'pos-<orderId>' records of Square
+ * orders and hash-keyed 'lnurlpay:' entries. A failed listing or deletion is
+ * logged and the sweep continues.
+ */
+async function clearKeychainEntries(): Promise<void> {
+    if (Platform.OS !== 'ios') return;
+    for (const cloudSync of [false, true]) {
+        let servers: string[] = [];
+        try {
+            servers = await getInternetPasswordServers(cloudSync);
+        } catch (e) {
+            console.warn('[ClearData] Error listing keychain entries:', e);
+        }
+        for (const server of servers) {
+            try {
+                await removeRawItem(server, cloudSync);
+            } catch (e) {
+                console.warn(
+                    `[ClearData] Error clearing keychain entry ${server}:`,
+                    e
+                );
+            }
+        }
+    }
+}
+
+/**
+ * Clears the per-order records PosStore writes: 'pos-<orderId>' (paid
+ * invoice or txid, amounts, rate, preimage) and 'pos-invoice-<orderId>'
+ * (unpaid invoice). The order ids come from the standalone and hidden order
+ * lists, so this must run before step 3 clears those lists. Skipped on
+ * Android, where step 8 deletes the keychain backing store wholesale.
+ */
+async function clearPosOrderRecords(): Promise<void> {
+    if (Platform.OS === 'android') return;
+    const orderIds = new Set<string>();
+    const readList = async (key: string, toId: (entry: any) => any) => {
+        try {
+            const json = await Storage.getItem(key);
+            const entries = json ? JSON.parse(json) : null;
+            if (Array.isArray(entries)) {
+                for (const entry of entries) {
+                    const id = toId(entry);
+                    if (typeof id === 'string' && id) orderIds.add(id);
+                }
+            }
+        } catch (e) {
+            console.warn(`[ClearData] Error reading POS orders ${key}:`, e);
+        }
+    };
+    await readList(POS_STANDALONE_KEY, (order) => order?.id);
+    await readList(POS_HIDDEN_KEY, (orderId) => orderId);
+
+    for (const orderId of orderIds) {
+        await clearKey(`pos-${orderId}`);
+        await clearKey(`pos-invoice-${orderId}`);
     }
 }
 
@@ -368,11 +490,7 @@ export async function clearCDKDatabaseForNode(node: any): Promise<void> {
             mnemonic = stored;
         }
 
-        const hash = hashjs
-            .sha256()
-            .update(mnemonic)
-            .digest('hex')
-            .slice(0, 16);
+        const hash = sha256StringToHex(mnemonic).slice(0, 16);
         const dbDir = cdkDatabaseDir();
         const dbFile = `cashu_wallet_${hash}.db`;
 
@@ -452,6 +570,7 @@ export const CASHU_KEY_SUFFIXES = [
     'sent-tokens',
     'offline-pending-tokens',
     'offline-spent-tokens',
+    'pending-melts',
     'seed-version',
     'seed-phrase',
     'seed',
@@ -521,6 +640,22 @@ const NODE_DIR_RETRY_DELAY_MS = 500;
  * whether the directory was removed so the caller can retry.
  */
 async function deleteNodeDataDirectory(node: any): Promise<boolean> {
+    const nodeDir =
+        node.implementation === 'embedded-lnd'
+            ? node.lndDir || 'lnd'
+            : node.implementation === 'ldk-node'
+            ? node.ldkNodeDir
+            : undefined;
+    if (nodeDir && !isValidNodeDir(nodeDir)) {
+        // ZEUS never generates such a directory, so there is nothing of
+        // this wallet's to delete. Report success: a retry cannot fix the
+        // value, and deleting the path would reach outside the wallet.
+        console.warn(
+            '[ClearData] Skipping node data directory with invalid name:',
+            nodeDir
+        );
+        return true;
+    }
     try {
         if (node.implementation === 'embedded-lnd') {
             // deleteLndWallet stops LND before unlinking the directory
@@ -569,6 +704,9 @@ export async function deleteNodeDataDirectoryWithRetry(
  * when the phrase is known (it lives in the node config).
  */
 async function clearLncCredentials(pairingPhrase: string) {
+    // Before clearing: a store still attached to a native LNC client must
+    // not write the entries back once they are gone
+    forgetCredentials(pairingPhrase);
     const baseKey = `${LNC_STORAGE_KEY}:${lncHash(pairingPhrase)}`;
     await clearKey(baseKey);
     await clearKey(`${baseKey}:host`);
@@ -576,38 +714,35 @@ async function clearLncCredentials(pairingPhrase: string) {
 
 /**
  * Clears all node-namespaced keychain material for a single node config:
- * - Cashu keys, which are namespaced by getNodeDir() (lndDir for LND-family,
- *   ldkNodeDir for LDK) - CashuStore.getNodeDir
+ * - Cashu keys, which are namespaced by getNodeDir() (lndDir for embedded
+ *   LND, ldkNodeDir for LDK Node) - CashuStore.getNodeDir
  * - LNC pairing credentials, namespaced by sha256(pairingPhrase)
- * - the legacy '<pubkey>-extended-private-keys' xprv cache (KEY-006)
+ * - the legacy '<pubkey>-extended-private-keys' xprv cache (KEY-006), and
+ *   the 'undefined-extended-private-keys' it was filed under without a pubkey
  *
  * Exported so both clearAllData() and single-wallet deletion
  * (WalletConfiguration.deleteNodeConfig) clear the same set of keys.
  */
 export async function clearNodeKeychainData(
     node: any,
-    opts?: { skipXprvPurge?: boolean }
+    opts?: { skipXprvPurge?: boolean; keepLncCredentials?: boolean }
 ): Promise<void> {
     if (!node) return;
-    if (node.lndDir) {
-        await clearCashuDataForNode(node.lndDir);
+    // Cashu only runs on embedded-lnd and ldk-node. Mirror getNodeDir(),
+    // including its defaults for legacy configs that predate explicit node
+    // dirs. A remote config can carry any lndDir / ldkNodeDir (an import file
+    // chooses them), so it must never clear the namespace of the embedded
+    // wallet that owns that dir.
+    if (node.implementation === 'embedded-lnd') {
+        await clearCashuDataForNode(node.lndDir || 'lnd');
     }
-    if (node.ldkNodeDir) {
-        await clearCashuDataForNode(node.ldkNodeDir);
+    if (node.implementation === 'ldk-node') {
+        await clearCashuDataForNode(node.ldkNodeDir || 'ldk');
     }
-    // Legacy configs can predate explicit node dirs (see the `lndDir || 'lnd'`
-    // fallbacks in WalletConfiguration/getNodeDir). Mirror getNodeDir()'s
-    // defaults so those wallets' Cashu keys are cleared too. Gate on
-    // implementation: only one config can occupy a default namespace per
-    // implementation, and remote nodes must never clear the 'lnd'/'ldk'
-    // namespaces owned by embedded wallets.
-    if (node.implementation === 'embedded-lnd' && !node.lndDir) {
-        await clearCashuDataForNode('lnd');
-    }
-    if (node.implementation === 'ldk-node' && !node.ldkNodeDir) {
-        await clearCashuDataForNode('ldk');
-    }
-    if (node.pairingPhrase) {
+    // LNC credentials are stored per pairing phrase, so configs copied by
+    // Duplicate Wallet, config import or legacy restore share one entry.
+    // The caller sets keepLncCredentials while such a config remains.
+    if (node.pairingPhrase && !opts?.keepLncCredentials) {
         await clearLncCredentials(node.pairingPhrase);
     }
     // Builds between Jan 2025 (ba70ce58f) and the removal in this PR
@@ -619,6 +754,16 @@ export async function clearNodeKeychainData(
     // export screen's decryption failed the same way before its write.
     // Belt and braces: NodeInfoStore also purges the cache at connect
     // time using the runtime nodeId, which is passphrase-independent.
+    //
+    // Those builds read the pubkey off NodeInfoStore without checking that
+    // node info had loaded, so an export made while LND was still starting,
+    // or had failed to start, was cached under the literal
+    // 'undefined-extended-private-keys'. No pubkey leads to that entry and no
+    // build reads it any more, so it goes with any embedded wallet. Not
+    // subject to skipXprvPurge: there is no scrypt to skip.
+    if (node.implementation === 'embedded-lnd') {
+        await clearKey('undefined-extended-private-keys');
+    }
     if (
         !opts?.skipXprvPurge &&
         node.implementation === 'embedded-lnd' &&
@@ -666,15 +811,151 @@ async function clearNodeDataDirectories(settings: any): Promise<void> {
     }
 }
 
+// Wallet directories are named with uuidv4() (WalletCreationUtils,
+// WalletConfiguration, SeedRecovery); older embedded LND wallets used 'lnd'
+const NODE_DIR_NAME_REGEX =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Paths only LND creates inside its data directory
+const LND_DIR_MARKERS = [
+    'lnd.conf',
+    'tls.cert',
+    'tls.key',
+    'data/chain',
+    'data/graph',
+    'logs/bitcoin'
+];
+
+async function hasLndMarker(dir: string): Promise<boolean> {
+    for (const marker of LND_DIR_MARKERS) {
+        if (await ReactNativeBlobUtil.fs.exists(`${dir}/${marker}`)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Deletes LND and LDK Node data directories found on disk whose config is
+ * no longer in settings.nodes, which clearNodeDataDirectories cannot reach.
+ * Directories are left behind when a single-wallet deletion removes the
+ * config but the directory removal fails and the user skips the retry, when
+ * the app is killed between those two steps, and by Android builds before
+ * v13.2.0, whose native delete removed nothing. Only directories named the
+ * way ZEUS names wallet directories and holding LND files are deleted, plus
+ * the entries of the ldk-node base directory. Directories of configured
+ * nodes were already handled by clearNodeDataDirectories and are skipped so
+ * a directory that failed there is not retried a second time.
+ */
+async function clearOrphanedNodeDataDirectories(settings: any): Promise<void> {
+    const nodes: any[] = Array.isArray(settings?.nodes) ? settings.nodes : [];
+    const configuredLndDirs = new Set(
+        nodes
+            .filter((node) => node?.implementation === 'embedded-lnd')
+            .map((node) => node.lndDir || 'lnd')
+    );
+    const configuredLdkDirs = new Set(
+        nodes
+            .filter((node) => node?.implementation === 'ldk-node')
+            .map((node) => node.ldkNodeDir)
+    );
+
+    // LND directories sit next to the CDK databases: Application Support on
+    // iOS, the files dir on Android
+    try {
+        const baseDir = cdkDatabaseDir();
+        const lndDirs: string[] = [];
+        // Legacy Android wallets ran LND in the files dir root, which
+        // deleteLndDirectory addresses as 'lnd'
+        if (Platform.OS === 'android' && (await hasLndMarker(baseDir))) {
+            lndDirs.push('lnd');
+        }
+        const entries: string[] = await ReactNativeBlobUtil.fs.ls(baseDir);
+        for (const entry of entries) {
+            const isNodeDirName =
+                NODE_DIR_NAME_REGEX.test(entry) ||
+                (Platform.OS === 'ios' && entry === 'lnd');
+            if (!isNodeDirName) continue;
+            if (await hasLndMarker(`${baseDir}/${entry}`)) {
+                lndDirs.push(entry);
+            }
+        }
+        for (const lndDir of lndDirs) {
+            if (configuredLndDirs.has(lndDir)) continue;
+            await deleteNodeDataDirectoryWithRetry({
+                implementation: 'embedded-lnd',
+                lndDir
+            });
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error sweeping LND directories:', e);
+    }
+
+    // Every LDK Node wallet has a subdirectory of the ldk-node base directory
+    try {
+        const ldkBaseDir = getLdkNodeBaseDirectory();
+        if (await ReactNativeBlobUtil.fs.exists(ldkBaseDir)) {
+            const entries: string[] = await ReactNativeBlobUtil.fs.ls(
+                ldkBaseDir
+            );
+            for (const ldkNodeDir of entries) {
+                if (configuredLdkDirs.has(ldkNodeDir)) continue;
+                await deleteNodeDataDirectoryWithRetry({
+                    implementation: 'ldk-node',
+                    ldkNodeDir
+                });
+            }
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error sweeping LDK Node directories:', e);
+    }
+}
+
+// Name exportChannelDb (utils/ChannelMigrationUtils.ts) gives the channel
+// database zip it saves to the public Downloads folder on Android. Kept
+// anchored to that exact shape so files the user named themselves stay.
+const CHANNEL_DB_EXPORT_REGEX = /^zeus-lnd-(mainnet|testnet)-\d+\.zip$/;
+
+/**
+ * Deletes the unencrypted channel database exports ("Export Channels to
+ * other device") that ZEUS wrote to the public Downloads folder on Android.
+ * They sit outside the app sandbox, so removing the node data directories
+ * does not touch them. Only run on a full wipe: until then the export may be
+ * the only copy of the wallet's channels. Best effort, like the rescue key
+ * purge: a renamed or moved copy, or one written by a previous install of
+ * the app, is not ours to delete under scoped storage.
+ */
+export async function purgeChannelDbExports(): Promise<void> {
+    if (Platform.OS !== 'android') return;
+    try {
+        const entries = await RNFS.readDir(RNFS.DownloadDirectoryPath);
+        for (const entry of entries) {
+            if (!entry.isFile() || !CHANNEL_DB_EXPORT_REGEX.test(entry.name))
+                continue;
+            try {
+                await RNFS.unlink(entry.path);
+            } catch (e) {
+                console.warn(
+                    '[ClearData] Error deleting channel database export:',
+                    e
+                );
+            }
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error listing Downloads:', e);
+    }
+}
+
 /**
  * Clears all app data including:
  * - Storage (new zeus: namespace)
  * - Old keychain entries (local and cloud)
  * - AsyncStorage
  * - EncryptedStorage
- * - Dynamic keys (notes, Cashu, LNC)
+ * - Dynamic keys (notes, POS orders, Cashu, LNC)
  * - CDK SQLite database (Cashu wallet state)
  * - LND/LDK on-disk node data directories (channel + wallet state)
+ * - HTTP cookies
+ * - Delivered system notifications
  *
  * After clearing, the app should be restarted.
  */
@@ -688,6 +969,11 @@ export async function clearAllData(): Promise<void> {
     // resurrecting every wallet config after the wipe. Observed on-device:
     // the settings write landed ~20ms after the wipe finished.
     Storage.blockWrites();
+
+    // 0b. Record the wipe before anything is cleared, so that a launch after
+    // the process ends mid-wipe finishes it (see isWipePending)
+    wipeRunning = true;
+    await markWipePending();
 
     // 1. First, try to get settings to find node-specific data
     let settings: any = null;
@@ -709,9 +995,16 @@ export async function clearAllData(): Promise<void> {
             // wholesale, and this path runs on the duress wipe, where added
             // seconds per embedded wallet matter. iOS has no backing store
             // to delete, so it must pay for the derivation here.
-            await clearNodeKeychainData(node, {
-                skipXprvPurge: Platform.OS === 'android'
-            });
+            // Own try/catch: a stored config whose values cannot be turned
+            // into key names (e.g. an imported lndDir that is not a string)
+            // must not stop the wipe before the settings blob is cleared
+            try {
+                await clearNodeKeychainData(node, {
+                    skipXprvPurge: Platform.OS === 'android'
+                });
+            } catch (e) {
+                console.warn('[ClearData] Error clearing node keys:', e);
+            }
         }
     }
     // Also try common node-dir defaults (getNodeDir falls back to 'lnd' / 'ldk')
@@ -722,10 +1015,22 @@ export async function clearAllData(): Promise<void> {
     // 2b. Clear CDK SQLite database (contains mints, proofs, transactions)
     await clearCDKDatabase();
 
+    // 2b2. Stop Tor and delete its data directories. Their guard and
+    // consensus state shows Tor was used. clearTorData bounds its wait for
+    // the daemon to stop, so it cannot hold up the rest of the wipe.
+    try {
+        await clearTorData();
+    } catch (e) {
+        console.warn('[ClearData] Error clearing Tor data:', e);
+    }
+
     // 2c. Stop and delete the on-disk LND/LDK node data directories. These
     // hold channel + wallet state and are not covered by the keychain/Cashu
     // clears above, so they must be unlinked explicitly.
     await clearNodeDataDirectories(settings);
+    await clearOrphanedNodeDataDirectories(settings);
+    // Channel database exports saved to public Downloads (Android).
+    await purgeChannelDbExports();
 
     // 2d. Delete any plaintext rescue-key exports. Legacy files live outside
     // the app sandbox (public Downloads on Android, Files-visible Documents
@@ -734,7 +1039,20 @@ export async function clearAllData(): Promise<void> {
     await purgeLegacyRescueKeyFiles();
     await unlinkRescueKeyStagingFile();
 
-    // 3. Clear all known storage keys
+    // 2e. Clear the per-order POS records while the order lists that name
+    // them still exist (step 3 clears the lists)
+    await clearPosOrderRecords();
+
+    // 3. Clear all known storage keys. The legacy settings blob goes first:
+    // getSettings() loads it whenever the keychain blob is missing, and it
+    // can predate a PIN set up since the storage migration, so it must not
+    // outlive the keychain blob. Own try/catch: on iOS removeItem rejects
+    // when the key is absent.
+    try {
+        await EncryptedStorage.removeItem('zeus-settings');
+    } catch (e) {
+        console.warn('[ClearData] Error clearing legacy settings:', e);
+    }
     console.log('[ClearData] Clearing known storage keys...');
     for (const key of STORAGE_KEYS) {
         await clearKey(key);
@@ -765,13 +1083,32 @@ export async function clearAllData(): Promise<void> {
 
     // 6. Clear EncryptedStorage (migration flags, etc.)
     try {
-        // Also explicitly clear the legacy settings key
-        await EncryptedStorage.removeItem('zeus-settings');
         await EncryptedStorage.clear();
+        // clear() also removed the pending-wipe record, and steps 7 and 8
+        // are still to run
+        await markWipePending();
         MigrationUtils.clearConfirmedFlags();
         console.log('[ClearData] EncryptedStorage cleared');
     } catch (e) {
         console.warn('[ClearData] Error clearing EncryptedStorage:', e);
+    }
+
+    // 6b. Clear the HTTP cookie store shared by every request the app makes,
+    // so hosts contacted before the wipe cannot recognize the install after
+    // it. Not awaited: Android without a WebView never calls back.
+    try {
+        Networking.clearCookies(() => {});
+    } catch (e) {
+        console.warn('[ClearData] Error clearing cookies:', e);
+    }
+
+    // 6c. Remove delivered notifications (NWC payments and invoices, ZEUS Pay
+    // receipts). The OS keeps them, with amounts and app names, after the
+    // app's own data is gone.
+    try {
+        Notifications.removeAllDeliveredNotifications();
+    } catch (e) {
+        console.warn('[ClearData] Error removing notifications:', e);
     }
 
     // 7. Clear any remaining keychain items with common prefixes
@@ -785,10 +1122,19 @@ export async function clearAllData(): Promise<void> {
         await clearKey(key);
     }
 
-    // 8. Android: delete the keychain backing stores wholesale, killing the
-    // orphaned entries no config-driven clear can reach. Keep this the LAST
+    // 8. Delete whatever is left in the keychain wholesale, killing the
+    // orphaned entries no config-driven clear can reach: by enumeration on
+    // iOS, by deleting the backing stores on Android. Keep this the LAST
     // clearing action (see clearKeychainBackingStore).
+    await clearKeychainEntries();
     await clearKeychainBackingStore();
+
+    try {
+        await EncryptedStorage.removeItem(WIPE_PENDING_KEY);
+    } catch (e) {
+        console.warn('[ClearData] Error clearing the pending wipe record:', e);
+    }
+    wipeRunning = false;
 
     console.log('[ClearData] All data cleared successfully');
 }

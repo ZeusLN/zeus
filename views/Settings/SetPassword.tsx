@@ -11,6 +11,11 @@ import TextInput from '../../components/TextInput';
 
 import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import {
+    deriveVerifier,
+    hasLockCredential,
+    matchesLockCredential
+} from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
 import ModalStore from '../../stores/ModalStore';
@@ -25,11 +30,12 @@ interface SetPassphraseProps {
 interface SetPassphraseState {
     passphrase: string;
     passphraseConfirm: string;
-    savedPassphrase: string;
+    hasSavedPassphrase: boolean;
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
     passphraseEmptyError: boolean;
     isBiometryEnabled: boolean;
+    saveError: boolean;
 }
 
 @inject('SettingsStore', 'ModalStore')
@@ -41,11 +47,12 @@ export default class SetPassphrase extends React.Component<
     state = {
         passphrase: '',
         passphraseConfirm: '',
-        savedPassphrase: '',
+        hasSavedPassphrase: false,
         passphraseMismatchError: false,
         passphraseInvalidError: false,
         passphraseEmptyError: false,
-        isBiometryEnabled: false
+        isBiometryEnabled: false,
+        saveError: false
     };
 
     private firstInput = React.createRef<any>();
@@ -56,11 +63,9 @@ export default class SetPassphrase extends React.Component<
         const settings = await SettingsStore.getSettings();
 
         this.setState({
-            isBiometryEnabled: settings.isBiometryEnabled
+            isBiometryEnabled: settings.isBiometryEnabled,
+            hasSavedPassphrase: hasLockCredential(settings, 'passphrase')
         });
-        if (settings.passphrase) {
-            this.setState({ savedPassphrase: settings.passphrase });
-        }
 
         this.firstInput.current?.focus();
     }
@@ -87,29 +92,56 @@ export default class SetPassphrase extends React.Component<
             return;
         }
 
-        const settings = await getSettings();
+        // A failed key derivation or settings write rejects. Nothing is
+        // saved in that case, so the user is told and can save again.
+        try {
+            const settings = await getSettings();
 
-        if (passphrase !== '' && passphrase === settings.duressPassphrase) {
-            this.setState({
-                passphraseInvalidError: true
+            if (passphrase === '') {
+                this.setState({
+                    passphraseEmptyError: true
+                });
+                return;
+            }
+
+            if (
+                // the duress passphrase may still be plaintext, or deleted by
+                // an older build next to its old verifier
+                await matchesLockCredential(
+                    passphrase,
+                    settings,
+                    'duressPassphrase'
+                )
+            ) {
+                this.setState({
+                    passphraseInvalidError: true
+                });
+
+                return;
+            }
+
+            const passphraseVerifier = await deriveVerifier(passphrase);
+            // drop any plaintext the verifier migration has not hashed
+            // yet, so it cannot win over this record later
+            await updateSettings({
+                passphraseVerifier,
+                passphrase: undefined,
+                // only one method is ever set, so the PIN fields can hold
+                // only records from before a downgrade, which would become
+                // the lock again once the plaintext is gone
+                pinVerifier: undefined,
+                duressPinVerifier: undefined
             });
-
+        } catch (error) {
+            console.error('Failed to save the password', error);
+            this.setState({ saveError: true });
             return;
         }
 
-        if (passphrase === '') {
-            this.setState({
-                passphraseEmptyError: true
-            });
-            return;
-        }
-
-        await updateSettings({ passphrase }).then(() => {
-            setLoginStatus(true);
-            getSettings();
-            navigation.popTo('Security', {
-                enableBiometrics: route.params?.forBiometrics
-            });
+        setLoginStatus(true);
+        getSettings();
+        navigation.popTo('Security', {
+            enableBiometrics: route.params?.forBiometrics
         });
     };
 
@@ -120,8 +152,15 @@ export default class SetPassphrase extends React.Component<
         const { updateSettings } = SettingsStore;
 
         await updateSettings({
-            duressPassphrase: '',
-            passphrase: '',
+            duressPassphraseVerifier: undefined,
+            passphraseVerifier: undefined,
+            // and any plaintext the verifier migration has not hashed yet
+            duressPassphrase: undefined,
+            passphrase: undefined,
+            // and the other method's records from before a downgrade, which
+            // would otherwise become the lock
+            pinVerifier: undefined,
+            duressPinVerifier: undefined,
             isBiometryEnabled: false
         });
         navigation.popTo('Security');
@@ -132,10 +171,11 @@ export default class SetPassphrase extends React.Component<
         const {
             passphrase,
             passphraseConfirm,
-            savedPassphrase,
+            hasSavedPassphrase,
             passphraseMismatchError,
             passphraseInvalidError,
-            passphraseEmptyError
+            passphraseEmptyError,
+            saveError
         } = this.state;
 
         return (
@@ -144,7 +184,7 @@ export default class SetPassphrase extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            savedPassphrase
+                            hasSavedPassphrase
                                 ? 'views.Settings.ChangePassword.title'
                                 : 'views.Settings.SetPassword.title'
                         ),
@@ -183,6 +223,13 @@ export default class SetPassphrase extends React.Component<
                             )}
                         />
                     )}
+                    {saveError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.Security.saveFailed'
+                            )}
+                        />
+                    )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.newPassword')}
                     </Text>
@@ -196,7 +243,8 @@ export default class SetPassphrase extends React.Component<
                                 passphrase: text,
                                 passphraseMismatchError: false,
                                 passphraseInvalidError: false,
-                                passphraseEmptyError: false
+                                passphraseEmptyError: false,
+                                saveError: false
                             })
                         }
                         autoCapitalize="none"
@@ -228,7 +276,8 @@ export default class SetPassphrase extends React.Component<
                                 passphraseConfirm: text,
                                 passphraseMismatchError: false,
                                 passphraseInvalidError: false,
-                                passphraseEmptyError: false
+                                passphraseEmptyError: false,
+                                saveError: false
                             })
                         }
                         autoCapitalize="none"
@@ -255,7 +304,7 @@ export default class SetPassphrase extends React.Component<
                             onPress={() => this.saveSettings()}
                         />
                     </View>
-                    {!!savedPassphrase && (
+                    {hasSavedPassphrase && (
                         <View style={{ paddingTop: 10, margin: 10 }}>
                             <Button
                                 title={localeString(

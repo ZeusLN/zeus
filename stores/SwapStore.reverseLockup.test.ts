@@ -1,13 +1,16 @@
 // Reverse swap lockup verification. Uses the real ecpair, bitcoinjs-lib
 // and @scure key material like SwapStore.rescue.test.ts, so the swap tree
 // and lockup address are derived exactly as the app derives them.
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores', () => ({
+    alertStore: {
+        setMempoolErrorFromUrl: jest.fn(),
+        clearMempoolError: jest.fn()
+    }
+}));
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: (s: string) => s
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (s: string) => s
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
     default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
@@ -18,14 +21,6 @@ jest.mock('react-native-blob-util', () => ({
         fetch: jest.fn(),
         fs: { dirs: { LibraryDir: '/lib', DocumentDir: '/docs' } }
     }
-}));
-jest.mock('react-native-fs', () => ({
-    DownloadDirectoryPath: '/public-downloads',
-    DocumentDirectoryPath: '/docs',
-    CachesDirectoryPath: '/cache',
-    exists: jest.fn().mockResolvedValue(false),
-    unlink: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
@@ -86,6 +81,7 @@ import { mnemonicToSeedSync } from '@scure/bip39';
 import { HDKey } from '@scure/bip32';
 
 import SwapStore from './SwapStore';
+import { alertStore } from './Stores';
 import BackendUtils from '../utils/BackendUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import Storage from '../storage';
@@ -156,6 +152,20 @@ const newStore = () =>
         { settings: {}, implementation: 'lnd' } as any
     );
 
+// members a swap creation response is not expected to have: "model" and
+// "qrCodeValue" are names of Swap getters, which new Swap() can't assign,
+// and "imported" marks a rescued swap
+const EXTRA_MEMBERS = {
+    model: 'not a swap',
+    qrCodeValue: 'lnbc-other-invoice',
+    imported: true
+};
+const expectNoExtraMembers = (swap: any) => {
+    for (const member of Object.keys(EXTRA_MEMBERS)) {
+        expect(Object.keys(swap)).not.toContain(member);
+    }
+};
+
 beforeEach(() => {
     for (const key of Object.keys(storageBacking)) delete storageBacking[key];
     jest.clearAllMocks();
@@ -171,7 +181,9 @@ describe('SwapStore.createReverseSwap response verification', () => {
 
     const create = async (
         responseOverrides: any = {},
-        tip: any = TIMEOUT - 100
+        tip: any = TIMEOUT - 100,
+        fee = '2',
+        reverseInfo: any = REVERSE_INFO
     ) => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
         const { outputScript: _outputScript, ...details } = VALID;
@@ -190,25 +202,27 @@ describe('SwapStore.createReverseSwap response verification', () => {
         });
 
         const store = newStore();
-        store.reverseInfo = REVERSE_INFO;
+        store.reverseInfo = reverseInfo;
         const navigation = { navigate: jest.fn() };
-        await store.createReverseSwap(
+        const result = await store.createReverseSwap(
             'bc1qdestination',
             INVOICE_AMOUNT,
-            '2',
+            fee,
             navigation
         );
         const stored = storageBacking[REVERSE_SWAPS_KEY]
             ? JSON.parse(storageBacking[REVERSE_SWAPS_KEY])
             : [];
-        return { store, navigation, stored };
+        return { store, navigation, stored, result };
     };
 
     it('saves and opens a swap whose tree, address and amount check out', async () => {
-        const { store, navigation, stored } = await create();
+        const { store, navigation, stored, result } = await create();
 
+        expect(result).toBeUndefined();
         expect(store.apiError).toBe('');
         expect(stored).toHaveLength(1);
+        expect(stored[0].onchainAmountVerified).toBe(true);
         expect(navigation.navigate).toHaveBeenCalledWith(
             'SwapDetails',
             expect.anything()
@@ -229,7 +243,8 @@ describe('SwapStore.createReverseSwap response verification', () => {
     );
 
     it('fails closed before payment when the explorer height is unusable', async () => {
-        const { navigation, stored } = await create({}, 'not a height');
+        const { store, navigation, stored } = await create({}, 'not a height');
+        expect(store.apiError).toBe('views.Swaps.tipHeightUnavailable');
         expect(stored).toHaveLength(0);
         expect(navigation.navigate).not.toHaveBeenCalled();
     });
@@ -261,9 +276,200 @@ describe('SwapStore.createReverseSwap response verification', () => {
             expect(navigation.navigate).not.toHaveBeenCalled();
         }
     );
+
+    it('stores and opens only the reverse swap fields of the response', async () => {
+        const { store, navigation, stored } = await create(EXTRA_MEMBERS);
+
+        expect(store.apiError).toBe('');
+        expect(stored).toHaveLength(1);
+        const { swapData } = navigation.navigate.mock.calls[0][1];
+        for (const swap of [swapData, stored[0]]) {
+            expectNoExtraMembers(swap);
+            const model = new Swap(swap);
+            expect(model.qrCodeValue).toBe('lnbc-provider-invoice');
+            expect(model.claimDestinationAddress).toBe('bc1qdestination');
+        }
+    });
+
+    it.each([null, []])(
+        'aborts before saving or paying when the response body is %j',
+        async (body) => {
+            storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+            fetchMock.mockResolvedValueOnce({ data: JSON.stringify(body) });
+            fetchMock.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                text: () => String(TIMEOUT - 100)
+            });
+            const store = newStore();
+            store.reverseInfo = REVERSE_INFO;
+            const navigation = { navigate: jest.fn() };
+            await store.createReverseSwap(
+                'bc1qdestination',
+                INVOICE_AMOUNT,
+                '2',
+                navigation
+            );
+
+            expect(store.apiError).toBe(
+                'views.Swaps.invalidReverseSwapResponse'
+            );
+            expect(store.loading).toBe(false);
+            expect(storageBacking[REVERSE_SWAPS_KEY]).toBeUndefined();
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        }
+    );
+});
+
+describe('SwapStore.createReverseSwap claim fee', () => {
+    const INVOICE_AMOUNT = 100000;
+    // a refused swap leaves its queued host response unused
+    afterEach(() => fetchMock.mockReset());
+
+    const withClaimQuote = (claim: any) => ({
+        fees: { percentage: 0.5, minerFees: { claim, lockup: 400 } }
+    });
+
+    const create = async (
+        fee: string,
+        claimQuote: any,
+        invoiceAmount = INVOICE_AMOUNT,
+        onchainAmount = 99100
+    ) => {
+        storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        const { outputScript: _outputScript, ...details } = VALID;
+        fetchMock.mockResolvedValueOnce({
+            data: JSON.stringify({
+                id: 'reverse-swap',
+                invoice: 'lnbc-provider-invoice',
+                onchainAmount,
+                ...details
+            })
+        });
+        fetchMock.mockResolvedValue({
+            info: () => ({ status: 200 }),
+            text: () => String(TIMEOUT - 100)
+        });
+
+        const store = newStore();
+        store.reverseInfo = withClaimQuote(claimQuote);
+        const navigation = { navigate: jest.fn() };
+        await store.createReverseSwap(
+            'bc1qdestination',
+            invoiceAmount,
+            fee,
+            navigation
+        );
+        const stored = storageBacking[REVERSE_SWAPS_KEY]
+            ? JSON.parse(storageBacking[REVERSE_SWAPS_KEY])
+            : [];
+        return { store, navigation, stored };
+    };
+
+    it.each([
+        ['raises a 1 sat quote to the rate on the largest claim', 1, 25 * 152],
+        ['keeps a quote above that', 4000, 4000]
+    ])('%s', async (_, quote, expected) => {
+        const { store, navigation, stored } = await create('25', quote);
+
+        // the Swaps screen showed the same fee before the swap started
+        expect(store.getReverseClaimMinerFee('25')).toBe(expected);
+        expect(stored).toHaveLength(1);
+        expect(stored[0].claimMinerFee).toBe(expected);
+        expect(stored[0].claimFeeRate).toBe(25);
+        expect(
+            navigation.navigate.mock.calls[0][1].swapData.claimMinerFee
+        ).toBe(expected);
+    });
+
+    it.each([
+        [
+            'a claim quote above the maximum',
+            '25',
+            2000 * 152 + 1,
+            'views.Swaps.invalidReverseSwapResponse'
+        ],
+        [
+            'a claim quote that is not a number',
+            '25',
+            'abc',
+            'views.Swaps.invalidReverseSwapResponse'
+        ],
+        // the host is not at fault here, so the error asks for a rate
+        [
+            'no usable fee rate',
+            '',
+            300,
+            'views.Swaps.reverseClaimFeeRateRequired'
+        ],
+        [
+            'a fee rate of 0',
+            '0',
+            300,
+            'views.Swaps.reverseClaimFeeRateRequired'
+        ],
+        [
+            'an implausible fee rate',
+            '100000',
+            300,
+            'views.Swaps.reverseClaimFeeRateRequired'
+        ]
+    ])(
+        'refuses to start a swap with %s',
+        async (_, fee: string, quote: any, error: string) => {
+            const { store, navigation, stored } = await create(fee, quote);
+
+            expect(store.apiError).toBe(error);
+            expect(store.loading).toBe(false);
+            // the host was never asked for an invoice
+            expect(fetchMock).not.toHaveBeenCalled();
+            expect(stored).toHaveLength(0);
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        }
+    );
+
+    // 100000 less 500 service and 400 lockup fees: the host locks up 99100
+    it('refuses, before asking the host, a fee rate whose claim fee takes the whole lockup', async () => {
+        // 652 x 152 = 99104 sats
+        const { store, navigation, stored } = await create('652', 300);
+
+        expect(store.apiError).toBe('views.Swaps.reverseClaimFeeExceedsAmount');
+        expect(store.loading).toBe(false);
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(stored).toHaveLength(0);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('starts a swap whose claim fee leaves some of the lockup', async () => {
+        // 651 x 152 = 98952 sats
+        const { store, stored } = await create('651', 300);
+
+        expect(store.apiError).toBe('');
+        expect(stored).toHaveLength(1);
+        expect(stored[0].claimMinerFee).toBe(98952);
+    });
+
+    it('refuses a lockup above the quoted amount but not above the claim fee', async () => {
+        // 4500 less 23 service and 400 lockup fees is 4077. The host's 3790
+        // passes the quote check (above 4077 - 300), but the 25 x 152 = 3800
+        // sat claim fee would take all of it
+        const { store, navigation, stored } = await create(
+            '25',
+            300,
+            4500,
+            3790
+        );
+
+        expect(store.apiError).toBe('views.Swaps.invalidReverseSwapResponse');
+        expect(stored).toHaveLength(0);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
 });
 
 describe('SwapStore.verifyReverseLockup', () => {
+    beforeEach(() => {
+        (alertStore.setMempoolErrorFromUrl as jest.Mock).mockClear();
+        (alertStore.clearMempoolError as jest.Mock).mockClear();
+    });
     const ONCHAIN_AMOUNT = 99100;
 
     // a stored swap: keys and preimage in their JSON shapes
@@ -277,6 +483,8 @@ describe('SwapStore.verifyReverseLockup', () => {
                     keys: OUR_KEYS,
                     preimage: PREIMAGE,
                     onchainAmount: ONCHAIN_AMOUNT,
+                    // created with the creation-time amount check
+                    onchainAmountVerified: true,
                     ...details,
                     ...overrides
                 })
@@ -329,6 +537,18 @@ describe('SwapStore.verifyReverseLockup', () => {
     it('allows the claim for a confirmed, fully funded lockup', async () => {
         esplora(200);
         await expect(verify()).resolves.toEqual({ status: 'ok' });
+        expect(alertStore.clearMempoolError).toHaveBeenCalled();
+    });
+
+    it('refuses a swap stored with an on-chain amount that is not a number', async () => {
+        // [Infinity] is saved as [null], which compares as 0
+        esplora(200);
+        await expect(
+            verify(storedSwap({ onchainAmount: [Infinity] }))
+        ).resolves.toEqual({
+            status: 'invalid',
+            reason: 'onchain-amount-invalid'
+        });
     });
 
     it('looks the lockup up on the mempool instance, not the provider', async () => {
@@ -368,6 +588,47 @@ describe('SwapStore.verifyReverseLockup', () => {
             });
         }
     );
+
+    it('names the spending transaction and whose it is, even past the refund deadline', async () => {
+        esplora(200);
+        const fetch = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (method, url) => {
+            if (url.endsWith(`/tx/${'ab'.repeat(32)}`)) {
+                return {
+                    info: () => ({ status: 200 }),
+                    json: () => ({
+                        vin: [
+                            {
+                                txid: LOCKUP_TX.getId(),
+                                vout: 0,
+                                witness: ['sig', 'refundscript', 'control']
+                            }
+                        ]
+                    })
+                };
+            }
+            if (url.includes('/outspend/')) {
+                return {
+                    info: () => ({ status: 200 }),
+                    json: () => ({ spent: true, txid: 'ab'.repeat(32) })
+                };
+            }
+            // the host may have refunded itself by now
+            if (url.endsWith('/blocks/tip/height')) {
+                return {
+                    info: () => ({ status: 200 }),
+                    text: () => String(TIMEOUT + 10)
+                };
+            }
+            return fetch(method, url);
+        });
+        await expect(verify()).resolves.toEqual({
+            status: 'invalid',
+            reason: 'lockup-spent',
+            spendingTxid: 'ab'.repeat(32),
+            spentBy: 'refund'
+        });
+    });
 
     it.each([{}, { spent: 'false' }, null])(
         'fails closed on malformed outspend data %j',
@@ -509,6 +770,10 @@ describe('SwapStore.verifyReverseLockup', () => {
             status: 'unconfirmed',
             reason: 'lockup-not-found'
         });
+        // a 404 means the instance responded, but the tx is not seen yet. It
+        // can also mean a wrong custom base path, so leave the alert unchanged.
+        expect(alertStore.setMempoolErrorFromUrl).not.toHaveBeenCalled();
+        expect(alertStore.clearMempoolError).not.toHaveBeenCalled();
     });
 
     it('waits on a lockup that is not confirmed yet', async () => {
@@ -522,6 +787,65 @@ describe('SwapStore.verifyReverseLockup', () => {
             status: { confirmed: false }
         });
         await expect(verify()).resolves.toEqual({ status: 'unconfirmed' });
+        // the fetch itself succeeded — clear any stale alert
+        expect(alertStore.clearMempoolError).toHaveBeenCalled();
+    });
+
+    it('raises the alert on a 500 response', async () => {
+        esplora(500, 'Internal Server Error');
+        await expect(verify()).resolves.toEqual({
+            status: 'unavailable',
+            reason: 'http-500'
+        });
+        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            expect.stringContaining('https://mempool.test/api/tx/'),
+            'HTTP 500'
+        );
+    });
+
+    it('raises the alert on a thrown network error', async () => {
+        esplora(200);
+        const fetch = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (method, url) => {
+            if (url.includes('/tx/') && !url.includes('/outspend/')) {
+                throw new Error('Network error');
+            }
+            return fetch(method, url);
+        });
+        await expect(verify()).resolves.toEqual({
+            status: 'unavailable',
+            reason: 'request-failed'
+        });
+        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            expect.stringContaining('https://mempool.test/api/tx/'),
+            'Network error'
+        );
+    });
+
+    it('raises "Invalid response" when json() throws', async () => {
+        esplora(200);
+        const fetch = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (method, url) => {
+            if (url.includes('/tx/') && !url.includes('/outspend/')) {
+                return {
+                    info: () => ({ status: 200 }),
+                    json: () => {
+                        throw new SyntaxError('Unexpected token <');
+                    }
+                };
+            }
+            return fetch(method, url);
+        });
+
+        await expect(verify()).resolves.toEqual({
+            status: 'unavailable',
+            reason: 'request-failed'
+        });
+
+        expect(alertStore.setMempoolErrorFromUrl).toHaveBeenCalledWith(
+            expect.stringContaining('https://mempool.test/api/tx/'),
+            'Invalid response'
+        );
     });
 
     it('refuses a lockup that pays less than the swap amount', async () => {
@@ -614,14 +938,17 @@ describe('SwapStore.verifyReverseLockup', () => {
         // 90% of a 100000-sat payment
         const FLOOR = 90000;
 
-        const rescuedSwap = () =>
+        const rescuedSwap = (overrides: any = {}) =>
             storedSwap({
+                imported: true,
+                onchainAmountVerified: undefined,
                 swapTree: undefined,
                 refundPublicKey: undefined,
                 timeoutBlockHeight: undefined,
                 onchainAmount: undefined,
                 tree: VALID.swapTree,
-                serverPublicKey: VALID.refundPublicKey
+                serverPublicKey: VALID.refundPublicKey,
+                ...overrides
             });
 
         const lockedUp = (value: number) =>
@@ -653,6 +980,25 @@ describe('SwapStore.verifyReverseLockup', () => {
             amount,
             paidAmount
         });
+
+        it.each([1000, 0, 99100])(
+            'ignores a legacy imported onchainAmount of %s',
+            async (onchainAmount) => {
+                paid();
+                lockedUp(1000);
+                const swap = rescuedSwap();
+                swap.onchainAmount = onchainAmount;
+                await expect(verify(swap)).resolves.toEqual(
+                    shortOf(100000, 1000)
+                );
+                expect(getPayments).toHaveBeenCalled();
+                await expect(
+                    newStore().verifyReverseLockup(swap, LOCKUP_TX.toHex(), {
+                        confirmedLockupAmount: 1000
+                    })
+                ).resolves.toEqual({ status: 'ok' });
+            }
+        );
 
         it.each([99100, FLOOR])(
             'claims a lockup of %s sats against a payment of 100000 sats',
@@ -782,10 +1128,533 @@ describe('SwapStore.verifyReverseLockup', () => {
             });
         });
 
+        it('ignores an invoice a rescued record carries from the host', async () => {
+            // the v13.2.2 rescue copied every host field, the invoice too
+            const decode = jest.spyOn(Bolt11Utils, 'decode');
+            paid();
+            lockedUp(1000);
+            await expect(
+                verify(rescuedSwap({ invoice: 'lnbc-from-host' }))
+            ).resolves.toEqual(shortOf(100000, 1000));
+            expect(decode).not.toHaveBeenCalled();
+            expect(getPayments).toHaveBeenCalled();
+            decode.mockRestore();
+        });
+
         it('does not look up payments for a swap with an on-chain amount', async () => {
             esplora(200);
             await expect(verify()).resolves.toEqual({ status: 'ok' });
             expect(getPayments).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('a swap created before the creation-time amount check', () => {
+        const getPayments = BackendUtils.getPayments as jest.Mock;
+        let decode: jest.SpyInstance;
+
+        // v13.2.2 stored the host's onchainAmount unchecked; here the host
+        // set it as low as the lockup it means to send
+        const legacySwap = (overrides: any = {}) =>
+            storedSwap({
+                onchainAmountVerified: undefined,
+                onchainAmount: 1000,
+                invoice: 'lnbc-legacy',
+                ...overrides
+            });
+
+        const lockedUp = (value: number) =>
+            esplora(200, {
+                vout: [
+                    {
+                        scriptpubkey: VALID.outputScript.toString('hex'),
+                        value
+                    }
+                ],
+                status: { confirmed: true }
+            });
+
+        beforeEach(() => {
+            decode = jest
+                .spyOn(Bolt11Utils, 'decode')
+                .mockReturnValue({ satoshis: 100000 } as any);
+        });
+
+        afterEach(() => decode.mockRestore());
+
+        it('asks before claiming a lockup that matches the low stored amount', async () => {
+            lockedUp(1000);
+            await expect(verify(legacySwap())).resolves.toEqual({
+                status: 'confirm-amount',
+                amount: 1000,
+                paidAmount: 100000
+            });
+            expect(decode).toHaveBeenCalledWith('lnbc-legacy');
+            expect(getPayments).not.toHaveBeenCalled();
+        });
+
+        it('claims without asking when the lockup is at least 90% of the invoice', async () => {
+            lockedUp(99100);
+            await expect(verify(legacySwap())).resolves.toEqual({
+                status: 'ok'
+            });
+            expect(getPayments).not.toHaveBeenCalled();
+        });
+
+        it('still refuses a lockup below the stored amount', async () => {
+            // above 90% of the invoice, but short of what the host promised
+            lockedUp(95000);
+            await expect(
+                verify(legacySwap({ onchainAmount: ONCHAIN_AMOUNT }))
+            ).resolves.toEqual({ status: 'invalid', reason: 'underfunded' });
+        });
+
+        it('claims once the user confirms the amount, without reading the invoice', async () => {
+            lockedUp(1000);
+            await expect(
+                newStore().verifyReverseLockup(
+                    legacySwap(),
+                    LOCKUP_TX.toHex(),
+                    { confirmedLockupAmount: 1000 }
+                )
+            ).resolves.toEqual({ status: 'ok' });
+            expect(decode).not.toHaveBeenCalled();
+            expect(getPayments).not.toHaveBeenCalled();
+        });
+
+        it('falls back to the payment lookup when the invoice cannot be read', async () => {
+            decode.mockImplementation(() => {
+                throw new Error('bad invoice');
+            });
+            getPayments.mockResolvedValue({ payments: [] });
+            lockedUp(1000);
+            await expect(verify(legacySwap())).resolves.toEqual({
+                status: 'confirm-amount',
+                amount: 1000
+            });
+            expect(getPayments).toHaveBeenCalled();
+        });
+
+        it('keeps the stored amount as the floor once the swap was checked at creation', async () => {
+            lockedUp(1000);
+            await expect(
+                verify(legacySwap({ onchainAmountVerified: true }))
+            ).resolves.toEqual({ status: 'ok' });
+            expect(decode).not.toHaveBeenCalled();
+        });
+    });
+});
+
+describe('SwapStore.lockupSpentBy', () => {
+    const SPENDER = 'cd'.repeat(32);
+    const LOCKUP = 'ef'.repeat(32);
+    const PREIMAGE_HEX = PREIMAGE.toString('hex');
+    const spenderWith = (vin: any) =>
+        fetchMock.mockResolvedValue({
+            info: () => ({ status: 200 }),
+            json: () => ({ vin })
+        });
+    const spentBy = () =>
+        newStore().lockupSpentBy(SPENDER, LOCKUP, 1, PREIMAGE_HEX);
+
+    beforeEach(() => fetchMock.mockReset());
+
+    it('reads a key-path spend as a claim', async () => {
+        spenderWith([{ txid: LOCKUP, vout: 1, witness: ['ab'.repeat(64)] }]);
+        await expect(spentBy()).resolves.toBe('claim');
+        expect(fetchMock).toHaveBeenCalledWith(
+            'GET',
+            `https://mempool.test/api/tx/${SPENDER}`
+        );
+    });
+
+    it('reads a claim-leaf spend that reveals the preimage as a claim', async () => {
+        spenderWith([
+            { txid: 'aa'.repeat(32), vout: 0, witness: ['sig'] },
+            {
+                txid: LOCKUP.toUpperCase(),
+                vout: 1,
+                witness: [
+                    'sig',
+                    PREIMAGE_HEX.toUpperCase(),
+                    'claimscript',
+                    'control'
+                ]
+            }
+        ]);
+        await expect(spentBy()).resolves.toBe('claim');
+    });
+
+    it('reads any other spend as the refund', async () => {
+        spenderWith([
+            {
+                txid: LOCKUP,
+                vout: 1,
+                witness: ['sig', 'refundscript', 'control']
+            }
+        ]);
+        await expect(spentBy()).resolves.toBe('refund');
+    });
+
+    it('only reads the input for the lockup output', async () => {
+        // a key-path spend of another output of the lockup transaction
+        spenderWith([
+            { txid: LOCKUP, vout: 0, witness: ['sig'] },
+            { txid: LOCKUP, vout: 1, witness: ['sig', 'refundscript', 'c'] }
+        ]);
+        await expect(spentBy()).resolves.toBe('refund');
+    });
+
+    it.each([
+        [
+            'an error status',
+            () => fetchMock.mockResolvedValue({ info: () => ({ status: 404 }) })
+        ],
+        ['no inputs', () => spenderWith(undefined)],
+        [
+            'no input for the lockup',
+            () => spenderWith([{ txid: LOCKUP, vout: 0, witness: ['sig'] }])
+        ],
+        ['no witness', () => spenderWith([{ txid: LOCKUP, vout: 1 }])],
+        ['a failed request', () => fetchMock.mockRejectedValue(new Error())]
+    ])('is unknown on %s', async (_case, setUp) => {
+        setUp();
+        await expect(spentBy()).resolves.toBeUndefined();
+    });
+
+    it('does not request a txid that is not 64 hex characters', async () => {
+        await expect(
+            newStore().lockupSpentBy('../blocks', LOCKUP, 1, PREIMAGE_HEX)
+        ).resolves.toBeUndefined();
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+});
+
+describe('SwapStore.checkStoredClaim', () => {
+    const LOCKUP_TXID = 'ef'.repeat(32);
+    const claimTx = () => {
+        const tx = new Transaction();
+        // inputs carry the txid in internal (reversed) byte order
+        tx.addInput(Buffer.from(LOCKUP_TXID, 'hex').reverse(), 2);
+        tx.addOutput(VALID.outputScript, 1000);
+        return tx;
+    };
+    const CLAIM = claimTx();
+    const SPENDER = 'cd'.repeat(32);
+    const respond = (outspend: any, spender?: any) =>
+        fetchMock.mockImplementation(async (_method: string, url: string) =>
+            url.includes('/outspend/')
+                ? { info: () => ({ status: 200 }), json: () => outspend }
+                : spender
+                ? { info: () => ({ status: 200 }), json: () => spender }
+                : { info: () => ({ status: 404 }) }
+        );
+    const check = (hex = CLAIM.toHex()) =>
+        newStore().checkStoredClaim(hex, JSON.parse(JSON.stringify(PREIMAGE)));
+
+    beforeEach(() => fetchMock.mockReset());
+
+    it('allows the resend while the lockup is unspent', async () => {
+        respond({ spent: false });
+        await expect(check()).resolves.toEqual({ status: 'ok' });
+        expect(fetchMock).toHaveBeenCalledWith(
+            'GET',
+            `https://mempool.test/api/tx/${LOCKUP_TXID}/outspend/2`
+        );
+    });
+
+    it('allows the resend when the stored claim is the spender', async () => {
+        respond({ spent: true, txid: CLAIM.getId() });
+        await expect(check()).resolves.toEqual({ status: 'ok' });
+    });
+
+    it.each([
+        ['the refund leaf', ['sig', 'refundscript', 'control'], 'refund'],
+        ['the preimage', ['sig', PREIMAGE.toString('hex'), 's', 'c'], 'claim']
+    ])(
+        'names another spender with %s in its witness',
+        async (_case, witness, spentBy) => {
+            respond(
+                { spent: true, txid: SPENDER },
+                { vin: [{ txid: LOCKUP_TXID, vout: 2, witness }] }
+            );
+            await expect(check()).resolves.toEqual({
+                status: 'invalid',
+                reason: 'lockup-spent',
+                spendingTxid: SPENDER,
+                spentBy
+            });
+        }
+    );
+
+    it('leaves the spender unknown when it cannot be looked up', async () => {
+        respond({ spent: true, txid: SPENDER });
+        await expect(check()).resolves.toEqual({
+            status: 'invalid',
+            reason: 'lockup-spent',
+            spendingTxid: SPENDER,
+            spentBy: undefined
+        });
+    });
+
+    it.each([
+        [
+            'an error status',
+            () => fetchMock.mockResolvedValue({ info: () => ({ status: 500 }) })
+        ],
+        ['malformed outspend data', () => respond({ spent: 'true' })],
+        ['a failed request', () => fetchMock.mockRejectedValue(new Error())]
+    ])('is unavailable on %s', async (_case, setUp) => {
+        setUp();
+        await expect(check()).resolves.toMatchObject({ status: 'unavailable' });
+    });
+
+    it('fails closed on a stored claim that does not decode', async () => {
+        await expect(check('zz')).resolves.toEqual({
+            status: 'invalid',
+            reason: 'undecodable-claim'
+        });
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+});
+
+describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
+    const INVOICE_AMOUNT = 100000;
+    // 0.5% service fee, 300 sat claim and 400 sat lockup fee: the Swaps
+    // screen shows 98800 sats to receive, and the claim pays 300 of the
+    // lockup, so the provider has to lock up 99100, less 1 sat of
+    // rounding slack
+    const REVERSE_INFO = {
+        hash: 'quote-hash',
+        fees: { percentage: 0.5, minerFees: { claim: 300, lockup: 400 } }
+    };
+
+    const create = async ({
+        onchainAmount = '99100',
+        invoiceAmount = INVOICE_AMOUNT,
+        reverseInfo = REVERSE_INFO,
+        duringRequest,
+        responseData,
+        feesResponse = { status: 200, json: { BTC: { BTC: REVERSE_INFO } } }
+    }: {
+        // the raw JSON text of the provider's onchainAmount
+        onchainAmount?: string;
+        invoiceAmount?: number;
+        reverseInfo?: any;
+        duringRequest?: (store: SwapStore) => void;
+        // replaces the whole POST /swap/reverse response body
+        responseData?: string;
+        // what GET /swap/submarine and /swap/reverse return
+        feesResponse?: { status: number; json: any };
+    } = {}) => {
+        storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        const { outputScript: _outputScript, ...details } = VALID;
+        const data = JSON.stringify({
+            id: 'reverse-swap',
+            invoice: 'lnbc-provider-invoice',
+            onchainAmount: 0,
+            ...details
+        }).replace('"onchainAmount":0', `"onchainAmount":${onchainAmount}`);
+
+        const store = newStore();
+        store.reverseInfo = reverseInfo;
+        fetchMock.mockImplementation(async (method: string, url: string) => {
+            if (method === 'POST') {
+                duringRequest?.(store);
+                return { data: responseData ?? data };
+            }
+            if (/\/swap\/(submarine|reverse)$/.test(url)) {
+                return {
+                    info: () => ({ status: feesResponse.status }),
+                    json: () => feesResponse.json
+                };
+            }
+            return {
+                info: () => ({ status: 200 }),
+                text: () => String(TIMEOUT - 100)
+            };
+        });
+        const navigation = { navigate: jest.fn() };
+        const result = await store.createReverseSwap(
+            'bc1qdestination',
+            invoiceAmount,
+            // at 1 sat/vB any claim fee floor stays below the 300 quoted
+            '1',
+            navigation
+        );
+        const stored = storageBacking[REVERSE_SWAPS_KEY]
+            ? JSON.parse(storageBacking[REVERSE_SWAPS_KEY])
+            : [];
+        return { store, navigation, stored, result };
+    };
+
+    const expectRefused = ({ store, navigation, stored }: any) => {
+        expect(store.apiError).toBe('views.Swaps.invalidReverseSwapResponse');
+        expect(store.loading).toBe(false);
+        expect(stored).toHaveLength(0);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    };
+
+    it('accepts the amount shown plus the claim fee', async () => {
+        const { store, stored } = await create();
+        expect(store.apiError).toBe('');
+        expect(stored).toHaveLength(1);
+        expect(stored[0].onchainAmount).toBe(99100);
+        expect(stored[0].claimMinerFee).toBe(300);
+    });
+
+    it('accepts one sat less, for the provider rounding its fee up', async () => {
+        const { store, stored } = await create({ onchainAmount: '99099' });
+        expect(store.apiError).toBe('');
+        expect(stored).toHaveLength(1);
+    });
+
+    it.each(['98801', '99098'])(
+        'refuses %s, which leaves less than the amount shown after the claim fee',
+        async (onchainAmount) => {
+            expectRefused(await create({ onchainAmount }));
+        }
+    );
+
+    describe('at a fee rate Boltz rounds up past the exact fee', () => {
+        // Boltz computes Math.ceil(0.07 / 100 * 1000000) = 701, one sat
+        // more than the exact 700, and locks up 1000000 - 701 - 400
+        const reverseInfo = {
+            fees: { percentage: 0.07, minerFees: { claim: 300, lockup: 400 } }
+        };
+        const invoiceAmount = 1000000;
+
+        it('accepts what Boltz locks up', async () => {
+            expect(Math.ceil((0.07 / 100) * invoiceAmount)).toBe(701);
+            const { store, stored } = await create({
+                onchainAmount: '998899',
+                invoiceAmount,
+                reverseInfo
+            });
+            expect(store.apiError).toBe('');
+            expect(stored).toHaveLength(1);
+        });
+
+        it('refuses one sat less', async () => {
+            expectRefused(
+                await create({
+                    onchainAmount: '998898',
+                    invoiceAmount,
+                    reverseInfo
+                })
+            );
+        });
+    });
+
+    it.each(['1e999', '[1e999]', '"99100"', '99100.5', '[99100]'])(
+        'refuses an on-chain amount of %s',
+        async (onchainAmount) => {
+            expectRefused(await create({ onchainAmount }));
+        }
+    );
+
+    it('does not let a negative claim quote lower the minimum below the amount shown', async () => {
+        // still 700 sats of miner fees and 98800 shown
+        const reverseInfo = {
+            fees: {
+                percentage: 0.5,
+                minerFees: { claim: -98000, lockup: 98700 }
+            }
+        };
+        expectRefused(await create({ onchainAmount: '98799', reverseInfo }));
+    });
+
+    it('checks against the quote read before the request, not one that arrives during it', async () => {
+        const result = await create({
+            onchainAmount: '1000',
+            duringRequest: (store) => {
+                store.reverseInfo = {
+                    fees: {
+                        percentage: 0.5,
+                        minerFees: { claim: 300, lockup: 300000 }
+                    }
+                };
+            }
+        });
+        expectRefused(result);
+    });
+
+    it('stores the claim fee from the quote read before the request', async () => {
+        const { stored } = await create({
+            duringRequest: (store) => {
+                store.reverseInfo = {
+                    fees: {
+                        percentage: 0.5,
+                        minerFees: { claim: 5000, lockup: 400 }
+                    }
+                };
+            }
+        });
+        expect(stored).toHaveLength(1);
+        expect(stored[0].claimMinerFee).toBe(300);
+    });
+
+    describe('pair hash', () => {
+        const postedBody = () => {
+            const post = fetchMock.mock.calls.find(
+                ([method]: any[]) => method === 'POST'
+            );
+            return JSON.parse(post[3]);
+        };
+
+        it('sends the hash of the quote the user saw', async () => {
+            await create({
+                duringRequest: (store) => {
+                    store.reverseInfo = { ...REVERSE_INFO, hash: 'newer' };
+                }
+            });
+            expect(postedBody().pairHash).toBe('quote-hash');
+        });
+
+        it('sends no pair hash when the quote has none', async () => {
+            const { hash: _hash, ...reverseInfo } = REVERSE_INFO;
+            const { stored } = await create({ reverseInfo });
+            expect(postedBody()).not.toHaveProperty('pairHash');
+            expect(stored).toHaveLength(1);
+        });
+
+        it('refreshes the quote and asks to retry when the fees changed', async () => {
+            const newQuote = {
+                hash: 'new-hash',
+                fees: {
+                    percentage: 0.5,
+                    minerFees: { claim: 300, lockup: 500 }
+                }
+            };
+            const { store, navigation, stored, result } = await create({
+                responseData: JSON.stringify({ error: 'invalid pair hash' }),
+                feesResponse: { status: 200, json: { BTC: { BTC: newQuote } } }
+            });
+            expect(result).toBe('fees-changed');
+            expect(store.reverseInfo).toEqual(newQuote);
+            expect(store.apiError).toBe('views.Swaps.swapFeesChanged');
+            expect(store.loading).toBe(false);
+            expect(stored).toHaveLength(0);
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+
+        it('does not report a fee change for other provider errors', async () => {
+            const { store, result } = await create({
+                responseData: JSON.stringify({ error: 'amount too low' })
+            });
+            expect(result).toBeUndefined();
+            expect(store.apiError).toBe('amount too low');
+            expect(store.reverseInfo).toEqual(REVERSE_INFO);
+        });
+
+        it('shows the fetch error when the refresh fails', async () => {
+            const { store, stored, result } = await create({
+                responseData: JSON.stringify({ error: 'invalid pair hash' }),
+                feesResponse: { status: 200, json: {} }
+            });
+            expect(result).toBe('fees-changed');
+            expect(store.apiError).toBe('views.Swaps.fetchFeesFailed');
+            expect(store.loading).toBe(false);
+            expect(stored).toHaveLength(0);
         });
     });
 });

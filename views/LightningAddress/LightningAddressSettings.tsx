@@ -5,81 +5,37 @@ import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
-import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
-import Switch from '../../components/Switch';
-import Text from '../../components/Text';
 import {
     ErrorMessage,
     WarningMessage
 } from '../../components/SuccessErrorMessage';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
-import SettingsStore, {
-    NOTIFICATIONS_PREF_KEYS,
-    AUTOMATIC_ATTESTATION_KEYS
-} from '../../stores/SettingsStore';
+import SettingsStore from '../../stores/SettingsStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import ZeusPayPlusSettings from '../../views/LightningAddress/ZeusPayPlusSettings';
 
+// Settings for a retired Zaplocker address: the address can only be
+// switched to another type or deleted.
 interface LightningAddressSettingsProps {
     navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
 }
 
-interface LightningAddressSettingsState {
-    automaticallyAccept: boolean | undefined;
-    automaticallyAcceptAttestationLevel: number;
-    routeHints: boolean | undefined;
-    allowComments: boolean | undefined;
-    zapReceiptsEnabled: boolean;
-    nostrPrivateKey: string;
-    nostrRelays: Array<string>;
-    notifications: number;
-}
-
 @inject('SettingsStore', 'LightningAddressStore')
 @observer
 export default class LightningAddressSettings extends React.Component<
     LightningAddressSettingsProps,
-    LightningAddressSettingsState
+    {}
 > {
-    constructor(props: LightningAddressSettingsProps) {
-        super(props);
-
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        this.state = {
-            automaticallyAccept: settings.lightningAddress?.automaticallyAccept
-                ? true
-                : false,
-            automaticallyAcceptAttestationLevel:
-                settings.lightningAddress
-                    ?.automaticallyAcceptAttestationLevel ?? 2,
-            routeHints: settings.lightningAddress?.routeHints ? true : false,
-            allowComments: settings.lightningAddress?.allowComments
-                ? true
-                : false,
-            zapReceiptsEnabled:
-                settings.lightningAddress?.zapReceiptsEnabled !== false,
-            nostrPrivateKey: settings.lightningAddress?.nostrPrivateKey || '',
-            nostrRelays: settings.lightningAddress?.nostrRelays || [],
-            notifications:
-                settings.lightningAddress?.notifications !== undefined
-                    ? settings.lightningAddress.notifications
-                    : 1
-        };
-    }
-
     confirmDelete = () => {
         Alert.alert(
             localeString('views.Settings.LightningAddress.deleteAddress'),
@@ -114,18 +70,8 @@ export default class LightningAddressSettings extends React.Component<
 
     render() {
         const { navigation, SettingsStore, LightningAddressStore } = this.props;
-        const {
-            automaticallyAccept,
-            automaticallyAcceptAttestationLevel,
-            routeHints,
-            allowComments,
-            zapReceiptsEnabled,
-            nostrRelays,
-            notifications
-        } = this.state;
-        const { settings, updateSettingsGroup } = SettingsStore;
-        const { loading, update, error_msg, paid } = LightningAddressStore;
-        const hasOpenPayments = paid && paid.length > 0;
+        const { settings } = SettingsStore;
+        const { loading, error_msg } = LightningAddressStore;
 
         return (
             <Screen>
@@ -154,338 +100,14 @@ export default class LightningAddressSettings extends React.Component<
                         {error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                marginTop: 20
-                            }}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontSize: 17,
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddressSettings.automaticallyAccept'
-                                    )}
-                                </Text>
-                            </View>
-                            <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
-                            >
-                                <Switch
-                                    value={automaticallyAccept ?? true}
-                                    onValueChange={async (value: boolean) => {
-                                        const next = value;
-                                        this.setState({
-                                            automaticallyAccept: next
-                                        });
-                                        try {
-                                            await updateSettingsGroup(
-                                                'lightningAddress',
-                                                {
-                                                    automaticallyAccept: next
-                                                }
-                                            );
-                                            restartNeeded();
-                                        } catch (e) {
-                                            this.setState({
-                                                automaticallyAccept: !next
-                                            });
-                                        }
-                                    }}
-                                />
-                            </View>
-                        </View>
                         <View style={{ marginTop: 20 }}>
-                            <DropdownSetting
-                                title={localeString(
-                                    'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel'
+                            <WarningMessage
+                                message={localeString(
+                                    'zeuspay.zaplocker.retired'
                                 )}
-                                titleColor={themeColor('text')}
-                                selectedValue={
-                                    automaticallyAcceptAttestationLevel
-                                }
-                                onValueChange={async (value: number) => {
-                                    const prev =
-                                        automaticallyAcceptAttestationLevel;
-                                    this.setState({
-                                        automaticallyAcceptAttestationLevel:
-                                            value
-                                    });
-                                    try {
-                                        await updateSettingsGroup(
-                                            'lightningAddress',
-                                            {
-                                                automaticallyAcceptAttestationLevel:
-                                                    value
-                                            }
-                                        );
-                                        restartNeeded();
-                                    } catch (e) {
-                                        this.setState({
-                                            automaticallyAcceptAttestationLevel:
-                                                prev
-                                        });
-                                    }
-                                }}
-                                values={AUTOMATIC_ATTESTATION_KEYS}
-                                disabled={!automaticallyAccept}
                             />
                         </View>
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                marginTop: 20
-                            }}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize: 17
-                                    }}
-                                    infoModalText={[
-                                        localeString(
-                                            'views.Settings.LightningAddressSettings.routeHintsExplainer1'
-                                        ),
-                                        localeString(
-                                            'views.Settings.LightningAddressSettings.routeHintsExplainer2'
-                                        )
-                                    ]}
-                                >
-                                    {localeString('views.Receive.routeHints')}
-                                </Text>
-                            </View>
-                            <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
-                            >
-                                <Switch
-                                    value={routeHints ?? false}
-                                    onValueChange={async (value: boolean) => {
-                                        const next = value;
-                                        this.setState({ routeHints: next });
-                                        try {
-                                            await updateSettingsGroup(
-                                                'lightningAddress',
-                                                {
-                                                    routeHints: next
-                                                }
-                                            );
-                                        } catch (e) {
-                                            this.setState({
-                                                routeHints: !next
-                                            });
-                                        }
-                                    }}
-                                />
-                            </View>
-                        </View>
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                marginTop: 20
-                            }}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize: 17
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddressSettings.allowComments'
-                                    )}
-                                </Text>
-                            </View>
-                            <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
-                            >
-                                <Switch
-                                    value={allowComments ?? true}
-                                    disabled={loading}
-                                    onValueChange={async (value: boolean) => {
-                                        const next = value;
-                                        this.setState({
-                                            allowComments: next
-                                        });
-                                        try {
-                                            await update({
-                                                allow_comments: next
-                                            });
-                                            await updateSettingsGroup(
-                                                'lightningAddress',
-                                                {
-                                                    allowComments: next
-                                                }
-                                            );
-                                        } catch (e) {
-                                            this.setState({
-                                                allowComments: !next
-                                            });
-                                        }
-                                    }}
-                                />
-                            </View>
-                        </View>
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                marginTop: 20
-                            }}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize: 17
-                                    }}
-                                    infoModalText={[
-                                        localeString(
-                                            'views.Settings.LightningAddressSettings.zapReceiptsExplainer1'
-                                        ),
-                                        localeString(
-                                            'views.Settings.LightningAddressSettings.zapReceiptsExplainer2'
-                                        )
-                                    ]}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddressSettings.zapReceiptsEnabled'
-                                    )}
-                                </Text>
-                            </View>
-                            <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
-                            >
-                                <Switch
-                                    value={zapReceiptsEnabled}
-                                    disabled={loading}
-                                    onValueChange={async (value: boolean) => {
-                                        const next = value;
-                                        this.setState({
-                                            zapReceiptsEnabled: next
-                                        });
-                                        try {
-                                            await update({
-                                                zap_receipts_enabled: next
-                                            });
-                                            await updateSettingsGroup(
-                                                'lightningAddress',
-                                                {
-                                                    zapReceiptsEnabled: next
-                                                }
-                                            );
-                                        } catch (e) {
-                                            this.setState({
-                                                zapReceiptsEnabled: !next
-                                            });
-                                        }
-                                    }}
-                                />
-                            </View>
-                        </View>
-                        <View style={{ marginTop: 20 }}>
-                            <DropdownSetting
-                                title={localeString(
-                                    'views.Settings.LightningAddressSettings.notifications'
-                                )}
-                                titleColor={themeColor('text')}
-                                selectedValue={notifications}
-                                onValueChange={async (value: number) => {
-                                    const prev = notifications;
-                                    this.setState({ notifications: value });
-                                    try {
-                                        await update({
-                                            notifications: value
-                                        });
-                                        await updateSettingsGroup(
-                                            'lightningAddress',
-                                            {
-                                                notifications: value
-                                            }
-                                        );
-                                        if (value === 1) {
-                                            LightningAddressStore.updatePushCredentials().catch(
-                                                (e) =>
-                                                    console.log(
-                                                        'Failed to update push credentials',
-                                                        e
-                                                    )
-                                            );
-                                        }
-                                    } catch (e) {
-                                        this.setState({ notifications: prev });
-                                    }
-                                }}
-                                values={NOTIFICATIONS_PREF_KEYS}
-                                disabled={loading}
-                            />
-                        </View>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                padding: 0,
-                                marginTop: 20
-                            }}
-                            onPress={() => navigation.navigate('NostrKeys')}
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString('nostr.keys')}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('text')}
-                            />
-                        </ListItem>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                padding: 0,
-                                marginTop: 20
-                            }}
-                            onPress={() => navigation.navigate('NostrRelays')}
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {`${localeString(
-                                        'views.Settings.Nostr.relays'
-                                    )} (${nostrRelays?.length || 0})`}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('text')}
-                            />
-                        </ListItem>
                         <ZeusPayPlusSettings navigation={navigation} />
-                        {hasOpenPayments && (
-                            <View style={{ marginTop: 30 }}>
-                                <WarningMessage
-                                    message={localeString(
-                                        'zeuspay.zaplocker.retirement.redeemFirst'
-                                    )}
-                                />
-                            </View>
-                        )}
                         {BackendUtils.supportsCashuWallet() &&
                             settings?.ecash?.enableCashu && (
                                 <ListItem
@@ -494,7 +116,6 @@ export default class LightningAddressSettings extends React.Component<
                                         padding: 0,
                                         marginTop: 30
                                     }}
-                                    disabled={hasOpenPayments}
                                     onPress={() =>
                                         navigation.navigate(
                                             'CreateCashuLightningAddress',
@@ -505,11 +126,7 @@ export default class LightningAddressSettings extends React.Component<
                                     <ListItem.Content>
                                         <ListItem.Title
                                             style={{
-                                                color: hasOpenPayments
-                                                    ? themeColor(
-                                                          'secondaryText'
-                                                      )
-                                                    : themeColor('text'),
+                                                color: themeColor('text'),
                                                 fontFamily:
                                                     'PPNeueMontreal-Book'
                                             }}
@@ -521,11 +138,7 @@ export default class LightningAddressSettings extends React.Component<
                                     </ListItem.Content>
                                     <Icon
                                         name="keyboard-arrow-right"
-                                        color={
-                                            hasOpenPayments
-                                                ? themeColor('secondaryText')
-                                                : themeColor('text')
-                                        }
+                                        color={themeColor('text')}
                                     />
                                 </ListItem>
                             )}
@@ -535,7 +148,6 @@ export default class LightningAddressSettings extends React.Component<
                                 padding: 0,
                                 marginTop: 30
                             }}
-                            disabled={hasOpenPayments}
                             onPress={() =>
                                 navigation.navigate(
                                     'CreateNWCLightningAddress',
@@ -546,9 +158,7 @@ export default class LightningAddressSettings extends React.Component<
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: hasOpenPayments
-                                            ? themeColor('secondaryText')
-                                            : themeColor('text'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -559,11 +169,7 @@ export default class LightningAddressSettings extends React.Component<
                             </ListItem.Content>
                             <Icon
                                 name="keyboard-arrow-right"
-                                color={
-                                    hasOpenPayments
-                                        ? themeColor('secondaryText')
-                                        : themeColor('text')
-                                }
+                                color={themeColor('text')}
                             />
                         </ListItem>
                         <View style={{ marginTop: 40, marginBottom: 20 }}>

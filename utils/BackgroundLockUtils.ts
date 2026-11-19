@@ -67,6 +67,7 @@ export const suppressBackgroundLockDuring = async <T>(
     task: () => Promise<T>
 ): Promise<T> => {
     const startedAt = Date.now();
+    const startedAtMonotonic = global.performance.now();
     suppressionActive = true;
     lockWasSkipped = false;
     try {
@@ -74,6 +75,7 @@ export const suppressBackgroundLockDuring = async <T>(
     } finally {
         const skipped = lockWasSkipped;
         const elapsed = Date.now() - startedAt;
+        const elapsedMonotonic = global.performance.now() - startedAtMonotonic;
         suppressionActive = false;
         lockWasSkipped = false;
 
@@ -86,8 +88,13 @@ export const suppressBackgroundLockDuring = async <T>(
             // the lock is no longer defensible, or the user actually left
             // the app (it never foregrounded after the flow settled, e.g. a
             // share target was opened or the dialog was dismissed from the
-            // app switcher).
-            const overdue = elapsed > BACKGROUND_LOCK_SUPPRESSION_MAX_MS;
+            // app switcher). performance.now() cannot be set but stops while
+            // the phone sleeps, so check both clocks, and treat a wall clock
+            // that shows less time than the monotonic one as set back.
+            const overdue =
+                elapsed > BACKGROUND_LOCK_SUPPRESSION_MAX_MS ||
+                elapsedMonotonic > BACKGROUND_LOCK_SUPPRESSION_MAX_MS ||
+                elapsed < elapsedMonotonic - 1000;
             const leftApp = async () =>
                 AppState.currentState !== 'active' &&
                 !(await returnsToForeground());

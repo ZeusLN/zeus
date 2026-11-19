@@ -93,6 +93,11 @@ export const getBalance = (data: any) => {
     let totalBalance = 0;
 
     for (let i = 0; i < opArray.length; i++) {
+        // CLN marks an output reserved: true while a transaction or PSBT
+        // holds it, for example after a transaction spends it and until
+        // that transaction confirms. Counting a spent output would add it
+        // next to its change output
+        if (opArray[i].reserved) continue;
         if (opArray[i].status === 'confirmed')
             confBalance = confBalance + opArray[i].amount_msat / 1000;
         else if (opArray[i].status === 'unconfirmed')
@@ -434,14 +439,20 @@ export const getUTXOs = async () => {
 
     return {
         ...listfunds,
-        outputs: (listfunds.outputs || []).map((output: any) => {
-            if (!tip) return output;
-            return {
-                ...output,
-                confirmations: output.blockheight
-                    ? tip - output.blockheight + 1
-                    : 0
-            };
-        })
+        // CLN marks an output reserved: true while a transaction or PSBT
+        // holds it, for example after a transaction spends it and until
+        // that transaction confirms. Coin control must not offer it:
+        // withdraw fails when it is picked
+        outputs: (listfunds.outputs || [])
+            .filter((output: any) => !output.reserved)
+            .map((output: any) => {
+                if (!tip) return output;
+                return {
+                    ...output,
+                    confirmations: output.blockheight
+                        ? tip - output.blockheight + 1
+                        : 0
+                };
+            })
     };
 };

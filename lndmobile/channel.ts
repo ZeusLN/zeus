@@ -137,7 +137,9 @@ export const openChannel = async (
     simpleTaprootChannel?: boolean,
     fund_max?: boolean,
     utxos?: Array<string>,
-    funding_shim?: any
+    funding_shim?: any,
+    close_address?: string,
+    requestId?: string
 ): Promise<string> => {
     let options: any = {
         node_pubkey: Base64Utils.hexToBase64(pubkey),
@@ -148,6 +150,7 @@ export const openChannel = async (
         min_confs,
         spend_unconfirmed,
         fund_max,
+        close_address,
         outpoints: utxos
             ? utxos.map((utxo: string) => {
                   const [txid_str, output_index] = utxo.split(':');
@@ -168,7 +171,8 @@ export const openChannel = async (
     >({
         request: lnrpc.OpenChannelRequest,
         method: 'OpenChannel',
-        options
+        options,
+        requestId
     });
     return response;
 };
@@ -181,7 +185,8 @@ export const closeChannel = async (
     output_index: number,
     force?: boolean,
     sat_per_vbyte?: number,
-    delivery_address?: string
+    delivery_address?: string,
+    requestId?: string
 ): Promise<string> => {
     const response = await sendStreamCommand<
         lnrpc.ICloseChannelRequest,
@@ -200,7 +205,8 @@ export const closeChannel = async (
                     : undefined,
                 delivery_address,
                 force
-            }
+            },
+            requestId
         },
         false
     );
@@ -529,6 +535,15 @@ export const decodeOpenStatusUpdate = (
 ): lnrpc.OpenStatusUpdate => {
     return decodeStreamResult<lnrpc.OpenStatusUpdate>({
         response: lnrpc.OpenStatusUpdate,
+        base64Result: data
+    });
+};
+
+export const decodeCloseStatusUpdate = (
+    data: string
+): lnrpc.CloseStatusUpdate => {
+    return decodeStreamResult<lnrpc.CloseStatusUpdate>({
+        response: lnrpc.CloseStatusUpdate,
         base64Result: data
     });
 };

@@ -12,13 +12,15 @@ interface LncFetchStores {
     ChannelsStore: { getChannels: () => Promise<any> };
 }
 
-// The LNC branch of the Wallet's fetchDataCore. Resolves false when the
-// node calls failed, so the caller stops there. A connect() error resolves
-// true: the error is already on SettingsStore and the rest of the fetch
-// still runs, as before.
+// The LNC branch of the Wallet's fetchDataCore. Resolves false when
+// connect() reported an error or the node calls failed, so the caller
+// stops there. The connect error is already on SettingsStore for the error
+// screen; running the rest of the fetch without node info would send the
+// ZEUS Pay calls an undefined pubkey.
 export const fetchLncData = async (
     connecting: boolean,
-    stores: LncFetchStores
+    stores: LncFetchStores,
+    isCurrent: () => boolean = () => true
 ): Promise<boolean> => {
     const {
         SettingsStore,
@@ -36,6 +38,7 @@ export const fetchLncData = async (
     // redial (or starts a dial if there is none) and reports an
     // error after its budget instead of every call below timing out.
     const reconnectNeeded = connecting || !(await BackendUtils.isConnected());
+    if (!isCurrent()) return false;
     if (reconnectNeeded) {
         try {
             error = await SettingsStore.connect();
@@ -44,15 +47,21 @@ export const fetchLncData = async (
             error = connectError?.message ?? String(connectError);
         }
     }
-    if (error) return true;
+    if (!isCurrent()) return false;
+    if (error) return false;
 
     try {
         await BackendUtils.checkPerms();
+        if (!isCurrent()) return false;
         await NodeInfoStore.getNodeInfo();
+        if (!isCurrent()) return false;
         if (BackendUtils.supportsAccounts()) await UTXOsStore.listAccounts();
+        if (!isCurrent()) return false;
         await BalanceStore.getCombinedBalance();
+        if (!isCurrent()) return false;
         if (BackendUtils.supportsChannelManagement())
             await ChannelsStore.getChannels();
+        if (!isCurrent()) return false;
         // The session may have come up in the background after an
         // earlier connect() timed out and left its error set
         if (SettingsStore.error) {

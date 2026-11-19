@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# zeus: high-level Zeus configuration over CDP (needs bin/metro + a running app).
+#
+# usage: bin/zeus status | nodes
+#        bin/zeus add-lnd alice|bob|carol [--select]
+#                 REST node https://localhost:<port>, admin macaroon,
+#                 certVerification: true (the CA from bin/ca must be installed
+#                 with bin/avd install-ca). Re-adding replaces the entry in
+#                 place; the selected wallet only changes with --select.
+#        bin/zeus select <index|nickname>   select a wallet, restart the app,
+#                 wait for the node to connect
+#        bin/zeus lsp on|off   point lspMainnet/lspTestnet/lspMutinynet at the stub
+#                 (regtest falls through to the mainnet LSP config) and set enableLSP
+#        bin/zeus ldk-create [nickname] [--select]
+#                 create an LDK Node regtest wallet (esplora = rig electrs,
+#                 VSS = http://127.0.0.1:1 with failOnVssError false so nothing
+#                 reaches prod VSS, RGS dead) and add it; details saved to
+#                 state/<RIG_NAME>/ldk-<nickname>.json. Needs profile ldk.
+#        bin/zeus mint-add [URL]   enable Cashu, add the rig mint (default
+#                 http://localhost:MINT_PORT) and restart the app so the Cashu
+#                 wallets initialize. Needs profile cashu.
+#        bin/zeus mint-quote <sats>   create a mint quote on the selected mint
+#                 and poll checkInvoicePaid until isPaid (the fakewallet pays
+#                 after MINT_MIN_DELAY..MINT_MAX_DELAY s); prints the balance
+#        bin/zeus pos standalone|off   POS standalone mode (0conf, no tips, keypad)
+#        bin/zeus invoices key=value...  e.g. defaultInvoiceType=lightning;
+#                 values that parse as JSON keep their type (routeHints=false)
+#        bin/zeus set '<json>'   merge a JSON patch into settings (one level deep)
+#        bin/zeus restart        bin/app restart --node
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+cdp() { node "$RIG_DIR/lib/cdp.js" "$@"; }
+js() { printf '%s' "$1" | jq -Rs .; }
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+    status) cdp 'JSON.stringify(Z.status())' ;;
+    nodes) cdp 'JSON.stringify(Z.nodes())' ;;
+    add-lnd)
+        n="${1:-}"; case "$n" in alice|bob|carol) ;; *) die "usage: bin/zeus add-lnd alice|bob|carol [--select]" ;; esac
+        [ -f "$STATE/macaroons/$n.hex" ] || die "no macaroon for $n; run bin/up"
+        port_var="$(echo "$n" | tr a-z A-Z)_REST_PORT"; port="${!port_var}"
+        sel=false; [ "${2:-}" = --select ] && sel=true
+        cdp --async "
+            const node = { host: 'https://localhost', port: '$port', macaroonHex: $(js "$(cat "$STATE/macaroons/$n.hex")"),
+                implementation: 'lnd', certVerification: true, enableTor: false,
+                nickname: '$n', dismissCustodialWarning: true };
+            await Z.upsertNode(node, { matchKeys: ['implementation', 'host', 'port'], select: $sel });
+            return Z.nodes();"
+        if [ "$sel" = true ]; then "$RIG_DIR/bin/app" restart --node; fi ;;
+    select)
+        [ $# -ge 1 ] || die "usage: bin/zeus select <index|nickname>"
+        cdp --async "
+            const ss = Z.S().settingsStore; const want = $(js "$1");
+            const nodes = ss.settings.nodes || [];
+            let i = /^[0-9]+\$/.test(want) ? Number(want) : nodes.findIndex(n => n.nickname === want);
+            if (i < 0 || i >= nodes.length) throw new Error('no wallet ' + want);
+            await ss.updateSettings({ selectedNode: i });
+            return 'selected ' + i + ' ' + nodes[i].nickname;"
+        "$RIG_DIR/bin/app" restart --node ;;
+    lsp)
+        on=true; [ "${1:-on}" = off ] && on=false
+        url="http://localhost:$LSP_PORT"
+        cdp --async "
+            await Z.settings({ enableLSP: $on, lspMainnet: '$url', lspTestnet: '$url', lspMutinynet: '$url' });
+            const s = Z.S().settingsStore.settings;
+            return { enableLSP: s.enableLSP, lspMainnet: s.lspMainnet };"
+        log "restart the app (bin/zeus restart) so LSPStore re-reads the config" ;;
+    ldk-create)
+        nick="LDK"; sel=false
+        for a in "$@"; do case "$a" in --select) sel=true ;; *) nick="$a" ;; esac; done
+        esplora="http://localhost:$ESPLORA_PORT"
+        out=$(cdp --timeout 180000 --async "
+            const L = Z.mod('utils/LdkNodeUtils.ts');
+            const create = L.createLdkNodeWallet || (L.default && L.default.createLdkNodeWallet);
+            const dir = 'zrig-' + Date.now();
+            const r = await create({ nodeDir: dir, network: 'regtest', esploraServerUrl: '$esplora',
+                vssServerUrl: 'http://127.0.0.1:1', failOnVssError: false });
+            const index = await Z.upsertNode({ nickname: $(js "$nick"), implementation: 'ldk-node', ldkNetwork: 'regtest',
+                ldkNodeDir: dir, ldkMnemonic: r.mnemonic, ldkEsploraServer: '$esplora',
+                ldkRgsServer: 'http://127.0.0.1:1', ldkVssServer: 'http://127.0.0.1:1' }, { select: $sel });
+            return { nodeDir: dir, mnemonic: r.mnemonic, index, vssError: r.vssError || null };")
+        echo "$out" | tee "$STATE/ldk-$nick.json"
+        if [ "$sel" = true ]; then "$RIG_DIR/bin/app" restart --node; fi ;;
+    mint-add)
+        url="${1:-http://localhost:$MINT_PORT}"
+        cdp --timeout 120000 --async "
+            await Z.settings({ ecash: { enableCashu: true } });
+            const c = Z.S().cashuStore;
+            await c.addMint($(js "$url"));
+            return { mints: c.mintUrls, selected: c.selectedMintUrl, error: c.error_msg || null };"
+        log "mint added; restarting the app (fails if the selected wallet does not connect)"
+        # Cashu wallets are initialized at startup; without a restart melts
+        # are spent at the mint but never recorded in cashuStore.payments
+        "$RIG_DIR/bin/app" restart --node ;;
+    mint-quote)
+        [ $# -ge 1 ] || die "usage: bin/zeus mint-quote <sats>"
+        cdp --timeout 180000 --async "
+            const c = Z.S().cashuStore;
+            await c.createInvoice({ memo: 'regtest-rig mint', value: '$1' });
+            const q = c.quoteId || (c.invoice && c.invoice.quote);
+            let r = null;
+            for (let i = 0; i < 60; i++) {
+                await Z.sleep(1000);
+                r = await c.checkInvoicePaid(q);
+                if (r && r.isPaid) break;
+            }
+            return { quote: q, isPaid: !!(r && r.isPaid), balance: c.totalBalanceSats };" ;;
+    pos)
+        case "${1:-}" in
+            standalone) cdp --async "await Z.settings({ pos: { posEnabled: 'standalone', confirmationPreference: '0conf', disableTips: true, defaultView: 'POS Keypad' } }); return Z.S().settingsStore.settings.pos;" ;;
+            off) cdp --async "await Z.settings({ pos: { posEnabled: 'disabled' } }); return Z.S().settingsStore.settings.pos;" ;;
+            *) die "usage: bin/zeus pos standalone|off" ;;
+        esac ;;
+    invoices)
+        [ $# -ge 1 ] || die "usage: bin/zeus invoices key=value..."
+        patch=$(for kv in "$@"; do k="${kv%%=*}"; v="${kv#*=}"; jq -n --arg k "$k" --arg v "$v" '{($k): ($v | try fromjson catch $v)}'; done | jq -s 'add')
+        cdp --async "await Z.settings({ invoices: $patch }); return Z.S().settingsStore.settings.invoices;" ;;
+    set)
+        [ $# -ge 1 ] || die "usage: bin/zeus set '<json>'"
+        echo "$1" | jq -e . >/dev/null || die "invalid JSON"
+        cdp --async "return await Z.settings($1);" ;;
+    restart) "$RIG_DIR/bin/app" restart --node ;;
+    *) die "usage: bin/zeus status|nodes|add-lnd|select|lsp|ldk-create|mint-add|mint-quote|pos|invoices|set|restart (see --help)" ;;
+esac

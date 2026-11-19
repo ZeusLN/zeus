@@ -27,10 +27,19 @@ import SettingsStore from '../stores/SettingsStore';
 import { verifyBiometry } from '../utils/BiometricUtils';
 import {
     blockNavigationDuringWipe,
-    clearAllData
+    clearAllData,
+    isWipePending,
+    markWipePending
 } from '../utils/DataClearUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { restartApp } from '../utils/RestartUtils';
+import {
+    verifySecret,
+    getLockMethod,
+    getLockVerifier,
+    getPlaintextCredential,
+    resolveLoginVerifiers
+} from '../utils/LockVerifierUtils';
 import {
     authenticatedShareIntent,
     ShareIntentPayload
@@ -55,14 +64,14 @@ interface LockscreenProps {
 }
 
 interface LockscreenState {
-    passphrase: string;
+    authMethod: 'pin' | 'passphrase' | null;
     passphraseAttempt: string;
-    duressPassphrase: string;
-    pin: string;
     pinAttempt: string;
-    duressPin: string;
     hidden: boolean;
     error: boolean;
+    attemptNotSaved: boolean;
+    verificationFailed: boolean;
+    verifying: boolean;
     modifySecurityScreen: string;
     deletePin: boolean;
     deleteDuressPin: boolean;
@@ -88,18 +97,25 @@ export default class Lockscreen extends React.Component<
     // whatever screen is on top. An instance field, not state, so the
     // guard holds before the next render.
     private unlocking = false;
+    // Set while an entry's attempt is being saved, so that each entry is
+    // saved before the next one is taken
+    private savingAttempt = false;
+    // Set once a wipe is decided, while its pending record is saved and
+    // before `wiping` is set, so a second submit cannot start another wipe.
+    // Never cleared: the wipe ends in a restart.
+    private startingWipe = false;
 
     constructor(props: any) {
         super(props);
         this.state = {
+            authMethod: null,
             passphraseAttempt: '',
-            passphrase: '',
-            duressPassphrase: '',
-            pin: '',
             pinAttempt: '',
-            duressPin: '',
             hidden: true,
             error: false,
+            attemptNotSaved: false,
+            verificationFailed: false,
+            verifying: false,
             modifySecurityScreen: '',
             deletePin: false,
             deleteDuressPin: false,
@@ -190,6 +206,17 @@ export default class Lockscreen extends React.Component<
             shareIntentData
         } = route.params ?? {};
 
+        // Finish a wipe started by an earlier launch that was cut short,
+        // before anything else, POS and biometrics included. A saved
+        // attempt count at the limit does not wipe here: the last attempt
+        // may have been a correct entry whose reset was not saved, so it
+        // only means the next wrong entry wipes.
+        if (await isWipePending()) {
+            this.setState({ wiping: true });
+            await this.authenticationFailure();
+            return;
+        }
+
         if (
             SettingsStore.isPosEnabled() &&
             SettingsStore.posStatus === 'active' &&
@@ -274,20 +301,12 @@ export default class Lockscreen extends React.Component<
             });
         }
 
-        if (settings && settings.passphrase) {
-            this.setState({ passphrase: settings.passphrase });
-            if (settings.duressPassphrase) {
-                this.setState({
-                    duressPassphrase: settings.duressPassphrase
-                });
-            }
-        } else if (settings && settings.pin) {
-            this.setState({ pin: settings.pin });
-            if (settings.duressPin) {
-                this.setState({
-                    duressPin: settings.duressPin
-                });
-            }
+        // A credential the verifier migration has not hashed yet still
+        // selects its method (onAttemptLogIn hashes it in memory), and wins
+        // over the other method's records from before a downgrade
+        const lockMethod = getLockMethod(settings);
+        if (lockMethod) {
+            this.setState({ authMethod: lockMethod });
         } else if (settings && settings.nodes && settings?.nodes?.length > 0) {
             this.proceed(pendingNavigation?.screen, pendingNavigation?.params);
         } else {
@@ -319,143 +338,267 @@ export default class Lockscreen extends React.Component<
     onAttemptLogIn = async () => {
         const { SettingsStore, navigation, route } = this.props;
         const {
-            passphrase,
-            duressPassphrase,
+            authMethod,
             passphraseAttempt,
-            pin,
             pinAttempt,
-            duressPin,
             modifySecurityScreen,
             deletePin,
             deleteDuressPin,
             deletePassword,
             deleteDuressPassword
         } = this.state;
-        const { updateSettings, getSettings, setPosStatus } = SettingsStore;
+        const { updateSettings, setPosStatus } = SettingsStore;
 
         // a wipe is already running; a second submit must not start another
         // wipe or mutate settings mid-wipe. Likewise while a verified login
         // is still completing, a second submit would navigate twice.
-        if (this.state.wiping || this.unlocking) return;
+        if (
+            this.state.wiping ||
+            this.startingWipe ||
+            this.unlocking ||
+            this.savingAttempt
+        ) {
+            return;
+        }
+
+        // Guard against re-entrancy: verification is an asynchronous native
+        // key derivation, so a double tap on the login button or a second
+        // submit could otherwise start a second attempt and double-count the
+        // failure counter. The `verifying` flag also drives the spinner
+        // overlay.
+        if (this.state.verifying) return;
+
+        // An empty password is not an attempt. verifySecret rejects it, so
+        // counting it would use up one of the attempts before the wipe on a
+        // submit with nothing entered. The PIN pad submits only a full PIN.
+        if (authMethod === 'passphrase' && passphraseAttempt === '') return;
 
         this.setState({
-            error: false
+            error: false,
+            attemptNotSaved: false,
+            verificationFailed: false,
+            verifying: true
         });
 
-        if (
-            (passphraseAttempt && passphraseAttempt === passphrase) ||
-            (pinAttempt && pinAttempt === pin)
-        ) {
-            this.unlocking = true;
+        // Verify against the salted verifier for the active method. Both the
+        // normal and duress checks always run a full derivation (a dummy
+        // record with the primary's KDF stands in when no duress credential
+        // is configured), so response time reveals neither which credential
+        // matched nor whether a duress credential exists at all. verifySecret
+        // would otherwise return early on a missing record, and skipping one
+        // of the two derivations would be a measurable tell.
+        const attempt =
+            authMethod === 'passphrase' ? passphraseAttempt : pinAttempt;
+        // Read the credentials now, not at mount: a queued settings write
+        // (this screen's own attempt count included) can land the verifier
+        // migration while the screen is up, replacing a plaintext
+        // credential with its verifier. The plaintext is set only while the
+        // migration has not hashed the credential (it threw on this boot,
+        // or a downgrade wrote it).
+        const { settings } = SettingsStore;
+        const primaryField = authMethod === 'passphrase' ? 'passphrase' : 'pin';
+        const duressField =
+            authMethod === 'passphrase' ? 'duressPassphrase' : 'duressPin';
+
+        try {
+            // A rejection here is a failed derivation, not a wrong entry, so
+            // it is reported without being counted: counting it would let a
+            // broken key derivation turn correct entries into a wipe.
+            let primaryMatch: boolean;
+            let duressMatch: boolean;
             try {
-                SettingsStore.setLoginStatus(true);
+                const verifiers = await resolveLoginVerifiers(
+                    getLockVerifier(settings, primaryField),
+                    getPlaintextCredential(settings, primaryField),
+                    getLockVerifier(settings, duressField),
+                    getPlaintextCredential(settings, duressField)
+                );
+                [primaryMatch, duressMatch] = await Promise.all([
+                    verifySecret(attempt, verifiers.primary),
+                    verifySecret(attempt, verifiers.duress)
+                ]);
+            } catch (error) {
+                console.error('Failed to verify the lock credential', error);
+                this.setState({
+                    error: true,
+                    verificationFailed: true,
+                    pinAttempt: '',
+                    verifying: false
+                });
+                return;
+            }
 
-                // Check if we're modifying security settings first
-                if (modifySecurityScreen) {
-                    await this.resetAuthenticationAttempts();
-                    navigation.popTo(modifySecurityScreen);
-                    return;
-                } else if (deletePassword) {
-                    this.deletePassword();
-                    return;
-                } else if (deletePin) {
-                    this.deletePin();
-                    return;
-                } else if (deleteDuressPassword) {
-                    this.deleteDuressPassword();
-                    return;
-                } else if (deleteDuressPin) {
-                    this.deleteDuressPin();
-                    return;
-                } else if (route.params?.pendingNavigation) {
-                    // must be handled before selectNodeOnStartup, which would
-                    // otherwise drop the re-auth target and land on the wallet
-                    // picker
-                    if (SettingsStore.isPosEnabled()) {
-                        setPosStatus('inactive');
-                    }
-                    await this.resetAuthenticationAttempts();
-                    const { pendingNavigation } = route.params;
-                    this.proceed(
-                        pendingNavigation.screen,
-                        pendingNavigation.params
-                    );
-                    return;
-                } else if (SettingsStore.settings.selectNodeOnStartup) {
-                    // Only handle wallet selection when NOT modifying security
-                    // A share intent reaches this branch with POS active (the
-                    // POS waiver does not apply to it), so leave POS here as
-                    // the other login branches do
-                    if (SettingsStore.isPosEnabled()) {
-                        setPosStatus('inactive');
-                    }
-                    await this.resetAuthenticationAttempts();
+            // The duress wipe does not depend on the attempt count, so it
+            // runs before the attempt is saved: a failed write (storage full)
+            // must not stop it. Duress creds only trigger the wipe on a
+            // genuine login attempt; in security management flows they count
+            // as an incorrect entry below.
+            if (
+                !primaryMatch &&
+                !this.isSecurityManagementFlow &&
+                duressMatch
+            ) {
+                // never mark the session logged in here: the wipe takes long
+                // enough that an unlocked app would expose the wallet UI (and
+                // the configs being wiped) before the restart lands. Keeping
+                // loggedIn false holds every auth gate shut for the duration,
+                // and the wipe guard pins the user to the wiping screen.
+                await this.startWipe(this.deleteNodes);
+                return;
+            }
 
-                    const shareIntentData = authenticatedShareIntent(
-                        route.params?.shareIntentData
-                    );
-
-                    if (shareIntentData) {
-                        navigation.replace('Wallets', {
-                            fromStartup: true,
-                            shareIntentData
-                        });
-                    } else {
-                        navigation.replace('Wallets', { fromStartup: true });
-                    }
-                    return;
+            // Save the attempt before acting on the result. An entry that is
+            // checked but not counted (a failed write, or the app closed
+            // before the write) would not count toward the wipe, so if the
+            // write fails the result is not used. The increment runs inside
+            // the settings update queue, so it always builds on the last
+            // saved count.
+            let authenticationAttempts: number;
+            this.savingAttempt = true;
+            try {
+                const updatedSettings = await updateSettings(
+                    (currentSettings: any) => ({
+                        authenticationAttempts:
+                            (currentSettings?.authenticationAttempts || 0) + 1
+                    })
+                );
+                if (
+                    typeof updatedSettings?.authenticationAttempts !== 'number'
+                ) {
+                    throw new Error('authentication attempt was not saved');
                 }
-                if (!SettingsStore.settings.selectNodeOnStartup) {
-                    if (SettingsStore.isPosEnabled()) {
-                        setPosStatus('inactive');
-                    }
-                    await this.resetAuthenticationAttempts();
-                    this.proceed();
-                }
+                authenticationAttempts = updatedSettings.authenticationAttempts;
+            } catch (error) {
+                console.error('Failed to save authentication attempt', error);
+                this.setState({
+                    error: true,
+                    attemptNotSaved: true,
+                    pinAttempt: '',
+                    verifying: false
+                });
+                return;
             } finally {
-                this.unlocking = false;
+                this.savingAttempt = false;
             }
-        } else if (
-            // duress creds only trigger the wipe on a genuine login attempt -
-            // in security management flows they count as an incorrect entry
-            !this.isSecurityManagementFlow &&
-            ((duressPassphrase && passphraseAttempt === duressPassphrase) ||
-                (duressPin && pinAttempt === duressPin))
-        ) {
-            // never mark the session logged in here: the wipe takes long
-            // enough that an unlocked app would expose the wallet UI (and
-            // the configs being wiped) before the restart lands. Keeping
-            // loggedIn false holds every auth gate shut for the duration,
-            // and the wipe guard pins the user to the wiping screen.
-            this.setState({ wiping: true });
-            await this.deleteNodes();
-        } else {
-            // need to fetch updated settings to get incremented value of
-            // authenticationAttempts, in case there are multiple failed attempts in a row
-            const updatedSettings = await getSettings();
-            let authenticationAttempts = 1;
-            if (updatedSettings?.authenticationAttempts) {
-                authenticationAttempts =
-                    updatedSettings.authenticationAttempts + 1;
-            }
-            this.setState({
-                authenticationAttempts
-            });
-            if (authenticationAttempts >= maxAuthenticationAttempts) {
-                // see the duress branch: loggedIn must stay false so the
-                // wallet UI stays gated while the wipe runs
-                this.setState({ wiping: true });
-                // wipe node configs, passwords, and pins
-                await this.authenticationFailure();
+
+            if (primaryMatch) {
+                // Re-checked here, not just on entry: verification is async,
+                // so two submits that both passed the entry guard reach this
+                // point one after the other, and the second must not
+                // navigate again.
+                if (this.unlocking) return;
+                this.unlocking = true;
+                try {
+                    SettingsStore.setLoginStatus(true);
+
+                    // Check if we're modifying security settings first
+                    if (modifySecurityScreen) {
+                        await this.resetAuthenticationAttempts();
+                        navigation.popTo(modifySecurityScreen);
+                        return;
+                    } else if (deletePassword) {
+                        this.deletePassword();
+                        return;
+                    } else if (deletePin) {
+                        this.deletePin();
+                        return;
+                    } else if (deleteDuressPassword) {
+                        this.deleteDuressPassword();
+                        return;
+                    } else if (deleteDuressPin) {
+                        this.deleteDuressPin();
+                        return;
+                    } else if (route.params?.pendingNavigation) {
+                        // must be handled before selectNodeOnStartup, which
+                        // would otherwise drop the re-auth target and land on
+                        // the wallet picker
+                        if (SettingsStore.isPosEnabled()) {
+                            setPosStatus('inactive');
+                        }
+                        await this.resetAuthenticationAttempts();
+                        const { pendingNavigation } = route.params;
+                        this.proceed(
+                            pendingNavigation.screen,
+                            pendingNavigation.params
+                        );
+                        return;
+                    } else if (SettingsStore.settings.selectNodeOnStartup) {
+                        // Only handle wallet selection when NOT modifying
+                        // security. A share intent reaches this branch with
+                        // POS active (the POS waiver does not apply to it),
+                        // so leave POS here as the other login branches do
+                        if (SettingsStore.isPosEnabled()) {
+                            setPosStatus('inactive');
+                        }
+                        await this.resetAuthenticationAttempts();
+
+                        const shareIntentData = authenticatedShareIntent(
+                            route.params?.shareIntentData
+                        );
+
+                        if (shareIntentData) {
+                            navigation.replace('Wallets', {
+                                fromStartup: true,
+                                shareIntentData
+                            });
+                        } else {
+                            navigation.replace('Wallets', {
+                                fromStartup: true
+                            });
+                        }
+                        return;
+                    }
+                    if (!SettingsStore.settings.selectNodeOnStartup) {
+                        if (SettingsStore.isPosEnabled()) {
+                            setPosStatus('inactive');
+                        }
+                        await this.resetAuthenticationAttempts();
+                        this.proceed();
+                    }
+                } finally {
+                    this.unlocking = false;
+                }
             } else {
-                await updateSettings({ authenticationAttempts }).then(() => {
+                this.setState({
+                    authenticationAttempts
+                });
+                if (authenticationAttempts >= maxAuthenticationAttempts) {
+                    // See the duress branch: loggedIn must stay false so the
+                    // wallet UI stays gated while the wipe runs.
+                    // wipe node configs, passwords, and pins
+                    await this.startWipe(this.authenticationFailure);
+                } else {
                     this.setState({
                         error: true,
-                        pinAttempt: ''
+                        pinAttempt: '',
+                        verifying: false
                     });
+                }
+            }
+        } catch (e) {
+            // A rejected settings read/write (updateSettings deliberately
+            // re-throws to its caller) must not leave the tap-swallowing
+            // overlay up with the re-entrancy guard armed - that would lock
+            // the user out until force-quit. The wipe branches keep the
+            // guard armed on purpose: the overlay pins the user to the
+            // wiping screen until restart.
+            if (!this.state.wiping && !this.startingWipe) {
+                this.setState({
+                    error: true,
+                    verifying: false
                 });
             }
         }
+    };
+
+    // Saves the pending wipe before the screen changes, so that closing the
+    // app once the result shows cannot stop the wipe. markWipePending()
+    // does not reject.
+    startWipe = async (wipe: () => Promise<void>) => {
+        this.startingWipe = true;
+        await markWipePending();
+        this.setState({ wiping: true });
+        await wipe();
     };
 
     onSubmitPin = (value: string) => {
@@ -471,8 +614,15 @@ export default class Lockscreen extends React.Component<
         // duress passphrase is also deleted when passphrase is deleted
         // biometry is also disabled when passphrase is deleted
         updateSettings({
-            passphrase: '',
-            duressPassphrase: '',
+            passphraseVerifier: undefined,
+            duressPassphraseVerifier: undefined,
+            // and any plaintext the verifier migration has not hashed yet
+            passphrase: undefined,
+            duressPassphrase: undefined,
+            // and the other method's records from before a downgrade, which
+            // would otherwise become the lock
+            pinVerifier: undefined,
+            duressPinVerifier: undefined,
             authenticationAttempts: 0,
             isBiometryEnabled: false
         }).then(() => {
@@ -485,7 +635,8 @@ export default class Lockscreen extends React.Component<
         const { updateSettings } = SettingsStore;
 
         updateSettings({
-            duressPassphrase: '',
+            duressPassphraseVerifier: undefined,
+            duressPassphrase: undefined,
             authenticationAttempts: 0
         }).then(() => {
             navigation.popTo('Security');
@@ -499,8 +650,15 @@ export default class Lockscreen extends React.Component<
         // duress pin is also deleted when pin is deleted
         // biometry is also disabled when pin is deleted
         updateSettings({
-            pin: '',
-            duressPin: '',
+            pinVerifier: undefined,
+            duressPinVerifier: undefined,
+            // and any plaintext the verifier migration has not hashed yet
+            pin: undefined,
+            duressPin: undefined,
+            // and the other method's records from before a downgrade, which
+            // would otherwise become the lock
+            passphraseVerifier: undefined,
+            duressPassphraseVerifier: undefined,
             authenticationAttempts: 0,
             isBiometryEnabled: false
         }).then(() => {
@@ -513,7 +671,8 @@ export default class Lockscreen extends React.Component<
         const { updateSettings } = SettingsStore;
 
         updateSettings({
-            duressPin: '',
+            duressPinVerifier: undefined,
+            duressPin: undefined,
             authenticationAttempts: 0
         }).then(() => {
             navigation.popTo('Security');
@@ -538,10 +697,9 @@ export default class Lockscreen extends React.Component<
             // mechanism and there is no meaningful recovery mid-wipe
             console.warn('[Lockscreen] wipe failed part-way', e);
         } finally {
-            // the restart must run even after a partial wipe: the settings
-            // blob is cleared early, so a restart still lands on a fresh
-            // install state rather than stranding the user on a dead
-            // lockscreen
+            // the restart must run even after a partial wipe: the wipe is
+            // still recorded as pending, so the next launch finishes it
+            // rather than stranding the user on a dead lockscreen
             restartApp();
         }
     };
@@ -582,10 +740,23 @@ export default class Lockscreen extends React.Component<
     };
 
     generateErrorMessage = (): string => {
-        const { passphrase, authenticationAttempts } = this.state;
+        const {
+            authMethod,
+            authenticationAttempts,
+            attemptNotSaved,
+            verificationFailed
+        } = this.state;
         let incorrect = '';
 
-        if (passphrase) {
+        if (attemptNotSaved) {
+            return localeString('views.Lockscreen.attemptNotSaved');
+        }
+
+        if (verificationFailed) {
+            return localeString('views.Lockscreen.verificationFailed');
+        }
+
+        if (authMethod === 'passphrase') {
             incorrect = localeString('views.Lockscreen.incorrectPassword');
         } else {
             incorrect = localeString('views.Lockscreen.incorrectPin');
@@ -605,11 +776,11 @@ export default class Lockscreen extends React.Component<
         const pendingNavigation = this.props.route.params?.pendingNavigation;
         const { settings } = SettingsStore;
         const {
-            passphrase,
+            authMethod,
             passphraseAttempt,
-            pin,
             hidden,
             error,
+            verifying,
             modifySecurityScreen,
             deletePin,
             deleteDuressPin,
@@ -640,17 +811,21 @@ export default class Lockscreen extends React.Component<
 
         return (
             <Screen>
-                {(this.isSecurityManagementFlow || pendingNavigation) && (
-                    <Header leftComponent="Back" navigation={navigation} />
-                )}
-                {this.isPosShareIntent && (
+                {/* the POS route guard can add a pendingNavigation to a
+                    share intent Lockscreen; proceed() serves the share
+                    intent first, so its Back is the one to show */}
+                {this.isPosShareIntent ? (
                     <Header
                         leftComponent="Back"
                         onBack={this.dismissShareIntent}
                         navigateBackOnBackPress={false}
                     />
+                ) : (
+                    (this.isSecurityManagementFlow || pendingNavigation) && (
+                        <Header leftComponent="Back" navigation={navigation} />
+                    )
                 )}
-                {!!passphrase && (
+                {authMethod === 'passphrase' && (
                     <View
                         style={{
                             ...styles.content,
@@ -732,7 +907,7 @@ export default class Lockscreen extends React.Component<
                         </View>
                     </View>
                 )}
-                {!!pin && (
+                {authMethod === 'pin' && (
                     <View style={styles.container}>
                         <View style={{ flex: 1 }}>
                             <>
@@ -800,12 +975,16 @@ export default class Lockscreen extends React.Component<
                                             this.setState({ error: false })
                                         }
                                         hidePinLength={true}
-                                        pinLength={pin.length}
                                         shuffle={settings.scramblePin}
                                     />
                                 </View>
                             </>
                         </View>
+                    </View>
+                )}
+                {verifying && (
+                    <View style={styles.verifyingOverlay}>
+                        <LoadingIndicator />
                     </View>
                 )}
             </Screen>
@@ -814,6 +993,18 @@ export default class Lockscreen extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    verifyingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        // dim + swallow taps so a second submit can't land while the
+        // verification runs
+        backgroundColor: 'rgba(0, 0, 0, 0.4)'
+    },
     content: {
         paddingLeft: 20,
         paddingRight: 20,

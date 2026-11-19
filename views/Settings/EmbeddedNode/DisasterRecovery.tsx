@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { ListItem, Divider } from '@rneui/themed';
-import Clipboard from '@react-native-clipboard/clipboard';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
@@ -17,6 +16,7 @@ import {
 } from '../../../stores/ChannelBackupStore';
 
 import Base64Utils from '../../../utils/Base64Utils';
+import { copySensitive } from '../../../utils/ClipboardUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -46,8 +46,9 @@ export default class DisasterRecovery extends React.Component<
     DisasterRecoveryState
 > {
     state = {
+        // Wallet.tsx and the Embedded node menu treat an unset value as off
         automaticDisasterRecoveryBackup:
-            settingsStore.settings.automaticDisasterRecoveryBackup || true,
+            !!settingsStore.settings.automaticDisasterRecoveryBackup,
         disasterRecoveryCopied: false,
         disasterRecoveryFileRecovered: false,
         disasterRecoveryFileRecoveredError: false,
@@ -260,9 +261,7 @@ export default class DisasterRecovery extends React.Component<
                                                             multi
                                                         );
 
-                                                    Clipboard.setString(
-                                                        multiString
-                                                    );
+                                                    copySensitive(multiString);
 
                                                     this.setState({
                                                         disasterRecoveryCopied:
@@ -433,8 +432,13 @@ export default class DisasterRecovery extends React.Component<
                                                 setChannelBackupRecoveredError();
                                             }
                                         } catch (e: any) {
+                                            // The title must be a string, an
+                                            // Error object crashes the Button
                                             setChannelBackupRecoveredErrorMessage(
-                                                e
+                                                e?.message ||
+                                                    localeString(
+                                                        'general.error'
+                                                    )
                                             );
                                         }
                                     }}

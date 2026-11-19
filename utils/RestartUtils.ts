@@ -1,5 +1,6 @@
 import { Alert, NativeModules, Platform } from 'react-native';
 import RNRestart from 'react-native-restart';
+import { IN_APP_RESTART } from './InAppRestartUtils';
 import { localeString } from './LocaleUtils';
 import { settingsStore } from '../stores/Stores';
 import LdkNode from '../ldknode/LdkNodeInjection';
@@ -39,12 +40,14 @@ const stopNode = async () => {
  * configs, pins) live in memory, and the relaunched UI lands back on the
  * lockscreen instead of the intro screen. iOS has no process-restart API;
  * there RNRestart performs a genuine JS reload, which resets module state.
+ * The process and its launch URL stay; the reason lets the next JS runtime
+ * tell (startedByInAppRestart).
  */
 const restartApp = () => {
     if (Platform.OS === 'android') {
         NativeModules.LndMobileTools.restartApp();
     } else {
-        RNRestart.Restart();
+        RNRestart.Restart(IN_APP_RESTART);
     }
 };
 

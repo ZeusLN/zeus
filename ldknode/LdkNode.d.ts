@@ -628,7 +628,9 @@ export interface ILdkNodeModule {
         maxPathCount: number,
         paymentTimeoutSecs: number
     ): Promise<{ refund: string }>;
-    bolt12RequestRefundPayment(refundStr: string): Promise<{ invoice: string }>;
+    bolt12RequestRefundPayment(
+        refundStr: string
+    ): Promise<{ invoice: string; paymentHash: string }>;
     bolt12DecodeOffer(offerStr: string): Promise<{
         offerId: string;
         description?: string;

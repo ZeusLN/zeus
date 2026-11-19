@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { View } from 'react-native';
-import moment from 'moment';
 
 import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
@@ -12,11 +11,13 @@ import {
 
 import {
     buildPaymentAwaitParams,
+    getOnchainPaymentAmount,
     isOrderFree,
     LSPOrderState,
     LSPService
 } from '../../models/LSP';
 
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 
@@ -89,8 +90,8 @@ export default class LSPS7OrderResponse extends React.Component<
                 {orderResponse?.created_at && (
                     <KeyValue
                         keyValue={localeString('general.createdAt')}
-                        value={moment(orderResponse?.created_at).format(
-                            'MMM Do YYYY, h:mm:ss a'
+                        value={DateTimeUtils.formatDateTime(
+                            orderResponse?.created_at
                         )}
                     />
                 )}
@@ -204,9 +205,9 @@ export default class LSPS7OrderResponse extends React.Component<
                         {payment?.bolt11.expires_at && (
                             <KeyValue
                                 keyValue={localeString('general.expiresAt')}
-                                value={moment(
+                                value={DateTimeUtils.formatDateTime(
                                     payment?.bolt11.expires_at
-                                ).format('MMM Do YYYY, h:mm:ss a')}
+                                )}
                             />
                         )}
                         {payment?.bolt11.invoice && (
@@ -259,9 +260,9 @@ export default class LSPS7OrderResponse extends React.Component<
                         {payment?.onchain.expires_at && (
                             <KeyValue
                                 keyValue={localeString('general.expiresAt')}
-                                value={moment(
+                                value={DateTimeUtils.formatDateTime(
                                     payment?.onchain.expires_at
-                                ).format('MMM Do YYYY, h:mm:ss a')}
+                                )}
                             />
                         )}
                         {payment?.onchain.address && (
@@ -279,7 +280,8 @@ export default class LSPS7OrderResponse extends React.Component<
                                 value={payment?.onchain.min_fee_for_0conf}
                             />
                         )}
-                        {payment?.onchain.min_onchain_payment_confirmations && (
+                        {payment?.onchain.min_onchain_payment_confirmations !=
+                            null && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.LSPS1.minOnchainPaymentConfirmations'
@@ -338,7 +340,7 @@ export default class LSPS7OrderResponse extends React.Component<
                                 </>
                             )}
                             {payment.onchain?.address &&
-                                payment.onchain?.fee_total_sat && (
+                                getOnchainPaymentAmount(payment) && (
                                     <>
                                         <Button
                                             title={
@@ -359,8 +361,9 @@ export default class LSPS7OrderResponse extends React.Component<
                                                         payment.onchain
                                                             ?.address,
                                                     satAmount:
-                                                        payment.onchain
-                                                            ?.fee_total_sat,
+                                                        getOnchainPaymentAmount(
+                                                            payment
+                                                        ),
                                                     transactionType: 'On-chain'
                                                 });
                                             }}

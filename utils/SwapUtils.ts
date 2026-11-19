@@ -108,6 +108,21 @@ export const aggregateMusigKeys = (pubkeys: Buffer[]): Buffer => {
 };
 
 /**
+ * The refund leaf of a Boltz swap in either direction: the refund key can
+ * spend once the chain reaches timeoutBlockHeight.
+ */
+const buildRefundLeaf = (
+    refundPubKey: Buffer,
+    timeoutBlockHeight: number
+): Buffer =>
+    bitcoinScript.compile([
+        toXOnly(refundPubKey),
+        opcodes.OP_CHECKSIGVERIFY,
+        bitcoinScript.number.encode(timeoutBlockHeight),
+        opcodes.OP_CHECKLOCKTIMEVERIFY
+    ]);
+
+/**
  * The two tapscript leaves of a Boltz reverse swap, as boltz-client's
  * SwapTree.Check expects them. The claim leaf pays our key against the
  * preimage, the refund leaf pays the server's key after the timeout.
@@ -133,12 +148,33 @@ export const buildReverseSwapLeaves = ({
         toXOnly(claimPubKey),
         opcodes.OP_CHECKSIG
     ]),
-    refundLeaf: bitcoinScript.compile([
-        toXOnly(refundPubKey),
-        opcodes.OP_CHECKSIGVERIFY,
-        bitcoinScript.number.encode(timeoutBlockHeight),
-        opcodes.OP_CHECKLOCKTIMEVERIFY
-    ])
+    refundLeaf: buildRefundLeaf(refundPubKey, timeoutBlockHeight)
+});
+
+/**
+ * The two tapscript leaves of a Boltz submarine swap, as boltz-core's
+ * swapTree builds them. The claim leaf pays the server's key against the
+ * preimage of our invoice, the refund leaf pays our key after the timeout.
+ */
+export const buildSubmarineSwapLeaves = ({
+    claimPubKey,
+    refundPubKey,
+    preimageHash,
+    timeoutBlockHeight
+}: {
+    claimPubKey: Buffer;
+    refundPubKey: Buffer;
+    preimageHash: Buffer;
+    timeoutBlockHeight: number;
+}): { claimLeaf: Buffer; refundLeaf: Buffer } => ({
+    claimLeaf: bitcoinScript.compile([
+        opcodes.OP_HASH160,
+        crypto.ripemd160(preimageHash),
+        opcodes.OP_EQUALVERIFY,
+        toXOnly(claimPubKey),
+        opcodes.OP_CHECKSIG
+    ]),
+    refundLeaf: buildRefundLeaf(refundPubKey, timeoutBlockHeight)
 });
 
 /**
@@ -171,6 +207,10 @@ export const deriveReverseSwapOutputKey = ({
 const LOCKTIME_THRESHOLD = 500000000;
 // Leave time for a unilateral claim if the provider refuses to co-sign.
 export const MIN_REVERSE_SWAP_CLAIM_BLOCKS = 6;
+// Until its timeout, a submarine swap's coins only come back if the provider
+// co-signs the refund. boltz-backend's sample config sets 1008 blocks (about
+// a week); refuse to lock coins up for more than about 30 days.
+export const MAX_SUBMARINE_SWAP_TIMEOUT_BLOCKS = 4320;
 
 // A rescued reverse swap is claimed without asking only if the lockup is at
 // least this share of the wallet's own payment for it. Real swap fees are
@@ -246,6 +286,7 @@ export type ReverseSwapResponseCheck =
               | 'claim-leaf-mismatch'
               | 'refund-leaf-mismatch'
               | 'lockup-address-mismatch'
+              | 'onchain-amount-invalid'
               | 'onchain-amount-low';
       };
 
@@ -253,9 +294,11 @@ export type ReverseSwapResponseCheck =
  * Verifies the provider's reverse swap details against what ZEUS chose:
  * the claim leaf must pay our key against our preimage hash, the refund
  * leaf must pay the server key, and the lockup address must be the
- * taproot output of exactly that tree. When minOnchainAmount is given,
- * the provider must also lock up more than that (the amount the Swaps
- * screen showed the user they would receive).
+ * taproot output of exactly that tree. A given onchainAmount must be a
+ * whole, positive number of sats. When minOnchainAmount is given, the
+ * provider must also lock up at least that much (the amount the Swaps
+ * screen showed the user they would receive, plus the claim fee that is
+ * paid out of the lockup).
  *
  * Without this a provider can hand out a lockup address it controls, or
  * a tree we can't claim from, and still get the preimage when we claim.
@@ -351,9 +394,19 @@ export const verifyReverseSwapResponse = ({
         return { valid: false, reason: 'lockup-address-mismatch' };
     }
 
+    // The stored amount is the lockup floor at claim time, so it has to
+    // survive the JSON round trip: 1e999 parses to Infinity and is saved
+    // as null, and a numeric string or array would pass Number() here but
+    // compare differently later. Rescued swaps store no amount.
+    if (
+        onchainAmount != null &&
+        (!Number.isSafeInteger(onchainAmount) || onchainAmount <= 0)
+    ) {
+        return { valid: false, reason: 'onchain-amount-invalid' };
+    }
     if (
         minOnchainAmount != null &&
-        !(Number(onchainAmount) > minOnchainAmount)
+        !(onchainAmount != null && onchainAmount >= minOnchainAmount)
     ) {
         return { valid: false, reason: 'onchain-amount-low' };
     }
@@ -363,6 +416,132 @@ export const verifyReverseSwapResponse = ({
         outputScript: Buffer.concat([Buffer.from([0x51, 0x20]), outputKey]),
         timeoutBlockHeight: refundHeight
     };
+};
+
+export type SubmarineSwapResponseCheck =
+    | { valid: true }
+    | {
+          valid: false;
+          reason:
+              | 'missing-fields'
+              | 'server-key-encoding'
+              | 'leaf-version'
+              | 'timeout'
+              | 'claim-leaf-mismatch'
+              | 'refund-leaf-mismatch'
+              | 'lockup-address-mismatch'
+              | 'expected-amount-high';
+      };
+
+/**
+ * Verifies the provider's submarine swap details against what ZEUS asked
+ * for: the claim leaf must pay the server key against our invoice's payment
+ * hash, the refund leaf must pay our key after the stated timeout, and the
+ * address must be the taproot output of exactly that tree, spelled as the
+ * standard address for bech32Prefix. The provider must not ask for more than
+ * maxExpectedAmount (the amount the Swaps screen showed the user they would
+ * send). The user funds this address, so it has to be one the refund key
+ * can recover from.
+ */
+export const verifySubmarineSwapResponse = ({
+    swapTree,
+    address,
+    serverPubKey,
+    timeoutBlockHeight,
+    expectedAmount,
+    ourPubKey,
+    preimageHash,
+    maxExpectedAmount,
+    bech32Prefix
+}: {
+    swapTree?: {
+        claimLeaf?: { output?: string; version?: number };
+        refundLeaf?: { output?: string; version?: number };
+    };
+    address?: string;
+    serverPubKey?: string;
+    timeoutBlockHeight?: number;
+    expectedAmount?: number;
+    ourPubKey: Buffer;
+    preimageHash: Buffer;
+    maxExpectedAmount: number;
+    bech32Prefix: string;
+}): SubmarineSwapResponseCheck => {
+    const claimLeafHex = swapTree?.claimLeaf?.output;
+    const refundLeafHex = swapTree?.refundLeaf?.output;
+    if (
+        typeof claimLeafHex !== 'string' ||
+        typeof refundLeafHex !== 'string' ||
+        typeof address !== 'string' ||
+        typeof serverPubKey !== 'string' ||
+        preimageHash.length !== 32
+    ) {
+        return { valid: false, reason: 'missing-fields' };
+    }
+
+    // the native refund assumes tapscript leaves when no version is given
+    for (const leaf of [swapTree!.claimLeaf!, swapTree!.refundLeaf!]) {
+        if (leaf.version != null && leaf.version !== TAPSCRIPT_LEAF_VERSION) {
+            return { valid: false, reason: 'leaf-version' };
+        }
+    }
+
+    // Compressed only, as for a reverse swap. The native refund decodes the
+    // key and the leaves from these strings itself, so they are matched as
+    // strings: Buffer.from stops at the first non-hex character, so a
+    // malformed string could pass a byte comparison.
+    if (
+        !/^0[23][0-9a-f]{64}$/i.test(serverPubKey) ||
+        !ecc.isPoint(Buffer.from(serverPubKey, 'hex'))
+    ) {
+        return { valid: false, reason: 'server-key-encoding' };
+    }
+    const serverKey = Buffer.from(serverPubKey, 'hex');
+
+    if (
+        !Number.isSafeInteger(timeoutBlockHeight) ||
+        timeoutBlockHeight! <= 0 ||
+        timeoutBlockHeight! >= LOCKTIME_THRESHOLD
+    ) {
+        return { valid: false, reason: 'timeout' };
+    }
+
+    const { claimLeaf, refundLeaf } = buildSubmarineSwapLeaves({
+        claimPubKey: serverKey,
+        refundPubKey: ourPubKey,
+        preimageHash,
+        timeoutBlockHeight: timeoutBlockHeight!
+    });
+    if (claimLeafHex.toLowerCase() !== claimLeaf.toString('hex')) {
+        return { valid: false, reason: 'claim-leaf-mismatch' };
+    }
+    if (refundLeafHex.toLowerCase() !== refundLeaf.toString('hex')) {
+        return { valid: false, reason: 'refund-leaf-mismatch' };
+    }
+
+    // Compare the whole string, not only the decoded witness program: bech32
+    // allows almost any prefix, and the pay button passes this string to
+    // handleAnything, which only treats the standard spelling as an on-chain
+    // address.
+    const outputKey = deriveReverseSwapOutputKey({
+        ourPubKey,
+        serverPubKey: serverKey,
+        claimLeaf,
+        refundLeaf
+    });
+    if (address !== bitcoinAddress.toBech32(outputKey, 1, bech32Prefix)) {
+        return { valid: false, reason: 'lockup-address-mismatch' };
+    }
+
+    if (
+        !Number.isSafeInteger(expectedAmount) ||
+        expectedAmount! <= 0 ||
+        !(expectedAmount! <= maxExpectedAmount)
+    ) {
+        return { valid: false, reason: 'expected-amount-high' };
+    }
+
+    return { valid: true };
 };
 
 export type LockupOutputStatus =
@@ -438,6 +617,15 @@ export const bigFloor = (big: BigNumber): BigNumber => {
 export const swapWebSocketUrl = (endpoint: string): string =>
     endpoint.replace(/^https/, 'wss').replace(/^http/, 'ws') + '/ws';
 
+/**
+ * Strips the trailing `/v2` from a swap host before it is handed to the
+ * native swap functions, which use boltz-client: it adds `/v2` to every
+ * request itself, so passing the stored host as is requested `/v2/v2/...`.
+ * Anchored to the end so a `/v2` elsewhere in a custom host is kept.
+ */
+export const nativeSwapEndpoint = (endpoint: string): string =>
+    endpoint.replace(/\/+$/, '').replace(/\/v2$/, '').replace(/\/+$/, '');
+
 export type RefundFailureAction =
     | { type: 'retry-uncooperative' }
     | { type: 'wait-for-timeout'; blocksRemaining?: number }
@@ -505,6 +693,32 @@ export const fetchBlockHeight = async (
         return 0;
     }
 };
+
+/**
+ * The network name the native swap builders take. Signet (mutinynet
+ * included) and testnet4 share testnet3's address encoding; regtest has
+ * its own.
+ */
+export const swapNetworkName = (nodeInfo?: {
+    isRegTest?: boolean;
+    isTestNet?: boolean;
+    isSigNet?: boolean;
+    isMutinynet?: boolean;
+}): 'mainnet' | 'testnet' | 'regtest' => {
+    if (nodeInfo?.isRegTest) return 'regtest';
+    if (nodeInfo?.isTestNet || nodeInfo?.isSigNet || nodeInfo?.isMutinynet)
+        return 'testnet';
+    return 'mainnet';
+};
+
+// What bitcoind and esplora say when the transaction is already in the
+// mempool or a block, so broadcasting it again is not a failure. Bitcoin
+// Core 28 changed "already in block chain" to "outputs already in utxo set".
+const ALREADY_BROADCAST =
+    /txn-already-known|txn-already-in-mempool|already in block ?chain|already in utxo set|transaction already exists/i;
+
+export const isAlreadyBroadcastError = (message?: string): boolean =>
+    ALREADY_BROADCAST.test(message || '');
 
 export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
@@ -682,6 +896,42 @@ export const calculateSendAmount = (
                   )
                   .plus(minerFee)
           );
+};
+
+// The network fee the Swaps screen charges: the claim and lockup miner
+// fees for a reverse swap, the miner fee for a submarine swap
+export const swapNetworkFee = (info: any, reverse: boolean): number =>
+    (reverse
+        ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
+              info?.fees?.minerFees?.lockup || 0
+          )
+        : new BigNumber(info?.fees?.minerFees || 0)
+    ).toNumber();
+
+// The receive amount and service fee for a send amount under a quote. Used
+// to refresh the Swaps screen when the provider's quote changes after the
+// user entered an amount.
+export const quoteSwapAmounts = (
+    sendAmount: BigNumber,
+    info: any,
+    reverse: boolean
+): { receiveAmount: BigNumber; serviceFee: BigNumber } => {
+    const serviceFeePct = info?.fees?.percentage || 0;
+    const networkFee = swapNetworkFee(info, reverse);
+    return {
+        receiveAmount: calculateReceiveAmount(
+            sendAmount,
+            serviceFeePct,
+            networkFee,
+            reverse
+        ),
+        serviceFee: calculateServiceFeeOnSend(
+            sendAmount,
+            serviceFeePct,
+            networkFee,
+            reverse
+        )
+    };
 };
 
 export const calculateLimit = (

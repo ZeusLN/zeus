@@ -6,13 +6,17 @@
 
 import BigNumber from 'bignumber.js';
 import Bolt11Utils from '../utils/Bolt11Utils';
-import { Hash as sha256Hash } from 'fast-sha256';
+import { sha256Bytes } from '../utils/HashingUtils';
 
 import libraryVersions from '../fetch-libraries-versions.json';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import Base64Utils from '../utils/Base64Utils';
-import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
+import {
+    defaultMaxRoutingFeeMsat,
+    feeLimitSatsToMaxRoutingFeeMsat
+} from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { markRequestTimeout } from '../utils/RequestTimeoutUtils';
 import type {
     Network,
     NodeStatus,
@@ -127,7 +131,7 @@ export default class LdkNode {
 
     // rHash arrives hex encoded from the Receive view
     watchInvoicePaid = (
-        { rHash }: { rHash: string; value?: string | number },
+        { rHash }: { rHash: string },
         onPaid: (payload: {
             amountSat: number;
             tx?: string;
@@ -285,29 +289,16 @@ export default class LdkNode {
      */
     getBlockchainBalance = async (): Promise<any> => {
         const balances = await LdkNodeInjection.node.listBalances();
-        // spendableOnchainBalanceSats excludes the anchor channel reserve,
-        // which is confirmed but held back - it must not be counted as
-        // unconfirmed or the balance shows as pending forever
-        const anchorReserve = balances.totalAnchorChannelsReserveSats || 0;
         const total = new BigNumber(balances.totalOnchainBalanceSats);
 
-        let confirmed: BigNumber;
-        if (balances.spendableOnchainBalanceSats > 0) {
-            // spendable is the trusted balance minus the reserve, so adding
-            // the reserve back recovers the confirmed balance exactly
-            confirmed = BigNumber.min(
-                new BigNumber(balances.spendableOnchainBalanceSats).plus(
-                    anchorReserve
-                ),
-                total
-            );
-        } else if (total.isZero()) {
-            confirmed = new BigNumber(0);
-        } else {
-            // spendable saturates at 0 once the trusted balance falls below
-            // the reserve (e.g. right after a fund-max channel open), which
-            // makes confirmed unrecoverable from the aggregate balances -
-            // sum confirmed UTXOs directly instead
+        // confirmed cannot be derived from spendableOnchainBalanceSats: that
+        // is the trusted balance minus the anchor channel reserve, and LDK
+        // trusts any unconfirmed output paying one of our change addresses,
+        // whoever sent it. Sum confirmed UTXOs instead. The anchor reserve
+        // sits in confirmed UTXOs, so it is not shown as pending, and an
+        // output whose confirmation height is unknown counts as unconfirmed
+        let confirmed = new BigNumber(0);
+        if (!total.isZero()) {
             const utxos = await this.listUnspentWithConfirmations();
             confirmed = BigNumber.min(
                 utxos.reduce(
@@ -353,18 +344,15 @@ export default class LdkNode {
                     channel.inboundCapacityMsat
                 ).dividedBy(1000);
                 const localReserve = channel.unspendablePunishmentReserve || 0;
-                const remoteReserve =
-                    channel.counterpartyUnspendablePunishmentReserve || 0;
 
                 let channelLocal: BigNumber;
                 if (outSats.gt(0)) {
                     channelLocal = outSats.plus(localReserve);
                 } else {
-                    channelLocal = new BigNumber(channel.channelValueSats)
-                        .minus(inSats)
-                        .minus(remoteReserve)
-                        .minus(660);
-                    if (channelLocal.lt(0)) channelLocal = new BigNumber(0);
+                    channelLocal = this.claimableOnChannelClose(
+                        channel,
+                        balances
+                    );
                 }
                 localBalance = localBalance.plus(channelLocal);
                 remoteBalance = remoteBalance.plus(inSats);
@@ -438,13 +426,16 @@ export default class LdkNode {
      * Get all channels
      */
     getChannels = async (): Promise<any> => {
-        const channels = await LdkNodeInjection.channel.listChannels();
+        const [channels, balances] = await Promise.all([
+            LdkNodeInjection.channel.listChannels(),
+            LdkNodeInjection.node.listBalances()
+        ]);
         // Only return ready channels — pending open channels are
         // returned by getPendingChannels() instead.
         const readyChannels = channels.filter((c) => c.isChannelReady);
         return {
             channels: readyChannels.map((channel) =>
-                this.formatChannel(channel)
+                this.formatChannel(channel, balances)
             )
         };
     };
@@ -754,7 +745,7 @@ export default class LdkNode {
         return {
             total_limbo_balance: totalLimboBalance.toString(),
             pending_open_channels: pendingOpen.map((channel) => ({
-                channel: this.formatChannel(channel)
+                channel: this.formatChannel(channel, balances)
             })),
             pending_closing_channels: pendingClosing,
             pending_force_closing_channels: pendingForceClosing,
@@ -1078,6 +1069,17 @@ export default class LdkNode {
      * [funding_txid_str, output_index, forceClose, satPerVbyte, deliveryAddress]
      * We look up the channel by funding txid to get the userChannelId
      * and counterpartyNodeId that LDK Node's close API requires.
+     *
+     * LDK Node's close call only starts the close: during a cooperative
+     * close the channel stays listed, no longer ready, until the shutdown
+     * negotiation ends. Resolve on the channelClosed event instead, so
+     * callers that refresh afterwards see the channel as closing.
+     *
+     * When the shutdown negotiation fails (e.g. the peer asks for a
+     * closing fee above our maximum), LDK force closes the channel and
+     * reports a non-cooperative closure reason. A cooperative close
+     * request then rejects, since the funds are now subject to the force
+     * close timelock.
      */
     closeChannel = async (urlParams?: Array<string>): Promise<any> => {
         const fundingTxid = (urlParams && urlParams[0]) || '';
@@ -1092,16 +1094,65 @@ export default class LdkNode {
             );
         }
 
-        if (forceClose) {
-            await LdkNodeInjection.channel.forceCloseChannel({
-                userChannelId: channel.userChannelId,
-                counterpartyNodeId: channel.counterpartyNodeId
-            });
-        } else {
-            await LdkNodeInjection.channel.closeChannel({
-                userChannelId: channel.userChannelId,
-                counterpartyNodeId: channel.counterpartyNodeId
-            });
+        const CHANNEL_CLOSE_TIMEOUT_MS = 60000;
+        let stopWaiting = (_reason?: ClosureReason) => {};
+        // Resolves with the closure reason from the channelClosed event,
+        // or undefined if there is none
+        const closed = new Promise<ClosureReason | undefined>((resolve) => {
+            // Timeout: resolve optimistically since the local node
+            // accepted the close request
+            const timeout = setTimeout(
+                () => stopWaiting(),
+                CHANNEL_CLOSE_TIMEOUT_MS
+            );
+            const unsubscribe = this.subscribeToEvents(
+                (event: LdkNodeEvent) => {
+                    if (
+                        event.type === 'channelClosed' &&
+                        event.userChannelId === channel.userChannelId
+                    ) {
+                        stopWaiting(event.reason);
+                    }
+                }
+            );
+            stopWaiting = (reason?: ClosureReason) => {
+                clearTimeout(timeout);
+                unsubscribe();
+                resolve(reason);
+            };
+        });
+
+        try {
+            if (forceClose) {
+                await LdkNodeInjection.channel.forceCloseChannel({
+                    userChannelId: channel.userChannelId,
+                    counterpartyNodeId: channel.counterpartyNodeId
+                });
+            } else {
+                await LdkNodeInjection.channel.closeChannel({
+                    userChannelId: channel.userChannelId,
+                    counterpartyNodeId: channel.counterpartyNodeId
+                });
+            }
+        } catch (error) {
+            stopWaiting();
+            throw error;
+        }
+
+        const reason = await closed;
+
+        // Events without a reason keep the previous behavior of reporting
+        // success, as there is nothing to say the close was not cooperative
+        if (!forceClose && reason && !LdkNode.isCooperativeReason(reason)) {
+            const error: any = new Error(
+                localeString('views.Channel.coopCloseBecameForceClose', {
+                    reason: LdkNode.closureReasonToMessage(reason)
+                })
+            );
+            // The channel is closed although the request failed, so callers
+            // should not offer to close it again
+            error.channelClosed = true;
+            throw error;
         }
 
         return { success: true };
@@ -1264,6 +1315,16 @@ export default class LdkNode {
             ? Number(data.value) * 1000
             : 0;
 
+        // the native module converts these to u64 / u32; on iOS a value that
+        // does not fit stops the app instead of rejecting, and both can come
+        // from an NWC make_invoice request
+        if (
+            !(expirySecs >= 0 && expirySecs <= 0xffffffff) ||
+            !(amountMsat >= 0 && amountMsat <= Number.MAX_SAFE_INTEGER)
+        ) {
+            throw new Error(localeString('error.invalidInvoiceAmountOrExpiry'));
+        }
+
         if (amountMsat > 0) {
             invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
@@ -1357,7 +1418,23 @@ export default class LdkNode {
 
         let paymentId: string;
 
-        if (data.amt) {
+        // sendBolt11UsingAmount pays the given amount whenever it is at least
+        // the invoice amount, so an explicit amount is only used for an
+        // invoice known to have none. For a fixed-amount invoice it is
+        // dropped and the invoice amount, which is what the payment screen
+        // shows, is paid. An invoice that cannot be decoded here is sent
+        // without the amount too, so it can never be overpaid: ldk-node pays
+        // its own amount or rejects it.
+        let invoiceHasNoAmount = false;
+        try {
+            const decoded = Bolt11Utils.decode(data.payment_request);
+            invoiceHasNoAmount =
+                decoded.satoshis == null && decoded.millisatoshis == null;
+        } catch (e) {
+            // undecodable: leave the invoice for ldk-node to validate
+        }
+
+        if (data.amt && invoiceHasNoAmount) {
             paymentId = await LdkNodeInjection.bolt11.sendBolt11UsingAmount({
                 invoice: data.payment_request,
                 amountMsat: Number(data.amt) * 1000,
@@ -1393,10 +1470,12 @@ export default class LdkNode {
      */
     sendKeysend = async (data: any): Promise<any> => {
         const pubkey = data.pubkey;
-        const amt = Number(data.amt);
-        const maxTotalRoutingFeeMsat = feeLimitSatsToMaxRoutingFeeMsat(
-            data.fee_limit_sat
-        );
+        const amountMsat = Number(data.amt) * 1000;
+        // ldk-node routes a keysend without maxTotalRoutingFeeMsat with no
+        // fee cap, unlike BOLT 11/12 sends, so fall back to LDK's default cap
+        const maxTotalRoutingFeeMsat =
+            feeLimitSatsToMaxRoutingFeeMsat(data.fee_limit_sat) ??
+            defaultMaxRoutingFeeMsat(amountMsat);
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
@@ -1407,7 +1486,7 @@ export default class LdkNode {
         const paymentId =
             await LdkNodeInjection.spontaneous.sendSpontaneousPayment({
                 nodeId: pubkey,
-                amountMsat: amt * 1000,
+                amountMsat,
                 maxTotalRoutingFeeMsat,
                 maxPathCount,
                 paymentTimeoutSecs
@@ -1422,7 +1501,8 @@ export default class LdkNode {
             payment_hash: hash,
             payment_preimage: preimage,
             fee_msat: feeMsat,
-            payment_route: {},
+            // SendingLightning would read a payment_route as success
+            ...(pending ? {} : { payment_route: {} }),
             status: pending ? 'IN_FLIGHT' : 'SUCCEEDED'
         };
     };
@@ -1442,6 +1522,23 @@ export default class LdkNode {
                 this.formatPayment(payment)
             )
         };
+    };
+
+    /**
+     * Targeted lookup by payment hash. listPayments is in-memory, so the
+     * filter is a local operation. Resolves payments awaitPaymentCompletion's
+     * timeout leaves pending.
+     */
+    lookupPayment = async (data: { payment_hash: string }): Promise<any> => {
+        const target = data.payment_hash.toLowerCase();
+        const payments = await LdkNodeInjection.payments.listPayments();
+        const payment = payments.find(
+            (p) =>
+                p.direction === 'outbound' &&
+                p.kind.type !== 'onchain' &&
+                (p.kind.hash || '').toLowerCase() === target
+        );
+        return payment ? this.formatPayment(payment) : null;
     };
 
     /**
@@ -1585,6 +1682,7 @@ export default class LdkNode {
             funding_confirms_within_blocks:
                 response.orderParams?.fundingConfirmsWithinBlocks,
             channel_expiry_blocks: response.orderParams?.channelExpiryBlocks,
+            announce_channel: response.orderParams?.announceChannel,
             payment: {
                 state: paymentInfo.state || bolt11?.state || onchain?.state,
                 fee_total_sat:
@@ -1804,6 +1902,26 @@ export default class LdkNode {
             data.fee_limit_sat
         );
 
+        // Every send to an offer gets a fresh payment id, so LDK would pay
+        // the offer again while an earlier payment to it is still pending
+        const { offerId } = await LdkNodeInjection.bolt12.bolt12DecodeOffer({
+            offer: data.offer
+        });
+        const payments = await LdkNodeInjection.payments.listPayments();
+        if (
+            payments.some(
+                (p) =>
+                    p.direction === 'outbound' &&
+                    p.status === 'pending' &&
+                    p.kind?.type === 'bolt12Offer' &&
+                    p.kind.offerId === offerId
+            )
+        ) {
+            throw new Error(
+                localeString('views.Send.payBolt12.paymentPending')
+            );
+        }
+
         const paymentId = await LdkNodeInjection.bolt12.bolt12SendUsingAmount({
             offer: data.offer,
             amountMsat: Number(data.amt) * 1000,
@@ -1853,10 +1971,27 @@ export default class LdkNode {
         invreq: string;
         label: string;
     }): Promise<any> => {
-        const invoiceStr =
+        const { invoice, paymentHash } =
             await LdkNodeInjection.bolt12.bolt12RequestRefundPayment(invreq);
 
-        return { bolt12: invoiceStr };
+        // requestRefundPayment only creates the invoice and sends it to the
+        // payer; nothing has been received yet. Callers treat a resolved
+        // result as paid (CLN's sendinvoice resolves once the invoice is
+        // paid), so wait for the inbound payment, as long as sendinvoice
+        // waits by default. ldk-node stores a refund payment under its
+        // payment hash, so the invoice's hash is the payment id.
+        const { hash, pending } = await this.awaitPaymentCompletion(
+            paymentHash,
+            90,
+            { pendingOnTimeout: true }
+        );
+        if (pending) {
+            throw new Error(
+                localeString('backends.LdkNode.withdrawalRequestNotPaid')
+            );
+        }
+
+        return { bolt12: invoice, payment_hash: hash };
     };
 
     // ========================================================================
@@ -1885,9 +2020,9 @@ export default class LdkNode {
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
-            signature: new sha256Hash()
-                .update(Base64Utils.stringToUint8Array(signed.signature))
-                .digest()
+            signature: sha256Bytes(
+                Base64Utils.stringToUint8Array(signed.signature)
+            )
         };
     };
 
@@ -1966,7 +2101,11 @@ export default class LdkNode {
                         pending: true
                     };
                 }
-                throw new Error(localeString('error.paymentTimedOut'));
+                // the app's own timeout, not LDK's answer: tagged so it is
+                // read as one in every locale
+                throw markRequestTimeout(
+                    new Error(localeString('error.paymentTimedOut'))
+                );
             }
 
             return {
@@ -1983,18 +2122,34 @@ export default class LdkNode {
     };
 
     /**
+     * Our side of an open channel as LDK accounts for it. Used when outbound
+     * capacity is 0 (we are at or below the reserve). Deriving it from the
+     * inbound capacity instead would count inbound HTLCs that are still in
+     * flight, and may be failed back, as our balance.
+     */
+    private claimableOnChannelClose(
+        channel: ChannelDetails,
+        balances: BalanceDetails
+    ): BigNumber {
+        const balance = balances.lightningBalances.find(
+            (lb) =>
+                lb.type === 'claimableOnChannelClose' &&
+                lb.channelId === channel.channelId
+        );
+        return new BigNumber(balance?.amountSatoshis || 0);
+    }
+
+    /**
      * Format a channel for Zeus compatibility
      */
-    private formatChannel(channel: ChannelDetails): any {
+    private formatChannel(
+        channel: ChannelDetails,
+        balances: BalanceDetails
+    ): any {
         const localReserveSats = channel.unspendablePunishmentReserve || 0;
-        const remoteReserveSats =
-            channel.counterpartyUnspendablePunishmentReserve || 0;
 
         const outboundSats = new BigNumber(
             channel.outboundCapacityMsat
-        ).dividedBy(1000);
-        const inboundSats = new BigNumber(
-            channel.inboundCapacityMsat
         ).dividedBy(1000);
 
         let localBalanceSats: BigNumber;
@@ -2002,19 +2157,23 @@ export default class LdkNode {
             // Normal case: outbound + our reserve = local balance
             localBalanceSats = outboundSats.plus(localReserveSats);
         } else {
-            // Below reserve: outbound is 0, derive from capacity.
-            // The commit fee is already reflected in inboundCapacityMsat,
-            // so only subtract the remote reserve and anchor outputs
-            // (2 × 330 sats for anchor channels).
-            localBalanceSats = new BigNumber(channel.channelValueSats)
-                .minus(inboundSats)
-                .minus(remoteReserveSats)
-                .minus(660);
-            if (localBalanceSats.lt(0)) localBalanceSats = new BigNumber(0);
+            // Below reserve: outbound is 0, use LDK's own figure
+            localBalanceSats = this.claimableOnChannelClose(channel, balances);
         }
-        const remoteBalanceSats = new BigNumber(channel.channelValueSats).minus(
-            localBalanceSats
-        );
+        // Inbound + their reserve, mirroring outbound + our reserve above.
+        // Subtracting local from the capacity would count in-flight HTLCs,
+        // the commit fee and anchors as theirs.
+        // LDK reports inbound 0 while the peer is at or below its reserve,
+        // which includes a peer that holds nothing, so the reserve is only
+        // added when there is inbound capacity.
+        const inboundSats = new BigNumber(
+            channel.inboundCapacityMsat
+        ).dividedBy(1000);
+        const remoteBalanceSats = inboundSats.gt(0)
+            ? inboundSats.plus(
+                  channel.counterpartyUnspendablePunishmentReserve || 0
+              )
+            : new BigNumber(0);
 
         return {
             active: channel.isUsable,
@@ -2022,7 +2181,7 @@ export default class LdkNode {
             channel_point: channel.fundingTxo_txid
                 ? `${channel.fundingTxo_txid}:${channel.fundingTxo_vout}`
                 : '',
-            // chan_id is the numeric SCID (used by chanFormat for NNNxNNNxNNN)
+            // chan_id is the numeric SCID (formatted as NNNxNNNxNNN by formatScid)
             chan_id: channel.shortChannelId || '',
             // channel_id is the 32-byte hex channel ID
             channel_id: channel.channelId,
@@ -2059,7 +2218,11 @@ export default class LdkNode {
     private formatPayment(payment: PaymentDetails): any {
         // For Lightning payments, hash and preimage are in the kind object
         const hash = payment.kind.hash || payment.id;
-        const preimage = payment.kind.preimage || '';
+        // LDK lists a keysend with the preimage the sender chose, also while
+        // it is pending and after it failed. Payment.isIncomplete reads a
+        // preimage as settled, so only pass it on for a succeeded payment.
+        const preimage =
+            payment.status === 'succeeded' ? payment.kind.preimage || '' : '';
         const bolt11 = payment.kind.bolt11Invoice || '';
         const feeMsat = payment.feePaidMsat || 0;
 
@@ -2199,6 +2362,7 @@ export default class LdkNode {
     supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
+    supportsPaymentLookup = () => true;
     supportsChannelManagement = () => true;
     supportsCircularRebalancing = () => false;
     supportsForceClose = () => true;
@@ -2231,6 +2395,7 @@ export default class LdkNode {
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
     supportsOnchainSendMax = () => true;
+    supportsChannelMemo = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsChannelFundMax = () => true;

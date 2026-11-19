@@ -5,7 +5,9 @@ import {
     exportNodeConfigs,
     decryptExportData,
     decryptExportDataV2,
+    getImportableNodes,
     isValidExportPassword,
+    isLegacyNodeConfigExport,
     EXPORT_FORMAT_VERSION,
     MIN_EXPORT_PASSWORD_LENGTH
 } from './NodeConfigUtils';
@@ -235,6 +237,25 @@ describe('NodeConfigUtils', () => {
             expect(typeof envelope.data).toBe('string');
         });
 
+        it('names the export after the local time it was made', async () => {
+            const nowSpy = jest
+                .spyOn(Date, 'now')
+                .mockReturnValue(new Date(2026, 8, 4, 7, 3, 9).getTime());
+            try {
+                await exportNodeConfigs(testNodes, testPassword);
+            } finally {
+                nowSpy.mockRestore();
+            }
+
+            const saveArg = mockSaveDocuments.mock.calls[0][0];
+            expect(saveArg.fileName).toBe(
+                '20260904-070309.zeus-wallet-config-backup'
+            );
+            expect(saveArg.sourceUris[0]).toBe(
+                'file:///cache/20260904-070309.zeus-wallet-config-backup'
+            );
+        });
+
         it('never writes the export to shared Downloads', async () => {
             await exportNodeConfigs(testNodes, testPassword);
             const wroteToDownloads = Object.keys(mockFiles).some((p) =>
@@ -356,6 +377,30 @@ describe('NodeConfigUtils', () => {
         });
     });
 
+    describe('isLegacyNodeConfigExport', () => {
+        it.each([
+            [{ version: 1, encrypted: true }],
+            [{ version: 1, encrypted: false }],
+            [{ version: 2, encrypted: false }],
+            [{ encrypted: true }]
+        ])('flags %j', (importData) => {
+            expect(isLegacyNodeConfigExport(importData)).toBe(true);
+        });
+
+        it('does not flag a v2 encrypted file', () => {
+            expect(
+                isLegacyNodeConfigExport({
+                    version: EXPORT_FORMAT_VERSION,
+                    encrypted: true
+                })
+            ).toBe(false);
+        });
+
+        it('does not flag a missing file', () => {
+            expect(isLegacyNodeConfigExport(undefined)).toBe(false);
+        });
+    });
+
     describe('isValidExportPassword', () => {
         it.each(['', ' ', '   ', '\t\n', '  abc   ', 'hunter2'])(
             'rejects %j',
@@ -390,6 +435,48 @@ describe('NodeConfigUtils', () => {
             await expect(
                 decryptExportDataV2(envelope.data, padded)
             ).resolves.toEqual(testNodes);
+        });
+    });
+
+    describe('getImportableNodes', () => {
+        it('keeps remote node configs', () => {
+            const nodes = [
+                { implementation: 'lnd', host: 'a', macaroonHex: 'x' },
+                { implementation: 'cln-rest', host: 'b', rune: 'y' },
+                { implementation: 'nostr-wallet-connect' }
+            ];
+            expect(getImportableNodes(nodes)).toEqual(nodes);
+        });
+
+        it('drops on-device wallets, which ZEUS never exports', () => {
+            const remote = { implementation: 'lnd', host: 'a' };
+            expect(
+                getImportableNodes([
+                    { implementation: 'ldk-node', ldkNodeDir: '../victim' },
+                    remote,
+                    { implementation: 'embedded-lnd', lndDir: '..' }
+                ])
+            ).toEqual([remote]);
+        });
+
+        it('strips on-device node dirs from remote configs', () => {
+            expect(
+                getImportableNodes([
+                    {
+                        implementation: 'lnd',
+                        host: 'a',
+                        lndDir: 'lnd',
+                        ldkNodeDir: 'ldk'
+                    }
+                ])
+            ).toEqual([{ implementation: 'lnd', host: 'a' }]);
+        });
+
+        it('drops entries that are not node objects', () => {
+            const remote = { implementation: 'lnd', host: 'a' };
+            expect(
+                getImportableNodes([null, 'lnd', 1, [], remote, undefined])
+            ).toEqual([remote]);
         });
     });
 

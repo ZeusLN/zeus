@@ -8,8 +8,9 @@
 #   .claude/skills/zeus-diagnostics-and-tooling/scripts/find-debt.sh --summary # per-file counts only
 #
 # Excludes generated/vendored code (uniffi bindings, protobuf output,
-# zeus_modules). node_modules/ios Pods/android build are gitignored and
-# skipped automatically because this uses `git grep`.
+# zeus_modules) and the agent skill docs under .claude/ (their prose
+# mentions TODO/XXX). node_modules/ios Pods/android build are gitignored
+# and skipped automatically because this uses `git grep`.
 #
 # Known false positive: utils/AddressUtils.test.ts contains "XXX" inside a
 # base64 test fixture, not a debt marker. The -w (whole-word) match below
@@ -28,11 +29,16 @@ for arg in "$@"; do
     esac
 done
 
-# Generated or vendored files that are full of upstream TODOs we don't own:
+# Generated or vendored files that are full of upstream TODOs we don't own.
+# The three Cashu uniffi paths are gitignored (generated at install time), so
+# git grep already skips them; they stay listed in case someone adds
+# --untracked or the files get committed.
 EXCLUDES=(
     ':(exclude)zeus_modules'
+    ':(exclude).claude'
     ':(exclude)proto/lightning.js'
     ':(exclude)proto/lightning.d.ts'
+    ':(exclude)ios/LndMobile/*.pb.swift'
     ':(exclude)ios/LdkNodeMobile/LDKNode.swift'
     ':(exclude)android/app/src/main/java/org/lightningdevkit/ldknode/ldk_node.kt'
     ':(exclude)android/app/src/main/java/uniffi/zeus_cashu_restore/zeus_cashu_restore.kt'

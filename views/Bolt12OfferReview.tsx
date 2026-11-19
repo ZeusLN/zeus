@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Amount from '../components/Amount';
 import Button from '../components/Button';
+import PaymentInFlightNotice from '../components/PaymentInFlightNotice';
 import Conversion from '../components/Conversion';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
@@ -21,6 +22,7 @@ import TransactionsStore from '../stores/TransactionsStore';
 
 import type { DecodedOffer } from '../ldknode/LdkNodeInjection';
 
+import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
 import { getOfferPayBlockers } from '../utils/Bolt12OfferUtils';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import FeeUtils from '../utils/FeeUtils';
@@ -85,6 +87,12 @@ export default class Bolt12OfferReview extends React.Component<
         );
     };
 
+    // The limit arrives as the text typed into FeeLimit. Text that can't be
+    // turned into a cap ('1,000', '0,5', '-1') must not be shown and confirmed
+    // here as if it applied
+    hasUsableFeeLimit = (): boolean =>
+        feeLimitSatsToMaxRoutingFeeMsat(this.getFeeLimitSat()) !== undefined;
+
     payOffer = () => {
         const { TransactionsStore, navigation, route } = this.props;
         const { offer, decodedOffer, satAmount, timeoutSeconds } = route.params;
@@ -93,6 +101,7 @@ export default class Bolt12OfferReview extends React.Component<
         // re-check here in case the handler fires through another path or the
         // offer expired after the last render
         if (getOfferPayBlockers(decodedOffer, satAmount).cannotPay) return;
+        if (!this.hasUsableFeeLimit()) return;
 
         // Guard against double-submission: bail if a payment is already in
         // flight so a rapid double-tap or re-fired swipe can't dispatch twice
@@ -143,8 +152,11 @@ export default class Bolt12OfferReview extends React.Component<
             expectsQuantity,
             isUnderpaying,
             offerAmountSats,
-            cannotPay
+            cannotPay: cannotPayOffer
         } = getOfferPayBlockers(decodedOffer, satAmount);
+
+        const hasUsableFeeLimit = this.hasUsableFeeLimit();
+        const cannotPay = cannotPayOffer || !hasUsableFeeLimit;
 
         return (
             <Screen>
@@ -195,6 +207,13 @@ export default class Bolt12OfferReview extends React.Component<
                                 `${numberWithCommas(
                                     offerAmountSats || 0
                                 )} ${localeString('general.sats')}`
+                            )}
+                        />
+                    )}
+                    {!hasUsableFeeLimit && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.PaymentRequest.invalidFeeLimit'
                             )}
                         />
                     )}
@@ -257,6 +276,9 @@ export default class Bolt12OfferReview extends React.Component<
                     </View>
                 </ScrollView>
                 <View style={{ bottom: 10 }}>
+                    <PaymentInFlightNotice
+                        TransactionsStore={TransactionsStore}
+                    />
                     {Number(satAmount) >= slideToPayThreshold ? (
                         <SwipeButton
                             key={this.state.swipeButtonKey}

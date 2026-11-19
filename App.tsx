@@ -112,6 +112,7 @@ import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import SelectCurrency from './views/Settings/SelectCurrency';
 import Display from './views/Settings/Display';
+import DateTime from './views/Settings/DateTime';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import Support from './views/Settings/Support';
 import Help from './views/Settings/Help';
@@ -142,17 +143,11 @@ import NWCConnectionActivity from './views/Settings/NostrWalletConnect/NWCConnec
 import NWCConnectionActivityFilter from './views/Settings/NostrWalletConnect/NWCConnectionActivityFilter';
 // Lightning address
 import LightningAddress from './views/LightningAddress';
-import CreateZaplockerLightningAddress from './views/LightningAddress/CreateZaplockerLightningAddress';
 import CreateNWCLightningAddress from './views/LightningAddress/CreateNWCLightningAddress';
-import ZaplockerInfo from './views/LightningAddress/ZaplockerInfo';
 import NWCAddressInfo from './views/LightningAddress/NWCAddressInfo';
 import LightningAddressSettings from './views/LightningAddress/LightningAddressSettings';
 import LightningAddressQR from './views/LightningAddress/LightningAddressQR';
 import NWCAddressSettings from './views/LightningAddress/NWCAddressSettings';
-import Attestation from './views/LightningAddress/Attestation';
-import Attestations from './views/LightningAddress/Attestations';
-import NostrKeys from './views/LightningAddress/NostrKeys';
-import NostrRelays from './views/LightningAddress/NostrRelays';
 import ChangeAddress from './views/LightningAddress/ChangeAddress';
 import EditProfile from './views/LightningAddress/EditProfile';
 import ZeusPayPlus from './views/LightningAddress/ZeusPayPlus';
@@ -314,6 +309,8 @@ import WIFSweeper from './views/Tools/WIFSweeper';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import LinkingUtils from './utils/LinkingUtils';
+import { lockRouteGuard } from './utils/NavigationUtils';
+import { shouldSkipBackgroundLock } from './utils/BackgroundLockUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
@@ -329,9 +326,19 @@ export default class App extends React.PureComponent {
         'SendingLightning',
         'SendingOnChain',
         'CashuSendingLightning',
+        'MultimintPayment',
         'IntroSplash',
         'NostrContacts'
     ];
+
+    constructor(props: {}) {
+        super(props);
+
+        // The stores can outlive the previous App root (see
+        // startNewRootSession). Done in the constructor because Wallet's
+        // componentDidMount, which checks the session, runs before App's.
+        settingsStore.startNewRootSession();
+    }
 
     private handleBackPress = (navigation: any) => {
         const dialogHasBeenClosed = modalStore.closeVisibleModalDialog();
@@ -386,7 +393,33 @@ export default class App extends React.PureComponent {
         }
     }
 
+    // The Wallet screen's AppState listener locks the app on background and
+    // shows the Lockscreen on return. Wallet can be off the stack (it
+    // replaces itself with the startup wallet list), so while it is, the
+    // lock is applied here.
+    private walletScreenMounted = (): boolean =>
+        !!this.navigation
+            ?.getRootState?.()
+            ?.routes?.some((route: any) => route.name === 'Wallet');
+
     handleAppStateChange = async (nextAppState: string) => {
+        if (!this.walletScreenMounted()) {
+            if (
+                nextAppState === 'background' &&
+                settingsStore.loginMethodConfigured() &&
+                settingsStore.settings.loginBackground &&
+                !shouldSkipBackgroundLock()
+            ) {
+                settingsStore.setLoginStatus(false);
+            } else if (
+                nextAppState === 'active' &&
+                this.navigation &&
+                settingsStore.loginRequired()
+            ) {
+                this.navigation.navigate('Lockscreen');
+            }
+        }
+
         if (nextAppState === 'active' && this.navigation) {
             LinkingUtils.resetShareIntentFlag();
 
@@ -554,6 +587,9 @@ export default class App extends React.PureComponent {
                                                                 blur: () =>
                                                                     this.backPressListenerSubscription?.remove()
                                                             })}
+                                                            UNSTABLE_router={
+                                                                lockRouteGuard
+                                                            }
                                                         >
                                                             <Stack.Screen
                                                                 name="Wallet" // @ts-ignore:next-line
@@ -754,6 +790,12 @@ export default class App extends React.PureComponent {
                                                                 }
                                                             />
                                                             <Stack.Screen
+                                                                name="DateTime" // @ts-ignore:next-line
+                                                                component={
+                                                                    DateTime
+                                                                }
+                                                            />
+                                                            <Stack.Screen
                                                                 name="Support" // @ts-ignore:next-line
                                                                 component={
                                                                     Support
@@ -898,12 +940,20 @@ export default class App extends React.PureComponent {
                                                                 component={
                                                                     SendingOnChain
                                                                 }
+                                                                options={{
+                                                                    gestureEnabled:
+                                                                        false // disables swipe back
+                                                                }}
                                                             />
                                                             <Stack.Screen
                                                                 name="SendingLightning" // @ts-ignore:next-line
                                                                 component={
                                                                     SendingLightning
                                                                 }
+                                                                options={{
+                                                                    gestureEnabled:
+                                                                        false // disables swipe back
+                                                                }}
                                                             />
                                                             <Stack.Screen
                                                                 name="NodeInfo" // @ts-ignore:next-line
@@ -1305,21 +1355,9 @@ export default class App extends React.PureComponent {
                                                                 }
                                                             />
                                                             <Stack.Screen
-                                                                name="ZaplockerInfo" // @ts-ignore:next-line
-                                                                component={
-                                                                    ZaplockerInfo
-                                                                }
-                                                            />
-                                                            <Stack.Screen
                                                                 name="LightningAddressSettings" // @ts-ignore:next-line
                                                                 component={
                                                                     LightningAddressSettings
-                                                                }
-                                                            />
-                                                            <Stack.Screen
-                                                                name="CreateZaplockerLightningAddress" // @ts-ignore:next-line
-                                                                component={
-                                                                    CreateZaplockerLightningAddress
                                                                 }
                                                             />
                                                             <Stack.Screen
@@ -1341,18 +1379,6 @@ export default class App extends React.PureComponent {
                                                                 }
                                                             />
                                                             <Stack.Screen
-                                                                name="Attestations" // @ts-ignore:next-line
-                                                                component={
-                                                                    Attestations
-                                                                }
-                                                            />
-                                                            <Stack.Screen
-                                                                name="Attestation" // @ts-ignore:next-line
-                                                                component={
-                                                                    Attestation
-                                                                }
-                                                            />
-                                                            <Stack.Screen
                                                                 name="Contacts" // @ts-ignore:next-line
                                                                 component={
                                                                     Contacts
@@ -1368,18 +1394,6 @@ export default class App extends React.PureComponent {
                                                                 name="ContactDetails" // @ts-ignore:next-line
                                                                 component={
                                                                     ContactDetails
-                                                                }
-                                                            />
-                                                            <Stack.Screen
-                                                                name="NostrKeys" // @ts-ignore:next-line
-                                                                component={
-                                                                    NostrKeys
-                                                                }
-                                                            />
-                                                            <Stack.Screen
-                                                                name="NostrRelays" // @ts-ignore:next-line
-                                                                component={
-                                                                    NostrRelays
                                                                 }
                                                             />
                                                             <Stack.Screen
@@ -1677,6 +1691,10 @@ export default class App extends React.PureComponent {
                                                                 component={
                                                                     MultimintPayment
                                                                 }
+                                                                options={{
+                                                                    gestureEnabled:
+                                                                        false // disables swipe back
+                                                                }}
                                                             />
                                                             <Stack.Screen
                                                                 name="Mint" // @ts-ignore:next-line

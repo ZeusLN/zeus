@@ -25,12 +25,16 @@ jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_MEMPOOL_INSTANCE: 'electrs.zeusln.com'
 }));
 
-import { modalStore, settingsStore } from '../stores/Stores';
+import { modalStore, nodeInfoStore, settingsStore } from '../stores/Stores';
 import UrlUtils from './UrlUtils';
 
 const mainnet = { isMutinynet: false, isTestNet: false };
 const testnet = { isMutinynet: false, isTestNet: true };
 const mutinynet = { isMutinynet: true, isTestNet: false };
+const testnet4 = { isMutinynet: false, isTestNet: true, isTestNet4: true };
+const signet = { isMutinynet: false, isTestNet: false, isSigNet: true };
+// LDK Node reports signet: true on Mutinynet as well
+const ldkMutinynet = { isMutinynet: true, isTestNet: false, isSigNet: true };
 
 describe('UrlUtils', () => {
     describe('getMempoolApiUrl', () => {
@@ -65,8 +69,38 @@ describe('UrlUtils', () => {
             );
         });
 
+        it('uses mempool.space testnet4 on testnet4', () => {
+            expect(UrlUtils.getMempoolApiUrl(testnet4)).toEqual(
+                'https://mempool.space/testnet4/api'
+            );
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'mempool.space'
+            };
+            expect(UrlUtils.getMempoolApiUrl(testnet4)).toEqual(
+                'https://mempool.space/testnet4/api'
+            );
+        });
+
         it('uses mutinynet.com on mutinynet', () => {
             expect(UrlUtils.getMempoolApiUrl(mutinynet)).toEqual(
+                'https://mutinynet.com/api'
+            );
+        });
+
+        it('uses mempool.space signet on signet (electrs.zeusln.com is mainnet-only)', () => {
+            expect(UrlUtils.getMempoolApiUrl(signet)).toEqual(
+                'https://mempool.space/signet/api'
+            );
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'mempool.space'
+            };
+            expect(UrlUtils.getMempoolApiUrl(signet)).toEqual(
+                'https://mempool.space/signet/api'
+            );
+        });
+
+        it('uses mutinynet.com on LDK Node Mutinynet, which also sets signet', () => {
+            expect(UrlUtils.getMempoolApiUrl(ldkMutinynet)).toEqual(
                 'https://mutinynet.com/api'
             );
         });
@@ -83,6 +117,9 @@ describe('UrlUtils', () => {
                 'https://mempool.mynode.local/api'
             );
             expect(UrlUtils.getMempoolApiUrl(mutinynet)).toEqual(
+                'https://mempool.mynode.local/api'
+            );
+            expect(UrlUtils.getMempoolApiUrl(testnet4)).toEqual(
                 'https://mempool.mynode.local/api'
             );
         });
@@ -125,6 +162,42 @@ describe('UrlUtils', () => {
         });
     });
 
+    describe('mempoolServesNetwork', () => {
+        const regtest = { ...mainnet, isRegTest: true };
+        const signet = { ...mainnet, isSigNet: true };
+
+        beforeEach(() => {
+            settingsStore.settings.privacy = {};
+        });
+
+        it('is true for mainnet, testnet, signet and mutinynet', () => {
+            expect(UrlUtils.mempoolServesNetwork(mainnet)).toBe(true);
+            expect(UrlUtils.mempoolServesNetwork(testnet)).toBe(true);
+            expect(UrlUtils.mempoolServesNetwork(signet)).toBe(true);
+            expect(
+                UrlUtils.mempoolServesNetwork({ ...mutinynet, isSigNet: true })
+            ).toBe(true);
+        });
+
+        it('is false for regtest without a custom instance', () => {
+            expect(UrlUtils.mempoolServesNetwork(regtest)).toBe(false);
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'Custom',
+                customMempoolInstance: ''
+            };
+            expect(UrlUtils.mempoolServesNetwork(regtest)).toBe(false);
+        });
+
+        it('trusts a custom instance on every network', () => {
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'Custom',
+                customMempoolInstance: 'http://localhost:4002'
+            };
+            expect(UrlUtils.mempoolServesNetwork(regtest)).toBe(true);
+            expect(UrlUtils.mempoolServesNetwork(signet)).toBe(true);
+        });
+    });
+
     describe('getMempoolInstanceHost', () => {
         it('returns the hostname of the effective instance', () => {
             settingsStore.settings.privacy = {};
@@ -132,6 +205,9 @@ describe('UrlUtils', () => {
                 'electrs.zeusln.com'
             );
             expect(UrlUtils.getMempoolInstanceHost(testnet)).toEqual(
+                'mempool.space'
+            );
+            expect(UrlUtils.getMempoolInstanceHost(signet)).toEqual(
                 'mempool.space'
             );
             settingsStore.settings.privacy = {
@@ -151,11 +227,79 @@ describe('UrlUtils', () => {
         beforeEach(() => {
             (modalStore.setUrl as jest.Mock).mockClear();
             settingsStore.settings.privacy = {};
+            (nodeInfoStore as any).nodeInfo = { isTestNet: false };
         });
 
         it('uses the default explorer when no custom one is set', () => {
             UrlUtils.goToBlockExplorerTXID('abc');
             expect(lastUrl()).toEqual('https://mempool.space/tx/abc');
+        });
+
+        it('adds the network path on testnet3 and testnet4', () => {
+            const originalNodeInfo = nodeInfoStore.nodeInfo;
+            try {
+                (nodeInfoStore as any).nodeInfo = testnet;
+                UrlUtils.goToBlockExplorerTXID('abc');
+                expect(lastUrl()).toEqual(
+                    'https://mempool.space/testnet/tx/abc'
+                );
+
+                (nodeInfoStore as any).nodeInfo = testnet4;
+                UrlUtils.goToBlockExplorerTXID('abc');
+                expect(lastUrl()).toEqual(
+                    'https://mempool.space/testnet4/tx/abc'
+                );
+                // the views' testnet argument is NodeInfoStore.testnet,
+                // which is also true on testnet4
+                UrlUtils.goToBlockExplorerTXID('abc', true);
+                expect(lastUrl()).toEqual(
+                    'https://mempool.space/testnet4/tx/abc'
+                );
+
+                (nodeInfoStore as any).nodeInfo = mutinynet;
+                UrlUtils.goToBlockExplorerTXID('abc', true);
+                expect(lastUrl()).toEqual('https://mutinynet.com/tx/abc');
+            } finally {
+                (nodeInfoStore as any).nodeInfo = originalNodeInfo;
+            }
+        });
+
+        it('adds the testnet/ path on testnet nodes or when asked', () => {
+            (nodeInfoStore as any).nodeInfo = testnet;
+            UrlUtils.goToBlockExplorerTXID('abc');
+            expect(lastUrl()).toEqual('https://mempool.space/testnet/tx/abc');
+
+            (nodeInfoStore as any).nodeInfo = mainnet;
+            UrlUtils.goToBlockExplorerTXID('abc', true);
+            expect(lastUrl()).toEqual('https://mempool.space/testnet/tx/abc');
+        });
+
+        it('adds the signet/ path on signet nodes', () => {
+            (nodeInfoStore as any).nodeInfo = signet;
+            UrlUtils.goToBlockExplorerTXID('abc');
+            expect(lastUrl()).toEqual('https://mempool.space/signet/tx/abc');
+            UrlUtils.goToBlockExplorerAddress('tb1qxyz');
+            expect(lastUrl()).toEqual(
+                'https://mempool.space/signet/address/tb1qxyz'
+            );
+
+            settingsStore.settings.privacy = {
+                defaultBlockExplorer: 'blockstream.info'
+            };
+            UrlUtils.goToBlockExplorerTXID('abc');
+            expect(lastUrl()).toEqual('https://blockstream.info/signet/tx/abc');
+        });
+
+        it('prefers the signet/ path over the testnet flag on signet nodes', () => {
+            (nodeInfoStore as any).nodeInfo = signet;
+            UrlUtils.goToBlockExplorerTXID('abc', true);
+            expect(lastUrl()).toEqual('https://mempool.space/signet/tx/abc');
+        });
+
+        it('uses mutinynet.com with no network path on LDK Node Mutinynet', () => {
+            (nodeInfoStore as any).nodeInfo = ldkMutinynet;
+            UrlUtils.goToBlockExplorerTXID('abc');
+            expect(lastUrl()).toEqual('https://mutinynet.com/tx/abc');
         });
 
         it('uses a custom explorer with a scheme', () => {
@@ -402,6 +546,53 @@ describe('UrlUtils', () => {
             expect(
                 UrlUtils.isCleartextHttpTransport('http://evil.com#foo.onion')
             ).toBe(true);
+        });
+
+        it('flags http: forms the URL parser reads as http://', () => {
+            for (const url of [
+                'http:mint.example.com',
+                'http:/mint.example.com',
+                'http:\\\\mint.example.com',
+                'http:\\/mint.example.com',
+                'HTTP:mint.example.com',
+                ' http:mint.example.com ',
+                'ht\ttp://mint.example.com',
+                'http:\n//mint.example.com'
+            ]) {
+                expect(UrlUtils.isCleartextHttpTransport(url)).toBe(true);
+            }
+        });
+
+        it('exempts loopback and onion hosts in those forms', () => {
+            expect(
+                UrlUtils.isCleartextHttpTransport('http:localhost:3338')
+            ).toBe(false);
+            expect(UrlUtils.isCleartextHttpTransport('http:/127.0.0.1')).toBe(
+                false
+            );
+            expect(
+                UrlUtils.isCleartextHttpTransport('http:someonionaddress.onion')
+            ).toBe(false);
+        });
+
+        it('fails closed on unparseable http input', () => {
+            expect(UrlUtils.isCleartextHttpTransport('http://')).toBe(true);
+            expect(UrlUtils.isCleartextHttpTransport('http:')).toBe(true);
+            expect(
+                UrlUtils.isCleartextHttpTransport('http://exa mple.com')
+            ).toBe(true);
+        });
+
+        it('does not flag https: forms or scheme-less hosts with a port', () => {
+            for (const url of [
+                'https:mint.example.com',
+                'https:/mint.example.com',
+                '192.168.1.5:8080',
+                'mynode.local:8080',
+                'localhost:8080'
+            ]) {
+                expect(UrlUtils.isCleartextHttpTransport(url)).toBe(false);
+            }
         });
     });
 

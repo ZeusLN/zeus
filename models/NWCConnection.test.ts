@@ -1,7 +1,5 @@
-jest.mock('../stores/Stores', () => ({}));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../stores/Stores');
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/NostrConnectUtils', () => ({
     __esModule: true,
     default: {
@@ -18,6 +16,8 @@ jest.mock('../utils/NostrConnectUtils', () => ({
         }
     }
 }));
+
+import { autorun } from 'mobx';
 
 import NWCConnection from './NWCConnection';
 
@@ -257,6 +257,85 @@ describe('NWCConnection budget accounting with pending payments', () => {
             connection.warnings.some((w) => w.type === 'budget_limit_reached')
         ).toBe(false);
     });
+
+    it('holds the fee cap of a pending pay_invoice with its amount', () => {
+        const connection = baseConnection();
+        connection.activity.push(
+            {
+                id: 'lnbc-held',
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                status: 'pending',
+                satAmount: 1,
+                feeLimitSats: 1000
+            },
+            {
+                id: 'lnbc-settled',
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                status: 'success',
+                satAmount: 1,
+                feeLimitSats: 1000
+            }
+        );
+
+        expect(connection.pendingSpendSats).toBe(1001);
+        expect(connection.remainingBudget).toBe(98999);
+    });
+});
+
+describe('NWCConnection feeLimitSatsForPayment', () => {
+    it('returns the full cap when the budget has room for it', () => {
+        const connection = baseConnection();
+        expect(connection.feeLimitSatsForPayment(1000, 1000)).toBe(1000);
+    });
+
+    it('limits the cap to the budget left after the amount', () => {
+        const connection = baseConnection();
+        connection.trackSpending(98500);
+        expect(connection.feeLimitSatsForPayment(1000, 1000)).toBe(500);
+        expect(connection.feeLimitSatsForPayment(1500, 1000)).toBe(0);
+    });
+
+    it('counts pending holds, fee caps included, as used', () => {
+        const connection = baseConnection();
+        connection.maxAmountSats = 2000;
+        connection.activity.push({
+            id: 'lnbc-held',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 1,
+            feeLimitSats: 1000
+        });
+
+        expect(connection.feeLimitSatsForPayment(1, 1000)).toBe(998);
+    });
+
+    it('never returns a negative cap', () => {
+        const connection = baseConnection();
+        connection.trackSpending(100000);
+        expect(connection.feeLimitSatsForPayment(10, 1000)).toBe(0);
+    });
+
+    it('returns the full cap when the connection has no budget', () => {
+        const connection = baseConnection();
+        connection.maxAmountSats = undefined;
+        expect(connection.feeLimitSatsForPayment(5000000, 1000)).toBe(1000);
+    });
+});
+
+describe('NWCConnection feeReserveSatsWithoutFeeLimit', () => {
+    it('is 1% of the amount, rounded up', () => {
+        expect(NWCConnection.feeReserveSatsWithoutFeeLimit(5000)).toBe(50);
+        expect(NWCConnection.feeReserveSatsWithoutFeeLimit(250001)).toBe(2501);
+    });
+
+    it('is at least 10 sats', () => {
+        expect(NWCConnection.feeReserveSatsWithoutFeeLimit(1)).toBe(10);
+        expect(NWCConnection.feeReserveSatsWithoutFeeLimit(999)).toBe(10);
+        expect(NWCConnection.feeReserveSatsWithoutFeeLimit(1001)).toBe(11);
+    });
 });
 
 describe('NWCConnection pay_invoice activity lookup', () => {
@@ -353,5 +432,39 @@ describe('NWCConnection pay_invoice activity lookup', () => {
                 isBudgetDebited: true
             })
         ).toBe(false);
+    });
+});
+
+describe('NWCConnection expiry', () => {
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('refuses payments after expiry while isExpired is observed', () => {
+        jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00Z'));
+        const connection = baseConnection();
+        connection.expiresAt = new Date('2026-01-01T01:00:00Z');
+        // a mounted observer screen keeps the computed cached
+        const dispose = autorun(() => connection.isExpired);
+        expect(connection.validateBudgetBeforePayment(1).success).toBe(true);
+
+        jest.setSystemTime(new Date('2026-01-01T02:00:00Z'));
+
+        expect(connection.isExpiredNow()).toBe(true);
+        expect(connection.validateBudgetBeforePayment(1)).toEqual({
+            success: false,
+            errorMessage:
+                'views.Settings.NostrWalletConnect.error.connectionExpired'
+        });
+        dispose();
+    });
+
+    it('isExpiredNow is false without an expiry and before it', () => {
+        jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00Z'));
+        const connection = baseConnection();
+        expect(connection.isExpiredNow()).toBe(false);
+
+        connection.expiresAt = new Date('2026-01-01T01:00:00Z');
+        expect(connection.isExpiredNow()).toBe(false);
     });
 });

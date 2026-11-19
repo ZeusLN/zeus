@@ -20,7 +20,7 @@ jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: { supportsCashuWallet: () => false }
 }));
-jest.mock('../utils/LocaleUtils', () => ({ localeString: (k: string) => k }));
+jest.mock('../utils/LocaleUtils');
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import Storage from '../storage';
@@ -193,6 +193,30 @@ describe('PosStore.saveStandaloneOrder', () => {
                 total_tax_money: expect.objectContaining({ amount: 80 + 200 })
             })
         ]);
+    });
+});
+
+describe('PosStore.recordInvoice', () => {
+    it('keeps the LSP fee the invoice was priced with, for Receive to show on reuse', () => {
+        makeStore('0').recordInvoice({
+            orderId: 'A',
+            payment_request: 'lnbc-wrapped-a',
+            lspFeeSats: 10000,
+            rHash: 'hash-a',
+            exchangeRate: '',
+            amount: '1000',
+            tip: '',
+            createdAt: 0,
+            expirySeconds: '3600'
+        });
+
+        expect(Storage.setItem).toHaveBeenLastCalledWith(
+            'pos-invoice-A',
+            expect.objectContaining({
+                payment_request: 'lnbc-wrapped-a',
+                lspFeeSats: 10000
+            })
+        );
     });
 });
 

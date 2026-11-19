@@ -40,7 +40,9 @@ import {
     exportNodeConfigs,
     decryptExportData,
     decryptExportDataV2,
+    getImportableNodes,
     isValidExportPassword,
+    isLegacyNodeConfigExport,
     EXPORT_FORMAT_VERSION,
     MIN_EXPORT_PASSWORD_LENGTH
 } from '../../utils/NodeConfigUtils';
@@ -64,6 +66,11 @@ const getImplementationDisplayName = (
     );
     return found ? found.key : implementation;
 };
+
+// On-device wallets (embedded LND, LDK Node) cannot be exported
+const isExportable = (node: Node): boolean =>
+    node.implementation !== 'embedded-lnd' &&
+    node.implementation !== 'ldk-node';
 
 interface NodeConfigExportImportProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -151,7 +158,8 @@ export default class NodeConfigExportImport extends React.Component<
             importPassword: '',
             importPasswordHidden: true,
             importNodes: [],
-            selectedImportNodes: []
+            selectedImportNodes: [],
+            importData: undefined
         });
     };
 
@@ -207,12 +215,7 @@ export default class NodeConfigExportImport extends React.Component<
 
         const allNodesSelected =
             nodes.length > 0 &&
-            selectedNodes.length ===
-                nodes.filter(
-                    (node) =>
-                        node.implementation !== 'embedded-lnd' &&
-                        node.implementation !== 'ldk-node'
-                ).length;
+            selectedNodes.length === nodes.filter(isExportable).length;
 
         return (
             <Modal
@@ -252,14 +255,8 @@ export default class NodeConfigExportImport extends React.Component<
                                         } else {
                                             const selectableNodes = nodes
                                                 .map((_, index) => index)
-                                                .filter(
-                                                    (index) =>
-                                                        nodes[index]
-                                                            .implementation !==
-                                                            'embedded-lnd' &&
-                                                        nodes[index]
-                                                            .implementation !==
-                                                            'ldk-node'
+                                                .filter((index) =>
+                                                    isExportable(nodes[index])
                                                 );
                                             this.setState({
                                                 selectedNodes: selectableNodes
@@ -280,9 +277,7 @@ export default class NodeConfigExportImport extends React.Component<
                             )}
 
                             {nodes.map((node: Node, index: number) => {
-                                const isEmbedded =
-                                    node.implementation === 'embedded-lnd' ||
-                                    node.implementation === 'ldk-node';
+                                const isEmbedded = !isExportable(node);
                                 const isSelected =
                                     selectedNodes.includes(index);
 
@@ -629,9 +624,12 @@ export default class NodeConfigExportImport extends React.Component<
                 });
             } else {
                 // Show node selection modal for unencrypted imports
-                const nodes = (importData.data as { nodes: Node[] })?.nodes;
+                const rawNodes = (importData.data as { nodes: Node[] })?.nodes;
+                const nodes = Array.isArray(rawNodes)
+                    ? getImportableNodes(rawNodes)
+                    : [];
 
-                if (!Array.isArray(nodes)) {
+                if (nodes.length === 0) {
                     this.handleError(
                         undefined,
                         'views.Tools.nodeConfigExportImport.importError'
@@ -641,6 +639,7 @@ export default class NodeConfigExportImport extends React.Component<
 
                 this.setState({
                     isLoading: false,
+                    importData,
                     importNodes: nodes,
                     selectedImportNodes: nodes.map((_, i) => i), // Select all by default
                     activeModal: 'importNodeSelection'
@@ -897,13 +896,23 @@ export default class NodeConfigExportImport extends React.Component<
 
             // v2 = native AES-256-GCM blob; v1 = legacy CryptoJS passphrase
             // blob (kept importable permanently).
-            const nodes =
+            const decryptedNodes =
                 importData!.version >= 2
                     ? await decryptExportDataV2(
                           importData!.data as string,
                           password
                       )
                     : decryptExportData(importData!.data as string, password);
+            const nodes = getImportableNodes(decryptedNodes);
+
+            if (nodes.length === 0) {
+                this.handleError(
+                    undefined,
+                    'views.Tools.nodeConfigExportImport.importError'
+                );
+                this.resetImportState();
+                return;
+            }
 
             // Show node selection modal for encrypted imports
             this.setState({
@@ -919,7 +928,7 @@ export default class NodeConfigExportImport extends React.Component<
     };
 
     private executeImport = async () => {
-        const { importNodes, selectedImportNodes } = this.state;
+        const { importNodes, selectedImportNodes, importData } = this.state;
 
         try {
             this.setState({ isLoading: true, activeModal: 'none' });
@@ -932,11 +941,16 @@ export default class NodeConfigExportImport extends React.Component<
             await saveNodeConfigs(nodesToImport, this.props.SettingsStore);
             this.setState({ isLoading: false });
 
+            const successMessage = localeString(
+                'views.Tools.nodeConfigExportImport.importSuccess'
+            );
             Alert.alert(
                 localeString('general.success'),
-                localeString(
-                    'views.Tools.nodeConfigExportImport.importSuccess'
-                ),
+                isLegacyNodeConfigExport(importData)
+                    ? `${successMessage}\n\n${localeString(
+                          'views.Tools.nodeConfigExportImport.legacyImportWarning'
+                      )}`
+                    : successMessage,
                 [
                     {
                         text: localeString('general.ok'),
@@ -1492,6 +1506,9 @@ export default class NodeConfigExportImport extends React.Component<
 
     render() {
         const { isLoading } = this.state;
+        const hasExportableNodes = (
+            this.props.SettingsStore.settings?.nodes || []
+        ).some(isExportable);
 
         return (
             <Screen>
@@ -1533,31 +1550,33 @@ export default class NodeConfigExportImport extends React.Component<
                             <LoadingIndicator />
                         ) : (
                             <>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.optionButton,
-                                        {
-                                            backgroundColor:
-                                                themeColor('secondary')
+                                {hasExportableNodes && (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.optionButton,
+                                            {
+                                                backgroundColor:
+                                                    themeColor('secondary')
+                                            }
+                                        ]}
+                                        onPress={() =>
+                                            this.setState({
+                                                activeModal: 'nodeSelection'
+                                            })
                                         }
-                                    ]}
-                                    onPress={() =>
-                                        this.setState({
-                                            activeModal: 'nodeSelection'
-                                        })
-                                    }
-                                >
-                                    <Feather
-                                        name="upload"
-                                        size={24}
-                                        color={themeColor('text')}
-                                    />
-                                    <Text style={styles.optionText}>
-                                        {localeString(
-                                            'views.Tools.nodeConfigExportImport.exportConfigs'
-                                        )}
-                                    </Text>
-                                </TouchableOpacity>
+                                    >
+                                        <Feather
+                                            name="upload"
+                                            size={24}
+                                            color={themeColor('text')}
+                                        />
+                                        <Text style={styles.optionText}>
+                                            {localeString(
+                                                'views.Tools.nodeConfigExportImport.exportConfigs'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
 
                                 <TouchableOpacity
                                     style={[

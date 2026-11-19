@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { inject, observer } from 'mobx-react';
 import { View } from 'react-native';
-import moment from 'moment';
 import BigNumber from 'bignumber.js';
 
 import KeyValue from '../../components/KeyValue';
@@ -15,11 +14,13 @@ import {
 
 import {
     buildPaymentAwaitParams,
+    getOnchainPaymentAmount,
     isOrderFree,
     LSPOrderState,
     LSPService
 } from '../../models/LSP';
 
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -141,16 +142,16 @@ export default class LSPS1OrderResponse extends React.Component<
                 {orderResponse?.created_at && (
                     <KeyValue
                         keyValue={localeString('general.createdAt')}
-                        value={moment(orderResponse?.created_at).format(
-                            'MMM Do YYYY, h:mm:ss a'
+                        value={DateTimeUtils.formatDateTime(
+                            orderResponse?.created_at
                         )}
                     />
                 )}
                 {orderResponse?.expires_at && (
                     <KeyValue
                         keyValue={localeString('general.expiresAt')}
-                        value={moment(orderResponse?.expires_at).format(
-                            'MMM Do YYYY, h:mm:ss a'
+                        value={DateTimeUtils.formatDateTime(
+                            orderResponse?.expires_at
                         )}
                     />
                 )}
@@ -215,7 +216,7 @@ export default class LSPS1OrderResponse extends React.Component<
                                 value={payment?.min_fee_for_0conf}
                             />
                         )}
-                        {payment?.min_onchain_payment_confirmations && (
+                        {payment?.min_onchain_payment_confirmations != null && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.LSPS1.minOnchainPaymentConfirmations'
@@ -234,14 +235,17 @@ export default class LSPS1OrderResponse extends React.Component<
                                 showCopyIcon
                             />
                         )}
-                        {payment?.onchain_payment && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.LSPS1.onchainPayment'
-                                )}
-                                value={payment?.onchain_payment}
-                            />
-                        )}
+                        {/* the LDK Node backend sets an object here, and an
+                            object can't be rendered as text */}
+                        {!!payment?.onchain_payment &&
+                            typeof payment.onchain_payment !== 'object' && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.LSPS1.onchainPayment'
+                                    )}
+                                    value={payment?.onchain_payment}
+                                />
+                            )}
                     </>
                 )}
                 {/* BOLT11 */}
@@ -291,9 +295,9 @@ export default class LSPS1OrderResponse extends React.Component<
                         {payment?.bolt11.expires_at && (
                             <KeyValue
                                 keyValue={localeString('general.expiresAt')}
-                                value={moment(
+                                value={DateTimeUtils.formatDateTime(
                                     payment?.bolt11.expires_at
-                                ).format('MMM Do YYYY, h:mm:ss a')}
+                                )}
                             />
                         )}
                         {payment?.bolt11.invoice && (
@@ -344,9 +348,9 @@ export default class LSPS1OrderResponse extends React.Component<
                         {payment?.onchain.expires_at && (
                             <KeyValue
                                 keyValue={localeString('general.expiresAt')}
-                                value={moment(
+                                value={DateTimeUtils.formatDateTime(
                                     payment?.onchain.expires_at
-                                ).format('MMM Do YYYY, h:mm:ss a')}
+                                )}
                             />
                         )}
                         {payment?.onchain.address && (
@@ -364,7 +368,8 @@ export default class LSPS1OrderResponse extends React.Component<
                                 value={payment?.onchain.min_fee_for_0conf}
                             />
                         )}
-                        {payment?.onchain.min_onchain_payment_confirmations && (
+                        {payment?.onchain.min_onchain_payment_confirmations !=
+                            null && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.LSPS1.minOnchainPaymentConfirmations'
@@ -399,14 +404,14 @@ export default class LSPS1OrderResponse extends React.Component<
                         />
                         <KeyValue
                             keyValue={localeString('views.LSPS1.fundedAt')}
-                            value={moment(channel?.funded_at).format(
-                                'MMM Do YYYY, h:mm:ss a'
+                            value={DateTimeUtils.formatDateTime(
+                                channel?.funded_at
                             )}
                         />
                         <KeyValue
                             keyValue={localeString('general.expiresAt')}
-                            value={moment(channel?.expires_at).format(
-                                'MMM Do YYYY, h:mm:ss a'
+                            value={DateTimeUtils.formatDateTime(
+                                channel?.expires_at
                             )}
                         />
                     </>
@@ -457,7 +462,7 @@ export default class LSPS1OrderResponse extends React.Component<
                                 </>
                             )}
                             {payment.onchain?.address &&
-                                payment.onchain?.fee_total_sat && (
+                                getOnchainPaymentAmount(payment) && (
                                     <>
                                         <Button
                                             title={
@@ -478,8 +483,9 @@ export default class LSPS1OrderResponse extends React.Component<
                                                         payment.onchain
                                                             ?.address,
                                                     satAmount:
-                                                        payment.onchain
-                                                            ?.fee_total_sat,
+                                                        getOnchainPaymentAmount(
+                                                            payment
+                                                        ),
                                                     transactionType: 'On-chain'
                                                 });
                                             }}

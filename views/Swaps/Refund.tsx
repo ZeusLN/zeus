@@ -4,7 +4,7 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 
 import lndMobile from '../../lndmobile/LndMobileInjection';
-const { createRefundTransaction } = lndMobile.swaps;
+const { buildRefundTransaction } = lndMobile.swaps;
 
 import Button from '../../components/Button';
 
@@ -23,14 +23,17 @@ import {
 } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 
+import AddressUtils from '../../utils/AddressUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
     fetchBlockHeight,
+    nativeSwapEndpoint,
     refundFailureAction,
-    RefundFailureAction
+    RefundFailureAction,
+    swapNetworkName
 } from '../../utils/SwapUtils';
 
 import SwapStore from '../../stores/SwapStore';
@@ -84,14 +87,16 @@ export default class RefundSwap extends React.Component<
 
     private scrollViewRef = React.createRef<ScrollView>();
 
-    broadcastRefund = (
+    // Built natively, broadcast through the user's mempool instance (then
+    // the swap host) rather than by native code
+    broadcastRefund = async (
         swapData: Swap,
         fee: any,
         destinationAddress: string,
         cooperative: boolean
-    ): Promise<string> =>
-        createRefundTransaction({
-            endpoint: swapData.endpoint.replace('/v2', ''),
+    ): Promise<string> => {
+        const txHex = await buildRefundTransaction({
+            endpoint: nativeSwapEndpoint(swapData.endpoint),
             swapId: swapData.id,
             claimLeaf: swapData?.swapTreeDetails.claimLeaf.output,
             refundLeaf: swapData?.swapTreeDetails.refundLeaf.output,
@@ -103,8 +108,13 @@ export default class RefundSwap extends React.Component<
             destinationAddress,
             lockupAddress: swapData.effectiveLockupAddress!,
             cooperative,
-            isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+            network: swapNetworkName(this.props.NodeInfoStore!.nodeInfo)
         });
+        return this.props.SwapStore!.broadcastSwapTransaction(
+            txHex,
+            swapData.endpoint
+        );
+    };
 
     latestBlockHeight = (): Promise<number> =>
         fetchBlockHeight(
@@ -237,19 +247,18 @@ export default class RefundSwap extends React.Component<
         } = this.state;
 
         const rawDetails = {
-            endpoint: swapData.endpoint.replace('/v2', ''),
+            endpoint: nativeSwapEndpoint(swapData.endpoint),
             swapId: swapData.id,
             claimLeaf: swapData?.swapTreeDetails.claimLeaf.output,
             refundLeaf: swapData?.swapTreeDetails.refundLeaf.output,
             transactionHex: swapData.lockupTransaction?.hex,
-            privateKey: swapData.refundPrivateKey,
             servicePubKey: swapData.servicePubKey,
             feeRate: Number(fee),
             timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
             destinationAddress,
             lockupAddress: swapData.effectiveLockupAddress,
             cooperative: !uncooperative,
-            isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+            network: swapNetworkName(this.props.NodeInfoStore!.nodeInfo)
         };
 
         return (
@@ -485,7 +494,10 @@ export default class RefundSwap extends React.Component<
                         containerStyle={{ marginTop: 20 }}
                         secondary
                         disabled={
-                            !destinationAddress ||
+                            !AddressUtils.isAddressForNodeNetwork(
+                                destinationAddress,
+                                this.props.NodeInfoStore!.nodeInfo
+                            ) ||
                             this.state.loading ||
                             fetchingAddress
                         }

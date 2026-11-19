@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, NativeModules, Alert } from 'react-native';
+import { View, Text, Alert } from 'react-native';
 import { observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
@@ -11,11 +11,10 @@ import Screen from '../components/Screen';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import handleAnything from '../utils/handleAnything';
+import { SENDING_SCREENS } from '../utils/LinkingUtils';
 import { ShareIntentPayload } from '../utils/ShareIntentProcessor';
 
 import { settingsStore } from '../stores/Stores';
-
-const { MobileTools } = NativeModules;
 
 interface ShareIntentProcessingProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -118,6 +117,9 @@ class ShareIntentProcessing extends React.Component<
         await this.processQRCode(qrData, base64Image);
     }
 
+    // The intent was cleared when processSharedQRImageFast read it. Clearing
+    // again here, after the decode and handleAnything, would discard a newer
+    // share that arrived in the meantime.
     async processQRCode(qrData?: string, base64Image?: string) {
         const { navigation } = this.props;
 
@@ -135,27 +137,12 @@ class ShareIntentProcessing extends React.Component<
                 if (result?.success && result.data) {
                     finalQrData = result.data;
                 } else {
-                    try {
-                        await MobileTools.clearSharedIntent();
-                    } catch (clearError) {
-                        console.warn(
-                            'Failed to clear shared intent:',
-                            clearError
-                        );
-                    }
-
                     this.showInvalidImageAlert(
                         localeString('utils.shareIntent.invalidImage')
                     );
                     return;
                 }
             } else {
-                try {
-                    await MobileTools.clearSharedIntent();
-                } catch (clearError) {
-                    console.warn('Failed to clear shared intent:', clearError);
-                }
-
                 this.showInvalidImageAlert(
                     localeString('utils.shareIntent.processingError')
                 );
@@ -172,23 +159,30 @@ class ShareIntentProcessing extends React.Component<
                 if (response) {
                     const [route, params] = response;
 
-                    try {
-                        await MobileTools.clearSharedIntent();
-                    } catch (error) {
-                        console.warn('Failed to clear shared intent:', error);
+                    // Same rule as LinkingUtils.handleDeepLink. handleAnything
+                    // has put the shared invoice in InvoicesStore, so a
+                    // PaymentRequest already open shows it with the
+                    // payment-request-changed warning. Replacing this screen
+                    // with a second PaymentRequest would review the shared
+                    // invoice as if the user had opened it, so pop back to
+                    // the open one, unless a payment status screen sits
+                    // above it.
+                    const routes = navigation.getState()?.routes ?? [];
+                    const openRequest = routes
+                        .map((r) => r.name)
+                        .lastIndexOf('PaymentRequest');
+                    if (
+                        route === 'PaymentRequest' &&
+                        openRequest !== -1 &&
+                        !routes
+                            .slice(openRequest + 1)
+                            .some((r) => SENDING_SCREENS.includes(r.name))
+                    ) {
+                        navigation.popTo(route, params);
+                    } else {
+                        navigation.replace(route, params);
                     }
-
-                    navigation.replace(route, params);
                 } else {
-                    try {
-                        await MobileTools.clearSharedIntent();
-                    } catch (clearError) {
-                        console.warn(
-                            'Failed to clear shared intent:',
-                            clearError
-                        );
-                    }
-
                     this.showInvalidImageAlert(
                         localeString('utils.shareIntent.processingError')
                     );
@@ -200,15 +194,6 @@ class ShareIntentProcessing extends React.Component<
                 '[ShareIntentProcessing] Error processing shared QR:',
                 error
             );
-
-            try {
-                await MobileTools.clearSharedIntent();
-            } catch (clearError) {
-                console.warn(
-                    'Failed to clear shared intent after error:',
-                    clearError
-                );
-            }
 
             this.showInvalidImageAlert(
                 localeString('utils.shareIntent.processingError')

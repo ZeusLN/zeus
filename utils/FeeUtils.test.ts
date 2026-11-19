@@ -1,6 +1,22 @@
-import FeeUtils from './FeeUtils';
+import FeeUtils, {
+    isPlausibleSatPerVbyte,
+    reverseClaimMinerFee,
+    sanitizeRecommendedFees,
+    MAX_REVERSE_CLAIM_FEE,
+    MAX_SAT_PER_VBYTE,
+    REVERSE_CLAIM_MAX_VSIZE
+} from './FeeUtils';
 
 const satoshisPerBTC = 100_000_000;
+
+// shape of a real mempool /v1/fees/recommended response
+const VALID_FEES = {
+    fastestFee: 12,
+    halfHourFee: 10,
+    hourFee: 8,
+    economyFee: 3,
+    minimumFee: 1
+};
 
 describe('FeeUtils', () => {
     describe('calculateDefaultRoutingFee', () => {
@@ -13,6 +29,14 @@ describe('FeeUtils', () => {
             expect(FeeUtils.calculateDefaultRoutingFee(1010)).toEqual('51');
             expect(FeeUtils.calculateDefaultRoutingFee(1011)).toEqual('51');
             expect(FeeUtils.calculateDefaultRoutingFee(10000)).toEqual('500');
+        });
+
+        it('Rounds a sub-sat amount up to whole sats', () => {
+            expect(FeeUtils.calculateDefaultRoutingFee(0.5)).toEqual('1');
+            expect(FeeUtils.calculateDefaultRoutingFee(1.5)).toEqual('2');
+            expect(FeeUtils.calculateDefaultRoutingFee(999.001)).toEqual(
+                '1000'
+            );
         });
     });
 
@@ -68,6 +92,188 @@ describe('FeeUtils', () => {
             expect(FeeUtils.toFixed(-500000 / satoshisPerBTC, true)).toEqual(
                 '-0.00500000'
             );
+        });
+    });
+
+    describe('isPlausibleSatPerVbyte', () => {
+        it('accepts ordinary and genuinely high rates', () => {
+            expect(isPlausibleSatPerVbyte(1)).toBe(true);
+            expect(isPlausibleSatPerVbyte(12)).toBe(true);
+            expect(isPlausibleSatPerVbyte(700)).toBe(true);
+            expect(isPlausibleSatPerVbyte(MAX_SAT_PER_VBYTE)).toBe(true);
+            // strings, as typed into the fee inputs
+            expect(isPlausibleSatPerVbyte('25')).toBe(true);
+        });
+
+        it('rejects rates above the sanity ceiling', () => {
+            expect(isPlausibleSatPerVbyte(MAX_SAT_PER_VBYTE + 1)).toBe(false);
+            expect(isPlausibleSatPerVbyte(50_000)).toBe(false);
+            expect(isPlausibleSatPerVbyte(100_000)).toBe(false);
+            expect(isPlausibleSatPerVbyte('99999')).toBe(false);
+        });
+
+        it('rejects zero, negative, and non-numeric input', () => {
+            expect(isPlausibleSatPerVbyte(0)).toBe(false);
+            expect(isPlausibleSatPerVbyte(0.5)).toBe(false);
+            expect(isPlausibleSatPerVbyte(-10)).toBe(false);
+            expect(isPlausibleSatPerVbyte(Infinity)).toBe(false);
+            expect(isPlausibleSatPerVbyte(NaN)).toBe(false);
+            expect(isPlausibleSatPerVbyte('')).toBe(false);
+            expect(isPlausibleSatPerVbyte('abc')).toBe(false);
+            expect(isPlausibleSatPerVbyte(null)).toBe(false);
+            expect(isPlausibleSatPerVbyte(undefined)).toBe(false);
+            expect(isPlausibleSatPerVbyte({})).toBe(false);
+        });
+    });
+
+    describe('sanitizeRecommendedFees', () => {
+        it('passes a well-formed response through as numbers', () => {
+            expect(sanitizeRecommendedFees(VALID_FEES)).toEqual(VALID_FEES);
+        });
+
+        it('coerces numeric strings', () => {
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, fastestFee: '12' })
+            ).toEqual(VALID_FEES);
+        });
+
+        it('rejects the whole response when any rate is implausible', () => {
+            // the audit scenario: a compromised or broken fee source
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, fastestFee: 50_000 })
+            ).toBeNull();
+            // an absurd value on a key the user may have set as preferred
+            // must not survive just because fastestFee looks sane
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, economyFee: 100_000 })
+            ).toBeNull();
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, minimumFee: 0 })
+            ).toBeNull();
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, hourFee: -1 })
+            ).toBeNull();
+        });
+
+        it('raises rates between 0 and 1 sat/vB to 1', () => {
+            // the shape of mempool's /v1/fees/precise response, which a
+            // custom mempool instance could serve as recommended fees
+            expect(
+                sanitizeRecommendedFees({
+                    fastestFee: 1,
+                    halfHourFee: 0.621,
+                    hourFee: 0.319,
+                    economyFee: 0.2,
+                    minimumFee: 0.1
+                })
+            ).toEqual({
+                fastestFee: 1,
+                halfHourFee: 1,
+                hourFee: 1,
+                economyFee: 1,
+                minimumFee: 1
+            });
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, minimumFee: 0.999 })
+            ).toEqual(VALID_FEES);
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, minimumFee: '0.5' })
+            ).toEqual(VALID_FEES);
+            // a fastestFee below 1 is still a usable rate once raised
+            expect(sanitizeRecommendedFees({ fastestFee: 0.5 })).toEqual({
+                fastestFee: 1
+            });
+        });
+
+        it('still rejects zero and negative rates', () => {
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, minimumFee: 0 })
+            ).toBeNull();
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, minimumFee: -0.5 })
+            ).toBeNull();
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, minimumFee: 'abc' })
+            ).toBeNull();
+        });
+
+        it('rejects a response with no fastestFee to fall back to', () => {
+            const { fastestFee, ...withoutFastest } = VALID_FEES;
+            expect(fastestFee).toBe(12);
+            expect(sanitizeRecommendedFees(withoutFastest)).toBeNull();
+        });
+
+        it('tolerates a response missing optional keys', () => {
+            expect(sanitizeRecommendedFees({ fastestFee: 12 })).toEqual({
+                fastestFee: 12
+            });
+            expect(
+                sanitizeRecommendedFees({ fastestFee: 12, hourFee: null })
+            ).toEqual({ fastestFee: 12 });
+        });
+
+        it('rejects malformed payloads', () => {
+            expect(sanitizeRecommendedFees(null)).toBeNull();
+            expect(sanitizeRecommendedFees(undefined)).toBeNull();
+            expect(sanitizeRecommendedFees('nope')).toBeNull();
+            expect(sanitizeRecommendedFees([])).toBeNull();
+            expect(sanitizeRecommendedFees({})).toBeNull();
+        });
+    });
+
+    describe('reverseClaimMinerFee', () => {
+        it('raises a quote too low to relay to the rate on the largest claim', () => {
+            // 1 sat for a 140 to 152 vB claim is under 0.01 sat/vB
+            expect(reverseClaimMinerFee(1, '25')).toBe(25 * 152);
+            expect(reverseClaimMinerFee(0, '25')).toBe(25 * 152);
+            expect(REVERSE_CLAIM_MAX_VSIZE).toBe(152);
+        });
+
+        it('keeps a quote at or above the floor', () => {
+            expect(reverseClaimMinerFee(4000, '25')).toBe(4000);
+            expect(reverseClaimMinerFee(3800, '25')).toBe(3800);
+            expect(reverseClaimMinerFee(300, 1)).toBe(300);
+        });
+
+        it('rounds a fractional rate and quote up', () => {
+            expect(reverseClaimMinerFee(0, '12.5')).toBe(13 * 152);
+            expect(reverseClaimMinerFee(4000.2, '12.5')).toBe(4001);
+        });
+
+        it('pays the rate when there is no quote', () => {
+            // legacy and rescued swaps carry no claim fee
+            expect(reverseClaimMinerFee(undefined, 2)).toBe(304);
+            expect(reverseClaimMinerFee(null, '10')).toBe(1520);
+        });
+
+        it('needs a plausible rate', () => {
+            // without one there is no floor to check the quote against
+            expect(reverseClaimMinerFee(462, '')).toBeUndefined();
+            expect(reverseClaimMinerFee(462, undefined)).toBeUndefined();
+            expect(reverseClaimMinerFee(462, '0')).toBeUndefined();
+            expect(reverseClaimMinerFee(462, 'abc')).toBeUndefined();
+            expect(
+                reverseClaimMinerFee(462, String(MAX_SAT_PER_VBYTE + 1))
+            ).toBeUndefined();
+        });
+
+        it('refuses a quote above the plausible maximum', () => {
+            expect(MAX_REVERSE_CLAIM_FEE).toBe(MAX_SAT_PER_VBYTE * 152);
+            expect(reverseClaimMinerFee(MAX_REVERSE_CLAIM_FEE, '25')).toBe(
+                MAX_REVERSE_CLAIM_FEE
+            );
+            expect(
+                reverseClaimMinerFee(MAX_REVERSE_CLAIM_FEE + 1, '25')
+            ).toBeUndefined();
+            expect(reverseClaimMinerFee(98800, '25')).toBe(98800);
+        });
+
+        it('refuses a quote that is not a fee', () => {
+            expect(reverseClaimMinerFee(-1, '25')).toBeUndefined();
+            expect(reverseClaimMinerFee('abc', '25')).toBeUndefined();
+            expect(reverseClaimMinerFee(NaN, '25')).toBeUndefined();
+            expect(reverseClaimMinerFee(Infinity, '25')).toBeUndefined();
+            expect(reverseClaimMinerFee(true, '25')).toBeUndefined();
         });
     });
 });

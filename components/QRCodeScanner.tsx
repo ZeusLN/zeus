@@ -23,6 +23,7 @@ import QRKit from 'react-native-qr-kit';
 import Header from './Header';
 import Button from '../components/Button';
 
+import { sha256StringToHex } from '../utils/HashingUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -31,8 +32,6 @@ import FlashOnIcon from '../assets/images/SVG/Flash On.svg';
 import GalleryIcon from '../assets/images/SVG/Gallery.svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-
-const createHash = require('create-hash');
 
 interface QRProps {
     text?: string;
@@ -81,7 +80,7 @@ export default function QRCodeScanner({
     const device = useCameraDevice('back');
 
     const handleRead = (data: any) => {
-        const hash = createHash('sha256').update(data).digest().toString('hex');
+        const hash = sha256StringToHex(data);
         if (scannedCache.current.has(hash)) {
             // this QR was already scanned, let's prevent firing duplicate callbacks
             return;

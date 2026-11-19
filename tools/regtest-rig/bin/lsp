@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# lsp: stub Olympus Flow LSP (lib/stub-lsp.js) on LSP_PORT.
+#
+# usage: bin/lsp start|stop|status
+#        bin/lsp fee <msat>|none [--queue]   set the default fee quote, or
+#                                            queue one answer (none = fee-less {id})
+#        bin/lsp log                         tail the request log
+#
+# The app reaches it at http://localhost:$LSP_PORT (bin/app reverse);
+# point Zeus at it with bin/zeus lsp on. /api/v1/proposal returns a bob
+# hold invoice with the inner invoice's payment hash (amount = inner + fee).
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+case "${1:-}" in
+    start)
+        start_proc lsp node "$RIG_DIR/lib/stub-lsp.js"
+        wait_until 20 curl -fs "localhost:$LSP_PORT/api/v1/info" || die "stub LSP did not answer; see $STATE/logs/lsp.log"
+        curl -s "localhost:$LSP_PORT/api/v1/info"; echo ;;
+    stop) stop_proc lsp ;;
+    status)
+        if proc_running lsp; then curl -s "localhost:$LSP_PORT/admin/state"; echo; else echo stopped; exit 1; fi ;;
+    fee)
+        [ $# -ge 2 ] || die "usage: bin/lsp fee <msat>|none [--queue]"
+        v="$2"; [ "$v" = none ] && v=null
+        q=false; [ "${3:-}" = --queue ] && q=true
+        curl -s -XPOST "localhost:$LSP_PORT/admin/fee" -d "{\"fee_msat\": $v, \"queue\": $q}"; echo ;;
+    log) tail -n 50 "$STATE/logs/stub-lsp.events.log" ;;
+    *) die "usage: bin/lsp start|stop|status|fee|log (see --help)" ;;
+esac

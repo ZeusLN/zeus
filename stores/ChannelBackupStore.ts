@@ -1,5 +1,5 @@
 import { action, observable, runInAction } from 'mobx';
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import ReactNativeBlobUtil, { FetchBlobResponse } from 'react-native-blob-util';
 import * as CryptoJS from 'crypto-js';
 
 import NodeInfoStore from './NodeInfoStore';
@@ -13,19 +13,49 @@ import {
 } from '../lndmobile/channel';
 
 import BackendUtils from '../utils/BackendUtils';
+import {
+    isValidAuthChallenge,
+    INVALID_AUTH_CHALLENGE_ERROR
+} from '../utils/AuthChallengeUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { encryptString, decryptString } from '../utils/ZipUtils';
 
 import Storage from '../storage';
 
 export const BACKUPS_HOST = 'https://backups.lnolymp.us';
+// /api/recover error when the server has no backup for the node. Matched
+// exactly in Wallet.fetchDataCore. The server reply is pinned by a test in
+// olympus-lnd-backups routes/backups.test.js, so change both together.
+export const NO_BACKUP_FOUND = 'No backup found';
+
+// The backup server accepts uploads of up to 100 kB
+const MAX_BACKUP_LENGTH = 1024 * 1024;
 
 export const LEGACY_LAST_CHANNEL_BACKUP_STATUS = 'LAST_CHANNEL_BACKUP_STATUS';
 export const LEGACY_LAST_CHANNEL_BACKUP_TIME = 'LAST_CHANNEL_BACKUP_TIME';
 
 export const LAST_CHANNEL_BACKUP_STATUS = 'zeus-last-channel-backup-status';
 export const LAST_CHANNEL_BACKUP_TIME = 'zeus-last-channel-backup-time';
+
+// Returns the body of a successful backups server response. Failures throw
+// the server's error message when the body is JSON, or the HTTP status when
+// it isn't (e.g. an HTML error page from the proxy in front of the server).
+const parseBackupsResponse = (response: FetchBlobResponse, route: string) => {
+    const status = response.info().status;
+    let data: any;
+    try {
+        data = response.json();
+    } catch {}
+    if (status !== 200 || !data?.success) {
+        throw new Error(
+            data?.error || `${route} response status code: ${status}`
+        );
+    }
+    return data;
+};
 
 export default class ChannelBackupStore {
     @observable public channelEventsSubscription: any;
@@ -44,7 +74,22 @@ export default class ChannelBackupStore {
 
     @action
     public reset = () => {
+        // Remove the listener before dropping it, or initSubscribeChannelEvents
+        // adds another one on every connect
+        try {
+            this.channelEventsSubscription?.remove?.();
+        } catch (error: any) {
+            console.error(
+                'remove channel events listener error: ' + error?.message
+            );
+        }
         this.channelEventsSubscription = null;
+        this.resetRecoveryState();
+    };
+
+    // Clears the recovery screen state without stopping automatic backups
+    @action
+    public resetRecoveryState = () => {
         this.error_msg = '';
         this.error = false;
         this.loading = false;
@@ -63,10 +108,23 @@ export default class ChannelBackupStore {
         const multi = backup.multi_chan_backup.multi_chan_backup;
         const multiString = Base64Utils.bytesToBase64(multi);
 
-        const encryptedBackup = CryptoJS.AES.encrypt(
-            multiString,
-            this.settingsStore.seedPhrase.toString()
-        ).toString();
+        if (!this.settingsStore.seedPhrase?.length) {
+            await this.logBackupStatus('ERROR');
+            throw new Error(
+                localeString('stores.ChannelBackupStore.seedUnavailable')
+            );
+        }
+
+        let encryptedBackup: string;
+        try {
+            encryptedBackup = await encryptString(
+                multiString,
+                this.settingsStore.seedPhrase.join(' ')
+            );
+        } catch (err) {
+            await this.logBackupStatus('ERROR');
+            throw err;
+        }
 
         try {
             const authResponse = await ReactNativeBlobUtil.fetch(
@@ -84,6 +142,9 @@ export default class ChannelBackupStore {
             }
 
             const { verification } = authResponse.json();
+            if (!isValidAuthChallenge(verification)) {
+                throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
+            }
 
             const messageSignData = await BackendUtils.signMessage(
                 verification
@@ -127,11 +188,13 @@ export default class ChannelBackupStore {
                 pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
             })
         );
-        const authResponseStatus = authResponse.info().status;
-        if (authResponseStatus !== 200) {
-            throw new Error(`Auth response status code: ${authResponseStatus}`);
+        const { verification } = parseBackupsResponse(authResponse, 'Auth');
+        if (!verification) {
+            throw new Error('Auth response has no verification');
         }
-        const { verification } = authResponse.json();
+        if (!isValidAuthChallenge(verification)) {
+            throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
+        }
 
         const messageSignData = await BackendUtils.signMessage(verification);
         const signature = messageSignData.zbase || messageSignData.signature;
@@ -145,14 +208,15 @@ export default class ChannelBackupStore {
                 signature
             })
         );
-        const data = recoverResponse.json();
-        const { backup, created_at, success } = data;
-        if (recoverResponse.info().status === 200 && success && backup) {
-            await this.triggerRecovery(backup);
-            return { backup, created_at };
-        } else {
-            throw new Error(data.error);
+        const { backup, created_at } = parseBackupsResponse(
+            recoverResponse,
+            'Recover'
+        );
+        if (!backup) {
+            throw new Error('Recover response has no backup');
         }
+        await this.triggerRecovery(backup);
+        return { backup, created_at };
     };
 
     @action
@@ -161,11 +225,42 @@ export default class ChannelBackupStore {
         this.loading = true;
 
         try {
-            const decryptedBytes = CryptoJS.AES.decrypt(
-                backup,
-                this.settingsStore.seedPhrase.toString()
-            );
-            const decryptedString = decryptedBytes.toString(CryptoJS.enc.Utf8);
+            if (
+                typeof backup !== 'string' ||
+                backup.length > MAX_BACKUP_LENGTH
+            ) {
+                throw new Error(
+                    localeString('stores.ChannelBackupStore.invalidBackup')
+                );
+            }
+
+            let decryptedString: string;
+            // 12 base64 chars decode to the first 9 bytes of the blob
+            const prefix = Base64Utils.base64ToBytes(backup.substring(0, 12));
+            if (Base64Utils.bytesToUtf8(prefix.subarray(0, 8)) === 'Salted__') {
+                // Legacy CryptoJS OpenSSL format (EVP_BytesToKey, AES-CBC).
+                // The passphrase is the COMMA-joined seed
+                // (Array.prototype.toString). This path must be kept for
+                // blobs already stored on the backup server.
+                const decryptedBytes = CryptoJS.AES.decrypt(
+                    backup,
+                    this.settingsStore.seedPhrase.toString()
+                );
+                decryptedString = decryptedBytes.toString(CryptoJS.enc.Utf8);
+            } else if (prefix[0] === 0x01) {
+                // v1 native format (PBKDF2-HMAC-SHA256 100k, AES-256-GCM);
+                // the passphrase is the space-joined seed
+                decryptedString = await decryptString(
+                    backup,
+                    this.settingsStore.seedPhrase.join(' ')
+                );
+            } else {
+                throw new Error(
+                    localeString(
+                        'stores.ChannelBackupStore.unrecognizedBackupFormat'
+                    )
+                );
+            }
 
             await restoreChannelBackups(decryptedString);
 
@@ -198,13 +293,13 @@ export default class ChannelBackupStore {
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
                 })
             );
-            const authResponseStatus = authResponse.info().status;
-            if (authResponseStatus !== 200) {
-                throw new Error(
-                    `Auth response status code: ${authResponseStatus}`
-                );
+            const { verification } = parseBackupsResponse(authResponse, 'Auth');
+            if (!verification) {
+                throw new Error('Auth response has no verification');
             }
-            const { verification } = authResponse.json();
+            if (!isValidAuthChallenge(verification)) {
+                throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
+            }
 
             const messageSignData = await BackendUtils.signMessage(
                 verification
@@ -221,23 +316,25 @@ export default class ChannelBackupStore {
                     signature
                 })
             );
-            const data = recoverResponse.json();
-            const { backups } = data;
-            if (recoverResponse.info().status === 200 && backups) {
-                runInAction(() => {
-                    this.backups = backups;
-                    this.loading = false;
-                });
-                return backups;
+            const { backups } = parseBackupsResponse(
+                recoverResponse,
+                'Recover advanced'
+            );
+            if (!backups) {
+                throw new Error('Recover advanced response has no backups');
             }
-
-            throw new Error(data.error);
+            runInAction(() => {
+                this.backups = backups;
+                this.loading = false;
+            });
+            return backups;
         } catch (error) {
+            // Callers render the error flag rather than catching
+            console.error('advanced recovery list error', error);
             runInAction(() => {
                 this.error = true;
                 this.loading = false;
             });
-            throw error;
         }
     };
 
@@ -251,7 +348,7 @@ export default class ChannelBackupStore {
             (time && this.isOlderThanThreeDays(time)) ||
             (!time && !status)
         ) {
-            this.backupChannels();
+            this.backupChannels().catch(console.error);
         }
         if (this.channelEventsSubscription?.remove)
             this.channelEventsSubscription.remove();
@@ -266,7 +363,7 @@ export default class ChannelBackupStore {
                         channelEvent.open_channel ||
                         channelEvent.closed_channel
                     ) {
-                        this.backupChannels();
+                        this.backupChannels().catch(console.error);
                     }
                 } catch (error: any) {
                     console.error(

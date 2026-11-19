@@ -6,8 +6,13 @@ import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
+import java.io.InputStream
 import java.net.HttpURLConnection
+import java.net.Inet4Address
+import java.net.InetAddress
 import java.net.URL
+import java.net.URLEncoder
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
@@ -46,7 +51,34 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     private val handleLock = Any()
 
     companion object {
+        // Internal / non-routable IPv4 ranges as (network, prefix length):
+        // 0/8 this network, 10/8 private, 100.64/10 shared CGNAT,
+        // 127/8 loopback, 169.254/16 link-local, 172.16/12 private,
+        // 192.0.0/24 IETF protocol assignments, 192.168/16 private,
+        // 198.18/15 benchmarking, 224/4 multicast, 240/4 reserved
+        private val DISALLOWED_IPV4_RANGES = listOf(
+            0x00000000L to 8,
+            0x0a000000L to 8,
+            0x64400000L to 10,
+            0x7f000000L to 8,
+            0xa9fe0000L to 16,
+            0xac100000L to 12,
+            0xc0000000L to 24,
+            0xc0a80000L to 16,
+            0xc6120000L to 15,
+            0xe0000000L to 4,
+            0xf0000000L to 4
+        )
+
         private const val TAG = "CashuDevKitModule"
+
+        // Upper bound on the characters read from a mint HTTP response.
+        // HttpURLConnection inflates gzip bodies transparently, so the
+        // limit applies to the decoded text, not the bytes on the wire.
+        private const val MAX_MINT_RESPONSE_CHARS = 1024 * 1024
+
+        // Error bodies only go into a log line and a rejection message.
+        private const val MAX_MINT_ERROR_BODY_CHARS = 4096
     }
 
     override fun getName(): String = "CashuDevKitModule"
@@ -262,6 +294,53 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     private fun normalizeMintUrl(mintUrl: String): String = mintUrl.trimEnd('/')
 
     /**
+     * Reads at most maxChars characters of a response body as text and
+     * closes the stream. Returns the text and whether the body was longer
+     * than maxChars, in which case the rest of it is not read.
+     */
+    private fun readBounded(stream: InputStream, maxChars: Int): Pair<String, Boolean> {
+        stream.bufferedReader().use { reader ->
+            val body = StringBuilder()
+            val buffer = CharArray(8192)
+            while (true) {
+                val read = reader.read(buffer)
+                if (read < 0) return Pair(body.toString(), false)
+                if (body.length + read > maxChars) {
+                    body.append(buffer, 0, maxChars - body.length)
+                    return Pair(body.toString(), true)
+                }
+                body.append(buffer, 0, read)
+            }
+        }
+    }
+
+    /**
+     * Reads a mint HTTP response body as text, up to
+     * MAX_MINT_RESPONSE_CHARS characters. Throws IOException for a longer
+     * body instead of buffering it, so an oversized or highly compressed
+     * response is rejected rather than exhausting the heap.
+     */
+    private fun readMintResponse(stream: InputStream): String {
+        val (body, truncated) = readBounded(stream, MAX_MINT_RESPONSE_CHARS)
+        if (truncated) throw IOException("Mint response too large")
+        return body
+    }
+
+    /**
+     * Reads a mint HTTP error body for logs and rejection messages,
+     * truncated to MAX_MINT_ERROR_BODY_CHARS characters. Returns null if
+     * the body cannot be read, so the caller can still report the HTTP
+     * status.
+     */
+    private fun readMintErrorBody(stream: InputStream): String? =
+        try {
+            val (body, truncated) = readBounded(stream, MAX_MINT_ERROR_BODY_CHARS)
+            if (truncated) "$body... (truncated)" else body
+        } catch (e: IOException) {
+            null
+        }
+
+    /**
      * Get (or lazily create) the per-mint Wallet for a mint URL.
      *
      * The repository only creates an in-memory Wallet handle here; no
@@ -364,6 +443,14 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
+    private fun transactionStatusToString(status: TransactionStatus): String {
+        return when (status) {
+            TransactionStatus.PENDING -> "Pending"
+            TransactionStatus.COMPLETED -> "Completed"
+            TransactionStatus.FAILED -> "Failed"
+        }
+    }
+
     /**
      * Map the CDK FFI exception to the legacy bridge error codes that JS
      * consumers were written against. CDK 0.15+ collapsed the previous
@@ -376,6 +463,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 legacyErrorCode(e.code, e.errorMessage) to e.errorMessage
             is FfiException.Internal ->
                 legacyErrorCode(null, e.errorMessage) to e.errorMessage
+            // 0.18.0 NUT-18 transport failure; unreachable until the bridge
+            // exposes preparePayRequest
+            is FfiException.PaymentRequestDeliveryFailed ->
+                "PAYMENT_FAILED" to e.errorMessage
         }
     }
 
@@ -406,11 +497,11 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     private fun encodeMintQuote(quote: MintQuote): JSONObject {
         return JSONObject().apply {
             put("id", quote.id)
-            put("amount", quote.amount?.value ?: 0)
+            put("amount", quote.amount?.value?.toLong() ?: 0L)
             put("unit", currencyUnitToString(quote.unit))
             put("request", quote.request)
             put("state", quoteStateToString(quote.state))
-            put("expiry", quote.expiry)
+            put("expiry", quote.expiry.toLong())
             put("mint_url", quote.mintUrl.url)
         }
     }
@@ -423,10 +514,13 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             put("request", quote.request)
             put("fee_reserve", quote.feeReserve.value.toLong())
             put("state", quoteStateToString(quote.state))
-            put("expiry", quote.expiry)
+            put("expiry", quote.expiry.toLong())
             // Upstream renamed payment_preimage to payment_proof; the bridge
             // key is part of the JS contract and keeps the old name
             quote.paymentProof?.let { put("payment_preimage", it) }
+            // Set while a melt saga still holds the quote, which is when
+            // CDK reports a melt the mint has not settled as Unpaid
+            quote.usedByOperation?.let { put("used_by_operation", it) }
         }
     }
 
@@ -457,14 +551,17 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         val mintUrl = token.mintUrl()
         val proofsArray = JSONArray()
         val currentRepo = repo
-        if (isInitialized && currentRepo != null) {
+        val currentDb = db
+        if (isInitialized && currentRepo != null && currentDb != null) {
             try {
                 // Only resolve proofs through a wallet the mint is already
                 // part of; decoding a foreign token must not add its mint or
-                // contact it
-                if (currentRepo.hasMint(MintUrl(normalizeMintUrl(mintUrl.url)))) {
-                    val wallet = getWallet(mintUrl.url)
-                    val keysets = wallet.getMintKeysets(KeysetFilter.ALL)
+                // contact it, so read the cached keysets straight from the
+                // database (0.18 removed Wallet.getMintKeysets)
+                val normalizedUrl = MintUrl(normalizeMintUrl(mintUrl.url))
+                if (currentRepo.hasMint(normalizedUrl)) {
+                    val keysets = currentDb.getMintKeysets(normalizedUrl)
+                        ?: emptyList()
                     val proofs = token.proofs(keysets)
                     proofs.forEach { proof ->
                         proofsArray.put(encodeProof(proof))
@@ -502,7 +599,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             put("id", keyset.id.toString())
             put("unit", currencyUnitToString(keyset.unit))
             put("active", keyset.active)
-            put("input_fee_ppk", keyset.inputFeePpk ?: 0)
+            put("input_fee_ppk", keyset.inputFeePpk.toLong())
         }
     }
 
@@ -698,9 +795,15 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 // creates a wallet per supported unit, so only fold this
                 // wallet's unit; other units must not count toward the total
                 val balances = repo.getBalances()
+                // CDK 0.18.1 already rejects balances whose total passes
+                // the i64 range, so this sum cannot overflow today. If a
+                // later CDK stops doing that, `+=` would wrap to a wrong
+                // total, so clamp instead.
                 var total: ULong = 0UL
                 balances.forEach { (key, amount) ->
-                    if (key.unit == walletUnit) total += amount.value
+                    if (key.unit != walletUnit) return@forEach
+                    val sum = total + amount.value
+                    total = if (sum < total) ULong.MAX_VALUE else sum
                 }
 
                 withContext(Dispatchers.Main) {
@@ -765,13 +868,14 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     fun fetchMintInfo(mintUrl: String, promise: Promise) {
         // fetchMintInfo uses direct HTTP - works without wallet initialization
         scope.launch {
+            var connection: HttpURLConnection? = null
             try {
                 // Normalize URL and construct info endpoint
                 val normalizedUrl = mintUrl.trimEnd('/')
                 val infoUrl = "$normalizedUrl/v1/info"
 
                 val url = URL(infoUrl)
-                val connection = url.openConnection() as HttpURLConnection
+                connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 30000
                 connection.readTimeout = 30000
@@ -784,8 +888,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     return@launch
                 }
 
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                connection.disconnect()
+                val response = readMintResponse(connection.inputStream)
 
                 // Return the raw JSON string (already in correct format)
                 withContext(Dispatchers.Main) {
@@ -796,6 +899,8 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 withContext(Dispatchers.Main) {
                     promise.reject("MINT_INFO_ERROR", e.message, e)
                 }
+            } finally {
+                connection?.disconnect()
             }
         }
     }
@@ -803,11 +908,21 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun getMintKeysets(mintUrl: String, promise: Promise) {
         getInitializedRepo(promise) ?: return
+        val currentDb = db
+        if (currentDb == null) {
+            promise.reject("NO_WALLET", "Wallet not initialized")
+            return
+        }
 
         scope.launch {
             try {
-                val wallet = getWallet(mintUrl)
-                val keysets = wallet.getMintKeysets(KeysetFilter.ALL)
+                // Cached keysets from the database only. The pre-0.18
+                // Wallet.getMintKeysets(KeysetFilter.ALL) fell back to
+                // fetching from the mint when none were stored; this read
+                // returns an empty list instead and never contacts the mint
+                val keysets =
+                    currentDb.getMintKeysets(MintUrl(normalizeMintUrl(mintUrl)))
+                        ?: emptyList()
 
                 val array = JSONArray()
                 keysets.forEach { keyset ->
@@ -897,6 +1012,92 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     /**
+     * Reject loopback, private (RFC1918), link-local and other internal hosts
+     * for server-supplied mint URLs. Matches on the literal host only (no DNS
+     * resolution) to avoid a rebinding/latency side channel; this is
+     * defense-in-depth on top of the JS-side configured-mint binding.
+     */
+    private fun isDisallowedMintHost(host: String?): Boolean {
+        if (host.isNullOrBlank()) return true
+        // A single trailing dot is the fully qualified spelling of the same
+        // host (localhost., 127.0.0.1.), so drop it before matching
+        val h = host.trim().trimStart('[').trimEnd(']').lowercase()
+            .removeSuffix(".")
+        if (h == "localhost" || h.endsWith(".localhost")) return true
+        // A host containing ':' can only be an IPv6 literal (hostnames
+        // cannot contain it), so parse it numerically instead of
+        // prefix-matching one spelling: mapped (::ffff:127.0.0.1),
+        // hex-mapped (::ffff:7f00:1) and zero-expanded (0:0:0:0:0:0:0:1)
+        // forms of the same internal address all normalize to the same
+        // bytes. This still involves no DNS - the brackets force
+        // InetAddress to treat the input as a literal or throw.
+        if (h.contains(':')) return isDisallowedIpv6Literal(h)
+        return isDisallowedIpv4(h)
+    }
+
+    // Parse the host the way inet_aton (and so the OS resolver) does, so
+    // decimal (2130706433), hex (0x7f.1), octal (0177.0.0.1) and shortened
+    // (127.1) spellings of an internal address are caught as well as the
+    // dotted-quad one. A host that does not parse is a hostname and is not
+    // an internal literal.
+    private fun isDisallowedIpv4(h: String): Boolean {
+        val addr = parseIpv4(h) ?: return false
+        return DISALLOWED_IPV4_RANGES.any { (network, prefix) ->
+            val mask = (0xffffffffL shl (32 - prefix)) and 0xffffffffL
+            (addr and mask) == network
+        }
+    }
+
+    private fun parseIpv4(h: String): Long? {
+        val parts = h.split('.')
+        if (parts.size > 4) return null
+        val values = parts.map { parseIpv4Part(it) ?: return null }
+        var addr = 0L
+        for (i in 0 until values.size - 1) {
+            if (values[i] > 0xff) return null
+            addr = addr or (values[i] shl (24 - 8 * i))
+        }
+        // The last part fills all remaining bytes: a.b.c.d, a.b.c(16 bits),
+        // a.b(24 bits), a(32 bits)
+        if (values.last() > (1L shl (8 * (5 - values.size))) - 1) return null
+        return addr or values.last()
+    }
+
+    private fun parseIpv4Part(part: String): Long? {
+        val (digits, radix) = when {
+            part.startsWith("0x") -> part.substring(2) to 16
+            part.length > 1 && part.startsWith("0") -> part.substring(1) to 8
+            else -> part to 10
+        }
+        if (digits.isEmpty()) return if (radix == 16) 0L else null
+        if (!digits.all { Character.digit(it, radix) >= 0 }) return null
+        val value = digits.toLongOrNull(radix) ?: return null
+        return if (value > 0xffffffffL) null else value
+    }
+
+    private fun isDisallowedIpv6Literal(literal: String): Boolean {
+        val addr = try {
+            InetAddress.getByName("[$literal]")
+        } catch (e: Exception) {
+            // Not parseable as an IPv6 literal and not a valid hostname
+            // either: fail closed
+            return true
+        }
+        // IPv4-mapped literals parse to an Inet4Address in any spelling;
+        // hold the embedded address to the same rules as a dotted host
+        if (addr is Inet4Address) {
+            return isDisallowedIpv4(addr.hostAddress ?: return true)
+        }
+        if (addr.isLoopbackAddress || addr.isLinkLocalAddress ||
+            addr.isSiteLocalAddress || addr.isAnyLocalAddress
+        ) {
+            return true
+        }
+        // fc00::/7 unique-local: no InetAddress predicate covers it
+        return (addr.address[0].toInt() and 0xfe) == 0xfc
+    }
+
+    /**
      * Check mint quote status directly from the mint's HTTP API.
      * This bypasses the local database check and works for external quotes
      * (e.g., quotes created by ZeusPay server).
@@ -904,14 +1105,48 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun checkExternalMintQuote(mintUrl: String, quoteId: String, promise: Promise) {
         scope.launch {
+            var connection: HttpURLConnection? = null
             try {
                 // Normalize mint URL and construct the quote endpoint
                 val normalizedUrl = mintUrl.trimEnd('/')
-                val quoteUrl = "$normalizedUrl/v1/mint/quote/bolt11/$quoteId"
+
+                // Security: this issues a raw HTTP GET against a mint URL that
+                // originates from a ZEUS Pay socket event. Refuse cleartext and
+                // internal/loopback/link-local targets so a forged event cannot
+                // downgrade the fetch or drive the device into an SSRF against
+                // the local network. quoteId is percent-encoded so it cannot
+                // alter the request path.
+                val parsed = try {
+                    URL(normalizedUrl)
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        promise.reject("INVALID_URL", "Invalid mint URL: $mintUrl")
+                    }
+                    return@launch
+                }
+                if (!parsed.protocol.equals("https", ignoreCase = true) ||
+                    isDisallowedMintHost(parsed.host)
+                ) {
+                    Log.e(TAG, "checkExternalMintQuote: refusing unsafe mint URL $mintUrl")
+                    withContext(Dispatchers.Main) {
+                        promise.reject(
+                            "UNSAFE_MINT_URL",
+                            "Refusing to contact non-HTTPS or internal mint host: $mintUrl"
+                        )
+                    }
+                    return@launch
+                }
+
+                // URLEncoder is form encoding: it turns a space into "+",
+                // which a path reads as a literal "+". A literal "+" is
+                // already escaped to %2B, so every "+" here was a space.
+                val encodedQuoteId = URLEncoder.encode(quoteId, "UTF-8")
+                    .replace("+", "%20")
+                val quoteUrl = "$normalizedUrl/v1/mint/quote/bolt11/$encodedQuoteId"
 
                 Log.d(TAG, "checkExternalMintQuote: Fetching $quoteUrl")
 
-                val connection = URL(quoteUrl).openConnection() as HttpURLConnection
+                connection = URL(quoteUrl).openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 30000
                 connection.readTimeout = 30000
@@ -919,7 +1154,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
                 val responseCode = connection.responseCode
                 if (responseCode != HttpURLConnection.HTTP_OK) {
-                    val errorStream = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error"
+                    val errorStream = connection.errorStream?.let { readMintErrorBody(it) } ?: "Unknown error"
                     Log.e(TAG, "checkExternalMintQuote: HTTP $responseCode - $errorStream")
                     withContext(Dispatchers.Main) {
                         promise.reject("HTTP_ERROR", "Mint returned HTTP $responseCode: $errorStream")
@@ -927,7 +1162,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     return@launch
                 }
 
-                val response = connection.inputStream.bufferedReader().readText()
+                val response = readMintResponse(connection.inputStream)
                 Log.d(TAG, "checkExternalMintQuote: Response: $response")
 
                 val json = JSONObject(response)
@@ -954,6 +1189,8 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 withContext(Dispatchers.Main) {
                     promise.reject("EXTERNAL_QUOTE_ERROR", e.message, e)
                 }
+            } finally {
+                connection?.disconnect()
             }
         }
     }
@@ -989,7 +1226,16 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     "PAID" -> QuoteState.PAID
                     "PENDING" -> QuoteState.PENDING
                     "ISSUED" -> QuoteState.ISSUED
-                    else -> QuoteState.PAID // Default to PAID for external quotes
+                    // Fail closed: never assume PAID for an unrecognized state.
+                    else -> {
+                        withContext(Dispatchers.Main) {
+                            promise.reject(
+                                "INVALID_QUOTE_STATE",
+                                "Unrecognized mint quote state: $state"
+                            )
+                        }
+                        return@launch
+                    }
                 }
 
                 // Storing a key equal to cdk's seed prefix on the quote
@@ -1011,6 +1257,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     expiry = expiry.toLong().toULong(),
                     amountPaid = if (quoteState == QuoteState.PAID || quoteState == QuoteState.ISSUED) amt else zeroAmount,
                     amountIssued = if (quoteState == QuoteState.ISSUED) amt else zeroAmount,
+                    // Insert as oldest-possible so any later saga update
+                    // (which drops stale responses by timestamp) supersedes
+                    // this externally sourced row
+                    updatedAt = 0uL,
                     estimatedBlocks = null,
                     paymentMethod = PaymentMethod.Bolt11,
                     secretKey = storedSecretKey,
@@ -1255,37 +1505,21 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     extra = null
                 )
 
-                // Step 2: Gather this mint's unspent proofs —
-                // the mint knows the MPP partial amount from the quote
-                val database = db
-                if (database == null) {
-                    withContext(Dispatchers.Main) {
-                        promise.reject("NO_WALLET", "Wallet not initialized")
-                    }
-                    return@launch
-                }
-                val url = MintUrl(normalizeMintUrl(mintUrl))
-                val proofInfos = database.getProofs(
-                    mintUrl = url,
-                    unit = CurrencyUnit.Sat,
-                    state = listOf(ProofState.UNSPENT),
-                    spendingConditions = null
-                )
-                val mintProofs = proofInfos.map { it.proof }
+                // Step 2: Two-phase melt. As in melt(), CDK selects proofs for
+                // the quoted partial amount plus fee reserve; every proof
+                // handed in stays pending while the payment is in flight
+                val melted = wallet.prepareMelt(quote.id).useHandle { it.confirm() }
 
-                if (mintProofs.isEmpty()) {
-                    withContext(Dispatchers.Main) {
-                        promise.reject("NO_PROOFS", "No proofs found for mint $mintUrl")
-                    }
-                    return@launch
+                // Return the id, fee reserve and expiry of the quote this
+                // part was paid with so the caller can record that quote.
+                val result = encodeMelted(melted).apply {
+                    put("quote_id", quote.id)
+                    put("fee_reserve", quote.feeReserve.value.toLong())
+                    put("expiry", quote.expiry.toLong())
                 }
-
-                // Step 3: Two-phase melt with the selected proofs
-                val melted = wallet.prepareMeltProofs(quote.id, mintProofs)
-                    .useHandle { it.confirm() }
 
                 withContext(Dispatchers.Main) {
-                    promise.resolve(encodeMelted(melted).toString())
+                    promise.resolve(result.toString())
                 }
             } catch (e: FfiException) {
                 val (code, message) = mapFfiException(e)
@@ -1411,43 +1645,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 Log.e(TAG, "confirmSend error", e)
                 withContext(Dispatchers.Main) {
                     promise.reject("CONFIRM_SEND_ERROR", e.message, e)
-                }
-            } finally {
-                // Always clean up prepared send, whether success or failure.
-                // Destroy it rather than only dropping the reference: the
-                // handle holds the wallet's database open until the Cleaner
-                // runs (see disposeHandles)
-                preparedSends.remove(preparedSendId)?.let {
-                    destroyHandles(listOf(it))
-                }
-            }
-        }
-    }
-
-    @ReactMethod
-    fun cancelSend(preparedSendId: String, promise: Promise) {
-        val prepared = preparedSends[preparedSendId]
-        if (prepared == null) {
-            promise.resolve(null)
-            return
-        }
-
-        scope.launch {
-            try {
-                prepared.cancel()
-                withContext(Dispatchers.Main) {
-                    promise.resolve(null)
-                }
-            } catch (e: FfiException) {
-                val (code, message) = mapFfiException(e)
-                Log.e(TAG, "cancelSend error: $message", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject(code, message, e)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "cancelSend error", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject("CANCEL_SEND_ERROR", e.message, e)
                 }
             } finally {
                 // Always clean up prepared send, whether success or failure.
@@ -1651,6 +1848,43 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     // ========================================================================
+    // Saga Recovery
+    // ========================================================================
+
+    @ReactMethod
+    fun recoverIncompleteSagas(mintUrl: String, promise: Promise) {
+        getInitializedRepo(promise) ?: return
+
+        scope.launch {
+            try {
+                val wallet = getWallet(mintUrl)
+                val report = wallet.recoverIncompleteSagas()
+                val json = JSONObject().apply {
+                    put("recovered", report.recovered.toLong())
+                    put("compensated", report.compensated.toLong())
+                    put("skipped", report.skipped.toLong())
+                    put("failed", report.failed.toLong())
+                }
+
+                withContext(Dispatchers.Main) {
+                    promise.resolve(json.toString())
+                }
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "recoverIncompleteSagas error: $message", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "recoverIncompleteSagas error", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("RECOVER_SAGAS_ERROR", e.message, e)
+                }
+            }
+        }
+    }
+
+    // ========================================================================
     // Proof Management
     // ========================================================================
 
@@ -1818,8 +2052,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
         scope.launch {
             try {
-                val txDirection = direction?.let {
-                    if (it == "incoming") TransactionDirection.INCOMING else TransactionDirection.OUTGOING
+                val txDirection = when (direction) {
+                    "incoming" -> TransactionDirection.INCOMING
+                    "outgoing" -> TransactionDirection.OUTGOING
+                    else -> null
                 }
 
                 val transactions = db!!.listTransactions(
@@ -1831,13 +2067,29 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 val result = JSONArray()
                 transactions.forEach { tx ->
                     val txJson = JSONObject().apply {
-                        put("id", tx.id.toString())
+                        put("id", tx.id.hex)
                         put("direction", if (tx.direction == TransactionDirection.INCOMING) "incoming" else "outgoing")
                         put("amount", tx.amount.value.toLong())
                         put("mint_url", tx.mintUrl.url)
-                        put("timestamp", tx.timestamp)
-                        tx.fee?.let { put("fee", it.value.toLong()) }
+                        put("timestamp", tx.timestamp.toLong())
+                        put("fee", tx.fee.value.toLong())
+                        put("unit", currencyUnitToString(tx.unit))
                         tx.memo?.let { put("memo", it) }
+                        put("state", transactionStatusToString(tx.status))
+                        tx.quoteId?.let { put("quote_id", it) }
+                        tx.paymentRequest?.let { put("payment_request", it) }
+                        tx.paymentProof?.let { put("payment_proof", it) }
+                        tx.paymentMethod?.let {
+                            put(
+                                "payment_method",
+                                when (it) {
+                                    is PaymentMethod.Bolt11 -> "bolt11"
+                                    is PaymentMethod.Bolt12 -> "bolt12"
+                                    is PaymentMethod.Onchain -> "onchain"
+                                    is PaymentMethod.Custom -> it.method
+                                }
+                            )
+                        }
                     }
                     result.put(txJson)
                 }

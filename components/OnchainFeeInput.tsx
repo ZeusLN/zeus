@@ -9,6 +9,7 @@ import { feeStore, settingsStore } from '../stores/Stores';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { isPlausibleSatPerVbyte } from '../utils/FeeUtils';
 
 interface OnchainFeeInputProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -17,8 +18,6 @@ interface OnchainFeeInputProps {
     onFeeError?: (error: boolean) => void;
     onNavigateAway?: () => void;
 }
-
-const DEFAULT_FEE = '10';
 
 export default function OnchainFeeInput(props: OnchainFeeInputProps) {
     const { fee, onChangeFee, onNavigateAway, navigation } = props;
@@ -35,6 +34,15 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
     useEffect(() => setNewFee(fee), [fee]);
 
     useEffect(() => {
+        const handleFeeError = () => {
+            onChangeFee('0');
+            setErrorOccurredLoadingFees(true);
+            setLoading(false);
+            if (props.onFeeError) {
+                props.onFeeError(true);
+            }
+        };
+
         if (enableMempoolRates) {
             const hasValidFee = fee && Number(fee) > 0;
             if (hasValidFee) {
@@ -55,18 +63,20 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                         recommended !== '' && recommended != null
                             ? String(recommended)
                             : '';
+                    if (!feeStr) {
+                        // getOnchainFeesviaMempool never rejects: it
+                        // resolves undefined on any failure (non-200,
+                        // network error, or implausible payload). Treat
+                        // that as a failure so the error is shown
+                        // instead of an empty fee field.
+                        handleFeeError();
+                        return;
+                    }
                     setNewFee(feeStr);
                     onChangeFee(feeStr);
                     setLoading(false);
                 })
-                .catch(() => {
-                    onChangeFee('0');
-                    setErrorOccurredLoadingFees(true);
-                    setLoading(false);
-                    if (props.onFeeError) {
-                        props.onFeeError(true);
-                    }
-                });
+                .catch(handleFeeError);
         }
     }, []);
 
@@ -126,13 +136,15 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
             ) : (
                 <TextInput
                     keyboardType="numeric"
-                    placeholder={DEFAULT_FEE}
+                    placeholder={localeString(
+                        'components.OnchainFeeInput.placeholder'
+                    )}
                     value={newFee}
                     onChangeText={(text: string) => {
                         setNewFee(text);
                         onChangeFee(text);
                     }}
-                    error={!newFee || newFee === '0'}
+                    error={!newFee || !isPlausibleSatPerVbyte(newFee)}
                 />
             )}
         </>

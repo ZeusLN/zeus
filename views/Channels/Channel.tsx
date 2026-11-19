@@ -1,19 +1,11 @@
 import * as React from 'react';
-import {
-    NativeModules,
-    NativeEventEmitter,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { Button as ElementButton, Divider } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import LinearGradient from '../../components/LinearGradient';
-import BigNumber from 'bignumber.js';
 import { duration } from 'moment';
 
 import Channel from '../../models/Channel';
@@ -30,17 +22,24 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
 import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import { ContactAvatar } from '../../components/ContactAvatar';
 import { SharedScreen, SharedText } from '../../components/SharedTransition';
 
-import DateTimeUtils from '../../utils/DateTimeUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import {
+    formatLeaseDuration,
+    getLeaseDisplay,
+    getRenewalInfo
+} from '../../utils/LeaseUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -76,14 +75,6 @@ interface ChannelState {
     deliveryAddress: string;
     aliasToggle: boolean;
     channel: Channel;
-    renewalInfo: {
-        scid?: string;
-        expiresInBlocks?: number;
-        expiresMonths?: number;
-        expiresDays?: number;
-        maxExtensionInBlocks?: number;
-        expirationBlock?: number;
-    };
 }
 
 @inject(
@@ -99,54 +90,10 @@ export default class ChannelView extends React.Component<
     ChannelProps,
     ChannelState
 > {
-    listener: any;
     constructor(props: ChannelProps) {
         super(props);
-        const { route, ChannelsStore, LSPStore, NodeInfoStore } = props;
+        const { route, ChannelsStore } = props;
         const channel = route.params?.channel;
-
-        const currentBlockHeight = NodeInfoStore.nodeInfo.currentBlockHeight;
-
-        const renewalInfo = LSPStore.getExtendableChannelsData?.filter(
-            (extendableChannel: any) => {
-                return (
-                    extendableChannel.short_channel_id ===
-                        channel.shortChannelId ||
-                    extendableChannel.short_channel_id ===
-                        channel.peerScidAlias ||
-                    extendableChannel.short_channel_id ===
-                        channel.zeroConfConfirmedScid
-                );
-            }
-        )[0];
-
-        let scid;
-        if (renewalInfo?.short_channel_id) {
-            scid = renewalInfo.short_channel_id;
-        }
-
-        let expiresInBlocks;
-        if (currentBlockHeight && renewalInfo?.expiration_block) {
-            expiresInBlocks = new BigNumber(renewalInfo.expiration_block)
-                .minus(currentBlockHeight)
-                .toNumber();
-        }
-
-        let expiresMonths, expiresDays;
-        if (expiresInBlocks) {
-            const { months, days } =
-                DateTimeUtils.blocksToMonthsAndDays(expiresInBlocks);
-            expiresMonths = months;
-            expiresDays = days;
-        }
-
-        let maxExtensionInBlocks;
-        if (renewalInfo?.max_channel_extension_expiry_blocks) {
-            maxExtensionInBlocks =
-                renewalInfo.max_channel_extension_expiry_blocks;
-        }
-
-        const expirationBlock = renewalInfo?.expiration_block;
 
         this.state = {
             confirmCloseChannel: false,
@@ -154,15 +101,7 @@ export default class ChannelView extends React.Component<
             forceCloseChannel: false,
             deliveryAddress: '',
             aliasToggle: false,
-            channel,
-            renewalInfo: {
-                scid,
-                expiresInBlocks,
-                expiresDays,
-                expiresMonths,
-                maxExtensionInBlocks,
-                expirationBlock
-            }
+            channel
         };
 
         if (BackendUtils.isLNDBased() && channel.channelId != null) {
@@ -236,8 +175,7 @@ export default class ChannelView extends React.Component<
         forceClose?: boolean | null,
         deliveryAddress?: string | null
     ) => {
-        const { ChannelsStore, SettingsStore, navigation } = this.props;
-        const { implementation } = SettingsStore;
+        const { ChannelsStore, navigation } = this.props;
 
         let funding_txid_str, output_index;
         if (channelPoint) {
@@ -246,7 +184,7 @@ export default class ChannelView extends React.Component<
             output_index = outputIndex;
         }
 
-        const streamingCall = await ChannelsStore.closeChannel(
+        await ChannelsStore.closeChannel(
             funding_txid_str && output_index
                 ? { funding_txid_str, output_index }
                 : undefined,
@@ -256,11 +194,7 @@ export default class ChannelView extends React.Component<
             deliveryAddress ? deliveryAddress : undefined
         );
 
-        if (implementation === 'lightning-node-connect') {
-            this.subscribeChannelClose(streamingCall);
-        } else {
-            if (!ChannelsStore.closeChannelErr) navigation.popTo('Wallet');
-        }
+        if (!ChannelsStore.closeChannelErr) navigation.popTo('Wallet');
     };
 
     handleOnNavigateBack = (satPerByte: string) => {
@@ -269,45 +203,11 @@ export default class ChannelView extends React.Component<
         });
     };
 
-    subscribeChannelClose = (streamingCall: string) => {
-        const { handleChannelClose, handleChannelCloseError } =
-            this.props.ChannelsStore;
-        const { LncModule } = NativeModules;
-        const eventEmitter = new NativeEventEmitter(LncModule);
-        this.listener = eventEmitter.addListener(
-            streamingCall,
-            (event: any) => {
-                if (event.result && event.result !== 'EOF') {
-                    let result;
-                    try {
-                        result = JSON.parse(event.result);
-                    } catch (e) {
-                        try {
-                            result = JSON.parse(event);
-                        } catch (e2) {
-                            result = event.result || event;
-                        }
-                    }
-                    if (
-                        result &&
-                        (result?.chan_close?.success || result?.close_pending)
-                    ) {
-                        handleChannelClose();
-                        this.listener = null;
-                        this.props.navigation.popTo('Wallet');
-                    } else {
-                        handleChannelCloseError(new Error(result));
-                        this.listener = null;
-                    }
-                }
-            }
-        );
-    };
-
     render() {
         const {
             navigation,
             SettingsStore,
+            LSPStore,
             ModalStore,
             NodeInfoStore,
             ChannelsStore
@@ -318,14 +218,17 @@ export default class ChannelView extends React.Component<
             satPerByte,
             forceCloseChannel,
             deliveryAddress,
-            aliasToggle,
-            renewalInfo
+            aliasToggle
         } = this.state;
         const { settings } = SettingsStore;
         const { privacy } = settings;
         const lurkerMode = privacy && privacy.lurkerMode;
         const { testnet } = NodeInfoStore;
-        const { closeChannelErr, closingChannel } = ChannelsStore;
+        const {
+            closeChannelErr,
+            closingChannel,
+            closedByFailedCloseChannelPoint
+        } = ChannelsStore;
 
         const closeAddress: string | undefined = channel?.close_address;
 
@@ -377,10 +280,30 @@ export default class ChannelView extends React.Component<
             blocks_til_maturity
         } = channel as ClosedChannel;
 
+        // The node closed this channel although the close request reported
+        // an error. The view still holds the channel as it was when opened
+        const closedByFailedClose =
+            channel_point === closedByFailedCloseChannelPoint;
+
+        // computed per render so lease data and the block height that
+        // arrive after the view opens are shown
+        const renewalInfo = getRenewalInfo(
+            LSPStore.getExtendableChannelsData,
+            channel,
+            NodeInfoStore.nodeInfo.currentBlockHeight
+        );
+        const expiresApprox = formatLeaseDuration(renewalInfo.expiresInBlocks);
+        const leaseDisplay = getLeaseDisplay({
+            ...renewalInfo,
+            fetchError: LSPStore.getExtendableChannelsError,
+            isLspChannel: remotePubkey === LSPStore.getLSPSPubkey()
+        });
+
         const privateChannel = channel.private;
         const confs = channel.getConfirmations(
             NodeInfoStore.nodeInfo.currentBlockHeight
         );
+        const waitingForPeer = channel.isWaitingForPeer;
 
         const editableFees: boolean = !(
             pendingOpen ||
@@ -513,7 +436,7 @@ export default class ChannelView extends React.Component<
                                 ? localeString('views.Channel.pendingOpen')
                                 : pendingClose || closing
                                 ? localeString('views.Channel.pendingClose')
-                                : forceClose
+                                : forceClose || closedByFailedClose
                                 ? localeString('views.Channel.forceClose')
                                 : closeHeight || to_us_msat
                                 ? localeString('views.Channel.closed')
@@ -526,7 +449,8 @@ export default class ChannelView extends React.Component<
                                 style={{
                                     ...styles.status,
                                     color: themeColor('text'),
-                                    marginTop: 0
+                                    marginTop: 0,
+                                    marginBottom: waitingForPeer ? 6 : 18
                                 }}
                             >
                                 {`${localeString(
@@ -534,13 +458,32 @@ export default class ChannelView extends React.Component<
                                 )}: ${confs.current} / ${confs.total}`}
                             </Text>
                         )}
-                        {!!renewalInfo.maxExtensionInBlocks && (
+                        {waitingForPeer && (
+                            <Text
+                                style={{
+                                    ...styles.status,
+                                    color: themeColor('text'),
+                                    marginTop: 0
+                                }}
+                            >
+                                {localeString('views.Channel.waitingForPeer')}
+                            </Text>
+                        )}
+                        {leaseDisplay.showFetchError && (
+                            <WarningMessage
+                                message={localeString(
+                                    'views.Channel.lease.fetchError'
+                                )}
+                            />
+                        )}
+                        {leaseDisplay.showLease && (
                             <>
                                 <Row
                                     justify="space-between"
                                     style={{ marginTop: 10, marginBottom: 10 }}
                                 >
-                                    {renewalInfo.expiresInBlocks ? (
+                                    {renewalInfo.expiresInBlocks !==
+                                    undefined ? (
                                         <View style={{ width: '50%' }}>
                                             <Text
                                                 style={{
@@ -565,45 +508,15 @@ export default class ChannelView extends React.Component<
                                                 renewalInfo.expiresInBlocks
                                             )} ${localeString(
                                                 'general.blocks'
-                                            )}\n ~${
-                                                renewalInfo.expiresMonths
-                                                    ? `${numberWithCommas(
-                                                          Math.abs(
-                                                              renewalInfo.expiresMonths
-                                                          )
-                                                      )} ${localeString(
-                                                          new BigNumber(
-                                                              Math.abs(
-                                                                  renewalInfo.expiresMonths
-                                                              )
-                                                          ).gt(1)
-                                                              ? 'time.months'
-                                                              : 'time.month'
-                                                      ).toLowerCase()}`
-                                                    : ''
-                                            }${
-                                                renewalInfo.expiresMonths &&
-                                                renewalInfo.expiresDays
-                                                    ? ', '
-                                                    : ''
-                                            }${
-                                                renewalInfo.expiresDays
-                                                    ? `${numberWithCommas(
-                                                          Math.abs(
-                                                              renewalInfo.expiresDays
-                                                          )
-                                                      )} ${localeString(
-                                                          new BigNumber(
-                                                              Math.abs(
-                                                                  renewalInfo.expiresDays
-                                                              )
-                                                          ).gt(1)
-                                                              ? 'time.days'
-                                                              : 'time.day'
-                                                      ).toLowerCase()}`
+                                            )}${
+                                                expiresApprox
+                                                    ? `\n ~${expiresApprox}`
                                                     : ''
                                             }`}</Text>
                                         </View>
+                                    ) : leaseDisplay.hasLease ? (
+                                        // block height not loaded yet
+                                        <View style={{ width: '50%' }} />
                                     ) : (
                                         <TouchableOpacity
                                             style={{ width: '50%' }}
@@ -642,42 +555,46 @@ export default class ChannelView extends React.Component<
                                             </Text>
                                         </TouchableOpacity>
                                     )}
-                                    <ElementButton
-                                        title={
-                                            renewalInfo.expiresInBlocks
-                                                ? localeString(
-                                                      'views.Channel.lease.extendLease'
-                                                  )
-                                                : localeString(
-                                                      'views.Channel.lease.purchaseLease'
-                                                  )
-                                        }
-                                        onPress={() => {
-                                            navigation.navigate('LSPS7', {
-                                                chanId: renewalInfo.scid,
-                                                maxExtensionInBlocks:
-                                                    renewalInfo.maxExtensionInBlocks,
-                                                expirationBlock:
-                                                    renewalInfo.expirationBlock
-                                            });
-                                        }}
-                                        ViewComponent={LinearGradient as any}
-                                        linearGradientProps={{
-                                            colors: [
-                                                'rgb(180, 26, 20)',
-                                                'rgb(255, 169, 0)'
-                                            ],
-                                            start: { x: 0, y: 0.5 },
-                                            end: { x: 1, y: 0.5 }
-                                        }}
-                                        buttonStyle={{
-                                            borderRadius: 5
-                                        }}
-                                        titleStyle={{
-                                            ...styles.text,
-                                            fontSize: 15
-                                        }}
-                                    />
+                                    {leaseDisplay.showExtendButton && (
+                                        <ElementButton
+                                            title={
+                                                leaseDisplay.hasLease
+                                                    ? localeString(
+                                                          'views.Channel.lease.extendLease'
+                                                      )
+                                                    : localeString(
+                                                          'views.Channel.lease.purchaseLease'
+                                                      )
+                                            }
+                                            onPress={() => {
+                                                navigation.navigate('LSPS7', {
+                                                    chanId: renewalInfo.scid,
+                                                    maxExtensionInBlocks:
+                                                        renewalInfo.maxExtensionInBlocks,
+                                                    expirationBlock:
+                                                        renewalInfo.expirationBlock
+                                                });
+                                            }}
+                                            ViewComponent={
+                                                LinearGradient as any
+                                            }
+                                            linearGradientProps={{
+                                                colors: [
+                                                    'rgb(180, 26, 20)',
+                                                    'rgb(255, 169, 0)'
+                                                ],
+                                                start: { x: 0, y: 0.5 },
+                                                end: { x: 1, y: 0.5 }
+                                            }}
+                                            buttonStyle={{
+                                                borderRadius: 5
+                                            }}
+                                            titleStyle={{
+                                                ...styles.text,
+                                                fontSize: 15
+                                            }}
+                                        />
+                                    )}
                                 </Row>
 
                                 <Divider
@@ -1138,6 +1055,22 @@ export default class ChannelView extends React.Component<
                                 }
                             />
                         )}
+                        {!!csv_delay && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.csvDelay'
+                                )}
+                                value={`${csv_delay} ${localeString(
+                                    'general.blocks'
+                                )}`}
+                                infoModalText={[
+                                    localeString(
+                                        'views.Channel.csvDelay.info1'
+                                    ),
+                                    localeString('views.Channel.csvDelay.info2')
+                                ]}
+                            />
+                        )}
 
                         <Divider
                             orientation="horizontal"
@@ -1158,7 +1091,6 @@ export default class ChannelView extends React.Component<
                                 total_satoshis_sent={total_satoshis_sent}
                                 commit_fee={commit_fee}
                                 commit_weight={commit_weight}
-                                csv_delay={csv_delay}
                             />
                         )}
                         {BackendUtils.supportsForwardingHistory() &&
@@ -1411,6 +1343,7 @@ export default class ChannelView extends React.Component<
                                                 deliveryAddress
                                             )
                                         }
+                                        disabled={closedByFailedClose}
                                         warning
                                     />
                                 </View>

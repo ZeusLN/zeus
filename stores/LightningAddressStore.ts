@@ -3,36 +3,42 @@ import { action, observable, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Notifications } from 'react-native-notifications';
 
-import BigNumber from 'bignumber.js';
-import Bolt11Utils from '../utils/Bolt11Utils';
 import { io } from 'socket.io-client';
-import { schnorr } from '@noble/curves/secp256k1.js';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
-import hashjs from 'hash.js';
-import { getPublicKey, SimplePool } from 'nostr-tools';
-import { mnemonicToEntropy, generateMnemonic } from '@scure/bip39';
-
-import { sha256 } from 'js-sha256';
 
 import CashuStore from './CashuStore';
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore from './SettingsStore';
 
 import BackendUtils from '../utils/BackendUtils';
-import Base64Utils from '../utils/Base64Utils';
-import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
-import { sleep } from '../utils/SleepUtils';
+import {
+    isValidAuthChallenge,
+    INVALID_AUTH_CHALLENGE_ERROR
+} from '../utils/AuthChallengeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { cashuErrorForDisplay } from '../utils/ErrorUtils';
+import { CDKErrorType } from '../cashu-cdk/types';
 
 import Storage from '../storage';
 
 const LNURL_HOST = 'https://zeuspay.com';
 const LNURL_SOCKET_PATH = '/stream';
 
+// ZEUS Pay sends open Cashu payments in the status `paid` list and in the
+// socket `paid` event. Both are server-supplied: only an object with a
+// non-empty string quote id can be redeemed or deleted.
+const isOpenCashuPayment = (item: any) =>
+    item !== null &&
+    typeof item === 'object' &&
+    !Array.isArray(item) &&
+    typeof item.quote_id === 'string' &&
+    item.quote_id !== '';
+
 export const LEGACY_ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
 export const LEGACY_HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 
 export const ADDRESS_ACTIVATED_STRING = 'zeuspay-lightning-address';
+// Preimages left on the device by retired Zaplocker addresses. Nothing reads
+// them anymore; the key is kept so address deletion and data wipes clear it.
 export const HASHES_STORAGE_STRING = 'zeuspay-lightning-address-hashes';
 
 export const ZEUS_PAY_DOMAIN_KEYS = [
@@ -69,11 +75,9 @@ export default class LightningAddressStore {
     @observable public lightningAddressHandle: string;
     @observable public lightningAddressDomain: string;
     @observable public lightningAddressType: string;
-    @observable public lightningAddressActivated: boolean = false;
     @observable public noffer: string | null = null;
     @observable public zeusPlusExpiresAt: any;
     @observable public zeusPlusAnnualFeeSats: any;
-    @observable public zeusPlusDiscount: any;
     @observable public legacyAccount: boolean = false;
     @observable public perks: Perk[] = [];
     @observable public image: string | null = null;
@@ -83,19 +87,23 @@ export default class LightningAddressStore {
     @observable public redeemingAll: boolean = false;
     @observable public error: boolean = false;
     @observable public error_msg: string | undefined;
-    @observable public availableHashes: number = 0; // on server
-    @observable public localHashes: number = 0; // on device
     @observable public paid: any = [];
-    @observable public preimageMap: any = {};
-    @observable public fees: any = {};
     @observable public minimumSats: number;
     @observable public socket: any;
+    // Set from prepareToAutomaticallyAcceptCashu until the socket is
+    // assigned, so a second call during the auth request opens no other
+    private socketPending: boolean = false;
+    // Bumped by reset(): an auth request, socket or Redeem All started
+    // before it belongs to the previous wallet. The auth request must not
+    // fill the cache, and the socket or Redeem All stops at its next step
+    private generation: number = 0;
+    // Redeems in flight by quote id (socket event, Redeem All, a tap on
+    // a payment)
+    private redeemingQuotes = new Map<string, Promise<boolean>>();
     // Push
     @observable public currentDeviceToken: string;
     @observable public serviceDeviceToken: string;
     private pendingPushUpdate: boolean = false;
-    @observable public readyToAutomaticallyAccept: boolean = false;
-    @observable public prepareToAutomaticallyAcceptStart: boolean = false;
     // Auth
     auth?: Auth;
     authDate?: Date;
@@ -120,6 +128,7 @@ export default class LightningAddressStore {
         if (this.auth && this.authDate && this.authDate > tenMinutesAgo) {
             return this.auth;
         } else {
+            const generation = this.generation;
             const authResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
                 `${LNURL_HOST}/api/lnurl/auth`,
@@ -133,252 +142,32 @@ export default class LightningAddressStore {
             if (authResponse.info().status !== 200) throw authData.error;
 
             const { verification } = authData;
+            if (!isValidAuthChallenge(verification)) {
+                throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
+            }
             const signData = await BackendUtils.signMessage(verification);
             const signature = signData.zbase || signData.signature;
+            const auth = { verification, signature };
 
-            this.auth = { verification, signature };
-            this.authDate = new Date(Date.now());
-
-            return this.auth;
-        }
-    };
-
-    public deleteAndGenerateNewPreimages = async () => {
-        this.loading = true;
-        await Storage.setItem(HASHES_STORAGE_STRING, '');
-        this.generatePreimages(true).catch((e) =>
-            console.log('Error generating preimages', e)
-        );
-    };
-
-    @action
-    public deleteLocalHashes = async () => {
-        this.loading = true;
-        await Storage.setItem(HASHES_STORAGE_STRING, '');
-        this.preimageMap = {};
-        this.localHashes = 0;
-        await this.status();
-        this.loading = false;
-    };
-
-    private getPreimageMap = async () => {
-        this.loading = true;
-        const map = await Storage.getItem(HASHES_STORAGE_STRING);
-
-        runInAction(() => {
-            if (map) {
-                this.preimageMap = JSON.parse(map);
-                this.localHashes = Object.keys(this.preimageMap).length;
+            // a reset during this request means the signature is for the
+            // previous wallet; caching it would make the next wallet's
+            // calls fail with 'invalid signature' for up to 10 minutes
+            if (generation === this.generation) {
+                this.auth = auth;
+                this.authDate = new Date(Date.now());
             }
 
-            this.loading = false;
-        });
-        return this.preimageMap;
+            return auth;
+        }
     };
 
     private setLightningAddress = async (handle: string, domain: string) => {
         await Storage.setItem(ADDRESS_ACTIVATED_STRING, true);
         runInAction(() => {
-            this.lightningAddressActivated = true;
             this.lightningAddressHandle = handle;
             this.lightningAddressDomain = domain;
             this.lightningAddress = `${handle}@${domain}`;
         });
-    };
-
-    private deleteHash = async (hash: string) => {
-        const hashesString =
-            (await Storage.getItem(HASHES_STORAGE_STRING)) || '{}';
-
-        const oldHashes = JSON.parse(hashesString);
-        delete oldHashes[hash];
-        const newHashes = oldHashes;
-
-        return await Storage.setItem(HASHES_STORAGE_STRING, newHashes);
-    };
-
-    @action
-    private generatePreimages = async (newDevice?: boolean) => {
-        this.error = false;
-        this.error_msg = '';
-        this.loading = true;
-
-        const preimageHashMap: any = {};
-
-        const preimages = [];
-        for (let i = 0; i < 250; i++) {
-            preimages.push(
-                Buffer.from(
-                    mnemonicToEntropy(
-                        generateMnemonic(BIP39_WORD_LIST, 256),
-                        BIP39_WORD_LIST
-                    )
-                ).toString('hex')
-            );
-        }
-
-        const hashes: any = [];
-        const nostrSignatures: any = [];
-        if (preimages) {
-            const nostrPrivateKey =
-                this.settingsStore?.settings?.lightningAddress?.nostrPrivateKey;
-            for (let i = 0; i < preimages.length; i++) {
-                const preimage = preimages[i];
-                const hash = sha256
-                    .create()
-                    .update(Base64Utils.hexToBytes(preimage))
-                    .hex();
-                if (nostrPrivateKey) {
-                    const pmthash_sig = bytesToHex(
-                        schnorr.sign(
-                            hexToBytes(hash),
-                            hexToBytes(nostrPrivateKey)
-                        )
-                    );
-                    nostrSignatures.push(pmthash_sig);
-                }
-                preimageHashMap[hash] = preimage;
-                hashes.push(hash);
-            }
-        }
-
-        const hashesString = await Storage.getItem(HASHES_STORAGE_STRING);
-
-        let newHashes;
-        if (hashesString) {
-            const oldHashes = JSON.parse(hashesString);
-            newHashes = {
-                ...oldHashes,
-                ...preimageHashMap
-            };
-        } else {
-            newHashes = {
-                ...preimageHashMap
-            };
-        }
-
-        await Storage.setItem(HASHES_STORAGE_STRING, newHashes);
-
-        try {
-            const { verification, signature } = await this.getAuthData();
-
-            const payload = {
-                pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
-                message: verification,
-                signature,
-                hashes,
-                newDevice,
-                ...(nostrSignatures.length > 0 && { nostrSignatures })
-            };
-
-            const submitResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/submitHashes`,
-                {
-                    'Content-Type': 'application/json'
-                },
-                JSON.stringify(payload)
-            );
-
-            const submitData = submitResponse.json();
-            if (!submitData.success) throw submitData.error;
-
-            this.loading = false;
-            await this.status();
-            return { created_at: submitData.created_at };
-        } catch (error) {
-            const error_msg = error?.toString();
-            runInAction(() => {
-                this.loading = false;
-                this.error = true;
-                this.error_msg = error_msg;
-            });
-            throw error;
-        }
-    };
-
-    @action
-    public createZaplocker = async (
-        nostr_pk: string,
-        nostrPrivateKey: string,
-        relays: Array<string>
-    ) => {
-        this.error = false;
-        this.error_msg = '';
-        this.loading = true;
-
-        try {
-            const { verification, signature } = await this.getAuthData();
-
-            const relays_sig = bytesToHex(
-                schnorr.sign(
-                    hexToBytes(
-                        hashjs
-                            .sha256()
-                            .update(JSON.stringify(relays))
-                            .digest('hex')
-                    ),
-                    hexToBytes(nostrPrivateKey)
-                )
-            );
-
-            const createResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/create`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
-                    message: verification,
-                    signature,
-                    nostr_pk,
-                    relays,
-                    relays_sig,
-                    address_type: 'zaplocker'
-                })
-            );
-
-            const createData = createResponse.json();
-            if (createResponse.info().status !== 200 || !createData.success) {
-                throw createData.error;
-            }
-
-            const { handle: responseHandle, domain, success } = createData;
-
-            if (responseHandle) {
-                this.setLightningAddress(responseHandle, domain);
-            }
-
-            await this.settingsStore.updateSettings({
-                lightningAddress: {
-                    enabled: true,
-                    automaticallyAccept: true,
-                    automaticallyRequestOlympusChannels: false, // deprecated
-                    allowComments: true,
-                    nostrPrivateKey,
-                    nostrRelays: relays,
-                    notifications: 1
-                }
-            });
-
-            runInAction(() => {
-                // ensure push credentials are in place
-                // right after creation
-                this.updatePushCredentials().catch((e) =>
-                    console.log('Failed to update push credentials', e)
-                );
-                this.loading = false;
-            });
-
-            return { success };
-        } catch (error) {
-            const error_msg = error?.toString();
-            runInAction(() => {
-                this.loading = false;
-                this.error = true;
-                this.error_msg = error_msg;
-            });
-            throw error;
-        }
     };
 
     @action
@@ -582,6 +371,14 @@ export default class LightningAddressStore {
 
             const { handle, domain, success } = updateData;
 
+            // Preimages from a former Zaplocker address have no use
+            // after switching to another address type
+            if (updates?.address_type) {
+                await Storage.setItem(HASHES_STORAGE_STRING, '').catch(
+                    (e: any) => console.log('Error clearing local hashes', e)
+                );
+            }
+
             if (handle) {
                 this.setLightningAddress(handle, domain || 'zeuspay.com');
             }
@@ -599,24 +396,10 @@ export default class LightningAddressStore {
         }
     };
 
-    private enhanceWithFee = (paymentArray: Array<any>) =>
-        paymentArray.map((item: any) => {
-            let fee;
-            try {
-                const decoded = Bolt11Utils.decode(item.hodl);
-                if (decoded.millisatoshis) {
-                    fee = new BigNumber(decoded.millisatoshis)
-                        .minus(item.amount_msat)
-                        .div(1000);
-                }
-            } catch (e) {}
-            item.fee = fee;
-            return item;
-        });
-
     @action
     public status = async (isRedeem?: boolean) => {
         this.loading = true;
+        const pubkey = this.nodeInfoStore.nodeInfo?.identity_pubkey;
 
         try {
             const { verification, signature } = await this.getAuthData();
@@ -638,16 +421,13 @@ export default class LightningAddressStore {
             }
 
             const {
-                results,
                 paid,
-                fees,
                 minimumSats,
                 handle,
                 domain,
                 addressType,
                 plusExpiresAt,
                 plusAnnualFeeSats,
-                plusDiscount,
                 legacyAccount,
                 perks,
                 deviceToken,
@@ -656,27 +436,28 @@ export default class LightningAddressStore {
                 noffer
             } = statusData;
 
+            // Keep the list only when it is an array, and only its open
+            // payments, so one bad entry cannot break the Lightning address
+            // screen or Redeem All.
+            const openPayments = Array.isArray(paid)
+                ? paid.filter(isOpenCashuPayment)
+                : [];
+
             runInAction(() => {
                 if (!isRedeem) {
                     this.error = false;
                     this.error_msg = '';
                 }
                 this.loading = false;
-                this.availableHashes = results || 0;
-            });
-
-            await this.getPreimageMap();
-
-            runInAction(() => {
-                this.paid = this.enhanceWithFee(paid);
-                this.fees = fees;
+                // only Cashu payments can be redeemed in the app; held
+                // payments to a retired Zaplocker address are dropped
+                this.paid = addressType === 'cashu' ? openPayments : [];
                 this.minimumSats = minimumSats;
                 this.lightningAddressHandle = handle;
                 this.lightningAddressDomain = domain;
                 this.lightningAddressType = addressType;
                 this.zeusPlusExpiresAt = plusExpiresAt;
                 this.zeusPlusAnnualFeeSats = plusAnnualFeeSats;
-                this.zeusPlusDiscount = plusDiscount;
                 this.legacyAccount = legacyAccount;
                 this.perks = perks;
                 this.image = image || null;
@@ -686,84 +467,36 @@ export default class LightningAddressStore {
                 if (handle && domain) {
                     this.lightningAddress = `${handle}@${domain}`;
                 }
-
-                if (
-                    this.lightningAddress &&
-                    this.localHashes === 0 &&
-                    this.lightningAddressType === 'zaplocker'
-                ) {
-                    this.generatePreimages(true).catch((e) =>
-                        console.log('Error generating preimages', e)
-                    );
-                } else if (
-                    this.lightningAddress &&
-                    new BigNumber(this.availableHashes).lt(50) &&
-                    this.lightningAddressType === 'zaplocker'
-                ) {
-                    this.generatePreimages().catch((e) =>
-                        console.log('Error generating preimages', e)
-                    );
-                }
             });
 
-            return { results };
+            // ZEUS Pay keys the address to the node pubkey, so it can exist
+            // without this install having created it (restore, reinstall,
+            // reset settings). `enabled` gates the startup redeem, the
+            // socket and Receive, so bring it in line with the server. A
+            // retired Zaplocker address stays off, and a reply for a node
+            // the user has since switched away from is ignored.
+            if (
+                handle &&
+                (addressType === 'cashu' || addressType === 'nwc') &&
+                this.nodeInfoStore.nodeInfo?.identity_pubkey === pubkey &&
+                !this.settingsStore.settings?.lightningAddress?.enabled
+            ) {
+                await this.settingsStore.updateSettingsGroup(
+                    'lightningAddress',
+                    { enabled: true }
+                );
+                if (
+                    addressType === 'cashu' &&
+                    this.settingsStore.settings?.lightningAddress
+                        ?.automaticallyAccept
+                ) {
+                    this.prepareToAutomaticallyAcceptCashu();
+                }
+            }
         } catch (error) {
             const error_msg = error?.toString();
             runInAction(() => {
                 this.loading = false;
-                this.error = true;
-                this.error_msg = error_msg;
-            });
-            throw error;
-        }
-    };
-
-    @action
-    private redeemZaplocker = async (
-        hash: string,
-        payReq?: string,
-        preimageNotFound?: boolean
-    ) => {
-        if (preimageNotFound) {
-            this.error = true;
-            this.error_msg = localeString(
-                'stores.LightningAddressStore.preimageNotFound'
-            );
-            return;
-        }
-
-        this.error = false;
-        this.error_msg = '';
-        this.redeeming = true;
-
-        try {
-            const { verification, signature } = await this.getAuthData();
-
-            const redeemResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/redeem`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
-                    message: verification,
-                    signature,
-                    hash,
-                    payReq
-                })
-            );
-
-            const redeemData = redeemResponse.json();
-            if (redeemResponse.info().status !== 200 || !redeemData.success) {
-                throw redeemData.error;
-            }
-
-            this.redeeming = false;
-            await this.deleteHash(hash);
-            return { success: redeemData.success };
-        } catch (error) {
-            const error_msg = error?.toString();
-            runInAction(() => {
-                this.redeeming = false;
                 this.error = true;
                 this.error_msg = error_msg;
             });
@@ -819,8 +552,79 @@ export default class LightningAddressStore {
         }
     };
 
+    // Normalize a mint URL for equality comparison: strip surrounding
+    // whitespace and any trailing slash, and lower-case the scheme and
+    // host, which are the only case-insensitive parts of a URL (RFC 3986).
+    // The path is kept byte-exact: two mints on one host may differ only
+    // by path case. Matched with a regex rather than the URL polyfill,
+    // which does not case-fold hosts. Kept local so the security check
+    // below does not depend on another store's private helper. The URL
+    // comes from the server, so anything that is not a string normalizes
+    // to '' and takes the normal "not approved" path instead of throwing.
+    private normalizeMintUrl = (url?: unknown): string => {
+        if (typeof url !== 'string' || !url) return '';
+        return url
+            .trim()
+            .replace(/\/+$/, '')
+            .replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/i, (schemeAndHost) =>
+                schemeAndHost.toLowerCase()
+            );
+    };
+
+    // Automatic paths (socket events, redeem-all on startup) drop an
+    // untrusted-mint payment silently, but a user tapping Redeem needs to
+    // see why nothing happened.
+    private rejectUntrustedMint = (localNotification?: boolean) => {
+        if (localNotification) return;
+        runInAction(() => {
+            this.error = true;
+            this.error_msg = localeString(
+                'stores.LightningAddressStore.Cashu.mintMismatch'
+            );
+        });
+    };
+
+    public redeemCashu = (
+        quote_id: string,
+        mint_url: string,
+        amount_msat: number,
+        skipStatus?: boolean,
+        localNotification?: boolean,
+        skipMintCheck?: boolean
+    ): Promise<boolean> => {
+        // The socket event and Redeem All can name the same quote; the
+        // second caller waits for the redeem in flight and gets its result
+        const inFlight = this.redeemingQuotes.get(quote_id);
+        if (inFlight) {
+            const generation = this.generation;
+            return inFlight.then((redeemed) => {
+                // the redeem in flight may be a socket event's, which shows
+                // no alert, so show its mint rejection to this caller
+                if (redeemed === false && generation === this.generation) {
+                    this.rejectUntrustedMint(localNotification);
+                }
+                return redeemed;
+            });
+        }
+        const redeem = this.redeemQuote(
+            quote_id,
+            mint_url,
+            amount_msat,
+            skipStatus,
+            localNotification,
+            skipMintCheck
+        ).finally(() => {
+            // after a reset the quote may belong to a newer redeem
+            if (this.redeemingQuotes.get(quote_id) === redeem) {
+                this.redeemingQuotes.delete(quote_id);
+            }
+        });
+        this.redeemingQuotes.set(quote_id, redeem);
+        return redeem;
+    };
+
     @action
-    public redeemCashu = async (
+    private redeemQuote = async (
         quote_id: string,
         mint_url: string,
         amount_msat: number,
@@ -830,6 +634,45 @@ export default class LightningAddressStore {
     ) => {
         this.error = false;
         this.error_msg = '';
+
+        // Security: the ZEUS Pay socket is a hint channel, not a command
+        // channel. A `paid` event (and the server-supplied open-payments
+        // list) names the mint URL to redeem from, but the wallet must only
+        // ever mint from a mint the user has approved: the mint this
+        // lightning address was created with (settings.lightningAddress.
+        // mintUrl, set in createCashu) or a mint the user approved in the
+        // wallet (cashuStore.mintUrls: Add Mint, onboarding, Nostr restore;
+        // mints CDK added on demand are kept out of it). These keep quotes
+        // redeemable when the configured mint changes or is overwritten by
+        // an unrelated lightningAddress settings write. Binding here, at
+        // the single chokepoint every caller passes through, stops a
+        // malicious or compromised backend from steering the wallet to an
+        // arbitrary mint (fake-deposit injection, unapproved mint trust,
+        // raw-HTTP fetch of an attacker URL). On a match, the locally
+        // stored URL is forwarded downstream instead of the server-supplied
+        // spelling, so the server cannot influence how the mint is keyed in
+        // CDK either.
+        const configuredMintUrl =
+            this.settingsStore?.settings?.lightningAddress?.mintUrl;
+        const trustedMintUrls: string[] = configuredMintUrl
+            ? [configuredMintUrl, ...(this.cashuStore?.mintUrls || [])]
+            : this.cashuStore?.mintUrls || [];
+        const normalizedEventMintUrl = this.normalizeMintUrl(mint_url);
+        const trustedMintUrl = normalizedEventMintUrl
+            ? trustedMintUrls.find(
+                  (url) => this.normalizeMintUrl(url) === normalizedEventMintUrl
+              )
+            : undefined;
+        if (!trustedMintUrl) {
+            console.warn(
+                'LightningAddressStore.redeemCashu: refusing to redeem against a mint that is neither the configured lightning address mint nor a locally added mint'
+            );
+            // This call has not set `redeeming`, so leave it alone: a
+            // forged event must not clear the flag of a redeem in progress.
+            this.rejectUntrustedMint(localNotification);
+            return false;
+        }
+
         this.redeeming = true;
 
         const fireLocalNotification = () => {
@@ -863,10 +706,16 @@ export default class LightningAddressStore {
             }
         };
 
+        // Which step failed decides the message. Before the ZEUS Pay /redeem
+        // call the payment is still claimable at the mint, so a connectivity
+        // failure there is retryable rather than terminal.
+        let step: 'claim' | 'redeem' | 'receive' = 'claim';
+        let notify = false;
+
         try {
             const response = await this.cashuStore.checkInvoicePaid(
                 quote_id,
-                mint_url,
+                trustedMintUrl,
                 true, // lockedQuote
                 skipMintCheck
             );
@@ -875,49 +724,48 @@ export default class LightningAddressStore {
                 response?.isPaid ||
                 response?.updatedInvoice?.state === 'ISSUED'
             ) {
-                try {
-                    const redeemData = await this.callRedeemEndpoint(quote_id);
+                step = 'redeem';
+                const redeemData = await this.callRedeemEndpoint(quote_id);
 
-                    // If server returns a token, receive it
-                    if (redeemData.token) {
-                        console.log(
-                            'Receiving token from server for quote:',
-                            quote_id
+                // If server returns a token, receive it
+                if (redeemData.token) {
+                    step = 'receive';
+                    console.log(
+                        'Receiving token from server for quote:',
+                        quote_id
+                    );
+                    // Security: CDK's receive adds whatever mint the
+                    // token names, so bind the server's token to the
+                    // approved mint too. Without this a compromised
+                    // backend could reference an already issued quote
+                    // at the approved mint and return a token from any
+                    // mint. A token that fails to decode throws and is
+                    // not received.
+                    const decoded = await this.cashuStore.decodeTokenCDK(
+                        redeemData.token
+                    );
+                    if (
+                        this.normalizeMintUrl(decoded?.mint_url) !==
+                        this.normalizeMintUrl(trustedMintUrl)
+                    ) {
+                        console.warn(
+                            'LightningAddressStore.redeemCashu: refusing a redeem token from a mint other than the approved mint'
                         );
-                        // Provide our Cashu secret key; CDK will only use it if the token is P2PK-locked.
-                        const signingKey =
-                            this.cashuStore.deriveCashuSecretKey();
-                        await this.cashuStore.receiveTokenCDK(
-                            redeemData.token,
-                            signingKey || undefined
-                        );
+                        runInAction(() => {
+                            this.redeeming = false;
+                        });
+                        this.rejectUntrustedMint(localNotification);
+                        return false;
                     }
-
-                    this.redeeming = false;
-
-                    if (localNotification && response.isPaid) {
-                        fireLocalNotification();
-                    }
-
-                    if (!skipStatus) {
-                        this.status(true).catch((e) =>
-                            console.log(
-                                'Error fetching Lightning address status',
-                                e
-                            )
-                        );
-                    }
-
-                    return true;
-                } catch (error) {
-                    const error_msg = error?.toString();
-                    runInAction(() => {
-                        this.redeeming = false;
-                        this.error = true;
-                        this.error_msg = error_msg;
-                    });
-                    throw error;
+                    // Provide our Cashu secret key; CDK will only use it if the token is P2PK-locked.
+                    const signingKey = this.cashuStore.deriveCashuSecretKey();
+                    await this.cashuStore.receiveTokenCDK(
+                        redeemData.token,
+                        signingKey || undefined
+                    );
                 }
+
+                notify = !!(localNotification && response.isPaid);
             } else {
                 runInAction(() => {
                     this.redeeming = false;
@@ -928,157 +776,51 @@ export default class LightningAddressStore {
                 });
                 return true;
             }
-        } catch (e) {
+        } catch (e: any) {
+            let prefix: string;
+            if (step === 'redeem') {
+                prefix = localeString(
+                    'stores.LightningAddressStore.Cashu.redeemErr'
+                );
+            } else if (step === 'claim' && e?.type === CDKErrorType.Network) {
+                prefix = localeString(
+                    'stores.LightningAddressStore.Cashu.mintUnreachable'
+                );
+            } else {
+                prefix = localeString(
+                    'stores.LightningAddressStore.Cashu.quotePaymentErr'
+                );
+            }
+            const reason = cashuErrorForDisplay(e);
             runInAction(() => {
                 this.redeeming = false;
                 this.error = true;
-                this.error_msg = localeString(
-                    'stores.LightningAddressStore.Cashu.quotePaymentErr'
-                );
+                this.error_msg = reason ? `${prefix}: ${reason}` : prefix;
             });
             return true;
         }
-    };
 
-    @action
-    public lookupAttestations = async (hash: string, amountMsat: number) => {
-        const attestations: any = [];
-        let status = 'warning';
+        // The payment is redeemed at this point; nothing below may report it
+        // as a redeem failure
+        runInAction(() => {
+            this.redeeming = false;
+        });
 
-        try {
-            const attestationEvents: any = {};
-
-            const hashpk = getPublicKey(hexToBytes(hash));
-
-            const relays =
-                this.settingsStore.settings.lightningAddress.nostrRelays;
-            const pool = new SimplePool();
+        if (notify) {
             try {
-                const events = await pool.querySync(relays, {
-                    kinds: [55869],
-                    '#p': [hashpk]
-                });
-
-                events.map((event: any) => {
-                    attestationEvents[event.id] = event;
-                });
-            } finally {
-                pool.close(relays);
-            }
-
-            Object.keys(attestationEvents).map((key) => {
-                const attestation = this.analyzeAttestation(
-                    attestationEvents[key],
-                    hash,
-                    amountMsat
-                );
-                attestations.push(attestation);
-            });
-
-            if (attestations.length === 1) {
-                const attestation = attestations[0];
-                if (attestation.isValid) {
-                    status = 'success';
-                } else {
-                    status = 'error';
-                }
-            }
-            if (attestations.length > 1) status = 'error';
-        } catch (e) {
-            console.log('attestation lookup error', e);
-        }
-
-        return {
-            attestations,
-            status
-        };
-    };
-
-    private calculateFeeMsat = (amountMsat: string | number) => {
-        let feeMsat;
-        for (let i = this.fees.length - 1; i >= 0; i--) {
-            const feeItem = this.fees[i];
-            const { limitAmount, limitQualifier, fee, feeQualifier } = feeItem;
-
-            let match;
-            if (limitQualifier === 'lt') {
-                match = new BigNumber(amountMsat).div(1000).lt(limitAmount);
-            } else if (limitQualifier === 'lte') {
-                match = new BigNumber(amountMsat).div(1000).lte(limitAmount);
-            } else if (limitQualifier === 'gt') {
-                match = new BigNumber(amountMsat).div(1000).gt(limitAmount);
-            } else if (limitQualifier === 'gte') {
-                match = new BigNumber(amountMsat).div(1000).gte(limitAmount);
-            }
-
-            if (match) {
-                if (feeQualifier === 'fixedSats') {
-                    feeMsat = fee * 1000;
-                } else if (feeQualifier === 'percentage') {
-                    feeMsat = Number(
-                        new BigNumber(amountMsat).times(fee).div(100)
-                    );
-                }
+                fireLocalNotification();
+            } catch (e) {
+                console.log('Error posting payment notification', e);
             }
         }
 
-        if (feeMsat) {
-            return feeMsat;
-        } else {
-            // return 250 sat fee in case of error
-            return 250000;
-        }
-    };
-
-    private analyzeAttestation = (
-        attestation: any,
-        hash: string,
-        amountMsat: string | number
-    ) => {
-        const { content } = attestation;
-
-        // defaults
-        attestation.isValid = false;
-        attestation.isValidLightningInvoice = false;
-        attestation.isHashValid = false;
-        attestation.isAmountValid = false;
-
-        try {
-            const decoded = Bolt11Utils.decode(content);
-
-            attestation.isValidLightningInvoice = true;
-
-            if (decoded.payment_hash === hash) {
-                attestation.isHashValid = true;
-            }
-
-            if (decoded.millisatoshis) {
-                attestation.millisatoshis = decoded.millisatoshis;
-                attestation.feeMsat = this.calculateFeeMsat(
-                    decoded.millisatoshis
-                );
-
-                if (
-                    new BigNumber(amountMsat)
-                        .plus(attestation.feeMsat)
-                        .isEqualTo(decoded.millisatoshis)
-                ) {
-                    attestation.isAmountValid = true;
-                }
-            }
-
-            if (
-                attestation.isValidLightningInvoice &&
-                attestation.isHashValid &&
-                attestation.isAmountValid
-            ) {
-                attestation.isValid = true;
-            }
-        } catch (e) {
-            console.log('analyzeAttestation decode error', e);
+        if (!skipStatus) {
+            this.status(true).catch((e) =>
+                console.log('Error fetching Lightning address status', e)
+            );
         }
 
-        return attestation;
+        return true;
     };
 
     @action
@@ -1112,307 +854,100 @@ export default class LightningAddressStore {
     };
 
     @action
-    public lookupPreimageAndRedeemZaplocker = async (
-        hash: string,
-        amount_msat: number,
-        comment?: string,
-        skipStatus?: boolean,
-        localNotification?: boolean
-    ) => {
-        return await this.getPreimageMap().then(async (map) => {
-            const preimage = map[hash];
-            const preimageNotFound = !preimage;
-            const value = (amount_msat / 1000).toString();
-            const value_commas = value.replace(
-                /\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g,
-                ','
-            );
-
-            const fireLocalNotification = () => {
-                const title = localeString('zeuspay.paymentReceived.title');
-                const body = localeString('zeuspay.paymentReceived.body', {
-                    value: value_commas,
-                    unit:
-                        value_commas === '1'
-                            ? 'sat'
-                            : localeString('general.sats')
-                });
-                if (Platform.OS === 'android') {
-                    // @ts-ignore:next-line
-                    Notifications.postLocalNotification({
-                        title,
-                        body
-                    });
-                }
-
-                if (Platform.OS === 'ios') {
-                    // @ts-ignore:next-line
-                    Notifications.postLocalNotification({
-                        title,
-                        body,
-                        sound: 'chime.aiff'
-                    });
-                }
-            };
-
-            return await BackendUtils.createInvoice({
-                // 24 hrs
-                expiry: '86400',
-                value_msat: amount_msat,
-                memo: comment ? `ZEUS Pay: ${comment}` : 'ZEUS Pay',
-                preimage,
-                private:
-                    this.settingsStore?.settings?.lightningAddress
-                        ?.routeHints || false
-            })
-                .then((result: any) => {
-                    if (result.payment_request) {
-                        return this.redeemZaplocker(
-                            hash,
-                            result.payment_request,
-                            preimageNotFound
-                        ).then((success: any) => {
-                            if (success?.success === true && localNotification)
-                                fireLocalNotification();
-                            if (!skipStatus)
-                                this.status(true).catch((e) =>
-                                    console.log(
-                                        'Error fetching Lightning address status',
-                                        e
-                                    )
-                                );
-                            return;
-                        });
-                    }
-                })
-                .catch(() => {
-                    // first, try looking up invoice for redeem
-                    try {
-                        return BackendUtils.lookupInvoice({
-                            r_hash: hash
-                        }).then((result: any) => {
-                            if (result.payment_request) {
-                                return this.redeemZaplocker(
-                                    hash,
-                                    result.payment_request,
-                                    preimageNotFound
-                                ).then((success: any) => {
-                                    if (
-                                        success?.success === true &&
-                                        localNotification
-                                    )
-                                        fireLocalNotification();
-                                    if (!skipStatus)
-                                        this.status(true).catch((e) =>
-                                            console.log(
-                                                'Error fetching Lightning address status',
-                                                e
-                                            )
-                                        );
-                                    return;
-                                });
-                            }
-                        });
-                    } catch (e) {
-                        // then, try to redeem without new pay req
-                        return this.redeemZaplocker(
-                            hash,
-                            undefined,
-                            preimageNotFound
-                        ).then((success) => {
-                            if (success?.success === true && localNotification)
-                                fireLocalNotification();
-                            if (!skipStatus)
-                                this.status(true).catch((e) =>
-                                    console.log(
-                                        'Error fetching Lightning address status',
-                                        e
-                                    )
-                                );
-                            return;
-                        });
-                    }
-                });
-        });
-    };
-
-    @action
-    public redeemAllOpenPaymentsZaplocker = async (
-        localNotification?: boolean
-    ) => {
-        this.redeemingAll = true;
-        const attestationLevel =
-            this.settingsStore?.settings?.lightningAddress
-                ?.automaticallyAcceptAttestationLevel ?? 2;
-
-        // disabled
-        if (attestationLevel === 0) {
-            for (const item of this.paid) {
-                await this.lookupPreimageAndRedeemZaplocker(
-                    item.hash,
-                    item.amount_msat,
-                    item.comment,
-                    true,
-                    localNotification
-                ).catch((e) => {
-                    console.log('Error redeeming payment', e);
-                });
-            }
-        } else {
-            for (const item of this.paid) {
-                await this.lookupAttestations(item.hash, item.amount_msat)
-                    .then(async ({ status }: { status?: string }) => {
-                        if (status === 'error') return;
-                        // success only
-                        if (status === 'warning' && attestationLevel === 1)
-                            return;
-                        return await this.lookupPreimageAndRedeemZaplocker(
-                            item.hash,
-                            item.amount_msat,
-                            item.comment,
-                            true,
-                            localNotification
-                        );
-                    })
-                    .catch((e) => {
-                        console.log('Error looking up attestation', e);
-                    });
-            }
-        }
-        runInAction(() => {
-            this.status(true).catch((e) =>
-                console.log('Error fetching Lightning address status', e)
-            );
-            this.redeemingAll = false;
-        });
-    };
-
-    @action
     public redeemAllOpenPaymentsCashu = async (localNotification?: boolean) => {
+        const generation = this.generation;
         this.redeemingAll = true;
+        // Each redeemCashu call clears the error first, so a mint rejection
+        // would be wiped by the next payment. redeemCashu only returns
+        // false on a mint rejection; surface it once the loop is done.
+        let rejected = false;
 
-        const openPaymentsToProcess = this.paid.slice().reverse();
-        const totalPayments = openPaymentsToProcess.length;
+        try {
+            const openPaymentsToProcess = this.paid.slice().reverse();
+            const totalPayments = openPaymentsToProcess.length;
 
-        for (let i = 0; i < totalPayments; i++) {
-            const item = openPaymentsToProcess[i];
-            const isLast = i === totalPayments - 1; // True if this is the last item
+            for (let i = 0; i < totalPayments; i++) {
+                if (generation !== this.generation) break;
+                const item = openPaymentsToProcess[i];
+                const isLast = i === totalPayments - 1; // True if this is the last item
 
-            await this.redeemCashu(
-                item.quote_id,
-                item.mint_url,
-                item.amount_msat,
-                true, // skipStatus
-                localNotification,
-                !isLast // skipMintCheck
-            );
-        }
-
-        runInAction(() => {
-            this.status(true).catch((e) =>
-                console.log('Error fetching Lightning address status', e)
-            );
-            this.redeemingAll = false;
-        });
-    };
-
-    private subscribeUpdatesZaplocker = async () => {
-        const { verification, signature } = await this.getAuthData();
-
-        this.socket = io(LNURL_HOST, {
-            path: LNURL_SOCKET_PATH
-        }).connect();
-        this.socket.emit('auth', {
-            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
-            message: verification,
-            signature
-        });
-
-        this.socket.on('paid', (data: any) => {
-            const { hash, amount_msat, comment } = data;
-
-            const attestationLevel =
-                this.settingsStore?.settings?.lightningAddress
-                    ?.automaticallyAcceptAttestationLevel ?? 2;
-
-            if (attestationLevel === 0) {
-                this.lookupPreimageAndRedeemZaplocker(
-                    hash,
-                    amount_msat,
-                    comment,
-                    false,
-                    true
-                ).catch((e) => console.log('Error redeeming payment', e));
-            } else {
-                this.lookupAttestations(hash, amount_msat)
-                    .then(({ status }: { status?: string }) => {
-                        if (status === 'error') return;
-                        // success only
-                        if (status === 'warning' && attestationLevel === 1)
-                            return;
-                        this.lookupPreimageAndRedeemZaplocker(
-                            hash,
-                            amount_msat,
-                            comment,
-                            false,
-                            true
-                        ).catch((e) =>
-                            console.log('Error redeeming payment', e)
-                        );
-                    })
-                    .catch((e) =>
-                        console.log('Error looking up attestation', e)
+                // The list is server-supplied: one bad item must not stop the
+                // remaining payments from being redeemed.
+                try {
+                    const redeemed = await this.redeemCashu(
+                        item.quote_id,
+                        item.mint_url,
+                        item.amount_msat,
+                        true, // skipStatus
+                        localNotification,
+                        !isLast // skipMintCheck
                     );
+                    if (redeemed === false) rejected = true;
+                } catch (e) {
+                    console.log('Error redeeming open payment', e);
+                }
             }
-        });
-    };
-
-    private subscribeUpdatesCashu = async () => {
-        const { verification, signature } = await this.getAuthData();
-
-        this.socket = io(LNURL_HOST, {
-            path: LNURL_SOCKET_PATH
-        }).connect();
-        this.socket.emit('auth', {
-            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
-            message: verification,
-            signature
-        });
-
-        this.socket.on('paid', (data: any) => {
-            const { quote_id, mint_url, amount_msat } = data;
-            this.redeemCashu(quote_id, mint_url, amount_msat, false, true);
-        });
-    };
-
-    public prepareToAutomaticallyAcceptZaplocker = async () => {
-        this.readyToAutomaticallyAccept = false;
-        this.prepareToAutomaticallyAcceptStart = true;
-
-        while (!this.readyToAutomaticallyAccept) {
-            const isReady =
-                await this.nodeInfoStore.isLightningReadyToReceive();
-            if (isReady) {
+        } finally {
+            // after a reset, the next wallet's state is not this run's to
+            // report on or clear
+            if (generation === this.generation) {
+                if (rejected) this.rejectUntrustedMint(localNotification);
                 runInAction(() => {
-                    this.readyToAutomaticallyAccept = true;
-                    if (this.socket && this.socket.connected) return;
-                    this.redeemAllOpenPaymentsZaplocker(true).catch((e) =>
-                        console.log('Error redeeming payments', e)
-                    );
-                    this.subscribeUpdatesZaplocker().catch((e) =>
+                    this.status(true).catch((e) =>
                         console.log(
-                            'Error subscribing to Lightning address updates',
+                            'Error fetching Lightning address status',
                             e
                         )
                     );
+                    this.redeemingAll = false;
                 });
             }
-            await sleep(3000);
         }
     };
 
+    private subscribeUpdatesCashu = async () => {
+        const generation = this.generation;
+        let auth: Auth;
+        try {
+            auth = await this.getAuthData();
+        } finally {
+            if (generation === this.generation) this.socketPending = false;
+        }
+        if (generation !== this.generation) return;
+        const { verification, signature } = auth;
+
+        this.socket = io(LNURL_HOST, {
+            path: LNURL_SOCKET_PATH
+        }).connect();
+        this.socket.emit('auth', {
+            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+            message: verification,
+            signature
+        });
+
+        this.socket.on('paid', (data: any) => {
+            if (generation !== this.generation) return;
+            if (!isOpenCashuPayment(data)) return;
+            const { quote_id, mint_url, amount_msat } = data;
+            this.redeemCashu(
+                quote_id,
+                mint_url,
+                amount_msat,
+                false,
+                true
+            ).catch((e) =>
+                console.log('Error redeeming Lightning address payment', e)
+            );
+        });
+    };
+
     public prepareToAutomaticallyAcceptCashu = () => {
-        if (this.socket && this.socket.connected) return;
+        // socket.io's `active` stays true while the socket connects or
+        // reconnects, so a socket that is still connecting counts as open.
+        // It turns false when the server ends the session, which socket.io
+        // does not recover from, and a new socket is opened then.
+        if (this.socket?.active || this.socketPending) return;
+        this.socketPending = true;
         this.redeemAllOpenPaymentsCashu(true).catch((e) =>
             console.log('Error redeeming payments', e)
         );
@@ -1426,15 +961,18 @@ export default class LightningAddressStore {
         this.loading = false;
         this.error = false;
         this.error_msg = '';
-        this.availableHashes = 0;
-        this.localHashes = 0;
         this.paid = [];
-        this.preimageMap = {};
         // the cached auth signature is tied to the previous node's
         // pubkey; reusing it after a node switch makes the server
         // reject calls with 'invalid signature'
         this.auth = undefined;
         this.authDate = undefined;
+        this.generation += 1;
+        this.socketPending = false;
+        // a redeem still running belongs to the previous connection, so
+        // the next one does not wait for it
+        this.redeemingQuotes.clear();
+        this.redeemingAll = false;
         if (this.socket) this.socket.disconnect();
         this.socket = undefined;
         this.lightningAddress = '';
@@ -1443,7 +981,6 @@ export default class LightningAddressStore {
         this.lightningAddressType = '';
         this.zeusPlusExpiresAt = undefined;
         this.zeusPlusAnnualFeeSats = undefined;
-        this.zeusPlusDiscount = undefined;
         this.legacyAccount = false;
         this.perks = [];
     };

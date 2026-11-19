@@ -63,9 +63,14 @@ export const createClaimTransaction = async ({
 };
 
 /**
+ * Builds and signs a reverse swap claim and returns its hex. Nothing is
+ * broadcast: a cooperative claim has already sent the preimage to the swap
+ * host by the time this resolves, so the caller must store the result and
+ * keep broadcasting it until it confirms.
+ *
  * @throws
  */
-export const createReverseClaimTransaction = async ({
+export const buildReverseClaimTransaction = async ({
     endpoint,
     swapId,
     claimLeaf,
@@ -78,7 +83,7 @@ export const createReverseClaimTransaction = async ({
     destinationAddress,
     feeRate,
     minerFee,
-    isTestnet
+    network
 }: {
     endpoint: string;
     swapId: string;
@@ -92,34 +97,32 @@ export const createReverseClaimTransaction = async ({
     destinationAddress: string;
     feeRate: number;
     minerFee: number;
-    isTestnet?: boolean;
-}): Promise<string> => {
-    try {
-        const error: string = await LncModule.createReverseClaimTransaction(
-            endpoint,
-            swapId,
-            claimLeaf,
-            refundLeaf,
-            privateKey,
-            servicePubKey,
-            preimageHex,
-            transactionHex,
-            lockupAddress,
-            destinationAddress,
-            feeRate,
-            minerFee,
-            isTestnet
-        );
-        return error;
-    } catch (e) {
-        throw e;
-    }
-};
+    network: string;
+}): Promise<string> =>
+    LncModule.buildReverseClaimTransaction(
+        endpoint,
+        swapId,
+        claimLeaf,
+        refundLeaf,
+        privateKey,
+        servicePubKey,
+        preimageHex,
+        transactionHex,
+        lockupAddress,
+        destinationAddress,
+        feeRate,
+        minerFee,
+        network
+    );
 
 /**
+ * Builds and signs a submarine swap refund and returns its hex. Nothing is
+ * broadcast. Pays minerFee sats when it is above 0, and feeRate sat/vbyte
+ * otherwise.
+ *
  * @throws
  */
-export const createRefundTransaction = async ({
+export const buildRefundTransaction = async ({
     endpoint,
     swapId,
     claimLeaf,
@@ -128,11 +131,12 @@ export const createRefundTransaction = async ({
     privateKey,
     servicePubKey,
     feeRate,
+    minerFee = 0,
     timeoutBlockHeight,
     destinationAddress,
     lockupAddress,
     cooperative = false,
-    isTestnet
+    network
 }: {
     endpoint: string;
     swapId: string;
@@ -142,30 +146,26 @@ export const createRefundTransaction = async ({
     privateKey: string;
     servicePubKey: string;
     feeRate: number;
+    minerFee?: number;
     timeoutBlockHeight: number;
     destinationAddress: string;
     lockupAddress: string;
     cooperative?: boolean;
-    isTestnet?: boolean;
-}): Promise<string> => {
-    try {
-        const txid: string = await LncModule.createRefundTransaction(
-            endpoint,
-            swapId,
-            claimLeaf,
-            refundLeaf,
-            transactionHex,
-            privateKey,
-            servicePubKey,
-            feeRate,
-            timeoutBlockHeight,
-            destinationAddress,
-            lockupAddress,
-            cooperative,
-            isTestnet
-        );
-        return txid;
-    } catch (e) {
-        throw e;
-    }
-};
+    network: string;
+}): Promise<string> =>
+    LncModule.buildRefundTransaction(
+        endpoint,
+        swapId,
+        claimLeaf,
+        refundLeaf,
+        transactionHex,
+        privateKey,
+        servicePubKey,
+        feeRate,
+        minerFee,
+        timeoutBlockHeight,
+        destinationAddress,
+        lockupAddress,
+        cooperative,
+        network
+    );

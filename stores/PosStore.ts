@@ -31,6 +31,8 @@ export interface orderPaymentInfo {
 export interface orderInvoiceInfo {
     orderId: string;
     payment_request: string;
+    // the LSP fee a wrapped payment_request was priced with
+    lspFeeSats?: number | null;
     rHash: string;
     exchangeRate: string;
     amount: string;
@@ -238,6 +240,7 @@ export default class PosStore {
     public recordInvoice = ({
         orderId,
         payment_request,
+        lspFeeSats,
         rHash,
         exchangeRate,
         amount,
@@ -248,6 +251,7 @@ export default class PosStore {
         Storage.setItem(`pos-invoice-${orderId}`, {
             orderId,
             payment_request,
+            lspFeeSats,
             rHash,
             exchangeRate,
             amount,

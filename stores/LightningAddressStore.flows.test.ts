@@ -1,0 +1,1762 @@
+jest.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
+jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
+jest.mock('react-native-notifications', () => ({
+    Notifications: { postLocalNotification: jest.fn() }
+}));
+jest.mock('socket.io-client', () => ({ io: jest.fn() }));
+jest.mock('./CashuStore', () => ({}));
+jest.mock('./NodeInfoStore', () => ({}));
+jest.mock('./SettingsStore', () => ({}));
+jest.mock('../utils/BackendUtils', () => ({
+    __esModule: true,
+    default: { signMessage: jest.fn() }
+}));
+jest.mock('../utils/LocaleUtils');
+jest.mock('../storage', () => ({
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    removeItem: jest.fn()
+}));
+
+import { Platform } from 'react-native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import { Notifications } from 'react-native-notifications';
+import { io } from 'socket.io-client';
+
+import BackendUtils from '../utils/BackendUtils';
+import * as LocaleUtils from '../utils/LocaleUtils';
+import Storage from '../storage';
+import LightningAddressStore, {
+    ADDRESS_ACTIVATED_STRING,
+    HASHES_STORAGE_STRING
+} from './LightningAddressStore';
+
+const HOST = 'https://zeuspay.com';
+const MINT = 'https://mint.test';
+const NODE_PUBKEY = '03cd';
+// The server issues 64 random bytes as lowercase hex
+const CHALLENGE = 'c0'.repeat(64);
+const FIRST = 'f1'.repeat(64);
+const SECOND = '5e'.repeat(64);
+const V = 'ab'.repeat(64);
+const CANONICAL_PHRASE =
+    'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
+
+const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
+const signMessage = BackendUtils.signMessage as jest.Mock;
+const postLocalNotification = Notifications.postLocalNotification as jest.Mock;
+const ioMock = io as jest.Mock;
+
+type Reply = { status?: number; body?: any } | Error;
+
+// Routes ReactNativeBlobUtil.fetch by API path. Paths without a reply
+// answer 404 so an unexpected call fails loudly.
+let replies: { [path: string]: Reply[] };
+const reply = (path: string, ...r: Reply[]) => {
+    replies[path] = (replies[path] || []).concat(r);
+};
+const ok = (body: any = {}) => ({
+    status: 200,
+    body: { success: true, ...body }
+});
+
+const callsTo = (path: string) =>
+    fetchMock.mock.calls.filter(([, url]) => url === `${HOST}${path}`);
+const bodyOf = (path: string, index = 0) => JSON.parse(callsTo(path)[index][3]);
+
+const newCashuStore = () => ({
+    cashuWallets: { [MINT]: { pubkey: '02ab' } } as any,
+    mintUrls: [MINT],
+    initializeWallet: jest.fn(),
+    checkInvoicePaid: jest.fn(),
+    deriveCashuSecretKey: jest.fn(),
+    receiveTokenCDK: jest.fn(),
+    decodeTokenCDK: jest.fn()
+});
+
+let cashuStore: ReturnType<typeof newCashuStore>;
+let settingsStore: {
+    settings: any;
+    updateSettings: jest.Mock;
+    updateSettingsGroup: jest.Mock;
+};
+
+const newStore = () =>
+    new LightningAddressStore(
+        cashuStore as any,
+        { nodeInfo: { identity_pubkey: NODE_PUBKEY } } as any,
+        settingsStore as any
+    );
+
+const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
+
+describe('LightningAddressStore flows', () => {
+    beforeEach(() => {
+        jest.resetAllMocks();
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        (Platform as any).OS = 'ios';
+
+        replies = {};
+        fetchMock.mockImplementation(async (_m, url: string) => {
+            const path = url.replace(HOST, '');
+            const next = replies[path]?.shift() ?? {
+                status: 404,
+                body: { error: `no reply for ${path}` }
+            };
+            if (next instanceof Error) throw next;
+            return {
+                info: () => ({ status: next.status ?? 200 }),
+                json: () => next.body
+            };
+        });
+        signMessage.mockResolvedValue({ zbase: 'zsig' });
+        (Storage.setItem as jest.Mock).mockResolvedValue(true);
+
+        cashuStore = newCashuStore();
+        cashuStore.initializeWallet.mockResolvedValue(undefined);
+        cashuStore.deriveCashuSecretKey.mockReturnValue('cashu-key');
+        cashuStore.receiveTokenCDK.mockResolvedValue(undefined);
+        cashuStore.decodeTokenCDK.mockResolvedValue({ mint_url: MINT });
+        settingsStore = {
+            settings: {},
+            updateSettings: jest.fn().mockResolvedValue(undefined),
+            updateSettingsGroup: jest.fn(async (group: string, patch: any) => {
+                settingsStore.settings = {
+                    ...settingsStore.settings,
+                    [group]: { ...settingsStore.settings[group], ...patch }
+                };
+            })
+        };
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    describe('auth', () => {
+        it('signs the server challenge and sends it with the next call', async () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: CHALLENGE }));
+            reply('/api/plus/order', ok());
+
+            await store.createZeusPayPlusOrder();
+
+            expect(bodyOf('/api/lnurl/auth')).toEqual({
+                pubkey: NODE_PUBKEY
+            });
+            expect(signMessage).toHaveBeenCalledWith(CHALLENGE);
+            expect(bodyOf('/api/plus/order')).toEqual({
+                pubkey: NODE_PUBKEY,
+                message: CHALLENGE,
+                signature: 'zsig'
+            });
+        });
+
+        it('uses the plain signature when the backend returns no zbase', async () => {
+            const store = newStore();
+            signMessage.mockResolvedValue({ signature: 'hexsig' });
+            reply('/api/lnurl/auth', ok({ verification: CHALLENGE }));
+            reply('/api/plus/order', ok());
+
+            await store.createZeusPayPlusOrder();
+
+            expect(bodyOf('/api/plus/order').signature).toBe('hexsig');
+        });
+
+        it('reuses the signature for 10 minutes, then signs a new challenge', async () => {
+            const now = jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
+            const store = newStore();
+            signMessage
+                .mockResolvedValueOnce({ zbase: 'sig-first' })
+                .mockResolvedValueOnce({ zbase: 'sig-second' });
+            reply(
+                '/api/lnurl/auth',
+                ok({ verification: FIRST }),
+                ok({ verification: SECOND })
+            );
+            reply('/api/plus/order', ok(), ok(), ok());
+
+            await store.createZeusPayPlusOrder();
+            now.mockReturnValue(1_000_000 + 10 * 60 * 1000 - 1);
+            await store.createZeusPayPlusOrder();
+
+            expect(callsTo('/api/lnurl/auth')).toHaveLength(1);
+            expect(signMessage).toHaveBeenCalledTimes(1);
+            expect(bodyOf('/api/plus/order', 1)).toMatchObject({
+                message: FIRST,
+                signature: 'sig-first'
+            });
+
+            now.mockReturnValue(1_000_000 + 10 * 60 * 1000 + 1);
+            await store.createZeusPayPlusOrder();
+
+            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(signMessage).toHaveBeenCalledTimes(2);
+            expect(signMessage).toHaveBeenLastCalledWith(SECOND);
+            expect(bodyOf('/api/plus/order', 2)).toMatchObject({
+                message: SECOND,
+                signature: 'sig-second'
+            });
+        });
+
+        it('signs a new challenge after reset', async () => {
+            const store = newStore();
+            reply(
+                '/api/lnurl/auth',
+                ok({ verification: FIRST }),
+                ok({ verification: SECOND })
+            );
+            reply('/api/plus/order', ok(), ok());
+
+            await store.createZeusPayPlusOrder();
+            store.reset();
+            await store.createZeusPayPlusOrder();
+
+            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(bodyOf('/api/plus/order', 1).message).toBe(SECOND);
+        });
+
+        it.each([
+            ['the LNURL-auth canonical phrase', CANONICAL_PHRASE],
+            ['uppercase hex', CHALLENGE.toUpperCase()],
+            ['hex of the wrong length', 'c0'.repeat(32)],
+            ['a non-hex string', 'challenge'],
+            ['a non-string value', { toString: () => CHALLENGE }],
+            ['a missing challenge', undefined]
+        ])(
+            'refuses to sign %s and does not send it on',
+            async (_label, verification) => {
+                const store = newStore();
+                reply('/api/lnurl/auth', ok({ verification }));
+                reply('/api/plus/order', ok());
+
+                await expect(store.createZeusPayPlusOrder()).rejects.toThrow(
+                    'Invalid auth challenge'
+                );
+
+                expect(signMessage).not.toHaveBeenCalled();
+                expect(callsTo('/api/plus/order')).toHaveLength(0);
+                expect(store.error).toBe(true);
+                expect(store.error_msg).toContain('Invalid auth challenge');
+            }
+        );
+
+        it('does not cache a refused challenge', async () => {
+            const store = newStore();
+            reply(
+                '/api/lnurl/auth',
+                ok({ verification: CANONICAL_PHRASE }),
+                ok({ verification: CHALLENGE })
+            );
+            reply('/api/plus/order', ok());
+
+            await expect(store.createZeusPayPlusOrder()).rejects.toThrow(
+                'Invalid auth challenge'
+            );
+            await store.createZeusPayPlusOrder();
+
+            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(signMessage).toHaveBeenCalledTimes(1);
+            expect(signMessage).toHaveBeenCalledWith(CHALLENGE);
+            expect(bodyOf('/api/plus/order').message).toBe(CHALLENGE);
+        });
+
+        it('does not cache a signature that finishes after reset', async () => {
+            const store = newStore();
+            let finishSign: (value: any) => void = () => {};
+            signMessage
+                .mockReturnValueOnce(
+                    new Promise((resolve) => (finishSign = resolve))
+                )
+                .mockResolvedValueOnce({ zbase: 'sig-new' });
+            reply(
+                '/api/lnurl/auth',
+                ok({ verification: FIRST }),
+                ok({ verification: SECOND })
+            );
+            reply('/api/plus/order', ok(), ok());
+
+            const stale = store.createZeusPayPlusOrder();
+            await flushPromises();
+            expect(signMessage).toHaveBeenCalledWith(FIRST);
+            store.reset();
+            finishSign({ zbase: 'sig-old' });
+            await stale;
+
+            // the request that started before reset still gets its result
+            expect(bodyOf('/api/plus/order')).toMatchObject({
+                message: FIRST,
+                signature: 'sig-old'
+            });
+            expect(store.auth).toBeUndefined();
+            expect(store.authDate).toBeUndefined();
+
+            await store.createZeusPayPlusOrder();
+
+            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(signMessage).toHaveBeenCalledTimes(2);
+            expect(bodyOf('/api/plus/order', 1)).toMatchObject({
+                message: SECOND,
+                signature: 'sig-new'
+            });
+        });
+
+        it('keeps the next wallet signature when a request from before reset finishes later', async () => {
+            const store = newStore();
+            let finishSign: (value: any) => void = () => {};
+            signMessage
+                .mockReturnValueOnce(
+                    new Promise((resolve) => (finishSign = resolve))
+                )
+                .mockResolvedValueOnce({ zbase: 'sig-new' });
+            reply(
+                '/api/lnurl/auth',
+                ok({ verification: FIRST }),
+                ok({ verification: SECOND })
+            );
+            reply('/api/plus/order', ok(), ok(), ok());
+
+            const stale = store.createZeusPayPlusOrder();
+            await flushPromises();
+            store.reset();
+            await store.createZeusPayPlusOrder();
+            finishSign({ zbase: 'sig-old' });
+            await stale;
+
+            expect(store.auth).toEqual({
+                verification: SECOND,
+                signature: 'sig-new'
+            });
+
+            await store.createZeusPayPlusOrder();
+
+            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(bodyOf('/api/plus/order', 2)).toMatchObject({
+                message: SECOND,
+                signature: 'sig-new'
+            });
+        });
+
+        it('fails the call without signing when the server refuses the challenge', async () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', {
+                status: 429,
+                body: { error: 'rate limited' }
+            });
+
+            await expect(store.status()).rejects.toBe('rate limited');
+
+            expect(signMessage).not.toHaveBeenCalled();
+            expect(callsTo('/api/lnurl/status')).toHaveLength(0);
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('rate limited');
+            expect(store.loading).toBe(false);
+        });
+        it('sends no account request when signing fails, and signs again on retry', async () => {
+            const store = newStore();
+            signMessage
+                .mockRejectedValueOnce(new Error('node locked'))
+                .mockResolvedValueOnce({ zbase: 'sig-retry' });
+            reply(
+                '/api/lnurl/auth',
+                ok({ verification: FIRST }),
+                ok({ verification: SECOND })
+            );
+            reply('/api/lnurl/status', ok({ addressType: 'cashu' }));
+
+            await expect(store.status()).rejects.toThrow('node locked');
+
+            expect(callsTo('/api/lnurl/status')).toHaveLength(0);
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('Error: node locked');
+            expect(store.loading).toBe(false);
+
+            await store.status();
+
+            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(bodyOf('/api/lnurl/status')).toMatchObject({
+                message: SECOND,
+                signature: 'sig-retry'
+            });
+            expect(store.error).toBe(false);
+        });
+    });
+
+    describe('status', () => {
+        const authed = () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            return store;
+        };
+
+        it('copies the account fields from the response', async () => {
+            const store = authed();
+            reply(
+                '/api/lnurl/status',
+                ok({
+                    addressType: 'cashu',
+                    paid: [],
+                    minimumSats: 10,
+                    handle: 'satoshi',
+                    domain: 'zeusnuts.com',
+                    plusExpiresAt: '2027-01-01',
+                    plusAnnualFeeSats: 21000,
+                    legacyAccount: true,
+                    perks: [{ title: 'Perk' }],
+                    deviceToken: 'service-token',
+                    image: 'base64img',
+                    bio: 'hello',
+                    noffer: 'noffer1abc'
+                })
+            );
+
+            await store.status();
+
+            expect(bodyOf('/api/lnurl/status')).toEqual({
+                pubkey: NODE_PUBKEY,
+                message: V,
+                signature: 'zsig'
+            });
+            expect(store.lightningAddress).toBe('satoshi@zeusnuts.com');
+            expect(store.lightningAddressHandle).toBe('satoshi');
+            expect(store.lightningAddressDomain).toBe('zeusnuts.com');
+            expect(store.minimumSats).toBe(10);
+            expect(store.zeusPlusExpiresAt).toBe('2027-01-01');
+            expect(store.zeusPlusAnnualFeeSats).toBe(21000);
+            expect(store.legacyAccount).toBe(true);
+            expect(store.perks).toEqual([{ title: 'Perk' }]);
+            expect(store.serviceDeviceToken).toBe('service-token');
+            expect(store.image).toBe('base64img');
+            expect(store.bio).toBe('hello');
+            expect(store.noffer).toBe('noffer1abc');
+        });
+
+        it('clears profile fields the server no longer returns', async () => {
+            const store = authed();
+            store.image = 'old';
+            store.bio = 'old';
+            store.noffer = 'old';
+            reply('/api/lnurl/status', ok({ addressType: 'nwc' }));
+
+            await store.status();
+
+            expect(store.image).toBeNull();
+            expect(store.bio).toBeNull();
+            expect(store.noffer).toBeNull();
+        });
+
+        it('keeps the full address when the response has a handle but no domain', async () => {
+            const store = authed();
+            store.lightningAddress = 'satoshi@zeuspay.com';
+            reply(
+                '/api/lnurl/status',
+                ok({ addressType: 'cashu', handle: 'satoshi' })
+            );
+
+            await store.status();
+
+            expect(store.lightningAddress).toBe('satoshi@zeuspay.com');
+            expect(store.lightningAddressDomain).toBeUndefined();
+        });
+
+        it('clears an earlier error on a normal refresh', async () => {
+            const store = authed();
+            store.error = true;
+            store.error_msg = 'earlier';
+            reply('/api/lnurl/status', ok({ addressType: 'cashu' }));
+
+            await store.status();
+
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+        });
+
+        it('keeps a redeem error visible when refreshing after a redeem', async () => {
+            const store = authed();
+            store.error = true;
+            store.error_msg = 'redeem failed';
+            reply('/api/lnurl/status', ok({ addressType: 'cashu' }));
+
+            await store.status(true);
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('redeem failed');
+            expect(store.loading).toBe(false);
+        });
+
+        it('treats a 200 reply with success false as a failure', async () => {
+            const store = authed();
+            reply('/api/lnurl/status', {
+                status: 200,
+                body: { success: false, error: 'not found' }
+            });
+
+            await expect(store.status()).rejects.toBe('not found');
+
+            expect(store.error_msg).toBe('not found');
+        });
+
+        it('redeems only the entries with a quote id on a manual Redeem All', async () => {
+            const store = authed();
+            reply(
+                '/api/lnurl/status',
+                ok({
+                    addressType: 'cashu',
+                    paid: [
+                        {},
+                        { quote_id: 'q1', mint_url: MINT, amount_msat: 1000 }
+                    ]
+                }),
+                // the status call at the end of Redeem All
+                ok({ addressType: 'cashu', paid: [] })
+            );
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: false });
+            await store.status();
+
+            await store.redeemAllOpenPaymentsCashu();
+            await flushPromises();
+
+            expect(cashuStore.checkInvoicePaid.mock.calls).toEqual([
+                ['q1', MINT, true, false]
+            ]);
+            // the reason for q1, not the mint check of the {} entry
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.quoteNotPaid'
+            );
+        });
+
+        describe('an address this install did not create', () => {
+            const withAddress = (addressType = 'cashu') =>
+                reply(
+                    '/api/lnurl/status',
+                    ok({
+                        addressType,
+                        handle: 'satoshi',
+                        domain: 'zeuspay.com'
+                    })
+                );
+            const armSpy = (store: LightningAddressStore) =>
+                jest
+                    .spyOn(store, 'prepareToAutomaticallyAcceptCashu')
+                    .mockImplementation(() => {});
+
+            it('enables the address locally, keeping the other settings', async () => {
+                const store = authed();
+                armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: { enabled: false, mintUrl: MINT }
+                };
+                withAddress();
+
+                await store.status();
+
+                expect(settingsStore.updateSettingsGroup).toHaveBeenCalledWith(
+                    'lightningAddress',
+                    { enabled: true }
+                );
+                expect(settingsStore.settings.lightningAddress).toEqual({
+                    enabled: true,
+                    mintUrl: MINT
+                });
+            });
+
+            it('starts automatic accept for a Cashu address', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                withAddress();
+
+                await store.status();
+
+                expect(arm).toHaveBeenCalledTimes(1);
+            });
+
+            it('does not start automatic accept when it is off', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: false
+                    }
+                };
+                withAddress();
+
+                await store.status();
+
+                expect(settingsStore.updateSettingsGroup).toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+
+            it('does not start automatic accept for an NWC address', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                withAddress('nwc');
+
+                await store.status();
+
+                expect(settingsStore.updateSettingsGroup).toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+
+            it('leaves settings alone when the address is already enabled', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: true,
+                        automaticallyAccept: true
+                    }
+                };
+                withAddress();
+
+                await store.status();
+
+                expect(
+                    settingsStore.updateSettingsGroup
+                ).not.toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+
+            it('does not enable anything when the node has no address', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                reply('/api/lnurl/status', ok({ paid: [] }));
+
+                await store.status();
+
+                expect(
+                    settingsStore.updateSettingsGroup
+                ).not.toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+
+            it('leaves a retired Zaplocker address disabled', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                withAddress('zaplocker');
+
+                await store.status();
+
+                expect(
+                    settingsStore.updateSettingsGroup
+                ).not.toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+
+            it('ignores the reply when the wallet was switched mid-request', async () => {
+                const store = authed();
+                const arm = armSpy(store);
+                settingsStore.settings = {
+                    lightningAddress: {
+                        enabled: false,
+                        automaticallyAccept: true
+                    }
+                };
+                signMessage.mockImplementation(async () => {
+                    store.nodeInfoStore.nodeInfo.identity_pubkey = '02ff';
+                    return { zbase: 'zsig' };
+                });
+                withAddress();
+
+                await store.status();
+
+                expect(
+                    settingsStore.updateSettingsGroup
+                ).not.toHaveBeenCalled();
+                expect(arm).not.toHaveBeenCalled();
+            });
+        });
+    });
+
+    describe('redeemCashu', () => {
+        const redeemStore = () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            const status = jest
+                .spyOn(store, 'status')
+                .mockResolvedValue(undefined);
+            return { store, status };
+        };
+
+        it('claims the quote, redeems it with ZEUS Pay and receives the returned token', async () => {
+            const { store, status } = redeemStore();
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            reply('/api/lnurl/nuts/redeem', ok({ token: 'cashuBtoken' }));
+
+            await expect(store.redeemCashu('q1', MINT, 21000)).resolves.toBe(
+                true
+            );
+
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledWith(
+                'q1',
+                MINT,
+                true,
+                undefined
+            );
+            expect(bodyOf('/api/lnurl/nuts/redeem')).toEqual({
+                pubkey: NODE_PUBKEY,
+                message: V,
+                signature: 'zsig',
+                quoteId: 'q1'
+            });
+            expect(cashuStore.receiveTokenCDK).toHaveBeenCalledWith(
+                'cashuBtoken',
+                'cashu-key'
+            );
+            expect(status).toHaveBeenCalledWith(true);
+            expect(store.redeeming).toBe(false);
+            expect(store.error).toBe(false);
+            expect(postLocalNotification).not.toHaveBeenCalled();
+        });
+
+        it('passes skipMintCheck through to the quote check', async () => {
+            const { store } = redeemStore();
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            reply('/api/lnurl/nuts/redeem', ok());
+
+            await store.redeemCashu('q1', MINT, 1000, true, false, true);
+
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledWith(
+                'q1',
+                MINT,
+                true,
+                true
+            );
+        });
+
+        it('receives the token without a signing key when none can be derived', async () => {
+            const { store } = redeemStore();
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            cashuStore.deriveCashuSecretKey.mockReturnValue(null);
+            reply('/api/lnurl/nuts/redeem', ok({ token: 'cashuBtoken' }));
+
+            await store.redeemCashu('q1', MINT, 1000);
+
+            expect(cashuStore.receiveTokenCDK).toHaveBeenCalledWith(
+                'cashuBtoken',
+                undefined
+            );
+        });
+
+        it('skips token receipt when the server returns no token', async () => {
+            const { store } = redeemStore();
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            reply('/api/lnurl/nuts/redeem', ok());
+
+            await store.redeemCashu('q1', MINT, 1000);
+
+            expect(cashuStore.receiveTokenCDK).not.toHaveBeenCalled();
+            expect(store.error).toBe(false);
+        });
+
+        it('redeems an already-issued quote without announcing a new payment', async () => {
+            const { store } = redeemStore();
+            cashuStore.checkInvoicePaid.mockResolvedValue({
+                isPaid: false,
+                updatedInvoice: { state: 'ISSUED' }
+            });
+            reply('/api/lnurl/nuts/redeem', ok());
+
+            await store.redeemCashu('q1', MINT, 1000, false, true);
+
+            expect(callsTo('/api/lnurl/nuts/redeem')).toHaveLength(1);
+            expect(postLocalNotification).not.toHaveBeenCalled();
+            expect(store.error).toBe(false);
+        });
+
+        it('does not refresh status when skipStatus is set', async () => {
+            const { store, status } = redeemStore();
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            reply('/api/lnurl/nuts/redeem', ok());
+
+            await store.redeemCashu('q1', MINT, 1000, true);
+
+            expect(status).not.toHaveBeenCalled();
+        });
+
+        it('posts a notification with a chime on iOS, grouping thousands', async () => {
+            const { store } = redeemStore();
+            const locale = jest.spyOn(LocaleUtils, 'localeString');
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            reply('/api/lnurl/nuts/redeem', ok());
+
+            await store.redeemCashu('q1', MINT, 1234000, true, true);
+
+            expect(locale).toHaveBeenCalledWith(
+                'zeuspay.paymentReceived.body',
+                { value: '1,234', unit: 'general.sats' }
+            );
+            expect(postLocalNotification).toHaveBeenCalledWith({
+                title: 'zeuspay.paymentReceived.title',
+                body: 'zeuspay.paymentReceived.body',
+                sound: 'chime.aiff'
+            });
+        });
+
+        it('posts a notification without a sound on Android, singular for 1 sat', async () => {
+            (Platform as any).OS = 'android';
+            const { store } = redeemStore();
+            const locale = jest.spyOn(LocaleUtils, 'localeString');
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            reply('/api/lnurl/nuts/redeem', ok());
+
+            await store.redeemCashu('q1', MINT, 1000, true, true);
+
+            expect(locale).toHaveBeenCalledWith(
+                'zeuspay.paymentReceived.body',
+                { value: '1', unit: 'sat' }
+            );
+            expect(postLocalNotification).toHaveBeenCalledWith({
+                title: 'zeuspay.paymentReceived.title',
+                body: 'zeuspay.paymentReceived.body'
+            });
+        });
+
+        it('reports an unpaid quote without calling ZEUS Pay', async () => {
+            const { store, status } = redeemStore();
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: false });
+
+            await expect(store.redeemCashu('q1', MINT, 1000)).resolves.toBe(
+                true
+            );
+
+            expect(callsTo('/api/lnurl/nuts/redeem')).toHaveLength(0);
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.quoteNotPaid'
+            );
+            expect(store.redeeming).toBe(false);
+            expect(status).not.toHaveBeenCalled();
+        });
+
+        it('reports an unpaid quote when the check returns nothing', async () => {
+            const { store } = redeemStore();
+            cashuStore.checkInvoicePaid.mockResolvedValue(undefined);
+
+            await store.redeemCashu('q1', MINT, 1000);
+
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.quoteNotPaid'
+            );
+        });
+
+        it('reports a quote check error without calling ZEUS Pay', async () => {
+            const { store } = redeemStore();
+            cashuStore.checkInvoicePaid.mockRejectedValue(
+                new Error('mint unreachable')
+            );
+
+            await expect(store.redeemCashu('q1', MINT, 1000)).resolves.toBe(
+                true
+            );
+
+            expect(callsTo('/api/lnurl/nuts/redeem')).toHaveLength(0);
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.quotePaymentErr: mint unreachable'
+            );
+            expect(store.redeeming).toBe(false);
+        });
+
+        it('reports a ZEUS Pay redeem error with the server reason', async () => {
+            const { store, status } = redeemStore();
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            reply('/api/lnurl/nuts/redeem', {
+                status: 400,
+                body: { success: false, error: 'already redeemed' }
+            });
+
+            await expect(
+                store.redeemCashu('q1', MINT, 1000, false, true)
+            ).resolves.toBe(true);
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.redeemErr: already redeemed'
+            );
+            expect(store.redeeming).toBe(false);
+            expect(cashuStore.receiveTokenCDK).not.toHaveBeenCalled();
+            expect(postLocalNotification).not.toHaveBeenCalled();
+            expect(status).not.toHaveBeenCalled();
+        });
+
+        it('reports a failed token receipt with its cause', async () => {
+            const { store, status } = redeemStore();
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            cashuStore.receiveTokenCDK.mockRejectedValue(
+                new Error('token spent')
+            );
+            reply('/api/lnurl/nuts/redeem', ok({ token: 'cashuBtoken' }));
+
+            await store.redeemCashu('q1', MINT, 1000, false, true);
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.quotePaymentErr: token spent'
+            );
+            expect(postLocalNotification).not.toHaveBeenCalled();
+            expect(status).not.toHaveBeenCalled();
+        });
+
+        it('clears an earlier error when a redeem starts', async () => {
+            const { store } = redeemStore();
+            store.error = true;
+            store.error_msg = 'earlier';
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            reply('/api/lnurl/nuts/redeem', ok());
+
+            await store.redeemCashu('q1', MINT, 1000);
+
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+        });
+
+        it('does not redeem a quote again while it is being redeemed', async () => {
+            const { store } = redeemStore();
+            let markPaid: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaid = resolve))
+            );
+            reply('/api/lnurl/nuts/redeem', ok(), ok());
+
+            const first = store.redeemCashu('q1', MINT, 1000);
+            const second = store.redeemCashu('q1', MINT, 1000);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(1);
+            expect(store.redeeming).toBe(true);
+
+            markPaid({ isPaid: true });
+            await expect(first).resolves.toBe(true);
+            await expect(second).resolves.toBe(true);
+            expect(callsTo('/api/lnurl/nuts/redeem')).toHaveLength(1);
+
+            // once the first redeem is done, the quote can be tried again
+            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            await store.redeemCashu('q1', MINT, 1000);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(2);
+        });
+
+        it('gives a second redeem of the same quote the outcome of the one in flight', async () => {
+            const { store } = redeemStore();
+            let markPaid: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaid = resolve))
+            );
+            reply('/api/lnurl/nuts/redeem', ok({ token: 'cashuBtoken' }));
+            cashuStore.decodeTokenCDK.mockResolvedValue({
+                mint_url: 'https://other.mint'
+            });
+
+            // socket event first, then Redeem All reaches the same quote
+            const first = store.redeemCashu('q1', MINT, 1000, false, true);
+            const second = store.redeemCashu('q1', MINT, 1000, true);
+            markPaid({ isPaid: true });
+
+            await expect(first).resolves.toBe(false);
+            await expect(second).resolves.toBe(false);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(1);
+            expect(cashuStore.receiveTokenCDK).not.toHaveBeenCalled();
+        });
+
+        it('shows a mint rejection to a second caller even when the first was silent', async () => {
+            const { store } = redeemStore();
+            let markPaid: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaid = resolve))
+            );
+            reply('/api/lnurl/nuts/redeem', ok({ token: 'cashuBtoken' }));
+            cashuStore.decodeTokenCDK.mockResolvedValue({
+                mint_url: 'https://other.mint'
+            });
+
+            // socket event (no alerts), then the user taps the payment
+            const first = store.redeemCashu('q1', MINT, 1000, false, true);
+            const tap = store.redeemCashu('q1', MINT, 1000);
+            markPaid({ isPaid: true });
+            await Promise.all([first, tap]);
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe(
+                'stores.LightningAddressStore.Cashu.mintMismatch'
+            );
+        });
+
+        it('starts a new redeem for a quote after reset', async () => {
+            const { store } = redeemStore();
+            let markPaid: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaid = resolve))
+            );
+            reply('/api/lnurl/nuts/redeem', ok(), ok());
+
+            const stale = store.redeemCashu('q1', MINT, 1000);
+            store.reset();
+            // the next connection's redeem of the same quote runs itself
+            let markPaidAgain: (value: any) => void = () => {};
+            cashuStore.checkInvoicePaid.mockReturnValueOnce(
+                new Promise((resolve) => (markPaidAgain = resolve))
+            );
+            const current = store.redeemCashu('q1', MINT, 1000);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(2);
+
+            // the stale redeem ending does not drop the current one
+            markPaid({ isPaid: false });
+            await stale;
+            store.redeemCashu('q1', MINT, 1000);
+            expect(cashuStore.checkInvoicePaid).toHaveBeenCalledTimes(2);
+
+            markPaidAgain({ isPaid: true });
+            await current;
+        });
+    });
+
+    describe('deletePayment', () => {
+        it('marks the quote redeemed with ZEUS Pay and refreshes status', async () => {
+            const store = newStore();
+            const status = jest
+                .spyOn(store, 'status')
+                .mockResolvedValue(undefined);
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/nuts/redeem', ok());
+
+            await store.deletePayment('q1');
+
+            expect(bodyOf('/api/lnurl/nuts/redeem').quoteId).toBe('q1');
+            expect(cashuStore.checkInvoicePaid).not.toHaveBeenCalled();
+            expect(status).toHaveBeenCalledWith(true);
+            expect(store.redeeming).toBe(false);
+            expect(store.error).toBe(false);
+        });
+
+        it('shows the server error and does not refresh status', async () => {
+            const store = newStore();
+            const status = jest
+                .spyOn(store, 'status')
+                .mockResolvedValue(undefined);
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/nuts/redeem', {
+                status: 404,
+                body: { success: false, error: 'quote not found' }
+            });
+
+            await expect(store.deletePayment('q1')).resolves.toBeUndefined();
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('quote not found');
+            expect(store.redeeming).toBe(false);
+            expect(status).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('push credentials', () => {
+        it('waits for the device token, then sends it once', async () => {
+            const store = newStore();
+            const update = jest
+                .spyOn(store, 'update')
+                .mockResolvedValue({ success: true });
+
+            await store.updatePushCredentials();
+            expect(update).not.toHaveBeenCalled();
+
+            store.setDeviceToken('device-token');
+            expect(update).toHaveBeenCalledWith({
+                device_token: 'device-token',
+                device_platform: 'ios'
+            });
+
+            store.setDeviceToken('device-token-2');
+            expect(update).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not send when the server already has this token', async () => {
+            const store = newStore();
+            const update = jest
+                .spyOn(store, 'update')
+                .mockResolvedValue({ success: true });
+            store.setDeviceToken('device-token');
+            store.serviceDeviceToken = 'device-token';
+
+            await store.updatePushCredentials();
+
+            expect(update).not.toHaveBeenCalled();
+        });
+
+        it('sends a changed token with the platform', async () => {
+            (Platform as any).OS = 'android';
+            const store = newStore();
+            const update = jest
+                .spyOn(store, 'update')
+                .mockResolvedValue({ success: true });
+            store.setDeviceToken('new-token');
+            store.serviceDeviceToken = 'old-token';
+
+            await store.updatePushCredentials();
+
+            expect(update).toHaveBeenCalledWith({
+                device_token: 'new-token',
+                device_platform: 'android'
+            });
+        });
+
+        it('logs a failed deferred send instead of throwing', async () => {
+            const store = newStore();
+            jest.spyOn(store, 'update').mockRejectedValue(new Error('offline'));
+
+            await store.updatePushCredentials();
+            expect(() => store.setDeviceToken('device-token')).not.toThrow();
+            await flushPromises();
+
+            expect(console.log).toHaveBeenCalledWith(
+                'Failed to update push credentials',
+                expect.any(Error)
+            );
+        });
+    });
+
+    describe('automatic Cashu redemption', () => {
+        // socket.io's `active` stays true while the socket connects or
+        // reconnects and turns false once the server ends the session
+        const newSocket = (connected = false, active = true) => {
+            const handlers: { [event: string]: (data: any) => void } = {};
+            const socket: any = {
+                connected,
+                active,
+                emit: jest.fn(),
+                disconnect: jest.fn(),
+                on: jest.fn((event: string, handler: any) => {
+                    handlers[event] = handler;
+                })
+            };
+            socket.connect = jest.fn(() => socket);
+            return { socket, handlers };
+        };
+
+        it('redeems open payments and subscribes to new ones', async () => {
+            const store = newStore();
+            const { socket, handlers } = newSocket();
+            ioMock.mockReturnValue(socket);
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            const redeemAll = jest
+                .spyOn(store, 'redeemAllOpenPaymentsCashu')
+                .mockResolvedValue(undefined);
+            const redeem = jest
+                .spyOn(store, 'redeemCashu')
+                .mockResolvedValue(true);
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+
+            expect(redeemAll).toHaveBeenCalledWith(true);
+            expect(ioMock).toHaveBeenCalledWith(HOST, { path: '/stream' });
+            expect(socket.emit).toHaveBeenCalledWith('auth', {
+                pubkey: NODE_PUBKEY,
+                message: V,
+                signature: 'zsig'
+            });
+            // MobX wraps the socket in an observable copy
+            expect(store.socket.disconnect).toBe(socket.disconnect);
+
+            handlers.paid({
+                quote_id: 'q9',
+                mint_url: MINT,
+                amount_msat: 5000
+            });
+            expect(redeem).toHaveBeenCalledWith('q9', MINT, 5000, false, true);
+        });
+
+        it.each([
+            ['no quote id', { mint_url: MINT, amount_msat: 1000 }],
+            [
+                'an empty quote id',
+                { quote_id: '', mint_url: MINT, amount_msat: 1000 }
+            ],
+            [
+                'a number as quote id',
+                { quote_id: 5, mint_url: MINT, amount_msat: 1000 }
+            ],
+            ['null', null],
+            ['no payload', undefined]
+        ])(
+            'does not redeem a paid event with %s',
+            async (_name: string, data: any) => {
+                const store = newStore();
+                const { socket, handlers } = newSocket();
+                ioMock.mockReturnValue(socket);
+                reply('/api/lnurl/auth', ok({ verification: V }));
+                jest.spyOn(
+                    store,
+                    'redeemAllOpenPaymentsCashu'
+                ).mockResolvedValue(undefined);
+                const redeem = jest
+                    .spyOn(store, 'redeemCashu')
+                    .mockResolvedValue(true);
+
+                store.prepareToAutomaticallyAcceptCashu();
+                await flushPromises();
+                handlers.paid(data);
+
+                expect(redeem).not.toHaveBeenCalled();
+            }
+        );
+
+        it('does nothing while a socket is connected', () => {
+            const store = newStore();
+            store.socket = newSocket(true).socket;
+            const redeemAll = jest.spyOn(store, 'redeemAllOpenPaymentsCashu');
+
+            store.prepareToAutomaticallyAcceptCashu();
+
+            expect(redeemAll).not.toHaveBeenCalled();
+            expect(ioMock).not.toHaveBeenCalled();
+        });
+
+        it('opens one socket when called again during the auth request', async () => {
+            const store = newStore();
+            const { socket } = newSocket();
+            ioMock.mockReturnValue(socket);
+            // the signature is usually cached, so both calls get past
+            // the auth step
+            Object.assign(store, {
+                auth: { verification: V, signature: 'zsig' },
+                authDate: new Date()
+            });
+            const redeemAll = jest
+                .spyOn(store, 'redeemAllOpenPaymentsCashu')
+                .mockResolvedValue(undefined);
+
+            store.prepareToAutomaticallyAcceptCashu();
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+
+            expect(ioMock).toHaveBeenCalledTimes(1);
+            expect(redeemAll).toHaveBeenCalledTimes(1);
+        });
+
+        it('does nothing while a socket is still connecting', async () => {
+            const store = newStore();
+            ioMock.mockReturnValue(newSocket(false).socket);
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            const redeemAll = jest
+                .spyOn(store, 'redeemAllOpenPaymentsCashu')
+                .mockResolvedValue(undefined);
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+
+            expect(ioMock).toHaveBeenCalledTimes(1);
+            expect(redeemAll).toHaveBeenCalledTimes(1);
+        });
+
+        it('opens a new socket after the server ends the session', async () => {
+            const store = newStore();
+            store.socket = newSocket(false, false).socket;
+            const { socket } = newSocket();
+            ioMock.mockReturnValue(socket);
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            const redeemAll = jest
+                .spyOn(store, 'redeemAllOpenPaymentsCashu')
+                .mockResolvedValue(undefined);
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+
+            expect(redeemAll).toHaveBeenCalledTimes(1);
+            expect(ioMock).toHaveBeenCalledTimes(1);
+            expect(store.socket.disconnect).toBe(socket.disconnect);
+        });
+
+        it('tries again after the auth request fails', async () => {
+            const store = newStore();
+            ioMock.mockReturnValue(newSocket().socket);
+            reply(
+                '/api/lnurl/auth',
+                new Error('offline'),
+                ok({ verification: V })
+            );
+            jest.spyOn(store, 'redeemAllOpenPaymentsCashu').mockResolvedValue(
+                undefined
+            );
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+            expect(ioMock).not.toHaveBeenCalled();
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+            expect(ioMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not open a socket for the previous wallet when reset runs during the auth request', async () => {
+            const store = newStore();
+            const { socket } = newSocket();
+            ioMock.mockReturnValue(socket);
+            reply(
+                '/api/lnurl/auth',
+                ok({ verification: V }),
+                ok({ verification: SECOND })
+            );
+            jest.spyOn(store, 'redeemAllOpenPaymentsCashu').mockResolvedValue(
+                undefined
+            );
+
+            store.prepareToAutomaticallyAcceptCashu();
+            store.reset();
+            await flushPromises();
+
+            expect(ioMock).not.toHaveBeenCalled();
+            expect(store.socket).toBeUndefined();
+
+            // the next wallet gets its own socket
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+
+            expect(ioMock).toHaveBeenCalledTimes(1);
+            expect(store.socket.disconnect).toBe(socket.disconnect);
+        });
+
+        it('ignores payment events from a socket opened before reset', async () => {
+            const store = newStore();
+            const { socket, handlers } = newSocket();
+            ioMock.mockReturnValue(socket);
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            jest.spyOn(store, 'redeemAllOpenPaymentsCashu').mockResolvedValue(
+                undefined
+            );
+            const redeem = jest
+                .spyOn(store, 'redeemCashu')
+                .mockResolvedValue(true);
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+            store.reset();
+
+            expect(socket.disconnect).toHaveBeenCalled();
+            handlers.paid({
+                quote_id: 'q9',
+                mint_url: MINT,
+                amount_msat: 5000
+            });
+            expect(redeem).not.toHaveBeenCalled();
+        });
+
+        it('stops Redeem All at the next payment after reset', async () => {
+            const store = newStore();
+            store.paid = [
+                { quote_id: 'q1', mint_url: MINT, amount_msat: 1000 },
+                { quote_id: 'q2', mint_url: MINT, amount_msat: 2000 }
+            ];
+            const status = jest
+                .spyOn(store, 'status')
+                .mockResolvedValue(undefined);
+            let finishRedeem: (value: boolean) => void = () => {};
+            const redeem = jest
+                .spyOn(store, 'redeemCashu')
+                .mockReturnValueOnce(
+                    new Promise((resolve) => (finishRedeem = resolve))
+                )
+                .mockResolvedValue(true);
+
+            const run = store.redeemAllOpenPaymentsCashu(true);
+            expect(redeem).toHaveBeenCalledTimes(1);
+            store.reset();
+
+            finishRedeem(true);
+            await run;
+
+            expect(redeem).toHaveBeenCalledTimes(1);
+            // the refresh would be for the previous wallet
+            expect(status).not.toHaveBeenCalled();
+            expect(store.redeemingAll).toBe(false);
+        });
+
+        it('keeps the running Redeem All flag when an older one ends', async () => {
+            const store = newStore();
+            store.paid = [
+                { quote_id: 'q1', mint_url: MINT, amount_msat: 1000 }
+            ];
+            jest.spyOn(store, 'status').mockResolvedValue(undefined);
+            let finishRedeem: (value: boolean) => void = () => {};
+            jest.spyOn(store, 'redeemCashu')
+                .mockReturnValueOnce(
+                    new Promise((resolve) => (finishRedeem = resolve))
+                )
+                .mockReturnValueOnce(new Promise(() => {}));
+
+            const stale = store.redeemAllOpenPaymentsCashu(true);
+            store.reset();
+            store.paid = [
+                { quote_id: 'q2', mint_url: MINT, amount_msat: 2000 }
+            ];
+            store.redeemAllOpenPaymentsCashu(true);
+
+            finishRedeem(true);
+            await stale;
+
+            expect(store.redeemingAll).toBe(true);
+        });
+
+        it('logs an auth failure instead of opening a socket', async () => {
+            const store = newStore();
+            jest.spyOn(store, 'redeemAllOpenPaymentsCashu').mockResolvedValue(
+                undefined
+            );
+            reply('/api/lnurl/auth', new Error('offline'));
+
+            store.prepareToAutomaticallyAcceptCashu();
+            await flushPromises();
+
+            expect(ioMock).not.toHaveBeenCalled();
+            expect(console.log).toHaveBeenCalledWith(
+                'Error subscribing to Lightning address updates',
+                expect.any(Error)
+            );
+        });
+
+        it('disconnects the socket and clears account state on reset', () => {
+            const store = newStore();
+            const { socket } = newSocket(true);
+            Object.assign(store, {
+                socket,
+                loading: true,
+                error: true,
+                error_msg: 'x',
+                paid: [{ quote_id: 'q1' }],
+                lightningAddress: 'satoshi@zeuspay.com',
+                lightningAddressHandle: 'satoshi',
+                lightningAddressDomain: 'zeuspay.com',
+                lightningAddressType: 'cashu',
+                zeusPlusExpiresAt: '2027-01-01',
+                zeusPlusAnnualFeeSats: 21000,
+                legacyAccount: true,
+                perks: [{ title: 'Perk' }]
+            });
+
+            store.reset();
+
+            expect(socket.disconnect).toHaveBeenCalled();
+            expect(store.socket).toBeUndefined();
+            expect(store).toMatchObject({
+                loading: false,
+                error: false,
+                error_msg: '',
+                paid: [],
+                lightningAddress: '',
+                lightningAddressHandle: '',
+                lightningAddressDomain: '',
+                lightningAddressType: '',
+                zeusPlusExpiresAt: undefined,
+                zeusPlusAnnualFeeSats: undefined,
+                legacyAccount: false,
+                perks: []
+            });
+        });
+    });
+
+    describe('createNWC', () => {
+        it('creates an NWC address and enables it in settings', async () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply(
+                '/api/lnurl/create',
+                ok({ handle: 'satoshi', domain: 'zeuspay.com' })
+            );
+
+            await expect(
+                store.createNWC('nostr+walletconnect://abc')
+            ).resolves.toEqual({ success: true });
+            await flushPromises();
+
+            expect(bodyOf('/api/lnurl/create')).toEqual({
+                pubkey: NODE_PUBKEY,
+                message: V,
+                signature: 'zsig',
+                nwc_string: 'nostr+walletconnect://abc',
+                address_type: 'nwc'
+            });
+            expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+                lightningAddress: {
+                    enabled: true,
+                    automaticallyAccept: true,
+                    allowComments: true
+                }
+            });
+            expect(Storage.setItem).toHaveBeenCalledWith(
+                ADDRESS_ACTIVATED_STRING,
+                true
+            );
+            expect(store.lightningAddress).toBe('satoshi@zeuspay.com');
+            expect(store.loading).toBe(false);
+        });
+
+        it('leaves settings alone when the server rejects the address', async () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/create', {
+                status: 400,
+                body: { success: false, error: 'handle taken' }
+            });
+
+            await expect(store.createNWC('nwc')).rejects.toBe('handle taken');
+
+            expect(settingsStore.updateSettings).not.toHaveBeenCalled();
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('handle taken');
+            expect(store.loading).toBe(false);
+        });
+    });
+
+    describe('createCashu', () => {
+        it('initializes a missing mint wallet and sends its pubkey', async () => {
+            const store = newStore();
+            const mint = 'https://new-mint.test';
+            cashuStore.initializeWallet.mockImplementation(async (url) => {
+                cashuStore.cashuWallets[url] = { pubkey: '02ef' };
+            });
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply(
+                '/api/lnurl/create',
+                ok({ handle: 'satoshi', domain: 'zeuspay.com' })
+            );
+
+            await store.createCashu(mint);
+            await flushPromises();
+
+            expect(cashuStore.initializeWallet).toHaveBeenCalledWith(mint);
+            expect(bodyOf('/api/lnurl/create')).toMatchObject({
+                cashu_pubkey: '02ef',
+                mint_url: mint,
+                address_type: 'cashu'
+            });
+            expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+                lightningAddress: {
+                    enabled: true,
+                    automaticallyAccept: true,
+                    allowComments: true,
+                    mintUrl: mint
+                }
+            });
+        });
+
+        it('reuses an initialized mint wallet', async () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/create', ok());
+
+            await store.createCashu(MINT);
+            await flushPromises();
+
+            expect(cashuStore.initializeWallet).not.toHaveBeenCalled();
+            expect(bodyOf('/api/lnurl/create').cashu_pubkey).toBe('02ab');
+        });
+
+        it('leaves settings alone when the server rejects the address', async () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/create', {
+                status: 200,
+                body: { success: false, error: 'mint not allowed' }
+            });
+
+            await expect(store.createCashu(MINT)).rejects.toBe(
+                'mint not allowed'
+            );
+
+            expect(settingsStore.updateSettings).not.toHaveBeenCalled();
+            expect(Storage.setItem).not.toHaveBeenCalled();
+            expect(store.error_msg).toBe('mint not allowed');
+            expect(store.loading).toBe(false);
+        });
+
+        it('does not call the server when the mint wallet cannot be initialized', async () => {
+            const store = newStore();
+            cashuStore.initializeWallet.mockRejectedValue(
+                new Error('mint offline')
+            );
+            reply('/api/lnurl/auth', ok({ verification: V }));
+
+            await expect(
+                store.createCashu('https://new-mint.test')
+            ).rejects.toThrow('mint offline');
+
+            expect(callsTo('/api/lnurl/create')).toHaveLength(0);
+            expect(store.error_msg).toBe('Error: mint offline');
+            expect(store.loading).toBe(false);
+        });
+    });
+
+    describe('testNWCConnectionString', () => {
+        it('sends only the connection string, unauthenticated', async () => {
+            const store = newStore();
+            reply('/api/lnurl/nwc/test', ok());
+
+            await expect(store.testNWCConnectionString('nwc')).resolves.toEqual(
+                { success: true }
+            );
+
+            expect(callsTo('/api/lnurl/auth')).toHaveLength(0);
+            expect(bodyOf('/api/lnurl/nwc/test')).toEqual({
+                nwc_string: 'nwc'
+            });
+            expect(store.error).toBe(false);
+            expect(store.loading).toBe(false);
+        });
+
+        it('shows a warning the server returns with a successful test', async () => {
+            const store = newStore();
+            reply('/api/lnurl/nwc/test', ok({ error: 'no make_invoice' }));
+
+            await expect(store.testNWCConnectionString('nwc')).resolves.toEqual(
+                { success: true }
+            );
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('no make_invoice');
+        });
+
+        it('rejects with the server error when the test fails', async () => {
+            const store = newStore();
+            reply('/api/lnurl/nwc/test', {
+                status: 200,
+                body: { success: false, error: 'relay unreachable' }
+            });
+
+            await expect(store.testNWCConnectionString('nwc')).rejects.toBe(
+                'relay unreachable'
+            );
+
+            expect(store.error_msg).toBe('relay unreachable');
+            expect(store.loading).toBe(false);
+        });
+    });
+
+    describe('update', () => {
+        it('defaults the domain to zeuspay.com when the reply has none', async () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/update', ok({ handle: 'hal' }));
+
+            await store.update({ handle: 'hal' });
+            await flushPromises();
+
+            expect(bodyOf('/api/lnurl/update')).toEqual({
+                pubkey: NODE_PUBKEY,
+                message: V,
+                signature: 'zsig',
+                updates: { handle: 'hal' }
+            });
+            expect(store.lightningAddress).toBe('hal@zeuspay.com');
+            expect(store.loading).toBe(false);
+        });
+    });
+
+    describe('deleteAddress', () => {
+        it('deletes the account, clears local flags and resets the store', async () => {
+            const store = newStore();
+            store.lightningAddress = 'satoshi@zeuspay.com';
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/delete', ok());
+
+            await expect(store.deleteAddress()).resolves.toBe(true);
+
+            expect(bodyOf('/api/lnurl/delete')).toEqual({
+                pubkey: NODE_PUBKEY,
+                message: V,
+                signature: 'zsig'
+            });
+            expect(Storage.setItem).toHaveBeenCalledWith(
+                ADDRESS_ACTIVATED_STRING,
+                false
+            );
+            expect(Storage.setItem).toHaveBeenCalledWith(
+                HASHES_STORAGE_STRING,
+                ''
+            );
+            expect(store.lightningAddress).toBe('');
+            expect(store.loading).toBe(false);
+        });
+
+        it('keeps local state when the server refuses', async () => {
+            const store = newStore();
+            store.lightningAddress = 'satoshi@zeuspay.com';
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/delete', {
+                status: 403,
+                body: { error: 'invalid signature' }
+            });
+
+            await expect(store.deleteAddress()).rejects.toBe(
+                'invalid signature'
+            );
+
+            expect(Storage.setItem).not.toHaveBeenCalled();
+            expect(store.lightningAddress).toBe('satoshi@zeuspay.com');
+            expect(store.error_msg).toBe('invalid signature');
+            expect(store.loading).toBe(false);
+        });
+
+        it('falls back to a generic message when the server gives no reason', async () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/delete', { status: 500, body: {} });
+
+            await expect(store.deleteAddress()).rejects.toBeUndefined();
+
+            expect(store.error_msg).toBe('Failed to delete account');
+        });
+    });
+
+    describe('createZeusPayPlusOrder', () => {
+        it('returns the order from the server', async () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/plus/order', {
+                status: 200,
+                body: { invoice: 'lnbc1', amount: 21000 }
+            });
+
+            await expect(store.createZeusPayPlusOrder()).resolves.toEqual({
+                invoice: 'lnbc1',
+                amount: 21000
+            });
+            expect(store.loading).toBe(false);
+            expect(store.error).toBe(false);
+        });
+
+        it('falls back to a generic message when the server gives no reason', async () => {
+            const store = newStore();
+            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/plus/order', { status: 500, body: {} });
+
+            await expect(
+                store.createZeusPayPlusOrder()
+            ).rejects.toBeUndefined();
+
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('Failed to create order');
+            expect(store.loading).toBe(false);
+        });
+    });
+});

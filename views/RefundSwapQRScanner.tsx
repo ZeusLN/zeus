@@ -11,7 +11,7 @@ export default class RefundSwapQRScanner extends BaseQRScanner {
         const { navigation } = this.props;
         const { value } = AddressUtils.processBIP21Uri(data);
 
-        if (AddressUtils.isValidBitcoinAddressForNode(value)) {
+        if (AddressUtils.isAddressForNodeNetwork(value)) {
             navigation.goBack();
             navigation.navigate({
                 name: 'RefundSwap',

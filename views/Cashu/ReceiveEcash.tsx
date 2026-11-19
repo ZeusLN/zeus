@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     Dimensions,
     Platform,
     ScrollView,
@@ -17,6 +18,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import cloneDeep from 'lodash/cloneDeep';
 
 import handleAnything from '../../utils/handleAnything';
+import { isUnsafeLnurlError } from '../../utils/LnurlFetchUtils';
 
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
 
@@ -53,7 +55,7 @@ import CashuInvoice from '../../models/CashuInvoice';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { scanNfcTag } from '../../utils/NFCUtils';
+import { isNfcWithdraw, scanNfcTag } from '../../utils/NFCUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getAmountFromSats } from '../../utils/AmountUtils';
 
@@ -98,6 +100,8 @@ interface ReceiveEcashState {
     value: string;
     satAmount: string | number;
     nfcSupported: boolean;
+    // the last NFC read was not an LNURL-withdraw card
+    nfcError: boolean;
     // POS
     orderId: string;
     orderTotal: string;
@@ -109,6 +113,7 @@ interface ReceiveEcashState {
 
 @inject(
     'CashuStore',
+    'ModalStore',
     'SettingsStore',
     'UnitsStore',
     'PosStore',
@@ -129,6 +134,7 @@ export default class ReceiveEcash extends React.Component<
             value: '',
             satAmount: '',
             nfcSupported: false,
+            nfcError: false,
             // POS
             orderId: '',
             orderTip: '',
@@ -139,7 +145,29 @@ export default class ReceiveEcash extends React.Component<
     }
 
     lnInterval: any;
+    // CashuStore is shared with the next ReceiveEcash view, so work that
+    // completes after this view is gone must not reach it
+    isUnmounted = false;
+    // Bumped for each invoice this view asks CashuStore for and by Cancel,
+    // so only the latest request's invoice is checked or handed on
+    invoiceRequestId = 0;
+    // Bumped by each NFC tag lookup, each invoice request and Cancel, so
+    // an LNURL server that answers after any of those creates, submits or
+    // shows nothing. Kept apart from invoiceRequestId so a tap that is not
+    // a withdraw does not stop the checks of the invoice on screen.
+    nfcLookupId = 0;
     hopPickerRef: HopPicker | null;
+
+    startInvoiceRequest = () => {
+        this.nfcLookupId++;
+        const id = ++this.invoiceRequestId;
+        return () => !this.isUnmounted && id === this.invoiceRequestId;
+    };
+
+    startNfcLookup = () => {
+        const id = ++this.nfcLookupId;
+        return () => !this.isUnmounted && id === this.nfcLookupId;
+    };
 
     async componentDidMount() {
         const { CashuStore, SettingsStore, LightningAddressStore, route } =
@@ -235,6 +263,7 @@ export default class ReceiveEcash extends React.Component<
 
     componentWillUnmount() {
         const { CashuStore } = this.props;
+        this.isUnmounted = true;
         CashuStore.clearInvoice();
         CashuStore.creatingInvoiceError = false;
         CashuStore.error_msg = undefined;
@@ -243,6 +272,18 @@ export default class ReceiveEcash extends React.Component<
 
     clearIntervals = () => {
         if (this.lnInterval) clearInterval(this.lnInterval);
+        this.lnInterval = undefined;
+    };
+
+    // Cancel: stop checking the invoice that is cleared, so a payment to
+    // it does not show the next invoice as paid
+    cancelInvoice = () => {
+        // a pending invoice request or NFC lookup must not start checks,
+        // submit an invoice or open a screen afterwards
+        this.invoiceRequestId++;
+        this.nfcLookupId++;
+        this.clearIntervals();
+        this.props.CashuStore.clearInvoice();
     };
 
     onBack = () => {
@@ -256,45 +297,73 @@ export default class ReceiveEcash extends React.Component<
     autoGenerateInvoice = (amount?: string, memo?: string) => {
         const { CashuStore } = this.props;
         const { createInvoice } = CashuStore;
+        const isCurrent = this.startInvoiceRequest();
 
         createInvoice({
             memo: memo || '',
             value: amount || '0'
         }).then(() => {
-            this.subscribeInvoice();
+            if (isCurrent()) this.subscribeInvoice();
         });
     };
 
     scanNfc = async () => {
-        const str = await scanNfcTag(this.props.ModalStore);
-        if (str) this.validateAddress(str);
+        const str = await scanNfcTag(this.props.ModalStore, 'withdraw');
+        if (!str || this.isUnmounted) return;
+        this.setState({ nfcError: false });
+        this.validateAddress(str);
     };
 
     validateAddress = (text: string) => {
-        const { navigation, CashuStore, route } = this.props;
+        const { navigation, CashuStore } = this.props;
         const { createInvoice } = CashuStore;
-        const satAmount = getSatAmount(route.params?.amount);
+        // route.params.amount is in the display unit that was active when it
+        // was passed, and the amount under the QR code toggles that unit:
+        // use the sats it was converted to back then
+        const { satAmount } = this.state;
+        // taken before the lookup: a newer tap, invoice or Cancel while the
+        // tag's LNURL server is answering supersedes this tap
+        const lookupIsCurrent = this.startNfcLookup();
 
         handleAnything(text, satAmount.toString())
             .then((response) => {
+                // the tag's LNURL server decides when this runs
+                if (!lookupIsCurrent()) return;
                 try {
                     const [route, props] = response;
                     const { lnurlParams } = props;
+                    // outside POS mode a tag can also hold an ecash token:
+                    // open it on the screen a cashu: link opens
+                    if (
+                        route === 'CashuToken' &&
+                        this.props.SettingsStore.posStatus !== 'active'
+                    ) {
+                        navigation.navigate(route, props);
+                        return;
+                    }
+                    // otherwise NFC reads here are for LNURL-withdraw (e.g. a
+                    // Bolt Card) only; tell staff about anything else
+                    if (!isNfcWithdraw(route, lnurlParams)) {
+                        this.setState({ nfcError: true });
+                        return;
+                    }
                     const { memo } = lnurlParams.defaultDescription;
 
                     // if an amount was entered on the keypad screen before scanning
                     // we will automatically create an invoice and attempt to withdraw
                     // otherwise we present the user with the create invoice screen
                     if (Number(satAmount) > 0) {
+                        const isCurrent = this.startInvoiceRequest();
                         createInvoice({
                             memo,
                             value: satAmount.toString(),
                             lnurl: lnurlParams
                         })
                             .then(() => {
-                                this.subscribeInvoice();
+                                if (isCurrent()) this.subscribeInvoice();
                             })
                             .catch(() => {
+                                if (!isCurrent()) return;
                                 navigation.navigate(route, {
                                     satAmount,
                                     ...props
@@ -305,7 +374,15 @@ export default class ReceiveEcash extends React.Component<
                     }
                 } catch (e) {}
             })
-            .catch();
+            .catch((e) => {
+                if (!lookupIsCurrent()) return;
+                // a host policy refusal is not a card that cannot pay
+                if (isUnsafeLnurlError(e)) {
+                    Alert.alert(localeString('general.error'), e.message);
+                    return;
+                }
+                this.setState({ nfcError: true });
+            });
     };
 
     subscribeInvoice = async () => {
@@ -314,6 +391,8 @@ export default class ReceiveEcash extends React.Component<
             this.state;
         const { setWatchedInvoicePaid, checkInvoicePaid } = CashuStore;
 
+        // nothing would stop this interval anymore
+        if (this.isUnmounted) return;
         if (!CashuStore.quoteId) return;
 
         // persist invoice to check,
@@ -323,7 +402,9 @@ export default class ReceiveEcash extends React.Component<
             CashuStore.lastInvoiceMintUrl || CashuStore.selectedMintUrl
         );
 
-        this.lnInterval = setInterval(() => {
+        // only ever poll the latest invoice of this view
+        this.clearIntervals();
+        const interval = setInterval(() => {
             checkInvoicePaid(quoteId, selectedMintUrl).then(
                 (response?: {
                     isPaid: boolean;
@@ -332,7 +413,11 @@ export default class ReceiveEcash extends React.Component<
                     updatedInvoice?: CashuInvoice;
                 }) => {
                     if (response?.isPaid) {
-                        setWatchedInvoicePaid(response.amtSat);
+                        // a check that was in flight when the interval
+                        // was cleared (view left, invoice cancelled or
+                        // replaced) must not mark the next invoice as paid
+                        if (!this.isUnmounted && this.lnInterval === interval)
+                            setWatchedInvoicePaid(response.amtSat);
                         if (orderId)
                             PosStore.recordPayment({
                                 orderId,
@@ -344,7 +429,8 @@ export default class ReceiveEcash extends React.Component<
                                 tx: response.paymentRequest || '',
                                 preimage: 'N/A'
                             });
-                        this.clearIntervals();
+                        // a stale check must not stop the checks of a newer invoice
+                        if (this.lnInterval === interval) this.clearIntervals();
                     } else {
                         if (__DEV__) {
                             console.log(
@@ -356,6 +442,7 @@ export default class ReceiveEcash extends React.Component<
                 }
             );
         }, 3000);
+        this.lnInterval = interval;
     };
 
     updateIndex = (selectedIndex: number) => {
@@ -407,9 +494,7 @@ export default class ReceiveEcash extends React.Component<
         const ClearButton = () => (
             <Icon
                 name="cancel"
-                onPress={() => {
-                    CashuStore.clearInvoice();
-                }}
+                onPress={this.cancelInvoice}
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={30}
@@ -593,6 +678,13 @@ export default class ReceiveEcash extends React.Component<
                             keyboardDismissMode="on-drag"
                         >
                             {error_msg && <ErrorMessage message={error_msg} />}
+                            {this.state.nfcError && (
+                                <ErrorMessage
+                                    message={localeString(
+                                        'views.Receive.nfcNotWithdraw'
+                                    )}
+                                />
+                            )}
 
                             <View>
                                 {!!invoice && (
@@ -601,11 +693,12 @@ export default class ReceiveEcash extends React.Component<
                                             <SuccessMessage
                                                 message={
                                                     !!lnurl &&
-                                                    `${localeString(
-                                                        'views.Receive.successCreate'
-                                                    )} ${localeString(
-                                                        'views.Receive.andSentTo'
-                                                    )} ${lnurl.domain}`
+                                                    localeString(
+                                                        'views.Receive.successCreateAndSentTo',
+                                                        {
+                                                            domain: lnurl.domain
+                                                        }
+                                                    )
                                                 }
                                             />
                                         )}
@@ -670,7 +763,7 @@ export default class ReceiveEcash extends React.Component<
                                                             )}
                                                             onPress={() =>
                                                                 navigation.navigate(
-                                                                    'CashuLightningAddress'
+                                                                    'CreateCashuLightningAddress'
                                                                 )
                                                             }
                                                         />
@@ -870,16 +963,20 @@ export default class ReceiveEcash extends React.Component<
                                         <View style={styles.button}>
                                             <Button
                                                 title={
-                                                    localeString(
-                                                        'views.Receive.createInvoice'
-                                                    ) +
-                                                    (lnurl
-                                                        ? ` ${localeString(
-                                                              'views.Receive.andSubmitTo'
-                                                          )} ${lnurl.domain}`
-                                                        : '')
+                                                    lnurl
+                                                        ? localeString(
+                                                              'views.Receive.createInvoiceAndSubmitTo',
+                                                              {
+                                                                  domain: lnurl.domain
+                                                              }
+                                                          )
+                                                        : localeString(
+                                                              'views.Receive.createInvoice'
+                                                          )
                                                 }
                                                 onPress={() => {
+                                                    const isCurrent =
+                                                        this.startInvoiceRequest();
                                                     createInvoice({
                                                         memo,
                                                         value:
@@ -887,7 +984,8 @@ export default class ReceiveEcash extends React.Component<
                                                             '0',
                                                         lnurl
                                                     }).then(() => {
-                                                        this.subscribeInvoice();
+                                                        if (isCurrent())
+                                                            this.subscribeInvoice();
                                                     });
                                                 }}
                                                 disabled={satAmount == 0}

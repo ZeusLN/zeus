@@ -227,6 +227,8 @@ Before submitting a PR, manually test:
 
 **Important**: If you are making cosmetic/UI changes, please test on both Android and iOS as things don't render exactly the same on both platforms.
 
+For Android device testing against a local regtest network (lnd nodes with open channels, plus an optional stub LSP, Cashu mint and Nostr relay), see [`tools/regtest-rig/README.md`](tools/regtest-rig/README.md). The rig runs in Docker with its own emulator and is for regtest only.
+
 ### Test Coverage
 
 - Bug fixes should include a test that would have caught the bug

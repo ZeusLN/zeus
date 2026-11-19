@@ -1,7 +1,13 @@
+import * as bitcoin from 'bitcoinjs-lib';
+
 import wifUtils from './WIFUtils';
+import { nodeInfoStore } from '../stores/Stores';
 
 jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => key
+}));
+jest.mock('../stores/Stores', () => ({
+    nodeInfoStore: { nodeInfo: {} }
 }));
 
 describe('WIFUtils', () => {
@@ -27,14 +33,49 @@ describe('WIFUtils', () => {
             // WIF (testnet)
             expect(
                 wifUtils.validateWIF(
-                    'cNdGLyNdGCXGoM8Vg5RM7LApKZTdGCRvrqT8EJHYXr3eMqsKP3NC'
+                    'cNdGLyNdGCXGoM8Vg5RM7LApKZTdGCRvrqT8EJHYXr3eMqsKP3NC',
+                    bitcoin.networks.testnet
                 )
             ).toEqual({ isValid: true });
             expect(
                 wifUtils.validateWIF(
-                    '91pe1SuvyuudCrsdrdoJF84aqAAf84x3EZGtUwDMjnYs9tPo4Ge'
+                    '91pe1SuvyuudCrsdrdoJF84aqAAf84x3EZGtUwDMjnYs9tPo4Ge',
+                    bitcoin.networks.regtest
                 )
             ).toEqual({ isValid: true });
+        });
+
+        describe('network of the connected node', () => {
+            const MAINNET_WIF =
+                'KzbXVJSMscR5AQT4yhPfofUmtu17cqZKNs7jfRxrjXx5cpA8Aqyf';
+            const TESTNET_WIF =
+                'cNdGLyNdGCXGoM8Vg5RM7LApKZTdGCRvrqT8EJHYXr3eMqsKP3NC';
+            const wrongNetwork = {
+                isValid: false,
+                error: 'views.Wif.wrongNetwork'
+            };
+
+            afterEach(() => {
+                nodeInfoStore.nodeInfo = {} as any;
+            });
+
+            it('rejects testnet WIFs on mainnet', () => {
+                expect(wifUtils.validateWIF(MAINNET_WIF).isValid).toBe(true);
+                expect(wifUtils.validateWIF(TESTNET_WIF)).toEqual(wrongNetwork);
+            });
+
+            it.each(['isTestNet', 'isSigNet', 'isRegTest', 'isMutinynet'])(
+                'rejects mainnet WIFs when the node reports %s',
+                (flag) => {
+                    nodeInfoStore.nodeInfo = { [flag]: true } as any;
+                    expect(wifUtils.validateWIF(TESTNET_WIF).isValid).toBe(
+                        true
+                    );
+                    expect(wifUtils.validateWIF(MAINNET_WIF)).toEqual(
+                        wrongNetwork
+                    );
+                }
+            );
         });
 
         it('rejects WIFs with invalid prefix', () => {

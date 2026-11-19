@@ -1,10 +1,8 @@
 import url from 'url';
 import * as React from 'react';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { inject, observer } from 'mobx-react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import querystring from 'querystring-es3';
-import { HMAC as sha256HMAC } from 'fast-sha256';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -20,17 +18,14 @@ import {
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
-import Base64Utils from '../utils/Base64Utils';
 import { verifyLnurlAuthCallback } from '../utils/LnurlPayUtils';
 import {
-    ecdsaSignDERHex,
-    getCompressedPublicKeyHex
-} from '../utils/SigningUtils';
+    LNURLAUTH_CANONICAL_PHRASE,
+    signLnurlAuthChallenge
+} from '../utils/LnurlAuthUtils';
+import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
 import DropdownSetting from '../components/DropdownSetting';
 import SettingsStore, { LNDHUB_AUTH_MODES } from '../stores/SettingsStore';
-
-const LNURLAUTH_CANONICAL_PHRASE =
-    'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
 
 interface LnurlAuthProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -129,23 +124,13 @@ export default class LnurlAuth extends React.Component<
 
         return BackendUtils.lnurlAuth(body)
             .then((signature: any) => {
-                // got the signed message, now build linkingkey
-
-                // from https://github.com/hsjoberg/blixt-wallet/blob/931c625666633915412bf7d8947ef6c2c5ce92b3/src/state/LNURL.ts
-                // 1. The following canonical phrase is defined: [...].
-                // 2. LN WALLET obtains an RFC6979 deterministic signature of sha256(utf8ToBytes(canonical phrase)) using secp256k1 with node private key.
-                // 3. LN WALLET defines hashingKey as PrivateKey(sha256(obtained signature)).
-                // // 4. SERVICE domain name is extracted from auth LNURL and then service-specific linkingPrivKey is defined as PrivateKey(hmacSha256(hashingKey, service domain name)).
-                const linkingKeyPriv = new sha256HMAC(signature.signature)
-                    .update(Base64Utils.stringToUint8Array(this.state.domain))
-                    .digest();
-
-                const linkingKeyPub = getCompressedPublicKeyHex(linkingKeyPriv);
-
-                const signedMessageDERHex = ecdsaSignDERHex(
-                    Base64Utils.hexToBytes(this.state.k1),
-                    linkingKeyPriv
-                );
+                // got the signed message, now build the linking key
+                const { linkingKeyPub, signedMessageDERHex } =
+                    signLnurlAuthChallenge(
+                        signature.signature,
+                        this.state.domain,
+                        this.state.k1
+                    );
 
                 this.setState({
                     linkingKeyPub,
@@ -218,7 +203,7 @@ export default class LnurlAuth extends React.Component<
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        ReactNativeBlobUtil.fetch('get', url.format(u))
+        fetchLnurlUrl(url.format(u))
             .then((response: any) => {
                 try {
                     const data = response.json();

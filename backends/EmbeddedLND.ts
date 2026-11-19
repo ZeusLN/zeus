@@ -1,6 +1,8 @@
 import LND from './LND';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
+import { markNodeResponded } from './../utils/PaymentLookupUtils';
+import { TransactionPageRequest } from '../utils/OnchainTransactionUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
@@ -9,6 +11,10 @@ import {
     checkLndStreamErrorResponse,
     LndMobileEventEmitter
 } from '../utils/LndMobileUtils';
+import {
+    isEventForRequest,
+    newStreamRequestId
+} from '../utils/StreamRequestUtils';
 
 const {
     addInvoice,
@@ -20,6 +26,7 @@ const {
     decodePayReq,
     sendPaymentV2Sync,
     sendKeysendPaymentV2,
+    trackPaymentV2,
     listPayments,
     getNetworkInfo,
     getRecoveryInfo,
@@ -42,6 +49,7 @@ const {
     openChannel,
     openChannelSync,
     decodeOpenStatusUpdate,
+    decodeCloseStatusUpdate,
     updateChannelPolicy
 } = lndMobile.channel;
 const {
@@ -50,6 +58,7 @@ const {
     bumpFee,
     bumpForceCloseFee,
     fundPsbt,
+    releaseOutput,
     signPsbt,
     finalizePsbt,
     publishTransaction,
@@ -83,6 +92,8 @@ import {
 } from '../lndmobile/wallet';
 
 import {
+    LndInvoiceListParams,
+    LndPaymentListParams,
     toLnrpcAddressTypeNum,
     toWalletrpcAddressTypeNum
 } from '../utils/LndUtils';
@@ -90,7 +101,10 @@ import {
 export default class EmbeddedLND extends LND {
     openChannelListener: any;
 
-    getTransactions = async (data?: any) => await getTransactions(data);
+    getTransactionsPage = async (data?: TransactionPageRequest | null) => {
+        const response = await getTransactions(data);
+        return { transactions: response.transactions || [] };
+    };
     getChannels = async () => await listChannels();
     getPendingChannels = async () => await pendingChannels();
     getClosedChannels = async () => await closedChannels();
@@ -104,7 +118,8 @@ export default class EmbeddedLND extends LND {
             data.sat_per_vbyte,
             data.spend_unconfirmed,
             data.send_all,
-            data.outpoints
+            data.outpoints,
+            data.label
         );
     sendCustomMessage = async (data: any) =>
         await sendCustomMessage(data.peer, data.type, data.data);
@@ -112,7 +127,8 @@ export default class EmbeddedLND extends LND {
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
     getRecoveryInfo = async () => await getRecoveryInfo();
-    getInvoices = async () => await listInvoices();
+    getInvoices = async (params?: LndInvoiceListParams) =>
+        await listInvoices(params);
     createInvoice = async (data: any) =>
         await addInvoice({
             amount: data.value ? Number(data.value) : undefined,
@@ -125,10 +141,8 @@ export default class EmbeddedLND extends LND {
             preimage: data.preimage,
             route_hints: data.route_hints
         });
-    getPayments = async (params?: {
-        maxPayments?: number;
-        reversed?: boolean;
-    }) => await listPayments(params);
+    getPayments = async (params?: LndPaymentListParams) =>
+        await listPayments(params);
     getNewAddress = async (data: any) =>
         await newAddress(
             toLnrpcAddressTypeNum(data?.type) as any,
@@ -156,8 +170,10 @@ export default class EmbeddedLND extends LND {
             data.close_address
         );
     openChannelStream = async (data: OpenChannelRequest) => {
+        const requestId = newStreamRequestId();
         return await new Promise((resolve, reject) => {
             LndMobileEventEmitter.addListener('OpenChannel', (e: any) => {
+                if (!isEventForRequest(e, requestId)) return;
                 try {
                     const error = checkLndStreamErrorResponse('OpenChannel', e);
                     if (error === 'EOF') {
@@ -190,7 +206,9 @@ export default class EmbeddedLND extends LND {
                 data.simpleTaprootChannel,
                 data.fundMax,
                 data.utxos,
-                data.funding_shim
+                data.funding_shim,
+                data.close_address,
+                requestId
             );
         });
     };
@@ -202,12 +220,12 @@ export default class EmbeddedLND extends LND {
                 const formattedPeer = {
                     pub_key: peer.pub_key || '',
                     address: peer.address || '',
-                    bytes_sent: peer.bytes_sent || '0',
-                    bytes_recv: peer.bytes_recv || '0',
-                    ping_time: peer.ping_time || '0',
+                    bytes_sent: peer.bytes_sent?.toString() || '0',
+                    bytes_recv: peer.bytes_recv?.toString() || '0',
+                    ping_time: peer.ping_time?.toString() || '0',
                     sync_type: peer.sync_type || '',
-                    sat_sent: peer.sats_sent || '0',
-                    sat_recv: peer.sats_recv || '0',
+                    sat_sent: peer.sat_sent?.toString() || '0',
+                    sat_recv: peer.sat_recv?.toString() || '0',
                     inbound: peer.inbound || false,
                     flap_count: peer.flap_count || '0'
                 };
@@ -255,7 +273,10 @@ export default class EmbeddedLND extends LND {
             dest: data.dest
         };
 
-        return await sendPaymentV2Sync(sendPaymentReq);
+        // in-process call: a rejection comes from lnd, never from transport
+        return await sendPaymentV2Sync(sendPaymentReq).catch((error) => {
+            throw markNodeResponded(error, error?.grpcCode);
+        });
     };
     sendKeysend = async (data: any) =>
         await sendKeysendPaymentV2({
@@ -267,8 +288,34 @@ export default class EmbeddedLND extends LND {
             max_shard_size_msat: data.max_shard_size_msat,
             max_parts: data.max_parts,
             cltv_limit: data.cltv_limit,
-            amp: data.amp
+            amp: data.amp,
+            timeout_seconds: data.timeout_seconds
+        }).catch((error) => {
+            throw markNodeResponded(error, error?.grpcCode);
         });
+    // override LND's REST implementation with the on-device
+    // TrackPaymentV2 stream: its latest update for this hash is the
+    // payment's current state (no_inflight_updates is false, so an
+    // in-flight payment answers immediately). Any failure, NOT_FOUND
+    // included, is settled by the dispatch-anchored page scan (run against
+    // the on-device listPayments via this backend's getPayments), so no
+    // record is confirmed by a second source before the tracker acts on
+    // it. The scan answers null only on a conclusive miss and throws when
+    // it can't tell, so a failed scan never reads as no record.
+    lookupPayment = async (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+        trackTimeoutMs?: number;
+    }) => {
+        try {
+            return await trackPaymentV2(data.payment_hash, data.trackTimeoutMs);
+        } catch {
+            return await this.scanForPayment(data);
+        }
+    };
+    // The native call returns once the request is handed to LND, before LND
+    // has processed it. The outcome arrives on the CloseChannel stream: an
+    // error, or close_pending once the closing transaction is published.
     closeChannel = async (urlParams?: Array<string>) => {
         const fundingTxId = (urlParams && urlParams[0]) || '';
         const outputIndex =
@@ -281,13 +328,64 @@ export default class EmbeddedLND extends LND {
         const delivery_address =
             urlParams && urlParams[4] ? urlParams[4] : undefined;
 
-        return await closeChannel(
-            fundingTxId,
-            outputIndex,
-            force,
-            sat_per_vbyte,
-            delivery_address
-        );
+        // ChannelsStore stops waiting after 6 s and ignores any later result,
+        // so stop listening then as well. Every close stream reports under
+        // the same CloseChannel event; the request id tells this close's
+        // updates apart from the others'.
+        const CHANNEL_CLOSE_TIMEOUT_MS = 6000;
+        const requestId = newStreamRequestId();
+        return await new Promise((resolve, reject) => {
+            const finish = () => {
+                clearTimeout(timeout);
+                listener.remove();
+            };
+            // Timeout: resolve optimistically since LND accepted the request
+            const timeout = setTimeout(() => {
+                finish();
+                resolve({});
+            }, CHANNEL_CLOSE_TIMEOUT_MS);
+            const listener = LndMobileEventEmitter.addListener(
+                'CloseChannel',
+                (e: any) => {
+                    if (!isEventForRequest(e, requestId)) return;
+                    try {
+                        const error = checkLndStreamErrorResponse(
+                            'CloseChannel',
+                            e
+                        );
+                        if (error === 'EOF') {
+                            return;
+                        } else if (error) {
+                            finish();
+                            reject(error);
+                            return;
+                        }
+
+                        // a close reports close_pending first; chan_close only
+                        // follows once the close confirms
+                        const update = decodeCloseStatusUpdate(e.data);
+                        if (update?.close_pending) {
+                            finish();
+                            resolve(update);
+                        }
+                    } catch (error) {
+                        console.error(error);
+                    }
+                }
+            );
+
+            closeChannel(
+                fundingTxId,
+                outputIndex,
+                force,
+                sat_per_vbyte,
+                delivery_address,
+                requestId
+            ).catch((error: any) => {
+                finish();
+                reject(error);
+            });
+        });
     };
     abandonChannel = async (
         urlParams?: Array<string | boolean | undefined>
@@ -313,14 +411,17 @@ export default class EmbeddedLND extends LND {
 
     getNodeInfo = async (urlParams?: Array<string>) =>
         await getNodeInfo((urlParams && urlParams[0]) || '');
+    // UTF-8, like the other backends. stringToUint8Array keeps only the low
+    // byte of each char, so a non-ASCII look-alike of the LNURL-auth phrase
+    // would pass isReservedSigningMessage and still be signed as the phrase.
     signMessage = async (msg: any) => {
-        return await signMessageNodePubkey(Base64Utils.stringToUint8Array(msg));
+        return await signMessageNodePubkey(Base64Utils.utf8ToBytes(msg));
     };
     verifyMessage = async (data: any) => {
         const { signature, msg } = data;
         return await verifyMessageNodePubkey(
             signature,
-            Base64Utils.stringToUint8Array(msg)
+            Base64Utils.utf8ToBytes(msg)
         );
     };
 
@@ -351,6 +452,7 @@ export default class EmbeddedLND extends LND {
     // getForwardingHistory = () => N/A
     // // Coin Control
     fundPsbt = async (data: any) => await fundPsbt(data);
+    releaseOutput = async (data: any) => await releaseOutput(data);
     signPsbt = async (data: any) => await signPsbt(data);
     finalizePsbt = async (data: any) => await finalizePsbt(data);
     publishTransaction = async (data: any) => {
@@ -429,7 +531,7 @@ export default class EmbeddedLND extends LND {
 
     // rHash arrives hex encoded from the Receive view
     watchInvoicePaid = (
-        { rHash }: { rHash: string; value?: string | number },
+        { rHash }: { rHash: string },
         onPaid: (payload: {
             amountSat: number;
             tx?: string;
@@ -492,11 +594,11 @@ export default class EmbeddedLND extends LND {
     watchOnchainReceived = (
         {
             address,
-            value,
+            expectedAmountSat,
             numConfPreference
         }: {
             address: string;
-            value?: string | number;
+            expectedAmountSat?: string | number;
             numConfPreference: number;
             blockHeight?: number;
         },
@@ -527,7 +629,8 @@ export default class EmbeddedLND extends LND {
                     if (
                         transaction.dest_addresses.includes(address) &&
                         transaction.num_confirmations > numConfPreference &&
-                        Number(transaction.amount) >= Number(value)
+                        Number(transaction.amount) >=
+                            Number(expectedAmountSat ?? 0)
                     ) {
                         listener.remove();
                         onReceived({
@@ -591,6 +694,8 @@ export default class EmbeddedLND extends LND {
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => this.supports('v0.18.3');
+    // the native openChannelSync does not forward a memo
+    supportsChannelMemo = () => false;
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     supportsChannelFundMax = () => true;

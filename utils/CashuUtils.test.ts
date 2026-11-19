@@ -9,11 +9,19 @@ jest.mock('../cashu-cdk', () => ({
 }));
 
 import CashuDevKit from '../cashu-cdk';
+import type { CDKTransaction } from '../cashu-cdk';
 import CashuUtils, {
     cashuTokenPrefixes,
     CashuSeedOrigin,
     classifyCashuSeedOrigin,
-    resolveLockTarget
+    isMeltPaid,
+    isMeltSettledUnpaid,
+    meltOutcome,
+    meltQuoteOutcome,
+    normalizeMeltState,
+    resolveLockTarget,
+    isCdkMeltTrackedLocally,
+    selectUntrackedCdkMelts
 } from './CashuUtils';
 
 const mockIsValidToken = CashuDevKit.isValidToken as jest.Mock;
@@ -499,5 +507,246 @@ describe('resolveLockTarget', () => {
         expect(
             resolveLockTarget({}, { pubkey: '', contactName: 'Alice' })
         ).toEqual({ pubkey: '', contactName: '' });
+    });
+});
+
+describe('melt state', () => {
+    describe('normalizeMeltState', () => {
+        it('uppercases the state it was given', () => {
+            expect(normalizeMeltState('Paid')).toBe('PAID');
+            expect(normalizeMeltState('Pending')).toBe('PENDING');
+        });
+
+        it('falls back to the next candidate when one is missing', () => {
+            expect(normalizeMeltState(undefined, 'Unpaid')).toBe('UNPAID');
+            expect(normalizeMeltState('', 'Pending')).toBe('PENDING');
+        });
+
+        it('prefers the first non-empty candidate', () => {
+            expect(normalizeMeltState('Pending', 'Paid')).toBe('PENDING');
+        });
+
+        it('leaves a missing state unknown', () => {
+            expect(normalizeMeltState()).toBe('');
+            expect(normalizeMeltState(undefined, null, '')).toBe('');
+        });
+    });
+
+    describe('isMeltPaid', () => {
+        it('accepts a Paid melt', () => {
+            expect(isMeltPaid('Paid')).toBe(true);
+        });
+
+        // The mint has not settled the invoice in any of these states, so a
+        // melt resolving with one must never be reported as a paid invoice
+        it.each(['Pending', 'Unpaid', 'Issued', 'Failed'])(
+            'rejects a %s melt',
+            (state) => {
+                expect(isMeltPaid(state)).toBe(false);
+            }
+        );
+
+        it('rejects a melt with no state at all', () => {
+            expect(isMeltPaid(undefined)).toBe(false);
+        });
+    });
+
+    describe('meltOutcome', () => {
+        it('reads a paid melt as paid', () => {
+            expect(meltOutcome('Paid')).toBe('paid');
+        });
+
+        // The mint is finished with these and did not pay: the ecash is the
+        // wallet's again and nothing can change later
+        it.each(['Unpaid', 'Failed', 'Expired'])(
+            'reads a %s melt as settled unpaid',
+            (state) => {
+                expect(isMeltSettledUnpaid(state)).toBe(true);
+                expect(meltOutcome(state)).toBe('unpaid');
+            }
+        );
+
+        it('reads a pending melt as in flight', () => {
+            expect(isMeltSettledUnpaid('Pending')).toBe(false);
+            expect(meltOutcome('Pending')).toBe('inFlight');
+        });
+
+        // Dropping an unknown state would lose a payment that may still
+        // settle, the same mistake as reporting it paid, in the other
+        // direction
+        it('reads an unknown or absent state as in flight', () => {
+            expect(meltOutcome('Issued')).toBe('inFlight');
+            expect(meltOutcome(undefined)).toBe('inFlight');
+            expect(meltOutcome('')).toBe('inFlight');
+        });
+    });
+
+    describe('meltQuoteOutcome', () => {
+        // CDK returns its local copy of a quote while a melt saga holds it,
+        // and that copy stays Unpaid until the saga finishes
+        it('reads an Unpaid quote a saga still holds as in flight', () => {
+            expect(
+                meltQuoteOutcome({
+                    state: 'Unpaid',
+                    used_by_operation: 'op-1'
+                })
+            ).toBe('inFlight');
+        });
+
+        it('reads an Unpaid quote no saga holds as unpaid', () => {
+            expect(meltQuoteOutcome({ state: 'Unpaid' })).toBe('unpaid');
+            expect(
+                meltQuoteOutcome({ state: 'Unpaid', used_by_operation: null })
+            ).toBe('unpaid');
+        });
+
+        it('reads a Paid quote as paid', () => {
+            expect(
+                meltQuoteOutcome({ state: 'Paid', used_by_operation: 'op-1' })
+            ).toBe('paid');
+            expect(meltQuoteOutcome({ state: 'Paid' })).toBe('paid');
+        });
+
+        it('reads a Pending quote as in flight', () => {
+            expect(meltQuoteOutcome({ state: 'Pending' })).toBe('inFlight');
+        });
+
+        it('reads a missing quote as in flight', () => {
+            expect(meltQuoteOutcome(undefined)).toBe('inFlight');
+        });
+    });
+});
+
+describe('isCdkMeltTrackedLocally', () => {
+    const cdkMelt = (overrides: Partial<CDKTransaction> = {}): CDKTransaction =>
+        ({
+            id: 'a'.repeat(64),
+            direction: 'outgoing',
+            amount: 1000,
+            fee: 2,
+            mint_url: 'https://mint.example.com',
+            timestamp: 1756200000,
+            quote_id: 'quote-1',
+            payment_proof: 'preimage-1',
+            ...overrides
+        } as CDKTransaction);
+
+    it('returns false with no local payments', () => {
+        expect(isCdkMeltTrackedLocally(cdkMelt(), [])).toBe(false);
+    });
+
+    it('matches a local payment by melt quote id', () => {
+        const payments = [
+            {
+                amount: 999999,
+                meltResponse: { quote: { quote: 'quote-1' } }
+            }
+        ];
+        expect(isCdkMeltTrackedLocally(cdkMelt(), payments)).toBe(true);
+    });
+
+    it('falls back to preimage + amount when quote ids differ (MPP)', () => {
+        const payments = [
+            {
+                amount: 1000,
+                payment_preimage: 'preimage-1',
+                meltResponse: { quote: { quote: 'planner-quote' } }
+            }
+        ];
+        expect(
+            isCdkMeltTrackedLocally(
+                cdkMelt({ quote_id: 'mint-mpp-quote' }),
+                payments
+            )
+        ).toBe(true);
+    });
+
+    it('does not match on preimage alone when amounts differ', () => {
+        const payments = [
+            {
+                amount: 400,
+                payment_preimage: 'preimage-1',
+                meltResponse: { quote: { quote: 'planner-quote' } }
+            }
+        ];
+        expect(
+            isCdkMeltTrackedLocally(
+                cdkMelt({ quote_id: 'mint-mpp-quote' }),
+                payments
+            )
+        ).toBe(false);
+    });
+
+    it('matches by preimage when the local record has no amount', () => {
+        const payments = [{ payment_preimage: 'preimage-1' }];
+        expect(
+            isCdkMeltTrackedLocally(cdkMelt({ quote_id: undefined }), payments)
+        ).toBe(true);
+    });
+
+    it('returns false for an untracked melt', () => {
+        const payments = [
+            {
+                amount: 1000,
+                payment_preimage: 'other-preimage',
+                meltResponse: { quote: { quote: 'other-quote' } }
+            }
+        ];
+        expect(isCdkMeltTrackedLocally(cdkMelt(), payments)).toBe(false);
+    });
+});
+
+describe('selectUntrackedCdkMelts', () => {
+    const melt = (overrides: Partial<CDKTransaction> = {}): CDKTransaction => ({
+        id: 'melt',
+        direction: 'outgoing',
+        amount: 1000,
+        fee: 1,
+        mint_url: 'https://mint.example.com',
+        timestamp: 1756200000,
+        quote_id: 'quote-1',
+        payment_proof: 'preimage-1',
+        state: 'Completed',
+        ...overrides
+    });
+
+    it('keeps a completed melt missing from local storage', () => {
+        const tx = melt();
+        expect(selectUntrackedCdkMelts([tx], [])).toEqual([tx]);
+    });
+
+    it('keeps an in-flight melt', () => {
+        const tx = melt({ state: 'Pending', payment_proof: undefined });
+        expect(selectUntrackedCdkMelts([tx], [])).toEqual([tx]);
+    });
+
+    it('drops a failed melt', () => {
+        expect(
+            selectUntrackedCdkMelts([melt({ state: 'Failed' })], [])
+        ).toEqual([]);
+    });
+
+    it('drops a melt already tracked locally', () => {
+        expect(
+            selectUntrackedCdkMelts(
+                [melt()],
+                [{ meltResponse: { quote: { quote: 'quote-1' } } }]
+            )
+        ).toEqual([]);
+    });
+
+    it('drops token sends, which carry no quote id', () => {
+        expect(
+            selectUntrackedCdkMelts(
+                [melt({ quote_id: undefined, state: 'Pending' })],
+                []
+            )
+        ).toEqual([]);
+    });
+
+    it('drops incoming transactions', () => {
+        expect(
+            selectUntrackedCdkMelts([melt({ direction: 'incoming' })], [])
+        ).toEqual([]);
     });
 });

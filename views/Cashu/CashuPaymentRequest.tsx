@@ -34,17 +34,18 @@ import TransactionsStore, {
     SendPaymentReq
 } from '../../stores/TransactionsStore';
 import UnitsStore from '../../stores/UnitsStore';
-import LnurlPayStore from '../../stores/LnurlPayStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
-import LinkingUtils from '../../utils/LinkingUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
     calculateDonationAmount,
-    findDonationPercentageIndex
+    calculateTotalWithDonation,
+    findDonationPercentageIndex,
+    getDonationToSend
 } from '../../utils/DonationUtils';
 
 import { Row } from '../../components/layout/Row';
@@ -53,12 +54,6 @@ import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
 
-const zaplockerDestinations = [
-    // OLYMPUS
-    '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581'
-    // TODO add Zaplocker.com
-];
-
 interface CashuPaymentRequestProps {
     exitSetup: any;
     navigation: NativeStackNavigationProp<any, any>;
@@ -66,12 +61,11 @@ interface CashuPaymentRequestProps {
     CashuStore: CashuStore;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
-    LnurlPayStore: LnurlPayStore;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface CashuPaymentRequestState {
-    zaplockerToggle: boolean;
     slideToPayThreshold: number;
     donationsToggle: boolean;
     donationPercentage: any;
@@ -87,8 +81,8 @@ interface CashuPaymentRequestState {
     'CashuStore',
     'TransactionsStore',
     'UnitsStore',
-    'LnurlPayStore',
-    'SettingsStore'
+    'SettingsStore',
+    'NodeInfoStore'
 )
 @observer
 export default class CashuPaymentRequest extends React.Component<
@@ -102,7 +96,6 @@ export default class CashuPaymentRequest extends React.Component<
     swipeResetDisposer: any;
     donationLockRequest?: string;
     state = {
-        zaplockerToggle: false,
         slideToPayThreshold: 10000,
         donationsToggle: false,
         donationPercentage: 0,
@@ -179,13 +172,18 @@ export default class CashuPaymentRequest extends React.Component<
         // complete against the swapped-in invoice. The render path notices
         // the mismatch and replaces the pay controls with a warning; the pin
         // is only advanced when the user explicitly accepts the new request.
+        // If no invoice was loaded at mount, pin the first one that
+        // arrives: the swipe is reset here, so it can only be paid after it
+        // has been on screen.
         this.swipeResetDisposer = reaction(
             () => CashuStore.paymentRequest,
-            () => {
+            (current) => {
                 if (!this.isComponentMounted) return;
-                this.setState({
-                    swipeButtonKey: this.state.swipeButtonKey + 1
-                });
+                this.setState((prevState) => ({
+                    swipeButtonKey: prevState.swipeButtonKey + 1,
+                    reviewedPaymentRequest:
+                        prevState.reviewedPaymentRequest || current || ''
+                }));
             }
         );
 
@@ -222,28 +220,43 @@ export default class CashuPaymentRequest extends React.Component<
         }
     }
 
-    sendPayment = ({ amount }: SendPaymentReq) => {
-        const { SettingsStore, navigation } = this.props;
-        const { settings } = SettingsStore;
-
-        const enableDonations =
-            Platform.OS !== 'ios' && settings?.payments?.enableDonations;
+    // The donation that will actually be sent with this payment. Resolved in
+    // one place so the coverage check below and the amount handed to the
+    // sending views cannot disagree: those views take this as decided rather
+    // than re-reading the store, which is what stops a donation the check
+    // never counted from going out once nodeInfo arrives mid-payment.
+    resolveDonationToSend = () => {
+        const { CashuStore, SettingsStore, NodeInfoStore } = this.props;
         const { donationAmount } = this.state;
 
+        const donationsAllowed =
+            Platform.OS !== 'ios' &&
+            !!CashuStore.payReq?.getRequestAmount &&
+            SettingsStore.settings?.payments?.enableDonations;
+
+        return getDonationToSend(
+            NodeInfoStore?.nodeInfo?.isMainNet,
+            donationsAllowed,
+            donationAmount
+        );
+    };
+
+    sendPayment = ({ payment_request, amount }: SendPaymentReq) => {
+        const { navigation } = this.props;
+        const donationToSend = this.resolveDonationToSend();
+
         navigation.navigate('CashuSendingLightning', {
-            enableDonations,
-            ...(enableDonations &&
-                donationAmount > 0 && {
-                    donationAmount: donationAmount.toString()
-                }),
-            paymentAmount: amount ? amount : undefined
+            ...(donationToSend > 0 && {
+                donationAmount: donationToSend.toString()
+            }),
+            paymentAmount: amount ? amount : undefined,
+            paymentRequest: payment_request
         });
     };
 
     triggerPayment = () => {
-        const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
-            this.props;
-        const { multiMintEnabled, donationAmount } = this.state;
+        const { CashuStore, navigation } = this.props;
+        const { multiMintEnabled, reviewedPaymentRequest } = this.state;
 
         // Fail closed: if the invoice in the store no longer matches the one
         // the user reviewed, it was swapped out from under the review screen.
@@ -253,9 +266,12 @@ export default class CashuPaymentRequest extends React.Component<
         // screen when this confirmation began. Reset the swipe knob so the
         // gesture doesn't stick; the render path shows the
         // payment-request-changed warning in place of the pay controls.
+        // With nothing pinned there is nothing the user reviewed, so refuse
+        // as well. The payment screens are handed the reviewed invoice, so
+        // that they refuse one swapped in between here and their mount.
         if (
-            this.state.reviewedPaymentRequest !== '' &&
-            CashuStore.paymentRequest !== this.state.reviewedPaymentRequest
+            !reviewedPaymentRequest ||
+            CashuStore.paymentRequest !== reviewedPaymentRequest
         ) {
             this.setState({
                 swipeButtonKey: this.state.swipeButtonKey + 1
@@ -278,35 +294,26 @@ export default class CashuPaymentRequest extends React.Component<
             ? requestAmount.toString()
             : undefined;
 
-        const enableDonations =
-            Platform.OS !== 'ios' &&
-            SettingsStore.settings?.payments?.enableDonations;
-
         const isMultiMint =
             multiMintEnabled &&
             Array.isArray(CashuStore?.multiMintSelectedUrls) &&
             CashuStore!.multiMintSelectedUrls.length > 1;
 
         if (isMultiMint) {
+            const donationToSend = this.resolveDonationToSend();
             navigation.navigate('MultimintPayment', {
                 paymentAmount,
-                enableDonations,
-                ...(enableDonations &&
-                    donationAmount > 0 && {
-                        donationAmount: donationAmount.toString()
-                    })
+                paymentRequest: reviewedPaymentRequest,
+                ...(donationToSend > 0 && {
+                    donationAmount: donationToSend.toString()
+                })
             });
             return;
         }
 
-        // Zaplocker
-        const { isZaplocker } = LnurlPayStore;
-
-        // Broadcast attestation if Zaplocker is enabled
-        if (isZaplocker) LnurlPayStore.broadcastAttestation();
-
         // Call sendPayment with the freshest values
         this.sendPayment({
+            payment_request: reviewedPaymentRequest,
             amount: paymentAmount
         });
     };
@@ -357,10 +364,9 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     render() {
-        const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
+        const { CashuStore, NodeInfoStore, SettingsStore, navigation } =
             this.props;
         const {
-            zaplockerToggle,
             slideToPayThreshold,
             donationsToggle,
             donationAmount,
@@ -375,26 +381,21 @@ export default class CashuPaymentRequest extends React.Component<
             loadingFeeEstimate,
             feeEstimate,
             clearPayReq,
-            totalBalanceSats
+            totalBalanceSats,
+            payReqMintBalance,
+            payReqAmount
         } = CashuStore;
 
-        // Zaplocker
-        const {
-            isZaplocker,
-            isPmtHashSigValid,
-            isRelaysSigValid,
-            zaplockerNpub
-        } = LnurlPayStore;
-
-        const isZaplockerValid = isPmtHashSigValid && isRelaysSigValid;
-
         const isPayReqExpired = !!payReq && payReq.isExpiredNow();
+
+        const locale = SettingsStore.settings.locale;
+        if (payReq) payReq.determineFormattedOriginalTimeUntilExpiry(locale);
 
         const requestAmount =
             payReq && payReq.getRequestAmount
                 ? payReq.getRequestAmount
                 : undefined;
-        const expiry = payReq && payReq.expiry;
+        const expiry = payReq && payReq.formattedOriginalTimeUntilExpiry;
         const cltv_expiry = payReq && payReq.cltv_expiry;
         const destination = payReq && payReq.destination;
         const description = payReq && payReq.description;
@@ -403,13 +404,12 @@ export default class CashuPaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { implementation, settings } = SettingsStore;
+        const { settings } = SettingsStore;
 
         const isNoAmountInvoice: boolean = !requestAmount;
         const showMultiMintToggle = !!settings?.ecash?.enableMultiMint;
 
         const noBalance = totalBalanceSats === 0;
-        const hasPayReqError = !!getPayReqError;
 
         // The screen renders whatever invoice is in the shared CashuStore, so
         // when the store no longer matches the pinned invoice the user has a
@@ -425,14 +425,32 @@ export default class CashuPaymentRequest extends React.Component<
         const enableDonations =
             Platform.OS !== 'ios' &&
             !isNoAmountInvoice &&
-            settings?.payments?.enableDonations;
+            settings?.payments?.enableDonations &&
+            NodeInfoStore?.nodeInfo?.isMainNet;
 
-        const showZaplockerWarning =
-            isZaplocker ||
-            (destination &&
-                zaplockerDestinations.includes(destination) &&
-                cltv_expiry &&
-                Number(cltv_expiry) > 200);
+        // The donation is a second payment drawn from the same mint right
+        // after this one, so the balance has to cover both. This is the same
+        // value the sending views are handed, so what is checked here and
+        // what is sent are the same number.
+        const donationToCover = this.resolveDonationToSend();
+        // payReqMintBalance is 0 when getPayReq did not quote the invoice, and
+        // getPayReqError already covers the invoice falling short on its own.
+        const donationLeavesTooLittle =
+            !getPayReqError &&
+            donationToCover > 0 &&
+            payReqMintBalance > 0 &&
+            payReqMintBalance <
+                calculateTotalWithDonation(
+                    payReqAmount,
+                    feeEstimate || 0,
+                    donationToCover
+                );
+        const payReqWarning = getPayReqError
+            ? getPayReqError
+            : donationLeavesTooLittle
+            ? localeString('stores.CashuStore.notEnoughFunds')
+            : undefined;
+        const hasPayReqError = !!payReqWarning;
 
         const QRButton = () => (
             <TouchableOpacity
@@ -563,21 +581,6 @@ export default class CashuPaymentRequest extends React.Component<
                                             />
                                         </View>
                                     )}
-                                    {showZaplockerWarning &&
-                                        implementation === 'embedded-lnd' && (
-                                            <View
-                                                style={{
-                                                    paddingTop: 10,
-                                                    paddingBottom: 10
-                                                }}
-                                            >
-                                                <WarningMessage
-                                                    message={localeString(
-                                                        'views.Send.zaplockerWarning'
-                                                    )}
-                                                />
-                                            </View>
-                                        )}
                                     {!BackendUtils.supportsLightningSends() && (
                                         <View
                                             style={{
@@ -607,7 +610,7 @@ export default class CashuPaymentRequest extends React.Component<
                                                 />
                                             </View>
                                         )}
-                                    {!!getPayReqError && (
+                                    {!!payReqWarning && (
                                         <View
                                             style={{
                                                 paddingTop: 10,
@@ -615,7 +618,7 @@ export default class CashuPaymentRequest extends React.Component<
                                             }}
                                         >
                                             <WarningMessage
-                                                message={getPayReqError}
+                                                message={payReqWarning}
                                             />
                                         </View>
                                     )}
@@ -634,139 +637,6 @@ export default class CashuPaymentRequest extends React.Component<
                                         </View>
                                     )}
                                 </>
-
-                                {isZaplocker && (
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            this.setState({
-                                                zaplockerToggle:
-                                                    !zaplockerToggle
-                                            });
-                                        }}
-                                    >
-                                        <View
-                                            style={{
-                                                marginTop: 10,
-                                                marginBottom: 10
-                                            }}
-                                        >
-                                            <Row justify="space-between">
-                                                <View style={{ flex: 1 }}>
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.Settings.LightningAddress.zaplockerVerification'
-                                                        )}
-                                                        color={
-                                                            isZaplockerValid
-                                                                ? themeColor(
-                                                                      'success'
-                                                                  )
-                                                                : themeColor(
-                                                                      'error'
-                                                                  )
-                                                        }
-                                                    />
-                                                </View>
-                                                {zaplockerToggle ? (
-                                                    <CaretDown
-                                                        fill={
-                                                            isZaplockerValid
-                                                                ? themeColor(
-                                                                      'success'
-                                                                  )
-                                                                : themeColor(
-                                                                      'error'
-                                                                  )
-                                                        }
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                ) : (
-                                                    <CaretRight
-                                                        fill={
-                                                            isZaplockerValid
-                                                                ? themeColor(
-                                                                      'success'
-                                                                  )
-                                                                : themeColor(
-                                                                      'error'
-                                                                  )
-                                                        }
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                )}
-                                            </Row>
-                                        </View>
-                                    </TouchableOpacity>
-                                )}
-
-                                {zaplockerToggle && (
-                                    <>
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'views.PaymentRequest.isPmtHashSigValid'
-                                            )}
-                                            value={
-                                                isPmtHashSigValid
-                                                    ? localeString(
-                                                          'general.valid'
-                                                      )
-                                                    : localeString(
-                                                          'general.invalid'
-                                                      )
-                                            }
-                                            color={
-                                                isPmtHashSigValid
-                                                    ? themeColor('success')
-                                                    : themeColor('error')
-                                            }
-                                        />
-
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'views.PaymentRequest.isRelaysSigValid'
-                                            )}
-                                            value={
-                                                isRelaysSigValid
-                                                    ? localeString(
-                                                          'general.valid'
-                                                      )
-                                                    : localeString(
-                                                          'general.invalid'
-                                                      )
-                                            }
-                                            color={
-                                                isRelaysSigValid
-                                                    ? themeColor('success')
-                                                    : themeColor('error')
-                                            }
-                                        />
-
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'nostr.npub'
-                                            )}
-                                            value={zaplockerNpub}
-                                            sensitive
-                                            showCopyIcon
-                                        />
-
-                                        <View style={styles.button}>
-                                            <Button
-                                                title={localeString(
-                                                    'nostr.loadProfileExternal'
-                                                )}
-                                                onPress={() =>
-                                                    LinkingUtils.handleDeepLink(
-                                                        `nostr:${zaplockerNpub}`,
-                                                        this.props.navigation
-                                                    )
-                                                }
-                                            />
-                                        </View>
-                                    </>
-                                )}
 
                                 {!!description && (
                                     <KeyValue
@@ -800,7 +670,9 @@ export default class CashuPaymentRequest extends React.Component<
                                         keyValue={localeString(
                                             'views.PaymentRequest.cltvExpiry'
                                         )}
-                                        value={cltv_expiry}
+                                        value={`${cltv_expiry} ${localeString(
+                                            'general.blocks'
+                                        )}`}
                                     />
                                 )}
 

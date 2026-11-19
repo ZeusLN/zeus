@@ -1,5 +1,7 @@
 package app.zeusln.zeus;
 
+import android.util.Base64;
+
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
@@ -8,8 +10,11 @@ import com.facebook.react.bridge.Promise;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -74,8 +79,19 @@ public class ZipUtils extends ReactContextBaseJavaModule {
         }
     }
 
+    // Upper bound on the total bytes unzipFile writes. The archives it reads
+    // are channel backups (lnd's graph directory: channel.db or the SQLite
+    // files). A mobile node's database is usually tens to a few hundred MB,
+    // so this leaves more than ten times that for an uncompacted one, while
+    // a small archive that inflates without end is stopped long before it
+    // can fill the phone's storage. The size each entry declares is not
+    // used, since it is not checked until the entry has been inflated.
+    static final long MAX_UNZIP_BYTES = 4L * 1024 * 1024 * 1024;
+
     @ReactMethod
     public void unzipFile(String zipPath, String destDirPath, Promise promise) {
+        // Files this call has created, deleted again if it fails
+        List<File> written = new ArrayList<>();
         try {
             File zipFile = new File(zipPath);
             if (!zipFile.exists()) {
@@ -88,37 +104,41 @@ public class ZipUtils extends ReactContextBaseJavaModule {
                 destDir.mkdirs();
             }
 
-            FileInputStream fis = new FileInputStream(zipFile);
-            ZipInputStream zis = new ZipInputStream(fis);
-            byte[] buffer = new byte[8192];
+            long total = 0;
+            try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
+                byte[] buffer = new byte[8192];
 
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                if (entry.isDirectory()) continue;
+                ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (entry.isDirectory()) continue;
 
-                String name = entry.getName();
-                // Prevent zip slip
-                File outFile = new File(destDir, name);
-                if (!outFile.getCanonicalPath().startsWith(destDir.getCanonicalPath() + File.separator)) {
-                    zis.close();
-                    fis.close();
-                    promise.reject("ERR_UNZIP", "Zip entry outside target directory: " + name);
-                    return;
+                    String name = entry.getName();
+                    // Prevent zip slip
+                    File outFile = new File(destDir, name);
+                    if (!outFile.getCanonicalPath().startsWith(destDir.getCanonicalPath() + File.separator)) {
+                        throw new IOException("Zip entry outside target directory: " + name);
+                    }
+
+                    written.add(outFile);
+                    try (FileOutputStream fos = new FileOutputStream(outFile)) {
+                        int len;
+                        while ((len = zis.read(buffer)) > 0) {
+                            total += len;
+                            if (total > MAX_UNZIP_BYTES) {
+                                throw new IOException("Zip contents exceed the maximum size of " + MAX_UNZIP_BYTES + " bytes");
+                            }
+                            fos.write(buffer, 0, len);
+                        }
+                    }
+                    zis.closeEntry();
                 }
-
-                FileOutputStream fos = new FileOutputStream(outFile);
-                int len;
-                while ((len = zis.read(buffer)) > 0) {
-                    fos.write(buffer, 0, len);
-                }
-                fos.close();
-                zis.closeEntry();
             }
 
-            zis.close();
-            fis.close();
             promise.resolve(null);
         } catch (Exception e) {
+            for (File file : written) {
+                file.delete();
+            }
             promise.reject("ERR_UNZIP", e.getMessage(), e);
         }
     }
@@ -139,19 +159,8 @@ public class ZipUtils extends ReactContextBaseJavaModule {
                 return;
             }
 
-            SecureRandom random = new SecureRandom();
-            byte[] salt = new byte[SALT_LEN];
-            random.nextBytes(salt);
-            byte[] iv = new byte[IV_LEN];
-            random.nextBytes(iv);
-
-            SecretKeySpec key = deriveKey(passphrase, salt);
-
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, iv));
-
             byte[] plaintext = readAllBytes(inFile);
-            byte[] ciphertext = cipher.doFinal(plaintext);
+            byte[] output = encryptBytes(plaintext, passphrase);
 
             File outFile = new File(outputPath);
             File parentDir = outFile.getParentFile();
@@ -160,10 +169,7 @@ public class ZipUtils extends ReactContextBaseJavaModule {
             }
 
             try (FileOutputStream fos = new FileOutputStream(outFile)) {
-                fos.write(VERSION);
-                fos.write(salt);
-                fos.write(iv);
-                fos.write(ciphertext); // includes GCM tag appended by Android
+                fos.write(output);
             }
 
             promise.resolve(null);
@@ -182,34 +188,7 @@ public class ZipUtils extends ReactContextBaseJavaModule {
             }
 
             byte[] fileData = readAllBytes(inFile);
-            int minLen = 1 + SALT_LEN + IV_LEN + GCM_TAG_BITS / 8;
-            if (fileData.length < minLen) {
-                promise.reject("ERR_DECRYPT", "File too small to be a valid encrypted backup");
-                return;
-            }
-
-            int version = fileData[0] & 0xFF;
-            if (version != VERSION) {
-                promise.reject("ERR_DECRYPT", "Unsupported encryption version: " + version);
-                return;
-            }
-
-            byte[] salt = new byte[SALT_LEN];
-            System.arraycopy(fileData, 1, salt, 0, SALT_LEN);
-            byte[] iv = new byte[IV_LEN];
-            System.arraycopy(fileData, 1 + SALT_LEN, iv, 0, IV_LEN);
-
-            int headerLen = 1 + SALT_LEN + IV_LEN;
-            int ciphertextLen = fileData.length - headerLen;
-            byte[] ciphertext = new byte[ciphertextLen];
-            System.arraycopy(fileData, headerLen, ciphertext, 0, ciphertextLen);
-
-            SecretKeySpec key = deriveKey(passphrase, salt);
-
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, iv));
-
-            byte[] plaintext = cipher.doFinal(ciphertext);
+            byte[] plaintext = decryptBytes(fileData, passphrase);
 
             File outFile = new File(outputPath);
             File parentDir = outFile.getParentFile();
@@ -227,6 +206,82 @@ public class ZipUtils extends ReactContextBaseJavaModule {
         } catch (Exception e) {
             promise.reject("ERR_DECRYPT", e.getMessage(), e);
         }
+    }
+
+    @ReactMethod
+    public void encryptString(String plaintextBase64, String passphrase, Promise promise) {
+        try {
+            byte[] plaintext = Base64.decode(plaintextBase64, Base64.DEFAULT);
+            byte[] output = encryptBytes(plaintext, passphrase);
+            promise.resolve(Base64.encodeToString(output, Base64.NO_WRAP));
+        } catch (Exception e) {
+            promise.reject("ERR_ENCRYPT", e.getMessage(), e);
+        }
+    }
+
+    @ReactMethod
+    public void decryptString(String dataBase64, String passphrase, Promise promise) {
+        try {
+            byte[] fileData = Base64.decode(dataBase64, Base64.DEFAULT);
+            byte[] plaintext = decryptBytes(fileData, passphrase);
+            promise.resolve(Base64.encodeToString(plaintext, Base64.NO_WRAP));
+        } catch (javax.crypto.AEADBadTagException e) {
+            promise.reject("ERR_DECRYPT", "Decryption failed. Incorrect seed or corrupted file.");
+        } catch (Exception e) {
+            promise.reject("ERR_DECRYPT", e.getMessage(), e);
+        }
+    }
+
+    private byte[] encryptBytes(byte[] plaintext, String passphrase) throws Exception {
+        SecureRandom random = new SecureRandom();
+        byte[] salt = new byte[SALT_LEN];
+        random.nextBytes(salt);
+        byte[] iv = new byte[IV_LEN];
+        random.nextBytes(iv);
+
+        SecretKeySpec key = deriveKey(passphrase, salt);
+
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, iv));
+
+        // ciphertext includes the GCM tag appended by Android
+        byte[] ciphertext = cipher.doFinal(plaintext);
+
+        byte[] output = new byte[1 + SALT_LEN + IV_LEN + ciphertext.length];
+        output[0] = (byte) VERSION;
+        System.arraycopy(salt, 0, output, 1, SALT_LEN);
+        System.arraycopy(iv, 0, output, 1 + SALT_LEN, IV_LEN);
+        System.arraycopy(ciphertext, 0, output, 1 + SALT_LEN + IV_LEN, ciphertext.length);
+        return output;
+    }
+
+    private byte[] decryptBytes(byte[] fileData, String passphrase) throws Exception {
+        int minLen = 1 + SALT_LEN + IV_LEN + GCM_TAG_BITS / 8;
+        if (fileData.length < minLen) {
+            throw new IllegalArgumentException("File too small to be a valid encrypted backup");
+        }
+
+        int version = fileData[0] & 0xFF;
+        if (version != VERSION) {
+            throw new IllegalArgumentException("Unsupported encryption version: " + version);
+        }
+
+        byte[] salt = new byte[SALT_LEN];
+        System.arraycopy(fileData, 1, salt, 0, SALT_LEN);
+        byte[] iv = new byte[IV_LEN];
+        System.arraycopy(fileData, 1 + SALT_LEN, iv, 0, IV_LEN);
+
+        int headerLen = 1 + SALT_LEN + IV_LEN;
+        int ciphertextLen = fileData.length - headerLen;
+        byte[] ciphertext = new byte[ciphertextLen];
+        System.arraycopy(fileData, headerLen, ciphertext, 0, ciphertextLen);
+
+        SecretKeySpec key = deriveKey(passphrase, salt);
+
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, iv));
+
+        return cipher.doFinal(ciphertext);
     }
 
     private SecretKeySpec deriveKey(String passphrase, byte[] salt) throws Exception {

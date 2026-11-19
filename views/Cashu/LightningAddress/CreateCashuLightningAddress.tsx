@@ -48,6 +48,7 @@ export default class CreateCashuLightningAddress extends React.Component<
     CreateCashuLightningAddressState
 > {
     isInitialFocus = true;
+    focusListener: any = null;
 
     state = {
         mintList: [],
@@ -61,7 +62,13 @@ export default class CreateCashuLightningAddress extends React.Component<
         this.loadMints();
 
         // triggers when loaded from navigation or back action
-        navigation.addListener('focus', this.handleFocus);
+        this.focusListener = navigation.addListener('focus', this.handleFocus);
+    }
+
+    componentWillUnmount(): void {
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     loadMints = () => {
@@ -101,8 +108,7 @@ export default class CreateCashuLightningAddress extends React.Component<
             route
         } = this.props;
         const { mintUrl, mintList } = this.state;
-        const { createCashu, update, deleteLocalHashes, error_msg } =
-            LightningAddressStore;
+        const { createCashu, update, error_msg } = LightningAddressStore;
         const { updateSettingsGroup } = SettingsStore;
         const switchTo = route.params?.switchTo;
 
@@ -219,17 +225,23 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                                 'cashu'
                                                         });
                                                     if (response.success) {
-                                                        await deleteLocalHashes();
                                                         await updateSettingsGroup(
                                                             'lightningAddress',
                                                             {
                                                                 mintUrl
                                                             }
                                                         );
-                                                        navigation.popTo(
-                                                            'LightningAddress'
-                                                        );
-                                                        return;
+                                                        // popTo() has no target and acts on the top
+                                                        // route, so only while this screen is on
+                                                        // top; otherwise turn the spinner off below
+                                                        if (
+                                                            navigation.isFocused()
+                                                        ) {
+                                                            navigation.popTo(
+                                                                'LightningAddress'
+                                                            );
+                                                            return;
+                                                        }
                                                     }
                                                 } catch (e) {
                                                     console.error(e);
@@ -240,10 +252,17 @@ export default class CreateCashuLightningAddress extends React.Component<
                                             } else {
                                                 createCashu(mintUrl)
                                                     .then((response) => {
-                                                        if (response.success) {
-                                                            navigation.popTo(
-                                                                'LightningAddress'
-                                                            );
+                                                        if (
+                                                            response.success &&
+                                                            navigation.isFocused()
+                                                        ) {
+                                                            // Opened only from ReceiveEcash and
+                                                            // Get started on the ZEUS Pay screen,
+                                                            // so go back to whichever opened it.
+                                                            // goBack() has no target and pops the
+                                                            // top route, so only while this screen
+                                                            // is on top
+                                                            navigation.goBack();
                                                         }
                                                     })
                                                     .catch((e) =>
@@ -267,13 +286,6 @@ export default class CreateCashuLightningAddress extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    text: {
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    explainer: {
-        fontSize: 20,
-        marginBottom: 10
-    },
     wrapper: {
         paddingTop: 5,
         paddingBottom: 5,

@@ -99,6 +99,9 @@ export interface CDKMeltQuote {
     state: CDKQuoteState;
     expiry: number;
     payment_preimage?: string;
+    // ID of the melt saga holding the quote. CDK keeps the quote Unpaid
+    // until the saga finishes, so Unpaid with this set is still in flight.
+    used_by_operation?: string;
 }
 
 export interface CDKMelted {
@@ -107,6 +110,15 @@ export interface CDKMelted {
     change?: CDKProof[];
     amount: number;
     fee_paid: number;
+}
+
+// Result of meltPartial, which creates its own MPP melt quote natively.
+// quote_id, fee_reserve and expiry are that quote's. Builds before they
+// were added omit them.
+export interface CDKPartialMelted extends CDKMelted {
+    quote_id?: string;
+    fee_reserve?: number;
+    expiry?: number;
 }
 
 // ============================================================================
@@ -166,6 +178,23 @@ export interface CDKPreparedSend {
     fee: number;
 }
 
+// Counts from recover_incomplete_sagas. A sent token still unclaimed at the
+// mint counts as recovered without being changed, so recovered > 0 does not
+// mean anything was fixed.
+export interface CDKRecoveryReport {
+    recovered: number;
+    compensated: number;
+    skipped: number;
+    failed: number;
+}
+
+export interface CDKOnDemandMintRecovery {
+    report: CDKRecoveryReport;
+    removed: boolean;
+    // Unset when the balance was not read
+    balance?: number;
+}
+
 export interface CDKReceiveOptions {
     p2pk_signing_keys?: string[]; // hex-encoded secret keys
     preimages?: string[];
@@ -199,8 +228,14 @@ export interface CDKTransaction {
     fee?: number;
     mint_url: string;
     timestamp: number;
+    unit?: string;
     memo?: string;
-    state: string;
+    quote_id?: string;
+    payment_request?: string;
+    payment_proof?: string;
+    payment_method?: string;
+    // lifecycle status: Pending, Completed or Failed
+    state?: string;
 }
 
 // ============================================================================
@@ -300,7 +335,6 @@ export interface CashuDevKitNativeModule {
         optionsJson?: string
     ): Promise<string>;
     confirmSend(preparedSendId: string, memo?: string): Promise<string>;
-    cancelSend(preparedSendId: string): Promise<void>;
     receive(encodedToken: string, optionsJson?: string): Promise<number>;
 
     // Token Utility
@@ -310,6 +344,9 @@ export interface CashuDevKitNativeModule {
     // Restore
     restore(mintUrl: string): Promise<number>;
     restoreFromSeed(mintUrl: string, seedHex: string): Promise<number>;
+
+    // Saga Recovery
+    recoverIncompleteSagas(mintUrl: string): Promise<string>;
 
     // Proof Management
     checkProofsState(mintUrl: string, proofsJson: string): Promise<string>;

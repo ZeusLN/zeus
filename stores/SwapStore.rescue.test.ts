@@ -4,13 +4,11 @@
 // other file stubs out, and a real in-memory Storage rather than a bare
 // jest.fn. Same split as UnitsUtils.alt.test.ts and
 // AddressUtils-testnet.test.ts.
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: (s: string) => s
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (s: string) => s
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: {
@@ -20,14 +18,6 @@ jest.mock('react-native-blob-util', () => ({
 }));
 // SwapUtils touches the filesystem and save dialog for the rescue key
 // export; neither is exercised here
-jest.mock('react-native-fs', () => ({
-    DownloadDirectoryPath: '/public-downloads',
-    DocumentDirectoryPath: '/docs',
-    CachesDirectoryPath: '/cache',
-    exists: jest.fn().mockResolvedValue(false),
-    unlink: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined)
-}));
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
 }));
@@ -234,6 +224,26 @@ describe('SwapStore.getRescuableSwaps', () => {
             tree: { claimLeaf: { output: 'c1' } },
             preimageHash: KEY_0_PREIMAGE_HASH
         });
+    });
+
+    it('takes no status that is not a string from the host', async () => {
+        restoreResponse([
+            {
+                id: 'rescued-reverse',
+                type: 'reverse',
+                status: { toString: 1 },
+                claimDetails: { keyIndex: 0, serverPublicKey: 'ab' }
+            }
+        ]);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        const [rescued] = getStored(SWAPS_KEY);
+        expect(rescued.id).toBe('rescued-reverse');
+        expect(rescued).not.toHaveProperty('status');
     });
 
     it('keeps a reverse swap whose preimage hash matches, in any case', async () => {
@@ -655,11 +665,9 @@ describe('rescued reverse swap, from storage to claim', () => {
 
         const claim = ReverseClaimTransaction.build({
             swap: new Swap({ ...getStored(SWAPS_KEY)[0] }),
-            endpoint: 'https://swaps.example.com',
             transactionHex: '00',
             feeRate: 2,
-            minerFee: 200,
-            isTestnet: false
+            minerFee: 200
         });
 
         const childPrivateKey = HDKey.fromMasterSeed(
@@ -699,7 +707,7 @@ describe('Swap.claimDestinationAddress', () => {
         ).toBeUndefined();
     });
 
-    it('uses an address the wallet generated for a rescued swap', () => {
+    it('does not trust a persisted wallet-origin marker on a rescued swap', () => {
         expect(
             new Swap({
                 id: 's',
@@ -707,7 +715,7 @@ describe('Swap.claimDestinationAddress', () => {
                 destinationAddress: 'bc1qwallet',
                 claimAddressFromWallet: true
             }).claimDestinationAddress
-        ).toBe('bc1qwallet');
+        ).toBeUndefined();
     });
 
     it('replaces a host address stored by an earlier rescue with a wallet address', async () => {
@@ -725,9 +733,10 @@ describe('Swap.claimDestinationAddress', () => {
         });
 
         expect(address).toBe('bc1qwallet');
-        // a later attempt claims to the same wallet address
-        expect(new Swap(getStored(SWAPS_KEY)[0]).claimDestinationAddress).toBe(
-            'bc1qwallet'
-        );
+        // A saved marker cannot distinguish a wallet address from a legacy
+        // host field. A later attempt must resolve through the wallet again.
+        expect(
+            new Swap(getStored(SWAPS_KEY)[0]).claimDestinationAddress
+        ).toBeUndefined();
     });
 });

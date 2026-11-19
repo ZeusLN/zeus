@@ -56,8 +56,10 @@ import VssServerPicker, {
 import { Row } from '../../components/layout/Row';
 import ShowHideToggle from '../../components/ShowHideToggle';
 
+import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
 import ChannelsStore from '../../stores/ChannelsStore';
+import NostrWalletConnectStore from '../../stores/NostrWalletConnectStore';
 import SyncStore from '../../stores/SyncStore';
 import SettingsStore, {
     INTERFACE_KEYS,
@@ -73,6 +75,7 @@ import Scan from '../../assets/images/SVG/Scan.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 
 import { getPhoto } from '../../utils/PhotoUtils';
+import { addRecoveryWallet } from '../../utils/WalletRecoveryUtils';
 import {
     clearNodeKeychainData,
     clearCDKDatabase,
@@ -96,8 +99,10 @@ import {
 
 interface WalletConfigurationProps {
     navigation: NativeStackNavigationProp<any, any>;
+    AlertStore: AlertStore;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
+    NostrWalletConnectStore: NostrWalletConnectStore;
     SettingsStore: SettingsStore;
     SyncStore: SyncStore;
     route: Route<
@@ -106,7 +111,7 @@ interface WalletConfigurationProps {
             node: Node;
             index: any;
             active: boolean;
-            tor: boolean;
+            enableTor: boolean;
             saved: boolean;
             newEntry: boolean;
             photo: string;
@@ -191,7 +196,14 @@ const ScanBadge = ({ onPress }: { onPress: () => void }) => (
     </TouchableOpacity>
 );
 
-@inject('BalanceStore', 'ChannelsStore', 'SettingsStore', 'SyncStore')
+@inject(
+    'AlertStore',
+    'BalanceStore',
+    'ChannelsStore',
+    'NostrWalletConnectStore',
+    'SettingsStore',
+    'SyncStore'
+)
 @observer
 export default class WalletConfiguration extends React.Component<
     WalletConfigurationProps,
@@ -250,7 +262,7 @@ export default class WalletConfiguration extends React.Component<
         ldkSeedWordCount: 12,
         ldkEsploraServer: '',
         ldkRgsServer: '',
-        ldkScorerUrl: '',
+        ldkScorerUrl: undefined,
         ldkVssServer: DEFAULT_VSS_SERVER,
         ldkVssServerSelected: DEFAULT_VSS_SERVER,
         ldkVssServerCustom: '',
@@ -270,6 +282,56 @@ export default class WalletConfiguration extends React.Component<
 
     scrollViewRef = React.createRef<ScrollView>();
 
+    // A different interface means a different server, so drop the previous
+    // server's address, credentials and input errors. Fields a form hides
+    // are still saved with the node, and a stale error flag keeps Save
+    // disabled. saved: false shows Save on an existing wallet.
+    //
+    // keepCertVerification (used by the clipboard imports) keeps the
+    // user's Certificate Verification choice instead of the dropdown's
+    // per-interface value, so an import never turns verification off. The
+    // lndhub form forces verification on and hides the switch, so a value
+    // carried to or from lndhub is not the user's and is reset.
+    resetConnection = (
+        implementation: Implementations,
+        {
+            keepCertVerification = false
+        }: { keepCertVerification?: boolean } = {}
+    ) => ({
+        implementation,
+        saved: false,
+        certVerification:
+            keepCertVerification &&
+            implementation !== 'lndhub' &&
+            this.state.implementation !== 'lndhub'
+                ? this.state.certVerification
+                : implementation === 'lndhub',
+        host: '',
+        port: '',
+        macaroonHex: '',
+        rune: '',
+        lndhubUrl: '',
+        username: '',
+        password: '',
+        pairingPhrase: '',
+        customMailboxServer: '',
+        nostrWalletConnectUrl: '',
+        hostError: false,
+        portError: false,
+        macaroonHexError: false,
+        runeError: false,
+        lndhubUrlError: false,
+        usernameError: false,
+        customMailboxServerError: false,
+        pairingPhraseError: false
+    });
+
+    // A port filled in from a saved wallet, a scan or an import is marked
+    // the same way as a typed one, so a disabled Save button has a reason
+    // on screen.
+    isInvalidPort = (port?: string) =>
+        !!port && !ValidationUtils.isValidPort(port);
+
     importClipboard = () => {
         const { suggestImport } = this.state;
 
@@ -277,10 +339,17 @@ export default class WalletConfiguration extends React.Component<
             const { host, port, macaroonHex } =
                 ConnectionFormatUtils.processLndConnectUrl(suggestImport);
 
+            // An lndconnect string describes an LND REST node. A Core
+            // Lightning rune left in the form would be sent to the
+            // imported host.
             this.setState({
+                ...this.resetConnection('lnd', {
+                    keepCertVerification: true
+                }),
                 host,
                 port,
-                macaroonHex,
+                portError: this.isInvalidPort(port),
+                macaroonHex: macaroonHex || '',
                 suggestImport: '',
                 importError: '',
                 enableTor: host.includes('.onion')
@@ -304,9 +373,9 @@ export default class WalletConfiguration extends React.Component<
                 const existingAccount = !!username;
 
                 const stateUpdate: any = {
+                    ...this.resetConnection('lndhub'),
                     username,
                     password,
-                    implementation: 'lndhub',
                     suggestImport: '',
                     importError: '',
                     existingAccount,
@@ -342,11 +411,14 @@ export default class WalletConfiguration extends React.Component<
             } = ConnectionFormatUtils.processCLNRestConnectUrl(suggestImport);
 
             this.setState({
+                ...this.resetConnection(implementation, {
+                    keepCertVerification: true
+                }),
                 host,
                 rune,
                 port,
+                portError: this.isInvalidPort(port),
                 enableTor,
-                implementation,
                 suggestImport: '',
                 importError: ''
             });
@@ -427,7 +499,7 @@ export default class WalletConfiguration extends React.Component<
         const node = route.params.node ?? this.state.node;
         const index = route.params.index ?? this.state.index;
         const active = route.params.active ?? this.state.active;
-        const tor = route.params.tor ?? this.state.enableTor;
+        const tor = route.params.enableTor ?? this.state.enableTor;
         const saved = route.params.saved ?? this.state.saved;
         const newEntry = route.params.newEntry ?? this.state.newEntry;
         const newPhoto = route.params.photo ?? this.state.photo;
@@ -479,6 +551,7 @@ export default class WalletConfiguration extends React.Component<
                 dismissCustodialWarning,
                 host,
                 port,
+                portError: this.isInvalidPort(port),
                 macaroonHex,
                 rune,
                 implementation: implementation || 'lnd',
@@ -533,8 +606,9 @@ export default class WalletConfiguration extends React.Component<
     // a host that is neither loopback nor a Tor onion service. A bare host
     // or an https:// scheme resolves to HTTPS in the backend getURL(), so
     // only an explicit http:// is treated as insecure. Gated per
-    // implementation because state retains fields the active backend never
-    // transmits credentials over (e.g. a stale host on an lndhub config).
+    // implementation because state retains fields some backends never read
+    // (e.g. a stale lndhubUrl on an lnd config, or a stale host on an
+    // lndhub config).
     private hasInsecureCleartextTransport = (): boolean => {
         const { implementation, host, lndhubUrl } = this.state;
         switch (implementation) {
@@ -546,6 +620,10 @@ export default class WalletConfiguration extends React.Component<
             default:
                 return false;
         }
+    };
+
+    selectImplementation = (value: Implementations) => {
+        this.setState(this.resetConnection(value));
     };
 
     saveWalletConfiguration = (
@@ -586,7 +664,8 @@ export default class WalletConfiguration extends React.Component<
         recoveryCipherSeed?: string,
         newEmbeddedLndWallet?: boolean
     ) => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, NostrWalletConnectStore, navigation } =
+            this.props;
         const {
             nickname,
             dismissCustodialWarning,
@@ -675,12 +754,14 @@ export default class WalletConfiguration extends React.Component<
         // Built inside the queued update so a write still in the queue
         // cannot be undone by a nodes array copied before it landed
         let originalNode: Node;
+        let otherNodes: Node[] = [];
         const update = (current: Settings) => {
             let nodes: Node[];
             if (current.nodes) {
                 nodes = [...current.nodes];
                 if (index != null) {
                     originalNode = nodes[index];
+                    otherNodes = nodes.filter((_, i) => i !== index);
                     nodes[index] = node;
                 } else {
                     nodes.push(node);
@@ -693,6 +774,11 @@ export default class WalletConfiguration extends React.Component<
                 return {
                     nodes,
                     selectedNode: nodes.length - 1,
+                    // Pending next to any earlier restore that has not run
+                    // yet, written with the node so a kill cannot split them
+                    ...(recoveryCipherSeed
+                        ? addRecoveryWallet(current, lndDir || 'lnd')
+                        : {}),
                     // Force Wallet view to restart connection for new wallet
                     justDeletedWallet: false,
                     // Ensure Express Graph Sync runs for new wallet
@@ -702,14 +788,45 @@ export default class WalletConfiguration extends React.Component<
             return { nodes };
         };
 
-        updateSettings(update)
-            .then(async () => {
-                if (recoveryCipherSeed) {
-                    await updateSettings({
-                        recovery: true
-                    });
-                }
+        // LNC credentials are stored under sha256(pairingPhrase), and wallet
+        // deletion and the data wipe find them through the pairing phrase in
+        // the node configs. Once an edit drops a phrase from every config,
+        // nothing can reach its entries again, so clear them here. Checked
+        // against the saved nodes so credentials another config still uses
+        // (a copy of this wallet, or an unchanged phrase) are kept.
+        const clearReplacedLncCredentials = async (savedNodes?: Node[]) => {
+            const replacedPhrase = originalNode?.pairingPhrase;
+            if (!replacedPhrase) return;
+            // Without the saved nodes there is no telling whether a config
+            // still uses the phrase, so the credentials are kept
+            if (!Array.isArray(savedNodes)) return;
+            if (savedNodes.some((n) => n.pairingPhrase === replacedPhrase))
+                return;
+            // Best effort: the settings are already saved, so a failed
+            // cleanup must not stop the reconnect and navigation below
+            try {
+                await clearNodeKeychainData({ pairingPhrase: replacedPhrase });
+            } catch (error) {
+                console.error('Error clearing replaced LNC keys:', error);
+            }
+        };
 
+        updateSettings(update)
+            .then(async (newSettings: Settings) => {
+                // Keep this wallet's NWC connections matched to its config
+                // when an edit changes the fields its id is derived from.
+                // Best effort, like the deletion cleanup.
+                if (originalNode != null) {
+                    try {
+                        await NostrWalletConnectStore.rekeyWalletConfigConnections(
+                            originalNode,
+                            node,
+                            otherNodes
+                        );
+                    } catch (error) {
+                        console.error('Error updating NWC connections:', error);
+                    }
+                }
                 this.setState({
                     saved: true
                 });
@@ -738,6 +855,9 @@ export default class WalletConfiguration extends React.Component<
                         // view reinitializes on the same credentials.
                         await BackendUtils.disconnect();
                     }
+                    // After the disconnect: credential writes it flushes
+                    // would otherwise recreate the cleared entries
+                    await clearReplacedLncCredentials(newSettings?.nodes);
                     setConnectingStatus(true);
                     // reset, not popTo: popTo only collapses the stack
                     // when the target route already exists on it. The
@@ -751,6 +871,7 @@ export default class WalletConfiguration extends React.Component<
                         routes: [{ name: 'Wallet' }]
                     });
                 } else {
+                    await clearReplacedLncCredentials(newSettings?.nodes);
                     if (newEmbeddedLndWallet) {
                         // New wallet created - trigger fresh connection
                         // LND was already stopped in createNewWallet(), just navigate
@@ -828,7 +949,8 @@ export default class WalletConfiguration extends React.Component<
     deleteNodeConfig = async () => {
         if (this.state.deletingWallet) return;
         this.setState({ deletingWallet: true });
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, NostrWalletConnectStore, navigation } =
+            this.props;
         const { updateSettings, embeddedLndStarted, settings } = SettingsStore;
         const { index, implementation, lndDir, ldkNodeDir, active } =
             this.state;
@@ -836,6 +958,31 @@ export default class WalletConfiguration extends React.Component<
         const deletedNode = index != null ? nodes?.[index] : undefined;
 
         try {
+            // The next wallet takes this one's index without a reconnect.
+            // Two embedded LND, LDK Node or NWC wallets have the same
+            // implementation and no host, so updateNodeProperties sees no
+            // change of target: end the deleted wallet's connection here
+            if (active) SettingsStore.invalidateConnection();
+
+            // Delete the wallet's NWC connections first, so they are no
+            // longer served now or when the same node is added again. The
+            // active wallet's are matched while it is still the current
+            // one; an inactive wallet's by its config.
+            // Best effort: a storage failure here must not block the
+            // deletion, and the last-wallet sweep below removes leftovers.
+            try {
+                if (active) {
+                    await NostrWalletConnectStore.deleteCurrentWalletConnections();
+                } else {
+                    await NostrWalletConnectStore.deleteWalletConfigConnections(
+                        deletedNode,
+                        (nodes || []).filter((_, i) => i !== index)
+                    );
+                }
+            } catch (error) {
+                console.error('Error deleting NWC connections:', error);
+            }
+
             // If deleting active embedded LND wallet, stop it first
             if (
                 active &&
@@ -870,8 +1017,17 @@ export default class WalletConfiguration extends React.Component<
             // wallet. This must happen before updateSettings removes the node
             // config: the hashed LNC keys can only be reconstructed from the
             // pairing phrase stored there, so a crash after the config is gone
-            // would orphan them permanently.
-            await clearNodeKeychainData(deletedNode);
+            // would orphan them permanently. LNC credentials another config
+            // still points to (a copy of this wallet) are kept.
+            await clearNodeKeychainData(deletedNode, {
+                keepLncCredentials:
+                    !!deletedNode?.pairingPhrase &&
+                    nodes!.some(
+                        (n, i) =>
+                            i !== index &&
+                            n.pairingPhrase === deletedNode.pairingPhrase
+                    )
+            });
 
             // Update settings first to clear node references before
             // deleting files — prevents stale references if navigation
@@ -939,6 +1095,15 @@ export default class WalletConfiguration extends React.Component<
                 // (legacy shared db, any per-wallet dbs whose seeds are no
                 // longer recoverable, and WAL/SHM sidecars).
                 await clearCDKDatabase();
+                // Also drop NWC connections of wallets deleted while
+                // inactive, which could not be matched to their wallet.
+                // Best effort: the config is already gone, so a failure
+                // here must not keep the user on this screen.
+                try {
+                    await NostrWalletConnectStore.deleteAllConnectionData();
+                } catch (error) {
+                    console.error('Error deleting NWC connection data:', error);
+                }
                 // reset, not navigate/replace: this screen is normally
                 // reached several pushes deep (Menu/Wallets ->
                 // WalletConfiguration), and once its last wallet is
@@ -1017,13 +1182,20 @@ export default class WalletConfiguration extends React.Component<
 
     private performDelete = () => {
         const { implementation, active } = this.state;
-        const { ChannelsStore, BalanceStore, navigation } = this.props;
+        const { AlertStore, ChannelsStore, BalanceStore, navigation } =
+            this.props;
+        const isLdkNode = implementation === 'ldk-node';
+        // On-device wallets: channel and balance checks below read the
+        // stores, which only hold the active wallet's data
+        const isOnDevice = implementation === 'embedded-lnd' || isLdkNode;
 
-        if (implementation === 'embedded-lnd' && !active) {
+        if (isOnDevice && !active) {
             Alert.alert(
                 localeString('general.error'),
                 localeString(
-                    'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
+                    isLdkNode
+                        ? 'views.Settings.WalletConfiguration.deleteWallet.inactiveWarningLdk'
+                        : 'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
                 ),
                 [
                     {
@@ -1041,15 +1213,20 @@ export default class WalletConfiguration extends React.Component<
                 { cancelable: false }
             );
         } else if (
-            implementation === 'embedded-lnd' &&
+            isOnDevice &&
             (ChannelsStore.channels.length > 0 ||
                 ChannelsStore.pendingChannels.length > 0)
         ) {
+            // Only the active wallet reaches this branch, so a VSS error in
+            // AlertStore is this wallet's: its channel state is local only
+            const channelsWarning = !isLdkNode
+                ? 'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
+                : AlertStore?.vssError
+                ? 'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdkVssError'
+                : 'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdk';
             Alert.alert(
                 localeString('general.warning'),
-                localeString(
-                    'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
-                ),
+                localeString(channelsWarning),
                 [
                     {
                         text: localeString(
@@ -1059,13 +1236,16 @@ export default class WalletConfiguration extends React.Component<
                     },
                     {
                         text: localeString(
-                            'views.Settings.WalletConfiguration.deleteWallet.exportChannels'
+                            isLdkNode
+                                ? 'views.Settings.Seed.title'
+                                : 'views.Settings.WalletConfiguration.deleteWallet.exportChannels'
                         ),
                         onPress: () =>
-                            // Active embedded-LND only reaches this branch;
-                            // SettingsStore already has this wallet's seed.
+                            // Only an active on-device wallet reaches this
+                            // branch; SettingsStore already has its seed.
                             reAuthNavigation(navigation, 'Seed', {
-                                skipWarning: true
+                                skipWarning: true,
+                                ...(isLdkNode && { implementation: 'ldk-node' })
                             }),
                         isPreferred: true
                     },
@@ -1077,7 +1257,7 @@ export default class WalletConfiguration extends React.Component<
                 { cancelable: false }
             );
         } else if (
-            implementation === 'embedded-lnd' &&
+            isOnDevice &&
             (BalanceStore.confirmedBlockchainBalance !== 0 ||
                 BalanceStore.unconfirmedBlockchainBalance !== 0)
         ) {
@@ -1347,7 +1527,7 @@ export default class WalletConfiguration extends React.Component<
             });
 
             // Node is already built — tell Wallet.tsx to skip re-init
-            SettingsStore.walletJustCreated = true;
+            SettingsStore.justCreatedNodeDir = ldkNodeDir;
 
             if (response?.vssError) {
                 console.warn(
@@ -1467,6 +1647,11 @@ export default class WalletConfiguration extends React.Component<
             !isLocalImpl &&
             implementation !== 'nostr-wallet-connect';
 
+        // The banner only needs to let the user recognise the string;
+        // the credentials it carries stay masked like the fields below
+        const importPreview =
+            ConnectionFormatUtils.redactConnectionString(suggestImport);
+
         const nostrWalletConnectUrlInvalid =
             implementation === 'nostr-wallet-connect' &&
             !ValidationUtils.isValidNostrWalletConnectUrl(
@@ -1496,15 +1681,7 @@ export default class WalletConfiguration extends React.Component<
                     'views.Settings.WalletConfiguration.walletInterface'
                 )}
                 selectedValue={implementation}
-                onValueChange={(value: Implementations) => {
-                    this.setState({
-                        implementation: value,
-                        saved: false,
-                        certVerification: value === 'lndhub' ? true : false,
-                        host: '',
-                        lndhubUrl: ''
-                    });
-                }}
+                onValueChange={this.selectImplementation}
                 values={interfaceKeys}
             />
         );
@@ -1564,7 +1741,9 @@ export default class WalletConfiguration extends React.Component<
                     }
                     navigation={navigation}
                 />
-                {!!suggestImport && (
+                {/* Same guard as the interface dropdown: an import would
+                    turn a set-up on-device wallet into a remote one */}
+                {!!suggestImport && !adminMacaroon && !ldkNodeInitialized && (
                     <View
                         style={{
                             padding: 10,
@@ -1583,9 +1762,9 @@ export default class WalletConfiguration extends React.Component<
                                 padding: 15
                             }}
                         >
-                            {suggestImport.length > 100
-                                ? `${suggestImport.substring(0, 100)}...`
-                                : suggestImport}
+                            {importPreview.length > 100
+                                ? `${importPreview.substring(0, 100)}...`
+                                : importPreview}
                         </Text>
                         <Text style={{ ...styles.whiteText, marginBottom: 10 }}>
                             {localeString(
@@ -1658,7 +1837,8 @@ export default class WalletConfiguration extends React.Component<
                                             onPress={() => {
                                                 createAccount(
                                                     lndhubUrl,
-                                                    certVerification
+                                                    certVerification,
+                                                    enableTor
                                                 ).then((data: any) => {
                                                     if (
                                                         data.login &&
@@ -2966,6 +3146,9 @@ export default class WalletConfiguration extends React.Component<
                                             </Text>
                                             <TextInput
                                                 value={localKey}
+                                                secureTextEntry={
+                                                    this.state.hidden
+                                                }
                                                 locked={true}
                                             />
                                         </>
@@ -2987,6 +3170,9 @@ export default class WalletConfiguration extends React.Component<
                                             </Text>
                                             <TextInput
                                                 value={remoteKey}
+                                                secureTextEntry={
+                                                    this.state.hidden
+                                                }
                                                 locked={true}
                                             />
                                         </>

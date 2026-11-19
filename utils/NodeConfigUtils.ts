@@ -23,6 +23,38 @@ export const MIN_EXPORT_PASSWORD_LENGTH = 8;
 export const isValidExportPassword = (password: string): boolean =>
     !!password && password.trim().length >= MIN_EXPORT_PASSWORD_LENGTH;
 
+// On-device wallets are never exported (the export picker disables them):
+// their config points at a local data directory and holds the seed. A file
+// that contains one anyway was not produced by ZEUS, and importing it would
+// let the file choose the directory that wallet deletion later removes.
+const NON_IMPORTABLE_IMPLEMENTATIONS = ['embedded-lnd', 'ldk-node'];
+
+// Drops entries that are not node objects or that belong to an on-device
+// implementation, and strips the on-device node dirs from the remote configs
+// that remain: those dirs name another wallet's local data and keychain
+// namespaces. Applied to every node list read from an import file.
+export const getImportableNodes = (nodes: unknown[]): Node[] =>
+    nodes
+        .filter(
+            (node: any): node is Node =>
+                !!node &&
+                typeof node === 'object' &&
+                !Array.isArray(node) &&
+                !NON_IMPORTABLE_IMPLEMENTATIONS.includes(node.implementation)
+        )
+        .map(
+            ({ lndDir: _lndDir, ldkNodeDir: _ldkNodeDir, ...node }: any) => node
+        );
+
+// True for files written before the v2 format: a v1 CryptoJS blob (MD5
+// key derivation, one iteration) or an unencrypted envelope. They still
+// import, but the user should export again and delete the old file.
+export const isLegacyNodeConfigExport = (importData?: {
+    version?: number;
+    encrypted?: boolean;
+}): boolean =>
+    !!importData && (!importData.encrypted || (importData.version ?? 0) < 2);
+
 interface NodeConfigExport {
     version: number;
     encrypted: boolean;

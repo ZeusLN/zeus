@@ -1,5 +1,6 @@
 import { bech32 } from '@scure/base';
-import { bytesToHex } from '@noble/hashes/utils';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import BigNumber from 'bignumber.js';
 import Bolt11Utils from './Bolt11Utils';
 import {
     generateSecretKey,
@@ -7,7 +8,8 @@ import {
     finalizeEvent,
     Relay,
     verifyEvent,
-    nip44
+    nip44,
+    utils as nostrUtils
 } from 'nostr-tools';
 
 // CLINK Offers — successor to LNURL-pay using Nostr as transport.
@@ -231,15 +233,20 @@ export const verifyBolt11MatchesOffer = (
     noffer: NofferData,
     requestedAmountSats?: number
 ): string | null => {
-    let invoiceSats: number | null;
+    let invoiceSats: BigNumber | null;
     try {
         const decoded = Bolt11Utils.decode(invoice);
+        // `satoshis` is also null when the amount isn't a whole number of
+        // sats; `millisatoshis` is set for every encoded amount, so only a
+        // null there means the invoice is amountless.
         invoiceSats =
-            typeof decoded?.satoshis === 'number' ? decoded.satoshis : null;
+            decoded.millisatoshis != null
+                ? new BigNumber(decoded.millisatoshis).div(1000)
+                : null;
     } catch {
         return 'could not decode service invoice';
     }
-    if (invoiceSats === null || invoiceSats === undefined) {
+    if (invoiceSats === null) {
         // Invoice has no encoded amount — service expects the wallet to
         // choose one. Acceptable only for spontaneous offers; otherwise
         // it's a protocol violation.
@@ -247,7 +254,7 @@ export const verifyBolt11MatchesOffer = (
         return 'service returned an amountless invoice';
     }
     if (noffer.priceType === NofferPriceType.Fixed && noffer.price) {
-        if (invoiceSats !== noffer.price) {
+        if (!invoiceSats.isEqualTo(noffer.price)) {
             return `expected ${noffer.price} sats, invoice is for ${invoiceSats} sats`;
         }
         return null;
@@ -256,7 +263,7 @@ export const verifyBolt11MatchesOffer = (
     // requested. (For variable offers with a currency the user requested
     // sats post-conversion, so a direct comparison is still appropriate.)
     if (requestedAmountSats !== undefined && requestedAmountSats > 0) {
-        if (invoiceSats !== requestedAmountSats) {
+        if (!invoiceSats.isEqualTo(requestedAmountSats)) {
             return `expected ${requestedAmountSats} sats, invoice is for ${invoiceSats} sats`;
         }
     }
@@ -480,6 +487,39 @@ const sendAndAwaitResponse = (opts: {
     });
 };
 
+// Whether a hostname, as react-native-url-polyfill returns it, names a Tor
+// onion service once the native socket stack maps it to ASCII. The polyfill
+// does no IDNA mapping, so the hostname can still hold fullwidth letters,
+// other full stops, and characters IDNA removes (soft hyphen, zero-width
+// space, variation selectors). NFKC folds the first two; every non-ASCII
+// character left after that is dropped, which can only make a hostname
+// count as onion, never hide one.
+export const isOnionHostname = (hostname: string): boolean => {
+    const host = hostname
+        .normalize('NFKC')
+        // IDNA also separates labels at the ideographic full stop
+        .replace(/\u3002/g, '.')
+        .replace(/[^\x00-\x7f]/g, '');
+    // a trailing dot is the fully qualified form of the same name
+    return /\.onion\.*$/i.test(host);
+};
+
+// Whether the host the relay layer would dial is a Tor onion service.
+// Judged on the URL Relay opens its socket to (nostr-tools runs the string
+// through the WHATWG URL parser first), not on the text of the offer: a
+// trailing dot, query, fragment, empty port, backslash, percent-encoded
+// letter or tab would otherwise hide the `.onion` from a plain regex.
+export const isOnionRelay = (relay: string): boolean => {
+    let hostname: string;
+    try {
+        hostname = new URL(nostrUtils.normalizeURL(relay)).hostname;
+    } catch {
+        // Relay's constructor throws on the same input: nothing is dialled
+        return false;
+    }
+    return isOnionHostname(hostname);
+};
+
 // Resolves to a CLINK response: either a success containing a bolt11
 // invoice, or an error containing a code and human-readable message.
 // Throws only on transport failure (no relay reachable / timeout).
@@ -500,7 +540,7 @@ export const requestInvoiceFromNoffer = async (
     }
     // WebSocket-over-Tor is not currently supported by the relay layer.
     // Refuse onion relays explicitly rather than silently leaking traffic.
-    const onion = relays.find((r) => /\.onion(:\d+)?(\/|$)/i.test(r));
+    const onion = relays.find(isOnionRelay);
     if (onion) {
         throw new ClinkRequestError('ONION_NOT_SUPPORTED', onion);
     }

@@ -70,7 +70,9 @@ export default class RecommendedSettings extends React.Component<
         enableCashu: true,
         discoverMode: 'zeus',
         clipboard: true,
-        fiatEnabled: false,
+        // fiat rates are on by default, as in SettingsStore and
+        // WalletSettings
+        fiatEnabled: true,
         selectedCurrency: DEFAULT_FIAT,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
         initialMintUrls: [],
@@ -81,14 +83,13 @@ export default class RecommendedSettings extends React.Component<
     };
 
     componentDidMount() {
-        const { navigation, CashuStore, SettingsStore, route } = this.props;
+        const { navigation, SettingsStore, route } = this.props;
 
         this.syncFromRouteParams();
 
         // Mint discovery is only needed for ecash (Cashu); skip fetch for self-custody onboarding
-        const prefetchMints = route.params?.enableCashu ?? true;
-        if (prefetchMints && !CashuStore.restoreCachedRecommendations('zeus')) {
-            CashuStore.fetchMintsFromFollows();
+        if (route.params?.enableCashu ?? true) {
+            this.prefetchMints();
         }
 
         // Listen for updates when returning from questionnaire steps
@@ -106,6 +107,30 @@ export default class RecommendedSettings extends React.Component<
             });
         });
     }
+
+    componentDidUpdate(
+        _prevProps: RecommendedSettingsProps,
+        prevState: RecommendedSettingsState
+    ) {
+        // A mounted summary switches from self-custody to ecash when
+        // WalletType returns to it, so the mints are fetched then too, not
+        // only on mount. Only for ZEUS' follows: the fetch fills the same
+        // list that "Your follows" reads, so it would show ZEUS' mints there.
+        if (
+            this.state.enableCashu &&
+            !prevState.enableCashu &&
+            this.state.discoverMode === 'zeus'
+        ) {
+            this.prefetchMints();
+        }
+    }
+
+    prefetchMints = () => {
+        const { CashuStore } = this.props;
+        if (!CashuStore.restoreCachedRecommendations('zeus')) {
+            CashuStore.fetchMintsFromFollows();
+        }
+    };
 
     syncFromRouteParams = () => {
         const { route, CashuStore } = this.props;
@@ -215,6 +240,7 @@ export default class RecommendedSettings extends React.Component<
             clipboard,
             fiatEnabled,
             selectedCurrency,
+            fiatRatesSource,
             initialMintUrls,
             implementation,
             choosingPeers,
@@ -285,7 +311,9 @@ export default class RecommendedSettings extends React.Component<
         const hasCustomized =
             !enableCashu ||
             !clipboard ||
-            fiatEnabled ||
+            !fiatEnabled ||
+            selectedCurrency !== DEFAULT_FIAT ||
+            fiatRatesSource !== DEFAULT_FIAT_RATES_SOURCE ||
             discoverMode !== 'zeus' ||
             implementation !== 'ldk-node';
 
@@ -451,12 +479,12 @@ export default class RecommendedSettings extends React.Component<
                                 }}
                             >
                                 {implementation === 'ldk-node'
-                                    ? `LDK Node (${localeString(
-                                          'views.NodeChoice.speedReliability'
-                                      ).toLowerCase()})`
-                                    : `Embedded LND (${localeString(
-                                          'views.NodeChoice.privacyPower'
-                                      ).toLowerCase()})`}
+                                    ? localeString(
+                                          'views.NodeChoice.ldkNodeDescription'
+                                      )
+                                    : localeString(
+                                          'views.NodeChoice.embeddedLndDescription'
+                                      )}
                             </ListItem.Subtitle>
                         </ListItem.Content>
                         <Icon

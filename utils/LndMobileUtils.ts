@@ -12,6 +12,7 @@ const log = Log('utils/LndMobileUtils.ts');
 
 import Base64Utils from './Base64Utils';
 import { localeString } from './LocaleUtils';
+import { assertValidNodeDir, isValidNodeDir } from './NodeDirUtils';
 import { retry, sleep } from './SleepUtils';
 import { importChannelDb } from './ChannelMigrationUtils';
 
@@ -197,7 +198,11 @@ export function checkLndStreamErrorResponse(
             return createLndError(LndErrorCode.RPC_CONNECTION_CLOSED);
         }
 
-        return new Error(errorDesc);
+        const error = new Error(errorDesc);
+        // the gRPC status code name (e.g. AlreadyExists) parsed natively
+        // from lnd's error, for callers that classify rejections
+        (error as any).grpcCode = event.error_code;
+        return error;
     }
     return null;
 }
@@ -328,6 +333,10 @@ const writeLndConfig = async ({
  */
 export async function deleteLndWallet(lndDir: string): Promise<boolean> {
     log.d('Attempting to delete Embedded LND wallet');
+    if (!isValidNodeDir(lndDir)) {
+        log.e('Refusing to delete invalid LND directory', [lndDir]);
+        return false;
+    }
     try {
         await stopLnd();
         await NativeModules.LndMobileTools.deleteLndDirectory(lndDir);
@@ -338,7 +347,27 @@ export async function deleteLndWallet(lndDir: string): Promise<boolean> {
     }
 }
 
+/**
+ * Deletes the neutrino chain files of an embedded LND wallet so they are
+ * fetched again on the next start.
+ */
+export async function deleteNeutrinoFiles(
+    lndDir: string,
+    network: string,
+    isSqlite: boolean
+): Promise<void> {
+    assertValidNodeDir(lndDir);
+    await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
+        lndDir,
+        network,
+        isSqlite
+    );
+}
+
 export async function expressGraphSync(): Promise<{ resetFailed: boolean }> {
+    const lndDir = settingsStore?.lndDir || 'lnd';
+    assertValidNodeDir(lndDir);
+
     return await new Promise(async (resolve) => {
         let resetFailed = false;
         syncStore.setExpressGraphSyncStatus(true);
@@ -364,7 +393,6 @@ export async function expressGraphSync(): Promise<{ resetFailed: boolean }> {
             if (settingsStore?.isSqlite) {
                 log.d('Resetting native SQL graph database');
                 try {
-                    const lndDir = settingsStore?.lndDir || 'lnd';
                     const network =
                         settingsStore?.embeddedLndNetwork === 'Mainnet'
                             ? 'mainnet'
@@ -391,7 +419,7 @@ export async function expressGraphSync(): Promise<{ resetFailed: boolean }> {
                     ? settingsStore?.settings?.customSpeedloader
                     : settingsStore?.settings?.speedloader ||
                           DEFAULT_SPEEDLOADER,
-                settingsStore?.lndDir || 'lnd',
+                lndDir,
                 settingsStore?.isSqlite || false
             );
 
@@ -421,6 +449,10 @@ export async function initializeLnd({
     compactDb?: boolean;
     isSqlite?: boolean;
 }) {
+    // The native config, graph and log helpers join lndDir onto app storage
+    // paths without checking it, so refuse a stored value that could leave
+    // the wallet's own directory.
+    assertValidNodeDir(lndDir);
     const { initialize } = lndMobile.index;
     await writeLndConfig({ lndDir, isTestnet, rescan, compactDb, isSqlite });
 
@@ -595,6 +627,7 @@ export async function startLnd({
     isTestnet: boolean;
     isRecovery?: boolean;
 }) {
+    assertValidNodeDir(lndDir);
     const { startLnd, decodeState, subscribeState } = lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
 
@@ -798,14 +831,15 @@ async function retryStartLnd({
             log.w(`Retry attempt ${attempt}/${MAX_START_LND_RETRIES} failed`, [
                 retryError
             ]);
-            if (attempt === MAX_START_LND_RETRIES) {
-                log.e(
-                    `LND failed to start after ${MAX_START_LND_RETRIES} attempts`
-                );
-                throw createLndError(LndErrorCode.LND_START_FAILED);
-            }
         }
     }
+
+    // Every attempt failed. This is also reached when the last attempt still
+    // found LND running (it refuses to stop during a recovery rescan): that LND
+    // serves another wallet's directory, so resolving here would attach the
+    // selected wallet to the wrong node
+    log.e(`LND failed to start after ${MAX_START_LND_RETRIES} attempts`);
+    throw createLndError(LndErrorCode.LND_START_FAILED);
 }
 
 /**
@@ -1255,6 +1289,7 @@ export async function createLndWallet({
     setStatus?: (message: string | null) => void;
     isSqlite?: boolean;
 }) {
+    assertValidNodeDir(lndDir);
     const {
         initialize,
         createIOSApplicationSupportAndLndDirectories,
@@ -1350,17 +1385,18 @@ export async function createLndWallet({
             channelDbUri,
             channelDbFileName,
             lndDir,
-            isTestnet || false
+            isTestnet || false,
+            isSqlite
         );
 
         LndMobileEventEmitter.removeAllListeners('SubscribeState');
         settingsStore.embeddedLndStarted = false;
-        settingsStore.walletJustCreated = false;
+        settingsStore.justCreatedNodeDir = undefined;
     } else {
         // Mark that LND is already running from wallet creation,
         // so Wallet.tsx skips the stop→init→start cycle
         settingsStore.embeddedLndStarted = true;
-        settingsStore.walletJustCreated = true;
+        settingsStore.justCreatedNodeDir = lndDir;
     }
 
     return { wallet, seed, randomBase64 };

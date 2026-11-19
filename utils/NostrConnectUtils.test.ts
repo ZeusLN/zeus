@@ -36,7 +36,7 @@ jest.mock('react-native-notifications', () => ({
 }));
 
 import * as nostrTools from 'nostr-tools';
-import { hexToBytes } from '@noble/hashes/utils';
+import { hexToBytes } from '@noble/hashes/utils.js';
 
 import BackendUtils from './BackendUtils';
 import NostrConnectUtils from './NostrConnectUtils';
@@ -58,6 +58,7 @@ type PaymentStateSnapshot = {
     status: string | number | null;
     isIncomplete: boolean | null;
     error: boolean;
+    mayHaveBeenSent?: boolean;
     payment_error: string | null;
     loading: boolean;
 };
@@ -121,6 +122,17 @@ const paymentFixtures = {
             payment_preimage: ZERO_PREIMAGE
         }),
 
+    /** LND-style: first HTLC failed, retry still in flight */
+    retriedInFlightHtlc: () =>
+        new Payment({
+            payment_request: INVOICE_A,
+            payment_hash: HASH_A,
+            status: 'IN_FLIGHT',
+            failure_reason: 'FAILURE_REASON_NONE',
+            payment_preimage: ZERO_PREIMAGE,
+            htlcs: [{ status: 'FAILED' }, { status: 'IN_FLIGHT' }]
+        }),
+
     /** Another invoice — used to verify lookup does not cross-match */
     otherInvoiceInFlight: () =>
         new Payment({
@@ -179,6 +191,26 @@ const storeState = {
         isIncomplete: true,
         error: true,
         payment_error: 'route not found',
+        loading: false
+    }),
+    // the send request was rejected without the node's answer (e.g. a proxy
+    // closed the idle response), so it may have reached the node
+    requestRejected: (): PaymentStateSnapshot => ({
+        status: null,
+        isIncomplete: null,
+        error: true,
+        mayHaveBeenSent: true,
+        payment_error: null,
+        loading: false
+    }),
+    // the node itself refused the send (e.g. LND's "payment is in
+    // transition"), so this request sent nothing
+    refusedByNode: (): PaymentStateSnapshot => ({
+        status: null,
+        isIncomplete: null,
+        error: true,
+        mayHaveBeenSent: false,
+        payment_error: null,
         loading: false
     })
 };
@@ -309,6 +341,15 @@ describe('NostrConnectUtils', () => {
                 );
                 expect(url).not.toContain('lud16');
             });
+        });
+    });
+
+    describe('getNotifications', () => {
+        it('advertises only the notifications that are published', () => {
+            expect(NostrConnectUtils.getNotifications()).toEqual([
+                'payment_received',
+                'payment_sent'
+            ]);
         });
     });
 
@@ -454,12 +495,159 @@ describe('NostrConnectUtils', () => {
         });
     });
 
+    describe('getWalletConfigId', () => {
+        const id = NostrConnectUtils.getWalletConfigId;
+
+        it('is the same for the same embedded node dir and differs between dirs', () => {
+            const a = { implementation: 'embedded-lnd', lndDir: 'dir-a' };
+
+            expect(id(a)).toBe(id({ ...a, nickname: 'renamed' } as any));
+            expect(id(a)).not.toBe(
+                id({ implementation: 'embedded-lnd', lndDir: 'dir-b' })
+            );
+        });
+
+        it('applies the default dirs to legacy embedded configs', () => {
+            expect(id({ implementation: 'embedded-lnd' })).toBe(
+                id({ implementation: 'embedded-lnd', lndDir: 'lnd' })
+            );
+            expect(id({ implementation: 'ldk-node' })).toBe(
+                id({ implementation: 'ldk-node', ldkNodeDir: 'ldk' })
+            );
+        });
+
+        it('matches remote nodes by implementation, host and port', () => {
+            const node = { host: 'node.example.com', port: '8080' };
+
+            expect(id(node)).toBe(id({ ...node, implementation: 'lnd' }));
+            expect(id(node)).not.toBe(id({ ...node, port: '8081' }));
+            expect(id(node)).not.toBe(
+                id({ ...node, implementation: 'cln-rest' })
+            );
+        });
+
+        it('matches LndHub accounts by URL and username', () => {
+            const account = {
+                implementation: 'lndhub',
+                lndhubUrl: 'https://lndhub.example.com',
+                username: 'alice'
+            };
+
+            expect(id(account)).not.toBe(id({ ...account, username: 'bob' }));
+            expect(id(account)).not.toBe(
+                id({ ...account, lndhubUrl: 'https://other.example.com' })
+            );
+        });
+
+        it('tells LNbits wallets on one server apart by password', () => {
+            // Every LNbits wallet logs in as admin; the password, the
+            // wallet's API key, selects the wallet
+            const wallet = {
+                implementation: 'lndhub',
+                lndhubUrl: 'https://lnbits.example.com/lndhub/ext/',
+                username: 'admin',
+                password: 'a'.repeat(32)
+            };
+            const value = id(wallet);
+
+            expect(value).not.toBe(id({ ...wallet, password: 'b'.repeat(32) }));
+            expect(value).toMatch(/^[0-9a-f]{64}$/);
+            expect(value).not.toContain(wallet.password);
+        });
+
+        it('does not contain the LNC pairing phrase', () => {
+            const pairingPhrase = 'alpha bravo charlie delta';
+            const value = id({
+                implementation: 'lightning-node-connect',
+                pairingPhrase
+            });
+
+            expect(value).toMatch(/^[0-9a-f]{64}$/);
+            expect(value).not.toContain('alpha');
+        });
+
+        it('is undefined without a config or its identifying fields', () => {
+            expect(id(undefined)).toBeUndefined();
+            expect(id({ implementation: 'lnd' })).toBeUndefined();
+            expect(id({ implementation: 'lndhub' })).toBeUndefined();
+        });
+
+        // NWC connections store this id (NWCConnection.walletConfigId), so
+        // its value must not change. Expected values are sha256 of the
+        // UTF-8 JSON field list, computed with Node's crypto.
+        it.each([
+            [
+                'embedded LND with the default dir',
+                { implementation: 'embedded-lnd' },
+                'edd007300d761b9e75b0164cefbc13f0ef66d394470426f57e77bb1252d182a4'
+            ],
+            [
+                'LDK Node with the default dir',
+                { implementation: 'ldk-node' },
+                'dacbeb6c1bff48ca4225f4dbd03f31e467e7056b84323dc4be6e155939a600fb'
+            ],
+            [
+                'a remote LND node',
+                { host: 'node.example.com', port: '8080' },
+                '09083661cb64f3159024919765b2a938241e9ac7672f73bf4092f2ed2bc411b2'
+            ],
+            [
+                'a CLNRest node',
+                {
+                    implementation: 'cln-rest',
+                    host: 'node.example.com',
+                    port: '3010'
+                },
+                'f1e4ee6857c319350c471b58fdc55ec69189e72ae2e0c3decdc610a6a1b5bfb9'
+            ],
+            [
+                'an LndHub account',
+                {
+                    implementation: 'lndhub',
+                    lndhubUrl: 'https://lndhub.example.com',
+                    username: 'alice'
+                },
+                '21f65c72b2d60daa843c034b1435dd913180b51563df8ac2ccc24fef2035ced0'
+            ],
+            [
+                'an LNbits wallet (hashed username:password)',
+                {
+                    implementation: 'lndhub',
+                    lndhubUrl: 'https://lnbits.example.com/lndhub/ext/',
+                    username: 'admin',
+                    password: 'a'.repeat(32)
+                },
+                '800f1189f428bb260a77dc0396af4320b509afd3fc19f97b5245bb8837fa0720'
+            ],
+            [
+                'an LNbits wallet with a non-ASCII password',
+                {
+                    implementation: 'lndhub',
+                    lndhubUrl: 'https://lnbits.example.com/lndhub/ext/',
+                    username: 'admin',
+                    password: 'pässwörd-₿-😀'
+                },
+                '060c09377e99f75a396f8849eff0a50117534503d41421f11f1189bdccc8bb9c'
+            ],
+            [
+                'an LNC pairing',
+                {
+                    implementation: 'lightning-node-connect',
+                    pairingPhrase: 'alpha bravo charlie delta'
+                },
+                '260585b7191bb0939a3c9b825b3a6406dcf50a46c4f6a34bef81df079d5ff1c9'
+            ]
+        ])('keeps the stored id for %s', (_name, node, expected) => {
+            expect(id(node as any)).toBe(expected);
+        });
+    });
+
     describe('resolveFeeSats', () => {
         it('rounds fractional sats from msat division', () => {
-            expect(NostrConnectUtils.resolveFeeSats(1.2)).toBe(1);
+            expect(NostrConnectUtils.resolveFeeSats(1.2)).toBe(2);
             expect(NostrConnectUtils.resolveFeeSats(1.999)).toBe(2);
             expect(NostrConnectUtils.resolveFeeSats('0.5')).toBe(1);
-            expect(NostrConnectUtils.resolveFeeSats(0.026)).toBe(0);
+            expect(NostrConnectUtils.resolveFeeSats(0.026)).toBe(1);
         });
 
         it('returns whole sats unchanged and zeros non-positive or invalid values', () => {
@@ -470,6 +658,27 @@ describe('NostrConnectUtils', () => {
             expect(NostrConnectUtils.resolveFeeSats(null)).toBe(0);
             expect(NostrConnectUtils.resolveFeeSats('')).toBe(0);
             expect(NostrConnectUtils.resolveFeeSats(NaN)).toBe(0);
+        });
+    });
+
+    describe('getSettledPreimage', () => {
+        it('returns the preimage of a settled payment', () => {
+            const settled = paymentFixtures.settled();
+            expect(NostrConnectUtils.getSettledPreimage(settled)).toBe(
+                settled.getPreimage
+            );
+            expect(settled.getPreimage).not.toBe('');
+        });
+
+        it("returns '' for a failed payment with LND's all-zero preimage", () => {
+            const failed = paymentFixtures.failed();
+            expect(failed.getPreimage).toBe(ZERO_PREIMAGE);
+            expect(NostrConnectUtils.getSettledPreimage(failed)).toBe('');
+        });
+
+        it("returns '' when there is no payment", () => {
+            expect(NostrConnectUtils.getSettledPreimage(undefined)).toBe('');
+            expect(NostrConnectUtils.getSettledPreimage(null)).toBe('');
         });
     });
 
@@ -510,6 +719,58 @@ describe('NostrConnectUtils', () => {
                 expect(
                     NostrConnectUtils.isPaymentTimedOutMessage(message)
                 ).toBe(expected);
+            });
+        });
+
+        describe('isRouteFailureMessage', () => {
+            it.each([
+                ['LND no route key', 'error.failureReasonNoRoute', true],
+                ['LDK route not found key', 'error.ldk.routeNotFound', true],
+                [
+                    'LDK retries exhausted key',
+                    'error.ldk.retriesExhausted',
+                    true
+                ],
+                ['no route text', 'No route found.', true],
+                [
+                    'CLN pay',
+                    'Ran out of routes to try after 3 attempts: see `paystatus`',
+                    true
+                ],
+                [
+                    'CLN xpay',
+                    'Failed after 1 attempts. We could not find a usable set of paths',
+                    true
+                ],
+                ['LND timeout key', 'error.failureReasonTimeout', false],
+                [
+                    'LND timeout text',
+                    'There are more routes to try, but the payment timeout was exceeded.',
+                    false
+                ],
+                [
+                    'insufficient balance key',
+                    'error.failureReasonInsufficientBalance',
+                    false
+                ],
+                [
+                    'insufficient balance text',
+                    'Insufficient local balance',
+                    false
+                ],
+                ['non-recoverable key', 'error.failureReasonError', false],
+                [
+                    'recipient rejected key',
+                    'error.ldk.recipientRejected',
+                    false
+                ],
+                ['invoice expired', 'invoice expired', false],
+                ['null', null, false],
+                ['empty string', '', false]
+            ])('%s', (_label, message, expected) => {
+                expect(NostrConnectUtils.isRouteFailureMessage(message)).toBe(
+                    expected
+                );
             });
         });
 
@@ -595,6 +856,40 @@ describe('NostrConnectUtils', () => {
                     )
                 ).toBeUndefined();
             });
+
+            // CLN lists one entry per pay/xpay call, oldest first
+            const clnAttempt = (status: string, preimage = ZERO_PREIMAGE) =>
+                new Payment({
+                    bolt11: INVOICE_A,
+                    payment_hash: HASH_A,
+                    status,
+                    preimage
+                });
+
+            it('prefers a pending attempt over an earlier failed one', () => {
+                const found = NostrConnectUtils.findPaymentForInvoice(
+                    INVOICE_A,
+                    [clnAttempt('failed'), clnAttempt('pending')]
+                );
+                expect(found?.status).toBe('pending');
+            });
+
+            it('prefers a settled attempt over an earlier failed one', () => {
+                const found = NostrConnectUtils.findPaymentForInvoice(
+                    INVOICE_A,
+                    [clnAttempt('failed'), clnAttempt('complete', hex64('9'))]
+                );
+                expect(found?.status).toBe('complete');
+            });
+
+            it('returns the first attempt when every attempt failed', () => {
+                const first = clnAttempt('failed');
+                const found = NostrConnectUtils.findPaymentForInvoice(
+                    INVOICE_A,
+                    [first, clnAttempt('failed')]
+                );
+                expect(found).toBe(first);
+            });
         });
 
         describe('findInTransitPaymentForInvoice', () => {
@@ -649,6 +944,17 @@ describe('NostrConnectUtils', () => {
                 [
                     'incomplete without error (hodl: no preimage yet)',
                     storeState.incompleteNoError(),
+                    true
+                ],
+                [
+                    'CLN pending status, which the outcome flags as an error',
+                    {
+                        status: 'pending',
+                        isIncomplete: true,
+                        error: true,
+                        payment_error: null,
+                        loading: false
+                    },
                     true
                 ],
                 ['settled', storeState.settled(), false],
@@ -806,6 +1112,55 @@ describe('NostrConnectUtils', () => {
                     expect(result.payment).toBe(failed);
                 });
 
+                it('holds budget when lnd lists a failed attempt next to a retry in flight', () => {
+                    const retried = paymentFixtures.retriedInFlightHtlc();
+                    const result = resolve({
+                        payments: [retried],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: true,
+                        payment: retried
+                    });
+                });
+
+                it('holds budget when a payment listed as failed still has an HTLC in flight', () => {
+                    // isListedPaymentFailed matches the FAILED status and
+                    // isListedPaymentInTransit the open HTLC, so this only
+                    // holds if in transit is checked first
+                    const failedWithHtlcOut = new Payment({
+                        payment_request: INVOICE_A,
+                        payment_hash: HASH_A,
+                        status: 'FAILED',
+                        failure_reason: 'FAILURE_REASON_NONE',
+                        payment_preimage: ZERO_PREIMAGE,
+                        htlcs: [{ status: 'FAILED' }, { status: 'IN_FLIGHT' }]
+                    });
+                    const result = resolve({
+                        payments: [failedWithHtlcOut],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: true,
+                        payment: failedWithHtlcOut
+                    });
+                });
+
+                it('holds budget when CLN lists a pending retry after a failed attempt', () => {
+                    const pending = paymentFixtures.pendingCln();
+                    const result = resolve({
+                        payments: [paymentFixtures.failedCln(), pending],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: true,
+                        payment: pending
+                    });
+                });
+
                 it('returns not inTransit when CLN lists a failed sendpay', () => {
                     const failed = paymentFixtures.failedCln();
                     const result = resolve({
@@ -815,6 +1170,67 @@ describe('NostrConnectUtils', () => {
 
                     expect(result.inTransit).toBe(false);
                     expect(result.payment).toBe(failed);
+                });
+            });
+
+            describe('when the send request was rejected', () => {
+                it('holds budget when the node still lists the payment in flight', () => {
+                    const inFlight = paymentFixtures.inFlightStatus();
+                    const result = resolve({
+                        payments: [inFlight],
+                        paymentState: storeState.requestRejected()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: true,
+                        payment: inFlight
+                    });
+                });
+
+                it('returns settled payment when the list already shows success', () => {
+                    const settled = paymentFixtures.settled();
+                    const result = resolve({
+                        payments: [settled],
+                        paymentState: storeState.requestRejected()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: false,
+                        payment: settled
+                    });
+                });
+
+                it('returns not inTransit when the listed payment failed', () => {
+                    const failed = paymentFixtures.failed();
+                    const result = resolve({
+                        payments: [failed],
+                        paymentState: storeState.requestRejected()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: false,
+                        payment: failed
+                    });
+                });
+
+                it('returns not inTransit when the node never listed the payment', () => {
+                    const result = resolve({
+                        payments: [paymentFixtures.otherInvoiceInFlight()],
+                        paymentState: storeState.requestRejected()
+                    });
+
+                    expect(result).toEqual({ inTransit: false });
+                });
+            });
+
+            describe('when the node refused the send', () => {
+                it('does not hold budget for a payment the node lists in flight', () => {
+                    const result = resolve({
+                        payments: [paymentFixtures.inFlightStatus()],
+                        paymentState: storeState.refusedByNode()
+                    });
+
+                    expect(result).toEqual({ inTransit: false });
                 });
             });
 
@@ -851,6 +1267,34 @@ describe('NostrConnectUtils', () => {
         });
 
         describe('connection activity conversion', () => {
+            // NIP-47 keeps "failed" for payments and "expired" for invoices
+            it.each([
+                ['pay_invoice', 'failed', 'outgoing', 'failed'],
+                ['make_invoice', 'expired', 'incoming', 'expired']
+            ] as const)(
+                'lists a %s with status %s as %s %s',
+                (type, status, direction, state) => {
+                    const activity: ConnectionActivity = {
+                        id: INVOICE_A,
+                        type,
+                        payment_source: 'lightning',
+                        status,
+                        satAmount: 1000,
+                        ...(type === 'make_invoice'
+                            ? { invoice: new Invoice(lndInvoice()) }
+                            : {})
+                    };
+
+                    const tx =
+                        NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                            activity
+                        );
+
+                    expect(tx.type).toBe(direction);
+                    expect(tx.state).toBe(state);
+                }
+            );
+
             it('never reports the payment request as a payment hash', () => {
                 const activity: ConnectionActivity = {
                     id: INVOICE_A,
@@ -883,6 +1327,48 @@ describe('NostrConnectUtils', () => {
                     );
 
                 expect(tx.expires_at).toBe(CREATION_DATE + EXPIRY_SECONDS);
+            });
+
+            it('reports expires_at in seconds when the activity records expiresAt as a Date', () => {
+                const expiresAtSeconds = CREATION_DATE + EXPIRY_SECONDS;
+                const activity: ConnectionActivity = {
+                    id: INVOICE_A,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    invoice: new Invoice(lndInvoice()),
+                    expiresAt: new Date(expiresAtSeconds * 1000)
+                };
+
+                const tx =
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    );
+
+                // NIP-47 timestamps are unix seconds; a Date turned into a
+                // number is milliseconds, which a client reads as a date
+                // tens of thousands of years away
+                expect(tx.expires_at).toBe(expiresAtSeconds);
+                expect(tx.expires_at).toBeLessThan(CREATION_DATE * 2);
+            });
+
+            it('reports expires_at in seconds when expiresAt is an ISO string from storage', () => {
+                const expiresAtSeconds = CREATION_DATE + EXPIRY_SECONDS;
+                const activity = {
+                    id: INVOICE_A,
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    invoice: new Invoice(lndInvoice()),
+                    expiresAt: new Date(expiresAtSeconds * 1000).toISOString()
+                } as unknown as ConnectionActivity;
+
+                const tx =
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    );
+
+                expect(tx.expires_at).toBe(expiresAtSeconds);
             });
 
             it('returns preimage and description_hash for a settled make_invoice activity', () => {
@@ -952,6 +1438,65 @@ describe('NostrConnectUtils', () => {
                     );
 
                 expect(tx.preimage).toBe(STORED_PREIMAGE);
+            });
+
+            it("does not report LND's all-zero preimage for an unsettled pay_invoice activity", () => {
+                const activity: ConnectionActivity = {
+                    id: INVOICE_A,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    payment: paymentFixtures.inFlightStatus()
+                };
+
+                const tx =
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    );
+
+                expect(tx.state).toBe('pending');
+                expect(tx.preimage).toBe('');
+            });
+
+            describe('fees_paid', () => {
+                const payActivity = (
+                    overrides: Partial<ConnectionActivity> = {}
+                ): ConnectionActivity => ({
+                    id: INVOICE_A,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 1000,
+                    ...overrides
+                });
+                const feesPaid = (activity: ConnectionActivity) =>
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    ).fees_paid;
+
+                it('converts the stored sat fee to msat', () => {
+                    expect(feesPaid(payActivity({ fees_paid: 5 }))).toBe(5000);
+                });
+
+                // LNbits pays recorded before its fees were read as
+                // positive were stored with a negative fees_paid
+                it('reports a stored negative LNbits fee as positive', () => {
+                    expect(feesPaid(payActivity({ fees_paid: -5 }))).toBe(5000);
+                });
+
+                it('falls back to the payment fee when none is stored', () => {
+                    expect(
+                        feesPaid(
+                            payActivity({
+                                payment: new Payment({ fee_sat: '3' })
+                            })
+                        )
+                    ).toBe(3000);
+                });
+
+                it('reports 0 with no stored fee and no payment', () => {
+                    expect(feesPaid(payActivity())).toBe(0);
+                });
             });
         });
     });
@@ -1058,7 +1603,7 @@ describe('NostrConnectUtils', () => {
     describe('list_transactions unpaid filter', () => {
         // NIP-47: "unpaid: include unpaid invoices, optional, default false"
         const transaction = (
-            state: 'settled' | 'pending' | 'failed',
+            state: 'settled' | 'pending' | 'failed' | 'expired',
             type: 'incoming' | 'outgoing',
             createdAt: number
         ) =>
@@ -1088,11 +1633,24 @@ describe('NostrConnectUtils', () => {
                 request as never
             );
 
-        it('returns only settled transactions when unpaid is not requested', () => {
+        // NIP-47's default: only settled transactions
+        it('lists only settled transactions by default', () => {
             const { transactions, totalCount } = filter({});
 
             expect(transactions).toEqual([settledInvoice, settledPayment]);
             expect(totalCount).toBe(2);
+        });
+
+        it('lists open and expired invoices, and no unsettled payments, for unpaid_incoming', () => {
+            const expiredInvoice = transaction('expired', 'incoming', 250);
+
+            const { transactions } =
+                NostrConnectUtils.filterAndPaginateTransactions(
+                    [settledInvoice, expiredInvoice, failedPayment],
+                    { unpaid_incoming: true } as never
+                );
+
+            expect(transactions).toEqual([settledInvoice, expiredInvoice]);
         });
 
         it('returns only settled transactions when unpaid is false', () => {
@@ -1106,6 +1664,43 @@ describe('NostrConnectUtils', () => {
 
             expect(transactions).toHaveLength(4);
             expect(totalCount).toBe(4);
+        });
+
+        it('hides unsettled incoming invoices when unpaid_incoming is false', () => {
+            const { transactions } = filter({ unpaid_incoming: false });
+
+            expect(transactions).toEqual([settledInvoice, settledPayment]);
+        });
+
+        it('adds unsettled outgoing payments for unpaid_outgoing', () => {
+            const { transactions, totalCount } = filter({
+                unpaid_outgoing: true
+            });
+
+            expect(transactions).toEqual([
+                settledInvoice,
+                settledPayment,
+                failedPayment
+            ]);
+            expect(totalCount).toBe(3);
+        });
+
+        it('lets the direction flags override unpaid', () => {
+            expect(
+                filter({ unpaid: false, unpaid_incoming: true }).transactions
+            ).toEqual([settledInvoice, pendingInvoice, settledPayment]);
+            expect(
+                filter({ unpaid: true, unpaid_incoming: false }).transactions
+            ).toEqual([settledInvoice, settledPayment, failedPayment]);
+        });
+
+        it('treats both direction flags as the settled-only listing when false', () => {
+            const { transactions } = filter({
+                unpaid_incoming: false,
+                unpaid_outgoing: false
+            });
+
+            expect(transactions).toEqual([settledInvoice, settledPayment]);
         });
 
         it('does not drop settled transactions when unpaid is true', () => {
@@ -1335,13 +1930,33 @@ describe('NostrConnectUtils', () => {
             ).toBe(true);
         });
 
-        it('abandons after invoice expiry plus grace', () => {
+        it('keeps a hold whose invoice expired long ago', () => {
             const activity = baseActivity();
-            activity.expiresAt = new Date(
-                now -
-                    NostrConnectUtils.UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS -
-                    1000
-            );
+            activity.createdAt = new Date(now - 13 * 24 * 60 * 60 * 1000);
+            activity.expiresAt = new Date(now - 13 * 24 * 60 * 60 * 1000);
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(false);
+        });
+
+        it('keeps a hold for the longest HTLC time lock', () => {
+            const activity = baseActivity();
+            // 2016 blocks at 10 minutes each
+            activity.createdAt = new Date(now - 2016 * 10 * 60 * 1000);
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(false);
+        });
+
+        it('keeps a hold for 21 days', () => {
+            const day = 24 * 60 * 60 * 1000;
+            const activity = baseActivity();
+            activity.createdAt = new Date(now - 21 * day + 60_000);
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(false);
+
+            activity.createdAt = new Date(now - 21 * day);
             expect(
                 NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
             ).toBe(true);
@@ -1352,5 +1967,323 @@ describe('NostrConnectUtils', () => {
                 NostrConnectUtils.isPayInvoiceHoldAbandoned(baseActivity(), now)
             ).toBe(false);
         });
+    });
+
+    describe('hasPaymentPermissions', () => {
+        it('is true when pay_invoice is granted', () => {
+            expect(
+                NostrConnectUtils.hasPaymentPermissions([
+                    'get_info',
+                    'pay_invoice'
+                ])
+            ).toBe(true);
+        });
+
+        it('is false for read-only permissions', () => {
+            expect(
+                NostrConnectUtils.hasPaymentPermissions(
+                    NostrConnectUtils.getReadOnlyPermissions()
+                )
+            ).toBe(false);
+        });
+
+        it('is false for no permissions', () => {
+            expect(NostrConnectUtils.hasPaymentPermissions([])).toBe(false);
+        });
+    });
+
+    describe('getBudgetRenewalIndex', () => {
+        it('returns the index of a known renewal key', () => {
+            const options = NostrConnectUtils.getBudgetRenewalOptions();
+            const last = options.length - 1;
+            expect(
+                NostrConnectUtils.getBudgetRenewalIndex(options[last].key)
+            ).toBe(last);
+        });
+
+        it('returns 0 for an unknown key', () => {
+            expect(NostrConnectUtils.getBudgetRenewalIndex('fortnightly')).toBe(
+                0
+            );
+        });
+
+        it('returns 0 when no renewal is set', () => {
+            expect(NostrConnectUtils.getBudgetRenewalIndex(undefined)).toBe(0);
+        });
+    });
+});
+
+describe('NostrConnectUtils pay_invoice amount resolution', () => {
+    const paymentRequest = 'lnbc1zero-amount';
+
+    beforeEach(() => {
+        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockResolvedValue({
+            paymentRequest,
+            paymentHash: '',
+            descriptionHash: '',
+            description: '',
+            amount: 0,
+            expiryTime: 0,
+            createdAt: 0,
+            isExpired: false,
+            network: 'bitcoin'
+        });
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('reports whether the invoice is zero-amount', async () => {
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '0' },
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 7000, zeroAmountInvoice: true });
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '5000' },
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 5000, zeroAmountInvoice: false });
+    });
+
+    it('returns the requested sats for an invoice without an amount', async () => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '0' },
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toBe(7000);
+    });
+
+    it('counts a sub-sat invoice as having an amount', async () => {
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '0', num_msat: '500' },
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 1, zeroAmountInvoice: false });
+    });
+
+    it.each([
+        ['CLN amount_msat number', { amount_msat: 500 }],
+        ['CLN amount_msat string', { amount_msat: '500msat' }]
+    ])('counts a sub-sat invoice with the %s shape', async (_n, decoded) => {
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: decoded,
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 1, zeroAmountInvoice: false });
+    });
+
+    it('counts a sub-sat amount found only in the BOLT11 tags', async () => {
+        (NostrConnectUtils.decodeInvoiceTags as jest.Mock).mockResolvedValue({
+            paymentRequest,
+            amount: 0,
+            amountMsat: 500
+        });
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: {},
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 1, zeroAmountInvoice: false });
+    });
+
+    it.each([
+        ['LND num_msat', { num_satoshis: '1', num_msat: '1999' }],
+        [
+            'LND num_msat just over a sat',
+            { num_satoshis: '1', num_msat: '1001' }
+        ],
+        ['bolt11 millisatoshis', { satoshis: null, millisatoshis: '1999' }],
+        ['CLN amount_msat number', { amount_msat: 1999 }],
+        ['CLN amount_msat string', { amount_msat: '1999msat' }]
+    ])(
+        'counts every started sat of a fractional %s amount',
+        async (_n, decoded) => {
+            await expect(
+                NostrConnectUtils.getPayInvoiceAmountSats({
+                    paymentRequest,
+                    lightningDecodedPayReq: decoded
+                })
+            ).resolves.toBe(2);
+        }
+    );
+
+    it('keeps a whole-sat msat amount as is', async () => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '2', num_msat: '2000' }
+            })
+        ).resolves.toBe(2);
+    });
+
+    it('rounds up a fractional amount found only in the BOLT11 tags', async () => {
+        (NostrConnectUtils.decodeInvoiceTags as jest.Mock).mockResolvedValue({
+            paymentRequest,
+            amount: 1,
+            amountMsat: 1999
+        });
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: {}
+            })
+        ).resolves.toBe(2);
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                decodedInvoice: {}
+            })
+        ).resolves.toBe(2);
+    });
+
+    it('rounds up a fractional Cashu payreq amount', async () => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                decodedInvoice: { getRequestAmount: 1.999 }
+            })
+        ).resolves.toBe(2);
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                decodedInvoice: { millisatoshis: '1999' }
+            })
+        ).resolves.toBe(2);
+    });
+
+    it('ignores the requested amount when the invoice has one', async () => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '5000' },
+                requestedAmountMsat: 90_000_000
+            })
+        ).resolves.toBe(5000);
+    });
+
+    it('ignores the requested amount when only the BOLT11 tags carry one', async () => {
+        (NostrConnectUtils.decodeInvoiceTags as jest.Mock).mockResolvedValue({
+            paymentRequest,
+            amount: 1200
+        });
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: {},
+                requestedAmountMsat: 90_000_000
+            })
+        ).resolves.toBe(1200);
+    });
+
+    it.each([
+        ['missing', undefined],
+        ['zero', 0],
+        ['negative', -1000],
+        ['sub-sat', 1500],
+        ['NaN', Number.NaN],
+        ['Infinity', Number.POSITIVE_INFINITY],
+        ['a string', '7000000']
+    ])('returns 0 for a %s requested amount', async (_name, requested) => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: {},
+                requestedAmountMsat: requested as any
+            })
+        ).resolves.toBe(0);
+    });
+
+    it('does not apply the requested amount to Cashu invoices', async () => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                decodedInvoice: {},
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toBe(0);
+    });
+});
+
+describe('NostrConnectUtils request event checks', () => {
+    const NOW = 1_800_000_000;
+    const window = NostrConnectUtils.PAY_REQUEST_MAX_CLOCK_DIFFERENCE_SECONDS;
+
+    it('uses a 10 minute window', () => {
+        expect(window).toBe(600);
+    });
+
+    it('is not expired without an expiration tag', () => {
+        expect(NostrConnectUtils.isRequestEventExpired({ tags: [] }, NOW)).toBe(
+            false
+        );
+        expect(NostrConnectUtils.isRequestEventExpired({}, NOW)).toBe(false);
+    });
+
+    it('is expired once the expiration time is reached', () => {
+        const at = (expiration: string) => ({
+            tags: [
+                ['p', 'x'],
+                ['expiration', expiration]
+            ]
+        });
+        expect(
+            NostrConnectUtils.isRequestEventExpired(at(String(NOW + 1)), NOW)
+        ).toBe(false);
+        expect(
+            NostrConnectUtils.isRequestEventExpired(at(String(NOW)), NOW)
+        ).toBe(true);
+        expect(
+            NostrConnectUtils.isRequestEventExpired(at(String(NOW - 1)), NOW)
+        ).toBe(true);
+    });
+
+    it('treats an expiration that is not a number as expired', () => {
+        expect(
+            NostrConnectUtils.isRequestEventExpired(
+                { tags: [['expiration', 'soon']] },
+                NOW
+            )
+        ).toBe(true);
+        expect(
+            NostrConnectUtils.isRequestEventExpired(
+                { tags: [['expiration']] },
+                NOW
+            )
+        ).toBe(true);
+    });
+
+    it('is recent within the window either way', () => {
+        for (const createdAt of [NOW, NOW - window, NOW + window]) {
+            expect(
+                NostrConnectUtils.isRequestEventRecent(
+                    { created_at: createdAt },
+                    NOW
+                )
+            ).toBe(true);
+        }
+    });
+
+    it('is not recent outside the window or without created_at', () => {
+        for (const event of [
+            { created_at: NOW - window - 1 },
+            { created_at: NOW + window + 1 },
+            { created_at: undefined },
+            { created_at: NaN }
+        ]) {
+            expect(NostrConnectUtils.isRequestEventRecent(event, NOW)).toBe(
+                false
+            );
+        }
     });
 });

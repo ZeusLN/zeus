@@ -40,6 +40,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import DropdownSetting from '../../components/DropdownSetting';
 import PreventRemove from '../../components/PreventRemove';
 
+import { IN_APP_RESTART } from '../../utils/InAppRestartUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -85,8 +86,12 @@ import SettingsStore, {
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
 import { SWAPS_RESCUE_KEY, isValidRescueKey } from '../../utils/SwapUtils';
+import { addRecoveryWallet } from '../../utils/WalletRecoveryUtils';
 
 import Storage from '../../storage';
+
+import EyeClosed from '../../assets/images/SVG/eye_closed.svg';
+import EyeOpened from '../../assets/images/SVG/eye_opened.svg';
 
 interface SeedRecoveryProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -137,6 +142,8 @@ interface SeedRecoveryState {
     showClipboardPrompt: boolean;
     clipboardSeedArray: string[];
     showValidation: boolean;
+    // Filled grid fields show ******** unless this is on
+    revealWords: boolean;
     // LDK Node specific
     implementation: string;
     ldkMnemonic: string;
@@ -190,6 +197,7 @@ export default class SeedRecovery extends React.PureComponent<
             showClipboardPrompt: false,
             clipboardSeedArray: [],
             showValidation: false,
+            revealWords: false,
             // LDK Node defaults
             implementation: 'embedded-lnd',
             ldkMnemonic: '',
@@ -298,7 +306,7 @@ export default class SeedRecovery extends React.PureComponent<
                 [
                     {
                         text: localeString('views.Wallet.restart'),
-                        onPress: () => RNRestart.Restart()
+                        onPress: () => RNRestart.Restart(IN_APP_RESTART)
                     }
                 ],
                 { cancelable: false }
@@ -315,7 +323,7 @@ export default class SeedRecovery extends React.PureComponent<
                 [
                     {
                         text: localeString('views.Wallet.restart'),
-                        onPress: () => RNRestart.Restart()
+                        onPress: () => RNRestart.Restart(IN_APP_RESTART)
                     }
                 ],
                 { cancelable: false }
@@ -434,7 +442,10 @@ export default class SeedRecovery extends React.PureComponent<
             return {
                 nodes,
                 selectedNode: nodes.length - 1,
-                recovery: recoveryCipherSeed ? true : false,
+                // Pending next to any earlier restore that has not run yet
+                ...(recoveryCipherSeed
+                    ? addRecoveryWallet(current, lndDir || 'lnd')
+                    : {}),
                 initialLoad: false
             };
         }).then(async () => {
@@ -479,7 +490,7 @@ export default class SeedRecovery extends React.PureComponent<
             return {
                 nodes,
                 selectedNode: nodes.length - 1,
-                recovery: true
+                ...addRecoveryWallet(current, nodeDir)
             };
         }).then(async () => {
             setConnectingStatus(true);
@@ -510,6 +521,7 @@ export default class SeedRecovery extends React.PureComponent<
             rescueHost,
             customRescueHost,
             showValidation,
+            revealWords,
             implementation
         } = this.state;
 
@@ -669,7 +681,8 @@ export default class SeedRecovery extends React.PureComponent<
                             padding: 0
                         }}
                     >
-                        {index != null &&
+                        {!revealWords &&
+                        index != null &&
                         text &&
                         !(
                             selectedInputType === 'word' &&
@@ -828,7 +841,7 @@ export default class SeedRecovery extends React.PureComponent<
                     });
 
                     // Node is already built — tell Wallet.tsx to skip re-init
-                    SettingsStore.walletJustCreated = true;
+                    SettingsStore.justCreatedNodeDir = nodeDir;
 
                     this.saveLdkNodeWalletConfiguration(
                         mnemonic,
@@ -956,7 +969,8 @@ export default class SeedRecovery extends React.PureComponent<
                                         lndDir,
                                         nodeInfo.testnet,
                                         nodeInfo.identity_pubkey,
-                                        recoveryCipherSeed
+                                        recoveryCipherSeed,
+                                        embeddedLndIsSqlite
                                     );
                                 if (!restored) {
                                     this.setState({
@@ -1199,6 +1213,44 @@ export default class SeedRecovery extends React.PureComponent<
                         </View>
                         {!showSuggestions && (
                             <>
+                                {selectedInputType !== 'scb' && (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            this.setState({
+                                                revealWords: !revealWords
+                                            })
+                                        }
+                                        accessibilityRole="button"
+                                        hitSlop={10}
+                                        style={styles.revealToggle}
+                                    >
+                                        {revealWords ? (
+                                            <EyeClosed
+                                                height="18"
+                                                width="20"
+                                                fill={themeColor('text')}
+                                            />
+                                        ) : (
+                                            <EyeOpened
+                                                height="18"
+                                                width="20"
+                                                fill={themeColor('text')}
+                                            />
+                                        )}
+                                        <Text
+                                            style={{
+                                                ...styles.revealToggleText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                revealWords
+                                                    ? 'general.hide'
+                                                    : 'general.show'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
                                 {selectedInputType !== 'scb' && (
                                     <ScrollView
                                         contentContainerStyle={{
@@ -1609,6 +1661,16 @@ export default class SeedRecovery extends React.PureComponent<
                                     'views.Settings.SeedRecovery.clipboardSeedWordsPrompt'
                                 )}
                             </ZeusText>
+                            <ZeusText
+                                style={{
+                                    ...styles.modalBody,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.SeedRecovery.clipboardSeedWordsWarning'
+                                )}
+                            </ZeusText>
                             <View style={{ marginBottom: 12 }}>
                                 <Button
                                     title={localeString('general.yes')}
@@ -1623,7 +1685,10 @@ export default class SeedRecovery extends React.PureComponent<
                                             ),
                                             showClipboardPrompt: false,
                                             clipboardSeedArray: [],
-                                            showValidation: true
+                                            showValidation: true,
+                                            // Show the pasted words so they
+                                            // can be checked before restoring
+                                            revealWords: true
                                         });
                                         if (implementation === 'ldk-node') {
                                             this.setState({
@@ -1720,5 +1785,17 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 16,
         marginBottom: 24
+    },
+    revealToggle: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-end',
+        marginTop: 8,
+        marginRight: 12
+    },
+    revealToggleText: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 16,
+        marginLeft: 6
     }
 });

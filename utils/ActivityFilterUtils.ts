@@ -9,7 +9,15 @@ import CashuToken from '../models/CashuToken';
 import Swap from '../models/Swap';
 import { LSPActivity, LSPOrderState } from '../models/LSP';
 
-type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
+type ActivityItem =
+    | Invoice
+    | Payment
+    | Transaction
+    | CashuInvoice
+    | CashuPayment
+    | CashuToken
+    | Swap
+    | LSPActivity;
 
 import { localeString } from './LocaleUtils';
 

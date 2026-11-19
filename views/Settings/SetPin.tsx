@@ -11,6 +11,11 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import {
+    deriveVerifier,
+    hasLockCredential,
+    matchesLockCredential
+} from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface SetPinProps {
@@ -24,6 +29,7 @@ interface SetPinState {
     pinConfirm: string;
     pinMismatchError: boolean;
     pinInvalidError: boolean;
+    saveError: boolean;
 }
 
 @inject('SettingsStore')
@@ -33,7 +39,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         pin: '',
         pinConfirm: '',
         pinMismatchError: false,
-        pinInvalidError: false
+        pinInvalidError: false,
+        saveError: false
     };
 
     renderSeparator = () => (
@@ -50,7 +57,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             this.setState({
                 pin: value,
                 pinMismatchError: false,
-                pinInvalidError: false
+                pinInvalidError: false,
+                saveError: false
             });
         } else {
             this.setState({ pinConfirm: value }, () => {
@@ -62,7 +70,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     onPinChange = () => {
         this.setState({
             pinMismatchError: false,
-            pinInvalidError: false
+            pinInvalidError: false,
+            saveError: false
         });
     };
 
@@ -81,31 +90,53 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             return;
         }
 
-        const settings = await getSettings();
+        // A failed key derivation or settings write rejects. Nothing is
+        // saved in that case, so the user is told and can enter it again.
+        try {
+            const settings = await getSettings();
 
-        if (pin === settings.duressPin) {
-            this.setState({
-                pinInvalidError: true,
-                pin: '',
-                pinConfirm: ''
+            // the duress PIN may still be plaintext, or deleted by an older
+            // build next to its old verifier
+            if (await matchesLockCredential(pin, settings, 'duressPin')) {
+                this.setState({
+                    pinInvalidError: true,
+                    pin: '',
+                    pinConfirm: ''
+                });
+
+                return;
+            }
+
+            const pinVerifier = await deriveVerifier(pin);
+            // drop any plaintext the verifier migration has not hashed
+            // yet, so it cannot win over this record later
+            await updateSettings({
+                pinVerifier,
+                pin: undefined,
+                // only one method is ever set, so the passphrase fields can
+                // hold only records from before a downgrade, which would
+                // become the lock again once the plaintext is gone
+                passphraseVerifier: undefined,
+                duressPassphraseVerifier: undefined
             });
-
+        } catch (error) {
+            console.error('Failed to save the PIN', error);
+            this.setState({ saveError: true, pin: '', pinConfirm: '' });
             return;
         }
 
-        await updateSettings({ pin }).then(() => {
-            setLoginStatus(true);
-            getSettings();
-            navigation.popTo('Security', {
-                enableBiometrics: route.params?.forBiometrics
-            });
+        setLoginStatus(true);
+        getSettings();
+        navigation.popTo('Security', {
+            enableBiometrics: route.params?.forBiometrics
         });
     };
 
     render() {
         const { navigation, SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const { pin, pinMismatchError, pinInvalidError } = this.state;
+        const { pin, pinMismatchError, pinInvalidError, saveError } =
+            this.state;
 
         return (
             <Screen>
@@ -131,6 +162,13 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                 )}
                             />
                         )}
+                        {saveError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.Security.saveFailed'
+                                )}
+                            />
+                        )}
                     </View>
                     {!pin && (
                         <>
@@ -143,7 +181,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                 }}
                             >
                                 {localeString(
-                                    settings.pin
+                                    hasLockCredential(settings, 'pin')
                                         ? 'views.Settings.SetPin.newPin'
                                         : 'views.Settings.SetPin.createPin'
                                 )}

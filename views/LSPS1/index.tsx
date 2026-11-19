@@ -1,13 +1,6 @@
 import * as React from 'react';
 import { inject, observer } from 'mobx-react';
-import {
-    NativeEventEmitter,
-    NativeModules,
-    View,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity
-} from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { ButtonGroup, Icon } from '@rneui/themed';
 import Slider from '@react-native-community/slider';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -68,7 +61,6 @@ interface LSPS1State {
 @inject('LSPStore', 'ChannelsStore', 'SettingsStore', 'NodeInfoStore')
 @observer
 export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
-    listener: any;
     private scrollViewRef = React.createRef<ScrollView>();
     private lastSavedOrderId: string | null = null;
     constructor(props: LSPS1Props) {
@@ -144,10 +136,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         }
     };
     componentWillUnmount() {
-        if (this.listener) {
-            this.listener.remove();
-            this.listener = null;
-        }
         this.props.LSPStore.resetLSPS1Data();
     }
 
@@ -166,18 +154,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             getInfoData?.result ||
             getInfoData;
 
-        if (lspBalanceSat === 0 && info?.min_initial_lsp_balance_sat) {
-            this.setState({
-                lspBalanceSat: parseInt(info.min_initial_lsp_balance_sat)
-            });
+        const minLspBalance = parseInt(info?.min_initial_lsp_balance_sat);
+        if (lspBalanceSat === 0 && minLspBalance > 0) {
+            this.setState({ lspBalanceSat: minLspBalance });
         }
-        if (
-            clientBalanceSat === 0 &&
-            info?.min_initial_client_balance_sat > 0
-        ) {
-            this.setState({
-                clientBalanceSat: parseInt(info.min_initial_client_balance_sat)
-            });
+        const minClientBalance = parseInt(info?.min_initial_client_balance_sat);
+        if (clientBalanceSat === 0 && minClientBalance > 0) {
+            this.setState({ clientBalanceSat: minClientBalance });
         }
 
         if (channelExpiryBlocks === 'N/A' && info?.max_channel_expiry_blocks) {
@@ -243,42 +226,20 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
     };
 
     subscribeToCustomMessages() {
-        if (
-            this.props.SettingsStore.implementation === 'lightning-node-connect'
-        ) {
-            const { LncModule } = NativeModules;
-            const eventName = BackendUtils.subscribeCustomMessages();
-            const eventEmitter = new NativeEventEmitter(LncModule);
-            this.listener = eventEmitter.addListener(
-                eventName,
-                (event: any) => {
-                    if (event.result) {
-                        try {
-                            const result = JSON.parse(event.result);
-                            this.props.LSPStore.handleCustomMessages(result);
-                        } catch (error) {
-                            console.error(error);
-                        }
-                    }
-                }
-            );
-            return;
-        } else {
-            return new Promise((resolve, reject) => {
-                this.props.LSPStore.subscribeCustomMessages()
-                    .then((response) => {
-                        console.log('Subscribed to custom messages:', response);
-                        resolve({});
-                    })
-                    .catch((error) => {
-                        console.error(
-                            'Error subscribing to custom messages:',
-                            error
-                        );
-                        reject();
-                    });
-            });
-        }
+        return new Promise((resolve, reject) => {
+            this.props.LSPStore.subscribeCustomMessages()
+                .then((response) => {
+                    console.log('Subscribed to custom messages:', response);
+                    resolve({});
+                })
+                .catch((error) => {
+                    console.error(
+                        'Error subscribing to custom messages:',
+                        error
+                    );
+                    reject();
+                });
+        });
     }
 
     connectPeer = async () => {
@@ -292,6 +253,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     host,
                     local_funding_amount: ''
                 },
+                true,
                 true,
                 true
             );
@@ -692,7 +654,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                     )}
                                                                 />
                                                             )}
-                                                            {info?.min_channel_confirmations && (
+                                                            {info?.min_channel_confirmations !=
+                                                                null && (
                                                                 <KeyValue
                                                                     keyValue={localeString(
                                                                         'views.LSPS1.minChannelConfirmations'
@@ -702,7 +665,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                     }
                                                                 />
                                                             )}
-                                                            {info?.min_onchain_payment_confirmations && (
+                                                            {info?.min_onchain_payment_confirmations !=
+                                                                null && (
                                                                 <KeyValue
                                                                     keyValue={localeString(
                                                                         'views.LSPS1.minOnchainPaymentConfirmations'
@@ -734,7 +698,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                     }
                                                                 />
                                                             )}
-                                                            {info?.min_required_channel_confirmations && (
+                                                            {info?.min_required_channel_confirmations !=
+                                                                null && (
                                                                 <KeyValue
                                                                     keyValue={localeString(
                                                                         'views.LSPS1.minRequiredChannelConfirmations'
@@ -1154,7 +1119,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 autoCapitalize="none"
                                             />
 
-                                            {info?.min_onchain_payment_confirmations && (
+                                            {info?.min_onchain_payment_confirmations !=
+                                                null && (
                                                 <>
                                                     <Text
                                                         style={{

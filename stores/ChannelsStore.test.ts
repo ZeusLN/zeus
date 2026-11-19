@@ -4,25 +4,49 @@ jest.mock('react-native-randombytes', () => ({
 jest.mock('../utils/BackendUtils', () => ({
     getChannels: jest.fn(),
     getPendingChannels: jest.fn(),
+    getClosedChannels: jest.fn(),
     getNodeInfo: jest.fn(() => Promise.resolve(null)),
+    closeChannel: jest.fn(),
     connectPeer: jest.fn(),
     openChannelSync: jest.fn(),
-    supportsClosedChannels: () => false,
+    openChannelStream: jest.fn(),
+    fundPsbt: jest.fn(),
+    signPsbt: jest.fn(),
+    fundingStateStep: jest.fn(),
+    supportsClosedChannels: jest.fn(() => false),
     supportsPendingChannels: jest.fn(() => false),
     isLNDBased: () => false
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
-jest.mock('../utils/ErrorUtils', () => ({
-    errorToUserFriendly: (e: any) => String(e)
-}));
+jest.mock('../utils/LocaleUtils');
+// the real BackendUtils, loaded below with jest.requireActual, reads the
+// implementation from Stores and constructs every backend
+jest.mock('./Stores');
+const mockLdkCloseChannel = jest.fn();
+function mockBackend() {
+    return {
+        __esModule: true,
+        default: class {
+            closeChannel = (...args: any[]) => mockLdkCloseChannel(...args);
+        }
+    };
+}
+jest.mock('../backends/LND', () => mockBackend());
+jest.mock('../backends/LightningNodeConnect', () => mockBackend());
+jest.mock('../backends/EmbeddedLND', () => mockBackend());
+jest.mock('../backends/LdkNode', () => mockBackend());
+jest.mock('../backends/CLNRest', () => mockBackend());
+jest.mock('../backends/LndHub', () => mockBackend());
+jest.mock('../backends/NostrWalletConnect', () => mockBackend());
 
 import { autorun } from 'mobx';
 
 import ChannelsStore from './ChannelsStore';
 import BackendUtils from '../utils/BackendUtils';
 import ChannelInfo from '../models/ChannelInfo';
+import { settingsStore } from './Stores';
+import { parseLdkNodeError } from '../utils/ErrorUtils';
+
+const RealBackendUtils = jest.requireActual('../utils/BackendUtils').default;
 
 const channel = (
     localBalance: number,
@@ -197,6 +221,504 @@ describe('ChannelsStore pending close balance', () => {
     });
 });
 
+describe('ChannelsStore.closeChannel', () => {
+    let store: ChannelsStore;
+    let balanceStore: {
+        setPendingCloseBalance: jest.Mock;
+        getCombinedBalance: jest.Mock;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        balanceStore = {
+            setPendingCloseBalance: jest.fn(),
+            getCombinedBalance: jest.fn(() => Promise.resolve())
+        };
+        store = new ChannelsStore(
+            { implementation: 'cln-rest' } as any,
+            balanceStore as any
+        );
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: []
+        } as any);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    const expectOneRefresh = () => {
+        expect(BackendUtils.getChannels).toHaveBeenCalledTimes(1);
+        expect(balanceStore.getCombinedBalance).toHaveBeenCalledTimes(1);
+        // resetting would show zero balances until the reload completes
+        expect(balanceStore.getCombinedBalance).toHaveBeenCalledWith();
+    };
+
+    it('reloads channels and balances when the close request succeeds', async () => {
+        jest.mocked(BackendUtils.closeChannel).mockResolvedValue({} as any);
+
+        await store.closeChannel(undefined, 'chan');
+
+        expectOneRefresh();
+        expect(store.closeChannelErr).toBeNull();
+    });
+
+    it('reloads channels and balances when the close request fails', async () => {
+        jest.mocked(BackendUtils.closeChannel).mockRejectedValue(
+            new Error('fee proposal exceeds max fee')
+        );
+
+        await store.closeChannel(undefined, 'chan');
+
+        expectOneRefresh();
+        expect(store.closeChannelErr).toBeTruthy();
+    });
+
+    it('clears the channel list when the node is unreachable for both the close and the refresh', async () => {
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [channel(11243, 5000, true)]
+        } as any);
+        await store.getChannels();
+        jest.clearAllMocks();
+
+        jest.mocked(BackendUtils.closeChannel).mockRejectedValue(
+            new Error('offline')
+        );
+        jest.mocked(BackendUtils.getChannels).mockRejectedValue(
+            new Error('offline')
+        );
+
+        await store.closeChannel(undefined, 'chan');
+        await jest.advanceTimersByTimeAsync(0);
+
+        expectOneRefresh();
+        expect(store.closeChannelErr).toBe('offline');
+        expect(store.channels).toEqual([]);
+        expect(store.hasChannelData).toBe(false);
+        expect(store.error).toBe(true);
+    });
+
+    it('reloads channels and balances when the close request is still pending after six seconds', async () => {
+        jest.mocked(BackendUtils.closeChannel).mockReturnValue(
+            new Promise(() => {}) as any
+        );
+
+        const close = store.closeChannel(undefined, 'chan');
+        await jest.advanceTimersByTimeAsync(6000);
+        await close;
+
+        expectOneRefresh();
+    });
+
+    it('passes the channel point and close options to the backend on LND', async () => {
+        store = new ChannelsStore(
+            { implementation: 'lnd' } as any,
+            balanceStore as any
+        );
+        jest.mocked(BackendUtils.closeChannel).mockResolvedValue({} as any);
+
+        await store.closeChannel(
+            { funding_txid_str: 'txid', output_index: '1' },
+            undefined,
+            '10',
+            false,
+            'bcrt1qdelivery'
+        );
+
+        expect(BackendUtils.closeChannel).toHaveBeenCalledWith([
+            'txid',
+            '1',
+            false,
+            '10',
+            'bcrt1qdelivery'
+        ]);
+        expectOneRefresh();
+    });
+
+    it('ignores a result that arrives after the forced resolution', async () => {
+        let reject: (error: Error) => void = () => {};
+        jest.mocked(BackendUtils.closeChannel).mockReturnValue(
+            new Promise((_, rej) => {
+                reject = rej;
+            }) as any
+        );
+
+        const close = store.closeChannel(undefined, 'chan');
+        await jest.advanceTimersByTimeAsync(6000);
+        await close;
+        // the REST close call stays open until the request times out
+        reject(new Error('Request timeout'));
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(store.closeChannelErr).toBeNull();
+        expectOneRefresh();
+    });
+
+    describe('on LDK Node', () => {
+        const CHANNEL_POINT = { funding_txid_str: 'txid', output_index: '1' };
+
+        beforeEach(() => {
+            store = new ChannelsStore(
+                { implementation: 'ldk-node' } as any,
+                balanceStore as any
+            );
+        });
+
+        it('reports a close that fails after six seconds', async () => {
+            let reject: (error: Error) => void = () => {};
+            jest.mocked(BackendUtils.closeChannel).mockReturnValue(
+                new Promise((_, rej) => {
+                    reject = rej;
+                }) as any
+            );
+
+            const close = store.closeChannel(CHANNEL_POINT);
+            await jest.advanceTimersByTimeAsync(10_000);
+
+            expect(store.closingChannel).toBe(true);
+            expect(BackendUtils.getChannels).not.toHaveBeenCalled();
+
+            // the backend resolves on LDK's channelClosed event, which
+            // comes once the shutdown negotiation ends
+            reject(new Error('cooperative close became a force close'));
+            await close;
+
+            expect(store.closingChannel).toBe(false);
+            expect(store.closeChannelErr).toBe(
+                'cooperative close became a force close'
+            );
+            expectOneRefresh();
+        });
+
+        it('reloads channels and balances once the close succeeds', async () => {
+            jest.mocked(BackendUtils.closeChannel).mockResolvedValue({} as any);
+
+            await store.closeChannel(CHANNEL_POINT);
+
+            expectOneRefresh();
+            expect(store.closeChannelErr).toBeNull();
+        });
+
+        // the error the backend throws when LDK force closes a channel
+        // after a failed cooperative close
+        const channelClosedError = () =>
+            Object.assign(new Error('force closed instead'), {
+                channelClosed: true
+            });
+
+        it('does not send a second close request for a channel the failed close already closed', async () => {
+            jest.mocked(BackendUtils.closeChannel).mockRejectedValue(
+                channelClosedError()
+            );
+            await store.closeChannel(CHANNEL_POINT);
+
+            expect(store.closedByFailedCloseChannelPoint).toBe('txid:1');
+            expect(store.closeChannelErr).toBe('force closed instead');
+            expectOneRefresh();
+
+            // the Channel view still shows the channel it was opened with
+            jest.mocked(BackendUtils.closeChannel).mockRejectedValue(
+                new Error('Channel with funding txid txid not found')
+            );
+            await store.closeChannel(CHANNEL_POINT);
+
+            expect(BackendUtils.closeChannel).toHaveBeenCalledTimes(1);
+            expect(store.closeChannelErr).toBe('force closed instead');
+            expect(store.closingChannel).toBe(false);
+            expectOneRefresh();
+        });
+
+        it('still closes another channel after a failed close closed one', async () => {
+            jest.mocked(BackendUtils.closeChannel).mockRejectedValueOnce(
+                channelClosedError()
+            );
+            await store.closeChannel(CHANNEL_POINT);
+
+            jest.mocked(BackendUtils.closeChannel).mockResolvedValue({} as any);
+            await store.closeChannel({
+                funding_txid_str: 'txid',
+                output_index: '2'
+            });
+
+            expect(BackendUtils.closeChannel).toHaveBeenCalledTimes(2);
+            expect(BackendUtils.closeChannel).toHaveBeenLastCalledWith([
+                'txid',
+                '2',
+                undefined,
+                undefined,
+                undefined
+            ]);
+            expect(store.closeChannelErr).toBeNull();
+        });
+
+        it('allows a retry after a close error that left the channel open', async () => {
+            jest.mocked(BackendUtils.closeChannel).mockRejectedValueOnce(
+                new Error('peer is offline')
+            );
+            await store.closeChannel(CHANNEL_POINT);
+
+            expect(store.closedByFailedCloseChannelPoint).toBeNull();
+            expect(store.closeChannelErr).toBe('peer is offline');
+
+            jest.mocked(BackendUtils.closeChannel).mockResolvedValue({} as any);
+            await store.closeChannel(CHANNEL_POINT);
+
+            expect(BackendUtils.closeChannel).toHaveBeenCalledTimes(2);
+            expect(store.closeChannelErr).toBeNull();
+        });
+
+        it('reports a requested force close as a success', async () => {
+            jest.mocked(BackendUtils.closeChannel).mockResolvedValue({} as any);
+
+            await store.closeChannel(CHANNEL_POINT, undefined, undefined, true);
+
+            expect(BackendUtils.closeChannel).toHaveBeenCalledWith([
+                'txid',
+                '1',
+                true,
+                undefined,
+                undefined
+            ]);
+            expect(store.closedByFailedCloseChannelPoint).toBeNull();
+            expect(store.closeChannelErr).toBeNull();
+            expectOneRefresh();
+        });
+
+        it('does not send a second close request when the error passes through BackendUtils.call', async () => {
+            settingsStore.implementation = 'ldk-node';
+            // only the first request should reach the backend
+            jest.mocked(BackendUtils.closeChannel).mockImplementationOnce(
+                (...args: any[]) => RealBackendUtils.closeChannel(...args)
+            );
+            mockLdkCloseChannel.mockRejectedValueOnce(channelClosedError());
+
+            await store.closeChannel(CHANNEL_POINT);
+
+            expect(mockLdkCloseChannel).toHaveBeenCalledWith([
+                'txid',
+                '1',
+                undefined,
+                undefined,
+                undefined
+            ]);
+            expect(store.closedByFailedCloseChannelPoint).toBe('txid:1');
+            expect(store.closeChannelErr).toBe('force closed instead');
+
+            await store.closeChannel(CHANNEL_POINT);
+
+            expect(mockLdkCloseChannel).toHaveBeenCalledTimes(1);
+            expect(store.closeChannelErr).toBe('force closed instead');
+        });
+    });
+
+    describe('on LNC', () => {
+        const CHANNEL_POINT = { funding_txid_str: 'txid', output_index: '1' };
+
+        beforeEach(() => {
+            store = new ChannelsStore(
+                { implementation: 'lightning-node-connect' } as any,
+                balanceStore as any
+            );
+        });
+
+        it('reloads channels and balances once the close stream succeeds', async () => {
+            jest.mocked(BackendUtils.closeChannel).mockResolvedValue({} as any);
+
+            await store.closeChannel(CHANNEL_POINT);
+
+            expectOneRefresh();
+            expect(store.closeChannelErr).toBeNull();
+        });
+
+        it('reloads channels and balances when the close stream fails', async () => {
+            jest.mocked(BackendUtils.closeChannel).mockRejectedValue(
+                new Error('peer is offline')
+            );
+
+            await store.closeChannel(CHANNEL_POINT);
+
+            expectOneRefresh();
+            expect(store.closeChannelErr).toBe('peer is offline');
+        });
+
+        it('waits for the close stream instead of resolving after six seconds', async () => {
+            let finishClose: () => void = () => {};
+            jest.mocked(BackendUtils.closeChannel).mockReturnValue(
+                new Promise((resolve) => {
+                    finishClose = () => resolve({});
+                }) as any
+            );
+
+            const close = store.closeChannel(CHANNEL_POINT);
+            await jest.advanceTimersByTimeAsync(60_000);
+
+            expect(store.closingChannel).toBe(true);
+            expect(BackendUtils.getChannels).not.toHaveBeenCalled();
+
+            finishClose();
+            await close;
+
+            expect(store.closingChannel).toBe(false);
+            expectOneRefresh();
+        });
+    });
+});
+
+describe('ChannelsStore.haveAnnouncedChannels', () => {
+    const pendingChannels = (pendingOpen: any[]) => ({
+        pending_open_channels: pendingOpen,
+        pending_closing_channels: [],
+        pending_force_closing_channels: [],
+        waiting_close_channels: []
+    });
+
+    // lets the enrichment reactions of all channel lists run to completion
+    const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+    beforeEach(() => {
+        jest.mocked(BackendUtils.supportsPendingChannels).mockReturnValue(true);
+        jest.mocked(BackendUtils.getPendingChannels).mockResolvedValue(
+            pendingChannels([])
+        );
+    });
+
+    afterEach(() => {
+        jest.mocked(BackendUtils.supportsPendingChannels).mockReturnValue(
+            false
+        );
+        jest.mocked(BackendUtils.supportsClosedChannels).mockReturnValue(false);
+    });
+
+    it('is not cleared by a pending channel', async () => {
+        const store = makeStore();
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [
+                channel(11243, 5000, true),
+                { ...channel(4000, 1000, true), private: true }
+            ]
+        } as any);
+        // an inbound channel open from another node
+        jest.mocked(BackendUtils.getPendingChannels).mockResolvedValue(
+            pendingChannels([
+                {
+                    channel: {
+                        remote_node_pub: 'stranger',
+                        channel_point: 'txid:0',
+                        capacity: '20000'
+                    }
+                }
+            ])
+        );
+
+        await store.getChannels();
+        await settle();
+
+        expect(store.pendingChannels.length).toBe(1);
+        expect(store.haveAnnouncedChannels).toBe(true);
+    });
+
+    it('ignores unannounced and inactive channels', async () => {
+        const store = makeStore();
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [
+                channel(11243, 5000, false),
+                { ...channel(4000, 1000, true), private: true }
+            ]
+        } as any);
+
+        await store.getChannels();
+        await settle();
+
+        expect(store.haveAnnouncedChannels).toBe(false);
+    });
+
+    it('is not cleared by a closed channel', async () => {
+        const store = makeStore();
+        jest.mocked(BackendUtils.supportsClosedChannels).mockReturnValue(true);
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [channel(11243, 5000, true)]
+        } as any);
+        jest.mocked(BackendUtils.getClosedChannels).mockResolvedValue({
+            channels: [{ ...channel(0, 0, false), close_type: 'REMOTE' }]
+        } as any);
+
+        await store.getChannels();
+        await settle();
+
+        expect(store.closedChannels.length).toBe(1);
+        expect(store.haveAnnouncedChannels).toBe(true);
+    });
+
+    it('follows the open channel list across refreshes', async () => {
+        const store = makeStore();
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [channel(11243, 5000, true)]
+        } as any);
+        await store.getChannels();
+        await settle();
+        expect(store.haveAnnouncedChannels).toBe(true);
+
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [
+                channel(11243, 5000, false),
+                { ...channel(4000, 1000, true), private: true }
+            ]
+        } as any);
+        await store.getChannels();
+        await settle();
+        expect(store.haveAnnouncedChannels).toBe(false);
+    });
+
+    it('is set before node info lookups finish', async () => {
+        jest.useFakeTimers();
+        try {
+            // lnd looks up node info for each new peer, which can take up
+            // to 10s before it times out
+            const store = new ChannelsStore(
+                { implementation: 'lnd' } as any,
+                { setPendingCloseBalance: jest.fn() } as any
+            );
+            jest.mocked(BackendUtils.getNodeInfo).mockReturnValue(
+                new Promise(() => {}) as any
+            );
+            jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+                channels: [channel(11243, 5000, true)]
+            } as any);
+
+            await store.getChannels();
+
+            expect(BackendUtils.getNodeInfo).toHaveBeenCalled();
+            expect(store.haveAnnouncedChannels).toBe(true);
+        } finally {
+            jest.clearAllTimers();
+            jest.useRealTimers();
+            jest.mocked(BackendUtils.getNodeInfo).mockImplementation(() =>
+                Promise.resolve(null)
+            );
+        }
+    });
+
+    it('keeps its value when a refresh fails', async () => {
+        const store = makeStore();
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [channel(11243, 5000, true)]
+        } as any);
+        await store.getChannels();
+        await settle();
+
+        jest.mocked(BackendUtils.getChannels).mockRejectedValue(
+            new Error('offline')
+        );
+        await store.getChannels();
+        await settle();
+
+        expect(store.error).toBe(true);
+        expect(store.channels.length).toBe(0);
+        expect(store.haveAnnouncedChannels).toBe(true);
+    });
+});
+
 describe('ChannelsStore.getNodePolicy', () => {
     it('returns undefined for LND-shaped channel info missing CLNRest fields (issue #4591)', () => {
         const store = makeStore();
@@ -368,7 +890,7 @@ describe('ChannelsStore.connectPeer', () => {
 
         expect(store.channelRequest).toBeFalsy();
         expect(store.errorPeerConnect).toBe(true);
-        expect(store.errorMsgPeer).toBe('Error: already connected to peer');
+        expect(store.errorMsgPeer).toBe('already connected to peer');
         expect(BackendUtils.openChannelSync).not.toHaveBeenCalled();
     });
 
@@ -443,5 +965,380 @@ describe('ChannelsStore.connectPeer', () => {
         });
         expect(store.peerSuccess).toBe(true);
         expect(store.errorPeerConnect).toBe(false);
+    });
+});
+
+describe('ChannelsStore batch channel open', () => {
+    let store: ChannelsStore;
+
+    const PSBT = 'cHNidP8BAFICAAAAAQ==';
+
+    // two channels funded by one transaction: A is opened with no_publish,
+    // B last, and B's psbt_finalize is what makes LND publish the batch
+    const batchRequest = () =>
+        ({
+            node_pubkey_string: 'abc',
+            host: 'peer-a.example.com:9735',
+            local_funding_amount: '500000',
+            account: 'default',
+            additionalChannels: [
+                {
+                    node_pubkey_string: 'def',
+                    host: 'peer-b.example.com:9735',
+                    satAmount: '300000'
+                }
+            ]
+        } as any);
+
+    const fundingSteps = () =>
+        jest
+            .mocked(BackendUtils.fundingStateStep)
+            .mock.calls.map(([step]: any) => step);
+
+    const flushPromises = async () => {
+        for (let i = 0; i < 10; i++) {
+            await new Promise<void>((resolve) => setImmediate(resolve));
+        }
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        store = makeStore();
+
+        jest.mocked(BackendUtils.connectPeer).mockResolvedValue({} as any);
+        ['chan-a', 'chan-b'].forEach((pending_chan_id) =>
+            jest.mocked(BackendUtils.openChannelStream).mockResolvedValueOnce({
+                result: {
+                    pending_chan_id,
+                    psbt_fund: {
+                        funding_address: `bc1q${pending_chan_id}`,
+                        funding_amount: 1,
+                        psbt: PSBT
+                    }
+                }
+            } as any)
+        );
+        jest.mocked(BackendUtils.fundPsbt).mockResolvedValue({
+            funded_psbt: PSBT
+        } as any);
+        jest.mocked(BackendUtils.signPsbt).mockResolvedValue({
+            signed_psbt: PSBT
+        } as any);
+    });
+
+    it('finalizes once LND has verified the PSBT for every channel', async () => {
+        jest.mocked(BackendUtils.fundingStateStep).mockResolvedValue({} as any);
+
+        await store.connectPeer(batchRequest());
+        await flushPromises();
+
+        expect(fundingSteps()).toEqual([
+            {
+                psbt_verify: {
+                    funded_psbt: PSBT,
+                    pending_chan_id: 'chan-a',
+                    skip_finalize: true
+                }
+            },
+            {
+                psbt_verify: {
+                    funded_psbt: PSBT,
+                    pending_chan_id: 'chan-b'
+                }
+            },
+            {
+                psbt_finalize: {
+                    signed_psbt: PSBT,
+                    pending_chan_id: 'chan-b'
+                }
+            }
+        ]);
+        expect(store.channelSuccess).toBe(true);
+        expect(store.errorOpenChannel).toBe(false);
+    });
+
+    it('does not finalize when LND fails to verify the PSBT for one of the channels', async () => {
+        jest.mocked(BackendUtils.fundingStateStep).mockImplementation(
+            (step: any) =>
+                step.psbt_verify?.pending_chan_id === 'chan-a'
+                    ? Promise.reject(new Error('Request timeout'))
+                    : Promise.resolve({})
+        );
+
+        await store.connectPeer(batchRequest());
+        await flushPromises();
+
+        // finalizing B would have LND publish a transaction that also pays
+        // A's funding output, for which no channel was negotiated
+        expect(fundingSteps().filter((step: any) => !step.shim_cancel)).toEqual(
+            [
+                {
+                    psbt_verify: {
+                        funded_psbt: PSBT,
+                        pending_chan_id: 'chan-a',
+                        skip_finalize: true
+                    }
+                }
+            ]
+        );
+        // and both pending channels are cancelled on the node
+        expect(
+            fundingSteps()
+                .filter((step: any) => step.shim_cancel)
+                .map((step: any) => step.shim_cancel.pending_chan_id)
+        ).toEqual(['chan-a', 'chan-b']);
+        expect(store.channelSuccess).toBe(false);
+        expect(store.errorOpenChannel).toBe(true);
+        expect(store.errorMsgChannel).toBe('Request timeout');
+    });
+
+    describe('dispatch order', () => {
+        // A is opened first, B in between and C last; C's psbt_finalize is
+        // what makes LND publish the batch
+        const threeChannelRequest = () => {
+            const request = batchRequest();
+            request.additionalChannels.push({
+                node_pubkey_string: 'ghi',
+                host: 'peer-c.example.com:9735',
+                satAmount: '200000'
+            });
+            return request;
+        };
+
+        const streamResult = (pending_chan_id: string) =>
+            ({
+                result: {
+                    pending_chan_id,
+                    psbt_fund: {
+                        funding_address: `bc1q${pending_chan_id}`,
+                        funding_amount: 1,
+                        psbt: PSBT
+                    }
+                }
+            } as any);
+
+        // the request object is reused between channels, so record what
+        // each openChannelStream call was sent at the time it was made
+        let dispatched: Array<{ node: string; no_publish: boolean }>;
+
+        const streamReplies = (replies: Array<() => Promise<any>>) => {
+            dispatched = [];
+            jest.mocked(BackendUtils.openChannelStream)
+                .mockReset()
+                .mockImplementation((request: any) => {
+                    dispatched.push({
+                        node: request.node_pubkey_string,
+                        no_publish: request.funding_shim.psbt_shim.no_publish
+                    });
+                    return replies[dispatched.length - 1]();
+                });
+        };
+
+        // the pending_chan_ids handleChannelOpen worked from, read when it
+        // finalizes
+        let idsAtFinalize: Array<string> | undefined;
+
+        beforeEach(() => {
+            idsAtFinalize = undefined;
+            jest.mocked(BackendUtils.fundingStateStep).mockImplementation(
+                (step: any) => {
+                    if (step.psbt_finalize) {
+                        idsAtFinalize = [...store.pending_chan_ids];
+                    }
+                    return Promise.resolve({});
+                }
+            );
+        });
+
+        it('opens the final channel only after the one before it is pending', async () => {
+            let answerB: (value: any) => void = () => {};
+            streamReplies([
+                () => Promise.resolve(streamResult('chan-a')),
+                () => new Promise((resolve) => (answerB = resolve)),
+                () => Promise.resolve(streamResult('chan-c'))
+            ]);
+
+            await store.connectPeer(threeChannelRequest());
+            await flushPromises();
+
+            // B's peer has not answered yet, so C must not be opened: its
+            // psbt_fund would start the funding flow without B's output
+            expect(dispatched).toEqual([
+                { node: 'abc', no_publish: true },
+                { node: 'def', no_publish: true }
+            ]);
+            expect(BackendUtils.fundPsbt).not.toHaveBeenCalled();
+
+            answerB(streamResult('chan-b'));
+            await flushPromises();
+
+            expect(dispatched).toEqual([
+                { node: 'abc', no_publish: true },
+                { node: 'def', no_publish: true },
+                { node: 'ghi', no_publish: false }
+            ]);
+            expect(idsAtFinalize).toEqual(['chan-a', 'chan-b', 'chan-c']);
+            expect(BackendUtils.fundPsbt).toHaveBeenCalledTimes(1);
+            expect(
+                Object.keys(
+                    jest.mocked(BackendUtils.fundPsbt).mock.calls[0][0].raw
+                        .outputs
+                )
+            ).toEqual(['bc1qchan-a', 'bc1qchan-b', 'bc1qchan-c']);
+            expect(fundingSteps()).toEqual([
+                {
+                    psbt_verify: {
+                        funded_psbt: PSBT,
+                        pending_chan_id: 'chan-a',
+                        skip_finalize: true
+                    }
+                },
+                {
+                    psbt_verify: {
+                        funded_psbt: PSBT,
+                        pending_chan_id: 'chan-b',
+                        skip_finalize: true
+                    }
+                },
+                {
+                    psbt_verify: {
+                        funded_psbt: PSBT,
+                        pending_chan_id: 'chan-c'
+                    }
+                },
+                {
+                    psbt_finalize: {
+                        signed_psbt: PSBT,
+                        pending_chan_id: 'chan-c'
+                    }
+                }
+            ]);
+            expect(store.channelSuccess).toBe(true);
+            expect(store.errorOpenChannel).toBe(false);
+        });
+
+        it('stops the batch when a channel before the final one is rejected', async () => {
+            streamReplies([
+                () => Promise.resolve(streamResult('chan-a')),
+                () => Promise.reject(new Error('peer b rejected the channel')),
+                () => Promise.resolve(streamResult('chan-c'))
+            ]);
+
+            await store.connectPeer(threeChannelRequest());
+            await flushPromises();
+
+            // opening C anyway would fund and publish a transaction without
+            // B's channel, and its success would replace B's error
+            expect(dispatched).toEqual([
+                { node: 'abc', no_publish: true },
+                { node: 'def', no_publish: true }
+            ]);
+            expect(BackendUtils.fundPsbt).not.toHaveBeenCalled();
+            // the only funding steps cancel the shims of A and B
+            expect(
+                jest
+                    .mocked(BackendUtils.fundingStateStep)
+                    .mock.calls.map(([step]: any) => Object.keys(step))
+            ).toEqual([['shim_cancel'], ['shim_cancel']]);
+            expect(store.channelSuccess).toBe(false);
+            expect(store.errorOpenChannel).toBe(true);
+            expect(store.errorMsgChannel).toBe('peer b rejected the channel');
+        });
+
+        it('keeps opening the second of two channels after the first is pending', async () => {
+            let answerA: (value: any) => void = () => {};
+            streamReplies([
+                () => new Promise((resolve) => (answerA = resolve)),
+                () => Promise.resolve(streamResult('chan-b'))
+            ]);
+
+            await store.connectPeer(batchRequest());
+            await flushPromises();
+
+            expect(dispatched).toEqual([{ node: 'abc', no_publish: true }]);
+
+            answerA(streamResult('chan-a'));
+            await flushPromises();
+
+            expect(dispatched).toEqual([
+                { node: 'abc', no_publish: true },
+                { node: 'def', no_publish: false }
+            ]);
+            expect(idsAtFinalize).toEqual(['chan-a', 'chan-b']);
+            expect(store.channelSuccess).toBe(true);
+        });
+    });
+});
+
+describe('BackendUtils.call on LDK Node', () => {
+    const ANDROID_ERROR =
+        'org.lightningdevkit.ldknode.NodeException$ChannelClosingFailed: Failed to close channel.';
+
+    beforeEach(() => {
+        mockLdkCloseChannel.mockReset();
+        settingsStore.implementation = 'ldk-node';
+    });
+
+    const closeError = async () => {
+        let caught: any;
+        await RealBackendUtils.closeChannel(['txid', '1']).catch(
+            (error: any) => {
+                caught = error;
+            }
+        );
+        return caught;
+    };
+
+    it('keeps channelClosed on the wrapped error', async () => {
+        const original = Object.assign(new Error(`Error: ${ANDROID_ERROR}`), {
+            channelClosed: true
+        });
+        mockLdkCloseChannel.mockRejectedValue(original);
+
+        const error = await closeError();
+
+        expect(error).not.toBe(original);
+        expect(error).toBeInstanceOf(Error);
+        expect(error.channelClosed).toBe(true);
+        expect(error.message).toBe(parseLdkNodeError(original));
+        expect(error.message).toBe('Failed to close channel.');
+    });
+
+    it('wraps an ordinary error as before', async () => {
+        const original = new Error(ANDROID_ERROR);
+        original.name = 'NodeException';
+        mockLdkCloseChannel.mockRejectedValue(original);
+
+        const error = await closeError();
+
+        expect(error).not.toBe(original);
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe('Failed to close channel.');
+        expect(error.name).toBe('NodeException');
+        expect(Object.keys(error)).toEqual(['name']);
+    });
+
+    it('wraps a string rejection without copying its characters', async () => {
+        mockLdkCloseChannel.mockRejectedValue(ANDROID_ERROR);
+
+        const error = await closeError();
+
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe('Failed to close channel.');
+        expect(error.name).toBe('Error');
+        expect(Object.keys(error)).toEqual(['name']);
+    });
+
+    it('keeps the parsed message when the rejection has an enumerable message', async () => {
+        mockLdkCloseChannel.mockRejectedValue({
+            message: ANDROID_ERROR,
+            channelClosed: true
+        });
+
+        const error = await closeError();
+
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe('Failed to close channel.');
+        expect(error.channelClosed).toBe(true);
     });
 });

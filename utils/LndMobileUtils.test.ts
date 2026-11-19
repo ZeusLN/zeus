@@ -28,12 +28,16 @@ jest.mock('../lndmobile/log', () => () => ({
     w: jest.fn(),
     e: jest.fn()
 }));
-jest.mock('../lndmobile/index', () => ({}));
+jest.mock('../lndmobile/index', () => ({
+    ELndMobileStatusCodes: { STATUS_PROCESS_STARTED: 2 }
+}));
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     index: {
         writeConfig: jest.fn().mockResolvedValue(undefined),
         initialize: jest.fn().mockResolvedValue(undefined),
         startLnd: jest.fn().mockResolvedValue(undefined),
+        stopLnd: jest.fn(),
+        checkStatus: jest.fn().mockResolvedValue(0),
         subscribeState: jest.fn(),
         decodeState: jest.fn()
     },
@@ -47,7 +51,7 @@ jest.mock('../stores/Stores', () => ({
     settingsStore: {
         settings: { neutrinoPeersMainnet: [] },
         embeddedLndStarted: false,
-        walletJustCreated: false
+        justCreatedNodeDir: undefined as string | undefined
     },
     syncStore: {}
 }));
@@ -65,10 +69,21 @@ jest.mock('./SleepUtils', () => ({
     sleep: jest.fn().mockResolvedValue(undefined)
 }));
 
+import { NativeModules } from 'react-native';
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { lnrpc } from '../proto/lightning';
 import { settingsStore } from '../stores/Stores';
-import { createLndWallet, LndMobileEventEmitter } from './LndMobileUtils';
+import { isLndError, LndErrorCode } from './LndMobileErrors';
+import {
+    checkLndStreamErrorResponse,
+    createLndWallet,
+    deleteLndWallet,
+    deleteNeutrinoFiles,
+    expressGraphSync,
+    initializeLnd,
+    LndMobileEventEmitter,
+    startLnd
+} from './LndMobileUtils';
 
 const mockRandomBytes = jest.fn<Uint8Array, [number]>();
 const entropy = Uint8Array.from(
@@ -95,7 +110,7 @@ describe('createLndWallet password generation', () => {
         jest.clearAllMocks();
         mockRandomBytes.mockReset().mockReturnValue(entropy.slice());
         settingsStore.embeddedLndStarted = false;
-        settingsStore.walletJustCreated = false;
+        settingsStore.justCreatedNodeDir = undefined;
 
         Object.defineProperty(globalThis, 'crypto', {
             configurable: true,
@@ -150,6 +165,13 @@ describe('createLndWallet password generation', () => {
             seed,
             randomBase64: password
         });
+    });
+
+    it('records which wallet the running node was created for', async () => {
+        await createLndWallet({ lndDir: 'new-wallet' });
+
+        expect(settingsStore.embeddedLndStarted).toBe(true);
+        expect(settingsStore.justCreatedNodeDir).toBe('new-wallet');
     });
 
     it('requests fresh entropy for each wallet instead of reusing a password', async () => {
@@ -219,7 +241,236 @@ describe('createLndWallet password generation', () => {
             expect(mockRandomBytes).toHaveBeenCalledTimes(1);
             expect(lndMobile.wallet.initWallet).not.toHaveBeenCalled();
             expect(settingsStore.embeddedLndStarted).toBe(false);
-            expect(settingsStore.walletJustCreated).toBe(false);
+            expect(settingsStore.justCreatedNodeDir).toBeUndefined();
         }
     );
+});
+
+describe('checkLndStreamErrorResponse', () => {
+    it('keeps the gRPC code name on the returned error', () => {
+        const error = checkLndStreamErrorResponse('RouterSendPaymentV2', {
+            error_code: 'AlreadyExists',
+            error_desc: 'invoice is already paid'
+        }) as Error;
+
+        expect(error.message).toBe('invoice is already paid');
+        expect((error as any).grpcCode).toBe('AlreadyExists');
+    });
+
+    it('returns null for a data event', () => {
+        expect(
+            checkLndStreamErrorResponse('RouterSendPaymentV2', { data: 'AA==' })
+        ).toBeNull();
+    });
+});
+
+describe('deleteLndWallet', () => {
+    const deleteLndDirectory = jest.fn();
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        deleteLndDirectory.mockReset().mockResolvedValue(null);
+        (NativeModules as any).LndMobileTools = { deleteLndDirectory };
+    });
+
+    afterEach(() => {
+        delete (NativeModules as any).LndMobileTools;
+    });
+
+    it.each(['lnd', '0b7d5a8e-3c1f-4f2a-9e6d-2a1b3c4d5e6f'])(
+        'stops LND and deletes %j',
+        async (lndDir) => {
+            await expect(deleteLndWallet(lndDir)).resolves.toBe(true);
+
+            expect(lndMobile.index.checkStatus).toHaveBeenCalledTimes(1);
+            expect(deleteLndDirectory).toHaveBeenCalledWith(lndDir);
+        }
+    );
+
+    it.each(['', '..', '../victim', 'lnd/..', '/data'])(
+        'refuses %j without stopping LND or deleting anything',
+        async (lndDir) => {
+            await expect(deleteLndWallet(lndDir)).resolves.toBe(false);
+
+            expect(lndMobile.index.checkStatus).not.toHaveBeenCalled();
+            expect(deleteLndDirectory).not.toHaveBeenCalled();
+        }
+    );
+
+    it('returns false when the native delete rejects', async () => {
+        deleteLndDirectory.mockRejectedValue(new Error('io error'));
+
+        await expect(deleteLndWallet('lnd')).resolves.toBe(false);
+    });
+});
+
+describe('embedded LND start with an invalid lndDir', () => {
+    const invalidDirs = ['', '.', '..', '../victim', 'x/..', 'lnd\n'];
+    const repairGraphDb = jest.fn();
+    const resetGraphDb = jest.fn();
+    const DEBUG_deleteNeutrinoFiles = jest.fn();
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        repairGraphDb.mockReset().mockResolvedValue('noop');
+        resetGraphDb.mockReset().mockResolvedValue('noop');
+        DEBUG_deleteNeutrinoFiles.mockReset().mockResolvedValue(true);
+        (NativeModules as any).LndMobileTools = {
+            repairGraphDb,
+            resetGraphDb,
+            DEBUG_deleteNeutrinoFiles
+        };
+        (settingsStore as any).embeddedLndStarted = false;
+    });
+
+    afterEach(() => {
+        delete (NativeModules as any).LndMobileTools;
+        delete (settingsStore as any).lndDir;
+        delete (settingsStore as any).isSqlite;
+        delete (settingsStore.settings as any).resetExpressGraphSyncOnStartup;
+    });
+
+    it('initializeLnd writes the config and repairs the graph for a valid dir', async () => {
+        await initializeLnd({ lndDir: 'lnd', isSqlite: true });
+
+        expect(lndMobile.index.writeConfig).toHaveBeenCalledWith(
+            expect.objectContaining({ lndDir: 'lnd' })
+        );
+        expect(repairGraphDb).toHaveBeenCalledWith('lnd', 'mainnet');
+        expect(lndMobile.index.initialize).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(invalidDirs)(
+        'initializeLnd refuses %j before touching native files',
+        async (lndDir) => {
+            await expect(
+                initializeLnd({ lndDir, isSqlite: true })
+            ).rejects.toThrow('Invalid node directory');
+
+            expect(lndMobile.index.writeConfig).not.toHaveBeenCalled();
+            expect(repairGraphDb).not.toHaveBeenCalled();
+            expect(lndMobile.index.initialize).not.toHaveBeenCalled();
+        }
+    );
+
+    it.each(invalidDirs)(
+        'startLnd refuses %j without starting LND',
+        async (lndDir) => {
+            await expect(
+                startLnd({
+                    lndDir,
+                    walletPassword: 'password',
+                    isTorEnabled: false,
+                    isTestnet: false
+                })
+            ).rejects.toThrow('Invalid node directory');
+
+            expect(lndMobile.index.startLnd).not.toHaveBeenCalled();
+            expect(settingsStore.embeddedLndStarted).toBe(false);
+        }
+    );
+
+    it.each(invalidDirs)(
+        'createLndWallet refuses %j before writing the config',
+        async (lndDir) => {
+            await expect(createLndWallet({ lndDir })).rejects.toThrow(
+                'Invalid node directory'
+            );
+
+            expect(lndMobile.index.writeConfig).not.toHaveBeenCalled();
+            expect(lndMobile.index.startLnd).not.toHaveBeenCalled();
+        }
+    );
+
+    it.each(invalidDirs.filter((lndDir) => lndDir !== ''))(
+        'expressGraphSync refuses a stored lndDir of %j before resetting the graph',
+        async (lndDir) => {
+            Object.assign(settingsStore, { lndDir, isSqlite: true });
+            (settingsStore.settings as any).resetExpressGraphSyncOnStartup =
+                true;
+
+            await expect(expressGraphSync()).rejects.toThrow(
+                'Invalid node directory'
+            );
+
+            expect(resetGraphDb).not.toHaveBeenCalled();
+        }
+    );
+
+    it('deleteNeutrinoFiles deletes the files for a valid dir', async () => {
+        await deleteNeutrinoFiles('lnd', 'mainnet', true);
+
+        expect(DEBUG_deleteNeutrinoFiles).toHaveBeenCalledWith(
+            'lnd',
+            'mainnet',
+            true
+        );
+    });
+
+    it.each(invalidDirs)(
+        'deleteNeutrinoFiles refuses %j without deleting anything',
+        async (lndDir) => {
+            await expect(
+                deleteNeutrinoFiles(lndDir, 'mainnet', true)
+            ).rejects.toThrow('Invalid node directory');
+
+            expect(DEBUG_deleteNeutrinoFiles).not.toHaveBeenCalled();
+        }
+    );
+});
+
+describe('startLnd while another LND cannot be stopped', () => {
+    const startArgs = {
+        lndDir: 'selected-wallet',
+        walletPassword: password,
+        isTorEnabled: false,
+        isTestnet: false
+    };
+    const originalLndMobileTools = NativeModules.LndMobileTools;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        NativeModules.LndMobileTools = {
+            killLnd: jest.fn().mockResolvedValue(true)
+        } as any;
+        // LND refuses StopDaemon during a recovery rescan and killLnd only
+        // clears the native "started" flag
+        jest.mocked(lndMobile.index.stopLnd).mockRejectedValue(
+            new Error(
+                'wallet recovery in progress, cannot shut down, please wait until rescan finishes'
+            )
+        );
+        jest.mocked(lndMobile.index.checkStatus).mockResolvedValue(1);
+    });
+
+    afterEach(() => {
+        jest.mocked(lndMobile.index.startLnd)
+            .mockReset()
+            .mockResolvedValue(undefined as any);
+        NativeModules.LndMobileTools = originalLndMobileTools;
+    });
+
+    it('fails instead of attaching to the running LND when every attempt is answered "already started"', async () => {
+        jest.mocked(lndMobile.index.startLnd).mockRejectedValue(
+            new Error('lnd already started')
+        );
+
+        const error = await startLnd(startArgs).catch((e) => e);
+
+        expect(isLndError(error, LndErrorCode.LND_START_FAILED)).toBe(true);
+        expect(lndMobile.index.startLnd).toHaveBeenCalledTimes(11);
+        expect(lndMobile.index.subscribeState).not.toHaveBeenCalled();
+    });
+
+    it('still fails when every attempt is answered with another error', async () => {
+        jest.mocked(lndMobile.index.startLnd).mockRejectedValue(
+            new Error('unable to start')
+        );
+
+        const error = await startLnd(startArgs).catch((e) => e);
+
+        expect(isLndError(error, LndErrorCode.LND_START_FAILED)).toBe(true);
+        expect(lndMobile.index.startLnd).toHaveBeenCalledTimes(11);
+        expect(lndMobile.index.subscribeState).not.toHaveBeenCalled();
+    });
 });

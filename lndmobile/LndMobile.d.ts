@@ -29,14 +29,18 @@ export interface ILndMobile {
         method: string,
         base64Payload: string
     ): Promise<{ data: string }>;
+    // requestId is echoed as `request_id` on every event of the stream;
+    // pass '' for none
     sendStreamCommand(
         method: string,
         base64Payload: string,
-        streamOnlyOnce: boolean
+        streamOnlyOnce: boolean,
+        requestId: string
     ): Promise<'done'>;
     sendBidiStreamCommand(
         method: string,
-        streamOnlyOnce: boolean
+        streamOnlyOnce: boolean,
+        requestId: string
     ): Promise<'done'>;
     writeToStream(method: string, payload: string): Promise<boolean>;
 
@@ -69,7 +73,7 @@ export interface ILndMobile {
         pubNonce: string
     ): Promise<string>;
 
-    createReverseClaimTransaction(
+    buildReverseClaimTransaction(
         endpoint: string,
         swapId: string,
         claimLeaf: string,
@@ -82,10 +86,10 @@ export interface ILndMobile {
         destinationAddress: string,
         feeRate: number,
         minerFee: number,
-        isTestnet?: boolean
+        network: string
     ): Promise<string>;
 
-    createRefundTransaction(
+    buildRefundTransaction(
         endpoint: string,
         swapId: string,
         claimLeaf: string,
@@ -94,11 +98,12 @@ export interface ILndMobile {
         privateKey: string,
         servicePubKey: string,
         feeRate: number,
+        minerFee: number,
         timeoutBlockHeight: number,
         destinationAddress: string,
         lockupAddress: string,
         cooperative: boolean,
-        isTestnet?: boolean
+        network: string
     ): Promise<string>;
 }
 
@@ -126,8 +131,6 @@ export interface ILndMobileTools {
     ): Promise<boolean>;
 
     // Android-specific
-    getIntentStringData(): Promise<string | null>;
-    getIntentNfcData(): Promise<string | null>;
     DEBUG_deleteWallet(network: string): Promise<boolean>;
     DEBUG_deleteDatafolder(): Promise<null>;
     DEBUG_listProcesses(): Promise<string>;

@@ -32,6 +32,7 @@ import {
     listPeers,
     readLndLog,
     sendPaymentV2Sync,
+    trackPaymentV2,
     IReadLndLogResponse,
     listPayments,
     listInvoices,
@@ -56,6 +57,7 @@ import {
     decodeChannelAcceptRequest,
     decodeChannelEvent,
     decodeOpenStatusUpdate,
+    decodeCloseStatusUpdate,
     exportAllChannelBackups,
     restoreChannelBackups,
     abandonChannel,
@@ -86,6 +88,7 @@ import {
     bumpFee,
     bumpForceCloseFee,
     fundPsbt,
+    releaseOutput,
     signPsbt,
     finalizePsbt,
     publishTransaction,
@@ -100,8 +103,8 @@ import { sweepRemoteClosed } from './chantools';
 import {
     // swaps
     createClaimTransaction,
-    createReverseClaimTransaction,
-    createRefundTransaction
+    buildReverseClaimTransaction,
+    buildRefundTransaction
 } from './swaps';
 
 import {
@@ -113,6 +116,7 @@ import {
     walletrpc,
     wtclientrpc
 } from '../proto/lightning';
+import { LndInvoiceListParams, LndPaymentListParams } from '../utils/LndUtils';
 // watchtowers
 import {
     WatchtowerClientAddTower,
@@ -209,7 +213,9 @@ export interface ILndMobileInjections {
         getNodeInfo: (pubKey: string) => Promise<lnrpc.NodeInfo>;
         lookupInvoice: (rHash: string) => Promise<lnrpc.Invoice>;
         listPeers: () => Promise<lnrpc.ListPeersResponse>;
-        listInvoices: () => Promise<lnrpc.ListInvoiceResponse>;
+        listInvoices: (
+            params?: LndInvoiceListParams
+        ) => Promise<lnrpc.ListInvoiceResponse>;
         readLndLog: () => Promise<IReadLndLogResponse>;
         sendPaymentV2Sync: ({
             payment_request,
@@ -246,15 +252,18 @@ export interface ILndMobileInjections {
             amp: boolean;
             dest: string;
         }) => Promise<lnrpc.Payment>;
+        trackPaymentV2: (
+            paymentHash: string,
+            timeoutMs?: number
+        ) => Promise<lnrpc.Payment>;
         queryRoutes: (
             pubkey: string,
             amount?: Long,
             routeHints?: lnrpc.IRouteHint[]
         ) => Promise<lnrpc.QueryRoutesResponse>;
-        listPayments: (params?: {
-            maxPayments?: number;
-            reversed?: boolean;
-        }) => Promise<lnrpc.ListPaymentsResponse>;
+        listPayments: (
+            params?: LndPaymentListParams
+        ) => Promise<lnrpc.ListPaymentsResponse>;
         subscribeChannelGraph: () => Promise<string>;
         sendKeysendPaymentV2: ({
             amt,
@@ -266,7 +275,8 @@ export interface ILndMobileInjections {
             payment_hash,
             amp,
             dest,
-            dest_custom_records
+            dest_custom_records,
+            timeout_seconds
         }: {
             amt?: Long;
             max_shard_size_msat?: string;
@@ -278,6 +288,7 @@ export interface ILndMobileInjections {
             amp: boolean;
             dest: string;
             dest_custom_records?: any;
+            timeout_seconds?: number;
         }) => Promise<lnrpc.Payment>;
         fundingStateStep: ({
             shim_register,
@@ -307,7 +318,8 @@ export interface ILndMobileInjections {
             outputIndex: number,
             force?: boolean,
             sat_per_vbyte?: number,
-            delivery_address?: string
+            delivery_address?: string,
+            requestId?: string
         ) => Promise<string>;
         listChannels: () => Promise<lnrpc.ListChannelsResponse>;
         openChannel: (
@@ -321,7 +333,9 @@ export interface ILndMobileInjections {
             simpleTaprootChannel?: boolean,
             fund_max?: boolean,
             utxos?: Array<string>,
-            funding_shim?: any
+            funding_shim?: any,
+            close_address?: string,
+            requestId?: string
         ) => Promise<string>;
         openChannelSync: (
             pubkey: string,
@@ -347,6 +361,7 @@ export interface ILndMobileInjections {
         subscribeChannelEvents: () => Promise<string>;
         decodeChannelEvent: (data: string) => lnrpc.ChannelEventUpdate;
         decodeOpenStatusUpdate: (data: string) => lnrpc.OpenStatusUpdate;
+        decodeCloseStatusUpdate: (data: string) => lnrpc.CloseStatusUpdate;
         exportAllChannelBackups: () => Promise<lnrpc.ChanBackupSnapshot>;
         restoreChannelBackups: (
             data: Uint8Array
@@ -385,7 +400,8 @@ export interface ILndMobileInjections {
             feeRate?: number,
             spend_unconfirmed?: boolean,
             send_all?: boolean,
-            outpoints?: Array<OutPoint>
+            outpoints?: Array<OutPoint>,
+            label?: string
         ) => Promise<lnrpc.SendCoinsResponse>;
         sendCoinsAll: (
             address: string,
@@ -469,6 +485,9 @@ export interface ILndMobileInjections {
             spend_unconfirmed?: boolean;
             sat_per_vbyte?: Long;
         }) => Promise<walletrpc.FundPsbtResponse>;
+        releaseOutput: (
+            request: walletrpc.IReleaseOutputRequest
+        ) => Promise<walletrpc.ReleaseOutputResponse>;
         signPsbt: ({
             funded_psbt
         }: {
@@ -557,21 +576,7 @@ export interface ILndMobileInjections {
             transactionHash: string;
             pubNonce: string;
         }) => Promise<string>;
-        createReverseClaimTransaction: ({
-            endpoint,
-            swapId,
-            claimLeaf,
-            refundLeaf,
-            privateKey,
-            servicePubKey,
-            preimageHex,
-            transactionHex,
-            lockupAddress,
-            destinationAddress,
-            feeRate,
-            minerFee,
-            isTestnet
-        }: {
+        buildReverseClaimTransaction: (args: {
             endpoint: string;
             swapId: string;
             claimLeaf: string;
@@ -584,23 +589,9 @@ export interface ILndMobileInjections {
             destinationAddress: string;
             feeRate: number;
             minerFee: number;
-            isTestnet?: boolean;
+            network: string;
         }) => Promise<string>;
-        createRefundTransaction: ({
-            endpoint,
-            swapId,
-            claimLeaf,
-            refundLeaf,
-            transactionHex,
-            privateKey,
-            servicePubKey,
-            feeRate,
-            timeoutBlockHeight,
-            destinationAddress,
-            lockupAddress,
-            cooperative,
-            isTestnet
-        }: {
+        buildRefundTransaction: (args: {
             endpoint: string;
             swapId: string;
             claimLeaf: string;
@@ -609,11 +600,12 @@ export interface ILndMobileInjections {
             privateKey: string;
             servicePubKey: string;
             feeRate: number;
+            minerFee?: number;
             timeoutBlockHeight: number;
             destinationAddress: string;
             lockupAddress: string;
-            cooperative: boolean;
-            isTestnet?: boolean;
+            cooperative?: boolean;
+            network: string;
         }) => Promise<string>;
     };
     wtclient: {
@@ -679,6 +671,7 @@ export default {
         listPeers,
         readLndLog,
         sendPaymentV2Sync,
+        trackPaymentV2,
         queryRoutes,
         listPayments,
         listInvoices,
@@ -700,6 +693,7 @@ export default {
         subscribeChannelEvents,
         decodeChannelEvent,
         decodeOpenStatusUpdate,
+        decodeCloseStatusUpdate,
         exportAllChannelBackups,
         restoreChannelBackups,
         abandonChannel,
@@ -733,6 +727,7 @@ export default {
         bumpFee,
         bumpForceCloseFee,
         fundPsbt,
+        releaseOutput,
         signPsbt,
         finalizePsbt,
         publishTransaction,
@@ -755,8 +750,8 @@ export default {
     },
     swaps: {
         createClaimTransaction,
-        createReverseClaimTransaction,
-        createRefundTransaction
+        buildReverseClaimTransaction,
+        buildRefundTransaction
     },
     wtclient: {
         WatchtowerClientAddTower,
