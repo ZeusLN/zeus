@@ -39,6 +39,7 @@ jest.mock('../../assets/images/SVG/Add.svg', () => 'Add');
 jest.mock('../../assets/images/SVG/DragDots.svg', () => 'DragDots');
 
 import * as React from 'react';
+import BackendUtils from '../../utils/BackendUtils';
 import Wallets from './Wallets';
 
 const OLD = { nickname: 'Old wallet', ldkMnemonic: 'twelve secret words' };
@@ -150,6 +151,34 @@ describe('Wallets', () => {
             expect(navigation.popTo).not.toHaveBeenCalled();
         });
 
+        it('selects nothing when the tapped wallet is deleted during the switch', async () => {
+            const { tap, view, navigation, SettingsStore } = makeView(
+                [HOME, WORK],
+                { nodes: [HOME, WORK], selectedNode: 0 }
+            );
+            SettingsStore.implementation = 'lightning-node-connect';
+            // A deletion lands while the LNC session is being closed
+            (BackendUtils.disconnect as jest.Mock).mockImplementationOnce(
+                async () => {
+                    SettingsStore.settings = {
+                        ...SettingsStore.settings,
+                        nodes: [HOME]
+                    };
+                }
+            );
+
+            await tap(1);
+
+            expect(SettingsStore.settings).toEqual({
+                nodes: [HOME],
+                selectedNode: 0
+            });
+            expect(SettingsStore.setConnectingStatus).not.toHaveBeenCalled();
+            expect(view.state.nodes).toEqual([HOME]);
+            expect(view.state.isSelecting).toBe(false);
+            expect(navigation.popTo).not.toHaveBeenCalled();
+        });
+
         it('does not write the deleted wallet back on reorder', async () => {
             const { reorder, view, SettingsStore } = makeView(
                 [OLD, HOME, WORK],
@@ -163,6 +192,39 @@ describe('Wallets', () => {
                 selectedNode: 0
             });
             expect(view.state.nodes).toEqual([HOME, WORK]);
+        });
+
+        it('does not reorder after the last wallet was deleted', async () => {
+            // The stored list still starts with the wallets on screen
+            const { reorder, view, SettingsStore } = makeView(
+                [HOME, WORK, OLD],
+                { nodes: [HOME, WORK], selectedNode: 0 }
+            );
+
+            await reorder(2, 0);
+
+            expect(SettingsStore.settings).toEqual({
+                nodes: [HOME, WORK],
+                selectedNode: 0
+            });
+            expect(view.state.nodes).toEqual([HOME, WORK]);
+        });
+
+        it('does not reorder after a wallet was deleted and another added', async () => {
+            // Same length as the list on screen, different wallets
+            const NEW = { nickname: 'New node', macaroonHex: 'cc' };
+            const { reorder, view, SettingsStore } = makeView([OLD, HOME], {
+                nodes: [HOME, NEW],
+                selectedNode: 0
+            });
+
+            await reorder(1, 0);
+
+            expect(SettingsStore.settings).toEqual({
+                nodes: [HOME, NEW],
+                selectedNode: 0
+            });
+            expect(view.state.nodes).toEqual([HOME, NEW]);
         });
     });
 

@@ -1738,12 +1738,12 @@ describe('WalletConfiguration', () => {
         });
 
         // `stored` is what the settings hold; `params` what the list passed
-        const open = async (stored: any[], params: any) => {
+        const open = async (stored: any[], params: any, selectedNode = 0) => {
             const SettingsStore: any = {
                 settings: {
                     privacy: { clipboard: false },
                     nodes: stored,
-                    selectedNode: 0
+                    selectedNode
                 },
                 updateSettings: jest.fn((update: any) => {
                     const patch =
@@ -1959,6 +1959,67 @@ describe('WalletConfiguration', () => {
             expect(SettingsStore.updateSettings).toHaveBeenCalledTimes(2);
             expect(SettingsStore.settings.nodes).toEqual([SAVINGS]);
             expect(alert).toHaveBeenCalledTimes(2);
+        });
+
+        describe('set wallet as active', () => {
+            const HOME = { ...LND_NODE, nickname: 'Home' };
+            const WORK = {
+                ...LND_NODE,
+                nickname: 'Work',
+                host: 'https://work.example.com'
+            };
+            const OLD = {
+                ...LND_NODE,
+                nickname: 'Old',
+                host: 'https://old.example.com'
+            };
+
+            const setActive = () =>
+                pressButton(
+                    'views.Settings.WalletConfiguration.setWalletActive'
+                );
+
+            it('selects the wallet where it is stored now', async () => {
+                // The list showed Old, Home, Work with Work active. Old was
+                // deleted after it was loaded, so Home moved from 1 to 0.
+                const { SettingsStore, navigation } = await open(
+                    [HOME, WORK],
+                    { node: HOME, index: 1, active: false, saved: true },
+                    1
+                );
+
+                await setActive();
+
+                expect(SettingsStore.settings.selectedNode).toBe(0);
+                expect(SettingsStore.settings.nodes).toEqual([HOME, WORK]);
+                expect(SettingsStore.setConnectingStatus).toHaveBeenCalledWith(
+                    true
+                );
+                expect(navigation.popTo).toHaveBeenCalledWith('Wallet');
+                expect(alert).not.toHaveBeenCalled();
+            });
+
+            it('selects nothing when the wallet was deleted', async () => {
+                const { SettingsStore, navigation } = await open(
+                    [HOME, WORK],
+                    { node: OLD, index: 0, active: false, saved: true },
+                    1
+                );
+
+                await setActive();
+
+                expect(SettingsStore.settings.selectedNode).toBe(1);
+                expect(SettingsStore.settings.nodes).toEqual([HOME, WORK]);
+                expect(alert).toHaveBeenCalledWith(
+                    'general.error',
+                    'views.Settings.WalletConfiguration.walletChanged'
+                );
+                expect(
+                    SettingsStore.setConnectingStatus
+                ).not.toHaveBeenCalled();
+                expect(SettingsStore.setInitialStart).not.toHaveBeenCalled();
+                expect(navigation.popTo).not.toHaveBeenCalled();
+            });
         });
     });
 });
