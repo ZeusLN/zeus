@@ -749,4 +749,78 @@ describe('selectUntrackedCdkMelts', () => {
             selectUntrackedCdkMelts([melt({ direction: 'incoming' })], [])
         ).toEqual([]);
     });
+
+    describe('melts that paid an invoice from the own node', () => {
+        // BOLT11 spec reference invoice and the payee its signature
+        // recovers to
+        const invoice =
+            'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+        const invoicePayee =
+            '03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad';
+        // BOLT11 spec invoice whose signature recovers no payee
+        const unrecoverableInvoice =
+            'lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpusp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygs9qrsgqwgt7mcn5yqw3yx0w94pswkpq6j9uh6xfqqqtsk4tnarugeektd4hg5975x9am52rz4qskukxdmjemg92vvqz8nvmsye63r5ykel43pgz7zq0g2';
+
+        it('drops a settled sweep', () => {
+            expect(
+                selectUntrackedCdkMelts(
+                    [melt({ payment_request: invoice })],
+                    [],
+                    invoicePayee
+                )
+            ).toEqual([]);
+        });
+
+        it('drops a sweep in flight', () => {
+            expect(
+                selectUntrackedCdkMelts(
+                    [
+                        melt({
+                            state: 'Pending',
+                            payment_proof: undefined,
+                            payment_request: invoice
+                        })
+                    ],
+                    [],
+                    invoicePayee
+                )
+            ).toEqual([]);
+        });
+
+        it('keeps a melt that paid another node', () => {
+            const tx = melt({ payment_request: invoice });
+            expect(
+                selectUntrackedCdkMelts([tx], [], '02' + '11'.repeat(32))
+            ).toEqual([tx]);
+        });
+
+        it('keeps melts while the own node pubkey is unknown', () => {
+            const tx = melt({ payment_request: invoice });
+            const noPayee = melt({
+                id: 'no-payee',
+                quote_id: 'quote-2',
+                payment_request: unrecoverableInvoice
+            });
+            expect(selectUntrackedCdkMelts([tx, noPayee], [])).toEqual([
+                tx,
+                noPayee
+            ]);
+            expect(selectUntrackedCdkMelts([tx, noPayee], [], '')).toEqual([
+                tx,
+                noPayee
+            ]);
+        });
+
+        it('keeps a melt whose request is not a BOLT11 invoice', () => {
+            const offer = melt({
+                payment_request:
+                    'lno1qgsqvgnwgcg35z6ee2h3yczraddm72xrfua9uve2rlrm9deu7xyfzrc',
+                payment_method: 'bolt12'
+            });
+            const noRequest = melt({ id: 'no-request', quote_id: 'quote-2' });
+            expect(
+                selectUntrackedCdkMelts([offer, noRequest], [], invoicePayee)
+            ).toEqual([offer, noRequest]);
+        });
+    });
 });

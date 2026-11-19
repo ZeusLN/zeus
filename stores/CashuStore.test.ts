@@ -1,5 +1,6 @@
 jest.mock('./Stores', () => ({
     activityStore: { getSortedActivity: jest.fn() },
+    nodeInfoStore: { nodeInfo: {} },
     connectivityStore: {
         start: jest.fn(),
         stop: jest.fn(),
@@ -67,7 +68,7 @@ import InvoicesStore from './InvoicesStore';
 import BackendUtils from '../utils/BackendUtils';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
-import { connectivityStore } from './Stores';
+import { connectivityStore, nodeInfoStore } from './Stores';
 import Storage, { getRawItem } from '../storage';
 import CashuDevKit from '../cashu-cdk';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
@@ -2855,6 +2856,84 @@ describe('CashuStore cdkPayments', () => {
     afterEach(() => {
         jest.restoreAllMocks();
         delete (CashuDevKit as any).listTransactions;
+        (nodeInfoStore as any).nodeInfo = {};
+    });
+
+    // BOLT11 spec reference invoice and the payee its signature recovers to
+    const invoice =
+        'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+    const invoicePayee =
+        '03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad';
+    const otherNode = '02' + '11'.repeat(32);
+
+    it('leaves out a sweep, a melt that paid an invoice from the own node', async () => {
+        (nodeInfoStore as any).nodeInfo = { nodeId: invoicePayee };
+        const store = await loadedStore([
+            pendingCdkMelt({
+                state: 'Completed',
+                quote_id: 'sweep-quote',
+                payment_request: invoice
+            })
+        ]);
+
+        expect(store.cdkTransactions).toHaveLength(1);
+        expect(store.cdkPayments).toEqual([]);
+    });
+
+    it('keeps a CDK melt that paid another node', async () => {
+        (nodeInfoStore as any).nodeInfo = { nodeId: otherNode };
+        const store = await loadedStore([
+            pendingCdkMelt({ state: 'Completed', payment_request: invoice })
+        ]);
+
+        expect(store.cdkPayments.map((p: any) => p.cdkQuoteId)).toEqual(['q1']);
+        expect(store.cdkPayments[0].isInTransit).toBe(false);
+    });
+
+    it('keeps the in-flight multi-mint part with no local record, and drops the parts recorded by quote id', async () => {
+        (nodeInfoStore as any).nodeInfo = { nodeId: otherNode };
+        const store = await loadedStore([
+            pendingCdkMelt({
+                state: 'Completed',
+                quote_id: 'part-a',
+                mint_url: 'https://mint-a.example.com',
+                amount: 1439,
+                payment_request: invoice
+            }),
+            pendingCdkMelt({
+                quote_id: 'part-b',
+                mint_url: 'https://mint-b.example.com',
+                amount: 1561,
+                payment_request: invoice
+            })
+        ]);
+        store.payments = [
+            new CashuPayment({
+                meltResponse: { quote: { quote: 'part-a', amount: 1439 } },
+                amount: 1439,
+                payment_preimage: '',
+                mintUrl: 'https://mint-a.example.com'
+            })
+        ];
+
+        expect(store.cdkPayments.map((p: any) => p.cdkQuoteId)).toEqual([
+            'part-b'
+        ]);
+        expect(store.cdkPayments[0].isInTransit).toBe(true);
+
+        // reconcile records the in-flight part locally under its quote id
+        store.payments = [
+            ...store.payments,
+            new CashuPayment({
+                meltResponse: { quote: { quote: 'part-b', amount: 1561 } },
+                amount: 1561,
+                status: 'IN_FLIGHT',
+                payment_preimage: '',
+                mintUrl: 'https://mint-b.example.com'
+            })
+        ];
+
+        expect(store.cdkPayments).toEqual([]);
     });
 
     it('drops a CDK melt once a local payment with its quote id is recorded, without a reload', async () => {
