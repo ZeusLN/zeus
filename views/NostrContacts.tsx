@@ -330,6 +330,15 @@ export default class NostrContacts extends React.Component<
                 profileEvents.forEach((item: any) => {
                     try {
                         const content = JSON.parse(item.content);
+                        // a kind 0 whose content is null, a string or an
+                        // array is not a profile
+                        if (
+                            !content ||
+                            typeof content !== 'object' ||
+                            Array.isArray(content)
+                        ) {
+                            return;
+                        }
                         if (
                             !newContactDataIndexByPubkey[item.pubkey] ||
                             item.created_at >
@@ -369,6 +378,7 @@ export default class NostrContacts extends React.Component<
             })
             .catch((error) => {
                 console.error('Error fetching profiles events:', error);
+                this.setState({ loading: false });
             })
             .finally(() => {
                 pool.close(DEFAULT_NOSTR_RELAYS);

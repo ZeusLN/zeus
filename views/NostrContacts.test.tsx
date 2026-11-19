@@ -41,10 +41,14 @@ jest.mock('../utils/AddressUtils', () => ({
     isValidNpub: (text: string) => text.startsWith('npub1'),
     isValidLightningAddress: (text: string) => /^[^@\s]+@[^@\s]+$/.test(text)
 }));
-jest.mock('../utils/ContactUtils', () => ({}));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({ themeColor: () => '#ffffff' }));
-jest.mock('../storage', () => ({}));
+const mockGetItem = jest.fn();
+const mockSetItem = jest.fn();
+jest.mock('../storage', () => ({
+    getItem: (...args: any[]) => mockGetItem(...args),
+    setItem: (...args: any[]) => mockSetItem(...args)
+}));
 jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.example.com']
 }));
@@ -84,8 +88,12 @@ const lookUp = async (account: string, enableTor: boolean = false) => {
     await render(
         <NostrContacts
             {...({
-                navigation: { goBack: jest.fn(), navigate: jest.fn() },
-                ContactStore: {},
+                navigation: {
+                    goBack: jest.fn(),
+                    navigate: jest.fn(),
+                    popTo: jest.fn()
+                },
+                ContactStore: { loadContacts: jest.fn() },
                 SettingsStore: { enableTor }
             } as any)}
         />
@@ -259,6 +267,83 @@ describe('NostrContacts follow list', () => {
             'https://cdn.example/avatar.png',
             undefined,
             undefined
+        ]);
+    });
+
+    const spinners = () =>
+        screen.container.queryAll((n) => n.type === 'LoadingIndicator');
+    const IMPORT_ALL = 'views.NostrContacts.importAllContacts';
+
+    it('lists the other profiles when one has null content', async () => {
+        const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+        await lookUpFollows([
+            profile('aa', { name: 'Alice', lud16: 'alice@wallet.example' }),
+            { pubkey: 'bb', created_at: 1, content: 'null' }
+        ]);
+
+        expect(screen.getByText('alice@wallet.example')).toBeOnTheScreen();
+        expect(spinners()).toHaveLength(0);
+        expect(error).not.toHaveBeenCalled();
+        error.mockRestore();
+    });
+
+    // Import all is offered whenever the list holds an entry, shown or not
+    it.each(['null', '"Alice"', '42', '[]'])(
+        'adds no entry for a profile whose content is %s',
+        async (raw) => {
+            const error = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            await lookUpFollows([
+                { pubkey: 'bb', created_at: 1, content: raw }
+            ]);
+
+            expect(
+                screen.queryByRole('button', { name: IMPORT_ALL })
+            ).not.toBeOnTheScreen();
+            expect(spinners()).toHaveLength(0);
+            expect(error).not.toHaveBeenCalled();
+            error.mockRestore();
+        }
+    );
+
+    it('stops the spinner when the relay query fails', async () => {
+        const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+        mockQueryProfile.mockResolvedValue({ pubkey: PUBKEY });
+        mockQuerySync.mockReset();
+        mockQuerySync.mockRejectedValue(new Error('relay down'));
+
+        await lookUp('satoshi@domain.com');
+        await new Promise(setImmediate);
+
+        expect(spinners()).toHaveLength(0);
+        error.mockRestore();
+    });
+
+    it('imports each contact with the npub of the event author', async () => {
+        mockGetItem.mockReset();
+        mockSetItem.mockReset();
+        mockGetItem.mockResolvedValue(null);
+        mockSetItem.mockResolvedValue(undefined);
+
+        await lookUpFollows([
+            profile('aa', { name: 'Alice', lud16: 'alice@wallet.example' }),
+            profile('cc', {
+                name: 'Mallory',
+                lud16: 'mallory@wallet.example',
+                npub: 'npub-of-aa'
+            })
+        ]);
+        await fireEvent.press(screen.getByRole('button', { name: IMPORT_ALL }));
+
+        expect(mockSetItem).toHaveBeenCalledTimes(1);
+        const [key, saved] = mockSetItem.mock.calls[0];
+        expect(key).toBe('contacts');
+        expect(
+            saved.map((contact: any) => [contact.name, contact.nostrNpub])
+        ).toEqual([
+            ['Alice', ['npub-of-aa']],
+            ['Mallory', ['npub-of-cc']]
         ]);
     });
 });
