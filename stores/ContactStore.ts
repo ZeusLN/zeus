@@ -27,7 +27,7 @@ export default class ContactStore {
             console.log('LOADING CONTACTS.....');
             const contactsString: any = await Storage.getItem(CONTACTS_KEY);
             if (contactsString) {
-                const allContacts: Contact[] = JSON.parse(contactsString);
+                const allContacts: unknown = JSON.parse(contactsString);
                 this.contacts = Array.isArray(allContacts)
                     ? allContacts.map(normalizeContactData)
                     : [];
