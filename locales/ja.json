@@ -1909,6 +1909,8 @@
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "No Cashu mint selected. Please select a mint first.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Failed to decode invoice - payReq is undefined",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "既に支払われている請求です",
+    "stores.NostrWalletConnectStore.error.paymentInProgress": "A payment for this invoice is already in progress",
+    "stores.NostrWalletConnectStore.error.paymentStatusUnavailable": "Could not check whether the invoice is already paid. Try again.",
     "stores.NostrWalletConnectStore.error.invalidPaymentRequest": "無効な決済リクエスト",
     "stores.NostrWalletConnectStore.error.invalidAmount": "金額が無効です",
     "stores.NostrWalletConnectStore.error.invalidSignMessage": "Message must be a non-empty string",
