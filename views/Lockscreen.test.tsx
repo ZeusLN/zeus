@@ -1,4 +1,5 @@
 import React from 'react';
+import { DeviceEventEmitter, Platform, StyleSheet } from 'react-native';
 import {
     act,
     fireEvent,
@@ -16,7 +17,13 @@ jest.mock('../components/Screen', () => {
     const { View } = require('react-native');
     return ({ children }: any) => <View>{children}</View>;
 });
-jest.mock('../components/Button', () => () => null);
+// Shows the title, and whether the button is styled as a warning
+jest.mock('../components/Button', () => {
+    const { Text } = require('react-native');
+    return ({ title, warning }: any) => (
+        <Text>{title + (warning ? ' (warning)' : '')}</Text>
+    );
+});
 // Each header shows which Back it wires up
 jest.mock('../components/Header', () => {
     const { Text } = require('react-native');
@@ -1229,6 +1236,94 @@ describe('Lockscreen delete handlers', () => {
                     (patch: any) => key in patch && patch[key] === undefined
                 )
             ).toBe(true);
+        }
+    });
+});
+
+describe('Lockscreen passphrase form', () => {
+    const settings = { passphraseVerifier: testVerifier('open sesame') };
+
+    it.each([
+        [{}, 'views.Lockscreen.enterPassword', 'views.Lockscreen.login'],
+        [
+            { modifySecurityScreen: 'SetDuressPassword' },
+            'views.Lockscreen.enterExistingPassword',
+            'views.Lockscreen.login'
+        ],
+        [
+            { deletePassword: true },
+            'views.Lockscreen.enterPassword',
+            'views.Settings.SetPassword.deletePassword (warning)'
+        ],
+        [
+            { deleteDuressPassword: true },
+            'views.Lockscreen.enterLoginPassword',
+            'views.Settings.SetDuressPassword.deletePassword (warning)'
+        ]
+    ])('with %j asks %s and offers %s', async (params, prompt, button) => {
+        await renderLockscreen(jest.fn(), { settings, params });
+
+        expect(await screen.findByText(prompt)).toBeTruthy();
+        expect(screen.getByText(button)).toBeTruthy();
+    });
+
+    // the nearest ancestor of the prompt that carries a bottom padding: the
+    // wrapper that moves the form above the keyboard
+    const keyboardWrapper = async () => {
+        let node = (await screen.findByText('views.Lockscreen.enterPassword'))
+            .parent;
+        while (node) {
+            const style = StyleSheet.flatten(node.props.style);
+            if (style && 'paddingBottom' in style) return node;
+            node = node.parent;
+        }
+        return null;
+    };
+
+    it('moves the form above a keyboard that covers it on iOS', async () => {
+        await renderLockscreen(jest.fn(), {
+            settings,
+            params: { deletePassword: true }
+        });
+        const wrapper = (await keyboardWrapper())!;
+        expect(wrapper).not.toBeNull();
+
+        // below a 110pt Back header, ending at the window's bottom
+        await act(async () => {
+            fireEvent(wrapper, 'layout', {
+                persist: () => {},
+                nativeEvent: {
+                    layout: { x: 0, y: 110, width: 402, height: 764 }
+                }
+            });
+        });
+        await act(async () => {
+            DeviceEventEmitter.emit('keyboardWillShow', {
+                duration: 0,
+                easing: 'keyboard',
+                endCoordinates: {
+                    screenX: 0,
+                    screenY: 538,
+                    width: 402,
+                    height: 336
+                }
+            });
+        });
+
+        expect(StyleSheet.flatten(wrapper.props.style).paddingBottom).toBe(336);
+    });
+
+    it('leaves the keyboard to the window on Android', async () => {
+        const os = jest.replaceProperty(Platform, 'OS', 'android');
+        try {
+            await renderLockscreen(jest.fn(), {
+                settings,
+                params: { deletePassword: true }
+            });
+
+            expect(await keyboardWrapper()).toBeNull();
+        } finally {
+            os.restore();
         }
     });
 });
