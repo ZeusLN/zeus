@@ -149,7 +149,7 @@ public class Probe {
         // A long destination path makes each File the cleanup list keeps
         // larger, so the unbounded list fills the 16 MiB heap sooner
         StringBuilder deep = new StringBuilder(dir.getPath());
-        for (int i = 0; i < 8; i++) deep.append("/").append("d".repeat(24));
+        for (int i = 0; i < 8; i++) deep.append("/dddddddddddddddddddddddd");
         File dest = new File(deep.toString());
 
         if (mode.equals("duplicates")) {
