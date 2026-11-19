@@ -13,11 +13,6 @@ jest.mock('react-native-encrypted-storage', () => ({
     setItem: jest.fn(),
     removeItem: jest.fn()
 }));
-jest.mock('react-native-keychain', () => ({
-    getInternetCredentials: jest.fn(),
-    setInternetCredentials: jest.fn(),
-    resetInternetCredentials: jest.fn()
-}));
 jest.mock('@react-native-async-storage/async-storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn(),
@@ -2163,7 +2158,6 @@ describe('MigrationUtils', () => {
         });
     });
     describe('keychainCloudSyncMigration write verification', () => {
-        const Keychain = require('react-native-keychain');
         const EncryptedStorage = require('react-native-encrypted-storage');
         const StorageModule = require('../storage');
         const STORAGE_KEY = 'zeus-settings-v2';
@@ -2198,11 +2192,8 @@ describe('MigrationUtils', () => {
             StorageModule.setItem.mockResolvedValue(true);
             // Only STORAGE_KEY exists in the old keychain; every other key in
             // the migration list reads as absent so the pass stays short.
-            Keychain.getInternetCredentials.mockImplementation(
-                async (server: string) =>
-                    LEGACY[server]
-                        ? { username: server, password: LEGACY[server] }
-                        : false
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string) => LEGACY[server] ?? null
             );
         });
 
