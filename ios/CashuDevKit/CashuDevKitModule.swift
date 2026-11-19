@@ -11,6 +11,38 @@ import ZeusCashuRestore
 /// prepare/confirm flow. This module adapts the new API behind the
 /// pre-existing bridge contract: method names, parameters and resolved
 /// JSON shapes are unchanged from the 0.14.x module.
+
+// MARK: - External quote fetch without redirects
+
+/// Refuses every HTTP redirect, so the task completes with the 3xx
+/// response itself. checkExternalMintQuote checks the mint URL's scheme
+/// and host once, before the request. A followed redirect would go to a
+/// destination that check never saw: a loopback or LAN address, or plain
+/// HTTP, which ATS allows here (NSAllowsArbitraryLoads). CDK's own mint
+/// transport does not follow redirects either.
+final class CashuNoRedirectSessionDelegate: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest,
+                    completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil)
+    }
+}
+
+enum CashuExternalQuoteFetch {
+    // One session for the app's lifetime. It keeps a strong reference to
+    // its delegate and is never invalidated, so nothing is created per call.
+    static let session = URLSession(configuration: .default,
+                                    delegate: CashuNoRedirectSessionDelegate(),
+                                    delegateQueue: nil)
+
+    static func data(from url: URL) async throws -> (Data, URLResponse) {
+        return try await session.data(from: url)
+    }
+}
+
+// MARK: - End external quote fetch without redirects
+
 @objc(CashuDevKitModule)
 class CashuDevKitModule: RCTEventEmitter {
 
@@ -1023,7 +1055,8 @@ class CashuDevKitModule: RCTEventEmitter {
                     return
                 }
 
-                let (data, response) = try await URLSession.shared.data(from: quoteUrl)
+                // Redirects are not followed: a 3xx is rejected below
+                let (data, response) = try await CashuExternalQuoteFetch.data(from: quoteUrl)
 
                 // Check HTTP response status
                 if let httpResponse = response as? HTTPURLResponse {
