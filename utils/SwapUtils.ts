@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import { saveDocuments } from '@react-native-documents/picker';
 import { validateMnemonic } from '@scure/bip39';
-import ecc from '@bitcoinerlab/secp256k1';
+import ecc from '../zeus_modules/noble_ecc';
 import {
     address as bitcoinAddress,
     crypto,
