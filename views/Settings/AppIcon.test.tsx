@@ -74,11 +74,13 @@ describe('AppIcon picker on iOS', () => {
         // The app was killed while the system "You have changed the icon"
         // alert was up: iOS switched the icon, but the setting was never
         // saved because setAlternateIconName had not called back yet.
-        native.getAlternateIcon.mockResolvedValue('AppIconZeusEngraved');
+        native.getAlternateIcon.mockResolvedValue('AppIconZeusIllustrated');
 
         await mount(makeStore('maxGradient'));
 
-        expect(highlighted()).toEqual(['views.Settings.AppIcon.zeusEngraved']);
+        expect(highlighted()).toEqual([
+            'views.Settings.AppIcon.zeusIllustrated'
+        ]);
     });
 
     it('highlights the primary icon when iOS reports no alternate icon', async () => {

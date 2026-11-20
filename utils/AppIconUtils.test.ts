@@ -96,15 +96,13 @@ describe('AppIconUtils', () => {
             expect(keys).toHaveLength(7);
             expect(keys).toContain('flat');
             expect(keys.some((k) => k.startsWith('max'))).toBe(false);
-            expect(keys).not.toContain('zeusEngraved');
             expect(keys).not.toContain('zeusIllustrated');
         });
 
-        it('lists the Zeus face variants on iOS', () => {
+        it('lists the Zeus face variant on iOS', () => {
             const keys = load('ios', makeNative())
                 .default.availableVariants()
                 .map((v) => v.key);
-            expect(keys).toContain('zeusEngraved');
             expect(keys).toContain('zeusIllustrated');
         });
 
@@ -187,21 +185,15 @@ describe('AppIconUtils', () => {
             const native = makeNative();
             const utils = load('android', native).default;
 
-            await expect(utils.setAppIcon('zeusEngraved')).resolves.toBe(false);
             await expect(utils.setAppIcon('zeusIllustrated')).resolves.toBe(
                 false
             );
             expect(native.setVariant).not.toHaveBeenCalled();
         });
 
-        it('passes the Zeus face alternate icon names on iOS', async () => {
+        it('passes the Zeus face alternate icon name on iOS', async () => {
             const native = makeNative();
             const utils = load('ios', native).default;
-
-            await expect(utils.setAppIcon('zeusEngraved')).resolves.toBe(true);
-            expect(native.setAlternateIcon).toHaveBeenLastCalledWith(
-                'AppIconZeusEngraved'
-            );
 
             await expect(utils.setAppIcon('zeusIllustrated')).resolves.toBe(
                 true
@@ -288,12 +280,12 @@ describe('AppIconUtils', () => {
     describe('selectedAppIcon', () => {
         it('trusts the icon iOS has applied over a stale setting', async () => {
             const native = makeNative();
-            native.getAlternateIcon.mockResolvedValue('AppIconZeusEngraved');
+            native.getAlternateIcon.mockResolvedValue('AppIconZeusIllustrated');
             await expect(
                 load('ios', native).default.selectedAppIcon({
                     display: { appIcon: 'maxGradient' }
                 })
-            ).resolves.toBe('zeusEngraved');
+            ).resolves.toBe('zeusIllustrated');
         });
 
         it('reports the primary icon on iOS when no alternate is applied', async () => {
@@ -329,7 +321,9 @@ describe('AppIconUtils', () => {
                 'flat'
             );
             await expect(
-                utils.selectedAppIcon({ display: { appIcon: 'zeusEngraved' } })
+                utils.selectedAppIcon({
+                    display: { appIcon: 'zeusIllustrated' }
+                })
             ).resolves.toBe('flat');
         });
     });

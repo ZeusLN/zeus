@@ -10,7 +10,6 @@ export type AppIconVariant =
     | 'maxRed'
     | 'maxGradientRed'
     | 'maxBlackAndWhite'
-    | 'zeusEngraved'
     | 'zeusIllustrated'
     | 'gradient'
     | 'flat'
@@ -74,12 +73,6 @@ export const APP_ICON_VARIANTS: VariantSpec[] = [
         translateKey: 'views.Settings.AppIcon.maxBlackAndWhite',
         thumbnail: require('../assets/images/icon_max_bw.png'),
         iosName: 'AppIconMaxBlackAndWhite'
-    },
-    {
-        key: 'zeusEngraved',
-        translateKey: 'views.Settings.AppIcon.zeusEngraved',
-        thumbnail: require('../assets/images/icon_zeus_engraved.png'),
-        iosName: 'AppIconZeusEngraved'
     },
     {
         key: 'zeusIllustrated',
