@@ -178,6 +178,14 @@ export default class TransactionsStore {
     // else (releasePaymentInFlight): before that, a retry is most likely
     // the same payment sent twice by mistake
     @observable public paymentInFlightConfirmed = false;
+    // true from the dispatch of an on-chain send until its outcome is known,
+    // funding, finalizing, broadcasting and a timeout lookup included.
+    // `loading` is shared with other operations (getTransactions), so it
+    // can't serve as the double-submission guard. reset() keeps it: the
+    // send's request can still go out after a reconnect
+    @observable public onchainSendInFlight = false;
+    // sendCoinsSeq of the send holding onchainSendInFlight (null when none)
+    private onchainSendOwnerSeq: number | null = null;
 
     // monotonic id assigned to each payment sendPayment accepts, when it
     // is dispatched or held back by the graph sync prompt
@@ -258,6 +266,9 @@ export default class TransactionsStore {
         this.pendingSendSeqs.clear();
         this.loading = false;
         this.sendOutcomeUnknown = false;
+        // onchainSendInFlight is left alone: an on-chain send still waiting
+        // on the node may yet broadcast, and only its own settling may
+        // release the guard
         this.paymentInFlight = false;
         this.inFlightOwnerSeq = null;
         this.inFlightPaymentHash = null;
@@ -719,8 +730,10 @@ export default class TransactionsStore {
             account
         };
 
-        BackendUtils.fundPsbt(fundPsbtRequest)
-            .then((data: any) => {
+        // returns the whole chain, broadcast included, so sendCoins knows
+        // when the send is over
+        return BackendUtils.fundPsbt(fundPsbtRequest)
+            .then((data: any) =>
                 runInAction(() => {
                     if (!isCurrent()) return;
                     this.crafting = false;
@@ -732,14 +745,14 @@ export default class TransactionsStore {
                         this.funded_psbt = funded_psbt;
                         this.loading = false;
                     } else {
-                        this.finalizePsbtAndBroadcast(
+                        return this.finalizePsbtAndBroadcast(
                             funded_psbt,
                             defaultAccount,
                             seq
                         );
                     }
-                });
-            })
+                })
+            )
             .catch((error: any) => {
                 const errorMsg = errorToUserFriendly(error.message);
                 runInAction(() => {
@@ -754,10 +767,47 @@ export default class TransactionsStore {
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
+        // Guard against double-submission: a second confirmation press while
+        // a send is still out would fund and broadcast a second transaction,
+        // from other inputs when none were selected. The node's input locks
+        // only stop it when the same inputs were selected.
+        if (this.onchainSendInFlight) return;
+
         // also invalidates a lookup still running for an earlier send; the
         // coin control path carries seq through funding, finalizing and
         // broadcasting
         const seq = ++this.sendCoinsSeq;
+
+        this.onchainSendInFlight = true;
+        this.onchainSendOwnerSeq = seq;
+        const releaseGuard = () =>
+            runInAction(() => {
+                if (this.onchainSendOwnerSeq !== seq) return;
+                this.onchainSendInFlight = false;
+                this.onchainSendOwnerSeq = null;
+            });
+
+        // A synchronous throw sends nothing, so it must not keep the guard.
+        // A backend without the method makes the dispatcher return false,
+        // and `.then` on that throws here too.
+        try {
+            return this.dispatchSendCoins(transactionRequest, seq).finally(
+                releaseGuard
+            );
+        } catch (error: any) {
+            this.error_msg = errorToUserFriendly(error);
+            this.error = true;
+            this.crafting = false;
+            this.loading = false;
+            releaseGuard();
+        }
+    };
+
+    @action
+    private dispatchSendCoins = (
+        transactionRequest: TransactionRequest,
+        seq: number
+    ) => {
         const isCurrent = () => seq === this.sendCoinsSeq;
 
         this.funded_psbt = '';
@@ -823,7 +873,7 @@ export default class TransactionsStore {
                 this.balanceStore.getCombinedBalance();
             });
 
-        BackendUtils.sendCoins(
+        return BackendUtils.sendCoins(
             label ? { ...transactionRequest, label } : transactionRequest
         )
             .then((data: any) => onSent(data.txid))

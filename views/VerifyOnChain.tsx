@@ -55,12 +55,29 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
         slideToPayThreshold: 10000
     };
 
+    // set by the first confirmation on each visit to this screen. The
+    // store's guard ends when the send answers, which a local node (LDK
+    // Node, embedded LND) can do before SendingOnChain covers this
+    // screen, so a second tap would start a second send. Try Again comes
+    // back here, and the focus event re-arms the button.
+    private confirmed = false;
+    private focusListener: (() => void) | undefined;
+
     async componentDidMount() {
-        const { SettingsStore } = this.props;
+        const { navigation, SettingsStore } = this.props;
+        this.focusListener = navigation.addListener('focus', () => {
+            this.confirmed = false;
+        });
         const settings = await SettingsStore.getSettings();
         this.setState({
             slideToPayThreshold: settings?.payments?.slideToPayThreshold
         });
+    }
+
+    componentWillUnmount() {
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     toggleBitcoinUnits = () => {
@@ -148,6 +165,9 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
     };
 
     onConfirm = () => {
+        if (this.confirmed) return;
+        this.confirmed = true;
+
         const { navigation, TransactionsStore, SettingsStore, route } =
             this.props;
         const {
@@ -334,7 +354,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
     };
 
     render() {
-        const { navigation, route } = this.props;
+        const { navigation, route, TransactionsStore } = this.props;
         const { destination, fee, satAmount, amount, account, fundMax } =
             route?.params;
         const { slideToPayThreshold } = this.state;
@@ -405,6 +425,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                                     size: 25
                                 }}
                                 onPress={this.onConfirm}
+                                disabled={TransactionsStore.onchainSendInFlight}
                             />
                         </View>
                     )}
