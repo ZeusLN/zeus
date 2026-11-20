@@ -4401,14 +4401,14 @@ export default class NostrWalletConnectStore {
         if (!payment) {
             // CashuStore drops an in-flight payment once the mint settles
             // the melt without paying it. Only trust its absence once the
-            // wallet is loaded and the melt is no longer tracked.
+            // wallet is loaded and the melt is no longer tracked. A hold
+            // with no melt quote is matched to its melt by invoice.
             const dropped =
                 this.cashuStore.cdkInitialized &&
                 !!cashuPayments &&
-                (!quote ||
-                    !this.cashuStore.pendingMelts.some(
-                        (melt) => melt.quote === quote
-                    ));
+                !this.cashuStore.pendingMelts.some((melt) =>
+                    quote ? melt.quote === quote : melt.request === activity.id
+                );
             if (dropped) {
                 runInAction(() => {
                     activity.status = 'failed';
@@ -4436,8 +4436,8 @@ export default class NostrWalletConnectStore {
                       0
                     : Number(payment.getFee) || 0;
                 const amountSats =
-                    Math.floor(Number(activity.satAmount)) ||
-                    Math.floor(Number(payment.getAmount) || 0);
+                    Math.ceil(Number(activity.satAmount)) ||
+                    Math.ceil(Number(payment.getAmount) || 0);
                 activity.status = 'success';
                 activity.error = undefined;
                 activity.fees_paid = feeSats;

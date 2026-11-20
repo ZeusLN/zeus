@@ -8826,6 +8826,98 @@ describe('NostrWalletConnectStore cashu pay_invoice in-flight melt', () => {
         expect(connection.pendingSpendSats).toBe(0);
     });
 
+    // The budget counts sats with ceil, as the lightning reconcile does
+    it('rounds a fractional hold amount up when the melt is paid', async () => {
+        const { store, connection, cashuStore } = await payInFlight();
+        connection.activity[0].satAmount = 100.4;
+        cashuStore.payments = [
+            new CashuPayment({
+                ...inFlightPayment(),
+                status: 'SUCCEEDED',
+                fee: 2,
+                payment_preimage: preimage
+            })
+        ];
+        cashuStore.pendingMelts = [];
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].isBudgetDebited).toBe(true);
+        expect(connection.totalSpendSats).toBe(103);
+    });
+
+    it('rounds a fractional payment amount up when the hold has no amount', async () => {
+        const { store, connection, cashuStore } = await payInFlight();
+        connection.activity[0].satAmount = 0;
+        cashuStore.payments = [
+            new CashuPayment({
+                ...inFlightPayment(),
+                amount: 100.4,
+                status: 'SUCCEEDED',
+                fee: 2,
+                payment_preimage: preimage
+            })
+        ];
+        cashuStore.pendingMelts = [];
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].isBudgetDebited).toBe(true);
+        expect(connection.totalSpendSats).toBe(103);
+    });
+
+    describe('a hold with no melt quote', () => {
+        const withoutQuote = async () => {
+            const context = await payInFlight();
+            context.connection.activity[0].payment = new CashuPayment({
+                bolt11: invoice,
+                amount: 100,
+                status: 'IN_FLIGHT'
+            });
+            context.cashuStore.payments = [];
+            return context;
+        };
+
+        it('is kept while a melt for its invoice is tracked', async () => {
+            const { store, connection, cashuStore } = await withoutQuote();
+            cashuStore.pendingMelts = [{ quote: 'quote-1', request: invoice }];
+
+            await (store as any).reconcilePendingPayInvoiceActivities(
+                connection
+            );
+
+            expect(connection.activity[0].status).toBe('pending');
+            expect(connection.pendingSpendSats).toBe(103);
+        });
+
+        it('is released once no melt for its invoice is tracked', async () => {
+            const { store, connection, cashuStore } = await withoutQuote();
+            cashuStore.pendingMelts = [
+                { quote: 'quote-2', request: 'lnbc1another' },
+                { quote: 'quote-3' }
+            ];
+
+            await (store as any).reconcilePendingPayInvoiceActivities(
+                connection
+            );
+
+            expect(connection.activity[0].status).toBe('failed');
+            expect(connection.activity[0].isBudgetDebited).toBeFalsy();
+            expect(connection.pendingSpendSats).toBe(0);
+        });
+    });
+
+    it('releases a hold whose melt is gone while a newer melt of its invoice is tracked', async () => {
+        const { store, connection, cashuStore } = await payInFlight();
+        cashuStore.payments = [];
+        cashuStore.pendingMelts = [{ quote: 'quote-2', request: invoice }];
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.pendingSpendSats).toBe(0);
+    });
+
     it('keeps the hold while CashuStore has not loaded its payments', async () => {
         const { store, connection, cashuStore } = await payInFlight();
         cashuStore.payments = undefined;
