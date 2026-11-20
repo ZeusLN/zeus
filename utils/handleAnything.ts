@@ -519,7 +519,7 @@ const handleAnything = async (
         return ['PSBT', { psbt: value }];
     } else if (value.includes('clnrest://') || value.includes('clnrest+')) {
         if (isClipboardValue) return true;
-        const { host, port, rune, implementation, enableTor } =
+        const { host, port, rune, implementation, enableTor, pinnedCerts } =
             ConnectionFormatUtils.processCLNRestConnectUrl(value);
 
         if (host && port && rune) {
@@ -531,7 +531,8 @@ const handleAnything = async (
                         port,
                         rune,
                         implementation,
-                        enableTor
+                        enableTor,
+                        pinnedCerts
                     },
                     newEntry: true,
                     isValid: true
