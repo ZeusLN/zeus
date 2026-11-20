@@ -137,7 +137,7 @@ const SEED_B =
 
 // An embedded wallet as initializeWallets() finds it in the keychain, with
 // the tokens claimTokenOffline() queued while the phone had no network.
-// tokenMints gives single tokens a mint other than tokenMint
+// tokenMints gives single tokens another mint the wallet has added
 const storeWallet = (
     lndDir: string,
     seed: string,
@@ -150,7 +150,10 @@ const storeWallet = (
         seed.split(' ')
     );
     mockKeychain[`${lndDir}-cashu-seed-version`] = 'v2-bip39';
-    mockKeychain[`${lndDir}-cashu-mintUrls`] = JSON.stringify([mint]);
+    mockKeychain[`${lndDir}-cashu-mintUrls`] = JSON.stringify([
+        mint,
+        ...Object.values(tokenMints)
+    ]);
     mockKeychain[`${lndDir}-cashu-selectedMintUrl`] = mint;
     mockKeychain[`${lndDir}-cashu-offline-pending-tokens`] = JSON.stringify(
         queuedTokens.map((encodedToken) => ({
@@ -183,9 +186,8 @@ const switchToWalletB = () => {
 };
 
 // Wallet B is stored with one queued token; queue wallet A's tokens and
-// open the store on wallet A, which starts A's sweep. With newMint, A's
-// tokens come from a mint A has not added, and adding it waits until the
-// test calls answerAddMint
+// open the store on wallet A, which starts A's sweep. addMint() of newMint,
+// a mint A has not added, waits until the test calls answerAddMint
 const startOnWalletA = async (
     queuedTokens: string[],
     newMint?: string,
@@ -212,7 +214,7 @@ const startOnWalletA = async (
         SEED_A,
         'https://mint-a.example',
         queuedTokens,
-        newMint,
+        undefined,
         tokenMints
     );
     storeWallet('walletB', SEED_B, 'https://mint-b.example', [
@@ -458,33 +460,20 @@ describe('CashuStore offline-token sweep across a wallet switch', () => {
     });
 });
 
-describe('CashuStore offline-token sweep across a wallet switch during addMint', () => {
+describe('CashuStore addMint across a wallet switch', () => {
     const MINT_C = 'https://mint-c.example';
+    let addMint: Promise<void>;
 
     beforeEach(async () => {
-        // A's sweep waits in addMint() instead of the claim
-        await startOnWalletA(['token-from-mint-C'], MINT_C);
-        expect(mockCdk.answerAddMint).toBeDefined();
-        // Claims are answered at once in these tests
-        mockCdk.answerFirstClaim = () => {};
-    });
-
-    it("does not claim wallet A's token into wallet B's CDK database", async () => {
-        switchToWalletB();
-        await store.initializeWallets();
-        await sweeps.mock.results[1].value;
-        expect(mockCdk.openMnemonic).toBe(SEED_B);
-
-        mockCdk.answerAddMint!();
+        // Wallet A adds a mint it has not added, as a self-custody receive
+        // of a token from that mint does, and the mint has not answered.
+        // The sweep cannot wait here: it skips tokens of mints the wallet
+        // has not added, and wallet open has added the others
+        await startOnWalletA(['token-1-for-wallet-A'], MINT_C);
+        mockCdk.answerFirstClaim!();
         await sweeps.mock.results[0].value;
-
-        expect(mockCdk.databases[SEED_B].received).toEqual([
-            'token-for-wallet-B'
-        ]);
-        expect(mockCdk.databases[SEED_A].received).toEqual([]);
-        expect(storedTokens('walletA-cashu-offline-pending-tokens')).toEqual([
-            'token-from-mint-C'
-        ]);
+        addMint = (store as any).ensureMintAdded(MINT_C);
+        expect(mockCdk.answerAddMint).toBeDefined();
     });
 
     it("does not count wallet A's addMint as added for wallet B", async () => {
@@ -493,7 +482,7 @@ describe('CashuStore offline-token sweep across a wallet switch during addMint',
         await sweeps.mock.results[1].value;
 
         mockCdk.answerAddMint!();
-        await sweeps.mock.results[0].value;
+        await addMint;
 
         await store.receiveTokenCDK(
             'token-from-mint-C-for-B',
@@ -504,7 +493,7 @@ describe('CashuStore offline-token sweep across a wallet switch during addMint',
     });
 
     it("does not mark wallet B's mint unreachable when wallet A's addMint fails", async () => {
-        // Wallet B has added the mint wallet A's sweep is adding
+        // Wallet B has added the mint wallet A is adding
         mockKeychain['walletB-cashu-mintUrls'] = JSON.stringify([
             'https://mint-b.example',
             MINT_C
@@ -517,7 +506,7 @@ describe('CashuStore offline-token sweep across a wallet switch during addMint',
         mockCdk.failAddMint!(
             new Error('WalletSqliteDatabase object has already been destroyed')
         );
-        await sweeps.mock.results[0].value;
+        await expect(addMint).rejects.toThrow('already been destroyed');
 
         expect(store.cashuWallets[MINT_C].errorConnecting).toBe(false);
     });
@@ -527,7 +516,8 @@ describe('CashuStore offline-token sweep across a wallet switch with a second mi
     const MINT_C = 'https://mint-c.example';
 
     beforeEach(async () => {
-        // A's second token comes from a mint A has not added
+        // A's second token comes from another mint A has added. B has
+        // not added that mint
         await startOnWalletA(
             ['token-1-for-wallet-A', 'token-from-mint-C'],
             undefined,

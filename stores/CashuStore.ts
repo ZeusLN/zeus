@@ -6401,23 +6401,30 @@ export default class CashuStore {
         // at the next wallet, so remember which wallet this sweep is for
         const session = this.walletSession;
         const nodeDir = this.getNodeDir();
-        let stoppedAt = -1;
 
         try {
             const results = { claimed: 0, alreadySpent: 0, failed: 0 };
-            const remaining: CashuToken[] = [];
+            // Tokens that leave the queue: claimed, or already spent
+            const settled = new Set<string>();
             const spent: CashuToken[] = [];
 
             const tokensToProcess = [...this.offlinePendingTokens];
 
+            // Same configured-mint gate as checkPendingItems: claiming runs
+            // ensureMintAdded, which would add a mint the user never added
+            // (or has since removed) and hold ecash there
+            const knownMints = new Set(
+                this.mintUrls.map((url) => this.normalizeMintUrl(url))
+            );
+
             for (let i = 0; i < tokensToProcess.length; i++) {
-                if (session !== this.walletSession) {
-                    stoppedAt = i;
-                    break;
-                }
+                if (session !== this.walletSession) break;
                 const token = tokensToProcess[i];
-                if (!token.encodedToken) {
-                    remaining.push(token);
+                if (
+                    !token.encodedToken ||
+                    (token.mint &&
+                        !knownMints.has(this.normalizeMintUrl(token.mint)))
+                ) {
                     continue;
                 }
                 try {
@@ -6425,10 +6432,7 @@ export default class CashuStore {
                     if (token.mint) {
                         await this.ensureMintAdded(token.mint);
                     }
-                    if (session !== this.walletSession) {
-                        stoppedAt = i;
-                        break;
-                    }
+                    if (session !== this.walletSession) break;
 
                     // A token queued from a mint that was not in the wallet
                     // was decoded without proofs, so isTokenP2PKLocked can't
@@ -6442,6 +6446,7 @@ export default class CashuStore {
                     );
 
                     // CDK records the transaction internally
+                    settled.add(token.encodedToken);
                     results.claimed++;
                 } catch (e: any) {
                     console.warn(
@@ -6451,7 +6456,6 @@ export default class CashuStore {
 
                     if (e.type === 'Network') {
                         // Abort sweep on network error to avoid failing all tokens
-                        remaining.push(...tokensToProcess.slice(i));
                         break;
                     }
 
@@ -6467,10 +6471,10 @@ export default class CashuStore {
                                 pendingClaim: false
                             })
                         );
+                        settled.add(token.encodedToken);
                         results.alreadySpent++;
                     } else {
                         // Keep in pending for retry
-                        remaining.push(token);
                         results.failed++;
                     }
                 }
@@ -6479,21 +6483,17 @@ export default class CashuStore {
             if (session !== this.walletSession) {
                 // The store now holds the next wallet's state. Only update
                 // the stored queues of the wallet this sweep was started for
-                const processed =
-                    stoppedAt === -1
-                        ? tokensToProcess
-                        : tokensToProcess.slice(0, stoppedAt);
-                await this.saveStoppedSweep(
-                    nodeDir,
-                    processed.filter((token) => !remaining.includes(token)),
-                    spent
-                );
+                await this.saveStoppedSweep(nodeDir, settled, spent);
                 return;
             }
 
             runInAction(() => {
-                this.offlinePendingTokens = remaining;
-                this.offlinePendingBalance = remaining.reduce(
+                // Filter the live queue rather than replacing it: tokens may
+                // have been queued or removed while we awaited the mint
+                this.offlinePendingTokens = this.offlinePendingTokens.filter(
+                    (t) => !t.encodedToken || !settled.has(t.encodedToken)
+                );
+                this.offlinePendingBalance = this.offlinePendingTokens.reduce(
                     (sum, t) => sum + t.getAmount,
                     0
                 );
@@ -6510,9 +6510,10 @@ export default class CashuStore {
             // during the first write loads the next wallet's lists into
             // the store
             const spentTokens = this.offlineSpentTokens;
+            const pendingTokens = this.offlinePendingTokens;
             await Storage.setItem(
                 `${nodeDir}-cashu-offline-pending-tokens`,
-                remaining
+                pendingTokens
             );
             if (spent.length > 0) {
                 await Storage.setItem(
@@ -6563,19 +6564,16 @@ export default class CashuStore {
      */
     private saveStoppedSweep = async (
         nodeDir: string,
-        settled: CashuToken[],
+        settled: Set<string>,
         spent: CashuToken[]
     ) => {
-        if (settled.length === 0) return;
-        const settledTokens = new Set(
-            settled.map((token) => token.encodedToken)
-        );
+        if (settled.size === 0) return;
         const pendingKey = `${nodeDir}-cashu-offline-pending-tokens`;
         const storedPending = await Storage.getItem(pendingKey);
         const pending: any[] = storedPending ? JSON.parse(storedPending) : [];
         await Storage.setItem(
             pendingKey,
-            pending.filter((token) => !settledTokens.has(token.encodedToken))
+            pending.filter((token) => !settled.has(token.encodedToken))
         );
         if (spent.length > 0) {
             const spentKey = `${nodeDir}-cashu-offline-spent-tokens`;
@@ -6598,6 +6596,33 @@ export default class CashuStore {
         // When offline, queue token for later claiming
         if (this.isOffline) {
             this.loading = false;
+            // The queue is swept with a plain receive, which would keep the
+            // token as ecash at a mint the user may never have added
+            if (toSelfCustody) {
+                return {
+                    success: false,
+                    errorMessage: localeString(
+                        'cashu.offlinePending.selfCustodyUnavailable'
+                    )
+                };
+            }
+            // The sweep skips tokens whose mint is not configured, so one
+            // queued here would stay pending
+            if (
+                decoded.mint &&
+                !this.mintUrls.some(
+                    (url) =>
+                        this.normalizeMintUrl(url) ===
+                        this.normalizeMintUrl(decoded.mint)
+                )
+            ) {
+                return {
+                    success: false,
+                    errorMessage: localeString(
+                        'cashu.offlinePending.mintNotAdded'
+                    )
+                };
+            }
             return await this.claimTokenOffline(encodedToken, decoded);
         }
 
