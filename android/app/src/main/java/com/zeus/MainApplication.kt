@@ -36,6 +36,7 @@ class MainApplication : Application(), ReactApplication {
                     add(ZipUtilsPackage())
                     add(LockKdfPackage())
                     add(TorWebSocketPackage())
+                    add(SensitiveClipboardPackage())
                 },
         )
     }
