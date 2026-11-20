@@ -30,6 +30,7 @@ import {
     getInfo,
     lookupInvoice,
     listPeers,
+    neutrinoKitStatus,
     readLndLog,
     sendPaymentV2Sync,
     trackPaymentV2,
@@ -114,7 +115,8 @@ import {
     autopilotrpc,
     routerrpc,
     walletrpc,
-    wtclientrpc
+    wtclientrpc,
+    neutrinorpc
 } from '../proto/lightning';
 import { LndInvoiceListParams, LndPaymentListParams } from '../utils/LndUtils';
 // watchtowers
@@ -213,6 +215,7 @@ export interface ILndMobileInjections {
         getNodeInfo: (pubKey: string) => Promise<lnrpc.NodeInfo>;
         lookupInvoice: (rHash: string) => Promise<lnrpc.Invoice>;
         listPeers: () => Promise<lnrpc.ListPeersResponse>;
+        neutrinoKitStatus: () => Promise<neutrinorpc.StatusResponse>;
         listInvoices: (
             params?: LndInvoiceListParams
         ) => Promise<lnrpc.ListInvoiceResponse>;
@@ -669,6 +672,7 @@ export default {
         getInfo,
         lookupInvoice,
         listPeers,
+        neutrinoKitStatus,
         readLndLog,
         sendPaymentV2Sync,
         trackPaymentV2,
