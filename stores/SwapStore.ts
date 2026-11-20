@@ -1695,9 +1695,14 @@ export default class SwapStore {
         if (typeof status !== 'string') return;
         try {
             const key = isSubmarineSwap ? SWAPS_KEY : REVERSE_SWAPS_KEY;
+            let keptRefund = false;
             await this.withSwapStorage(async () => {
                 const storedSwaps = await Storage.getItem(key);
                 const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+                keptRefund = swaps.some(
+                    (swap: any) =>
+                        swap.id === swapId && isRefundedByWallet(swap)
+                );
 
                 const updatedSwaps = swaps.map((swap: any) =>
                     swap.id === swapId && !isRefundedByWallet(swap)
@@ -1715,10 +1720,11 @@ export default class SwapStore {
 
                 await Storage.setItem(key, JSON.stringify(updatedSwaps));
             });
+            const kind = isSubmarineSwap ? `swap` : `reverse swap`;
             console.log(
-                `Updated ${
-                    isSubmarineSwap ? `swap` : `reverse swap`
-                } status for swap ID ${swapId} to "${status}"`
+                keptRefund
+                    ? `Kept the recorded refund of ${kind} ID ${swapId}, ignored status "${status}"`
+                    : `Updated ${kind} status for swap ID ${swapId} to "${status}"`
             );
         } catch (error) {
             console.error('Error updating swap status in storage:', error);

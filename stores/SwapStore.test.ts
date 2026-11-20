@@ -543,6 +543,7 @@ describe('SwapStore swap status from the host', () => {
 
         it('keeps the refund when the host sends swap.expired', async () => {
             stored[SWAPS_KEY] = JSON.stringify([REFUNDED_SWAP]);
+            const log = jest.spyOn(console, 'log').mockImplementation();
 
             await buildStore().updateSwapStatus(
                 SWAP_ID,
@@ -552,6 +553,31 @@ describe('SwapStore swap status from the host', () => {
             );
 
             expect(storedSwaps()).toEqual([REFUNDED_SWAP]);
+            // the log must not claim the status was stored
+            const logged = log.mock.calls.map(([message]) => message);
+            log.mockRestore();
+            expect(logged).toEqual([
+                `Kept the recorded refund of swap ID ${SWAP_ID}, ignored status "swap.expired"`
+            ]);
+        });
+
+        it('logs the update of a swap that was not refunded', async () => {
+            stored[SWAPS_KEY] = JSON.stringify([
+                { ...STORED_SWAP, status: SwapState.TransactionLockupFailed }
+            ]);
+            const log = jest.spyOn(console, 'log').mockImplementation();
+
+            await buildStore().updateSwapStatus(
+                SWAP_ID,
+                SwapState.SwapExpired,
+                true
+            );
+
+            const logged = log.mock.calls.map(([message]) => message);
+            log.mockRestore();
+            expect(logged).toEqual([
+                `Updated swap status for swap ID ${SWAP_ID} to "swap.expired"`
+            ]);
         });
 
         it('keeps a refund stored while the status poll was out', async () => {
