@@ -44,12 +44,16 @@ const extract = () => {
 // argv[0] is the provider: "valid" serves a small image at once, "stalled"
 // returns a pipe and never writes to it, "blockingClose" does the same and
 // never returns from close(), "endless" writes without end, "atCap" and
-// "overCap" serve exactly SHARED_IMAGE_MAX_BYTES and one byte more. argv[1]
-// is the deadline JS passes, in ms from the call. Prints how long the
+// "overCap" serve exactly SHARED_IMAGE_MAX_BYTES and one byte more,
+// "neverOpens" never returns from openInputStream. argv[1] is the deadline JS
+// passes, in ms from the call. argv[2] asks for a second take once the first
+// has settled: "sameShare" of the same intent, "newShare" of a new one.
+// Prints how long the
 // @ReactMethod held its caller, how the promise settled, whether the
 // provider was opened, and whether its stream was closed and its reader let
 // go.
 const HARNESS = (method: string) => `import java.io.*;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
@@ -80,10 +84,16 @@ class Harness {
     void setAction(String action) { consumed.set(true); }
     void removeExtra(String key) { consumed.set(true); }
   }
-  static class Activity { Intent getIntent() { return new Intent(); } }
+  static class Activity { Intent getIntent() { return intent; } }
   static class ContentResolver {
     InputStream openInputStream(Uri uri) {
       opened.set(true);
+      opens.incrementAndGet();
+      // a binder call into the sending app cannot be interrupted
+      while (neverOpens) {
+        try { new CountDownLatch(1).await(); }
+        catch (InterruptedException e) {}
+      }
       return provider;
     }
   }
@@ -138,6 +148,9 @@ class Harness {
   }
 
   static InputStream provider;
+  static volatile Intent intent = new Intent();
+  static volatile boolean neverOpens;
+  static final AtomicInteger opens = new AtomicInteger();
   static volatile Thread caller;
   static final AtomicBoolean opened = new AtomicBoolean();
   static final AtomicLong served = new AtomicLong();
@@ -217,6 +230,9 @@ class Harness {
       case "overCap":
         provider = bytes(SHARED_IMAGE_MAX_BYTES + 1);
         break;
+      case "neverOpens":
+        neverOpens = true;
+        break;
       case "endless":
         provider = watched(new InputStream() {
           @Override public int read() { return 0; }
@@ -245,13 +261,22 @@ class Harness {
     // A close that blocked the deadline thread would also keep the next
     // share's deadline from firing
     String secondOutcome = null;
+    boolean secondInCall = false;
+    String secondTake = args.length > 2 ? args[2] : "none";
     if (args[0].equals("blockingClose")) {
       provider = blockingClose();
+      secondTake = "newShare";
+    }
+    if (!secondTake.equals("none")) {
+      if (secondTake.equals("newShare")) intent = new Intent();
       Promise second = new Promise();
+      caller = Thread.currentThread();
       new Harness().takeSharedImageBase64(
           System.currentTimeMillis() + settleByOffsetMs, second);
+      caller = null;
       second.settled.await(SHARED_IMAGE_TIMEOUT_MS + 3000, TimeUnit.MILLISECONDS);
       secondOutcome = second.outcome;
+      secondInCall = second.inCall;
     }
 
     System.out.println("{\\"heldMs\\":" + heldMs
@@ -261,7 +286,9 @@ class Harness {
         + ",\\"secondOutcome\\":\\"" + secondOutcome + "\\""
         + ",\\"settleCalls\\":" + promise.calls.get()
         + ",\\"settledInCall\\":" + promise.inCall
+        + ",\\"secondInCall\\":" + secondInCall
         + ",\\"opened\\":" + opened.get()
+        + ",\\"opens\\":" + opens.get()
         + ",\\"served\\":" + served.get()
         + ",\\"closed\\":" + closed.get()
         + ",\\"consumed\\":" + consumed.get()
@@ -293,11 +320,22 @@ class Harness {
         // its 8 s timeout less the 1 s it leaves for the result to reach it
         const JS_SETTLE_BY_MS = 7000;
 
-        const run = (provider: string, settleByMs = JS_SETTLE_BY_MS) =>
+        const run = (
+            provider: string,
+            settleByMs = JS_SETTLE_BY_MS,
+            secondTake = 'none'
+        ) =>
             JSON.parse(
                 execFileSync(
                     'java',
-                    ['-cp', dir, 'Harness', provider, String(settleByMs)],
+                    [
+                        '-cp',
+                        dir,
+                        'Harness',
+                        provider,
+                        String(settleByMs),
+                        secondTake
+                    ],
                     { encoding: 'utf8', timeout: 20000 }
                 )
             );
@@ -372,6 +410,37 @@ class Harness {
             expect(result.settledMs).toBeLessThan(result.timeoutMs + 2000);
             expect(result.secondOutcome).toBe('rejected:SHARE_TIMEOUT');
         }, 30000);
+
+        // A share that timed out stays on the activity and is taken again
+        // on every resume. A sending app that never returns from the open
+        // keeps its reader thread for good, and each later take would park
+        // another one.
+        it('does not open a share again while its reader is still parked', () => {
+            const result = run('neverOpens', 1000, 'sameShare');
+
+            expect(result.heldMs).toBeLessThan(1000);
+            expect(result.outcome).toBe('rejected:SHARE_TIMEOUT');
+            expect(result.secondOutcome).toBe('resolved:null');
+            // resolved before the method returned, so no reader was started
+            expect(result.secondInCall).toBe(true);
+            expect(result.opens).toBe(1);
+        }, 20000);
+
+        it('still reads a new share while an earlier reader is parked', () => {
+            const result = run('neverOpens', 1000, 'newShare');
+
+            expect(result.secondOutcome).toBe('rejected:SHARE_TIMEOUT');
+            expect(result.opens).toBe(2);
+        }, 20000);
+
+        it('opens a share again once the reader that timed out has stopped', () => {
+            const result = run('stalled', 1000, 'sameShare');
+
+            expect(result.outcome).toBe('rejected:SHARE_TIMEOUT');
+            expect(result.readerStopped).toBe(true);
+            expect(result.secondInCall).toBe(false);
+            expect(result.opens).toBe(2);
+        }, 20000);
 
         it('reads an image of exactly the byte cap', () => {
             const result = run('atCap');

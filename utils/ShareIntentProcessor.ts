@@ -37,10 +37,13 @@ export interface ShareIntentResult {
 // LinkingUtils.handleAndroidIntents and Wallet.handleAppStateChange. When the
 // read and the clear were separate native calls, both reads finished before
 // either cleared, so each would navigate to ShareIntentProcessing. The native
-// take now reads and clears in one call on a serial module queue, and this
-// lock stays as a second layer: only one take runs at a time, and a caller
-// that arrives meanwhile gets null, as if nothing had been shared, while the
-// caller holding the lock delivers the image.
+// take now reads and clears in one call, and a second take of the same share
+// finds nothing while the first is still reading it (iOS: the file is moved
+// aside first; Android: the read runs off the module queue and a share has
+// one reader at a time). This lock stays as a second layer: only one take
+// runs at a time, and a caller that arrives meanwhile gets null, as if
+// nothing had been shared, while the caller holding the lock delivers the
+// image.
 let readInFlight = false;
 
 /**

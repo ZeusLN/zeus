@@ -22,6 +22,8 @@ import java.io.InputStream;
 import java.io.FilterInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -48,6 +50,14 @@ class MobileTools extends ReactContextBaseJavaModule {
       Executors.newCachedThreadPool();
   private static final ScheduledExecutorService sharedImageDeadlines =
       Executors.newSingleThreadScheduledExecutor();
+  // The shares (by intent) whose reader thread is still running. A share
+  // that timed out stays on the activity and is taken again on every resume,
+  // and a reader parked in a provider that never returns would be joined by
+  // another one each time. While a share's reader runs, a take of the same
+  // share finds nothing, so each share has at most one reader, and two takes
+  // cannot both deliver its image.
+  private static final Set<Intent> sharedImageReads =
+      ConcurrentHashMap.newKeySet();
 
   public MobileTools(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -221,7 +231,7 @@ class MobileTools extends ReactContextBaseJavaModule {
   // that never returns cannot be interrupted, so its reader thread stays
   // parked, but the promise is settled all the same. The share is consumed
   // only when the promise settles with the image, so a read that times out
-  // or fails leaves it for the next one.
+  // or fails leaves it for the next one, once its reader has finished.
   private void readSharedImage(
       Intent intent, Uri imageUri, long timeoutMs, Promise promise) {
     // JS has given up on this call, or is about to: leave the share for the
@@ -229,6 +239,12 @@ class MobileTools extends ReactContextBaseJavaModule {
     if (timeoutMs <= 0) {
       android.util.Log.w(TAG, "Shared image read started after its deadline");
       promise.reject("SHARE_TIMEOUT", "Shared image was not served in time");
+      return;
+    }
+
+    if (!sharedImageReads.add(intent)) {
+      android.util.Log.d(TAG, "Shared image is still being read");
+      promise.resolve(null);
       return;
     }
 
@@ -279,6 +295,8 @@ class MobileTools extends ReactContextBaseJavaModule {
           android.util.Log.e(TAG, "Error processing shared image", e);
           promise.reject("SHARE_ERROR", e.getMessage());
         }
+      } finally {
+        sharedImageReads.remove(intent);
       }
     });
 
