@@ -50,7 +50,7 @@ import { alertStore } from './Stores';
 
 import Storage from '../storage';
 
-import Swap, { SwapState, SwapType } from '../models/Swap';
+import Swap, { SwapState, SwapType, SWAP_GETTERS } from '../models/Swap';
 import {
     privateKeyFromKeys,
     preimageHexFrom
@@ -1665,7 +1665,23 @@ export default class SwapStore {
                     new Date(a.createdAt).getTime()
             );
 
-            this.swaps = swaps.map((swap) => new Swap(swap));
+            // Build each swap on its own, without members named like a Swap
+            // getter. Stored records keep them. A record new Swap() still
+            // cannot take is skipped instead of hiding every swap.
+            const models: Swap[] = [];
+            for (const swap of swaps) {
+                try {
+                    const data = { ...swap };
+                    for (const name of SWAP_GETTERS) delete data[name];
+                    models.push(new Swap(data));
+                } catch (error) {
+                    console.error(
+                        `Failed to load stored swap ${swap?.id}:`,
+                        error
+                    );
+                }
+            }
+            this.swaps = models;
             this.swapsLoading = false;
         } catch (error) {
             console.error('Failed to fetch and update swaps:', error);

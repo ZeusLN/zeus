@@ -154,3 +154,14 @@ export default class Swap extends BaseModel {
         return undefined;
     }
 }
+
+// Names of the Swap getters. new Swap() throws on a stored member with one
+// of these names (swaps saved before #5334 can have `model` or
+// `qrCodeValue`), so SwapStore drops them before building a Swap. Defined
+// here because SwapStore can load before this class is defined, through the
+// Swap -> LocaleUtils -> Stores -> SwapStore import cycle.
+export const SWAP_GETTERS = new Set(
+    Object.entries(Object.getOwnPropertyDescriptors(Swap.prototype))
+        .filter(([, descriptor]) => descriptor.get)
+        .map(([name]) => name)
+);
