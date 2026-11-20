@@ -8,6 +8,8 @@ import * as path from 'path';
 // step.
 const FONT_DIRS = ['assets/fonts', 'android/app/src/main/assets/fonts'];
 const BODY_FONTS = ['Roboto-Regular', 'Roboto-Medium', 'Roboto-Bold'];
+const HEADLINE_FONT = 'Gloock-Regular';
+const BUNDLED_FONTS = [...BODY_FONTS, HEADLINE_FONT];
 const SOURCE_DIRS = ['components', 'views', 'utils', 'stores', 'models'];
 const SOURCE_FILE = /\.tsx?$/;
 
@@ -21,13 +23,13 @@ const sourceFiles = (dir: string): string[] =>
 const read = (file: string) => fs.readFileSync(file, 'utf8');
 
 describe('font assets', () => {
-    it.each(BODY_FONTS)('bundles %s for both platforms', (font) => {
+    it.each(BUNDLED_FONTS)('bundles %s for both platforms', (font) => {
         for (const dir of FONT_DIRS) {
             expect(fs.existsSync(path.join(dir, `${font}.ttf`))).toBe(true);
         }
     });
 
-    it.each(BODY_FONTS)('registers %s with iOS', (font) => {
+    it.each(BUNDLED_FONTS)('registers %s with iOS', (font) => {
         expect(read('ios/zeus/Info.plist')).toContain(
             `<string>${font}.ttf</string>`
         );
@@ -36,7 +38,7 @@ describe('font assets', () => {
         );
     });
 
-    it.each(BODY_FONTS)('lists %s in the asset manifests', (font) => {
+    it.each(BUNDLED_FONTS)('lists %s in the asset manifests', (font) => {
         for (const platform of ['ios', 'android']) {
             const manifest = JSON.parse(
                 read(`${platform}/link-assets-manifest.json`)
@@ -46,13 +48,16 @@ describe('font assets', () => {
         }
     });
 
-    it('ships the Roboto licence next to the font files', () => {
-        for (const dir of FONT_DIRS) {
-            expect(
-                read(path.join(dir, 'Roboto Open Font License.txt'))
-            ).toContain('SIL Open Font License');
+    it.each(['Roboto', 'Gloock'])(
+        'ships the %s licence next to the font files',
+        (family) => {
+            for (const dir of FONT_DIRS) {
+                expect(
+                    read(path.join(dir, `${family} Open Font License.txt`))
+                ).toContain('SIL Open Font License');
+            }
         }
-    });
+    );
 
     it('only uses Roboto weights that are bundled', () => {
         const unknown: string[] = [];
@@ -66,9 +71,11 @@ describe('font assets', () => {
         expect(unknown).toEqual([]);
     });
 
-    it('has no references left to PP Neue Montreal', () => {
+    it('has no references left to PP Neue Montreal or Marlide Display', () => {
         const stale = [...SOURCE_DIRS.flatMap(sourceFiles), 'App.tsx'].filter(
-            (file) => /PPNeueMontreal/.test(read(file))
+            (file) =>
+                !file.endsWith('FontUtils.test.ts') &&
+                /PPNeueMontreal|Marlide|marlide/.test(read(file))
         );
         expect(stale).toEqual([]);
     });

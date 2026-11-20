@@ -30,13 +30,10 @@
 *
 ********************************************************************************
 *
-*   The Marlide Display (Kontour Type, LLC) font file in assets/fonts/ and
-*   android/app/src/main/assets/fonts/ is a commercial typeface licensed by
-*   Atlas 21 Inc. It is not covered by this license and may not be reused
-*   outside ZEUS. See "Marlide Display License.txt" in those directories.
-*
-*   The Roboto font files in the same directories are licensed under the
-*   SIL Open Font License 1.1. See "Roboto Open Font License.txt".
+*   The Gloock and Roboto font files in assets/fonts/ and
+*   android/app/src/main/assets/fonts/ are licensed under the SIL Open Font
+*   License 1.1, not this license. See "Gloock Open Font License.txt" and
+*   "Roboto Open Font License.txt" in those directories.
 *
 ********************************************************************************
 

@@ -749,9 +749,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                     >
                         <Text
                             style={{
-                                fontFamily: font('marlideBold'),
+                                fontFamily: font('headline'),
                                 marginBottom: 12,
-                                fontSize: 32,
+                                fontSize: 27.2,
                                 textAlign: 'center'
                             }}
                         >
@@ -843,9 +843,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         <>
                             <Text
                                 style={{
-                                    fontFamily: font('marlideBold'),
+                                    fontFamily: font('headline'),
                                     marginBottom: 12,
-                                    fontSize: 32,
+                                    fontSize: 27.2,
                                     textAlign: 'center'
                                 }}
                             >

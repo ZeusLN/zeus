@@ -10,16 +10,16 @@
       "sha1": "133fb6cf26ea073b456fb557b94ce8c46143b117"
     },
     {
+      "path": "assets/fonts/Gloock-Regular.ttf",
+      "sha1": "bfe8c6468f95a2547cd208bb8d48bb281070327f"
+    },
+    {
       "path": "assets/fonts/Lato-Bold.ttf",
       "sha1": "d67fee08c79a82ce375ab9629ae5a903da8bb321"
     },
     {
       "path": "assets/fonts/Lato-Regular.ttf",
       "sha1": "e923c72eda5e50a87e18ff5c71e9ef4b3b6455a3"
-    },
-    {
-      "path": "assets/fonts/Marlide-Display-Bold.ttf",
-      "sha1": "ed2c5555ef073d63910fe6f686e98867e3cde63c"
     },
     {
       "path": "assets/fonts/Roboto-Bold.ttf",

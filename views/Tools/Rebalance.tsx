@@ -1668,8 +1668,8 @@ const styles = StyleSheet.create({
         fontFamily: 'Roboto-Regular'
     },
     sectionTitleFancy: {
-        fontSize: 28,
-        fontFamily: font('marlideBold')
+        fontSize: 23.8,
+        fontFamily: font('headline')
     },
     channelInfo: {
         padding: 6,

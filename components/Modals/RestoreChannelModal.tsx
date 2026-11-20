@@ -63,7 +63,7 @@ export default class RestoreChannelModal extends React.Component<RestoreChannelM
                     <Text
                         style={{
                             ...styles.title,
-                            fontFamily: font('marlideBold'),
+                            fontFamily: font('headline'),
                             color: themeColor('text')
                         }}
                     >
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center'
     },
     title: {
-        fontSize: 32,
+        fontSize: 27.2,
         marginBottom: 12,
         textAlign: 'center'
     },

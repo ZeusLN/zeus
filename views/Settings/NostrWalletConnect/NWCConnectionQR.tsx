@@ -495,8 +495,8 @@ const styles = StyleSheet.create({
         marginBottom: 15
     },
     connectedTitle: {
-        fontSize: 28,
-        fontFamily: font('marlideBold'),
+        fontSize: 23.8,
+        fontFamily: font('headline'),
         textAlign: 'center',
         marginBottom: 8
     },
@@ -544,8 +544,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center'
     },
     modalTitle: {
-        fontSize: 26,
-        fontFamily: font('marlideBold'),
+        fontSize: 22.1,
+        fontFamily: font('headline'),
         textAlign: 'center',
         marginBottom: 12
     },
