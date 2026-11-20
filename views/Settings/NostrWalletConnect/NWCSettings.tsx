@@ -356,7 +356,7 @@ export default class NWCSettings extends React.Component<
                         style={{
                             color: textColor,
                             fontSize: 17,
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             flexShrink: 1
                         }}
                     >
@@ -379,7 +379,7 @@ export default class NWCSettings extends React.Component<
                         fontSize: 14,
                         marginTop: 8,
                         lineHeight: 20,
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }}
                 >
                     {localeString(
@@ -458,7 +458,7 @@ export default class NWCSettings extends React.Component<
                                                 ? highlight
                                                 : textColor,
                                             fontSize: 16,
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {track.name}
@@ -501,7 +501,7 @@ export default class NWCSettings extends React.Component<
                         ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={

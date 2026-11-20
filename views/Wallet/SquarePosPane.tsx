@@ -95,9 +95,7 @@ export default class SquarePosPane extends React.PureComponent<
             <Text
                 style={{
                     fontSize: 16,
-                    fontFamily: isSelected
-                        ? 'PPNeueMontreal-Medium'
-                        : 'PPNeueMontreal-Book',
+                    fontFamily: isSelected ? 'Roboto-Medium' : 'Roboto-Regular',
                     color: isSelected
                         ? themeColor('background')
                         : themeColor('text')
@@ -111,9 +109,7 @@ export default class SquarePosPane extends React.PureComponent<
             <Text
                 style={{
                     fontSize: 16,
-                    fontFamily: isSelected
-                        ? 'PPNeueMontreal-Medium'
-                        : 'PPNeueMontreal-Book',
+                    fontFamily: isSelected ? 'Roboto-Medium' : 'Roboto-Regular',
                     color: isSelected
                         ? themeColor('background')
                         : themeColor('text')

@@ -581,7 +581,7 @@ export default class Contacts extends React.Component<
                                     }}
                                     titleStyle={{
                                         color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                     onPress={() => ContactStore?.loadContacts()}
                                 />

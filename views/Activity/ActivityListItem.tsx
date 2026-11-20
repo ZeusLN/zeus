@@ -215,12 +215,18 @@ const ActivityListItem = observer(
             );
         } else if (item.model === 'LSPS1Order') {
             displayName = localeString('views.LSPS1.type');
-            subTitle = `${localeString('general.state')}: ${item.state
+            // a stored order can have no order_state, and one stored by an
+            // older version can have a non-string one
+            subTitle = `${localeString('general.state')}: ${String(
+                item.state ?? ''
+            )
                 .toLowerCase()
                 .replace(/^\w/, (c: string) => c.toUpperCase())}`;
         } else if (item.model === 'LSPS7Order') {
             displayName = localeString('views.LSPS7.type');
-            subTitle = `${localeString('general.state')}: ${item.state
+            subTitle = `${localeString('general.state')}: ${String(
+                item.state ?? ''
+            )
                 .toLowerCase()
                 .replace(/^\w/, (c: string) => c.toUpperCase())}`;
         }
@@ -243,7 +249,7 @@ const ActivityListItem = observer(
                                     item === selectedPaymentForOrder
                                         ? themeColor('highlight')
                                         : themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         >
                             {displayName}
@@ -302,7 +308,7 @@ const ActivityListItem = observer(
                                     item === selectedPaymentForOrder
                                         ? themeColor('highlight')
                                         : themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         >
                             {subTitle}
@@ -312,7 +318,7 @@ const ActivityListItem = observer(
                             style={{
                                 ...styles.rightCell,
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         >
                             {order

@@ -209,7 +209,7 @@ export default class Privacy extends React.Component<
                         text: localeString('views.Settings.Privacy.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -239,7 +239,7 @@ export default class Privacy extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -269,7 +269,7 @@ export default class Privacy extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('error'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         fontSize: 12,
                                         marginTop: 4
                                     }}
@@ -293,7 +293,7 @@ export default class Privacy extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                                 infoModalText={localeString(
                                     'views.Settings.Privacy.clipboard.explainer'
@@ -327,7 +327,7 @@ export default class Privacy extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                                 infoModalText={[
                                     localeString(
@@ -369,7 +369,7 @@ export default class Privacy extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -415,7 +415,7 @@ export default class Privacy extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString('general.custom')}
@@ -435,7 +435,7 @@ export default class Privacy extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('error'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             fontSize: 12,
                                             marginTop: 4
                                         }}
@@ -475,7 +475,7 @@ export default class Privacy extends React.Component<
                                     style={{
                                         color: themeColor('secondaryText'),
                                         fontSize: 17,
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(

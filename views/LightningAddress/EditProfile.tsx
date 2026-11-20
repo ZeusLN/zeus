@@ -125,7 +125,7 @@ export default class EditProfile extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -261,7 +261,7 @@ export default class EditProfile extends React.Component<
 
 const styles = StyleSheet.create({
     label: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 16,
         marginBottom: 5
     },

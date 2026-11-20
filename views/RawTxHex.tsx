@@ -76,7 +76,7 @@ export default class RawTxHex extends React.PureComponent<
                         text: localeString('views.Transaction.rawTxHex'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     containerStyle={{

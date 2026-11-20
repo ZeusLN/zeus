@@ -284,7 +284,7 @@ store method names; when a PR renames those, update `lib/prelude.js` and
 view → BackendUtils.<method> → call(funcName) → active backend class
    REST (clearnet):   ReactNativeBlobUtil.config({ trusty: !certVerification }).fetch(...)
    REST (Tor):        doTorRequest(...)  [react-native-nitro-tor]
-   Streaming:         wsReq(...) → new WebSocket(wss://host:port/route?method=...)
+   Streaming:         createWebSocket(wss://host:port/route?method=...) → WebSocket, or TorWebSocket when Tor is on
    Embedded backends: no network at this layer (gomobile IPC / uniffi FFI)
 ```
 
@@ -299,10 +299,12 @@ Facts you need before reaching for a proxy:
    long as certVerification is off and you route the emulator/device through
    the proxy (Android emulator: `-http-proxy`; iOS simulator honors macOS
    system proxy). There is no cert pinning anywhere in the REST path.
-2. **WebSocket streams bypass Tor entirely.** `wsReq` and the other
-   `new WebSocket(...)` call sites in `backends/LND.ts` build `wss://` URLs
-   straight from host/port — even when the node has Tor enabled. When
-   debugging "subscription works but payments leak clearnet" (or vice
+2. **WebSocket streams use a separate transport.** With Tor on,
+   `createWebSocket` in `backends/LND.ts` opens them through
+   `utils/TorWebSocket.ts` (native `TorWebSocketModule`: OkHttp on Android,
+   URLSession on iOS, SOCKS to nitro-tor), not `doTorRequest`. They keep
+   standard TLS validation even for `.onion` and refuse handshake
+   redirects. When debugging "REST works but streams fail" (or vice
    versa), remember these are two different transports.
 3. **Tor path cannot be trivially proxied.** Tor requests go through the
    embedded nitro-tor daemon (`utils/TorUtils.ts` `doTorRequest`), not the
@@ -619,7 +621,7 @@ One-line re-verification commands for volatile facts:
 | DevTools command list | `git grep -n "name: '" views/Tools/DeveloperTools.tsx` |
 | Export excludes on-device wallets | `git grep -n -A2 'const isExportable' views/Tools/NodeConfigExportImport.tsx` |
 | `trusty:` TLS default | `git grep -n 'trusty' backends/LND.ts` |
-| WS-bypasses-Tor | `git grep -n 'new WebSocket' backends/LND.ts` |
+| WS-over-Tor | `git grep -n -A5 'createWebSocket = ' backends/LND.ts` |
 | Tor onion-only bypass | `git grep -n 'isOnionHttpsUrl' utils/TorUtils.ts backends/LND.ts` |
 | nitro-tor version | `git grep -n 'react-native-nitro-tor' package.json` |
 | dedup-cache clear site | `git grep -n 'clearCachedCalls' stores/SettingsStore.ts backends/` |

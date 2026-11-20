@@ -86,7 +86,7 @@ export default abstract class BaseQRScanner<
                             text: localeString('general.loading'),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         backgroundColor={themeColor('background')}

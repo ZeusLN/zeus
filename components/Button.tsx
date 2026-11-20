@@ -110,7 +110,7 @@ function Button(props: ButtonProps) {
                     ? {
                           ...(titleStyle as object),
                           textTransform: noUppercase ? 'none' : 'uppercase',
-                          fontFamily: 'PPNeueMontreal-Book'
+                          fontFamily: 'Roboto-Regular'
                       }
                     : {
                           color: iconOnly
@@ -123,7 +123,7 @@ function Button(props: ButtonProps) {
                               ? themeColor('highlight')
                               : themeColor('background'),
                           textTransform: noUppercase ? 'none' : 'uppercase',
-                          fontFamily: 'PPNeueMontreal-Book'
+                          fontFamily: 'Roboto-Regular'
                       }
             }
             onPress={onPress}

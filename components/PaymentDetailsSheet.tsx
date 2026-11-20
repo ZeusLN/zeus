@@ -102,7 +102,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                         ) : null}
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 color: themeColor('text')
                             }}
                         >
@@ -122,7 +122,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
             <View style={{ marginTop: 10 }}>
                 <Text
                     style={{
-                        fontFamily: 'PPNeueMontreal-Book',
+                        fontFamily: 'Roboto-Regular',
                         color: themeColor('secondaryText'),
                         fontSize: 14,
                         marginBottom: 8
@@ -149,7 +149,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                             />
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('text'),
                                     fontSize: 14,
                                     flexShrink: 1
@@ -165,7 +165,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                             {mint.fee != null && mint.fee > 0 && (
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         color: themeColor('secondaryText'),
                                         fontSize: 11
                                     }}
@@ -248,7 +248,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                         style={{
                             marginTop: 7,
                             textAlign: 'center',
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             color: themeColor('text')
                         }}
                     >
@@ -311,8 +311,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                                     >
                                         <Text
                                             style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Medium',
+                                                fontFamily: 'Roboto-Medium',
                                                 color: themeColor('text'),
                                                 fontSize: 20,
                                                 textAlign: 'center',
@@ -374,7 +373,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                                                             <Text
                                                                 style={{
                                                                     fontFamily:
-                                                                        'PPNeueMontreal-Book',
+                                                                        'Roboto-Regular',
                                                                     color: themeColor(
                                                                         'text'
                                                                     )

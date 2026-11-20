@@ -342,7 +342,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const oneMoButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 0
                             ? themeColor('background')
@@ -355,7 +355,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const threeMoButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 1
                             ? themeColor('background')
@@ -368,7 +368,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const sixMoButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 2
                             ? themeColor('background')
@@ -381,7 +381,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const twelveMoButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 3
                             ? themeColor('background')
@@ -536,7 +536,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                         'text'
                                                                     ),
                                                                     fontFamily:
-                                                                        'PPNeueMontreal-Book',
+                                                                        'Roboto-Regular',
                                                                     marginBottom: 10
                                                                 }}
                                                             >
@@ -553,7 +553,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                                 'text'
                                                                             ),
                                                                             fontFamily:
-                                                                                'PPNeueMontreal-Book',
+                                                                                'Roboto-Regular',
                                                                             marginBottom: 10
                                                                         }}
                                                                     >

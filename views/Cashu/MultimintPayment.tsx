@@ -452,7 +452,7 @@ export default class MultimintPayment extends React.Component<
                         style={{
                             color: themeColor('text'),
                             fontSize: 18,
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {item.mintName}
@@ -581,7 +581,7 @@ export default class MultimintPayment extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -625,7 +625,7 @@ export default class MultimintPayment extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('warning'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         fontSize: 32,
                                         marginTop: 24
                                     }}
@@ -637,7 +637,7 @@ export default class MultimintPayment extends React.Component<
                                         style={{
                                             color: themeColor('warning'),
                                             textAlign: 'center',
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             marginTop: 8,
                                             paddingHorizontal: 12
                                         }}
@@ -673,7 +673,7 @@ export default class MultimintPayment extends React.Component<
                                         style={{
                                             color: themeColor('secondaryText'),
                                             marginRight: 6,
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden'
     },
     moreMintsText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 15,
         marginLeft: 4
     }

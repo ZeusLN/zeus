@@ -30,6 +30,7 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsFlowLSP: jest.fn(() => true),
     supportsLSPScustomMessage: () => true,
     supportsLSPS1rest: jest.fn(() => false),
+    supportsLSPS1native: jest.fn(() => false),
     supportsLSPS7native: jest.fn(() => false),
     lsps7GetExtendableChannels: jest.fn(),
     requestLsps1Liquidity: jest.fn()
@@ -2715,6 +2716,79 @@ describe('LSPStore.updateOrderInStorage', () => {
 
         expect(Storage.setItem).not.toHaveBeenCalled();
         warn.mockRestore();
+    });
+});
+
+describe('LSPStore.saveOrderToHistory', () => {
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+    const reply = (result: any) => ({ jsonrpc: '2.0', id: 'req-1', result });
+    const storedOrders = () =>
+        jest
+            .mocked(Storage.setItem)
+            .mock.calls.map(([, value]: any) =>
+                value.map((item: string) => JSON.parse(item))
+            );
+
+    beforeEach(() => {
+        jest.mocked(Storage.getItem).mockReset();
+        jest.mocked(Storage.setItem).mockReset();
+        jest.mocked(Storage.getItem).mockResolvedValue(null);
+    });
+
+    describe.each(['LSPS1', 'LSPS7'] as const)('%s', (service) => {
+        it('stores a well-formed create_order reply', async () => {
+            const order = reply({
+                order_id: 'order-1',
+                order_state: 'CREATED',
+                lsp_balance_sat: '1000000'
+            });
+
+            await makeStore().saveOrderToHistory(order, service);
+            await flush();
+
+            expect(storedOrders()).toEqual([
+                [expect.objectContaining({ order, service })]
+            ]);
+        });
+
+        it('does not store a reply whose order_state is an object', async () => {
+            const warn = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+
+            await makeStore().saveOrderToHistory(
+                reply({
+                    order_id: 'order-1',
+                    order_state: { state: 'CREATED' },
+                    lsp_balance_sat: '1000000'
+                }),
+                service
+            );
+            await flush();
+
+            expect(Storage.setItem).not.toHaveBeenCalled();
+            warn.mockRestore();
+        });
+
+        it('does not store a reply with an object in a field the readers use', async () => {
+            const warn = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+
+            await makeStore().saveOrderToHistory(
+                reply({
+                    order_id: 'order-1',
+                    order_state: 'CREATED',
+                    lsp_balance_sat: '1000000',
+                    payment: { bolt11: { order_total_sat: { n: 1 } } }
+                }),
+                service
+            );
+            await flush();
+
+            expect(Storage.setItem).not.toHaveBeenCalled();
+            warn.mockRestore();
+        });
     });
 });
 

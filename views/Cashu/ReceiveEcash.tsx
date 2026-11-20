@@ -515,7 +515,7 @@ export default class ReceiveEcash extends React.Component<
                             selectedIndex === 0
                                 ? themeColor('background')
                                 : themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }}
                 >
                     {localeString('general.lightningInvoice')}
@@ -535,7 +535,7 @@ export default class ReceiveEcash extends React.Component<
                             selectedIndex === 1
                                 ? themeColor('background')
                                 : themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }}
                 >
                     {localeString('general.lightningAddressCondensed')}
@@ -581,7 +581,7 @@ export default class ReceiveEcash extends React.Component<
                                   ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -712,7 +712,7 @@ export default class ReceiveEcash extends React.Component<
                                                 style={{
                                                     marginTop: 35,
                                                     fontFamily:
-                                                        'PPNeueMontreal-Book',
+                                                        'Roboto-Regular',
                                                     fontSize: 16 / fontScale,
                                                     color: themeColor('text'),
                                                     textAlign: 'center'
@@ -1058,9 +1058,9 @@ const styles = StyleSheet.create({
         paddingTop: 20
     },
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     secondaryText: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     }
 });

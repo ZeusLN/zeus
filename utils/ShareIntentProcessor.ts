@@ -22,11 +22,13 @@ export interface ShareIntentResult {
 
 // On resume two handlers look for the same share at once: on iOS
 // Wallet.handleOpenURL and Wallet.handleAppStateChange, on Android
-// LinkingUtils.handleAndroidIntents and Wallet.handleAppStateChange. Both
-// reads finish before either clears the intent, so each would navigate to
-// ShareIntentProcessing. Only one read runs at a time, held until the intent
-// is cleared; a caller that arrives meanwhile gets null, as if nothing had
-// been shared, and the caller holding the read delivers the image.
+// LinkingUtils.handleAndroidIntents and Wallet.handleAppStateChange. When the
+// read and the clear were separate native calls, both reads finished before
+// either cleared, so each would navigate to ShareIntentProcessing. The native
+// take now reads and clears in one call on a serial module queue, and this
+// lock stays as a second layer: only one take runs at a time, and a caller
+// that arrives meanwhile gets null, as if nothing had been shared, while the
+// caller holding the lock delivers the image.
 let readInFlight = false;
 
 /**
@@ -38,20 +40,18 @@ export const processSharedQRImageFast =
         if (readInFlight) return null;
         readInFlight = true;
         try {
-            // Get the shared image as base64 from Android intent
-            const base64Image = await MobileTools.getSharedImageBase64();
-
-            if (!base64Image) return null;
-
-            // Consume the intent now that the image is in memory. Left in
-            // place, every later read (each resume runs
+            // Read the shared image (Android: the activity intent; iOS: the
+            // file the share extension wrote) and consume it in the same
+            // native call. Left in place, every later read (each resume runs
             // Wallet.getSettingsAndNavigate) hands the same image over again,
             // which in POS mode puts the terminal back on the PIN screen.
-            try {
-                await MobileTools.clearSharedIntent();
-            } catch (clearError) {
-                console.warn('Failed to clear share intent', clearError);
-            }
+            // Reading and clearing in two calls let a share that arrived in
+            // between be cleared without ever being read. If the native side
+            // cannot consume the share it still returns the image and leaves
+            // the share in place, so the next read delivers it again.
+            const base64Image = await MobileTools.takeSharedImageBase64();
+
+            if (!base64Image) return null;
 
             // Return the base64 image for processing in the ShareIntentProcessing screen.
             //

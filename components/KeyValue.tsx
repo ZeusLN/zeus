@@ -181,7 +181,7 @@ export default class KeyValue extends React.Component<KeyValueProps> {
                 <Text
                     style={{
                         color: color || themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book',
+                        fontFamily: 'Roboto-Regular',
                         flexShrink: 1
                     }}
                 >

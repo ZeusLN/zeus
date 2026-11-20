@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
         elevation: 5
     },
     toastText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14
     }
 });

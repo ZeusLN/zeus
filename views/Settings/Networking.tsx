@@ -48,7 +48,7 @@ export default class Networking extends React.Component<
                         text: localeString('views.Settings.networking'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -68,7 +68,7 @@ export default class Networking extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -102,7 +102,7 @@ export default class Networking extends React.Component<
                         style={{
                             color: themeColor('secondaryText'),
                             fontSize: 14,
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             marginTop: 8
                         }}
                     >
@@ -122,7 +122,7 @@ export default class Networking extends React.Component<
                             style={{
                                 color: themeColor('text'),
                                 fontSize: 17,
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         >
                             {`${localeString('general.status')}: `}
@@ -133,7 +133,7 @@ export default class Networking extends React.Component<
                                     ? themeColor('error')
                                     : themeColor('success'),
                                 fontSize: 17,
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         >
                             {ConnectivityStore.isOffline

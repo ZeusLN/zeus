@@ -317,7 +317,7 @@ export default class NWCConnectionQR extends React.Component<
                         ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                 />
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     },
     description: {
         fontSize: 15,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'center',
         lineHeight: 22,
         maxWidth: 340
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontSize: 15,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'center',
         lineHeight: 22
     },
@@ -495,14 +495,14 @@ const styles = StyleSheet.create({
         marginBottom: 15
     },
     connectedTitle: {
-        fontSize: 28,
-        fontFamily: font('marlideBold'),
+        fontSize: 23.8,
+        fontFamily: font('headline'),
         textAlign: 'center',
         marginBottom: 8
     },
     connectedSubtitle: {
         fontSize: 15,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'center',
         lineHeight: 22
     },
@@ -544,14 +544,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center'
     },
     modalTitle: {
-        fontSize: 26,
-        fontFamily: font('marlideBold'),
+        fontSize: 22.1,
+        fontFamily: font('headline'),
         textAlign: 'center',
         marginBottom: 12
     },
     modalMessage: {
         fontSize: 15,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'center',
         lineHeight: 22,
         marginBottom: 28

@@ -212,7 +212,7 @@ export default class LnurlChannel extends React.Component<
                         text: localeString('views.LnurlChannel.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -223,7 +223,7 @@ export default class LnurlChannel extends React.Component<
                             padding: 20,
                             fontSize: 22,
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Medium'
+                            fontFamily: 'Roboto-Medium'
                         }}
                     >
                         {domain}
@@ -233,7 +233,7 @@ export default class LnurlChannel extends React.Component<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {localeString('views.LnurlChannel.uri')}
@@ -242,7 +242,7 @@ export default class LnurlChannel extends React.Component<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {lnurl.uri}
@@ -254,7 +254,7 @@ export default class LnurlChannel extends React.Component<
                                 style={{
                                     top: 10,
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(

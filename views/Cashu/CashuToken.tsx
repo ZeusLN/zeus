@@ -306,7 +306,7 @@ export default class CashuTokenView extends React.Component<
                             : localeString('cashu.token'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -702,7 +702,7 @@ export default class CashuTokenView extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     content: {
         paddingLeft: 20,

@@ -12,6 +12,8 @@
     <uses-feature android:name="android.hardware.nfc.hce" android:required="false" />
 
     <queries>
+        <!-- NfcIntentGuard looks up the system NFC service package -->
+        <package android:name="com.android.nfc" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="http"/>

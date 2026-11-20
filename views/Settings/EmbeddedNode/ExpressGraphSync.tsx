@@ -71,7 +71,7 @@ export default class ExpressGraphSync extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -87,7 +87,7 @@ export default class ExpressGraphSync extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(
@@ -153,7 +153,7 @@ export default class ExpressGraphSync extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(
@@ -226,7 +226,7 @@ export default class ExpressGraphSync extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(

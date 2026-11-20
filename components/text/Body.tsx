@@ -69,10 +69,7 @@ export function Body({
                     ? undefined
                     : 16,
                 lineHeight,
-                fontFamily:
-                    bold || jumbo
-                        ? 'PPNeueMontreal-Medium'
-                        : 'PPNeueMontreal-Book'
+                fontFamily: bold || jumbo ? 'Roboto-Medium' : 'Roboto-Regular'
             }}
             accessible={accessible}
             accessibilityLabel={accessibilityLabel}

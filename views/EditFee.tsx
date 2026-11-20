@@ -405,7 +405,7 @@ export default class EditFee extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('warning'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             textAlign: 'center',
                                             marginTop: 10
                                         }}

@@ -279,7 +279,7 @@ export default class AmountInput extends React.Component<
                 {title && (
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             color: themeColor('secondaryText'),
                             fontSize: 14,
                             marginBottom: 5
@@ -347,7 +347,7 @@ export default class AmountInput extends React.Component<
                         {fiatError ? (
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('warning')
                                 }}
                             >
@@ -357,7 +357,7 @@ export default class AmountInput extends React.Component<
                             fiatEnabled && (
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         color: themeColor('text')
                                     }}
                                 >
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden'
     },
     amountText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 20
     }
 });

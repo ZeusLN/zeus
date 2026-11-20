@@ -30,7 +30,7 @@ export default function OrderItem({
                 <Text
                     style={{
                         color: themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }}
                 >
                     {date}
@@ -38,7 +38,7 @@ export default function OrderItem({
                 <Text
                     style={{
                         color: themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }}
                 >
                     {money}

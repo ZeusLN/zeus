@@ -30,12 +30,10 @@
 *
 ********************************************************************************
 *
-*   The PP Neue Montreal (Pangram Pangram Foundry) and Marlide Display
-*   (Kontour Type, LLC) font files in assets/fonts/ and
-*   android/app/src/main/assets/fonts/ are commercial typefaces licensed by
-*   Atlas 21 Inc. They are not covered by this license and may not be
-*   reused outside ZEUS. See "PP Neue Montreal and Marlide Display
-*   License.txt" in those directories.
+*   The Gloock and Roboto font files in assets/fonts/ and
+*   android/app/src/main/assets/fonts/ are licensed under the SIL Open Font
+*   License 1.1, not this license. See "Gloock Open Font License.txt" and
+*   "Roboto Open Font License.txt" in those directories.
 *
 ********************************************************************************
 

@@ -250,7 +250,7 @@ export default class Watchtowers extends React.Component<
                         text: localeString('views.Tools.watchtowers'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -296,7 +296,7 @@ export default class Watchtowers extends React.Component<
                                 value={searchQuery}
                                 inputStyle={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                                 placeholderTextColor={placeholderColor()}
                                 containerStyle={{

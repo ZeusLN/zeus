@@ -1,4 +1,5 @@
 import CashuDevKit, { CDKToken, CDKTransaction } from '../cashu-cdk';
+import Bolt11Utils from './Bolt11Utils';
 
 export enum MintPaymentStatus {
     IDLE = 'idle',
@@ -256,22 +257,48 @@ export function isCdkMeltTrackedLocally(
 }
 
 /**
+ * True if a melt paid a BOLT11 invoice signed by the wallet's own node: a
+ * sweep or a self-custody claim. Both create the invoice on the node without
+ * an LSP, so its payee is the node itself. The payee comes from the invoice
+ * signature, so this holds whether or not the mint returned a preimage.
+ */
+function isCdkMeltToOwnNode(
+    tx: CDKTransaction,
+    ownNodePubkey?: string
+): boolean {
+    if (!ownNodePubkey) return false;
+    try {
+        return (
+            Bolt11Utils.decode(tx.payment_request ?? '').payeeNodeKey ===
+            ownNodePubkey
+        );
+    } catch {
+        // no request, or not a BOLT11 invoice, e.g. a BOLT12 offer
+        return false;
+    }
+}
+
+/**
  * Outgoing CDK melts missing from locally persisted payments: in-flight melts
  * (local storage only records settled ones) and settled melts local storage
  * missed, e.g. when the app was killed between melt and persist. Failed melts
  * moved no funds. Token sends carry no quote_id and stay tracked via
- * sentTokens.
+ * sentTokens. Melts to the own node are left out, as recordSettledMelt does
+ * for local records: the funds arrive as an incoming payment on the node, so
+ * listing the melt as well would show the same funds sent and received.
  */
 export function selectUntrackedCdkMelts(
     transactions: CDKTransaction[],
-    payments: LocalCashuPaymentRecord[]
+    payments: LocalCashuPaymentRecord[],
+    ownNodePubkey?: string
 ): CDKTransaction[] {
     return transactions.filter(
         (tx) =>
             tx.direction === 'outgoing' &&
             !!tx.quote_id &&
             tx.state !== 'Failed' &&
-            !isCdkMeltTrackedLocally(tx, payments)
+            !isCdkMeltTrackedLocally(tx, payments) &&
+            !isCdkMeltToOwnNode(tx, ownNodePubkey)
     );
 }
 

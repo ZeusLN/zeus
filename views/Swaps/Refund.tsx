@@ -269,7 +269,7 @@ export default class RefundSwap extends React.Component<
                         text: localeString('views.Swaps.refundSwap'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={

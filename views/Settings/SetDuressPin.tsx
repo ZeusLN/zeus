@@ -261,13 +261,13 @@ export default class SetDuressPin extends React.Component<
 
 const styles = StyleSheet.create({
     mainText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 20,
         textAlign: 'center',
         marginTop: 10
     },
     secondaryText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'center',
         marginLeft: 10,
         marginRight: 10

@@ -306,6 +306,82 @@ export const verifyPurgePreflight = async (
     return { ok: true };
 };
 
+const lncPairingPhrases = (settingsJson: unknown): string[] => {
+    if (typeof settingsJson !== 'string' || !settingsJson) return [];
+    try {
+        const settings = JSON.parse(settingsJson);
+        if (!Array.isArray(settings?.nodes)) return [];
+        return settings.nodes
+            .filter(
+                (node: any) =>
+                    node?.implementation === 'lightning-node-connect' &&
+                    typeof node.pairingPhrase === 'string' &&
+                    node.pairingPhrase
+            )
+            .map((node: any) => node.pairingPhrase);
+    } catch {
+        return [];
+    }
+};
+
+/**
+ * Builds up to v0.9.4 kept LNC credentials (pairing phrase, local and remote
+ * keys) in EncryptedStorage under lnc-rn:<sha256(pairingPhrase)> and :host.
+ * The storage migration copied them to the keychain and left the
+ * originals. EncryptedStorage cannot list its keys, so they are named from
+ * the pairing phrases in the legacy settings blob (the only record of
+ * wallets deleted since the migration) and in the live settings. An entry
+ * of a wallet that is still configured is only removed once its keychain
+ * copy exists.
+ */
+const purgeLegacyLncEntries = async (
+    skipped: string[]
+): Promise<{ deleted: number; failures: string[] }> => {
+    let deleted = 0;
+    const failures: string[] = [];
+    let legacyJson: unknown = null;
+    let liveJson: unknown = null;
+    try {
+        legacyJson = await EncryptedStorage.getItem(LEGACY_STORAGE_KEY);
+    } catch {
+        // nothing to name entries from
+    }
+    try {
+        liveJson = await Storage.getItem(STORAGE_KEY);
+    } catch {
+        // handled below: every entry then needs its keychain copy
+    }
+
+    // Without readable live settings, any entry may belong to a configured
+    // wallet
+    const liveKnown = typeof liveJson === 'string' && !!liveJson;
+    const livePhrases = new Set(lncPairingPhrases(liveJson));
+    const phrases = new Set([...lncPairingPhrases(legacyJson), ...livePhrases]);
+
+    for (const phrase of phrases) {
+        const baseKey = `${LNC_STORAGE_KEY}:${lncHash(phrase)}`;
+        for (const key of [baseKey, `${baseKey}:host`]) {
+            try {
+                // iOS removeItem rejects when the item does not exist
+                if ((await EncryptedStorage.getItem(key)) === null) continue;
+                if (
+                    (!liveKnown || livePhrases.has(phrase)) &&
+                    (await getRawItem(`${KEY_PREFIX}${key}`, false)) === null
+                ) {
+                    skipped.push(key);
+                    continue;
+                }
+                await EncryptedStorage.removeItem(key);
+                deleted++;
+            } catch {
+                failures.push(key);
+            }
+        }
+    }
+
+    return { deleted, failures };
+};
+
 /**
  * Deletes all scanned locations. Order is chosen for crash safety: stale
  * unprefixed entries go first and the zeus:* synchronizable entries last,
@@ -386,7 +462,15 @@ export const executePurge = async (scan: PurgeScan): Promise<PurgeResult> => {
         await remove(server, true);
     }
 
-    if (scan.hasLegacyEncryptedSettings) {
+    // Before the legacy blob: it may be the only record of the pairing
+    // phrases these entries are named after
+    const lnc = await purgeLegacyLncEntries(skipped);
+    deleted += lnc.deleted;
+    failures.push(...lnc.failures);
+
+    // Kept while an LNC entry it names failed to delete, so a re-run can
+    // still find that entry
+    if (scan.hasLegacyEncryptedSettings && lnc.failures.length === 0) {
         try {
             await EncryptedStorage.removeItem(LEGACY_STORAGE_KEY);
             deleted++;

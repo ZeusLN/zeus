@@ -7,14 +7,15 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.Promise;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -88,10 +89,21 @@ public class ZipUtils extends ReactContextBaseJavaModule {
     // used, since it is not checked until the entry has been inflated.
     static final long MAX_UNZIP_BYTES = 4L * 1024 * 1024 * 1024;
 
+    // Upper bound on the entries unzipFile reads, directories included. A
+    // channel backup is zipFolder's copy of the top-level files in lnd's
+    // graph directory: channel.db, sphinxreplay.db and wtclient.db for bolt,
+    // or channel.sqlite and lnd.sqlite with their -wal and -shm files for
+    // SQLite, so six at most. 64 leaves room for files a later lnd
+    // adds. Without a bound, an archive of empty entries never reaches
+    // MAX_UNZIP_BYTES: each entry costs a file creation and a place in the
+    // cleanup list, so millions of them fill the heap or the directory.
+    static final int MAX_UNZIP_ENTRIES = 64;
+
     @ReactMethod
     public void unzipFile(String zipPath, String destDirPath, Promise promise) {
-        // Files this call has created, deleted again if it fails
-        List<File> written = new ArrayList<>();
+        // Files this call has created, deleted again if it fails. A set, so
+        // an entry name repeated in the archive is held once.
+        Set<File> written = new LinkedHashSet<>();
         try {
             File zipFile = new File(zipPath);
             if (!zipFile.exists()) {
@@ -105,11 +117,15 @@ public class ZipUtils extends ReactContextBaseJavaModule {
             }
 
             long total = 0;
+            int entries = 0;
             try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
                 byte[] buffer = new byte[8192];
 
                 ZipEntry entry;
                 while ((entry = zis.getNextEntry()) != null) {
+                    if (++entries > MAX_UNZIP_ENTRIES) {
+                        throw new IOException("Zip file has more than " + MAX_UNZIP_ENTRIES + " entries");
+                    }
                     if (entry.isDirectory()) continue;
 
                     String name = entry.getName();
@@ -150,6 +166,13 @@ public class ZipUtils extends ReactContextBaseJavaModule {
     private static final int PBKDF2_ITERATIONS = 100000;
     private static final int KEY_LEN_BITS = 256;
 
+    // Upper bound on the size of a file decryptFile reads. Its inputs are
+    // node-config exports (a few KB of JSON) and Olympus channel backups,
+    // which the Olympus server limits to 15 MiB of base64 in the upload
+    // body. The ciphertext and the plaintext are both held in memory, so
+    // the size is checked before anything is read.
+    static final long MAX_DECRYPT_INPUT_BYTES = 64L * 1024 * 1024;
+
     @ReactMethod
     public void encryptFile(String inputPath, String outputPath, String passphrase, Promise promise) {
         try {
@@ -187,8 +210,38 @@ public class ZipUtils extends ReactContextBaseJavaModule {
                 return;
             }
 
-            byte[] fileData = readAllBytes(inFile);
-            byte[] plaintext = decryptBytes(fileData, passphrase);
+            long fileLen = inFile.length();
+            int headerLen = 1 + SALT_LEN + IV_LEN;
+            if (fileLen < headerLen + GCM_TAG_BITS / 8) {
+                promise.reject("ERR_DECRYPT", "File too small to be a valid encrypted backup");
+                return;
+            }
+            if (fileLen > MAX_DECRYPT_INPUT_BYTES) {
+                promise.reject("ERR_DECRYPT", "File too large to be a valid encrypted backup");
+                return;
+            }
+
+            byte[] salt = new byte[SALT_LEN];
+            byte[] iv = new byte[IV_LEN];
+            byte[] ciphertext;
+            try (DataInputStream in = new DataInputStream(new FileInputStream(inFile))) {
+                int version = in.readUnsignedByte();
+                if (version != VERSION) {
+                    promise.reject("ERR_DECRYPT", "Unsupported encryption version: " + version);
+                    return;
+                }
+                in.readFully(salt);
+                in.readFully(iv);
+                ciphertext = new byte[(int) (fileLen - headerLen)];
+                in.readFully(ciphertext);
+            }
+
+            SecretKeySpec key = deriveKey(passphrase, salt);
+
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, iv));
+
+            byte[] plaintext = cipher.doFinal(ciphertext);
 
             File outFile = new File(outputPath);
             File parentDir = outFile.getParentFile();

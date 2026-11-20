@@ -148,7 +148,7 @@ export default class LegacySeedRecovery extends React.Component<
                         ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -157,7 +157,7 @@ export default class LegacySeedRecovery extends React.Component<
                     <Text
                         style={{
                             color: themeColor('secondaryText'),
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             fontSize: 16,
                             marginBottom: 20
                         }}
@@ -170,7 +170,7 @@ export default class LegacySeedRecovery extends React.Component<
                     <Text
                         style={{
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Medium',
+                            fontFamily: 'Roboto-Medium',
                             fontSize: 16,
                             marginBottom: 10
                         }}
@@ -205,7 +205,7 @@ export default class LegacySeedRecovery extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 14,
                                     marginTop: 10
                                 }}
@@ -227,7 +227,7 @@ export default class LegacySeedRecovery extends React.Component<
                             <Text
                                 style={{
                                     color: 'white',
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 14
                                 }}
                             >
@@ -241,7 +241,7 @@ export default class LegacySeedRecovery extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 16,
                                     textAlign: 'center'
                                 }}
@@ -259,7 +259,7 @@ export default class LegacySeedRecovery extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 16,
                                     textAlign: 'center'
                                 }}

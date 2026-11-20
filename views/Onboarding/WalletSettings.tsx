@@ -167,7 +167,7 @@ export default class WalletSettings extends React.Component<
                         <Text
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 alignSelf: 'center',
                                 fontSize: 15,
                                 padding: 8
@@ -195,7 +195,7 @@ export default class WalletSettings extends React.Component<
                         text: localeString('views.WalletSettings.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -237,7 +237,7 @@ export default class WalletSettings extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                                 infoModalText={localeString(
                                     'views.Settings.Privacy.clipboard.explainer'
@@ -280,7 +280,7 @@ export default class WalletSettings extends React.Component<
                             <ListItem.Title
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -360,8 +360,7 @@ export default class WalletSettings extends React.Component<
                                                 color: themeColor(
                                                     'secondaryText'
                                                 ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
+                                                fontFamily: 'Roboto-Regular'
                                             }}
                                         >
                                             {(() => {
@@ -412,7 +411,7 @@ export default class WalletSettings extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(

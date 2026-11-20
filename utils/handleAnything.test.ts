@@ -12,6 +12,8 @@ import { Alert } from 'react-native';
 import { nip05 } from 'nostr-tools';
 
 import { invoicesStore, settingsStore } from '../stores/Stores';
+import { isUnsafeLnurlError } from './LnurlFetchUtils';
+import { localeString } from './LocaleUtils';
 import handleAnything, {
     strictUriEncode,
     convertMerchantQRToLightningAddress,
@@ -92,11 +94,19 @@ jest.mock('./AddressUtils', () => ({
     isValidWithdrawalRequest: () => mockIsValidWithdrawalRequest,
     ZEUS_ECASH_GIFT_URL
 }));
+const mockTorHttpRequest = jest.fn();
+// doTorRequest is used by the NIP-05 lookup over Tor (#5321)
 const mockDoTorRequest = jest.fn();
 jest.mock('./TorUtils', () => ({
+    torHttpRequest: (...args: any[]) => mockTorHttpRequest(...args),
     doTorRequest: (...args: any[]) => mockDoTorRequest(...args),
     RequestMethod: { GET: 'GET' }
 }));
+const torJson = (body: any) => ({
+    statusCode: 200,
+    headers: {},
+    body: JSON.stringify(body)
+});
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
     supportsAccounts: () => mockSupportsAccounts,
@@ -186,7 +196,10 @@ jest.mock('nostr-tools', () => ({
         NIP05_REGEX: jest.requireActual('nostr-tools').nip05.NIP05_REGEX,
         queryProfile: jest.fn()
     },
-    nip19: { decode: (...args: any[]) => mockNip19Decode(...args) }
+    nip19: {
+        decode: (...args: any[]) => mockNip19Decode(...args),
+        npubEncode: jest.requireActual('nostr-tools').nip19.npubEncode
+    }
 }));
 jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.example.com']
@@ -1422,23 +1435,24 @@ describe('handleAnything', () => {
                 'SATOSHI@ZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUS.ONION';
             mockProcessBIP21Uri.mockReturnValue({ value: address });
             mockIsValidLightningAddress = true;
-            mockDoTorRequest.mockResolvedValue({
-                callback: 'http://example.onion/callback'
-            });
+            mockTorHttpRequest.mockResolvedValue(
+                torJson({ callback: 'http://example.onion/callback' })
+            );
             (settingsStore as any).enableTor = true;
 
             try {
                 const result = await handleAnything(address);
 
-                expect(mockDoTorRequest).toHaveBeenCalledWith(
-                    'http://zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion/.well-known/lnurlp/satoshi',
-                    'GET'
-                );
+                expect(mockTorHttpRequest).toHaveBeenCalledWith({
+                    url: 'http://zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion/.well-known/lnurlp/satoshi',
+                    method: 'GET',
+                    followRedirects: false
+                });
                 expect(mockBlobUtilFetch).not.toHaveBeenCalled();
                 expect(result[0]).toBe('LnurlPay');
             } finally {
                 (settingsStore as any).enableTor = undefined;
-                mockDoTorRequest.mockReset();
+                mockTorHttpRequest.mockReset();
             }
         });
     });
@@ -1731,6 +1745,26 @@ describe('handleAnything', () => {
             expect(result[0]).toBe('ContactDetails');
             expect(result[1].isNostrContact).toBe(true);
             expect(result[1].nostrContact.name).toBe('Satoshi');
+            expect(result[1].nostrContact.nostrNpub).toEqual([NPUB]);
+        });
+
+        it('ignores the npub and pubkey a profile claims for itself', async () => {
+            mockNip19Decode.mockReturnValue({ type: 'npub', data: PUBKEY });
+            mockQuerySync.mockResolvedValue([
+                {
+                    id: 'event',
+                    created_at: 1,
+                    content: JSON.stringify({
+                        display_name: 'Satoshi',
+                        npub: 'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5',
+                        pubkey: '34d2f5274f1958fcd2cb2463dabeaddf8a21f84ace4241da888023bf05cc8095'
+                    })
+                }
+            ]);
+
+            const result = await handleAnything(NPUB);
+
+            expect(result[1].nostrContact.nostrNpub).toEqual([NPUB]);
         });
 
         it('throws the profile error when the npub does not decode', async () => {
@@ -2077,7 +2111,8 @@ describe('handleAnything', () => {
 
             beforeEach(() => {
                 settingsStore = require('../stores/Stores').settingsStore;
-                mockDoTorRequest.mockReset();
+                mockTorHttpRequest.mockReset();
+                (nip05.queryProfile as jest.Mock).mockReset();
                 mockDoHResponse({
                     Status: 0,
                     AD: true,
@@ -2092,15 +2127,17 @@ describe('handleAnything', () => {
             it('makes no DoH request with Tor enabled', async () => {
                 settingsStore.enableTor = true;
                 const lnurlParams = { callback: `http://${ONION}/callback` };
-                mockDoTorRequest.mockResolvedValue(lnurlParams);
+                mockTorHttpRequest.mockResolvedValue(torJson(lnurlParams));
 
                 const result = await handleAnything(ONION_ADDRESS);
 
                 expect(mockDnsFetch).not.toHaveBeenCalled();
-                expect(mockDoTorRequest).toHaveBeenCalledWith(
-                    ONION_LNURLP,
-                    'GET'
-                );
+                expect(mockTorHttpRequest).toHaveBeenCalledWith({
+                    url: ONION_LNURLP,
+                    method: 'GET',
+                    followRedirects: false
+                });
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
                 expect(result).toEqual([
                     'LnurlPay',
                     {
@@ -2114,39 +2151,108 @@ describe('handleAnything', () => {
 
             it('rejects with the Tor request error when the LNURL fetch fails', async () => {
                 settingsStore.enableTor = true;
-                mockDoTorRequest.mockRejectedValue(new Error('tor failure'));
+                mockTorHttpRequest.mockRejectedValue(new Error('tor failure'));
 
                 await expect(handleAnything(ONION_ADDRESS)).rejects.toThrow(
                     'tor failure'
                 );
                 expect(mockDnsFetch).not.toHaveBeenCalled();
+                // the NIP-05 lookup is not sent over Tor
+                expect(nip05.queryProfile).not.toHaveBeenCalled();
             });
 
-            it('makes no DoH request with Tor disabled', async () => {
+            it('rejects a non-200 answer over Tor without a NIP-05 lookup', async () => {
+                settingsStore.enableTor = true;
+                mockTorHttpRequest.mockResolvedValue({
+                    statusCode: 404,
+                    headers: {},
+                    body: 'not found'
+                });
+
+                await expect(handleAnything(ONION_ADDRESS)).rejects.toThrow(
+                    localeString('utils.handleAnything.lightningAddressError')
+                );
+                expect(nip05.queryProfile).not.toHaveBeenCalled();
+            });
+
+            it('refuses a redirect off the onion service over Tor', async () => {
+                settingsStore.enableTor = true;
+                mockTorHttpRequest.mockResolvedValueOnce({
+                    statusCode: 302,
+                    headers: { location: ['http://192.168.1.1/lnurlp'] },
+                    body: ''
+                });
+
+                const error = await handleAnything(ONION_ADDRESS).catch(
+                    (e: any) => e
+                );
+
+                expect(isUnsafeLnurlError(error)).toBe(true);
+                expect(mockTorHttpRequest).toHaveBeenCalledTimes(1);
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+            });
+
+            it('looks up the address over Tor with Tor disabled', async () => {
+                settingsStore.enableTor = false;
+                const lnurlParams = { callback: `http://${ONION}/callback` };
+                mockTorHttpRequest.mockResolvedValue(torJson(lnurlParams));
+
                 const result = await handleAnything(ONION_ADDRESS);
 
                 expect(mockDnsFetch).not.toHaveBeenCalled();
-                expect(mockDoTorRequest).not.toHaveBeenCalled();
+                expect(mockTorHttpRequest).toHaveBeenCalledWith({
+                    url: ONION_LNURLP,
+                    method: 'GET',
+                    followRedirects: false
+                });
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                expect(result[0]).toBe('LnurlPay');
+            });
+
+            it('rejects a failed lookup with Tor disabled without a NIP-05 lookup', async () => {
+                settingsStore.enableTor = false;
+                mockTorHttpRequest.mockRejectedValue(new Error('tor failure'));
+
+                await expect(handleAnything(ONION_ADDRESS)).rejects.toThrow(
+                    'tor failure'
+                );
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                expect(nip05.queryProfile).not.toHaveBeenCalled();
+            });
+
+            it('looks up a clearnet address without Tor with Tor disabled', async () => {
+                settingsStore.enableTor = false;
+                mockBlobUtilFetch.mockResolvedValueOnce({
+                    info: () => ({ status: 200, headers: {} }),
+                    json: () => ({ callback: 'https://example.com/cb' })
+                });
+
+                await handleAnything('satoshi@example.com');
+
                 expect(mockBlobUtilFetch).toHaveBeenCalledWith(
                     'get',
-                    ONION_LNURLP
+                    'https://example.com/.well-known/lnurlp/satoshi'
                 );
-                expect(result[0]).toBe('LnurlPay');
+                expect(mockTorHttpRequest).not.toHaveBeenCalled();
             });
 
             it('still looks up a clearnet domain with an .onion label', async () => {
                 settingsStore.enableTor = true;
+                mockTorHttpRequest.mockResolvedValue(
+                    torJson({ callback: 'https://pay.onion.example.com/cb' })
+                );
 
                 const result = await handleAnything(
                     'satoshi@pay.onion.example.com'
                 );
 
                 expect(mockDnsFetch).toHaveBeenCalledTimes(1);
-                expect(mockDoTorRequest).not.toHaveBeenCalled();
-                expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-                    'get',
-                    'https://pay.onion.example.com/.well-known/lnurlp/satoshi'
-                );
+                expect(mockTorHttpRequest).toHaveBeenCalledWith({
+                    url: 'https://pay.onion.example.com/.well-known/lnurlp/satoshi',
+                    method: 'GET',
+                    followRedirects: false
+                });
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
                 expect(result[0]).toBe('ChoosePaymentMethod');
             });
         });
@@ -2182,6 +2288,34 @@ describe('handleAnything', () => {
                     isValid: true
                 }
             ]);
+        });
+
+        it('leaves lndhubUrl unset for an lndhub:// URL without a host', async () => {
+            const lndhubUrl = 'lndhub://admin:password';
+            mockProcessBIP21Uri.mockReturnValue({ value: lndhubUrl });
+            mockIsValidLNDHubAddress = true;
+            mockProcessLNDHubAddress.mockReturnValue({
+                username: 'admin',
+                password: 'password'
+            });
+
+            const result = await handleAnything(lndhubUrl);
+
+            expect(result).toEqual([
+                'WalletConfiguration',
+                {
+                    node: {
+                        implementation: 'lndhub',
+                        username: 'admin',
+                        password: 'password',
+                        certVerification: true,
+                        existingAccount: true
+                    },
+                    newEntry: true,
+                    isValid: true
+                }
+            ]);
+            expect(result[1].node).not.toHaveProperty('lndhubUrl');
         });
 
         it('should handle lndconnect URLs', async () => {

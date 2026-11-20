@@ -808,7 +808,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         text: localeString('views.Send.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -1847,10 +1847,10 @@ export default class Send extends React.Component<SendProps, SendState> {
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     secondaryText: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     content: {
         padding: 20,
@@ -1870,7 +1870,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     label: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         paddingTop: 5
     }
 });

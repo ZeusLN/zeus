@@ -52,7 +52,7 @@ export default class LdkWalletRecoverySettings extends React.Component<
                         ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -109,13 +109,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20
     },
     title: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 22,
         textAlign: 'center',
         marginBottom: 12
     },
     subtitle: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 16,
         textAlign: 'center',
         marginBottom: 40

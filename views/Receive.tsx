@@ -1307,7 +1307,7 @@ export default class Receive extends React.Component<
                             selectedIndex === 0
                                 ? themeColor('background')
                                 : themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }}
                 >
                     {localeString('general.unified')}
@@ -1329,7 +1329,7 @@ export default class Receive extends React.Component<
                             selectedIndex === 1
                                 ? themeColor('background')
                                 : themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }}
                 >
                     {localeString('general.lightning')}
@@ -1351,7 +1351,7 @@ export default class Receive extends React.Component<
                             selectedIndex === 2
                                 ? themeColor('background')
                                 : themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }}
                 >
                     {localeString('general.onchain')}
@@ -1371,7 +1371,7 @@ export default class Receive extends React.Component<
                             selectedIndex === 3
                                 ? themeColor('background')
                                 : themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }}
                 >
                     {localeString('general.lightningAddressCondensed')}
@@ -1433,7 +1433,7 @@ export default class Receive extends React.Component<
         const tenMButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 0
                             ? themeColor('background')
@@ -1446,7 +1446,7 @@ export default class Receive extends React.Component<
         const oneHButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 1
                             ? themeColor('background')
@@ -1459,7 +1459,7 @@ export default class Receive extends React.Component<
         const oneDButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 2
                             ? themeColor('background')
@@ -1472,7 +1472,7 @@ export default class Receive extends React.Component<
         const oneWButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 3
                             ? themeColor('background')
@@ -1495,7 +1495,7 @@ export default class Receive extends React.Component<
                 element: () => (
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             color:
                                 routeHintMode === RouteHintMode.Automatic
                                     ? themeColor('background')
@@ -1510,7 +1510,7 @@ export default class Receive extends React.Component<
                 element: () => (
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             color:
                                 routeHintMode === RouteHintMode.Custom
                                     ? themeColor('background')
@@ -1580,7 +1580,7 @@ export default class Receive extends React.Component<
                                 : localeString('views.Receive.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -1810,8 +1810,7 @@ export default class Receive extends React.Component<
                                         >
                                             <Text
                                                 style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Medium',
+                                                    fontFamily: 'Roboto-Medium',
                                                     color: themeColor('text'),
                                                     fontSize: 15
                                                 }}
@@ -1862,7 +1861,7 @@ export default class Receive extends React.Component<
                                                 <Text
                                                     style={{
                                                         fontFamily:
-                                                            'PPNeueMontreal-Medium',
+                                                            'Roboto-Medium',
                                                         color: themeColor(
                                                             requiresChannelSetup
                                                                 ? 'highlight'
@@ -1895,7 +1894,7 @@ export default class Receive extends React.Component<
                                                     <Text
                                                         style={{
                                                             fontFamily:
-                                                                'PPNeueMontreal-Medium',
+                                                                'Roboto-Medium',
                                                             color: themeColor(
                                                                 'text'
                                                             ),
@@ -1910,7 +1909,7 @@ export default class Receive extends React.Component<
                                                 <Text
                                                     style={{
                                                         fontFamily:
-                                                            'PPNeueMontreal-Medium',
+                                                            'Roboto-Medium',
                                                         color: themeColor(
                                                             'secondaryText'
                                                         ),
@@ -1951,7 +1950,7 @@ export default class Receive extends React.Component<
                                                 <Text
                                                     style={{
                                                         fontFamily:
-                                                            'PPNeueMontreal-Medium',
+                                                            'Roboto-Medium',
                                                         color: themeColor(
                                                             'text'
                                                         ),
@@ -1965,7 +1964,7 @@ export default class Receive extends React.Component<
                                                 <Text
                                                     style={{
                                                         fontFamily:
-                                                            'PPNeueMontreal-Medium',
+                                                            'Roboto-Medium',
                                                         color: themeColor(
                                                             'secondaryText'
                                                         ),
@@ -2175,7 +2174,7 @@ export default class Receive extends React.Component<
                                                                             'secondaryText'
                                                                         ),
                                                                         fontFamily:
-                                                                            'PPNeueMontreal-Book',
+                                                                            'Roboto-Regular',
                                                                         fontSize: 16
                                                                     }}
                                                                 >
@@ -2468,7 +2467,7 @@ export default class Receive extends React.Component<
                                                         <Text
                                                             style={{
                                                                 fontFamily:
-                                                                    'PPNeueMontreal-Medium',
+                                                                    'Roboto-Medium',
                                                                 color: themeColor(
                                                                     'text'
                                                                 ),
@@ -2489,7 +2488,7 @@ export default class Receive extends React.Component<
                                                         <Text
                                                             style={{
                                                                 fontFamily:
-                                                                    'PPNeueMontreal-Medium',
+                                                                    'Roboto-Medium',
                                                                 color: themeColor(
                                                                     'secondaryText'
                                                                 ),
@@ -3322,9 +3321,9 @@ const styles = StyleSheet.create({
         paddingBottom: 15
     },
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     secondaryText: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     }
 });

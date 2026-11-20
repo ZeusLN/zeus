@@ -39,7 +39,7 @@ function Sponsors(props: SponsorsProps) {
                     text: localeString('views.Sponsors.title'),
                     style: {
                         color: themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }
                 }}
                 navigation={navigation}
@@ -58,7 +58,7 @@ function Sponsors(props: SponsorsProps) {
                             <ListItem.Title
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {item.label}

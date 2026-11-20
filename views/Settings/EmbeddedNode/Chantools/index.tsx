@@ -27,7 +27,7 @@ export default class Chantools extends React.Component<ChantoolsProps, {}> {
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -46,7 +46,7 @@ export default class Chantools extends React.Component<ChantoolsProps, {}> {
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(

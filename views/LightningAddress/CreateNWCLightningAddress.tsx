@@ -275,7 +275,7 @@ export default class CreateNWCLightningAddress extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     wrapper: {
         margin: 10

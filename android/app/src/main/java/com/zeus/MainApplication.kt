@@ -35,6 +35,7 @@ class MainApplication : Application(), ReactApplication {
                     add(LdkNodePackage())
                     add(ZipUtilsPackage())
                     add(LockKdfPackage())
+                    add(TorWebSocketPackage())
                 },
         )
     }

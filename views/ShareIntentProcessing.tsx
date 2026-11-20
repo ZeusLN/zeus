@@ -221,7 +221,7 @@ class ShareIntentProcessing extends React.Component<
                             fontSize: 18,
                             textAlign: 'center',
                             marginTop: 20,
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {currentStep + '...'}
@@ -232,7 +232,7 @@ class ShareIntentProcessing extends React.Component<
                             fontSize: 14,
                             textAlign: 'center',
                             marginTop: 10,
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {localeString('utils.shareIntent.extractingQR')}

@@ -63,7 +63,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                     body = (
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 color: themeColor('text')
                             }}
                         >
@@ -81,7 +81,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                         >
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: color || themeColor('text')
                                 }}
                             >
@@ -89,7 +89,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                             </Text>
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: color || themeColor('text')
                                 }}
                             >
@@ -107,7 +107,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                     body = (
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 color: themeColor('text')
                             }}
                         >

@@ -372,7 +372,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                         text: localeString('views.Settings.Wallets.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     onBack={
@@ -499,7 +499,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                                   'text'
                                                               ),
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book'
+                                                            'Roboto-Regular'
                                                     }}
                                                 >
                                                     {NodeTitle(item)}
@@ -514,7 +514,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                                   'secondaryText'
                                                               ),
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book'
+                                                            'Roboto-Regular'
                                                     }}
                                                 >
                                                     {nodeSubtitle}

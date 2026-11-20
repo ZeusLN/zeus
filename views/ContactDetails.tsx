@@ -191,35 +191,6 @@ export default class ContactDetails extends React.Component<
         });
     };
 
-    saveUpdatedContact = async (updatedContact: Contact) => {
-        const { ContactStore } = this.props;
-        try {
-            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
-
-            if (contactsString) {
-                const existingContacts: Contact[] = JSON.parse(contactsString);
-
-                // Find the index of the contact with the same name
-                const contactIndex = existingContacts.findIndex(
-                    (contact) => contact.contactId === updatedContact.contactId
-                );
-
-                if (contactIndex !== -1) {
-                    // Update the contact in the array
-                    existingContacts[contactIndex] = updatedContact;
-
-                    // Save the updated contacts back to storage
-                    await Storage.setItem(CONTACTS_KEY, existingContacts);
-
-                    console.log('Contact updated successfully!');
-                    ContactStore?.loadContacts();
-                }
-            }
-        } catch (error) {
-            console.log('Error updating contact:', error);
-        }
-    };
-
     importToContacts = async () => {
         const { contact } = this.state;
 
@@ -254,7 +225,7 @@ export default class ContactDetails extends React.Component<
         };
 
         // Save the updated contact
-        this.saveUpdatedContact(updatedContact);
+        this.props.ContactStore.updateContact(updatedContact);
 
         // Update the state to reflect the changes
         this.setState({ contact: updatedContact });

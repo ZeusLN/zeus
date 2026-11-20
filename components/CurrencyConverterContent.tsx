@@ -789,6 +789,6 @@ const styles = StyleSheet.create({
     },
     currencyLabel: {
         fontSize: 20,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     }
 });

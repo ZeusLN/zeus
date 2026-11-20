@@ -73,7 +73,7 @@ export default class LdkRecoveryVssServer extends React.Component<
                         ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
         paddingTop: 20
     },
     subtitle: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 15,
         marginBottom: 24
     },

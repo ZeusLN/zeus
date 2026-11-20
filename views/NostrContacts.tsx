@@ -27,6 +27,7 @@ import { Row } from '../components/layout/Row';
 import AddressUtils from '../utils/AddressUtils';
 import ContactUtils from '../utils/ContactUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { isImageSourceAllowed } from '../utils/LnurlPayUtils';
 import NostrUtils from '../utils/NostrUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -131,14 +132,16 @@ const ContactItem = React.memo(
                     transform: [{ translateX: checkboxTranslateX }]
                 }}
             >
-                {item.picture && (
-                    <ContactAvatar
-                        name={item?.display_name || item?.name}
-                        contactId={`${item.npub}`}
-                        imageUrl={item.picture}
-                        style={{ marginRight: 10 }}
-                    />
-                )}
+                <ContactAvatar
+                    name={item?.display_name || item?.name}
+                    contactId={`${item.npub}`}
+                    imageUrl={
+                        isImageSourceAllowed(item.picture)
+                            ? item.picture
+                            : undefined
+                    }
+                    style={{ marginRight: 10 }}
+                />
                 <View style={{ flex: 1 }}>
                     <SharedText
                         tag={`contact-name-${item.npub}`}
@@ -318,8 +321,6 @@ export default class NostrContacts extends React.Component<
                 });
             })
             .then((profileEvents) => {
-                const newContactDataIndexByName: Record<string, NostrContact> =
-                    {};
                 const newContactDataIndexByPubkey: Record<
                     string,
                     { content: NostrContact; timestamp: number }
@@ -329,6 +330,15 @@ export default class NostrContacts extends React.Component<
                 profileEvents.forEach((item: any) => {
                     try {
                         const content = JSON.parse(item.content);
+                        // a kind 0 whose content is null, a string or an
+                        // array is not a profile
+                        if (
+                            !content ||
+                            typeof content !== 'object' ||
+                            Array.isArray(content)
+                        ) {
+                            return;
+                        }
                         if (
                             !newContactDataIndexByPubkey[item.pubkey] ||
                             item.created_at >
@@ -350,20 +360,17 @@ export default class NostrContacts extends React.Component<
                 });
                 Object.keys(newContactDataIndexByPubkey).forEach((pubkey) => {
                     const content = newContactDataIndexByPubkey[pubkey].content;
-                    if (!content?.npub) {
-                        content.npub = nip19.npubEncode(pubkey);
-                    }
-                    newContactDataIndexByName[
-                        content?.display_name?.toLowerCase() ||
-                            content?.name?.toLowerCase()
-                    ] = content;
+                    content.npub = nip19.npubEncode(pubkey);
+                    newContactsData.push(content);
                 });
 
-                Object.keys(newContactDataIndexByName)
-                    .sort()
-                    .forEach((name) => {
-                        newContactsData.push(newContactDataIndexByName[name]);
-                    });
+                const sortName = (contact: NostrContact) =>
+                    String(
+                        contact?.display_name || contact?.name || ''
+                    ).toLowerCase();
+                newContactsData.sort((a, b) =>
+                    sortName(a).localeCompare(sortName(b))
+                );
                 this.setState({
                     contactsData: newContactsData,
                     loading: false
@@ -371,6 +378,7 @@ export default class NostrContacts extends React.Component<
             })
             .catch((error) => {
                 console.error('Error fetching profiles events:', error);
+                this.setState({ loading: false });
             })
             .finally(() => {
                 pool.close(DEFAULT_NOSTR_RELAYS);
@@ -401,11 +409,16 @@ export default class NostrContacts extends React.Component<
             this.toggleContactSelection(item);
         } else {
             this.props.navigation.navigate('ContactDetails', {
-                nostrContact: await ContactUtils.transformContactData(item),
+                nostrContact: await ContactUtils.transformContactData(
+                    item,
+                    item.npub
+                ),
                 isNostrContact: true,
                 contactId: item.npub,
                 contactName: item.display_name || item.name,
-                contactPhoto: item.picture
+                contactPhoto: isImageSourceAllowed(item.picture)
+                    ? item.picture
+                    : undefined
             });
         }
     };
@@ -456,7 +469,8 @@ export default class NostrContacts extends React.Component<
 
             // Transform Nostr contacts data to match the format in AddContact
             const transformedContactsPromises = contactsToImport.map(
-                (contact) => ContactUtils.transformContactData(contact)
+                (contact) =>
+                    ContactUtils.transformContactData(contact, contact.npub)
             );
 
             const transformedContacts = await Promise.all(
@@ -552,7 +566,7 @@ export default class NostrContacts extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         rightComponent={

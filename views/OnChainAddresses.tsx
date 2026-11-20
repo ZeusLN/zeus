@@ -525,7 +525,7 @@ export default class OnChainAddresses extends React.Component<
                                 localeString('views.OnChainAddresses.title')),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -648,7 +648,7 @@ export default class OnChainAddresses extends React.Component<
                         }}
                         titleStyle={{
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     />
                 )}

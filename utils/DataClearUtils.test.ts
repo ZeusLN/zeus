@@ -12,6 +12,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     clear: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('react-native-encrypted-storage', () => ({
+    getItem: jest.fn().mockResolvedValue(null),
     removeItem: jest.fn().mockResolvedValue(undefined),
     clear: jest.fn().mockResolvedValue(undefined)
 }));
@@ -58,6 +59,9 @@ jest.mock('./LdkNodeUtils', () => ({
     deleteLdkNodeWallet: jest.fn().mockResolvedValue(undefined),
     getLdkNodeBaseDirectory: jest.fn().mockReturnValue('/docs/ldk-node'),
     stopLdkNode: jest.fn().mockResolvedValue(undefined)
+}));
+jest.mock('./ChannelMigrationUtils', () => ({
+    purgeChannelDbStagingFiles: jest.fn().mockResolvedValue(undefined)
 }));
 
 // Retry backoff - keep the suite from actually waiting on it
@@ -164,7 +168,7 @@ jest.mock('../utils/RatingUtils', () => ({
 
 import { createHash } from 'node:crypto';
 // @ts-ignore: Networking is exported at runtime but missing from the legacy typings
-import { BackHandler, Networking, Platform } from 'react-native';
+import { BackHandler, NativeModules, Networking, Platform } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Notifications } from 'react-native-notifications';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -176,9 +180,11 @@ import path from 'path';
 import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
+import { purgeChannelDbStagingFiles } from './ChannelMigrationUtils';
 import {
     blockNavigationDuringWipe,
     clearAllData,
+    clearNfcTagData,
     clearNodeKeychainData,
     clearCDKDatabase,
     clearCDKDatabaseForNode,
@@ -751,6 +757,11 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         mockedStorageGetItem.mockResolvedValue(null);
     });
 
+    afterEach(() => {
+        (EncryptedStorage.getItem as jest.Mock).mockResolvedValue(null);
+        (EncryptedStorage.removeItem as jest.Mock).mockResolvedValue(undefined);
+    });
+
     it('clears Cashu data for an embedded-lnd node dir', async () => {
         await clearNodeKeychainData({
             implementation: 'embedded-lnd',
@@ -898,6 +909,57 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
             mockedStorageRemoveItem.mockResolvedValue(true);
             rememberCredentials(pairingPhrase);
         }
+    });
+
+    it('removes the legacy EncryptedStorage copies of the LNC credentials', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
+        const legacy = new Map([
+            [baseKey, '{"pairingPhrase":"over hover clever trigger"}'],
+            [`${baseKey}:host`, 'mailbox.terminal.lightning.today:443']
+        ]);
+        (EncryptedStorage.getItem as jest.Mock).mockImplementation(
+            async (key: string) => legacy.get(key) ?? null
+        );
+
+        await clearNodeKeychainData({
+            implementation: 'lightning-node-connect',
+            pairingPhrase
+        });
+
+        expect(EncryptedStorage.removeItem).toHaveBeenCalledWith(baseKey);
+        expect(EncryptedStorage.removeItem).toHaveBeenCalledWith(
+            `${baseKey}:host`
+        );
+    });
+
+    it('does not call removeItem for LNC entries EncryptedStorage does not hold', async () => {
+        // iOS removeItem rejects for an absent item
+        await clearNodeKeychainData({
+            implementation: 'lightning-node-connect',
+            pairingPhrase: 'over hover clever trigger'
+        });
+
+        expect(EncryptedStorage.removeItem).not.toHaveBeenCalled();
+    });
+
+    it('still clears the keychain host entry when a legacy removal fails', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
+        (EncryptedStorage.getItem as jest.Mock).mockResolvedValue('x');
+        (EncryptedStorage.removeItem as jest.Mock).mockRejectedValueOnce(
+            new Error('remove failed')
+        );
+
+        await clearNodeKeychainData({
+            implementation: 'lightning-node-connect',
+            pairingPhrase
+        });
+
+        expect(removedKeys()).toContain(`${baseKey}:host`);
+        expect(EncryptedStorage.removeItem).toHaveBeenCalledWith(
+            `${baseKey}:host`
+        );
     });
 
     it('is a no-op for a null node', async () => {
@@ -1131,6 +1193,105 @@ describe('clearAllData keychain backing store deletion (Android)', () => {
     });
 });
 
+// The NFC button stores the shared invoice or address in react-native-hce's
+// shared_prefs file, which outlived the wipe.
+describe('clearAllData NFC tag data (Android)', () => {
+    const mockedLs = ReactNativeBlobUtil.fs.ls as jest.Mock;
+    const mockedUnlink = ReactNativeBlobUtil.fs.unlink as jest.Mock;
+    const prefsDir = '/docs/../shared_prefs';
+    let hce: Record<string, jest.Mock>;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedLs.mockImplementation(async (dir: string) =>
+            dir === prefsDir
+                ? ['RN_KEYCHAIN.xml', 'app.zeusln.zeus.HCE_DATA.xml']
+                : []
+        );
+        hce = {
+            getContent: jest.fn().mockResolvedValue({
+                type: 'text',
+                content: 'bc1qexampleaddress',
+                writable: false
+            }),
+            setEnabled: jest.fn().mockResolvedValue(false),
+            setContent: jest.fn().mockResolvedValue(null)
+        };
+        NativeModules.Hce = hce;
+    });
+
+    afterEach(() => {
+        delete NativeModules.Hce;
+        mockedLs.mockResolvedValue([]);
+    });
+
+    const unlinked = () => mockedUnlink.mock.calls.map((call) => call[0]);
+
+    it('switches the card service off, blanks the value and deletes the file', async () => {
+        setPlatformOS('android');
+
+        await clearAllData();
+
+        expect(hce.setEnabled).toHaveBeenCalledWith(false);
+        expect(hce.setContent).toHaveBeenCalledWith({
+            type: 'text',
+            content: '',
+            writable: false
+        });
+        expect(unlinked()).toContain(
+            `${prefsDir}/app.zeusln.zeus.HCE_DATA.xml`
+        );
+        // the blank value is set before the file is deleted
+        expect(hce.setContent.mock.invocationCallOrder[0]).toBeLessThan(
+            mockedUnlink.mock.invocationCallOrder[
+                unlinked().indexOf(`${prefsDir}/app.zeusln.zeus.HCE_DATA.xml`)
+            ]
+        );
+    });
+
+    it('does not write tag data when nothing was shared', async () => {
+        setPlatformOS('android');
+        hce.getContent.mockResolvedValue(null);
+
+        await clearNfcTagData();
+
+        expect(hce.setEnabled).not.toHaveBeenCalled();
+        expect(hce.setContent).not.toHaveBeenCalled();
+    });
+
+    it('deletes the file when the native module is missing', async () => {
+        setPlatformOS('android');
+        delete NativeModules.Hce;
+
+        await clearNfcTagData();
+
+        expect(unlinked()).toEqual([
+            `${prefsDir}/app.zeusln.zeus.HCE_DATA.xml`
+        ]);
+    });
+
+    it('finishes the wipe when the native module throws', async () => {
+        setPlatformOS('android');
+        hce.getContent.mockRejectedValue(new Error('no HCE'));
+
+        await clearAllData();
+
+        expect(unlinked()).toContain(
+            `${prefsDir}/app.zeusln.zeus.HCE_DATA.xml`
+        );
+        expect(removedKeys()).toContain('lnc-rn');
+    });
+
+    it('does nothing on iOS', async () => {
+        // Platform.OS is 'ios' by default under the react-native jest preset
+        await clearNfcTagData();
+
+        expect(hce.getContent).not.toHaveBeenCalled();
+        expect(mockedUnlink).not.toHaveBeenCalled();
+    });
+});
+
 describe('clearAllData write latch (settings resurrection regression)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -1237,6 +1398,34 @@ describe('clearAllData cookies and notifications', () => {
         await clearAllData();
 
         expect(removedKeys()).toContain('lnc-rn');
+    });
+});
+
+describe('clearAllData channel database staging files', () => {
+    const mockedPurgeChannelDbStagingFiles =
+        purgeChannelDbStagingFiles as jest.Mock;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+    });
+
+    it('deletes staged channel database copies for an embedded LND wallet', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'embedded-lnd', lndDir: 'lnd-abc' }
+            ]).getItem
+        );
+
+        await clearAllData();
+
+        expect(mockedPurgeChannelDbStagingFiles).toHaveBeenCalledTimes(1);
+    });
+
+    it('deletes staged channel database copies when no wallet is configured', async () => {
+        await clearAllData();
+
+        expect(mockedPurgeChannelDbStagingFiles).toHaveBeenCalledTimes(1);
     });
 });
 

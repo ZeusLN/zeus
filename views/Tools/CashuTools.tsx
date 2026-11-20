@@ -59,7 +59,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                             text: localeString('views.Tools.cashu'),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -82,8 +82,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                         <ListItem.Title
                                             style={{
                                                 color: themeColor('text'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
+                                                fontFamily: 'Roboto-Regular'
                                             }}
                                         >
                                             {localeString(
@@ -95,8 +94,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                                 color: themeColor(
                                                     'secondaryText'
                                                 ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
+                                                fontFamily: 'Roboto-Regular'
                                             }}
                                         >
                                             BIP-39
@@ -123,7 +121,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -133,7 +131,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -160,7 +158,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(
@@ -170,7 +168,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(

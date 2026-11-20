@@ -172,7 +172,7 @@ export default class CashuPayment extends React.Component<
                             : localeString('views.Cashu.CashuPayment.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -223,7 +223,7 @@ export default class CashuPayment extends React.Component<
                                             <Text
                                                 style={{
                                                     fontFamily:
-                                                        'PPNeueMontreal-Book',
+                                                        'Roboto-Regular',
                                                     color: themeColor('text')
                                                 }}
                                             >
@@ -340,7 +340,7 @@ export default class CashuPayment extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {enhancedPath.length > 1

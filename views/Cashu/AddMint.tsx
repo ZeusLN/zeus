@@ -552,7 +552,7 @@ export default class AddMint extends React.Component<
                         text: localeString('views.Cashu.AddMint.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -662,8 +662,7 @@ export default class AddMint extends React.Component<
                                         <Text
                                             style={{
                                                 color: themeColor('highlight'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
+                                                fontFamily: 'Roboto-Regular'
                                             }}
                                         >
                                             {localeString('general.change')}
@@ -818,7 +817,7 @@ export default class AddMint extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     content: {
         flex: 1,
@@ -838,7 +837,7 @@ const styles = StyleSheet.create({
         columnGap: 10
     },
     leftCell: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         flexGrow: 0,
         flexShrink: 1
     },
@@ -869,13 +868,13 @@ const styles = StyleSheet.create({
         maxWidth: 400
     },
     modalTitle: {
-        fontFamily: font('marlideBold'),
-        fontSize: 22,
+        fontFamily: font('headline'),
+        fontSize: 18.7,
         textAlign: 'center',
         marginBottom: 10
     },
     modalSubtitle: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14,
         textAlign: 'center',
         marginBottom: 20
@@ -909,12 +908,12 @@ const styles = StyleSheet.create({
         flex: 1
     },
     optionTitle: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         fontSize: 16,
         marginBottom: 4
     },
     optionDescription: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 13
     },
     npubInputContainer: {
@@ -922,12 +921,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15
     },
     npubLabel: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14,
         marginBottom: 8
     },
     npubError: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 12,
         marginTop: 5
     },

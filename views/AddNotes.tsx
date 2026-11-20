@@ -107,7 +107,7 @@ export default class AddNotes extends React.Component<
                                   ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 fontSize: 20
                             }
                         }}

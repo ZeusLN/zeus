@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
         paddingTop: 10,
         paddingHorizontal: 4,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     action: {
         flex: 1,

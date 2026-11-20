@@ -885,7 +885,7 @@ export default class DeveloperTools extends React.Component<
                         text: localeString('views.Tools.developerTools.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -1058,11 +1058,11 @@ const styles = StyleSheet.create({
     },
     commandText: {
         fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     subItemText: {
         fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         paddingTop: 8,
         paddingLeft: 32
     },
@@ -1081,7 +1081,7 @@ const styles = StyleSheet.create({
     },
     booleanParamLabel: {
         fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         flex: 1
     },
     textParamRow: {
@@ -1106,7 +1106,7 @@ const styles = StyleSheet.create({
     },
     responseTitle: {
         fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontWeight: 'bold',
         marginBottom: 8
     },

@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
     value: {
         marginBottom: 15,
         paddingHorizontal: 20,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     qrPadding: {
         alignItems: 'center',
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
         paddingVertical: 18
     },
     labelBottomText: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         fontSize: 20,
         textAlign: 'center'
     }

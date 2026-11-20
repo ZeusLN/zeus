@@ -136,7 +136,7 @@ export default class NWCConnectionActivityFilter extends React.Component<
                         text: localeString('views.ActivityFilter.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -161,7 +161,7 @@ export default class NWCConnectionActivityFilter extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {item.label}

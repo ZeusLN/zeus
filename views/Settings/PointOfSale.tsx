@@ -164,7 +164,7 @@ export default class PointOfSale extends React.Component<
                         text: localeString('general.pos'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}

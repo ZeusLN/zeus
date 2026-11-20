@@ -35,7 +35,7 @@ export default class DonateToZEUS extends React.Component<
                         text: localeString('views.PaymentRequest.donateToZEUS'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}

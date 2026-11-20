@@ -157,7 +157,7 @@ export default class ChannelView extends React.Component<
                         style={{
                             fontSize: 18,
                             color: themeColor('highlight'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {contact.name}
@@ -363,7 +363,7 @@ export default class ChannelView extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     ...styles.alias
                                 }}
                             >
@@ -381,7 +381,7 @@ export default class ChannelView extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('highlight'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             ...styles.pubkey
                                         }}
                                     >
@@ -1358,7 +1358,7 @@ export default class ChannelView extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     content: {
         marginLeft: 20,
@@ -1368,7 +1368,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     status: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         marginVertical: 18,
         flex: 1,
         flexDirection: 'row',

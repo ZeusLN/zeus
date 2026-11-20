@@ -1271,7 +1271,7 @@ export default class SwapDetails extends React.Component<
                         text: localeString('views.SwapDetails.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -1297,8 +1297,8 @@ export default class SwapDetails extends React.Component<
                         <Text
                             style={{
                                 textAlign: 'center',
-                                fontFamily: font('marlideBold'),
-                                fontSize: 28
+                                fontFamily: font('headline'),
+                                fontSize: 23.8
                             }}
                         >
                             {swapData.type}
@@ -1306,8 +1306,8 @@ export default class SwapDetails extends React.Component<
                         <Text
                             style={{
                                 textAlign: 'center',
-                                fontFamily: font('marlide'),
-                                fontSize: 22
+                                fontFamily: font('headline'),
+                                fontSize: 18.7
                             }}
                         >
                             {swapData.type === SwapType.Submarine
@@ -1330,7 +1330,7 @@ export default class SwapDetails extends React.Component<
                                 style={{
                                     textAlign: 'center',
                                     fontSize: 14,
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     marginTop: 10
                                 }}
                             >

@@ -209,8 +209,7 @@ export default class Activity extends React.PureComponent<
         const { loading, selectedPaymentForOrder, isCsvModalVisible } =
             this.state;
 
-        const { filteredActivity, getActivityAndFilter, filters } =
-            ActivityStore;
+        const { filteredActivity, getActivityAndFilter } = ActivityStore;
         const { recordPayment } = PosStore;
         const { settings } = SettingsStore;
         const { fiat } = settings;
@@ -288,6 +287,13 @@ export default class Activity extends React.PureComponent<
             />
         );
 
+        // Read here, not inside FilterButton: render() is what the observer
+        // tracks, so a change to the filters re-renders the icon
+        const filtersAreDefault = isEqual(
+            ActivityStore.getEffectiveFilters(),
+            DEFAULT_FILTERS
+        );
+
         const FilterButton = () => (
             <TouchableOpacity
                 onPress={() =>
@@ -299,7 +305,7 @@ export default class Activity extends React.PureComponent<
             >
                 <Filter
                     fill={
-                        isEqual(filters, DEFAULT_FILTERS)
+                        filtersAreDefault
                             ? themeColor('text')
                             : themeColor('highlight')
                     }
@@ -339,7 +345,7 @@ export default class Activity extends React.PureComponent<
                         text: localeString('general.activity'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -415,7 +421,7 @@ export default class Activity extends React.PureComponent<
                         }}
                         titleStyle={{
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     />
                 )}

@@ -104,7 +104,7 @@ Open problems where Zeus can advance the state of the art in self-custodial Ligh
 **Verified gaps in this repo (2026-07-06).**
 | Gap | Evidence | Verify |
 |---|---|---|
-| WebSocket streams bypass Tor entirely | `backends/LND.ts` constructs `new WebSocket(url, …)` directly in 4 places; only the REST path goes through `doTorRequest`. Open fixes: #4579 (remote LND WebSocket streams through the Tor SOCKS proxy) and #4522 (embedded LND node traffic through the in-app SOCKS proxy); neither merged as of 2026-10-24 | `grep -n "new WebSocket" backends/LND.ts`; `gh pr view 4579 -R ZeusLN/zeus --json state` |
+| WebSocket streams over Tor | Remote LND bypass closed by #4579: `backends/LND.ts createWebSocket` opens `utils/TorWebSocket.ts` when `enableTor`. Remaining: an onion node whose lnd certificate lacks the onion name fails the stream TLS check, and #4522 (embedded LND node traffic through the in-app SOCKS proxy) | `grep -n -A5 "createWebSocket = " backends/LND.ts`; `gh pr view 4522 -R ZeusLN/zeus --json state` |
 | .onion LNURL params unfetchable | 3 identical `// TODO handle fetching of params with internal Tor` sites | `grep -rn "internal Tor" utils/ components/` → `utils/handleAnything.ts`, `components/LayerBalances/LightningSwipeableRow.tsx`, `components/LayerBalances/EcashSwipeableRow.tsx` |
 | TLS verification OFF by default | `@observable certVerification: boolean = false` in `stores/SettingsStore.ts`; passed as `trusty: !certVerification` to react-native-blob-util | `grep -n "certVerification: boolean = " stores/SettingsStore.ts` |
 | CLINK refuses .onion relays | `ONION_NOT_SUPPORTED` error in `utils/ClinkUtils.ts` | `grep -n ONION_NOT_SUPPORTED utils/ClinkUtils.ts` |
@@ -113,7 +113,7 @@ Open problems where Zeus can advance the state of the art in self-custodial Ligh
 
 **First three concrete steps in this repo.**
 1. **Close the .onion LNURL gap:** implement Tor fetching of LNURL params at the 3 TODO sites using `utils/TorUtils.ts` (`doTorRequest`), respecting the .onion-HTTPS-only TLS rule.
-2. **Route or fence the WebSocket gap:** review or finish #4579 / #4522 first. The options are to proxy `backends/LND.ts` WS streams through the embedded Tor SOCKS layer, or make the UI state explicitly that streaming falls back to clearnet when Tor is enabled. Today it leaks silently.
+2. **Finish the WebSocket gap:** #4579 routes remote LND streams through the embedded Tor SOCKS layer. What remains is the TLS check on onion streams (lnd's default certificate does not name the onion) and #4522 for embedded LND.
 3. **`certVerification` default-flip campaign:** flipping the default to `true` for existing users is a settings-default change requiring a MOD_KEY migration and maintainer sign-off — scope the breakage first (self-signed home-node certs are the common case), design the migration + UX (pin-on-first-use?), and route through **zeus-storage-and-migrations** + **zeus-change-control**. Do not just flip the initializer.
 
 **You have a result when:** with Tor enabled, a full send+receive+stream session on a device under packet capture shows zero clearnet connections (WS included), and the LNURL flows work against a .onion service. Falsified by a single observed clearnet packet.
@@ -168,7 +168,7 @@ Re-verify volatile facts before relying on them:
 | Store test count (30) | `ls stores/*.test.ts \| wc -l` |
 | Largest stores | `wc -l stores/*.ts \| sort -rn \| head -6` |
 | `certVerification` default | `grep -n "certVerification: boolean = " stores/SettingsStore.ts` |
-| WS-bypasses-Tor | `grep -n "new WebSocket" backends/LND.ts` |
+| WS-over-Tor | `grep -n -A5 "createWebSocket = " backends/LND.ts` |
 | .onion LNURL TODO count (3) | `grep -rn "internal Tor" utils/ components/` |
 | ecash defaults (enableCashu false, sweep 10000) | `grep -n -A4 "ecash: {" stores/SettingsStore.ts` |
 | CLINK kind 21001 / onion unsupported | `grep -n "CLINK_KIND\|ONION_NOT_SUPPORTED" utils/ClinkUtils.ts` |

@@ -282,12 +282,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20
     },
     paragraph: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 15,
         marginBottom: 14
     },
     detailLine: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14,
         marginBottom: 4
     },

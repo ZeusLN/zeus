@@ -5,7 +5,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNFS from 'react-native-fs';
 import { Notifications } from 'react-native-notifications';
 // @ts-ignore: Networking is exported at runtime but missing from the legacy typings
-import { BackHandler, Networking, Platform } from 'react-native';
+import { BackHandler, NativeModules, Networking, Platform } from 'react-native';
 import CashuDevKit from '../cashu-cdk';
 import Storage, { getInternetPasswordServers, removeRawItem } from '../storage';
 
@@ -71,6 +71,7 @@ import {
 } from '../stores/NostrWalletConnectStore';
 import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
+import { purgeChannelDbStagingFiles } from './ChannelMigrationUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import {
     deleteLdkNodeWallet,
@@ -228,6 +229,34 @@ export function blockNavigationDuringWipe(navigation: any): () => void {
 }
 
 /**
+ * Collects the per-note keys from the current note index (NOTES_KEY in the
+ * keychain) and the legacy one (LEGACY_NOTES_KEY in EncryptedStorage, which
+ * storageMigrationV2 copied the notes from under the same key names). A
+ * failed or malformed read of one index does not drop the other.
+ */
+async function readNoteKeys(): Promise<string[]> {
+    const noteKeys = new Set<string>();
+    const indexes: Array<[string, () => Promise<string | false | null>]> = [
+        [NOTES_KEY, () => Storage.getItem(NOTES_KEY)],
+        [LEGACY_NOTES_KEY, () => EncryptedStorage.getItem(LEGACY_NOTES_KEY)]
+    ];
+    for (const [name, read] of indexes) {
+        try {
+            const json = await read();
+            const keys = json ? JSON.parse(json) : null;
+            if (Array.isArray(keys)) {
+                for (const key of keys) {
+                    if (typeof key === 'string' && key) noteKeys.add(key);
+                }
+            }
+        } catch (e) {
+            console.warn(`[ClearData] Error reading note index ${name}:`, e);
+        }
+    }
+    return [...noteKeys];
+}
+
+/**
  * Clears a key from all possible locations:
  * - New Storage namespace (zeus:key)
  * - Old keychain (key) - both local and cloud
@@ -321,6 +350,47 @@ async function clearKeychainBackingStore(): Promise<void> {
                 e
             );
         }
+    }
+}
+
+/**
+ * Removes the value last shared with the NFC button. react-native-hce keeps
+ * it in plaintext in shared_prefs/<package>.HCE_DATA.xml, and stopping the
+ * broadcast only switches the card service off. Android-only, like the
+ * library. The native module has no call that deletes the value, so switch
+ * the service off and overwrite the value in the module's in-memory prefs,
+ * then delete the file: the restart that follows a wipe kills the process
+ * and can drop a queued prefs write, and a write that does land after the
+ * delete only holds the blank value.
+ */
+export async function clearNfcTagData(): Promise<void> {
+    if (Platform.OS !== 'android') return;
+    const { Hce } = NativeModules;
+    if (Hce) {
+        try {
+            if (await Hce.getContent()) {
+                await Hce.setEnabled(false);
+                await Hce.setContent({
+                    type: 'text',
+                    content: '',
+                    writable: false
+                });
+            }
+        } catch (e) {
+            console.warn('[ClearData] Error clearing NFC tag content:', e);
+        }
+    }
+    try {
+        const prefsDir = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/../shared_prefs`;
+        const files: string[] = await ReactNativeBlobUtil.fs.ls(prefsDir);
+        for (const file of files) {
+            if (file.endsWith('.HCE_DATA.xml')) {
+                await ReactNativeBlobUtil.fs.unlink(`${prefsDir}/${file}`);
+                console.log('[ClearData] NFC tag data deleted:', file);
+            }
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error deleting NFC tag data:', e);
     }
 }
 
@@ -708,8 +778,23 @@ async function clearLncCredentials(pairingPhrase: string) {
     // not write the entries back once they are gone
     forgetCredentials(pairingPhrase);
     const baseKey = `${LNC_STORAGE_KEY}:${lncHash(pairingPhrase)}`;
-    await clearKey(baseKey);
-    await clearKey(`${baseKey}:host`);
+    for (const key of [baseKey, `${baseKey}:host`]) {
+        await clearKey(key);
+        // Builds up to v0.9.4 kept these in EncryptedStorage, and the
+        // storage migration copied them to the keychain without removing
+        // the originals. Read first: on iOS removeItem rejects when the
+        // item does not exist.
+        try {
+            if ((await EncryptedStorage.getItem(key)) !== null) {
+                await EncryptedStorage.removeItem(key);
+            }
+        } catch (e) {
+            console.warn(
+                `[ClearData] Error clearing legacy LNC entry ${key}:`,
+                e
+            );
+        }
+    }
 }
 
 /**
@@ -954,6 +1039,7 @@ export async function purgeChannelDbExports(): Promise<void> {
  * - Dynamic keys (notes, POS orders, Cashu, LNC)
  * - CDK SQLite database (Cashu wallet state)
  * - LND/LDK on-disk node data directories (channel + wallet state)
+ * - Channel database copies staged in app cache
  * - HTTP cookies
  * - Delivered system notifications
  *
@@ -985,6 +1071,10 @@ export async function clearAllData(): Promise<void> {
     } catch (e) {
         console.warn('[ClearData] Could not read settings:', e);
     }
+
+    // 1b. Read the per-note keys now: step 3 deletes both note indexes
+    // before step 4 clears the notes they list
+    const noteKeys = await readNoteKeys();
 
     // 2. Clear node-namespaced keychain material (Cashu keys for both LND and
     // LDK node dirs, plus LNC pairing credentials) for every known node.
@@ -1043,6 +1133,11 @@ export async function clearAllData(): Promise<void> {
     // them still exist (step 3 clears the lists)
     await clearPosOrderRecords();
 
+    // 2f. Delete channel database copies that the channel import, export and
+    // Olympus flows staged in app cache, outside the node directories
+    // deleted in 2c.
+    await purgeChannelDbStagingFiles();
+
     // 3. Clear all known storage keys. The legacy settings blob goes first:
     // getSettings() loads it whenever the keychain blob is missing, and it
     // can predate a PIN set up since the storage migration, so it must not
@@ -1060,14 +1155,8 @@ export async function clearAllData(): Promise<void> {
 
     // 4. Clear notes (dynamic keys)
     try {
-        const notesListJson = await Storage.getItem(NOTES_KEY);
-        if (notesListJson) {
-            const noteKeys = JSON.parse(notesListJson);
-            if (Array.isArray(noteKeys)) {
-                for (const noteKey of noteKeys) {
-                    await clearKey(noteKey);
-                }
-            }
+        for (const noteKey of noteKeys) {
+            await clearKey(noteKey);
         }
     } catch (e) {
         console.warn('[ClearData] Error clearing notes:', e);
@@ -1110,6 +1199,9 @@ export async function clearAllData(): Promise<void> {
     } catch (e) {
         console.warn('[ClearData] Error removing notifications:', e);
     }
+
+    // 6d. Remove the value last shared over NFC (Android)
+    await clearNfcTagData();
 
     // 7. Clear any remaining keychain items with common prefixes
     const additionalKeys = [

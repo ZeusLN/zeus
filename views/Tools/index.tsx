@@ -219,7 +219,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                         text: localeString('views.Tools.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -943,8 +943,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                                                 style={{
                                                     color: themeColor('text'),
                                                     fontSize: 14,
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
+                                                    fontFamily: 'Roboto-Regular'
                                                 }}
                                             >
                                                 {'</>'}
@@ -1032,7 +1031,7 @@ const styles = StyleSheet.create({
     columnText: {
         fontSize: 16,
         flex: 1,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     separationLine: {
         borderColor: '#A7A9AC',

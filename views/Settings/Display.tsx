@@ -112,7 +112,7 @@ export default class Display extends React.Component<
                         text: localeString('views.Settings.Display.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -159,7 +159,7 @@ export default class Display extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -186,7 +186,7 @@ export default class Display extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -213,7 +213,7 @@ export default class Display extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -242,7 +242,7 @@ export default class Display extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -271,7 +271,7 @@ export default class Display extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -300,7 +300,7 @@ export default class Display extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -348,7 +348,7 @@ export default class Display extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString('views.Settings.DateTime.title')}

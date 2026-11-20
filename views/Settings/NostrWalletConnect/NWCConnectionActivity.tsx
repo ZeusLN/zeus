@@ -495,7 +495,7 @@ export default class NWCConnectionActivity extends React.Component<
                                     styles.leftCellSecondary,
                                     {
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }
                                 ]}
                             >
@@ -506,7 +506,7 @@ export default class NWCConnectionActivity extends React.Component<
                                     styles.rightCellSecondary,
                                     {
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }
                                 ]}
                             >
@@ -664,7 +664,7 @@ export default class NWCConnectionActivity extends React.Component<
                         text: connectionName || '',
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -696,20 +696,20 @@ const styles = StyleSheet.create({
     },
     leftCell: {
         fontWeight: '600',
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         flexShrink: 1
     },
     rightCell: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'right',
         flexShrink: 0
     },
     leftCellSecondary: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         flexShrink: 1
     },
     rightCellSecondary: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'right'
     },
     noteLabel: {

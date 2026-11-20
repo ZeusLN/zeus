@@ -7,7 +7,8 @@ const mockFetch = jest.fn();
 jest.mock('react-native-blob-util', () => ({
     config: () => ({ fetch: (...args: any[]) => mockFetch(...args) })
 }));
-// clearnet lookups go through the redirect-checking fetch
+// every lookup goes through the redirect-checking fetch, which also sends
+// it over Tor when Use Tor is on (covered in LnurlFetchUtils.test.ts)
 const mockFetchLnurlUrl = jest.fn();
 // the lnurl resolve behind getLnurlParams
 const mockFetchLnurlParams = jest.fn();
@@ -15,11 +16,6 @@ jest.mock('../../utils/LnurlFetchUtils', () => ({
     ...jest.requireActual('../../utils/LnurlFetchUtils'),
     fetchLnurlUrl: (...args: any[]) => mockFetchLnurlUrl(...args),
     fetchLnurlParams: (...args: any[]) => mockFetchLnurlParams(...args)
-}));
-const mockDoTorRequest = jest.fn();
-jest.mock('../../utils/TorUtils', () => ({
-    doTorRequest: (...args: any[]) => mockDoTorRequest(...args),
-    RequestMethod: { GET: 'GET' }
 }));
 jest.mock('../../utils/BackendUtils', () => ({
     supportsCashuWallet: () => false
@@ -90,10 +86,6 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             info: () => ({ status: 200 }),
             json: () => ({ callback: 'https://example.com/callback' })
         });
-        mockDoTorRequest.mockReset();
-        mockDoTorRequest.mockResolvedValue({
-            callback: `http://${ONION}/callback`
-        });
         mockSettingsStore.enableTor = false;
         mockSettingsStore.settings = {};
     });
@@ -120,26 +112,23 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         );
     });
 
-    it('routes an uppercase .onion address through Tor', async () => {
+    it('looks up an uppercase .onion address through fetchLnurlUrl with Tor on', async () => {
         mockSettingsStore.enableTor = true;
 
         const navigation = await tapRow(`SATOSHI@${ONION.toUpperCase()}`);
 
-        expect(mockDoTorRequest).toHaveBeenCalledWith(
-            `http://${ONION}/.well-known/lnurlp/satoshi`,
-            'GET'
+        expect(mockFetchLnurlUrl).toHaveBeenCalledWith(
+            `http://${ONION}/.well-known/lnurlp/satoshi`
         );
-        expect(mockFetchLnurlUrl).not.toHaveBeenCalled();
         expect(navigation.navigate).toHaveBeenCalledWith(
             'LnurlPay',
             expect.anything()
         );
     });
 
-    it('does not use Tor for an .onion address while Tor is off', async () => {
+    it('looks up an .onion address through fetchLnurlUrl with Tor off', async () => {
         await tapRow(`satoshi@${ONION}`);
 
-        expect(mockDoTorRequest).not.toHaveBeenCalled();
         expect(mockFetchLnurlUrl).toHaveBeenCalledWith(
             `http://${ONION}/.well-known/lnurlp/satoshi`
         );
@@ -157,7 +146,6 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             expect.anything()
         );
         expect(mockFetchLnurlUrl).not.toHaveBeenCalled();
-        expect(mockDoTorRequest).not.toHaveBeenCalled();
         expect(navigation.navigate).not.toHaveBeenCalled();
         alertSpy.mockRestore();
     });
@@ -167,7 +155,6 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
 
         await tapRow('satoshi@pay.onion.example.com');
 
-        expect(mockDoTorRequest).not.toHaveBeenCalled();
         expect(mockFetchLnurlUrl).toHaveBeenCalledWith(
             'https://pay.onion.example.com/.well-known/lnurlp/satoshi'
         );
@@ -241,9 +228,12 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             expect(navigation.navigate).not.toHaveBeenCalled();
         });
 
-        it('alerts when a Tor response has no callback', async () => {
+        it('alerts when an .onion response has no callback with Tor on', async () => {
             mockSettingsStore.enableTor = true;
-            mockDoTorRequest.mockResolvedValue({});
+            mockFetchLnurlUrl.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({})
+            });
 
             const navigation = await tapRow(`satoshi@${ONION}`);
 
@@ -253,10 +243,10 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             expect(navigation.navigate).not.toHaveBeenCalled();
         });
 
-        // doTorRequest can reject with a non-Error value
-        it('falls back to the generic message for a Tor rejection without a message', async () => {
+        // the lookup can reject with a non-Error value
+        it('falls back to the generic message for a rejection without a message', async () => {
             mockSettingsStore.enableTor = true;
-            mockDoTorRequest.mockRejectedValue('socks failure');
+            mockFetchLnurlUrl.mockRejectedValue('socks failure');
 
             const navigation = await tapRow(`satoshi@${ONION}`);
 

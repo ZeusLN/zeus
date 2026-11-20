@@ -10,6 +10,10 @@
       "sha1": "133fb6cf26ea073b456fb557b94ce8c46143b117"
     },
     {
+      "path": "assets/fonts/Gloock-Regular.ttf",
+      "sha1": "bfe8c6468f95a2547cd208bb8d48bb281070327f"
+    },
+    {
       "path": "assets/fonts/Lato-Bold.ttf",
       "sha1": "d67fee08c79a82ce375ab9629ae5a903da8bb321"
     },
@@ -18,24 +22,16 @@
       "sha1": "e923c72eda5e50a87e18ff5c71e9ef4b3b6455a3"
     },
     {
-      "path": "assets/fonts/Marlide-Display-Bold.ttf",
-      "sha1": "ed2c5555ef073d63910fe6f686e98867e3cde63c"
+      "path": "assets/fonts/Roboto-Bold.ttf",
+      "sha1": "3e68c6b14826940778aa16fcac7af80974c3f257"
     },
     {
-      "path": "assets/fonts/Marlide-Display.ttf",
-      "sha1": "04a807b744dacda4766f2f09d222cb34b86d4f5b"
+      "path": "assets/fonts/Roboto-Medium.ttf",
+      "sha1": "fbac4821c9148de598b83e95d3b1ab5709d8c6f5"
     },
     {
-      "path": "assets/fonts/PPNeueMontreal-Bold.otf",
-      "sha1": "95820a6a2994c3ad6ea3525a8de722fa4fac2dde"
-    },
-    {
-      "path": "assets/fonts/PPNeueMontreal-Book.otf",
-      "sha1": "2d5d5ee383d716b326e88e2f5c1dc02cd8c431d7"
-    },
-    {
-      "path": "assets/fonts/PPNeueMontreal-Medium.otf",
-      "sha1": "1a7ebe1563254d0807a979056f7bf2bb872e93d2"
+      "path": "assets/fonts/Roboto-Regular.ttf",
+      "sha1": "b02eb5ea5ff3ea0e77a4a624e121fd30342b31b2"
     },
     {
       "path": "assets/images/affiliates/Mempool.svg",

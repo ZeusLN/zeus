@@ -117,7 +117,7 @@ export default class EcashSettings extends React.Component<
                         text: localeString('views.Settings.Ecash.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -335,7 +335,7 @@ export default class EcashSettings extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString('cashu.cashuMints')}

@@ -44,7 +44,7 @@ export default function StatusCard({
             >
                 <Text
                     style={{
-                        fontFamily: 'PPNeueMontreal-Medium',
+                        fontFamily: 'Roboto-Medium',
                         color: textColor
                     }}
                 >
@@ -53,7 +53,7 @@ export default function StatusCard({
                 {body && (
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             color: textColor,
                             marginTop: 20
                         }}
@@ -84,7 +84,7 @@ export default function StatusCard({
                         />
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Medium',
+                                fontFamily: 'Roboto-Medium',
                                 color: textColor,
                                 // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                 marginTop: -8,

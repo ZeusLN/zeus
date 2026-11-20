@@ -749,9 +749,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                     >
                         <Text
                             style={{
-                                fontFamily: font('marlideBold'),
+                                fontFamily: font('headline'),
                                 marginBottom: 12,
-                                fontSize: 32,
+                                fontSize: 27.2,
                                 textAlign: 'center'
                             }}
                         >
@@ -759,7 +759,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         </Text>
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 color: themeColor('text'),
                                 marginBottom: 12,
                                 fontSize: 18,
@@ -843,9 +843,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         <>
                             <Text
                                 style={{
-                                    fontFamily: font('marlideBold'),
+                                    fontFamily: font('headline'),
                                     marginBottom: 12,
-                                    fontSize: 32,
+                                    fontSize: 27.2,
                                     textAlign: 'center'
                                 }}
                             >
@@ -853,7 +853,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                             </Text>
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('text'),
                                     marginBottom: 12,
                                     fontSize: 18,
@@ -926,7 +926,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                             text: localeString('views.Swaps.title'),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -942,7 +942,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 fontSize: 16,
                                 textAlign: 'center'
                             }}
@@ -1081,7 +1081,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         text: localeString('views.Swaps.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -1133,8 +1133,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                     <View style={{ alignItems: 'center' }}>
                                         <Text
                                             style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
+                                                fontFamily: 'Roboto-Regular',
                                                 fontSize: 20
                                             }}
                                         >
@@ -1142,8 +1141,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                         </Text>
                                         <Text
                                             style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
+                                                fontFamily: 'Roboto-Regular',
                                                 color: themeColor(
                                                     'secondaryText'
                                                 ),
@@ -1801,7 +1799,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     <Text
                                                         style={{
                                                             fontFamily:
-                                                                'PPNeueMontreal-Book'
+                                                                'Roboto-Regular'
                                                         }}
                                                     >
                                                         {`${localeString(
@@ -1814,7 +1812,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     <Text
                                                         style={{
                                                             fontFamily:
-                                                                'PPNeueMontreal-Book'
+                                                                'Roboto-Regular'
                                                         }}
                                                     >
                                                         {`${localeString(
@@ -1827,7 +1825,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     <Text
                                                         style={{
                                                             fontFamily:
-                                                                'PPNeueMontreal-Book'
+                                                                'Roboto-Regular'
                                                         }}
                                                     >
                                                         {` (${serviceFeePct}%)`}
@@ -1969,7 +1967,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         <Text
                                                             style={{
                                                                 fontFamily:
-                                                                    'PPNeueMontreal-Book'
+                                                                    'Roboto-Regular'
                                                             }}
                                                         >
                                                             {`${localeString(
@@ -2113,7 +2111,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         <Text
                                                             style={{
                                                                 fontFamily:
-                                                                    'PPNeueMontreal-Book'
+                                                                    'Roboto-Regular'
                                                             }}
                                                         >
                                                             {`${localeString(
@@ -2156,7 +2154,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     <Text
                                                         style={{
                                                             fontFamily:
-                                                                'PPNeueMontreal-Book',
+                                                                'Roboto-Regular',
                                                             color: themeColor(
                                                                 'secondaryText'
                                                             ),
@@ -2238,7 +2236,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 <Text
                                                                     style={{
                                                                         fontFamily:
-                                                                            'PPNeueMontreal-Medium',
+                                                                            'Roboto-Medium',
                                                                         color: themeColor(
                                                                             'text'
                                                                         ),
@@ -2264,7 +2262,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 <Text
                                                                     style={{
                                                                         fontFamily:
-                                                                            'PPNeueMontreal-Medium',
+                                                                            'Roboto-Medium',
                                                                         color: themeColor(
                                                                             'secondaryText'
                                                                         ),

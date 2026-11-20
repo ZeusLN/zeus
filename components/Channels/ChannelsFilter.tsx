@@ -163,7 +163,7 @@ class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
                         value={search}
                         inputStyle={{
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                         placeholderTextColor={placeholderColor()}
                         containerStyle={{

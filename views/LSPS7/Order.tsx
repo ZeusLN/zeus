@@ -152,7 +152,7 @@ export default class LSPS7Order extends React.Component<
                         text: localeString('views.LSPS7.type'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={

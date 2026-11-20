@@ -43,7 +43,7 @@ function LSPServicesList(props: LSPServicesListProps) {
                     text: localeString('view.Settings.LSPServicesList.title'),
                     style: {
                         color: themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }
                 }}
                 navigation={navigation}
@@ -64,7 +64,7 @@ function LSPServicesList(props: LSPServicesListProps) {
                             <ListItem.Title
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {item.label}

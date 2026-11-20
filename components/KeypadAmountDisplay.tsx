@@ -147,7 +147,7 @@ export default class KeypadAmountDisplay extends React.Component<
         let digitIndex = 0;
         const textStyle = {
             fontSize,
-            fontFamily: 'PPNeueMontreal-Medium',
+            fontFamily: 'Roboto-Medium',
             lineHeight
         };
         return formattedNumber.split('').map((char) => {
@@ -311,7 +311,7 @@ export default class KeypadAmountDisplay extends React.Component<
                                     zIndex: 1,
                                     color: textColor,
                                     fontSize: scaledFontSize,
-                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    fontFamily: 'Roboto-Medium',
                                     lineHeight: scaledLineHeight
                                 }}
                             >
@@ -342,7 +342,7 @@ export default class KeypadAmountDisplay extends React.Component<
                                     color={textColor}
                                     style={{
                                         fontSize: scaledFontSize,
-                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        fontFamily: 'Roboto-Medium',
                                         lineHeight: scaledLineHeight
                                     }}
                                     lineHeight={scaledLineHeight}
@@ -360,7 +360,7 @@ export default class KeypadAmountDisplay extends React.Component<
                                         zIndex: 1,
                                         color: themeColor('secondaryText'),
                                         fontSize: scaledFontSize,
-                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        fontFamily: 'Roboto-Medium',
                                         lineHeight: scaledLineHeight
                                     }}
                                 >
@@ -377,7 +377,7 @@ export default class KeypadAmountDisplay extends React.Component<
                                         scaledFontSize * 0.2,
                                         12
                                     ),
-                                    fontFamily: 'PPNeueMontreal-Medium'
+                                    fontFamily: 'Roboto-Medium'
                                 }}
                             >
                                 {suffix}

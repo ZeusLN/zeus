@@ -114,8 +114,7 @@
 	</dict>
 	<key>UIAppFonts</key>
 	<array>
-		<string>Marlide-Display.ttf</string>
-		<string>Marlide-Display-Bold.ttf</string>
+		<string>Gloock-Regular.ttf</string>
 		<string>AntDesign.ttf</string>
 		<string>Entypo.ttf</string>
 		<string>EvilIcons.ttf</string>
@@ -132,9 +131,9 @@
 		<string>SimpleLineIcons.ttf</string>
 		<string>Zocial.ttf</string>
 		<string>Fontisto.ttf</string>
-		<string>PPNeueMontreal-Bold.otf</string>
-		<string>PPNeueMontreal-Book.otf</string>
-		<string>PPNeueMontreal-Medium.otf</string>
+		<string>Roboto-Bold.ttf</string>
+		<string>Roboto-Regular.ttf</string>
+		<string>Roboto-Medium.ttf</string>
 		<string>Lato-Bold.ttf</string>
 		<string>Lato-Regular.ttf</string>
 		<string>DroidSansMono.ttf</string>
