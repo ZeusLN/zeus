@@ -2125,7 +2125,9 @@ export default class SwapStore {
     /**
      * A rescue key without a key index counter was restored on this device
      * (new install, or deleted and restored), and the counter would start
-     * over at 0. Each reverse swap's preimage is derived from its index and
+     * over at 0. A key generated before generateRescueKey stored a counter,
+     * and not used for a swap since, has none either and is checked the
+     * same way. Each reverse swap's preimage is derived from its index and
      * handed to the host when the swap is claimed, so reusing an index
      * reuses a preimage the host already holds. Before the first new swap,
      * set the counter past every index used by the swaps this device has
