@@ -2321,7 +2321,7 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
             expect(connection.activity).toHaveLength(1);
             expect(connection.activity[0].status).toBe(status);
             expect(
-                new Date(connection.activity[0].createdAt).getTime()
+                new Date(connection.activity[0].createdAt!).getTime()
             ).toBeGreaterThanOrEqual(before);
         }
     );
