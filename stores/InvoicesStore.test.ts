@@ -2423,7 +2423,11 @@ describe('InvoicesStore.createInvoice route hints', () => {
     const newHintStore = () =>
         new InvoicesStore(
             { settings: {} } as any,
-            { resetFee: jest.fn(), flow_error: null } as any,
+            {
+                resetFee: jest.fn(),
+                clearFee: jest.fn(),
+                flow_error: null
+            } as any,
             { chanInfo: {} } as any,
             { nodeInfo: { nodeId: 'me' } } as any
         );
@@ -2493,5 +2497,18 @@ describe('InvoicesStore.createInvoice route hints', () => {
         expect(store.error_msg).toBe(
             'stores.InvoicesStore.routeHintsLimitExceeded'
         );
+    });
+    it('leaves the Receive screen alone when a silent call has an unavailable channel', async () => {
+        const store = newHintStore();
+        await store.createInvoice({
+            memo: '',
+            value: '1000',
+            routeHints: true,
+            routeHintChannels: [{ canBeRouteHint: false }],
+            silent: true
+        } as any);
+        expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+        expect(store.creatingInvoiceError).toBe(false);
+        expect(store.error_msg).toBeUndefined();
     });
 });
