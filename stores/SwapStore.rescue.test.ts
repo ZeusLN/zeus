@@ -823,6 +823,24 @@ describe('SwapStore key index after a rescue key restore', () => {
         expect(index).toBe(5);
     });
 
+    it('still derives a key when the host lists the last non-hardened index', async () => {
+        hostLists([
+            ...HOST_SWAPS,
+            {
+                id: 'last',
+                type: 'reverse',
+                claimDetails: { keyIndex: 2147483647 }
+            }
+        ]);
+        const store = newStore();
+
+        const { index, keys } = await store.generateNewKey();
+
+        expect(index).toBe(2);
+        expect(keys.publicKey).toBeDefined();
+        expect(storageBacking[SWAPS_LAST_USED_KEY]).toBe('3');
+    });
+
     it('starts at 0 when the key has no swaps', async () => {
         hostLists([]);
 

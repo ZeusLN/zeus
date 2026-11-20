@@ -1695,6 +1695,17 @@ describe('keyIndexAfter', () => {
         }
     );
 
+    it.each([[2147483647], ['2147483647'], [2147483648]])(
+        'ignores the index %p, whose successor cannot be derived',
+        (keyIndex) => {
+            expect(keyIndexAfter([{ keyIndex }, { keyIndex: 2 }])).toBe(3);
+        }
+    );
+
+    it('counts the last index that leaves one to derive', () => {
+        expect(keyIndexAfter([{ keyIndex: 2147483646 }])).toBe(2147483647);
+    });
+
     it('ignores an index past the safe integer range', () => {
         expect(
             keyIndexAfter([{ keyIndex: Number.MAX_VALUE }, { keyIndex: 2 }])

@@ -2,6 +2,7 @@ import BigNumber from 'bignumber.js';
 import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import { saveDocuments } from '@react-native-documents/picker';
+import { HARDENED_OFFSET } from '@scure/bip32';
 import { validateMnemonic } from '@scure/bip39';
 import ecc from '@bitcoinerlab/secp256k1';
 import {
@@ -726,6 +727,10 @@ export const isAlreadyBroadcastError = (message?: string): boolean =>
  * (keyIndex in claimDetails or refundDetails); an index sent as a string
  * of digits counts, as getRescuableSwaps accepts it, and entries without a
  * valid index are ignored. Returns 0 when none has one.
+ *
+ * Rescue keys are derived as non-hardened children, so the last index is
+ * HARDENED_OFFSET - 1. That index is ignored too: the one after it cannot
+ * be derived, and a counter set there would fail every new swap.
  */
 export const keyIndexAfter = (swaps: any[]): number => {
     let next = 0;
@@ -739,7 +744,12 @@ export const keyIndexAfter = (swaps: any[]): number => {
                 typeof raw === 'string' && /^\d+$/.test(raw)
                     ? Number(raw)
                     : raw;
-            if (Number.isSafeInteger(index) && index >= 0 && index >= next) {
+            if (
+                Number.isSafeInteger(index) &&
+                index >= 0 &&
+                index < HARDENED_OFFSET - 1 &&
+                index >= next
+            ) {
                 next = index + 1;
             }
         }
