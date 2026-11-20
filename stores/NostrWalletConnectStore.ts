@@ -4850,15 +4850,14 @@ export default class NostrWalletConnectStore {
         const isRetry =
             existing?.status === 'failed' &&
             !connection.isUnresolvedPayInvoiceActivity(existing);
+        const keptCreatedAt = isRetry ? undefined : existing?.createdAt;
 
         if (index !== -1) {
             connection.activity[index] = {
                 ...existing,
                 ...record,
                 // Keep original createdAt unless this is a brand-new attempt
-                createdAt: isRetry
-                    ? record.createdAt ?? new Date()
-                    : existing?.createdAt ?? record.createdAt ?? new Date(),
+                createdAt: keptCreatedAt ?? record.createdAt ?? new Date(),
                 // Don't clear isBudgetDebited if already true
                 isBudgetDebited:
                     existing?.isBudgetDebited || record.isBudgetDebited,

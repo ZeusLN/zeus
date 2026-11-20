@@ -2284,12 +2284,56 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
         expect(connection.activity[0].createdAt).toEqual(createdAt);
     });
 
+    // finalizePayment writes success with no createdAt: a retry that the
+    // node paid at once is dated to that write
     it.each([
-        ['pending', undefined],
-        ['failed', 'views.SendingLightning.paymentTimedOut']
+        ['success', undefined],
+        ['failed', 'error.failureReasonNoRoute']
+    ])(
+        'upsertPayInvoiceActivity dates a %s write with no createdAt over a failed invoice to the write',
+        (status, error) => {
+            const { store } = createStore();
+            const firstAttemptAt = new Date(Date.now() - 60 * 60 * 1000);
+            const connection = addConnection(store, {
+                activity: [
+                    {
+                        id: normalizedInvoice,
+                        type: 'pay_invoice',
+                        payment_source: 'lightning',
+                        status: 'failed',
+                        satAmount: 100,
+                        error: 'error.failureReasonNoRoute',
+                        createdAt: firstAttemptAt
+                    }
+                ]
+            });
+            const before = Date.now();
+
+            (store as any).upsertPayInvoiceActivity(connection, {
+                id: normalizedInvoice,
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                status,
+                satAmount: 100,
+                error
+            });
+
+            expect(connection.activity).toHaveLength(1);
+            expect(connection.activity[0].status).toBe(status);
+            expect(
+                new Date(connection.activity[0].createdAt).getTime()
+            ).toBeGreaterThanOrEqual(before);
+        }
+    );
+
+    it.each([
+        ['pending', 'pending', undefined, true],
+        ['timed-out', 'failed', 'views.SendingLightning.paymentTimedOut', true],
+        ['failed', 'failed', 'error.failureReasonNoRoute', false],
+        ['successful', 'success', undefined, false]
     ])(
         'upsertPayInvoiceActivity dates a %s retry of a failed invoice to the retry',
-        async (status, error) => {
+        async (_, status, error, held) => {
             const { store } = createStore({
                 paymentsStore: {
                     payments: [],
@@ -2335,11 +2379,12 @@ describe('NostrWalletConnectStore pay_invoice activity upsert', () => {
             );
 
             expect(connection.activity[0].status).toBe(status);
+            expect(connection.activity[0].createdAt).toEqual(retriedAt);
             expect(
                 connection.isUnresolvedPayInvoiceActivity(
                     connection.activity[0]
                 )
-            ).toBe(true);
+            ).toBe(held);
         }
     );
 
