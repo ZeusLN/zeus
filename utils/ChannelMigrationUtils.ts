@@ -75,6 +75,45 @@ export const unlockWalletFromMigration = async (
 
 const VALID_CHANNEL_DB_EXTENSIONS = ['.zip'];
 
+/**
+ * uploadChannelBackupToOlympus adds this file to the archive next to the
+ * graph directory's files, so it is inside the encrypted payload and the
+ * server cannot change it. It records when the backup was made:
+ * { "version": 1, "created_at": <ms since epoch> }. Older app versions
+ * that restore such a backup unzip it into the graph directory, where lnd
+ * ignores it.
+ */
+export const BACKUP_METADATA_FILE = 'zeus-backup-metadata.json';
+const BACKUP_METADATA_VERSION = 1;
+
+/**
+ * Reads the creation time the app sealed into an unpacked backup. Returns
+ * null for a backup without the file (made before it was added) or with
+ * one this version cannot read.
+ */
+const readSealedBackupDate = async (
+    unpackedDir: string
+): Promise<number | null> => {
+    const path = `${unpackedDir}/${BACKUP_METADATA_FILE}`;
+    try {
+        if (!(await RNFS.exists(path))) return null;
+        const metadata = JSON.parse(await RNFS.readFile(path, 'utf8'));
+        const createdAt = metadata?.created_at;
+        if (
+            metadata?.version !== BACKUP_METADATA_VERSION ||
+            typeof createdAt !== 'number' ||
+            !Number.isFinite(createdAt) ||
+            createdAt <= 0
+        ) {
+            return null;
+        }
+        return createdAt;
+    } catch (e) {
+        console.error('Failed to read the backup metadata:', e);
+        return null;
+    }
+};
+
 const getGraphDir = (lndDir: string, isTestnet: boolean): string => {
     const network = isTestnet ? 'testnet' : 'mainnet';
     const rootPath = Platform.select({
@@ -200,18 +239,31 @@ const resolveToLocalPath = async (uri: string): Promise<string> => {
  * lnd opens only the channel database of its configured backend
  * (channel.db for bolt, channel.sqlite for SQLite) and creates an empty
  * one when that file is missing. Check that the unzipped backup provided
- * it, so a backup of the other type, or one with no database, is reported
- * as an error instead of a restore with no channels.
+ * it with data in it, so a backup of the other type, one with no database,
+ * or an archive the unzip could not read is reported as an error instead
+ * of a restore with no channels. The files in the directory are removed
+ * before throwing: importChannelDb empties the graph directory before it
+ * unzips and restoreChannelBackupFromOlympus unzips to a new staging
+ * directory, so these are the files the unzip wrote.
  */
 const assertChannelDbRestored = async (
     graphDir: string,
     isSqlite: boolean
 ): Promise<void> => {
     const file = isSqlite ? 'channel.sqlite' : 'channel.db';
-    if (await RNFS.exists(`${graphDir}/${file}`)) return;
-
     const otherFile = isSqlite ? 'channel.db' : 'channel.sqlite';
-    if (await RNFS.exists(`${graphDir}/${otherFile}`)) {
+    const entries = await RNFS.readDir(graphDir);
+    const hasData = (name: string): boolean =>
+        entries.some(
+            (item) =>
+                item.isFile() && item.name === name && Number(item.size) > 0
+        );
+    if (hasData(file)) return;
+
+    for (const item of entries) {
+        if (item.isFile()) await RNFS.unlink(item.path).catch(() => {});
+    }
+    if (hasData(otherFile)) {
         throw new Error(
             localeString('views.Tools.migration.import.databaseMismatch', {
                 backupType: isSqlite ? 'Bolt' : 'SQLite',
@@ -403,10 +455,34 @@ export const uploadChannelBackupToOlympus = async (
                         )
                     );
                 const timestamp = Date.now();
-                const tempZipPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-backup-${timestamp}.zip`;
-                const tempEncPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-backup-${timestamp}.enc`;
-                stagingPaths.push(tempZipPath, tempEncPath);
-                await zipFolder(graphDir, tempZipPath);
+                const stagingDir = `${RNFS.CachesDirectoryPath}/zeus-olympus-backup-${timestamp}`;
+                const tempZipPath = `${stagingDir}.zip`;
+                const tempEncPath = `${stagingDir}.enc`;
+                stagingPaths.push(stagingDir, tempZipPath, tempEncPath);
+
+                // Zip a copy of the graph directory with the metadata file
+                // added, so nothing is written to lnd's directory
+                await RNFS.mkdir(stagingDir);
+                for (const item of await RNFS.readDir(graphDir)) {
+                    // An older app version that restored a backup with
+                    // metadata left the file here; the new one replaces it
+                    if (item.isFile() && item.name !== BACKUP_METADATA_FILE) {
+                        await RNFS.copyFile(
+                            item.path,
+                            `${stagingDir}/${item.name}`
+                        );
+                    }
+                }
+                await RNFS.writeFile(
+                    `${stagingDir}/${BACKUP_METADATA_FILE}`,
+                    JSON.stringify({
+                        version: BACKUP_METADATA_VERSION,
+                        created_at: Date.now()
+                    }),
+                    'utf8'
+                );
+                await zipFolder(stagingDir, tempZipPath);
+                await RNFS.unlink(stagingDir);
 
                 if (setStatus)
                     setStatus(
@@ -642,35 +718,6 @@ export const restoreChannelBackupFromOlympus = async (
             return false;
         }
 
-        const userConfirmed = await new Promise<boolean>((resolve) => {
-            const dateStr = new Date(last_backup_at).toLocaleString();
-            Alert.alert(
-                localeString('views.Tools.migration.export.backupFound'),
-                localeString(
-                    'views.Tools.migration.import.backupFoundMessage',
-                    { date: dateStr }
-                ),
-                [
-                    {
-                        text: localeString('general.cancel'),
-                        style: 'cancel',
-                        onPress: () => resolve(false)
-                    },
-                    {
-                        text: localeString(
-                            'views.Settings.EmbeddedNode.restoreChannelBackups.restore'
-                        ),
-                        onPress: () => resolve(true)
-                    }
-                ],
-                { cancelable: false }
-            );
-        });
-
-        if (!userConfirmed) {
-            return false;
-        }
-
         // 2. Authenticatication for restoring backup
         console.log('Authenticating for restore...');
         const restoreAuthResponse = await ReactNativeBlobUtil.fetch(
@@ -697,11 +744,14 @@ export const restoreChannelBackupFromOlympus = async (
         );
         const restoreSignature = restoreSignData.signature;
 
-        // 3. Download the encrypted backup
+        // 3. Download the encrypted backup. It is downloaded once and
+        // unpacked before the user is asked, so the date in the prompt is
+        // the one sealed in the backup that gets installed.
         console.log('Downloading encrypted backup...');
         const timestamp = Date.now();
-        const tempEncPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-restore-${timestamp}.enc`;
-        const tempZipPath = `${RNFS.CachesDirectoryPath}/zeus-olympus-restore-${timestamp}.zip`;
+        const stagingDir = `${RNFS.CachesDirectoryPath}/zeus-olympus-restore-${timestamp}`;
+        const tempEncPath = `${stagingDir}.enc`;
+        const tempZipPath = `${stagingDir}.zip`;
 
         const restoreResponse = await ReactNativeBlobUtil.fetch(
             'POST',
@@ -728,17 +778,61 @@ export const restoreChannelBackupFromOlympus = async (
         // (it was uploaded as base64 inside a JSON body). Decode it
         // back to raw binary before decrypting.
         const encryptedBase64Response = await restoreResponse.text();
-        stagingPaths.push(tempEncPath, tempZipPath);
+        stagingPaths.push(tempEncPath, tempZipPath, stagingDir);
         await ReactNativeBlobUtil.fs.writeFile(
             tempEncPath,
             encryptedBase64Response,
             'base64'
         );
 
-        // 4. Decrypt the payload
+        // 4. Decrypt the payload and unpack it to the staging directory
         console.log('Decrypting backup...');
         await decryptFile(tempEncPath, tempZipPath, seedArray);
         await RNFS.unlink(tempEncPath);
+
+        await RNFS.mkdir(stagingDir);
+        await unzipFile(tempZipPath, stagingDir);
+        // The finally block tries again if this fails
+        await removeStagingFiles([tempZipPath]);
+        await assertChannelDbRestored(stagingDir, isSqlite);
+
+        // Backups made before the metadata file was added have no sealed
+        // date, so the prompt shows the server's date and says so
+        const sealedDate = await readSealedBackupDate(stagingDir);
+        const userConfirmed = await new Promise<boolean>((resolve) => {
+            const message =
+                sealedDate !== null
+                    ? localeString(
+                          'views.Tools.migration.import.backupFoundMessage',
+                          { date: new Date(sealedDate).toLocaleString() }
+                      )
+                    : localeString(
+                          'views.Tools.migration.import.backupFoundMessageUnverified',
+                          { date: new Date(last_backup_at).toLocaleString() }
+                      );
+            Alert.alert(
+                localeString('views.Tools.migration.export.backupFound'),
+                message,
+                [
+                    {
+                        text: localeString('general.cancel'),
+                        style: 'cancel',
+                        onPress: () => resolve(false)
+                    },
+                    {
+                        text: localeString(
+                            'views.Settings.EmbeddedNode.restoreChannelBackups.restore'
+                        ),
+                        onPress: () => resolve(true)
+                    }
+                ],
+                { cancelable: false }
+            );
+        });
+
+        if (!userConfirmed) {
+            return false;
+        }
 
         const MAX_RECOVERY_WAIT_ATTEMPTS = 60;
         for (let attempt = 1; ; attempt++) {
@@ -774,16 +868,28 @@ export const restoreChannelBackupFromOlympus = async (
             await RNFS.mkdir(destFolder);
         }
 
-        // A file left behind here could pass assertChannelDbRestored in
-        // place of the backup's database, so a failed clear fails the restore
+        // A file left behind here could be read by lnd in place of the
+        // backup's database, so a failed clear fails the restore
         const existing = await RNFS.readDir(destFolder);
         for (const item of existing) {
             if (item.isFile()) await RNFS.unlink(item.path);
         }
 
-        await unzipFile(tempZipPath, destFolder);
-        await RNFS.unlink(tempZipPath);
-        await assertChannelDbRestored(destFolder, isSqlite);
+        // 5. Install the files unpacked above
+        const installed: string[] = [];
+        try {
+            for (const item of await RNFS.readDir(stagingDir)) {
+                if (!item.isFile() || item.name === BACKUP_METADATA_FILE)
+                    continue;
+                const destPath = `${destFolder}/${item.name}`;
+                await RNFS.moveFile(item.path, destPath);
+                installed.push(destPath);
+            }
+        } catch (e) {
+            // Do not leave part of the backup for lnd to open
+            await removeStagingFiles(installed);
+            throw e;
+        }
 
         return true;
     } catch (error: any) {
