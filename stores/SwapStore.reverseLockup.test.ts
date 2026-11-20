@@ -88,6 +88,7 @@ import Storage from '../storage';
 import Swap from '../models/Swap';
 import {
     REVERSE_SWAPS_KEY,
+    SWAPS_LAST_USED_KEY,
     SWAPS_RESCUE_KEY,
     buildReverseSwapLeaves,
     deriveReverseSwapOutputKey,
@@ -186,6 +187,8 @@ describe('SwapStore.createReverseSwap response verification', () => {
         reverseInfo: any = REVERSE_INFO
     ) => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        // a key generated on this device, whose first swap uses index 0
+        storageBacking[SWAPS_LAST_USED_KEY] = '0';
         const { outputScript: _outputScript, ...details } = VALID;
         fetchMock.mockResolvedValueOnce({
             data: JSON.stringify({
@@ -295,6 +298,7 @@ describe('SwapStore.createReverseSwap response verification', () => {
         'aborts before saving or paying when the response body is %j',
         async (body) => {
             storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+            storageBacking[SWAPS_LAST_USED_KEY] = '0';
             fetchMock.mockResolvedValueOnce({ data: JSON.stringify(body) });
             fetchMock.mockResolvedValue({
                 info: () => ({ status: 200 }),
@@ -336,6 +340,7 @@ describe('SwapStore.createReverseSwap claim fee', () => {
         onchainAmount = 99100
     ) => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        storageBacking[SWAPS_LAST_USED_KEY] = '0';
         const { outputScript: _outputScript, ...details } = VALID;
         fetchMock.mockResolvedValueOnce({
             data: JSON.stringify({
@@ -1447,6 +1452,7 @@ describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
         feesResponse?: { status: number; json: any };
     } = {}) => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        storageBacking[SWAPS_LAST_USED_KEY] = '0';
         const { outputScript: _outputScript, ...details } = VALID;
         const data = JSON.stringify({
             id: 'reverse-swap',
