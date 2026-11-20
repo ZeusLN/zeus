@@ -9684,7 +9684,17 @@ describe('NostrWalletConnectStore scheduled save', () => {
         ).mockImplementation(() => undefined);
     });
 
-    it('stores a debit while requests keep arriving less than 500 ms apart', async () => {
+    it('writes a scheduled change 1 s after it was made', async () => {
+        const { store } = await buildStore();
+        debit(store, 10_000);
+
+        await jest.advanceTimersByTimeAsync(999);
+        expect(storedConnection().totalSpendSats).toBe(0);
+        await jest.advanceTimersByTimeAsync(1);
+        expect(storedConnection().totalSpendSats).toBe(10_000);
+    });
+
+    it('stores a debit while requests keep arriving less than 1 s apart', async () => {
         const { store } = await buildStore();
         debit(store, 10_000);
 
@@ -9822,7 +9832,7 @@ describe('NostrWalletConnectStore scheduled save', () => {
             debit(store, 10_000);
             nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
 
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
 
             expect(storedSpend()).toEqual([
                 ['conn-1', 10_000],
@@ -9875,7 +9885,7 @@ describe('NostrWalletConnectStore scheduled save', () => {
             await failLoad(store);
             (store as any).scheduleSave();
 
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
 
             expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
         });
@@ -9927,7 +9937,7 @@ describe('NostrWalletConnectStore scheduled save', () => {
             await finalize(store);
             expect(storedConnection().totalSpendSats).toBe(0);
 
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
             expect(storedConnection().totalSpendSats).toBe(10_000);
         });
 
@@ -9943,7 +9953,7 @@ describe('NostrWalletConnectStore scheduled save', () => {
             });
             expect(storedConnection().activity).toEqual([]);
 
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
             expect(storedConnection().activity[0].status).toBe('pending');
         });
 
@@ -9963,10 +9973,10 @@ describe('NostrWalletConnectStore scheduled save', () => {
             failWrites(NWC_CONNECTIONS_KEY, { once: true });
             debit(store, 10_000);
 
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
             expect(storedConnection().totalSpendSats).toBe(0);
 
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
             expect(storedConnection().totalSpendSats).toBe(10_000);
         });
 
@@ -9974,12 +9984,12 @@ describe('NostrWalletConnectStore scheduled save', () => {
             const { store } = await buildStore();
             failWrites(NWC_CONNECTIONS_KEY);
             debit(store, 1_000);
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
             debit(store, 2_000);
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
 
             writeFailures.delete(NWC_CONNECTIONS_KEY);
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
 
             expect(storedConnection().totalSpendSats).toBe(3_000);
         });
@@ -10003,7 +10013,7 @@ describe('NostrWalletConnectStore scheduled save', () => {
 
             await store.reset(true);
             nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
             await store.loadConnections();
 
             expect(store.connections.map((c) => c.id)).toEqual(['conn-b']);
@@ -10024,7 +10034,7 @@ describe('NostrWalletConnectStore scheduled save', () => {
             nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
             write.fail(new Error('storage write failed'));
             await paying;
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
 
             expect(storedSpend()).toEqual([
                 ['conn-1', 10_000],
@@ -10037,13 +10047,13 @@ describe('NostrWalletConnectStore scheduled save', () => {
             storeSecondWalletConnection();
             const write = holdNextWrite(NWC_CONNECTIONS_KEY);
             debit(store, 10_000);
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
             await write.entered;
 
             await settle(store.reset(true));
             nodeInfoStore.nodeInfo = { nodeId: 'node-b' };
             write.fail(new Error('storage write failed'));
-            await jest.advanceTimersByTimeAsync(500);
+            await jest.advanceTimersByTimeAsync(1000);
 
             expect(storedSpend()).toEqual([
                 ['conn-1', 10_000],
