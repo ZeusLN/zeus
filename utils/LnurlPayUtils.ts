@@ -248,6 +248,14 @@ const isPrivateOrReservedHost = (hostnameRaw: string): boolean => {
 };
 
 /**
+ * The authority (userinfo, host and port) of a URL as written, before any
+ * parser has interpreted it. Both url.parse and OkHttp accept any run of '/'
+ * and '\' after the scheme.
+ */
+const rawAuthority = (target: string): string | undefined =>
+    /^[a-z][a-z0-9+.-]*:[/\\]*([^/?#\\]*)/i.exec(target.trim())?.[1];
+
+/**
  * Reject a service-supplied LNURL callback that the wallet must not fetch:
  *  - cleartext http to a non-onion host (leaks the amount/comment and lets a
  *    network attacker substitute the invoice), and
@@ -286,12 +294,8 @@ export const isLnurlCallbackAllowed = (callback: string): LnurlCheckResult => {
 
     // url.parse ends the host at '%', but OkHttp percent-decodes it before
     // dialing, so `https://192.168.%31.1/` is classified as `192.168.` and
-    // reaches 192.168.1.1. A real host never contains '%'. Both parsers
-    // accept any run of '/' and '\' after the scheme.
-    const authority = /^[a-z][a-z0-9+.-]*:[/\\]*([^/?#\\]*)/i.exec(
-        callback.trim()
-    )?.[1];
-    if (authority?.includes('%')) {
+    // reaches 192.168.1.1. A real host never contains '%'.
+    if (rawAuthority(callback)?.includes('%')) {
         return { ok: false, reason: 'percent-encoded host' };
     }
 
@@ -416,6 +420,11 @@ export const verifyLnurlAuthCallback = (
     return { ok: true };
 };
 
+// url.parse keeps a trailing root dot ("x.onion."), which still resolves
+// to the same host, so strip it before matching the onion suffix.
+const isOnionHostname = (hostname?: string | null): boolean =>
+    (hostname || '').toLowerCase().replace(/\.+$/, '').endsWith('.onion');
+
 /**
  * The same policy, applied to the LNURL endpoint itself before it is fetched.
  *
@@ -449,3 +458,67 @@ export const isLnurlEndpointAllowed = (lnurl: string): LnurlCheckResult => {
 export const isLightningAddressEndpointAllowed = (
     wellKnownUrl: string
 ): LnurlCheckResult => isLnurlCallbackAllowed(wellKnownUrl);
+
+/**
+ * Policy for an image URL named by a third party (a Nostr profile picture or
+ * banner, a mint icon) that the wallet loads without asking: the callback
+ * policy above, plus no .onion hosts, since neither RNFS nor the platform
+ * image loader goes through Tor, and no backslashes, since native URL parsers
+ * and url.parse disagree on which side of a "\@" the host is.
+ */
+export const isRemoteImageAllowed = (imageUrl: string): LnurlCheckResult => {
+    if (typeof imageUrl === 'string' && imageUrl.includes('\\')) {
+        return { ok: false, reason: 'image URL contains a backslash' };
+    }
+
+    const allowed = isLnurlCallbackAllowed(imageUrl);
+    if (!allowed.ok) return allowed;
+
+    if (isOnionHostname(url.parse(imageUrl).hostname)) {
+        return { ok: false, reason: 'image URL targets an onion host' };
+    }
+
+    return { ok: true };
+};
+
+/**
+ * Whether an <Image> may load a third-party image source. Inline data:image
+ * URIs make no request. An image served from the same origin as
+ * trustedOrigin (e.g. a mint's icon on the mint itself) is allowed, unless
+ * that origin is an onion host.
+ */
+export const isImageSourceAllowed = (
+    imageUrl?: string | null,
+    trustedOrigin?: string | null
+): imageUrl is string => {
+    if (typeof imageUrl !== 'string' || imageUrl.length === 0) return false;
+    if (/^data:image\//i.test(imageUrl)) return true;
+    if (isRemoteImageAllowed(imageUrl).ok) return true;
+    if (typeof trustedOrigin !== 'string' || imageUrl.includes('\\')) {
+        return false;
+    }
+
+    let image: url.UrlWithStringQuery;
+    let trusted: url.UrlWithStringQuery;
+    try {
+        image = url.parse(imageUrl);
+        trusted = url.parse(trustedOrigin);
+    } catch {
+        // e.g. "URI malformed" from a bad percent escape in the userinfo
+        return false;
+    }
+    const host = (image.host || '').toLowerCase();
+    // url.parse ends the host at '%', ';', '|' and other characters and moves
+    // the rest into the path, so `http://mint.example%2eevil.com/` parses as
+    // host mint.example while OkHttp dials mint.example.evil.com. Compare
+    // only when the parsed host is the whole authority as written.
+    return (
+        !!host &&
+        (rawAuthority(imageUrl) || '').toLowerCase() === host &&
+        !image.auth &&
+        !isOnionHostname(image.hostname) &&
+        (image.protocol === 'https:' || image.protocol === 'http:') &&
+        image.protocol === trusted.protocol &&
+        host === (trusted.host || '').toLowerCase()
+    );
+};
