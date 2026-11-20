@@ -434,7 +434,7 @@ const sendAndAwaitResponse = (opts: {
                                 log('event rejected (plaintext not JSON):', e);
                                 return;
                             }
-                            log('response accepted', parsed);
+                            log('response accepted');
                             resolved = true;
                             clearTimeout(timeout);
                             cleanup();

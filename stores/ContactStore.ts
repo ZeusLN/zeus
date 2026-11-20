@@ -67,7 +67,7 @@ export default class ContactStore {
                 // Save the updated contacts to encrypted storage
                 await Storage.setItem(CONTACTS_KEY, updatedContacts);
 
-                console.log('Contact updated successfully!', updatedContacts);
+                console.log('Contact updated successfully!');
 
                 this.loadContacts();
                 navigation.popTo('Contacts');

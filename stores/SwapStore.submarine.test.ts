@@ -245,6 +245,24 @@ describe('SwapStore.createSubmarineSwap response verification', () => {
         ]);
     });
 
+    it('does not log the provider response', async () => {
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        try {
+            const { stored } = await create();
+
+            // the swap was saved, so the path past the response ran
+            expect(stored).toHaveLength(1);
+            expect(logSpy).toHaveBeenCalledWith(
+                'Creating submarine swap using rescue key...'
+            );
+            expect(JSON.stringify(logSpy.mock.calls)).not.toContain(
+                VALID.address
+            );
+        } finally {
+            logSpy.mockRestore();
+        }
+    });
+
     it('stores and opens only the submarine swap fields of the response', async () => {
         const { store, navigation, stored } = await create(EXTRA_MEMBERS);
 
