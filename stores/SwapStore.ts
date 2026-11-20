@@ -189,6 +189,12 @@ const invoiceAmountSats = (invoice?: string): number | undefined => {
 // RNBlobUtil's native default (60s) only measures inactivity.
 const SWAP_STATUS_TIMEOUT_MS = 10000;
 
+// A refund this wallet broadcast: updateSwapOnRefund stores it with its
+// txid. The host is not told about it, so a status it sends later (such as
+// swap.expired) must not replace it and offer the refund again.
+const isRefundedByWallet = (swap: any) =>
+    swap?.status === SwapState.TransactionRefunded && !!swap?.txid;
+
 /**
  * Keeps one stored entry per swap ID. Running the rescue again used to
  * append a second copy of a reverse swap already re-filed under
@@ -1627,7 +1633,11 @@ export default class SwapStore {
                         ? JSON.parse(latestReverseSwaps)
                         : [])
                 ].map((swap: any) => {
-                    if (swap?.id && statuses.has(swap.id)) {
+                    if (
+                        swap?.id &&
+                        statuses.has(swap.id) &&
+                        !isRefundedByWallet(swap)
+                    ) {
                         return { ...swap, status: statuses.get(swap.id) };
                     }
                     // stored before only strings were accepted as a status
@@ -1685,12 +1695,17 @@ export default class SwapStore {
         if (typeof status !== 'string') return;
         try {
             const key = isSubmarineSwap ? SWAPS_KEY : REVERSE_SWAPS_KEY;
+            let keptRefund = false;
             await this.withSwapStorage(async () => {
                 const storedSwaps = await Storage.getItem(key);
                 const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+                keptRefund = swaps.some(
+                    (swap: any) =>
+                        swap.id === swapId && isRefundedByWallet(swap)
+                );
 
                 const updatedSwaps = swaps.map((swap: any) =>
-                    swap.id === swapId
+                    swap.id === swapId && !isRefundedByWallet(swap)
                         ? {
                               ...swap,
                               status,
@@ -1705,10 +1720,11 @@ export default class SwapStore {
 
                 await Storage.setItem(key, JSON.stringify(updatedSwaps));
             });
+            const kind = isSubmarineSwap ? `swap` : `reverse swap`;
             console.log(
-                `Updated ${
-                    isSubmarineSwap ? `swap` : `reverse swap`
-                } status for swap ID ${swapId} to "${status}"`
+                keptRefund
+                    ? `Kept the recorded refund of ${kind} ID ${swapId}, ignored status "${status}"`
+                    : `Updated ${kind} status for swap ID ${swapId} to "${status}"`
             );
         } catch (error) {
             console.error('Error updating swap status in storage:', error);
