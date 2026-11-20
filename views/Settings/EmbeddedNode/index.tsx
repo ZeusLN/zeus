@@ -64,7 +64,7 @@ export default class EmbeddedNode extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -84,7 +84,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -111,7 +111,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -140,7 +140,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -169,7 +169,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -198,7 +198,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -208,7 +208,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -241,7 +241,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -251,7 +251,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {expressGraphSync
@@ -278,7 +278,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -308,7 +308,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -335,7 +335,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -366,7 +366,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString('general.advanced')}
@@ -391,7 +391,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -418,7 +418,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -497,7 +497,7 @@ export default class EmbeddedNode extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(

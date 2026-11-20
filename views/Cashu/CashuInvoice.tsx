@@ -173,7 +173,7 @@ export default class CashuInvoiceView extends React.Component<
                         text: localeString('views.Cashu.CashuInvoice.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={

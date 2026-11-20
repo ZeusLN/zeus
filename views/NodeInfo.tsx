@@ -240,7 +240,7 @@ export default class NodeInfo extends React.Component<
         const buttonElement = (title: string, index: number) => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         selectedIndex === index
                             ? themeColor('background')
@@ -272,7 +272,7 @@ export default class NodeInfo extends React.Component<
                                   text: localeString('views.NodeInfo.title'),
                                   style: {
                                       color: themeColor('text'),
-                                      fontFamily: 'PPNeueMontreal-Book'
+                                      fontFamily: 'Roboto-Regular'
                                   }
                               }
                     }

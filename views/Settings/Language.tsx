@@ -80,7 +80,7 @@ export default class Language extends React.Component<
                             )} (${locales?.length || 0})`,
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}

@@ -361,7 +361,7 @@ export default class KeypadPane extends React.PureComponent<
                             >
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        fontFamily: 'Roboto-Medium',
                                         color: themeColor('text'),
                                         fontSize: 15
                                     }}
@@ -377,7 +377,7 @@ export default class KeypadPane extends React.PureComponent<
                                 </Text>
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        fontFamily: 'Roboto-Medium',
                                         color: themeColor('secondaryText'),
                                         fontSize: 15,
                                         top: 5,
@@ -640,7 +640,7 @@ export default class KeypadPane extends React.PureComponent<
                     <View>
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 color: themeColor('text'),
                                 fontSize: 16,
                                 paddingTop: 24,
@@ -745,7 +745,7 @@ const styles = StyleSheet.create({
         marginBottom: 24
     },
     sendOptionLabel: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 22
     }
 });

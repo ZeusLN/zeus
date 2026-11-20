@@ -75,7 +75,7 @@ export default class PathfindingScorer extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -85,7 +85,7 @@ export default class PathfindingScorer extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     marginBottom: 10
                                 }}
                             >
@@ -98,7 +98,7 @@ export default class PathfindingScorer extends React.Component<
                         <Text
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         >
                             {localeString(
@@ -122,7 +122,7 @@ export default class PathfindingScorer extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('error'),
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 12,
                                     marginTop: 4
                                 }}

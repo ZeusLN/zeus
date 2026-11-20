@@ -87,7 +87,7 @@ const QRFormatSelector: React.FC<QRFormatSelectorProps> = ({
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     }
 });
 

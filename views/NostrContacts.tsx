@@ -552,7 +552,7 @@ export default class NostrContacts extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         rightComponent={

@@ -34,7 +34,7 @@ function TotalRow({
             <Text
                 style={{
                     color: themeColor('text'),
-                    fontFamily: 'PPNeueMontreal-Book'
+                    fontFamily: 'Roboto-Regular'
                 }}
             >
                 {amount}

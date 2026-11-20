@@ -791,7 +791,7 @@ export default class SignVerifyMessage extends React.Component<
                         text: localeString('views.Settings.SignMessage.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -1099,7 +1099,7 @@ const styles = StyleSheet.create({
         padding: 20
     },
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     form: {
         paddingTop: 5
@@ -1110,7 +1110,7 @@ const styles = StyleSheet.create({
         borderRadius: 6,
         padding: 10,
         minHeight: 100,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     button: {
         paddingTop: 20,

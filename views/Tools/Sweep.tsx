@@ -131,7 +131,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                         text: localeString('views.Sweep.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -171,7 +171,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                             <>
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         color: themeColor('secondaryText')
                                     }}
                                 >
@@ -190,7 +190,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                             <>
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         color: themeColor('secondaryText')
                                     }}
                                 >
@@ -253,10 +253,10 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     secondaryText: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     content: {
         padding: 20
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     label: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         paddingTop: 5
     }
 });

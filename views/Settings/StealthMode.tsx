@@ -262,7 +262,7 @@ export default class StealthMode extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -301,7 +301,7 @@ export default class StealthMode extends React.Component<
                         text: localeString('views.Settings.StealthMode.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -322,7 +322,7 @@ export default class StealthMode extends React.Component<
                                 style={{
                                     color: themeColor('text'),
                                     fontSize: 16,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -347,7 +347,7 @@ export default class StealthMode extends React.Component<
                             style={{
                                 color: themeColor('text'),
                                 fontSize: 18,
-                                fontFamily: 'PPNeueMontreal-Medium',
+                                fontFamily: 'Roboto-Medium',
                                 marginBottom: 5
                             }}
                         >
@@ -359,7 +359,7 @@ export default class StealthMode extends React.Component<
                             style={{
                                 color: themeColor('secondaryText'),
                                 fontSize: 14,
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 marginBottom: 15
                             }}
                         >
@@ -394,7 +394,7 @@ export default class StealthMode extends React.Component<
                                         style={{
                                             color: themeColor('text'),
                                             fontSize: 12,
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             marginTop: 8,
                                             textAlign: 'center'
                                         }}
@@ -417,7 +417,7 @@ export default class StealthMode extends React.Component<
                             style={{
                                 color: themeColor('text'),
                                 fontSize: 18,
-                                fontFamily: 'PPNeueMontreal-Medium',
+                                fontFamily: 'Roboto-Medium',
                                 marginBottom: 15,
                                 textAlign: 'center'
                             }}
@@ -493,7 +493,7 @@ export default class StealthMode extends React.Component<
                             style={{
                                 color: themeColor('text'),
                                 fontSize: 18,
-                                fontFamily: 'PPNeueMontreal-Medium',
+                                fontFamily: 'Roboto-Medium',
                                 marginBottom: 20,
                                 textAlign: 'center'
                             }}
@@ -508,7 +508,7 @@ export default class StealthMode extends React.Component<
                                 style={{
                                     color: themeColor('text'),
                                     fontSize: 16,
-                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    fontFamily: 'Roboto-Medium',
                                     marginBottom: 8
                                 }}
                             >
@@ -520,7 +520,7 @@ export default class StealthMode extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 14,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {getUnlockInstructionText(
@@ -545,7 +545,7 @@ export default class StealthMode extends React.Component<
                                 style={{
                                     color: themeColor('text'),
                                     fontSize: 16,
-                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    fontFamily: 'Roboto-Medium',
                                     marginBottom: 8
                                 }}
                             >
@@ -557,7 +557,7 @@ export default class StealthMode extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 14,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -578,7 +578,7 @@ export default class StealthMode extends React.Component<
                             style={{
                                 color: themeColor('secondaryText'),
                                 fontSize: 13,
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 fontStyle: 'italic',
                                 textAlign: 'center'
                             }}
@@ -600,7 +600,7 @@ export default class StealthMode extends React.Component<
                             style={{
                                 color: themeColor('highlight'),
                                 fontSize: 16,
-                                fontFamily: 'PPNeueMontreal-Medium'
+                                fontFamily: 'Roboto-Medium'
                             }}
                         >
                             #FreeSamourai

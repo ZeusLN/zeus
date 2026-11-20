@@ -218,6 +218,6 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     }
 });

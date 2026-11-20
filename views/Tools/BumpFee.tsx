@@ -101,7 +101,7 @@ export default class BumpFee extends React.PureComponent<
         const feeRateButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         target_type === 0
                             ? themeColor('background')
@@ -115,7 +115,7 @@ export default class BumpFee extends React.PureComponent<
         const targetConfButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         target_type === 1
                             ? themeColor('background')
@@ -145,7 +145,7 @@ export default class BumpFee extends React.PureComponent<
                             : localeString('views.BumpFee.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -428,7 +428,7 @@ export default class BumpFee extends React.PureComponent<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     button: {
         paddingTop: 15,

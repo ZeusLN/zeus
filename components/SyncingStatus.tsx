@@ -65,7 +65,7 @@ export default class SyncingStatus extends React.PureComponent<
                         />
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Medium',
+                                fontFamily: 'Roboto-Medium',
                                 color: themeColor('text'),
                                 fontSize: 14
                             }}

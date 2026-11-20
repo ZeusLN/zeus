@@ -448,7 +448,7 @@ export default class NWCConnectionsList extends React.Component<
                         ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     searchInput: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         borderRadius: 16
     },
     connectionsList: {
@@ -702,12 +702,12 @@ const styles = StyleSheet.create({
     },
     filterButtonText: {
         fontSize: 13,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'center'
     },
     connectionName: {
         fontSize: 16,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontWeight: '600',
         flex: 1,
         marginRight: 8
@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
     },
     budgetLabel: {
         fontSize: 13,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         marginBottom: 6
     },
     budgetBarContainer: {
@@ -745,7 +745,7 @@ const styles = StyleSheet.create({
     },
     budgetDetailText: {
         fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     emptyState: {
         justifyContent: 'center',
@@ -756,13 +756,13 @@ const styles = StyleSheet.create({
     emptyStateSubtitle: {
         textAlign: 'center',
         fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         lineHeight: 20
     },
     emptyStateHint: {
         textAlign: 'center',
         fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         lineHeight: 20,
         marginTop: 24
     },
@@ -773,6 +773,6 @@ const styles = StyleSheet.create({
     },
     emptySearchText: {
         fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     }
 });

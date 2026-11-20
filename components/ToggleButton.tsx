@@ -128,12 +128,12 @@ const getStyles = (toggleWidth: number, thumbWidth: number) =>
         },
         toggleText: {
             fontSize: 16,
-            fontFamily: 'PPNeueMontreal-Book',
+            fontFamily: 'Roboto-Regular',
             color: themeColor('secondaryText'),
             textAlign: 'center'
         },
         activeText: {
             color: themeColor('background'),
-            fontFamily: 'PPNeueMontreal-Medium'
+            fontFamily: 'Roboto-Medium'
         }
     });

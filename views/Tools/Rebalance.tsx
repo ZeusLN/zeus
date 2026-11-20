@@ -1602,7 +1602,7 @@ export default class Rebalance extends React.Component<
                         text: localeString('views.Rebalance.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -1665,7 +1665,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 20,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     sectionTitleFancy: {
         fontSize: 28,
@@ -1681,7 +1681,7 @@ const styles = StyleSheet.create({
     },
     inputLabel: {
         fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     buttonContainer: {
         marginTop: 30,

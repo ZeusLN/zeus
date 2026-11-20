@@ -111,7 +111,7 @@ const ErrorMessage = ({
 
 const styles = StyleSheet.create({
     field: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         width: '100%',
         top: 10,
         borderRadius: 6,

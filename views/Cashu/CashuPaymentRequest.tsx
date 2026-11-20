@@ -502,7 +502,7 @@ export default class CashuPaymentRequest extends React.Component<
             (
                 <Text
                     style={{
-                        fontFamily: 'PPNeueMontreal-Book',
+                        fontFamily: 'Roboto-Regular',
                         color:
                             this.state.selectedIndex === index
                                 ? themeColor('background')
@@ -530,7 +530,7 @@ export default class CashuPaymentRequest extends React.Component<
                         text: localeString('views.PaymentRequest.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={<QRButton />}
@@ -974,7 +974,7 @@ export default class CashuPaymentRequest extends React.Component<
                                                     ),
                                                     fontSize: 15,
                                                     fontFamily:
-                                                        'PPNeueMontreal-Book',
+                                                        'Roboto-Regular',
                                                     marginRight: 8
                                                 }}
                                             >
@@ -1065,11 +1065,11 @@ const styles = StyleSheet.create({
         paddingRight: 20
     },
     label: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         paddingTop: 5
     },
     labelSecondary: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         paddingTop: 5
     },
     button: {

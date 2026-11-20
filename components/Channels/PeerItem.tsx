@@ -111,7 +111,7 @@ export function PeerItem({
                             style={{
                                 fontSize: 16,
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Medium'
+                                fontFamily: 'Roboto-Medium'
                             }}
                         >
                             {title}
@@ -146,7 +146,7 @@ export function PeerItem({
                         <Text
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         >
                             {peer.address}

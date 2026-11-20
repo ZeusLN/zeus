@@ -91,7 +91,7 @@ export default class UnspentTokens extends React.PureComponent<
                         text: localeString('views.Cashu.UnspentTokens.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -130,7 +130,7 @@ export default class UnspentTokens extends React.PureComponent<
                                                             'text'
                                                         ),
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book'
+                                                            'Roboto-Regular'
                                                     }}
                                                 >
                                                     {displayName}
@@ -166,7 +166,7 @@ export default class UnspentTokens extends React.PureComponent<
                                                             'secondaryText'
                                                         ),
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book'
+                                                            'Roboto-Regular'
                                                     }}
                                                 >
                                                     {subTitle}
@@ -179,7 +179,7 @@ export default class UnspentTokens extends React.PureComponent<
                                                             'secondaryText'
                                                         ),
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book'
+                                                            'Roboto-Regular'
                                                     }}
                                                 >
                                                     {item.getDisplayTimeShort}
@@ -218,7 +218,7 @@ export default class UnspentTokens extends React.PureComponent<
                         }}
                         titleStyle={{
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     />
                 )}

@@ -350,7 +350,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                         text: localeString('views.VerifyOnChain.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={this.renderQRButton()}

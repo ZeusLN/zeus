@@ -107,7 +107,7 @@ export default class PayCodeView extends React.Component<
                         text: localeString('general.paycode'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -268,7 +268,7 @@ export default class PayCodeView extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     content: {
         paddingLeft: 20,

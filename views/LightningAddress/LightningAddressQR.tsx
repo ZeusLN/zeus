@@ -124,6 +124,6 @@ export default class LightningAddressQR extends React.PureComponent<
 
 const styles = StyleSheet.create({
     tabText: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     }
 });

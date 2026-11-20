@@ -442,8 +442,8 @@ export default class ChannelsPane extends React.PureComponent<
                         style={{
                             fontSize: 16,
                             fontFamily: focused
-                                ? 'PPNeueMontreal-Medium'
-                                : 'PPNeueMontreal-Book',
+                                ? 'Roboto-Medium'
+                                : 'Roboto-Regular',
                             color
                         }}
                     >
@@ -763,7 +763,7 @@ export default class ChannelsPane extends React.PureComponent<
                                         fontWeight: 'bold',
                                         marginBottom: 12,
                                         textAlign: 'center',
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(
@@ -776,7 +776,7 @@ export default class ChannelsPane extends React.PureComponent<
                                         color: themeColor('secondaryText'),
                                         fontSize: 16,
                                         textAlign: 'center',
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(
@@ -806,8 +806,7 @@ export default class ChannelsPane extends React.PureComponent<
                                                 ),
                                                 fontSize: 16,
                                                 textTransform: 'uppercase',
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
+                                                fontFamily: 'Roboto-Regular'
                                             }}
                                         >
                                             {localeString('general.cancel')}
@@ -827,8 +826,7 @@ export default class ChannelsPane extends React.PureComponent<
                                                 color: themeColor('highlight'),
                                                 fontSize: 16,
                                                 textTransform: 'uppercase',
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
+                                                fontFamily: 'Roboto-Regular'
                                             }}
                                         >
                                             {localeString('general.confirm')}
@@ -864,7 +862,7 @@ const styles = StyleSheet.create({
         margin: 10
     },
     buttonText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         color: 'white',
         fontWeight: 'bold',
         textAlign: 'center'
@@ -874,7 +872,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10
     },
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     peersContainer: {
         margin: 0,

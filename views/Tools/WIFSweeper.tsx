@@ -130,7 +130,7 @@ export default class WIFSweeper extends React.Component<
                             text: localeString('views.Wif.title'),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -439,6 +439,6 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     }
 });

@@ -72,7 +72,7 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
                             color: showArrow
                                 ? themeColor('highlight')
                                 : themeColor('secondaryText'),
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             textAlign: 'center'
                         }}
                     >

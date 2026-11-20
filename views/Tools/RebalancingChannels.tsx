@@ -645,7 +645,7 @@ export default class RebalancingChannels extends React.Component<
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 fontSize:
                                     windowSize.width * windowSize.scale * 0.016,
                                 marginTop: 20,
@@ -742,7 +742,7 @@ export default class RebalancingChannels extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('warning'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             fontSize: 32,
                                             marginTop: windowSize.height * 0.07,
                                             textAlign: 'center'
@@ -753,7 +753,7 @@ export default class RebalancingChannels extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             fontSize:
                                                 windowSize.width *
                                                 windowSize.scale *
@@ -955,7 +955,7 @@ const styles = StyleSheet.create({
     },
     errorText: {
         textAlign: 'center',
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 16,
         marginTop: 10,
         marginBottom: 20
@@ -977,7 +977,7 @@ const styles = StyleSheet.create({
     },
     rebalanceAmountLabel: {
         fontSize: 16,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         marginBottom: 10,
         textAlign: 'center'
     },

@@ -433,7 +433,7 @@ export default class CashuLockSettings extends React.Component<
                         text: localeString('cashu.lockEcash'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -465,7 +465,7 @@ export default class CashuLockSettings extends React.Component<
 
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Medium',
+                            fontFamily: 'Roboto-Medium',
                             fontSize: 14,
                             color: themeColor('secondaryText'),
                             marginBottom: 8
@@ -605,7 +605,7 @@ export default class CashuLockSettings extends React.Component<
                             titleStyle={{
                                 color: themeColor('text'),
                                 fontSize: 16,
-                                fontFamily: 'PPNeueMontreal-Medium',
+                                fontFamily: 'Roboto-Medium',
                                 marginLeft: 2
                             }}
                             title={localeString('general.paste')}
@@ -621,7 +621,7 @@ export default class CashuLockSettings extends React.Component<
                     >
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Medium',
+                                fontFamily: 'Roboto-Medium',
                                 fontSize: 16,
                                 color: themeColor('text'),
                                 marginRight: 8
@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
         padding: 20
     },
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     bottomButtonContainer: {
         marginTop: 'auto',
@@ -776,6 +776,6 @@ const styles = StyleSheet.create({
     },
     cancelButtonText: {
         fontSize: 16,
-        fontFamily: 'PPNeueMontreal-Medium'
+        fontFamily: 'Roboto-Medium'
     }
 });

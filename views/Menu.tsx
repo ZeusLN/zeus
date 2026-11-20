@@ -219,7 +219,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         style={{
                                             fontSize: 20,
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {NodeTitle(selectedNode)}
@@ -229,7 +229,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                             fontSize: 16,
                                             color: themeColor('text'),
                                             opacity: 0.6,
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {nodeSubtitle}
@@ -1003,7 +1003,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 fontSize: 16,
                                 color: themeColor('secondaryText'),
                                 alignSelf: 'center',
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 marginTop: 5,
                                 marginBottom: 10
                             }}
@@ -1037,7 +1037,7 @@ const styles = StyleSheet.create({
     columnText: {
         fontSize: 16,
         flex: 1,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     separationLine: {
         borderColor: '#A7A9AC',

@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20
     },
     triggerText: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         fontSize: 16,
         marginRight: 8
     },
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
         gap: 8
     },
     modalTitle: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         fontSize: 18,
         textAlign: 'center'
     },
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     headerSpacer: { flex: 1 },
     headerCell: { flex: 1, alignItems: 'center' },
     headerText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 12,
         textTransform: 'uppercase'
     },
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10
     },
     label: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14
     },
     cell: {
@@ -381,14 +381,14 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     placeholder: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 12
     },
     onchainFeeSection: {
         paddingTop: 20
     },
     onchainFeeLabel: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14,
         marginBottom: 5
     }

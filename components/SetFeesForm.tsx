@@ -339,7 +339,7 @@ export default class SetFeesForm extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     button: {
         paddingTop: 15,

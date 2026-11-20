@@ -93,7 +93,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                         ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -181,7 +181,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(
@@ -233,7 +233,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                             >
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         color: themeColor('secondaryText')
                                     }}
                                 >
@@ -284,7 +284,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                             >
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         color: themeColor('secondaryText')
                                     }}
                                 >
@@ -311,7 +311,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(
@@ -429,8 +429,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                                 color: themeColor(
                                                     'secondaryText'
                                                 ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
+                                                fontFamily: 'Roboto-Regular'
                                             }}
                                         >
                                             {item.label}

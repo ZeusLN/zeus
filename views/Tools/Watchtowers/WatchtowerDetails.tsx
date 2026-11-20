@@ -187,7 +187,7 @@ export default class WatchtowerDetails extends React.Component<
                         text: localeString('views.Tools.watchtowers.details'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '400',
         marginBottom: 16,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     buttonContainer: {
         padding: 20,

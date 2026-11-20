@@ -194,7 +194,7 @@ export default class SendingOnChain extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('warning'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             fontSize: 32,
                                             margin: 15,
                                             marginTop: windowSize.height * 0.07
@@ -206,8 +206,7 @@ export default class SendingOnChain extends React.Component<
                                         <Text
                                             style={{
                                                 color: themeColor('text'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
+                                                fontFamily: 'Roboto-Regular',
                                                 fontSize:
                                                     windowSize.width *
                                                     windowSize.scale *
@@ -375,7 +374,7 @@ export default class SendingOnChain extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     container: {
         flex: 1

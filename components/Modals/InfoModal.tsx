@@ -137,7 +137,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                         {typeof infoModalText === 'string' && (
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('text'),
                                     fontSize: 20,
                                     marginBottom: 40
@@ -152,7 +152,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                 <Text
                                     key={index}
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         color: themeColor('text'),
                                         fontSize: 18,
                                         marginBottom: 20

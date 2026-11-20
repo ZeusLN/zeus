@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     },
     amountLabel: {
         fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         textTransform: 'uppercase',
         letterSpacing: 1,
         marginBottom: 8

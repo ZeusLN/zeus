@@ -630,7 +630,7 @@ export default class SeedRecovery extends React.PureComponent<
                         <View>
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color:
                                         selectedInputType === 'word' &&
                                         selectedWordIndex === index
@@ -647,7 +647,7 @@ export default class SeedRecovery extends React.PureComponent<
                     {!showSuggestions && type === 'scb' && (
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 color:
                                     selectedInputType === 'scb'
                                         ? themeColor('highlight')
@@ -664,7 +664,7 @@ export default class SeedRecovery extends React.PureComponent<
                     <Text
                         style={{
                             flex: 1,
-                            fontFamily: 'PPNeueMontreal-Medium',
+                            fontFamily: 'Roboto-Medium',
                             color:
                                 !showSuggestions && type === 'scb'
                                     ? text
@@ -1050,7 +1050,7 @@ export default class SeedRecovery extends React.PureComponent<
                             : localeString('views.Settings.SeedRecovery.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -1081,7 +1081,7 @@ export default class SeedRecovery extends React.PureComponent<
                             <Text
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 15,
                                     marginTop: 20
                                 }}
@@ -1199,7 +1199,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     <Text
                                         style={{
                                             color: themeColor('error'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             fontSize: 14,
                                             marginTop: 5,
                                             marginLeft: 30
@@ -1400,7 +1400,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                             'secondaryText'
                                                         ),
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book'
+                                                            'Roboto-Regular'
                                                     }}
                                                 >
                                                     {localeString(
@@ -1720,15 +1720,15 @@ export default class SeedRecovery extends React.PureComponent<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     whiteText: {
         color: 'white',
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     blackText: {
         color: 'black',
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     button: {
         paddingTop: 10,
@@ -1794,7 +1794,7 @@ const styles = StyleSheet.create({
         marginRight: 12
     },
     revealToggleText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 16,
         marginLeft: 6
     }

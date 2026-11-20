@@ -132,7 +132,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                 <Text
                     style={{
                         color: themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book',
+                        fontFamily: 'Roboto-Regular',
                         fontSize: 16
                     }}
                 >
@@ -141,7 +141,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                 <Text
                     style={{
                         color: themeColor('secondaryText'),
-                        fontFamily: 'PPNeueMontreal-Book',
+                        fontFamily: 'Roboto-Regular',
                         fontSize: 12,
                         marginTop: 5
                     }}
@@ -168,7 +168,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             style={{
                                 ...styles.leftCell,
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 fontSize: 16
                             }}
                         >
@@ -239,7 +239,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                 : localeString('cashu.mints'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={<AddMintButton />}
@@ -265,7 +265,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                 <Text
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         fontSize: 16
                                     }}
                                 >
@@ -529,7 +529,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             }}
                             titleStyle={{
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         />
                         {this.renderUnlistedMints()}

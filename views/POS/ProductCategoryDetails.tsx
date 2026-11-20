@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     textInput: {
         fontSize: 20,
         width: '100%',
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         top: 5
     }
 });

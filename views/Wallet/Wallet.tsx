@@ -1686,7 +1686,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         <View style={{ backgroundColor: themeColor('error') }}>
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: '#fff',
                                     fontSize: 12,
                                     marginBottom: 15,
@@ -1777,7 +1777,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         style={{
                                             marginTop: 7,
                                             textAlign: 'center',
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             color: themeColor('text')
                                         }}
                                     >
@@ -2023,7 +2023,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     <Text
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             alignSelf: 'center',
                                             fontSize: 15,
                                             padding: 8

@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     },
     input: {
         fontSize: 20,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     trailing: {
         flexShrink: 0,

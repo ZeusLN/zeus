@@ -1464,14 +1464,14 @@ export default class OpenChannel extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     textWhite: {
         color: 'white',
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     tabTitleStyle: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 12
     },
     content: {
@@ -1499,16 +1499,16 @@ const styles = StyleSheet.create({
         fontSize: 60,
         textAlign: 'center',
         marginBottom: 10,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     successTitle: {
         fontSize: 22,
         textAlign: 'center',
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         marginBottom: 30
     },
     channelIndex: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14,
         marginTop: 10,
         marginBottom: 2
@@ -1516,7 +1516,7 @@ const styles = StyleSheet.create({
     successNote: {
         fontSize: 16,
         textAlign: 'center',
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         marginTop: 30,
         paddingHorizontal: 10
     },

@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
         marginBottom: 10
     },
     text: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'center',
         marginBottom: 10
     }

@@ -158,7 +158,7 @@ export default class SelectCurrency extends React.Component<
                                     item.value === DEFAULT_FIAT)
                                     ? themeColor('highlight')
                                     : themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {`${item.flag ? item.flag : ''} ${item.key} ${
@@ -196,7 +196,7 @@ export default class SelectCurrency extends React.Component<
                     <Text
                         style={{
                             color: themeColor('secondaryText'),
-                            fontFamily: 'PPNeueMontreal-Medium',
+                            fontFamily: 'Roboto-Medium',
                             fontSize: 14
                         }}
                     >
@@ -243,7 +243,7 @@ export default class SelectCurrency extends React.Component<
                             )} (${currencies?.length || 0})`,
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -255,7 +255,7 @@ export default class SelectCurrency extends React.Component<
                         value={search}
                         inputStyle={{
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                         placeholderTextColor={placeholderColor()}
                         containerStyle={{
@@ -304,8 +304,7 @@ export default class SelectCurrency extends React.Component<
                                                     color: themeColor(
                                                         'secondaryText'
                                                     ),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Medium',
+                                                    fontFamily: 'Roboto-Medium',
                                                     fontSize: 14
                                                 }}
                                             >

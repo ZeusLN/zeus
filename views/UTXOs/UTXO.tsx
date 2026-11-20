@@ -77,7 +77,7 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                         text: localeString('general.utxo'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     },
     valueWithLink: {
         paddingBottom: 5,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     buttonContainer: {
         paddingHorizontal: 20,

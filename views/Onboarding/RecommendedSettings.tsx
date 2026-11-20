@@ -280,7 +280,7 @@ export default class RecommendedSettings extends React.Component<
                         <Text
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 alignSelf: 'center',
                                 fontSize: 15,
                                 padding: 8
@@ -354,7 +354,7 @@ export default class RecommendedSettings extends React.Component<
                         ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -402,7 +402,7 @@ export default class RecommendedSettings extends React.Component<
                             <ListItem.Title
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -412,7 +412,7 @@ export default class RecommendedSettings extends React.Component<
                             <ListItem.Subtitle
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    fontFamily: 'Roboto-Medium',
                                     marginTop: 4
                                 }}
                             >
@@ -428,7 +428,7 @@ export default class RecommendedSettings extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         fontSize: 12,
                                         marginTop: 2
                                     }}
@@ -464,7 +464,7 @@ export default class RecommendedSettings extends React.Component<
                             <ListItem.Title
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -474,7 +474,7 @@ export default class RecommendedSettings extends React.Component<
                             <ListItem.Subtitle
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    fontFamily: 'Roboto-Medium',
                                     marginTop: 4
                                 }}
                             >
@@ -515,7 +515,7 @@ export default class RecommendedSettings extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(
@@ -525,7 +525,7 @@ export default class RecommendedSettings extends React.Component<
                                 <ListItem.Subtitle
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        fontFamily: 'Roboto-Medium',
                                         marginTop: 4
                                     }}
                                 >
@@ -598,7 +598,7 @@ export default class RecommendedSettings extends React.Component<
                             <ListItem.Title
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -608,7 +608,7 @@ export default class RecommendedSettings extends React.Component<
                             <ListItem.Subtitle
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    fontFamily: 'Roboto-Medium',
                                     marginTop: 4
                                 }}
                             >
@@ -647,7 +647,7 @@ export default class RecommendedSettings extends React.Component<
                             <ListItem.Title
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString('views.RecommendedSettings.fiat')}
@@ -655,7 +655,7 @@ export default class RecommendedSettings extends React.Component<
                             <ListItem.Subtitle
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    fontFamily: 'Roboto-Medium',
                                     marginTop: 4
                                 }}
                             >

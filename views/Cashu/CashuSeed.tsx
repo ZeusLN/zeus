@@ -63,7 +63,7 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
                 <Text
                     style={{
                         flex: 1,
-                        fontFamily: 'PPNeueMontreal-Book',
+                        fontFamily: 'Roboto-Regular',
                         color: themeColor('secondaryText'),
                         fontSize: 18,
                         alignSelf: 'flex-start'
@@ -75,7 +75,7 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
             <Text
                 style={{
                     flex: 1,
-                    fontFamily: 'PPNeueMontreal-Medium',
+                    fontFamily: 'Roboto-Medium',
                     color: themeColor('text'),
                     fontSize: 18,
                     alignSelf: 'flex-end',
@@ -141,7 +141,7 @@ export default class CashuSeed extends React.PureComponent<
                         text: localeString('views.Cashu.CashuSeed.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -248,7 +248,7 @@ export default class CashuSeed extends React.PureComponent<
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 textAlign: 'center',
                                 margin: 10,
                                 fontSize: 20
@@ -268,7 +268,7 @@ export default class CashuSeed extends React.PureComponent<
                             <Text
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     textAlign: 'center',
                                     margin: 10,
                                     fontSize: 20
@@ -285,7 +285,7 @@ export default class CashuSeed extends React.PureComponent<
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 textAlign: 'center',
                                 margin: 10,
                                 fontSize: 20
@@ -296,7 +296,7 @@ export default class CashuSeed extends React.PureComponent<
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 textAlign: 'center',
                                 margin: 10,
                                 fontSize: 20
@@ -310,7 +310,7 @@ export default class CashuSeed extends React.PureComponent<
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 textAlign: 'center',
                                 margin: 10,
                                 fontSize: 20
@@ -399,15 +399,15 @@ export default class CashuSeed extends React.PureComponent<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     whiteText: {
         color: 'white',
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     blackText: {
         color: 'black',
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     button: {
         paddingTop: 10,

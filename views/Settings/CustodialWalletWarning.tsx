@@ -101,7 +101,7 @@ export default class CustodialWalletWarning extends React.Component<
                         ).toUpperCase()}`,
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}

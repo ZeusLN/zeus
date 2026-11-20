@@ -51,7 +51,7 @@ export default class RestoreChannelBackups extends React.Component<
                         ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
         paddingRight: 5
     },
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     textInput: {
         fontSize: 20,

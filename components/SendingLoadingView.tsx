@@ -22,7 +22,7 @@ export default function SendingLoadingView() {
             <Text
                 style={{
                     color: themeColor('text'),
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     // paddingBottom for centering
                     paddingBottom: windowSize.height / 10,
                     fontSize: windowSize.width * windowSize.scale * 0.014

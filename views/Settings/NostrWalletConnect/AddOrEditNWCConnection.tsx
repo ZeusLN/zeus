@@ -705,7 +705,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                 style={{
                                     color: themeColor('text'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontWeight: '400'
                                 }}
                             >
@@ -716,7 +716,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     color: themeColor('secondaryText'),
                                     fontSize: 14,
                                     marginTop: 4,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {permissionType.description}
@@ -760,7 +760,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                         style={{
                             color: themeColor('text'),
                             fontSize: 17,
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             fontWeight: '400'
                         }}
                     >
@@ -771,7 +771,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                             color: themeColor('secondaryText'),
                             fontSize: 14,
                             marginTop: 4,
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {permissionType.description}
@@ -807,7 +807,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                         style={{
                             color: themeColor('text'),
                             fontSize: 17,
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {permission.title}
@@ -817,7 +817,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                             color: themeColor('secondaryText'),
                             fontSize: 14,
                             marginTop: 4,
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {permission.description}
@@ -892,7 +892,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                     element: () => (
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 fontSize: 13,
                                 color:
                                     selectedBudgetRenewalIndex === index
@@ -910,7 +910,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                 element: () => (
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             fontSize: 13,
                             color:
                                 selectedExpiryPresetIndex === index
@@ -936,7 +936,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                               ),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -994,7 +994,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(
@@ -1082,7 +1082,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(
@@ -1208,7 +1208,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                                 'secondaryText'
                                                             ),
                                                             fontFamily:
-                                                                'PPNeueMontreal-Book',
+                                                                'Roboto-Regular',
                                                             fontSize: 12
                                                         }}
                                                     >
@@ -1223,7 +1223,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                                 'secondaryText'
                                                             ),
                                                             fontFamily:
-                                                                'PPNeueMontreal-Book',
+                                                                'Roboto-Regular',
                                                             fontSize: 12
                                                         }}
                                                     >
@@ -1253,7 +1253,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                         'secondaryText'
                                                     ),
                                                     fontFamily:
-                                                        'PPNeueMontreal-Book',
+                                                        'Roboto-Regular',
                                                     fontSize: 14
                                                 }}
                                             >
@@ -1279,7 +1279,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                                 'highlight'
                                                             ),
                                                             fontFamily:
-                                                                'PPNeueMontreal-Book',
+                                                                'Roboto-Regular',
                                                             fontSize: 16,
                                                             marginTop: 10
                                                         }}
@@ -1308,7 +1308,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                         style={{
                                             color: themeColor('text'),
                                             fontSize: 17,
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             fontWeight: '400'
                                         }}
                                     >

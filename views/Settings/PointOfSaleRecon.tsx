@@ -139,7 +139,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
         const oneDButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         selectedIndex === 0
                             ? themeColor('background')
@@ -152,7 +152,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
         const oneWButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         selectedIndex === 1
                             ? themeColor('background')
@@ -165,7 +165,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
         const oneMButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         selectedIndex === 2
                             ? themeColor('background')
@@ -178,7 +178,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
         const threeMButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         selectedIndex === 3
                             ? themeColor('background')
@@ -191,7 +191,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
         const sixMButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         selectedIndex === 4
                             ? themeColor('background')
@@ -204,7 +204,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
         const oneYButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         selectedIndex === 5
                             ? themeColor('background')
@@ -279,7 +279,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
                         {false && orders.length === 0 && !loading && (
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('text'),
                                     alignSelf: 'center',
                                     top: 100

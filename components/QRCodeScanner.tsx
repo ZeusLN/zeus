@@ -212,7 +212,7 @@ export default function QRCodeScanner({
                         centerComponent={
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('text'),
                                     fontSize: 16
                                 }}
@@ -286,7 +286,7 @@ export default function QRCodeScanner({
                 <View style={styles.content}>
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             textAlign: 'center',
                             padding: 15,
                             color: 'white'
@@ -318,7 +318,7 @@ export default function QRCodeScanner({
                 <View style={styles.content}>
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             textAlign: 'center',
                             padding: 15,
                             color: 'white'
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row'
     },
     textOverlay: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         color: 'white',
         textAlign: 'center',

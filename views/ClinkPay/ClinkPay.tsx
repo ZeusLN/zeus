@@ -268,7 +268,7 @@ export default class ClinkPay extends React.Component<
                         text: localeString('views.ClinkPay.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -369,7 +369,7 @@ export default class ClinkPay extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     content: { paddingHorizontal: 20 },
     headerSection: {
@@ -378,17 +378,17 @@ const styles = StyleSheet.create({
     },
     recipient: {
         fontSize: 16,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         marginBottom: 6
     },
     label: {
         fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     relay: {
         marginTop: 12,
         fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     button: { paddingVertical: 15 }
 });

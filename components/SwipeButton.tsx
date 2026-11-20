@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     },
     instructions: {
         fontSize: 16,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         color: 'black'
     },
     swipeButton: {

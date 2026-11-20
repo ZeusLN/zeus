@@ -69,7 +69,7 @@ export default class DateTime extends React.Component<
                         text: localeString('views.Settings.DateTime.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -112,7 +112,7 @@ export default class DateTime extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 17,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -138,7 +138,7 @@ export default class DateTime extends React.Component<
                             style={{
                                 color: themeColor('secondaryText'),
                                 fontSize: 17,
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         >
                             {localeString('views.Settings.DateTime.preview')}

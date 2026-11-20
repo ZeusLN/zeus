@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     },
     balanceLabel: {
         fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         textAlign: 'right',
         marginTop: 2
     },
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     layerText: {
         backgroundColor: 'transparent',
         fontSize: 15,
-        fontFamily: 'PPNeueMontreal-Medium'
+        fontFamily: 'Roboto-Medium'
     },
     subtitle: {
         marginTop: 2

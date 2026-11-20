@@ -129,7 +129,7 @@ export default class AddWatchtower extends React.Component<
                         text: localeString('views.Tools.addWatchtower'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -281,12 +281,12 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 15,
-        fontFamily: 'PPNeueMontreal-Medium'
+        fontFamily: 'Roboto-Medium'
     },
     input: {
         borderRadius: 8,
         fontSize: 15,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     descriptionContainer: {
         marginTop: 8,
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     description: {
         fontSize: 14,
         lineHeight: 20,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         opacity: 0.8
     }
 });

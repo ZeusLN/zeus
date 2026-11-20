@@ -120,7 +120,7 @@ export default class NeutrinoPeers extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         rightComponent={
@@ -206,7 +206,7 @@ export default class NeutrinoPeers extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {localeString(

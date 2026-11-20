@@ -22,16 +22,16 @@
       "sha1": "ed2c5555ef073d63910fe6f686e98867e3cde63c"
     },
     {
-      "path": "assets/fonts/PPNeueMontreal-Bold.otf",
-      "sha1": "95820a6a2994c3ad6ea3525a8de722fa4fac2dde"
+      "path": "assets/fonts/Roboto-Bold.ttf",
+      "sha1": "3e68c6b14826940778aa16fcac7af80974c3f257"
     },
     {
-      "path": "assets/fonts/PPNeueMontreal-Book.otf",
-      "sha1": "2d5d5ee383d716b326e88e2f5c1dc02cd8c431d7"
+      "path": "assets/fonts/Roboto-Medium.ttf",
+      "sha1": "fbac4821c9148de598b83e95d3b1ab5709d8c6f5"
     },
     {
-      "path": "assets/fonts/PPNeueMontreal-Medium.otf",
-      "sha1": "1a7ebe1563254d0807a979056f7bf2bb872e93d2"
+      "path": "assets/fonts/Roboto-Regular.ttf",
+      "sha1": "b02eb5ea5ff3ea0e77a4a624e121fd30342b31b2"
     },
     {
       "path": "assets/images/affiliates/Mempool.svg",

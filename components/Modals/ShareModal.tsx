@@ -52,7 +52,7 @@ export default class ShareModal extends React.Component<ShareModalProps, {}> {
                 <View>
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             color: themeColor('text'),
                             fontSize: 16,
                             paddingTop: 24,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
         marginBottom: 24
     },
     sendOptionLabel: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 22
     }
 });
