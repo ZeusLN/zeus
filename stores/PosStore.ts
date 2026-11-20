@@ -10,7 +10,11 @@ import UnitsStore from './UnitsStore';
 import Order from '../models/Order';
 
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
-import { calculateTaxSats } from '../utils/PosUtils';
+import {
+    calculateSubTotalSats,
+    calculateTaxSats,
+    isPayableSatsAmount
+} from '../utils/PosUtils';
 import { toCsvRow } from '../utils/CsvUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -147,16 +151,9 @@ export default class PosStore {
                 : null;
         const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
-        const subTotalSats =
-            (currentOrder?.total_money?.sats ?? 0) > 0
-                ? currentOrder.total_money.sats
-                : rate > 0
-                ? new BigNumber(currentOrder?.total_money?.amount)
-                      .div(100)
-                      .div(rate)
-                      .multipliedBy(SATS_PER_BTC)
-                      .toFixed(0)
-                : '0';
+        // from the line items, as total_money.sats leaves out fiat-priced
+        // items added without a rate
+        const subTotalSats = calculateSubTotalSats(lineItems, rate);
 
         const taxSats = Number(
             calculateTaxSats(lineItems, subTotalSats, rate, taxPercentage)
@@ -170,6 +167,18 @@ export default class PosStore {
             .multipliedBy(rate)
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
+
+        // Without a usable fiat rate the total can't be converted: a
+        // fiat-priced item makes it Infinity or NaN, and in fiat units
+        // Receive would create an invoice with no amount. Show the order
+        // instead, where paying stays disabled until a rate is available.
+        if (
+            !isPayableSatsAmount(totalSats) ||
+            (units === 'fiat' && !(Number(rate) > 0))
+        ) {
+            navigation.navigate('Order', { order: currentOrder });
+            return;
+        }
 
         const destination =
             settings?.ecash?.enableCashu && BackendUtils.supportsCashuWallet()
@@ -412,13 +421,13 @@ export default class PosStore {
                 this.currentOrder.total_tax_money.amount =
                     totalTaxCents.toNumber();
 
-                if (this.fiatStore.fiatRates) {
-                    const fiatEntry = this.fiatStore.fiatRates.filter(
-                        (entry: any) =>
-                            entry.code === this.settingsStore.settings.fiat
-                    )[0];
-                    const { code } = fiatEntry;
-                    this.currentOrder.total_tax_money.currency = code;
+                const fiatEntry = this.fiatStore.fiatRates?.filter(
+                    (entry: any) =>
+                        entry.code === this.settingsStore.settings.fiat
+                )[0];
+                // With no rate for the currency, keep the order's currency
+                if (fiatEntry) {
+                    this.currentOrder.total_tax_money.currency = fiatEntry.code;
                 }
             } else {
                 this.currentOrder.total_tax_money.amount = 0;

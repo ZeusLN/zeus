@@ -143,6 +143,51 @@ describe('PosStore.recalculateCurrentOrder', () => {
         store.recalculateCurrentOrder();
         expect(order.total_tax_money.amount).toBe(0);
     });
+
+    it('sets the tax currency from the rate for the selected currency', () => {
+        const store = makeStore('8');
+        const order = makeOrder([fiatItem(10)]);
+        order.total_tax_money.currency = 'EUR';
+        store.currentOrder = order;
+
+        store.recalculateCurrentOrder();
+
+        expect(order.total_tax_money.currency).toBe('USD');
+    });
+
+    describe.each([
+        ['an empty rate list', []],
+        ['no rate for the currency', [{ code: 'EUR', rate: RATE }]],
+        ['no rates', undefined]
+    ])('with tax and %s', (_, fiatRates) => {
+        const recalculateWithoutRate = (line_items: LineItem[]) => {
+            const store = new PosStore(
+                {
+                    settings: { fiat: 'USD', pos: { taxPercentage: '8' } }
+                } as any,
+                { fiatRates, getRate: () => '$N/A' } as any,
+                { units: 'fiat' } as any
+            );
+            store.currentOrder = makeOrder(line_items);
+            store.recalculateCurrentOrder();
+            return store.currentOrder;
+        };
+
+        it('keeps the fiat amounts and leaves the sats at 0', () => {
+            const order = recalculateWithoutRate([fiatItem(10)]);
+            expect(order.total_money.amount).toBe(1000);
+            expect(order.total_money.sats).toBe(0);
+            expect(order.total_tax_money.amount).toBe(80);
+            expect(order.total_tax_money.currency).toBe('USD');
+        });
+
+        it('applies per-item tax rates', () => {
+            const order = recalculateWithoutRate([fiatItem(10, '20')]);
+            expect(order.total_money.amount).toBe(1000);
+            expect(order.total_tax_money.amount).toBe(200);
+            expect(order.total_tax_money.currency).toBe('USD');
+        });
+    });
 });
 
 describe('PosStore.processCheckout', () => {
@@ -167,6 +212,172 @@ describe('PosStore.processCheckout', () => {
         const params = await quickPay('0', 'fiat');
         expect(params.orderTotal).toBe('10800');
         expect(params.amount).toBe('10.80');
+    });
+
+    describe.each([
+        ['a zero rate', [{ code: 'USD', rate: 0 }]],
+        ['a negative rate', [{ code: 'USD', rate: -1 }]],
+        ['a string rate', [{ code: 'USD', rate: 'x' }]],
+        ['no rate for the currency', [{ code: 'EUR', rate: RATE }]],
+        ['no rates', undefined]
+    ])('with %s', (_, fiatRates) => {
+        it.each(['sats', 'fiat'])(
+            'shows the order instead of invoicing a fiat-priced order (%s)',
+            async (units) => {
+                const store = new PosStore(
+                    { settings: { fiat: 'USD', pos: {} } } as any,
+                    { fiatRates, getRate: () => '$N/A' } as any,
+                    { units } as any
+                );
+                const order = makeOrder([fiatItem(10)]);
+                store.currentOrder = order;
+                store.recalculateCurrentOrder();
+
+                const navigate = jest.fn();
+                await store.processCheckout({ navigate } as any, true);
+
+                expect(navigate).toHaveBeenCalledTimes(1);
+                expect(navigate).toHaveBeenCalledWith('Order', { order });
+            }
+        );
+    });
+
+    it('invoices the subtotal plus the global tax in fiat', async () => {
+        const store = makeStore('8', 'fiat');
+        store.currentOrder = makeOrder([fiatItem(10)]);
+        store.recalculateCurrentOrder();
+        expect(store.currentOrder.total_money.sats).toBe(10000);
+        expect(store.currentOrder.total_tax_money.amount).toBe(80);
+
+        const navigate = jest.fn();
+        await store.processCheckout({ navigate } as any, true);
+
+        expect(navigate).toHaveBeenCalledWith(
+            'Receive',
+            expect.objectContaining({ amount: '10.80', orderTotal: '10800' })
+        );
+    });
+
+    describe.each([
+        ['quick pay', true],
+        ['request', false]
+    ])('%s with tax and an empty rate list', (_, isQuickPay) => {
+        // the steps the POS keypad runs for each tap
+        const tap = async (store: PosStore, navigate: jest.Mock) => {
+            if (!store.currentOrder) store.createCurrentOrder('USD');
+            store.currentOrder!.line_items.push(fiatItem(10));
+            store.recalculateCurrentOrder();
+            await store.processCheckout({ navigate } as any, isQuickPay);
+        };
+
+        it('shows an order with one line item and creates no invoice', async () => {
+            const store = new PosStore(
+                {
+                    settings: { fiat: 'USD', pos: { taxPercentage: '8' } }
+                } as any,
+                { fiatRates: [], getRate: () => '$N/A' } as any,
+                { units: 'fiat' } as any
+            );
+            const navigate = jest.fn();
+
+            await tap(store, navigate);
+            await tap(store, navigate);
+
+            expect(navigate).toHaveBeenCalledTimes(2);
+            navigate.mock.calls.forEach(([route, params]) => {
+                expect(route).toBe('Order');
+                expect(params.order.line_items).toHaveLength(1);
+                expect(params.order.total_money.sats).toBe(0);
+            });
+            expect(navigate.mock.calls[0][1].order).not.toBe(
+                navigate.mock.calls[1][1].order
+            );
+            expect(store.currentOrder).toBeNull();
+        });
+    });
+
+    it('invoices a sats-priced order without a rate in sats', async () => {
+        const store = new PosStore(
+            { settings: { fiat: 'USD', pos: {} } } as any,
+            { fiatRates: undefined, getRate: () => '$N/A' } as any,
+            { units: 'sats' } as any
+        );
+        store.currentOrder = makeOrder([satsItem(10000)]);
+        store.recalculateCurrentOrder();
+
+        const navigate = jest.fn();
+        await store.processCheckout({ navigate } as any, true);
+
+        expect(navigate).toHaveBeenCalledWith(
+            'Receive',
+            expect.objectContaining({ amount: '10000', orderTotal: '10000' })
+        );
+    });
+
+    it('shows a sats-priced order instead of invoicing it in fiat without a rate', async () => {
+        const store = new PosStore(
+            { settings: { fiat: 'USD', pos: {} } } as any,
+            { fiatRates: undefined, getRate: () => '$N/A' } as any,
+            { units: 'fiat' } as any
+        );
+        const order = makeOrder([satsItem(10000)]);
+        store.currentOrder = order;
+        store.recalculateCurrentOrder();
+
+        const navigate = jest.fn();
+        await store.processCheckout({ navigate } as any, true);
+
+        expect(navigate).toHaveBeenCalledWith('Order', { order });
+    });
+
+    describe('for a sats-priced item and a fiat-priced item', () => {
+        const mixedStore = (fiatRates: any, units: string) => {
+            const fiatStore: any = { fiatRates, getRate: () => '$N/A' };
+            const store = new PosStore(
+                { settings: { fiat: 'USD', pos: {} } } as any,
+                fiatStore,
+                { units } as any
+            );
+            store.currentOrder = makeOrder([satsItem(1000), fiatItem(5)]);
+            store.recalculateCurrentOrder();
+            return { store, fiatStore };
+        };
+
+        it.each(['sats', 'BTC', 'fiat'])(
+            'shows the order instead of invoicing only the sats item without a rate (%s)',
+            async (units) => {
+                const { store } = mixedStore(undefined, units);
+                const order = store.currentOrder;
+                // the fiat item adds no sats without a rate
+                expect(order!.total_money.sats).toBe(1000);
+
+                const navigate = jest.fn();
+                await store.processCheckout({ navigate } as any, true);
+
+                expect(navigate).toHaveBeenCalledTimes(1);
+                expect(navigate).toHaveBeenCalledWith('Order', { order });
+            }
+        );
+
+        it.each([
+            ['fiat', '6.00'],
+            ['sats', '6000'],
+            ['BTC', '0.00006000']
+        ])(
+            'invoices both items when rates load after they were added (%s)',
+            async (units, amount) => {
+                const { store, fiatStore } = mixedStore(undefined, units);
+                fiatStore.fiatRates = [{ code: 'USD', rate: RATE }];
+
+                const navigate = jest.fn();
+                await store.processCheckout({ navigate } as any, true);
+
+                expect(navigate).toHaveBeenCalledWith(
+                    'Receive',
+                    expect.objectContaining({ amount, orderTotal: '6000' })
+                );
+            }
+        );
     });
 
     it('clears the current order once checked out', async () => {
