@@ -114,7 +114,6 @@
 	</dict>
 	<key>UIAppFonts</key>
 	<array>
-		<string>Marlide-Display.ttf</string>
 		<string>Marlide-Display-Bold.ttf</string>
 		<string>AntDesign.ttf</string>
 		<string>Entypo.ttf</string>

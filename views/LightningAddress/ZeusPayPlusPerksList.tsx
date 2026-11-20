@@ -4,7 +4,6 @@ import { inject, observer } from 'mobx-react';
 
 import Button from '../../components/Button';
 import Text from '../../components/Text';
-import { Row } from '../../components/layout/Row';
 
 import LightningAddressStore from '../../stores/LightningAddressStore';
 
@@ -36,38 +35,34 @@ export default class ZeusPayPlusPerksList extends React.Component<
                             marginBottom: 10
                         }}
                     >
-                        <Row justify="space-between">
+                        <Text
+                            style={{
+                                ...styles.perk,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {`• ${perk.title}`}
+                        </Text>
+                        {perk.comingSoon && (
                             <Text
                                 style={{
-                                    ...styles.perk,
-                                    color: themeColor('text')
+                                    ...styles.comingSoon,
+                                    color: themeColor('highlight')
                                 }}
                             >
-                                {`• ${perk.title}`}
+                                {localeString('general.comingSoon')}
                             </Text>
-                            {perk.comingSoon && (
-                                <Text
-                                    style={{
-                                        ...styles.comingSoon,
-                                        color: themeColor('highlight'),
-                                        textAlign: 'right'
-                                    }}
-                                >
-                                    {localeString('general.comingSoon')}
-                                </Text>
-                            )}
-                            {perk.value && (
-                                <Text
-                                    style={{
-                                        ...styles.value,
-                                        color: themeColor('highlight'),
-                                        textAlign: 'right'
-                                    }}
-                                >
-                                    {perk.value}
-                                </Text>
-                            )}
-                        </Row>
+                        )}
+                        {perk.value && (
+                            <Text
+                                style={{
+                                    ...styles.value,
+                                    color: themeColor('highlight')
+                                }}
+                            >
+                                {perk.value}
+                            </Text>
+                        )}
                         {perk.note && (
                             <Text
                                 style={{
@@ -96,7 +91,7 @@ export default class ZeusPayPlusPerksList extends React.Component<
 
 const styles = StyleSheet.create({
     perk: {
-        fontFamily: font('marlide'),
+        fontFamily: font('marlideBold'),
         fontSize: 30,
         marginBottom: 5
     },
@@ -107,11 +102,15 @@ const styles = StyleSheet.create({
     },
     comingSoon: {
         fontFamily: font('marlideBold'),
-        fontSize: 15
+        fontSize: 15,
+        marginLeft: 20,
+        marginBottom: 5
     },
     value: {
         fontFamily: font('marlideBold'),
-        fontSize: 35
+        fontSize: 35,
+        marginLeft: 20,
+        marginBottom: 5
     },
     button: {
         marginTop: 10,
