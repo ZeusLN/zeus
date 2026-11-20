@@ -5397,13 +5397,15 @@ export default class CashuStore {
                     this.normalizeMultimintPaymentAmount(rawPaymentAmt);
 
                 if (paymentAmt === undefined) {
-                    runInAction(() => {
-                        this.paymentError = true;
-                        this.paymentErrorMsg = localeString(
-                            'stores.CashuStore.invalidMultimintPaymentAmount'
-                        );
-                        this.loading = false;
-                    });
+                    if (!isDonationPayment) {
+                        runInAction(() => {
+                            this.paymentError = true;
+                            this.paymentErrorMsg = localeString(
+                                'stores.CashuStore.invalidMultimintPaymentAmount'
+                            );
+                            this.loading = false;
+                        });
+                    }
                     return;
                 }
 
@@ -5425,13 +5427,15 @@ export default class CashuStore {
             const paymentAmt = rawPaymentAmt;
 
             if (!meltQuote) {
-                runInAction(() => {
-                    this.paymentError = true;
-                    this.paymentErrorMsg = localeString(
-                        'stores.CashuStore.noMeltQuoteAvailable'
-                    );
-                    this.loading = false;
-                });
+                if (!isDonationPayment) {
+                    runInAction(() => {
+                        this.paymentError = true;
+                        this.paymentErrorMsg = localeString(
+                            'stores.CashuStore.noMeltQuoteAvailable'
+                        );
+                        this.loading = false;
+                    });
+                }
                 return;
             }
 
@@ -6066,13 +6070,15 @@ export default class CashuStore {
             // to retry
             const firstFailure = (inFlightPart || failedMints[0])?.reason;
 
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg = firstFailure
-                    ? cashuErrorForDisplay(firstFailure)
-                    : localeString('stores.CashuStore.errorPayingInvoice');
-                this.loading = false;
-            });
+            if (!isDonationPayment) {
+                runInAction(() => {
+                    this.paymentError = true;
+                    this.paymentErrorMsg = firstFailure
+                        ? cashuErrorForDisplay(firstFailure)
+                        : localeString('stores.CashuStore.errorPayingInvoice');
+                    this.loading = false;
+                });
+            }
 
             onProgress?.({
                 step: MultinutPaymentStep.FAILED,
