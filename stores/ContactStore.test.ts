@@ -276,6 +276,22 @@ describe('ContactStore', () => {
             ]);
         });
 
+        // loadContacts normalizes what it reads, and the list screen
+        // passes one of those contacts back to be deleted
+        it('removes an old contact as loadContacts returned it', async () => {
+            const existing = [
+                { id: 'old-a', name: 'Alice' },
+                { id: 'old-b', name: 'Bob' }
+            ];
+            getItemMock.mockResolvedValue(JSON.stringify(existing));
+            await store.loadContacts();
+            store.setPrefillContact(store.contacts[0]);
+
+            await store.deleteContact(navigation);
+
+            expect(savedContacts()).toEqual([{ id: 'old-b', name: 'Bob' }]);
+        });
+
         it('removes nothing when the contact has no id at all', async () => {
             const existing = [{ name: 'Alice' }, { id: 'old-b', name: 'Bob' }];
             getItemMock.mockResolvedValue(JSON.stringify(existing));
