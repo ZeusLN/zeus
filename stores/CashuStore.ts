@@ -5425,13 +5425,15 @@ export default class CashuStore {
             const paymentAmt = rawPaymentAmt;
 
             if (!meltQuote) {
-                runInAction(() => {
-                    this.paymentError = true;
-                    this.paymentErrorMsg = localeString(
-                        'stores.CashuStore.noMeltQuoteAvailable'
-                    );
-                    this.loading = false;
-                });
+                if (!isDonationPayment) {
+                    runInAction(() => {
+                        this.paymentError = true;
+                        this.paymentErrorMsg = localeString(
+                            'stores.CashuStore.noMeltQuoteAvailable'
+                        );
+                        this.loading = false;
+                    });
+                }
                 return;
             }
 
