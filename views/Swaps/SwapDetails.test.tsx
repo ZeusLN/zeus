@@ -1526,17 +1526,133 @@ describe('SwapDetails lockup verification retry wiring', () => {
             });
         });
 
-        // The host's refund has spent the lockup, so the screen shows the
-        // stored status without waiting on the socket
-        it('shows a swap stored as refunded without subscribing', async () => {
+        // transaction.refunded is the host's word, stored before the lockup
+        // was checked, so an unsent claim is still sent after a reopen
+        it('sends the stored claim when a swap stored as refunded is opened', async () => {
             const { store } = await renderView({
                 status: 'transaction.refunded',
                 claimTransactionHex: 'storedhex'
             });
 
-            expect(global.WebSocket).not.toHaveBeenCalled();
+            // shown before the host answers
             expect(statusShown()).toBe('transaction.refunded');
-            expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+            expect(global.WebSocket).toHaveBeenCalled();
+
+            await sendStatus('transaction.refunded');
+
+            expect(store.checkStoredClaim).toHaveBeenCalledTimes(1);
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledWith(
+                'storedhex',
+                'https://provider.test/v2'
+            );
+            expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                'swap',
+                'claim-txid'
+            );
+        });
+
+        it.each([
+            ['no claim is stored', {}],
+            [
+                'the stored claim was broadcast',
+                { claimTransactionHex: 'storedhex', claimTxid: 'claim-txid' }
+            ]
+        ])(
+            'shows a swap stored as refunded without subscribing when %s',
+            async (_, swapData) => {
+                const { store } = await renderView({
+                    status: 'transaction.refunded',
+                    ...swapData
+                });
+
+                expect(global.WebSocket).not.toHaveBeenCalled();
+                expect(statusShown()).toBe('transaction.refunded');
+                expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+                expect(store.checkStoredClaim).not.toHaveBeenCalled();
+            }
+        );
+
+        // The host gets the preimage inside the native build, before the
+        // claim is stored, and can send a failed status before it answers
+        it.each([...FAILED, 'transaction.refunded'])(
+            'keeps sending a claim that was still being built on %s',
+            async (status) => {
+                const { store } = await renderView();
+                store.broadcastSwapTransaction.mockRejectedValue(
+                    new Error('mempool down')
+                );
+                let finishBuild: (hex: string) => void = () => {};
+                nativeClaim.mockReturnValue(
+                    new Promise((resolve) => (finishBuild = resolve))
+                );
+                await act(async () => {
+                    socket.onmessage({
+                        data: JSON.stringify({
+                            event: 'update',
+                            args: [
+                                {
+                                    status: 'transaction.confirmed',
+                                    transaction: { hex: 'txhex' }
+                                }
+                            ]
+                        })
+                    });
+                });
+                expect(nativeClaim).toHaveBeenCalledTimes(1);
+
+                await sendStatus(status);
+                await act(async () => finishBuild('claimhex'));
+                await advance(0);
+                expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(
+                    11
+                );
+
+                store.broadcastSwapTransaction.mockResolvedValue('claim-txid');
+                await advance(61000);
+
+                expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(
+                    12
+                );
+                expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                    'swap',
+                    'claim-txid'
+                );
+                expect(nativeClaim).toHaveBeenCalledTimes(1);
+            }
+        );
+
+        it.each([['boom'], ['Operation timeout'], [{ code: 1 }]])(
+            'sends the stored claim when the host answers with the error %p',
+            async (error) => {
+                const { store } = await renderView({
+                    status: 'swap.expired',
+                    claimTransactionHex: 'storedhex'
+                });
+
+                await sendUpdate({ error });
+
+                expect(socket.close).toHaveBeenCalled();
+                expect(store.broadcastSwapTransaction).toHaveBeenCalledWith(
+                    'storedhex',
+                    'https://provider.test/v2'
+                );
+                expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                    'swap',
+                    'claim-txid'
+                );
+            }
+        );
+
+        it('stops on an error once the claim was broadcast', async () => {
+            const { store } = await renderView();
+            await sendConfirmedLockup();
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(1);
+
+            await sendUpdate({ error: 'boom' });
+            await advance(180000);
+
+            expect(errorShown()).toBe('boom');
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(1);
             expect(store.checkStoredClaim).not.toHaveBeenCalled();
         });
     });

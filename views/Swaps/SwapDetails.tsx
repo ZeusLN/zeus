@@ -176,21 +176,18 @@ export default class SwapDetails extends React.Component<
                 SwapState.SwapExpired
             ];
             // A stored claim that never went out may already have sent the
-            // preimage to the host, so it is sent again on an expired
-            // status. A swap stored as transaction.refunded always ends
-            // here, so it shows its status without waiting on the socket.
+            // preimage to the host, so the screen subscribes and sends it
+            // again. That includes a swap stored as transaction.refunded:
+            // the status is the host's word, saved before the lockup was
+            // checked. The stored status shows without waiting on the socket.
             const storedClaimUnsent =
                 !!swapData?.claimTransactionHex && !swapData?.claimTxid;
-            if (
-                failedStatus.includes(swapData?.status) &&
-                (swapData.status === SwapState.TransactionRefunded ||
-                    !storedClaimUnsent)
-            ) {
-                this.setState({
-                    updates: swapData.status,
-                    socketConnected: false
-                });
-                return;
+            if (failedStatus.includes(swapData?.status)) {
+                this.setState({ updates: swapData.status });
+                if (!storedClaimUnsent) {
+                    this.setState({ socketConnected: false });
+                    return;
+                }
             }
 
             // the claim awaits this same lookup
@@ -729,6 +726,23 @@ export default class SwapDetails extends React.Component<
             await claimIfLockupVerified(lockup.hex);
         };
 
+        // The host has ended the swap or reported an error. A claim that is
+        // stored, or still being built, may have sent it the preimage, and
+        // it can refund itself after the timeout. Keep sending that claim
+        // until it is broadcast or the lockup is spent; the lockup is
+        // checked on the user's mempool instance, not taken from the host.
+        // A claim in flight sends itself again, so it is only left running.
+        const stopUnlessClaimUnsent = async () => {
+            if (
+                !submitted &&
+                (verifyingLockup || this.state.swapData?.claimTransactionHex)
+            ) {
+                await claimIfLockupVerified('');
+            } else {
+                stopRechecks();
+            }
+        };
+
         console.log('Connecting to WebSocket for updates...');
         this.setState({ loading: true });
 
@@ -763,23 +777,16 @@ export default class SwapDetails extends React.Component<
 
             // Check for API errors
             if (error) {
-                stopRechecks();
-                if (error === 'Operation timeout') {
-                    this.setState({
-                        error: 'The operation timed out.',
-                        loading: false,
-                        socketConnected: false
-                    });
-                    webSocket.close();
-                    return;
-                }
-
                 this.setState({
-                    error,
+                    error:
+                        error === 'Operation timeout'
+                            ? 'The operation timed out.'
+                            : error,
                     loading: false,
                     socketConnected: false
                 });
                 webSocket.close();
+                await stopUnlessClaimUnsent();
                 return;
             }
 
@@ -819,21 +826,9 @@ export default class SwapDetails extends React.Component<
                             error: failureReason,
                             socketConnected: false
                         });
-                    // The stored claim may have sent the preimage to the
-                    // host, which can refund itself after the timeout. Keep
-                    // sending it until it is broadcast or the lockup is
-                    // spent. On transaction.refunded this checks the lockup
-                    // on the user's mempool instance rather than take the
-                    // host's word: a spent lockup shows lockupSpentElsewhere,
-                    // an unspent one gets the claim.
-                    if (
-                        !submitted &&
-                        this.state.swapData?.claimTransactionHex
-                    ) {
-                        await claimIfLockupVerified('');
-                    } else {
-                        stopRechecks();
-                    }
+                    // On transaction.refunded a spent lockup shows
+                    // lockupSpentElsewhere, an unspent one gets the claim
+                    await stopUnlessClaimUnsent();
                     break;
 
                 case SwapState.InvoiceSettled:
