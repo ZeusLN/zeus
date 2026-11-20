@@ -105,6 +105,8 @@ const renderPrompt = async (params: any) => {
         loginRequired: jest.fn(() => true),
         setLoginStatus: jest.fn(),
         setPosStatus: jest.fn(),
+        bindLegacyBiometryKey: jest.fn(),
+        disableBiometry: jest.fn(() => Promise.resolve()),
         getSettings: jest.fn(() => Promise.resolve({})),
         // Like SettingsStore.updateSettings: resolves a function patch
         // against the saved settings and resolves with the saved settings
