@@ -867,7 +867,11 @@ export default class WalletConfiguration extends React.Component<
                     saved: true
                 });
 
-                const activeNodeIndex = settings.selectedNode || 0;
+                // From the settings as saved, like the index written: a
+                // write queued ahead of this save can move the active
+                // wallet after `settings` was read above
+                const activeNodeIndex =
+                    (newSettings ?? settings).selectedNode || 0;
                 const writtenIndex = editsStoredWallet ? savedIndex : index;
                 if (writtenIndex === activeNodeIndex) {
                     // updating active node

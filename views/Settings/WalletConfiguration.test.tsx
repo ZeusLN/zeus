@@ -485,13 +485,15 @@ describe('WalletConfiguration', () => {
             phrase: string,
             // What the settings update resolves with; the saved nodes by
             // default
-            resolveWith: (saved: any) => any = (saved) => saved
+            resolveWith: (saved: any) => any = (saved) => saved,
+            // the active wallet when Save is tapped
+            selectedNode = 0
         ) => {
             const SettingsStore = {
                 settings: {
                     privacy: { clipboard: false },
                     nodes,
-                    selectedNode: 0
+                    selectedNode
                 },
                 updateSettings: jest.fn((update: any) =>
                     Promise.resolve(resolveWith(update({ nodes })))
@@ -584,6 +586,132 @@ describe('WalletConfiguration', () => {
                 nodes: undefined
             }));
 
+            expect(clearNodeKeychainData).not.toHaveBeenCalled();
+        });
+
+        // A write queued ahead of the save can change the active wallet
+        // after Save read the settings, so the saved settings decide
+        // whether the edited wallet is the active one
+        describe('when the active wallet changed before the save was written', () => {
+            const reconnect = {
+                index: 0,
+                routes: [{ name: 'Wallet' }]
+            };
+
+            it('reconnects a wallet that became active', async () => {
+                const { navigation, SettingsStore } = await saveWithPhrase(
+                    [{}, LNC_NODE],
+                    1,
+                    NEW_PHRASE,
+                    (saved) => ({ ...saved, selectedNode: 1 })
+                );
+
+                expect(BackendUtils.disconnect).toHaveBeenCalledTimes(1);
+                expect(SettingsStore.setConnectingStatus).toHaveBeenCalledWith(
+                    true
+                );
+                expect(navigation.reset).toHaveBeenCalledWith(reconnect);
+                expect(navigation.goBack).not.toHaveBeenCalled();
+            });
+
+            it('leaves the screen of a wallet that is no longer active', async () => {
+                const { navigation, SettingsStore } = await saveWithPhrase(
+                    [LNC_NODE, {}],
+                    0,
+                    NEW_PHRASE,
+                    (saved) => ({ ...saved, selectedNode: 1 })
+                );
+
+                expect(BackendUtils.disconnect).not.toHaveBeenCalled();
+                expect(
+                    SettingsStore.setConnectingStatus
+                ).not.toHaveBeenCalled();
+                expect(navigation.reset).not.toHaveBeenCalled();
+                expect(navigation.goBack).toHaveBeenCalledTimes(1);
+            });
+
+            it('goes by the settings read at Save when the save returns none', async () => {
+                const { navigation } = await saveWithPhrase(
+                    [{}, LNC_NODE],
+                    1,
+                    NEW_PHRASE,
+                    () => undefined,
+                    1
+                );
+
+                expect(BackendUtils.disconnect).toHaveBeenCalledTimes(1);
+                expect(navigation.reset).toHaveBeenCalledWith(reconnect);
+                expect(navigation.goBack).not.toHaveBeenCalled();
+            });
+        });
+
+        // The save makes a new embedded LND wallet the active one
+        it.each([
+            ['at the index the list gave it', 1],
+            ['at a stale index', 3]
+        ])('opens a new embedded LND wallet stored %s', async (_, index) => {
+            const nodes = [{}];
+            const SettingsStore = {
+                settings: {
+                    privacy: { clipboard: false },
+                    nodes,
+                    selectedNode: 0
+                },
+                updateSettings: jest.fn((update: any) =>
+                    Promise.resolve({ selectedNode: 0, ...update({ nodes }) })
+                ),
+                setConnectingStatus: jest.fn()
+            };
+            const navigation = {
+                goBack: jest.fn(),
+                navigate: jest.fn(),
+                reset: jest.fn()
+            };
+            // The save of a new embedded LND wallet follows wallet creation
+            // in native code, so it is called on the mounted view
+            const view: { current?: any } = {};
+            const proto = (WalletConfiguration as any).prototype;
+            const didMount = proto.componentDidMount;
+            const mounted = jest
+                .spyOn(proto, 'componentDidMount')
+                .mockImplementation(function (this: any) {
+                    view.current = this;
+                    return didMount.call(this);
+                });
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation,
+                        route: {
+                            params: {
+                                node: { implementation: 'embedded-lnd' },
+                                index,
+                                newEntry: true
+                            }
+                        },
+                        SettingsStore
+                    } as any)}
+                />
+            );
+
+            mounted.mockRestore();
+
+            await act(async () =>
+                view.current.saveWalletConfiguration(undefined, true)
+            );
+
+            expect(SettingsStore.setConnectingStatus).toHaveBeenCalledTimes(1);
+            expect(SettingsStore.setConnectingStatus).toHaveBeenCalledWith(
+                true
+            );
+            expect(navigation.reset).toHaveBeenCalledTimes(1);
+            expect(navigation.reset).toHaveBeenCalledWith({
+                index: 0,
+                routes: [{ name: 'Wallet' }]
+            });
+            expect(navigation.goBack).not.toHaveBeenCalled();
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            expect(BackendUtils.disconnect).not.toHaveBeenCalled();
             expect(clearNodeKeychainData).not.toHaveBeenCalled();
         });
 
