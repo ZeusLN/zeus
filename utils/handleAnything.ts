@@ -20,6 +20,7 @@ import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
 
 import CashuToken from '../models/CashuToken';
+import { normalizeContactData } from '../models/Contact';
 import Invoice from '../models/Invoice';
 
 // Nostr
@@ -1082,9 +1083,9 @@ const handleAnything = async (
         }
     } else if (data.startsWith('zeuscontact:')) {
         const zeusContactData = data.replace('zeuscontact:', '');
-        const card = JSON.parse(zeusContactData);
+        const card = normalizeContactData(JSON.parse(zeusContactData));
 
-        if (card?.contactId) {
+        if (card.contactId) {
             // Cards made before v0.11.0 could carry remote photo/banner
             // URLs, which ContactDetails would load as soon as it opens
             // and again on every display after saving.
