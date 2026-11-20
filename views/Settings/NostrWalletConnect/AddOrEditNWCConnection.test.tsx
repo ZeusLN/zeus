@@ -9,13 +9,17 @@ jest.mock('../../../components/Screen', () => {
     const { View } = require('react-native');
     return ({ children }: any) => <View>{children}</View>;
 });
-jest.mock('../../../components/Accordion', () => () => null);
+// open, so the advanced settings inside it are rendered
+jest.mock('../../../components/Accordion', () => {
+    const { View } = require('react-native');
+    return ({ children }: any) => <View>{children}</View>;
+});
 jest.mock('../../../components/Header', () => () => null);
 jest.mock('../../../components/Button', () => () => null);
 jest.mock('../../../components/TextInput', () => () => null);
 jest.mock('../../../components/LoadingIndicator', () => () => null);
 jest.mock('../../../components/Switch', () => () => null);
-jest.mock('../../../components/DropdownSetting', () => () => null);
+jest.mock('../../../components/DropdownSetting', () => jest.fn(() => null));
 jest.mock('../../../components/SuccessErrorMessage', () => ({
     ErrorMessage: () => null
 }));
@@ -42,7 +46,19 @@ jest.mock('../../../utils/ThemeUtils', () => ({
     themeColor: jest.fn(() => '#000')
 }));
 jest.mock('../../../utils/LocaleUtils', () => ({
-    localeString: jest.fn((key: string) => key),
+    // German time units, so a label can be told from its unit
+    localeString: jest.fn(
+        (key: string) =>
+            ((
+                {
+                    'time.hours': 'Stunden',
+                    'time.days': 'Tage',
+                    'time.weeks': 'Wochen',
+                    'time.months': 'Monate',
+                    'time.years': 'Jahre'
+                } as { [key: string]: string }
+            )[key] || key)
+    ),
     allLocaleStrings: jest.fn((key: string) =>
         key === 'time.hours' ? ['Hours', 'Stunden'] : []
     )
@@ -71,6 +87,7 @@ jest.mock('react-native-notifications', () => ({
 
 import AddOrEditNWCConnection from './AddOrEditNWCConnection';
 import NostrConnectUtils from '../../../utils/NostrConnectUtils';
+import DropdownSetting from '../../../components/DropdownSetting';
 
 const BUDGET = 'views.Settings.NostrWalletConnect.budget';
 const INFO_LABEL =
@@ -200,5 +217,30 @@ describe('AddOrEditNWCConnection change tracking', () => {
         expect(ref.current.state.showCustomExpiryInput).toBe(true);
         expect(ref.current.state.customExpiryUnit).toBe('Hours');
         expect(ref.current.checkForChanges()).toBe(false);
+    });
+});
+
+describe('AddOrEditNWCConnection custom expiry unit dropdown', () => {
+    it('shows translated labels and keeps the units as values', async () => {
+        (DropdownSetting as unknown as jest.Mock).mockClear();
+        const createdAt = new Date();
+        await renderScreen(['pay_invoice'], undefined, {
+            createdAt,
+            expiresAt: new Date(createdAt.getTime() + 72 * 60 * 60 * 1000),
+            customExpiryValue: 72,
+            customExpiryUnit: 'Hours'
+        });
+
+        const dropdowns = (DropdownSetting as unknown as jest.Mock).mock.calls
+            .map(([props]) => props)
+            .filter((props) => props.selectedValue === 'Hours');
+        expect(dropdowns.length).toBeGreaterThan(0);
+        expect(dropdowns[dropdowns.length - 1].values).toEqual([
+            { key: 'Stunden', value: 'Hours' },
+            { key: 'Tage', value: 'Days' },
+            { key: 'Wochen', value: 'Weeks' },
+            { key: 'Monate', value: 'Months' },
+            { key: 'Jahre', value: 'Years' }
+        ]);
     });
 });
