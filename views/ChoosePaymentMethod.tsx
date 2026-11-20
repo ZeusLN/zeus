@@ -61,6 +61,7 @@ interface ChoosePaymentMethodState {
     clinkNoffer: string;
     lnurlParams: LNURLWithdrawParams | undefined;
     feeRate: string;
+    amountMismatch: boolean;
 }
 
 @inject(
@@ -87,7 +88,8 @@ export default class ChoosePaymentMethod extends React.Component<
         offer: '',
         clinkNoffer: '',
         lnurlParams: undefined,
-        feeRate: ''
+        feeRate: '',
+        amountMismatch: false
     };
 
     componentDidMount() {
@@ -135,10 +137,22 @@ export default class ChoosePaymentMethod extends React.Component<
             lnurlParams
         } = params ?? {};
 
+        const invoiceSatAmount = lightning
+            ? this.decodeSatAmount(lightning)
+            : undefined;
         const resolvedSatAmount =
-            !satAmount && lightning
-                ? this.decodeSatAmount(lightning)
-                : satAmount;
+            !satAmount && lightning ? invoiceSatAmount : satAmount;
+        // a BIP 21 URI can carry an amount that differs from the amount
+        // of its lightning invoice; the amount shown here is the former.
+        // amount= holds whole sats, so a sub-sat invoice amount matches
+        // when amount= is within 1 sat of it (rounded down or up). An
+        // amount of 0 is not shown, so it is not compared either
+        const amountMismatch =
+            !!satAmount &&
+            Number(satAmount) > 0 &&
+            !!invoiceSatAmount &&
+            Number(invoiceSatAmount) > 0 &&
+            Math.abs(Number(invoiceSatAmount) - Number(satAmount)) >= 1;
 
         const stateUpdate: Partial<ChoosePaymentMethodState> = {
             ...(value && { value }),
@@ -148,7 +162,8 @@ export default class ChoosePaymentMethod extends React.Component<
             ...(lightningAddress && { lightningAddress }),
             ...(offer && { offer }),
             ...(clinkNoffer && { clinkNoffer }),
-            ...(lnurlParams && { lnurlParams })
+            ...(lnurlParams && { lnurlParams }),
+            ...(amountMismatch && { amountMismatch })
         };
         if (Object.keys(stateUpdate).length > 0) {
             this.setState((prev) => ({ ...prev, ...stateUpdate }));
@@ -300,7 +315,8 @@ export default class ChoosePaymentMethod extends React.Component<
             offer,
             clinkNoffer,
             lnurlParams,
-            feeRate
+            feeRate,
+            amountMismatch
         } = this.state;
 
         const { accounts } = UTXOsStore!;
@@ -374,6 +390,15 @@ export default class ChoosePaymentMethod extends React.Component<
                             sensitive
                             jumboText
                             toggleable
+                        />
+                    </View>
+                )}
+                {amountMismatch && (
+                    <View style={styles.errorSection}>
+                        <WarningMessage
+                            message={localeString(
+                                'views.ChoosePaymentMethod.amountMismatch'
+                            )}
                         />
                     </View>
                 )}
