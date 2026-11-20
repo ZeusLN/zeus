@@ -716,4 +716,20 @@ describe('ActivityFilter swap states the rows show', () => {
             expect(applied.swapFilter.reverse[state]).toBe(true)
         );
     });
+
+    it('turns a partial Submarine row off and keeps swaps on while Reverse is on', async () => {
+        setBackend(NWC);
+        const filters = filtersWith();
+        filters.swapFilter.submarine[SWAP_FILTER_STATES.submarine[0]] = false;
+        const { ActivityStore, filter } = await renderFilter({ filters });
+
+        await filter.handleToggle('submarine');
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.submarine).toBe(false);
+        expect(applied.swaps).toBe(true);
+        SWAP_FILTER_STATES.submarine.forEach((state) =>
+            expect(applied.swapFilter.submarine[state]).toBe(false)
+        );
+    });
 });
