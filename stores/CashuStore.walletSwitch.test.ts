@@ -22,6 +22,10 @@ jest.mock('../utils/MigrationUtils', () => ({
     }
 }));
 jest.mock('../utils/ThemeUtils', () => ({}));
+jest.mock('../utils/BackendUtils', () => ({
+    __esModule: true,
+    default: {}
+}));
 jest.mock('../utils/LocaleUtils', () => ({ localeString: (s: string) => s }));
 jest.mock('../NavigationService', () => ({}));
 

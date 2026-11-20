@@ -34,6 +34,10 @@ jest.mock('../utils/MigrationUtils', () => ({
     migrateCashuSeedVersion: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('../utils/ThemeUtils', () => ({}));
+jest.mock('../utils/BackendUtils', () => ({
+    __esModule: true,
+    default: {}
+}));
 jest.mock('../utils/LocaleUtils', () => ({ localeString: (s: string) => s }));
 // The pass under test is started by hand, not from checkPendingItems
 jest.mock('../utils/SchedulingUtils', () => ({ runWhenIdle: jest.fn() }));
