@@ -297,6 +297,7 @@ const restartTor = async () => {
 export {
     doTorRequest,
     torHttpRequest,
+    ensureTorStarted,
     restartTor,
     ensureTorStarted,
     isOnionHttpsUrl,
