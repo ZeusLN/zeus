@@ -1,5 +1,7 @@
 import {
     getDecimalPlaceholder,
+    numberWithCommas,
+    numberWithDecimals,
     roundUpToWholeSats,
     satsToBip21Amount
 } from './UnitsUtils';
@@ -49,6 +51,63 @@ describe('UnitsUtils', () => {
                 string: '000',
                 count: 3
             });
+        });
+    });
+
+    describe('numberWithCommas', () => {
+        it('groups the whole part in thousands', () => {
+            expect(numberWithCommas(1234567)).toEqual('1,234,567');
+            expect(numberWithCommas('1234567')).toEqual('1,234,567');
+            expect(numberWithCommas(999)).toEqual('999');
+            expect(numberWithCommas('-1234567')).toEqual('-1,234,567');
+        });
+
+        it('keeps up to three decimals as they are', () => {
+            expect(numberWithCommas('4539039877.452')).toEqual(
+                '4,539,039,877.452'
+            );
+            expect(numberWithCommas(1234.5)).toEqual('1,234.5');
+        });
+
+        it('does not group the digits after the decimal point', () => {
+            expect(numberWithCommas('1234.5678')).toEqual('1,234.5678');
+            expect(numberWithCommas(0.00001234)).toEqual('0.00001234');
+            expect(numberWithCommas('-1234567.8912')).toEqual(
+                '-1,234,567.8912'
+            );
+            // 24778.456 + 3.478 in floating point
+            expect(numberWithCommas(24778.456 + 3.478)).toEqual(
+                '24,781.933999999997'
+            );
+        });
+
+        it('keeps a decimal point with nothing before or after it', () => {
+            expect(numberWithCommas('1234.')).toEqual('1,234.');
+            expect(numberWithCommas('.5')).toEqual('.5');
+        });
+
+        it('leaves an already grouped amount alone', () => {
+            expect(numberWithCommas('1,234,567.8912')).toEqual(
+                '1,234,567.8912'
+            );
+        });
+
+        it('returns 0 for an empty or missing value', () => {
+            expect(numberWithCommas('')).toEqual('0');
+            expect(numberWithCommas(undefined as any)).toEqual('0');
+            expect(numberWithCommas(0)).toEqual('0');
+        });
+    });
+
+    describe('numberWithDecimals', () => {
+        it('swaps the separators', () => {
+            expect(numberWithDecimals('1234567.89')).toEqual('1.234.567,89');
+        });
+
+        it('does not group the digits after the decimal separator', () => {
+            expect(numberWithDecimals('1234567.8912')).toEqual(
+                '1.234.567,8912'
+            );
         });
     });
 
