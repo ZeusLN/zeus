@@ -52,6 +52,10 @@ export interface Node {
     nickname?: string;
     dismissCustodialWarning: boolean;
     photo?: string;
+    // LndHub
+    lndhubUrl?: string;
+    username?: string;
+    password?: string;
     // LNC
     pairingPhrase?: string;
     mailboxServer?: string;
