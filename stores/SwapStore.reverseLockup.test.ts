@@ -89,6 +89,7 @@ import Swap from '../models/Swap';
 import {
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
+    SWAPS_LAST_USED_KEY,
     buildReverseSwapLeaves,
     deriveReverseSwapOutputKey,
     deriveSwapPreimage
@@ -145,6 +146,9 @@ const VALID = swapDetails();
 // a correctly formed swap for a key that isn't ours: its address is a
 // real taproot address the provider could control
 const OTHER_ADDRESS = swapDetails(OTHER_PUBKEY).lockupAddress;
+
+// a mainnet address, as the store is given a mainnet node
+const DESTINATION = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
 
 const newStore = () =>
     new SwapStore(
@@ -205,7 +209,7 @@ describe('SwapStore.createReverseSwap response verification', () => {
         store.reverseInfo = reverseInfo;
         const navigation = { navigate: jest.fn() };
         const result = await store.createReverseSwap(
-            'bc1qdestination',
+            DESTINATION,
             INVOICE_AMOUNT,
             fee,
             navigation
@@ -287,7 +291,7 @@ describe('SwapStore.createReverseSwap response verification', () => {
             expectNoExtraMembers(swap);
             const model = new Swap(swap);
             expect(model.qrCodeValue).toBe('lnbc-provider-invoice');
-            expect(model.claimDestinationAddress).toBe('bc1qdestination');
+            expect(model.claimDestinationAddress).toBe(DESTINATION);
         }
     });
 
@@ -304,7 +308,7 @@ describe('SwapStore.createReverseSwap response verification', () => {
             store.reverseInfo = REVERSE_INFO;
             const navigation = { navigate: jest.fn() };
             await store.createReverseSwap(
-                'bc1qdestination',
+                DESTINATION,
                 INVOICE_AMOUNT,
                 '2',
                 navigation
@@ -318,6 +322,74 @@ describe('SwapStore.createReverseSwap response verification', () => {
             expect(navigation.navigate).not.toHaveBeenCalled();
         }
     );
+});
+
+describe('SwapStore.createReverseSwap claim address', () => {
+    afterEach(() => fetchMock.mockReset());
+
+    const create = async (destinationAddress: any, nodeInfo: any = {}) => {
+        storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        storageBacking[SWAPS_LAST_USED_KEY] = '0';
+        const store = new SwapStore(
+            { nodeInfo: { nodeId: 'node-pubkey', ...nodeInfo } } as any,
+            { settings: {}, implementation: 'lnd' } as any
+        );
+        store.reverseInfo = {
+            fees: { percentage: 0.5, minerFees: { claim: 300, lockup: 400 } }
+        };
+        const navigation = { navigate: jest.fn() };
+        const result = await store.createReverseSwap(
+            destinationAddress,
+            100000,
+            '2',
+            navigation
+        );
+        return { store, navigation, result };
+    };
+
+    it.each([
+        ['an empty address', ''],
+        ['no address', undefined],
+        ['text that is not an address', 'bc1qdestination'],
+        [
+            'an address with one wrong character',
+            'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdp'
+        ],
+        [
+            'a testnet address on a mainnet node',
+            'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx'
+        ]
+    ])('refuses %s before anything is requested', async (_, address) => {
+        const { store, navigation, result } = await create(address);
+
+        expect(result).toBeUndefined();
+        expect(store.apiError).toBe('views.Swaps.invalidClaimAddress');
+        expect(store.loading).toBe(false);
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        // no key index, and so no preimage, was used up
+        expect(storageBacking[SWAPS_LAST_USED_KEY]).toBe('0');
+        expect(storageBacking[REVERSE_SWAPS_KEY]).toBeUndefined();
+    });
+
+    it("checks against the store's node, not the mainnet default", async () => {
+        const { store } = await create(DESTINATION, { isTestNet: true });
+
+        expect(store.apiError).toBe('views.Swaps.invalidClaimAddress');
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('goes on to the host with an address of the node network', async () => {
+        fetchMock.mockResolvedValue({
+            data: JSON.stringify({ error: 'stop here' })
+        });
+
+        const { store } = await create(DESTINATION);
+
+        expect(store.apiError).toBe('stop here');
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(storageBacking[SWAPS_LAST_USED_KEY]).toBe('1');
+    });
 });
 
 describe('SwapStore.createReverseSwap claim fee', () => {
@@ -354,7 +426,7 @@ describe('SwapStore.createReverseSwap claim fee', () => {
         store.reverseInfo = withClaimQuote(claimQuote);
         const navigation = { navigate: jest.fn() };
         await store.createReverseSwap(
-            'bc1qdestination',
+            DESTINATION,
             invoiceAmount,
             fee,
             navigation
@@ -1475,7 +1547,7 @@ describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
         });
         const navigation = { navigate: jest.fn() };
         const result = await store.createReverseSwap(
-            'bc1qdestination',
+            DESTINATION,
             invoiceAmount,
             // at 1 sat/vB any claim fee floor stays below the 300 quoted
             '1',
