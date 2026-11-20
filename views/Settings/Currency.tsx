@@ -15,6 +15,7 @@ import SettingsStore, {
 } from '../../stores/SettingsStore';
 
 import UnitsStore from '../../stores/UnitsStore';
+import FiatStore from '../../stores/FiatStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -25,6 +26,7 @@ interface CurrencyProps {
     navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
+    FiatStore: FiatStore;
 }
 
 interface CurrencyState {
@@ -33,7 +35,7 @@ interface CurrencyState {
     fiatRatesSource: string;
 }
 
-@inject('SettingsStore', 'UnitsStore')
+@inject('SettingsStore', 'UnitsStore', 'FiatStore')
 @observer
 export default class Currency extends React.Component<
     CurrencyProps,
@@ -65,7 +67,7 @@ export default class Currency extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore, UnitsStore } = this.props;
+        const { navigation, SettingsStore, UnitsStore, FiatStore } = this.props;
         const { fiatEnabled, selectedCurrency, fiatRatesSource } = this.state;
         const { updateSettings }: any = SettingsStore;
 
@@ -114,13 +116,18 @@ export default class Currency extends React.Component<
                                     await updateSettings({
                                         fiatEnabled: newFiatEnabled
                                     });
-                                    // stored, unlike resetUnits(), so the
-                                    // wallet does not come back in fiat
-                                    // at the next start
-                                    if (!newFiatEnabled) {
-                                        if (UnitsStore.units === 'fiat') {
-                                            await UnitsStore.setUnits('sats');
-                                        }
+                                    if (newFiatEnabled) {
+                                        // Nothing loads rates while fiat is
+                                        // off, so load them now rather than
+                                        // at the next wallet refresh. After
+                                        // the save, so a failed save makes
+                                        // no request.
+                                        FiatStore.getFiatRates();
+                                    } else if (UnitsStore.units === 'fiat') {
+                                        // stored, unlike resetUnits(), so the
+                                        // wallet does not come back in fiat
+                                        // at the next start
+                                        await UnitsStore.setUnits('sats');
                                     }
                                 }}
                             />

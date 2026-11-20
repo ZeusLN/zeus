@@ -32,31 +32,58 @@ jest.mock('../../components/Screen', () => {
 jest.mock('../../components/Switch', () => 'Switch');
 
 import * as React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import Currency from './Currency';
 
-const toggleFiat = async (units: string) => {
+const toggleFiat = async (
+    units: string,
+    fiatEnabled: boolean = true,
+    saveFails: boolean = false
+) => {
+    let saved = false;
     const SettingsStore = {
-        settings: { fiatEnabled: true, fiat: 'USD', fiatRatesSource: 'Zeus' },
-        updateSettings: jest.fn(async () => {})
+        settings: { fiatEnabled, fiat: 'USD', fiatRatesSource: 'Zeus' },
+        updateSettings: jest.fn(async () => {
+            await Promise.resolve();
+            if (saveFails) throw new Error('save failed');
+            saved = true;
+        })
     };
     const UnitsStore = {
         units,
         setUnits: jest.fn(async () => {}),
         resetUnits: jest.fn()
     };
+    // The load comes after the save, so a failed save makes no request.
+    // Record for each call whether the save had finished
+    const fetchesAfterSave: boolean[] = [];
+    const FiatStore = {
+        getFiatRates: jest.fn(async () => {
+            fetchesAfterSave.push(saved);
+        })
+    };
     await render(
         <Currency
             {...({
                 navigation: { navigate: jest.fn() },
                 SettingsStore,
-                UnitsStore
+                UnitsStore,
+                FiatStore
             } as any)}
         />
     );
     const fiatSwitch = screen.container.queryAll((n) => n.type === 'Switch')[0];
-    await fireEvent(fiatSwitch, 'valueChange');
-    return { SettingsStore, UnitsStore };
+    if (saveFails) {
+        // fireEvent does not hand back the handler's promise
+        await act(async () => {
+            await expect(fiatSwitch.props.onValueChange()).rejects.toThrow(
+                'save failed'
+            );
+        });
+    } else {
+        await fireEvent(fiatSwitch, 'valueChange');
+    }
+    return { SettingsStore, UnitsStore, FiatStore, fetchesAfterSave };
 };
 
 describe('Currency fiat switch', () => {
@@ -74,5 +101,38 @@ describe('Currency fiat switch', () => {
 
         expect(UnitsStore.setUnits).not.toHaveBeenCalled();
         expect(UnitsStore.resetUnits).not.toHaveBeenCalled();
+    });
+
+    // Since #5151 only the wallet refresh loads rates, and only with fiat
+    // on: turning fiat on here left the POS header on the fetch error
+    it('loads the rates once fiat is turned on and stored', async () => {
+        const { SettingsStore, fetchesAfterSave } = await toggleFiat(
+            'sats',
+            false
+        );
+
+        expect(SettingsStore.updateSettings).toHaveBeenCalledWith({
+            fiatEnabled: true
+        });
+        expect(fetchesAfterSave).toEqual([true]);
+    });
+
+    it('does not load rates when fiat is turned off', async () => {
+        const { FiatStore } = await toggleFiat('sats');
+
+        expect(FiatStore.getFiatRates).not.toHaveBeenCalled();
+    });
+
+    it('does not load rates when saving fiat on fails', async () => {
+        const { SettingsStore, FiatStore } = await toggleFiat(
+            'sats',
+            false,
+            true
+        );
+
+        expect(SettingsStore.updateSettings).toHaveBeenCalledWith({
+            fiatEnabled: true
+        });
+        expect(FiatStore.getFiatRates).not.toHaveBeenCalled();
     });
 });
