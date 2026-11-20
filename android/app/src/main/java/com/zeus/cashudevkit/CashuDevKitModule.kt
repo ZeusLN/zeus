@@ -1,6 +1,7 @@
 package app.zeusln.zeus.cashudevkit
 
 import android.util.Log
+import app.zeusln.zeus.JnaStructWarmup
 import com.facebook.react.bridge.*
 import kotlinx.coroutines.*
 import org.json.JSONArray
@@ -32,6 +33,11 @@ import uniffi.zeus_cashu_restore.RestoreException
  */
 class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
+
+    init {
+        // Every CDK and zeus_cashu_restore call goes through this module
+        JnaStructWarmup.await("CashuDevKitModule")
+    }
 
     @Volatile
     private var repo: WalletRepository? = null
