@@ -6,6 +6,10 @@
 import { NativeModules, Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import { generateVssAuthHeaders } from '../utils/VssAuthUtils';
+import {
+    clearVssHeaderIssued,
+    noteVssHeaderIssued
+} from '../utils/VssHeaderRefreshUtils';
 import type {
     Network,
     NodeStatus,
@@ -887,6 +891,8 @@ const initializeNode = async ({
     const t0 = Date.now();
     const elapsed = () => `${Date.now() - t0}ms`;
     console.log('LDK Node: Initializing...');
+    // Set again below once a header is signed for this build
+    clearVssHeaderIssued();
     await createBuilder();
     await setNetwork(network);
     console.log(`LDK Node: [${elapsed()}] Network set to ${network}`);
@@ -971,6 +977,9 @@ const initializeNode = async ({
                 passphrase ?? undefined,
                 vssKey
             );
+            // The node sends this header unchanged until it is rebuilt;
+            // VssHeaderRefresher rebuilds it before the header expires
+            noteVssHeaderIssued(tAuth);
             console.log(
                 `LDK Node: [${elapsed()}] VSS auth header generated (${
                     Date.now() - tAuth

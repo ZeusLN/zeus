@@ -72,6 +72,10 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { applySystemNavigationBarTheme } from '../../utils/SystemNavigationBarUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import WalletRefreshRunner from '../../utils/WalletRefreshRunner';
+import {
+    VssHeaderRefresher,
+    isLdkNodeBusy
+} from '../../utils/VssHeaderRefreshUtils';
 
 import {
     loadPendingPaymentData,
@@ -206,6 +210,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     private linkingSubscription: EmitterSubscription | undefined;
     private startupTimeoutId?: ReturnType<typeof setTimeout>;
     private refreshRunner: WalletRefreshRunner;
+    private vssHeaderRefresher: VssHeaderRefresher;
     // Set once this instance replaces itself with the startup wallet
     // selection screen; late focus/AppState triggers must not connect to
     // the previously selected wallet or consume the initial deep link
@@ -229,6 +234,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             () => this.props.navigation.isFocused(),
             () => this.getSettingsAndNavigate()
         );
+        this.vssHeaderRefresher = new VssHeaderRefresher({
+            isEnabled: () => props.SettingsStore.implementation === 'ldk-node',
+            isBusy: () =>
+                this.refreshRunner.running ||
+                isLdkNodeBusy({
+                    SettingsStore: props.SettingsStore,
+                    TransactionsStore: props.TransactionsStore,
+                    ChannelsStore: props.ChannelsStore
+                }),
+            rebuild: () => this.rebuildLdkNodeForVssHeader()
+        });
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
             onMoveShouldSetPanResponder: () => true,
@@ -350,6 +366,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             'change',
             this.handleAppStateChange
         );
+        this.vssHeaderRefresher.handleAppStateChange(AppState.currentState);
 
         const {
             SettingsStore: { updateSettings }
@@ -366,6 +383,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         this.props.navigation.removeListener &&
             this.props.navigation.removeListener('focus', this.handleFocus);
         this.handleAppStateChangeSubscription?.remove();
+        this.vssHeaderRefresher.stop();
         this.backPressSubscription?.remove();
         this.linkingSubscription?.remove();
         if (this.startupTimeoutId) {
@@ -410,6 +428,118 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     this.refreshRunner.run(() => this.getSettingsAndNavigate());
                 }
             }
+        }
+        // After the refresh above has started, so a due rebuild waits for it
+        this.vssHeaderRefresher.handleAppStateChange(nextAppState);
+    };
+
+    // Arguments for startLdkNodeWallet from the selected LDK Node wallet's
+    // settings, or undefined if the wallet is missing its seed or directory
+    private getLdkStartParams() {
+        const { SettingsStore } = this.props;
+        const {
+            settings,
+            ldkNodeDir,
+            ldkMnemonic,
+            ldkPassphrase,
+            ldkNetwork,
+            ldkEsploraServer,
+            ldkRgsServer,
+            ldkScorerUrl,
+            ldkVssServer
+        } = SettingsStore;
+        if (!ldkMnemonic || !ldkNodeDir) return undefined;
+
+        // Get LSPS1 config from settings based on network
+        const lspConfig = getLspConfigForNetwork(
+            settings,
+            ldkNetwork || 'mainnet'
+        );
+        const lsps1Token = settings.lsps1Token;
+
+        const lsps1Config =
+            lspConfig.lsps1Pubkey && lspConfig.lsps1Host
+                ? {
+                      nodeId: lspConfig.lsps1Pubkey,
+                      address: lspConfig.lsps1Host,
+                      token: lsps1Token || null
+                  }
+                : undefined;
+
+        // Always include Flow LSP pubkey as trusted 0-conf peer
+        const flowLspPubkey = lspConfig.defaultPubkey;
+
+        // Include both the default Flow LSP and user-configured
+        // LSP as trusted 0-conf peers (dedup if they're the same)
+        const trustedPeers = [flowLspPubkey];
+        if (lsps1Config?.nodeId && lsps1Config.nodeId !== flowLspPubkey) {
+            trustedPeers.push(lsps1Config.nodeId);
+        }
+
+        return {
+            nodeDir: ldkNodeDir,
+            seedMnemonic: ldkMnemonic,
+            passphrase: ldkPassphrase,
+            network: (ldkNetwork || 'mainnet') as
+                | 'mainnet'
+                | 'testnet'
+                | 'signet'
+                | 'regtest',
+            esploraServerUrl: ldkEsploraServer,
+            rgsServerUrl: ldkRgsServer,
+            scorerUrl:
+                ldkScorerUrl === undefined ? DEFAULT_SCORER_URL : ldkScorerUrl,
+            lsps1Config,
+            trustedPeers0conf: trustedPeers,
+            vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER
+        };
+    }
+
+    private showLdkStartErrors(result?: {
+        vssError?: string;
+        esploraError?: string;
+        rgsError?: string;
+    }) {
+        const { AlertStore } = this.props;
+        if (result?.vssError) {
+            AlertStore.setVssError(result.vssError);
+        }
+        if (result?.esploraError) {
+            AlertStore.setEsploraError(result.esploraError);
+        }
+        if (result?.rgsError) {
+            AlertStore.setRgsError(result.rgsError);
+        }
+    }
+
+    // Stops and rebuilds the running LDK node so it signs a new VSS auth
+    // header (see VssHeaderRefreshUtils). Same stop and start as a connect,
+    // without resetting the stores or showing the connecting screen.
+    private rebuildLdkNodeForVssHeader = async () => {
+        const { SettingsStore } = this.props;
+        const params = this.getLdkStartParams();
+        if (!params) return;
+        const isCurrent = SettingsStore.getConnectionGuard();
+        await stopLdkNode();
+        if (!isCurrent()) return;
+        try {
+            const result = await startLdkNodeWallet(params);
+            if (!isCurrent()) return;
+            this.showLdkStartErrors(result);
+            console.log('LDK Node: rebuilt with a new VSS auth header');
+        } catch (e) {
+            if (!isCurrent()) return;
+            // The node is stopped now. Reconnect through the full connect
+            // path, which shows its errors the same way as at startup. Not
+            // through refreshRunner: a refresh already in flight (e.g. from
+            // an app resume) would make run() a no-op, and the reconnect
+            // fails that refresh's connection guard, so nothing would ever
+            // restart the node and connecting would stay set.
+            console.warn(
+                'LDK Node: rebuild for a new VSS auth header failed, reconnecting:',
+                e
+            );
+            await this.retryConnection();
         }
     };
 
@@ -651,13 +781,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             isSqlite,
             // LDK Node settings
             ldkNodeDir,
-            ldkMnemonic,
-            ldkPassphrase,
-            ldkNetwork,
-            ldkEsploraServer,
-            ldkRgsServer,
-            ldkScorerUrl,
-            ldkVssServer,
             updateSettings
         } = SettingsStore;
         const {
@@ -747,57 +870,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 );
             }
 
-            if (ldkMnemonic && ldkNodeDir) {
-                // Get LSPS1 config from settings based on network
-                const lspConfig = getLspConfigForNetwork(
-                    settings,
-                    ldkNetwork || 'mainnet'
-                );
-                const lsps1Token = settings.lsps1Token;
-
-                const lsps1Config =
-                    lspConfig.lsps1Pubkey && lspConfig.lsps1Host
-                        ? {
-                              nodeId: lspConfig.lsps1Pubkey,
-                              address: lspConfig.lsps1Host,
-                              token: lsps1Token || null
-                          }
-                        : undefined;
-
-                // Always include Flow LSP pubkey as trusted 0-conf peer
-                const flowLspPubkey = lspConfig.defaultPubkey;
-
-                // Include both the default Flow LSP and user-configured
-                // LSP as trusted 0-conf peers (dedup if they're the same)
-                const trustedPeers = [flowLspPubkey];
-                if (
-                    lsps1Config?.nodeId &&
-                    lsps1Config.nodeId !== flowLspPubkey
-                ) {
-                    trustedPeers.push(lsps1Config.nodeId);
-                }
-
+            const ldkStartParams = this.getLdkStartParams();
+            if (ldkStartParams) {
                 console.log('[LDK startup] calling startLdkNodeWallet');
                 let ldkResult;
                 try {
                     ldkResult = await startLdkNodeWallet({
-                        nodeDir: ldkNodeDir,
-                        seedMnemonic: ldkMnemonic,
-                        passphrase: ldkPassphrase,
-                        network: (ldkNetwork || 'mainnet') as
-                            | 'mainnet'
-                            | 'testnet'
-                            | 'signet'
-                            | 'regtest',
-                        esploraServerUrl: ldkEsploraServer,
-                        rgsServerUrl: ldkRgsServer,
-                        scorerUrl:
-                            ldkScorerUrl === undefined
-                                ? DEFAULT_SCORER_URL
-                                : ldkScorerUrl,
-                        lsps1Config,
-                        trustedPeers0conf: trustedPeers,
-                        vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
+                        ...ldkStartParams,
                         skipInit: justCreated,
                         onSyncStart: () => {
                             SettingsStore.ldkNodeSyncing = true;
@@ -826,15 +905,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 console.log('[LDK startup] startLdkNodeWallet returned');
                 SettingsStore.ldkNodeSyncing = false;
                 if (!isCurrent()) return;
-                if (ldkResult?.vssError) {
-                    AlertStore.setVssError(ldkResult.vssError);
-                }
-                if (ldkResult?.esploraError) {
-                    AlertStore.setEsploraError(ldkResult.esploraError);
-                }
-                if (ldkResult?.rgsError) {
-                    AlertStore.setRgsError(ldkResult.rgsError);
-                }
+                this.showLdkStartErrors(ldkResult);
 
                 if (settings?.ecash?.enableCashu)
                     await CashuStore.initializeWallets();
