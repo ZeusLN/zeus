@@ -7002,7 +7002,7 @@ export default class CashuStore {
                 console.warn(
                     `Sweep ${mintUrl}: Fee reserve (${feeReserve}) is above the limit for ${amountToSweep} sats. Not sweeping.`
                 );
-                this.loading = false;
+                if (!background) this.loading = false;
                 return false;
             }
 

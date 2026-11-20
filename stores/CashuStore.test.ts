@@ -529,6 +529,36 @@ describe('CashuStore auto-sweep and the shared loading and error state', () => {
         expect(store.error_msg).toBeUndefined();
     });
 
+    // 51 sats on 1000 is above the sweep fee cap of 50
+    const reserveAboveCap = () =>
+        (CashuDevKit.createMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            amount: 990,
+            fee_reserve: 51,
+            expiry: 9999999999
+        });
+
+    it('leaves loading set by another operation when the fee cap stops it', async () => {
+        const store = sweepingStore();
+        reserveAboveCap();
+        store.loading = true;
+
+        await store.checkAndSweepMints();
+
+        expect(CashuDevKit.melt).not.toHaveBeenCalled();
+        expect(store.loading).toBe(true);
+    });
+
+    it('a direct sweepMint clears loading when the fee cap stops it', async () => {
+        const store = sweepingStore();
+        reserveAboveCap();
+
+        await expect(store.sweepMint(mintUrl)).resolves.toBe(false);
+
+        expect(CashuDevKit.melt).not.toHaveBeenCalled();
+        expect(store.loading).toBe(false);
+    });
+
     it('a direct sweepMint still sets loading while it runs and clears it', async () => {
         const store = sweepingStore();
         const seen: boolean[] = [];
