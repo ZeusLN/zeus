@@ -1018,6 +1018,8 @@ describe('CashuStore NDK instance', () => {
                     {
                         url,
                         updateValidationRatio: jest.fn(),
+                        on: jest.fn(),
+                        removeAllListeners: jest.fn(),
                         connectivity: {
                             resetReconnectionState: jest.fn(),
                             disconnect: jest.fn(),
@@ -3535,5 +3537,106 @@ describe('CashuStore reset on a wallet switch', () => {
         expect(store.cdkInitialized).toBe(true);
         expect(store.mintUrls).toEqual([SHARED_MINT]);
         expect(CashuDevKit.getBalances).toHaveBeenCalled();
+    });
+});
+
+describe('CashuStore NDK teardown with the real NDK', () => {
+    const RealNDK = jest.requireActual('@nostr-dev-kit/ndk').default;
+    const realWebSocket = (global as any).WebSocket;
+
+    // androidClose: close() on a CONNECTING socket does nothing and the
+    // socket still opens later, as with React Native's Android WebSocketModule
+    const stubWebSocket = (androidClose = false) => {
+        const sockets: any[] = [];
+        (global as any).WebSocket = class {
+            static CONNECTING = 0;
+            static OPEN = 1;
+            static CLOSING = 2;
+            static CLOSED = 3;
+            readyState = 0;
+            onopen?: () => void;
+            onclose?: () => void;
+            onerror?: () => void;
+            constructor(public url: string) {
+                sockets.push(this);
+                setTimeout(
+                    () => {
+                        if (url.includes('relay.down')) {
+                            this.readyState = 3;
+                            this.onerror?.();
+                            this.onclose?.();
+                        } else if (
+                            this.readyState === 0 ||
+                            (androidClose && this.readyState === 2)
+                        ) {
+                            this.readyState = 1;
+                            this.onopen?.();
+                        }
+                    },
+                    url.includes('relay.slow') ? 3000 : 10
+                );
+            }
+            addEventListener() {}
+            removeEventListener() {}
+            send() {}
+            close() {
+                if (this.readyState >= 2) return;
+                const connecting = this.readyState === 0;
+                this.readyState = 2;
+                if (androidClose && connecting) return;
+                setTimeout(() => {
+                    this.readyState = 3;
+                    this.onclose?.();
+                }, 0);
+            }
+        };
+        return sockets;
+    };
+
+    const connected = async (urls: string[]) => {
+        const ndk = new RealNDK({
+            explicitRelayUrls: urls,
+            enableOutboxModel: false
+        });
+        const connecting = ndk.connect(2000);
+        await jest.advanceTimersByTimeAsync(2000);
+        await connecting;
+        return ndk;
+    };
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => {
+        (global as any).WebSocket = realWebSocket;
+        jest.useRealTimers();
+    });
+
+    it('leaves no timer running after teardown', async () => {
+        stubWebSocket();
+        const ndk = await connected(['wss://relay.up', 'wss://relay.down']);
+        (newStore() as any).disconnectNdk(ndk);
+        await jest.advanceTimersByTimeAsync(31000);
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('does not reopen a relay whose wake probe is in flight at teardown', async () => {
+        const sockets = stubWebSocket();
+        const ndk = await connected(['wss://relay.up']);
+        // app suspended for 20 s: the next sleep detector tick probes
+        jest.setSystemTime(Date.now() + 20000);
+        await jest.advanceTimersByTimeAsync(10000);
+        (newStore() as any).disconnectNdk(ndk);
+        await jest.advanceTimersByTimeAsync(31000);
+        expect(sockets).toHaveLength(1);
+        expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it('closes a relay that connects after teardown (Android)', async () => {
+        stubWebSocket(true);
+        const ndk = await connected(['wss://relay.slow']);
+        const [relay] = Array.from(ndk.pool.relays.values()) as any[];
+        (newStore() as any).disconnectNdk(ndk);
+        await jest.advanceTimersByTimeAsync(31000);
+        expect(relay.status).not.toBe(5); // CONNECTED
+        expect(jest.getTimerCount()).toBe(0);
     });
 });
