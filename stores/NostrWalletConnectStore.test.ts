@@ -9831,6 +9831,82 @@ describe('NostrWalletConnectStore scheduled save', () => {
         });
     });
 
+    // A load that cannot read storage empties the connections in memory.
+    // A save from that state must not store the empty list as the current
+    // wallet's connections.
+    describe('after a load that could not read storage', () => {
+        const failLoad = async (store: NostrWalletConnectStore) => {
+            (Storage.getItem as jest.Mock).mockRejectedValueOnce(
+                new Error('storage read failed')
+            );
+            await store.loadConnections();
+            expect(store.connections).toHaveLength(0);
+        };
+
+        beforeEach(() => silence('error'));
+
+        it('keeps the stored connections when a save follows', async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+
+            await store.saveConnections();
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        it('keeps the stored connections when a scheduled save is flushed on background', async () => {
+            const addEventListener = jest
+                .spyOn(AppState, 'addEventListener')
+                .mockReturnValue({ remove: jest.fn() } as any);
+            const { store } = await buildStore();
+            store.persistentNWCServiceEnabled = false;
+            (store as any).setupAppStateMonitoring();
+            await failLoad(store);
+            (store as any).scheduleSave();
+
+            await (addEventListener.mock.calls[0][1] as any)('background');
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        it('keeps the stored connections when the timer fires', async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+            (store as any).scheduleSave();
+
+            await jest.advanceTimersByTimeAsync(500);
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        it('keeps the stored connections when the stored JSON does not parse', async () => {
+            const { store } = await buildStore();
+            const stored = storedItems.get(NWC_CONNECTIONS_KEY)!;
+            storedItems.set(NWC_CONNECTIONS_KEY, '{');
+            await store.loadConnections();
+            storedItems.set(NWC_CONNECTIONS_KEY, stored);
+
+            await store.saveConnections();
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-1']);
+        });
+
+        it('removes the last connection from storage once a load has succeeded', async () => {
+            const { store } = await buildStore();
+            await failLoad(store);
+            await store.loadConnections();
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-1']);
+
+            runInAction(() => {
+                store.connections = [];
+            });
+            await store.saveConnections();
+
+            expect(persistedConnections()).toHaveLength(0);
+        });
+    });
+
     describe('when a write fails', () => {
         const finalize = (store: NostrWalletConnectStore) =>
             (store as any).finalizePayment({

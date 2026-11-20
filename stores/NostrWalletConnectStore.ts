@@ -257,6 +257,9 @@ export default class NostrWalletConnectStore {
     // during (node switch, Android Stop Service) does not finish over it
     private resetGeneration = 0;
     private _scheduledSaveRetries = true;
+    // The last loadConnections could not read storage, so memory is not the
+    // current wallet's full set of connections
+    private connectionsLoadFailed = false;
     private initializeInFlight: Promise<void> | null = null;
     private lastPendingPaymentStatusFetchByConnection = new Map<
         string,
@@ -634,6 +637,12 @@ export default class NostrWalletConnectStore {
                 console.log('NWC: resetting service');
                 this.cancelScheduledMaxBudgetRefresh();
                 this.maxBudgetRefreshNeeded = false;
+                // If this write fails, the retry it schedules can fire
+                // after the switch. The next wallet's loadConnections
+                // flushes first, which stores the previous wallet's change
+                // under its own records. If that write fails too, the load
+                // replaces memory and the change is lost: accepted, as for
+                // any change whose write fails twice in a row.
                 await this.flushScheduledSave();
                 if (Platform.OS === 'ios') {
                     this.teardownIOSAppStateMonitor();
@@ -1338,8 +1347,11 @@ export default class NostrWalletConnectStore {
         await this.flushScheduledSave();
         try {
             const connectionsData = await Storage.getItem(NWC_CONNECTIONS_KEY);
-            if (connectionsData) {
-                const connections = JSON.parse(connectionsData);
+            const connections = connectionsData
+                ? JSON.parse(connectionsData)
+                : undefined;
+            this.connectionsLoadFailed = false;
+            if (connections) {
                 void this.pruneProcessedEventIds(
                     new Set(connections.map((c: NWCConnectionData) => c.id))
                 ).catch((error) =>
@@ -1398,6 +1410,7 @@ export default class NostrWalletConnectStore {
             }
         } catch (error: any) {
             console.error('Failed to load NWC connections:', error);
+            this.connectionsLoadFailed = true;
             runInAction(() => {
                 this.connections = [];
                 this.setError(
@@ -1476,9 +1489,14 @@ export default class NostrWalletConnectStore {
                 // previous wallet's connections until the next load.
                 // Replacing the current wallet's records with them would
                 // remove its connections, so only update their own records.
-                const replacesCurrentWallet = this.connections.every((c) =>
-                    this.connectionBelongsToCurrentWallet(c)
-                );
+                // The same applies after a load that could not read storage:
+                // memory is empty then, and replacing would remove every
+                // stored connection of the current wallet.
+                const replacesCurrentWallet =
+                    !this.connectionsLoadFailed &&
+                    this.connections.every((c) =>
+                        this.connectionBelongsToCurrentWallet(c)
+                    );
                 const filteredExisting = replacesCurrentWallet
                     ? allConnections.filter(
                           (c: NWCConnectionData) =>
