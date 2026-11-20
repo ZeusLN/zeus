@@ -345,7 +345,7 @@ export default class Activity extends React.PureComponent<
                         text: localeString('general.activity'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -421,7 +421,7 @@ export default class Activity extends React.PureComponent<
                         }}
                         titleStyle={{
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     />
                 )}

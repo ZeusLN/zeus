@@ -470,11 +470,11 @@ export default class FeeBreakdown extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         alignSelf: 'center'
     },
     secondaryText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         alignSelf: 'center'
     },
     title: {

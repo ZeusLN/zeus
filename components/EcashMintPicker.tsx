@@ -362,11 +362,11 @@ const styles = StyleSheet.create({
     },
     text: {
         fontSize: 18,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     multiMintText: {
         fontSize: 15,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     field: {
         justifyContent: 'center', // Centered vertically
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.3)'
     },
     moreMintsText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 15,
         marginLeft: 4
     }

@@ -125,7 +125,7 @@ export default class PaymentsSettings extends React.Component<
                         text: localeString('views.Settings.Payments.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -140,7 +140,7 @@ export default class PaymentsSettings extends React.Component<
                         <View style={{ marginBottom: 20 }}>
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('secondaryText')
                                 }}
                             >
@@ -252,7 +252,7 @@ export default class PaymentsSettings extends React.Component<
                         <>
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     paddingTop: 5,
                                     color: themeColor('secondaryText')
                                 }}
@@ -285,7 +285,7 @@ export default class PaymentsSettings extends React.Component<
                     >
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 color: themeColor('secondaryText'),
                                 flex: 1
                             }}
@@ -337,7 +337,7 @@ export default class PaymentsSettings extends React.Component<
                         >
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('secondaryText'),
                                     flex: 1
                                 }}
@@ -375,7 +375,7 @@ export default class PaymentsSettings extends React.Component<
                             >
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         color: themeColor('secondaryText')
                                     }}
                                 >

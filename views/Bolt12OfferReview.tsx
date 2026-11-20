@@ -166,7 +166,7 @@ export default class Bolt12OfferReview extends React.Component<
                         text: localeString('views.Bolt12OfferReview.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}

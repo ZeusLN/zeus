@@ -612,7 +612,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         text: localeString('cashu.mint'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -644,7 +644,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                     >
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Medium',
+                                fontFamily: 'Roboto-Medium',
                                 color: themeColor('background')
                             }}
                         >
@@ -662,7 +662,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                             <>
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         color: themeColor('background'),
                                         marginTop: 20
                                     }}
@@ -674,7 +674,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                 {restorationKeyset && (
                                     <Text
                                         style={{
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             color: themeColor('background')
                                         }}
                                     >
@@ -712,7 +712,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                 />
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        fontFamily: 'Roboto-Medium',
                                         color: themeColor('background'),
                                         // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                         marginTop: -8,
@@ -743,7 +743,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         {mintInfo?.name && (
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 28,
                                     fontWeight: 'bold',
                                     color: themeColor('text')
@@ -755,7 +755,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         {errorConnecting && (
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 16,
                                     marginBottom: 10,
                                     color: themeColor('warning')
@@ -767,7 +767,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         {isselectedMint && (
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 16,
                                     marginBottom: 10,
                                     color: themeColor('highlight')
@@ -779,7 +779,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         {mintInfo?.description && (
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 18,
                                     marginBottom: 14,
                                     color: themeColor('text')
@@ -791,7 +791,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         {mintInfo?.description_long && (
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 14,
                                     marginBottom: 10,
                                     color: themeColor('text')
@@ -973,8 +973,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                     >
                                         <Text
                                             style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
+                                                fontFamily: 'Roboto-Regular',
                                                 color: themeColor(
                                                     'secondaryText'
                                                 )
@@ -1118,7 +1117,7 @@ const styles = StyleSheet.create({
     },
     valueWithLink: {
         paddingBottom: 5,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     // Modal styles
     modalContainer: {
@@ -1139,7 +1138,7 @@ const styles = StyleSheet.create({
         marginBottom: 10
     },
     modalSubtitle: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14,
         textAlign: 'center',
         marginBottom: 15
@@ -1153,7 +1152,7 @@ const styles = StyleSheet.create({
         padding: 5
     },
     ratingText: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         fontSize: 16,
         textAlign: 'center',
         marginBottom: 10
@@ -1187,19 +1186,19 @@ const styles = StyleSheet.create({
         flex: 1
     },
     optionTitle: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         fontSize: 16,
         marginBottom: 4
     },
     optionDescription: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 13
     },
     nsecInputContainer: {
         marginTop: 10
     },
     nsecError: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 12,
         marginTop: 5
     },
@@ -1213,12 +1212,12 @@ const styles = StyleSheet.create({
         marginVertical: 10
     },
     npubLabel: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 12,
         marginBottom: 5
     },
     npubValue: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 12
     }
 });

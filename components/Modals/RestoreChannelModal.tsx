@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
         textAlign: 'center'
     },
     description: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 18,
         marginBottom: 28,
         textAlign: 'left'

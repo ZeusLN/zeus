@@ -139,7 +139,7 @@ export default class Sweepremoteclosed extends React.Component<
                                 ),
                                 style: {
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }
                             }}
                             rightComponent={
@@ -513,6 +513,6 @@ export default class Sweepremoteclosed extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     }
 });

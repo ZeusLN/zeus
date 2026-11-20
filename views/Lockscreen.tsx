@@ -1063,7 +1063,7 @@ const styles = StyleSheet.create({
         marginLeft: 10
     },
     mainText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 20,
         textAlign: 'center'
     }

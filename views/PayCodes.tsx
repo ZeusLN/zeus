@@ -126,7 +126,7 @@ export default class PayCodes extends React.Component<PayCodesProps, {}> {
                         text: localeString('general.paycodes'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -171,7 +171,7 @@ export default class PayCodes extends React.Component<PayCodesProps, {}> {
                     ) : (
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 color: themeColor('secondaryText'),
                                 textAlign: 'center'
                             }}

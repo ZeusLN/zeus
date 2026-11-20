@@ -68,7 +68,7 @@ const FilterButton = ({
                 color: themeColor('text'),
                 fontSize: 14,
                 marginLeft: 8,
-                fontFamily: 'PPNeueMontreal-Book'
+                fontFamily: 'Roboto-Regular'
             }}
         >
             {localeString(labelKey)}
@@ -446,7 +446,7 @@ export default class RoutingEvent extends React.Component<
 
 const styles = StyleSheet.create({
     highlight: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     content: {
         paddingLeft: 20,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
         padding: 10
     },
     sectionHeader: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 20,
         textAlign: 'center',
         padding: 20,

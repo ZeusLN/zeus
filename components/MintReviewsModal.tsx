@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
         paddingTop: 15
     },
     reviewsMintUrl: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 12,
         textAlign: 'center',
         marginBottom: 15
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     profilePlaceholderText: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         fontSize: 18
     },
     reviewHeaderText: {
@@ -439,17 +439,17 @@ const styles = StyleSheet.create({
         marginBottom: 2
     },
     reviewerName: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         fontSize: 14,
         flex: 1
     },
     reviewDate: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 11,
         marginLeft: 8
     },
     reviewerNpub: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 11
     },
     npubRow: {
@@ -461,12 +461,12 @@ const styles = StyleSheet.create({
         marginLeft: 4
     },
     reviewContent: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14,
         fontStyle: 'normal'
     },
     expandHint: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 12,
         marginTop: 4
     },
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
         height: 1
     },
     noReviews: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14,
         textAlign: 'center',
         marginTop: 20,

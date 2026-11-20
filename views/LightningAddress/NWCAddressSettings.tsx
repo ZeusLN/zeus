@@ -110,7 +110,7 @@ export default class NWCAddressSettings extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         rightComponent={
@@ -136,7 +136,7 @@ export default class NWCAddressSettings extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         fontSize: 17
                                     }}
                                 >
@@ -185,7 +185,7 @@ export default class NWCAddressSettings extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         fontSize: 17
                                     }}
                                     infoModalText={[
@@ -286,7 +286,7 @@ export default class NWCAddressSettings extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(
@@ -319,8 +319,7 @@ export default class NWCAddressSettings extends React.Component<
                                         <ListItem.Title
                                             style={{
                                                 color: themeColor('text'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
+                                                fontFamily: 'Roboto-Regular'
                                             }}
                                         >
                                             {localeString(

@@ -1231,7 +1231,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         paddingVertical: 5,
         width: '100%',
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'center'
     },
     divider: {
@@ -1258,7 +1258,7 @@ const styles = StyleSheet.create({
     },
     addFieldText: {
         fontSize: 17,
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         letterSpacing: 0.2
     },
     modalContainer: {

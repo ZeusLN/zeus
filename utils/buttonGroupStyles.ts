@@ -17,5 +17,5 @@ export const getButtonGroupStyles = () => ({
 });
 
 export const buttonTextStyle = {
-    fontFamily: 'PPNeueMontreal-Book'
+    fontFamily: 'Roboto-Regular'
 };

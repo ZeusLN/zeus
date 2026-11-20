@@ -65,7 +65,7 @@ export default class ChannelBackupLoadingModal extends React.Component<ChannelBa
 
 const styles = StyleSheet.create({
     message: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 18,
         marginTop: 20,
         textAlign: 'center'

@@ -82,7 +82,7 @@ export default class ChannelsSettings extends React.Component<
                         text: localeString('views.Settings.Channels.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -242,6 +242,6 @@ export default class ChannelsSettings extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     }
 });

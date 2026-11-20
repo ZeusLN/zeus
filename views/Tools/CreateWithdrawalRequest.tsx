@@ -214,7 +214,7 @@ export default class CreateWithdrawalRequest extends Component<
                     centerComponent={{
                         text: localeString('general.withdrawalRequest'),
                         style: {
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             color: themeColor('text')
                         }
                     }}

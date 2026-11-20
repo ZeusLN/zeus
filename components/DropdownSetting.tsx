@@ -207,7 +207,7 @@ export default class DropdownSetting extends React.Component<
 
 const styles = StyleSheet.create({
     secondaryText: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     field: {
         fontSize: 20,
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
         marginBottom: 10,
         overflow: 'hidden',
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         ...Platform.select({ ios: { paddingTop: 18 }, android: {} })
     }
 });

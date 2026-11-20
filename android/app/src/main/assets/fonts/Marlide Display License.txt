@@ -1,0 +1,15 @@
+Marlide Display: commercial font licence notice
+===============================================
+
+The following font file is a commercial typeface. It is NOT covered by
+ZEUS's open source licence (GNU Affero General Public License v3) and is
+used in ZEUS under licence by Atlas 21 Inc.
+
+  Marlide-Display-Bold.ttf
+      Marlide Display. Copyright 2022 Kontour Type, LLC.
+      "Marlide Display" is a trademark of Kontour Type, LLC.
+      https://kontour.com
+
+All rights reserved by its owner. You may not copy, redistribute or reuse
+this file outside ZEUS. If you fork or redistribute ZEUS, remove this file
+or obtain your own licence from the foundry.

@@ -409,7 +409,7 @@ export default class ChannelPicker extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     field: {
         paddingTop: 10,

@@ -183,7 +183,7 @@ export default class Products extends React.Component<
                         <Text
                             style={{
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 alignSelf: 'center',
                                 marginTop: 20
                             }}

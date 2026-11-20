@@ -41,7 +41,7 @@ export default class ZeusText extends React.Component<TextProps, {}> {
                 numberOfLines={numberOfLines}
                 ellipsizeMode={ellipsizeMode}
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color: themeColor('text'),
                     ...style
                 }}

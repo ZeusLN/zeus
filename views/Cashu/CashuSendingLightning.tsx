@@ -442,7 +442,7 @@ export default class CashuSendingLightning extends React.Component<
                                         style={{
                                             textAlign: 'center',
                                             color: 'white',
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             padding: 20,
                                             fontSize: 14
                                         }}

@@ -84,7 +84,7 @@ export default class LightningAddressSettings extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         rightComponent={
@@ -127,8 +127,7 @@ export default class LightningAddressSettings extends React.Component<
                                         <ListItem.Title
                                             style={{
                                                 color: themeColor('text'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
+                                                fontFamily: 'Roboto-Regular'
                                             }}
                                         >
                                             {localeString(
@@ -159,7 +158,7 @@ export default class LightningAddressSettings extends React.Component<
                                 <ListItem.Title
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {localeString(

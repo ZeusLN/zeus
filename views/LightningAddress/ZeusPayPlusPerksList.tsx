@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
         marginBottom: 5
     },
     note: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 15,
         marginBottom: 5
     },

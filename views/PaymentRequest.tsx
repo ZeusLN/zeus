@@ -584,7 +584,7 @@ export default class PaymentRequest extends React.Component<
             (
                 <Text
                     style={{
-                        fontFamily: 'PPNeueMontreal-Book',
+                        fontFamily: 'Roboto-Regular',
                         color:
                             this.state.selectedIndex === index
                                 ? themeColor('background')
@@ -663,7 +663,7 @@ export default class PaymentRequest extends React.Component<
                         text: localeString('views.PaymentRequest.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -1457,7 +1457,7 @@ export default class PaymentRequest extends React.Component<
                                 <>
                                     <Text
                                         style={{
-                                            fontFamily: 'PPNeueMontreal-Medium',
+                                            fontFamily: 'Roboto-Medium',
                                             color: themeColor('highlight'),
                                             margin: 5,
                                             alignSelf: 'center',
@@ -1545,11 +1545,11 @@ const styles = StyleSheet.create({
         paddingRight: 20
     },
     label: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         paddingTop: 5
     },
     labelSecondary: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         paddingTop: 5
     },
     button: {

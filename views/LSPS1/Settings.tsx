@@ -213,7 +213,7 @@ export default class LSPS1Settings extends React.Component<
                         )}`,
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -225,7 +225,7 @@ export default class LSPS1Settings extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontSize: 14,
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     marginBottom: 16
                                 }}
                             >
@@ -493,7 +493,7 @@ export default class LSPS1Settings extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {item.label}

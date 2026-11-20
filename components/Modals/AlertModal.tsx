@@ -71,7 +71,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                         <ScrollView>
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('text'),
                                     fontSize: 20,
                                     marginBottom: 20
@@ -308,13 +308,13 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
 
 const styles = StyleSheet.create({
     header: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontWeight: 'bold',
         fontSize: 20,
         marginBottom: 15
     },
     text: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 20,
         marginBottom: 10
     },

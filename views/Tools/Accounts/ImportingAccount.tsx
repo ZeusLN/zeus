@@ -167,7 +167,7 @@ export default class ImportingAccount extends React.Component<
 
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Medium',
+                            fontFamily: 'Roboto-Medium',
                             color: themeColor('secondaryText'),
                             paddingTop: 15
                         }}
@@ -176,7 +176,7 @@ export default class ImportingAccount extends React.Component<
                     </Text>
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Medium',
+                            fontFamily: 'Roboto-Medium',
                             color: themeColor('text'),
                             paddingTop: 15,
                             paddingBottom: 15
@@ -187,7 +187,7 @@ export default class ImportingAccount extends React.Component<
 
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Medium',
+                            fontFamily: 'Roboto-Medium',
                             color: themeColor('secondaryText')
                         }}
                     >
@@ -195,7 +195,7 @@ export default class ImportingAccount extends React.Component<
                     </Text>
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Medium',
+                            fontFamily: 'Roboto-Medium',
                             color: themeColor('text'),
                             paddingTop: 15,
                             paddingBottom: 15

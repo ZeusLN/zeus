@@ -32,7 +32,7 @@ export default function PaymentSuccessView({
                     style={{
                         color: themeColor('text'),
                         paddingTop: windowSize.height * 0.03,
-                        fontFamily: 'PPNeueMontreal-Book',
+                        fontFamily: 'Roboto-Regular',
                         fontSize: windowSize.width * windowSize.scale * 0.017
                     }}
                 >
@@ -60,7 +60,7 @@ export default function PaymentSuccessView({
                                 <Text
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         fontSize: amountFontSize
                                     }}
                                 >
@@ -75,7 +75,7 @@ export default function PaymentSuccessView({
                                 <Text
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         fontSize: amountFontSize
                                     }}
                                 >
@@ -92,7 +92,7 @@ export default function PaymentSuccessView({
                         style={{
                             color: themeColor('secondaryText'),
                             marginTop: 10,
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {localeString('views.SendingLightning.paymentSettled', {

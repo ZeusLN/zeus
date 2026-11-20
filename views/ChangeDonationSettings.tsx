@@ -69,7 +69,7 @@ export default class ChangeDonationSettings extends React.Component<
                         text: localeString('views.PaymentRequest.addATip'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -91,7 +91,7 @@ export default class ChangeDonationSettings extends React.Component<
                         >
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('secondaryText'),
                                     flex: 1
                                 }}
@@ -129,7 +129,7 @@ export default class ChangeDonationSettings extends React.Component<
                             >
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         color: themeColor('secondaryText')
                                     }}
                                 >

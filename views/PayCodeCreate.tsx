@@ -101,7 +101,7 @@ export default class PayCodeCreateView extends React.Component<
                         text: localeString('views.PayCode.createOffer'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={<InfoButton />}
@@ -123,7 +123,7 @@ export default class PayCodeCreateView extends React.Component<
 
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             color: themeColor('secondaryText')
                         }}
                     >
@@ -142,7 +142,7 @@ export default class PayCodeCreateView extends React.Component<
                         <>
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('secondaryText')
                                 }}
                             >

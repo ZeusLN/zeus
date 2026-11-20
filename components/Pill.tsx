@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden'
     },
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     }
 });
 

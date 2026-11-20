@@ -107,11 +107,11 @@
 		74B637832A5A350B00750202 /* StreamingCallback.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B6377A2A5A350A00750202 /* StreamingCallback.mm */; };
 		74B637842A5A350B00750202 /* Callback.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B6377C2A5A350A00750202 /* Callback.mm */; };
 		74B637872A5A35B600750202 /* Lndmobile.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74B637862A5A35B600750202 /* Lndmobile.xcframework */; };
-		74C5F97A2D5311BC003840C4 /* PPNeueMontreal-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 74C5F9772D5311BC003840C4 /* PPNeueMontreal-Bold.otf */; };
-		74C5F97B2D5311BC003840C4 /* PPNeueMontreal-Book.otf in Resources */ = {isa = PBXBuildFile; fileRef = 74C5F9782D5311BC003840C4 /* PPNeueMontreal-Book.otf */; };
-		74C5F97C2D5311BC003840C4 /* PPNeueMontreal-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 74C5F9792D5311BC003840C4 /* PPNeueMontreal-Medium.otf */; };
+		74C5F97A2D5311BC003840C4 /* Roboto-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74C5F9772D5311BC003840C4 /* Roboto-Bold.ttf */; };
+		74C5F97B2D5311BC003840C4 /* Roboto-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74C5F9782D5311BC003840C4 /* Roboto-Regular.ttf */; };
+		74C5F97C2D5311BC003840C4 /* Roboto-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74C5F9792D5311BC003840C4 /* Roboto-Medium.ttf */; };
 		74DE85FF2BB530E5001FEC15 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 74A116702A55DEE600F7078C /* libresolv.tbd */; };
-		74F9D7F22AF33324007D44BF /* PPNeueMontreal-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 74F9D7EF2AF33324007D44BF /* PPNeueMontreal-Medium.otf */; };
+		74F9D7F22AF33324007D44BF /* Roboto-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74F9D7EF2AF33324007D44BF /* Roboto-Medium.ttf */; };
 		7559993899134A458764182A /* Gear.svg in Resources */ = {isa = PBXBuildFile; fileRef = DD64CA87612F416B940C8B7C /* Gear.svg */; };
 		7682ABAE72B940CE8DA4BD4F /* zeus_illustration_1b.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 0CF3D10833D24020923868CE /* zeus_illustration_1b.jpg */; };
 		78D83D32BB1A48AEBFCF1515 /* zeus_illustration_3a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = CD61856C84E64B23AB9305C4 /* zeus_illustration_3a.jpg */; };
@@ -587,11 +587,11 @@
 		74B6377E2A5A350A00750202 /* Callback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Callback.h; sourceTree = "<group>"; };
 		74B6377F2A5A350A00750202 /* LncModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LncModule.h; sourceTree = "<group>"; };
 		74B637862A5A35B600750202 /* Lndmobile.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Lndmobile.xcframework; path = LncMobile/Lndmobile.xcframework; sourceTree = "<group>"; };
-		74C5F9772D5311BC003840C4 /* PPNeueMontreal-Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "PPNeueMontreal-Bold.otf"; path = "../assets/fonts/PPNeueMontreal-Bold.otf"; sourceTree = SOURCE_ROOT; };
-		74C5F9782D5311BC003840C4 /* PPNeueMontreal-Book.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "PPNeueMontreal-Book.otf"; path = "../assets/fonts/PPNeueMontreal-Book.otf"; sourceTree = SOURCE_ROOT; };
-		74C5F9792D5311BC003840C4 /* PPNeueMontreal-Medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "PPNeueMontreal-Medium.otf"; path = "../assets/fonts/PPNeueMontreal-Medium.otf"; sourceTree = SOURCE_ROOT; };
+		74C5F9772D5311BC003840C4 /* Roboto-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Roboto-Bold.ttf"; path = "../assets/fonts/Roboto-Bold.ttf"; sourceTree = SOURCE_ROOT; };
+		74C5F9782D5311BC003840C4 /* Roboto-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Roboto-Regular.ttf"; path = "../assets/fonts/Roboto-Regular.ttf"; sourceTree = SOURCE_ROOT; };
+		74C5F9792D5311BC003840C4 /* Roboto-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Roboto-Medium.ttf"; path = "../assets/fonts/Roboto-Medium.ttf"; sourceTree = SOURCE_ROOT; };
 		74DE86022BB530E5001FEC15 /* libresolv.9.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.9.tbd; path = usr/lib/libresolv.9.tbd; sourceTree = SDKROOT; };
-		74F9D7EF2AF33324007D44BF /* PPNeueMontreal-Medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "PPNeueMontreal-Medium.otf"; path = "../assets/fonts/PPNeueMontreal-Medium.otf"; sourceTree = "<group>"; };
+		74F9D7EF2AF33324007D44BF /* Roboto-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Roboto-Medium.ttf"; path = "../assets/fonts/Roboto-Medium.ttf"; sourceTree = "<group>"; };
 		78C398B01ACF4ADC00677621 /* RCTLinking.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTLinking.xcodeproj; path = "../node_modules/react-native/Libraries/LinkingIOS/RCTLinking.xcodeproj"; sourceTree = "<group>"; };
 		7ABECF711E9D4F5AB912E1C0 /* Copy.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Copy.svg; path = ../assets/images/SVG/Copy.svg; sourceTree = "<group>"; };
 		7BF4E2803ED74582856B0DDC /* alby.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = alby.jpg; path = ../assets/images/alby.jpg; sourceTree = "<group>"; };
@@ -1112,9 +1112,9 @@
 				97F6D47522054E640030F13B /* EvilIcons.ttf */,
 				97F6D47622054E640030F13B /* SimpleLineIcons.ttf */,
 				97F6D47722054E640030F13B /* MaterialIcons.ttf */,
-				74C5F9772D5311BC003840C4 /* PPNeueMontreal-Bold.otf */,
-				74C5F9782D5311BC003840C4 /* PPNeueMontreal-Book.otf */,
-				74C5F9792D5311BC003840C4 /* PPNeueMontreal-Medium.otf */,
+				74C5F9772D5311BC003840C4 /* Roboto-Bold.ttf */,
+				74C5F9782D5311BC003840C4 /* Roboto-Regular.ttf */,
+				74C5F9792D5311BC003840C4 /* Roboto-Medium.ttf */,
 				749E81AF2D55D70800A2A7C0 /* DroidSansMono.ttf */,
 			);
 			name = Fonts;
@@ -1170,7 +1170,7 @@
 				BB0EF52AEE1F4724A178B73A /* Zocial.ttf */,
 				6EA51D451E9C4637BBA7ADDB /* Fontisto.ttf */,
 				74668A562AE3CBB90023695A /* Marlide-Display-Bold.ttf */,
-				74F9D7EF2AF33324007D44BF /* PPNeueMontreal-Medium.otf */,
+				74F9D7EF2AF33324007D44BF /* Roboto-Medium.ttf */,
 				97D9A8F5652E4AC580E97DEF /* Mempool.svg */,
 				2D6AFC110FCE4DB693ABCF13 /* loading.gif */,
 				745E06A9295CB0E500597EE8 /* Caret Down.svg */,
@@ -1743,10 +1743,10 @@
 				NWCAUDIO0000000000000011 /* Fireplace.m4a in Resources */,
 				NWCAUDIO0000000000000012 /* White Noise.m4a in Resources */,
 				NWCAUDIO0000000000000013 /* Gentle Rain.m4a in Resources */,
-				74F9D7F22AF33324007D44BF /* PPNeueMontreal-Medium.otf in Resources */,
-				74C5F97A2D5311BC003840C4 /* PPNeueMontreal-Bold.otf in Resources */,
-				74C5F97B2D5311BC003840C4 /* PPNeueMontreal-Book.otf in Resources */,
-				74C5F97C2D5311BC003840C4 /* PPNeueMontreal-Medium.otf in Resources */,
+				74F9D7F22AF33324007D44BF /* Roboto-Medium.ttf in Resources */,
+				74C5F97A2D5311BC003840C4 /* Roboto-Bold.ttf in Resources */,
+				74C5F97B2D5311BC003840C4 /* Roboto-Regular.ttf in Resources */,
+				74C5F97C2D5311BC003840C4 /* Roboto-Medium.ttf in Resources */,
 				2F59AB02206B4761AB921130 /* Mempool.svg in Resources */,
 				5ECDD76F848B4802B0B5D3C1 /* loading.gif in Resources */,
 				D1F6E94001C348F4BF7300D7 /* Caret Right.svg in Resources */,

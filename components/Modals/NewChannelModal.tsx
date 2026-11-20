@@ -69,7 +69,7 @@ export default class NewChannelModal extends React.Component<
                 <View>
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             color: themeColor('text'),
                             fontSize: 16,
                             paddingTop: 24,
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
         width: '90%'
     },
     optionLabel: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 18
     },
     infoIcon: {

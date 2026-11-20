@@ -1271,7 +1271,7 @@ export default class SwapDetails extends React.Component<
                         text: localeString('views.SwapDetails.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -1330,7 +1330,7 @@ export default class SwapDetails extends React.Component<
                                 style={{
                                     textAlign: 'center',
                                     fontSize: 14,
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     marginTop: 10
                                 }}
                             >

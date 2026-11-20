@@ -81,7 +81,7 @@ export default function Pin({
                 {showPin ? (
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Bold',
+                            fontFamily: 'Roboto-Bold',
                             fontSize: 27,
                             letterSpacing: 21,
                             left: Platform.OS === 'ios' ? 12 : 0,

@@ -77,7 +77,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         text: localeString('views.Settings.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -626,7 +626,7 @@ const styles = StyleSheet.create({
     columnText: {
         fontSize: 16,
         flex: 1,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     separationLine: {
         borderColor: '#A7A9AC',

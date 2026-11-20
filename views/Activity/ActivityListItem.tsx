@@ -249,7 +249,7 @@ const ActivityListItem = observer(
                                     item === selectedPaymentForOrder
                                         ? themeColor('highlight')
                                         : themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         >
                             {displayName}
@@ -308,7 +308,7 @@ const ActivityListItem = observer(
                                     item === selectedPaymentForOrder
                                         ? themeColor('highlight')
                                         : themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         >
                             {subTitle}
@@ -318,7 +318,7 @@ const ActivityListItem = observer(
                             style={{
                                 ...styles.rightCell,
                                 color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }}
                         >
                             {order

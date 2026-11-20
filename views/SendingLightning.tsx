@@ -493,7 +493,7 @@ export default class SendingLightning extends React.Component<
                             style={{
                                 textAlign: 'center',
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 padding: 20,
                                 fontSize: 14
                             }}
@@ -562,7 +562,7 @@ export default class SendingLightning extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             fontSize:
                                                 windowSize.width *
                                                 windowSize.scale *
@@ -680,7 +680,7 @@ export default class SendingLightning extends React.Component<
                                         style={{
                                             textAlign: 'center',
                                             color: 'white',
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             padding: 20,
                                             fontSize: 14
                                         }}
@@ -695,7 +695,7 @@ export default class SendingLightning extends React.Component<
                                         style={{
                                             textAlign: 'center',
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             padding: 20,
                                             fontSize: 14
                                         }}

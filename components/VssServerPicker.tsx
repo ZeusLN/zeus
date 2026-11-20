@@ -81,7 +81,7 @@ export default function VssServerPicker({
                         <Text
                             style={{
                                 color: themeColor('error'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 fontSize: 12,
                                 marginTop: 4
                             }}

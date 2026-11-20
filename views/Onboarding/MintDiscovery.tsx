@@ -278,7 +278,7 @@ export default class MintDiscovery extends React.Component<
                         text: localeString('views.MintDiscovery.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -290,7 +290,7 @@ export default class MintDiscovery extends React.Component<
                     <Text
                         style={{
                             color: themeColor('secondaryText'),
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             fontSize: 14,
                             textAlign: 'center',
                             marginBottom: 20,
@@ -372,7 +372,7 @@ export default class MintDiscovery extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    fontFamily: 'Roboto-Medium',
                                     fontSize: 16,
                                     marginBottom: 2
                                 }}
@@ -382,7 +382,7 @@ export default class MintDiscovery extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 12,
                                     marginBottom: 10
                                 }}
@@ -440,7 +440,7 @@ export default class MintDiscovery extends React.Component<
                                                                 'text'
                                                             ),
                                                             fontFamily:
-                                                                'PPNeueMontreal-Medium',
+                                                                'Roboto-Medium',
                                                             fontSize: 14,
                                                             marginBottom: 2
                                                         }}
@@ -455,7 +455,7 @@ export default class MintDiscovery extends React.Component<
                                                             'secondaryText'
                                                         ),
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book',
+                                                            'Roboto-Regular',
                                                         fontSize: 12
                                                     }}
                                                     numberOfLines={1}
@@ -473,7 +473,7 @@ export default class MintDiscovery extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         fontSize: 14,
                                         textAlign: 'center',
                                         padding: 20
@@ -548,12 +548,12 @@ const styles = StyleSheet.create({
         flex: 1
     },
     optionTitle: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         fontSize: 16,
         marginBottom: 4
     },
     optionDescription: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 13
     },
     npubInputContainer: {
@@ -561,12 +561,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 5
     },
     npubLabel: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14,
         marginBottom: 8
     },
     npubError: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 12,
         marginTop: 5
     },

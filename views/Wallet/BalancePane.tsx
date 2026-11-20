@@ -880,7 +880,7 @@ export default class BalancePane extends React.PureComponent<
                                                                             'background'
                                                                         ),
                                                                         fontFamily:
-                                                                            'PPNeueMontreal-Medium',
+                                                                            'Roboto-Medium',
                                                                         textAlign:
                                                                             'center'
                                                                     }}
@@ -1184,7 +1184,7 @@ export default class BalancePane extends React.PureComponent<
                                                                     style={{
                                                                         color: '#fff',
                                                                         fontFamily:
-                                                                            'PPNeueMontreal-Medium',
+                                                                            'Roboto-Medium',
                                                                         textAlign:
                                                                             'center'
                                                                     }}
@@ -1290,14 +1290,14 @@ const styles = StyleSheet.create({
         borderWidth: 1.5
     },
     cardTitleText: {
-        fontFamily: 'PPNeueMontreal-Medium'
+        fontFamily: 'Roboto-Medium'
     },
     cardBodyText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         marginTop: 20
     },
     cardBodyTextBold: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontWeight: 'bold',
         marginTop: 20
     },
@@ -1314,7 +1314,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row'
     },
     progressText: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
         marginTop: -8,
         marginLeft: 14,
@@ -1330,13 +1330,13 @@ const styles = StyleSheet.create({
         padding: 15
     },
     errorTitleText: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         color: '#fff',
         fontSize: 16,
         marginBottom: 10
     },
     errorBodyText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         color: '#fff',
         marginBottom: 20
     },
@@ -1353,7 +1353,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     pendingBannerText: {
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         color: '#fff',
         fontSize: 14
     },
@@ -1375,7 +1375,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12
     },
     tokenMint: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 12,
         marginTop: 4
     },
@@ -1398,7 +1398,7 @@ const styles = StyleSheet.create({
         flex: 1
     },
     errorText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         color: '#fff',
         fontSize: 20,
         margin: 20

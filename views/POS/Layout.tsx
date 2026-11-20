@@ -67,7 +67,7 @@ export default class Layout extends React.PureComponent<LayoutProps> {
                 >
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             color: '#fff',
                             fontSize: 20,
                             marginBottom: 25
@@ -89,7 +89,7 @@ export default class Layout extends React.PureComponent<LayoutProps> {
                     />
                     <Text
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
+                            fontFamily: 'Roboto-Regular',
                             color: '#fff',
                             fontSize: 12,
                             marginTop: 20,

@@ -372,7 +372,7 @@ export default class ImportAccount extends React.Component<
                             <Text
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 17,
                                     flex: 1
                                 }}
@@ -395,7 +395,7 @@ export default class ImportAccount extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         marginBottom: 10
                                     }}
                                 >
@@ -410,8 +410,7 @@ export default class ImportAccount extends React.Component<
                                                 color: themeColor(
                                                     'secondaryText'
                                                 ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
+                                                fontFamily: 'Roboto-Regular',
                                                 marginBottom: 10
                                             }}
                                         >
@@ -425,8 +424,7 @@ export default class ImportAccount extends React.Component<
                                                 color: themeColor(
                                                     'secondaryText'
                                                 ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
+                                                fontFamily: 'Roboto-Regular',
                                                 marginBottom: 10
                                             }}
                                         >
@@ -463,7 +461,7 @@ export default class ImportAccount extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             marginBottom: 10
                                         }}
                                     >
@@ -549,7 +547,7 @@ export default class ImportAccount extends React.Component<
 
 const styles = StyleSheet.create({
     warningText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         margin: 10,
         fontSize: 20
     },
@@ -561,7 +559,7 @@ const styles = StyleSheet.create({
         paddingRight: 10
     },
     label: {
-        fontFamily: 'PPNeueMontreal-Medium'
+        fontFamily: 'Roboto-Medium'
     },
     button: {
         paddingTop: 10,

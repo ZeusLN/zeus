@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     layerText: {
         backgroundColor: 'transparent',
         fontSize: 15,
-        fontFamily: 'PPNeueMontreal-Medium'
+        fontFamily: 'Roboto-Medium'
     },
     eyeIcon: { alignSelf: 'center', margin: 15, marginLeft: 25 },
     mintIconsContainer: {
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     },
     mintIconPlaceholderText: {
         fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Medium',
+        fontFamily: 'Roboto-Medium',
         color: '#fff'
     }
 });

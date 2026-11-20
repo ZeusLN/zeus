@@ -295,7 +295,7 @@ export default class LSPPaymentAwait extends React.Component<
                                 : localeString('views.LSPS1.awaitingPayment'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -366,7 +366,7 @@ export default class LSPPaymentAwait extends React.Component<
                                 style={{
                                     color: themeColor('secondaryText'),
                                     marginLeft: 10,
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    fontFamily: 'Roboto-Regular'
                                 }}
                             >
                                 {localeString(
@@ -411,7 +411,7 @@ export default class LSPPaymentAwait extends React.Component<
                                     color: themeColor('text'),
                                     marginTop: 20,
                                     textAlign: 'center',
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 20
                                 }}
                             >
@@ -422,7 +422,7 @@ export default class LSPPaymentAwait extends React.Component<
                                     color: themeColor('secondaryText'),
                                     marginTop: 12,
                                     textAlign: 'center',
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 16
                                 }}
                             >

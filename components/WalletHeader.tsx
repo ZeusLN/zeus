@@ -724,7 +724,7 @@ export default class WalletHeader extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             fontSize: 16
                                         }}
                                         disabled={!sessionStarted}

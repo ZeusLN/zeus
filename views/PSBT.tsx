@@ -513,7 +513,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     button: {
         padding: 10

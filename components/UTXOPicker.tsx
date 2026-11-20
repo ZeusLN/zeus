@@ -599,10 +599,10 @@ export default class UTXOPicker extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     secondaryText: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     sheet: {
         borderTopLeftRadius: 20,
@@ -627,10 +627,10 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         paddingTop: 4,
         textAlign: 'center',
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     sheetDescription: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'center',
         paddingTop: 10,
         paddingBottom: 10
@@ -647,11 +647,11 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     selectionMetaText: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14
     },
     selectionMetaAction: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14
     },
     loadingWrap: {
@@ -681,19 +681,19 @@ const styles = StyleSheet.create({
     utxoOutpoint: {
         flex: 1,
         alignSelf: 'flex-start',
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     utxoCheck: {
         paddingLeft: 10,
         fontSize: 16,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     utxoAmountLine: {
         alignSelf: 'flex-start',
         marginTop: 2
     },
     utxoLabel: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 13,
         marginTop: 4,
         alignSelf: 'flex-start'

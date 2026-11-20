@@ -68,7 +68,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         navigation={navigation}
@@ -78,7 +78,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
                         {!loading && error && (
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     textAlign: 'center',
                                     color: themeColor('error')
                                 }}
@@ -91,7 +91,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
                         {!loading && backups.length === 0 && (
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     textAlign: 'center',
                                     color: themeColor('text')
                                 }}
@@ -151,8 +151,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
                                         >
                                             <Text
                                                 style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Medium',
+                                                    fontFamily: 'Roboto-Medium',
                                                     alignSelf: 'flex-start',
                                                     color: isSelected
                                                         ? themeColor(
@@ -171,7 +170,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
                                                 <Text
                                                     style={{
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book',
+                                                            'Roboto-Regular',
                                                         alignSelf: 'flex-start',
                                                         color: isSelected
                                                             ? themeColor(

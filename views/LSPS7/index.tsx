@@ -239,7 +239,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
         const oneMoButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 0
                             ? themeColor('background')
@@ -252,7 +252,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
         const threeMoButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 1
                             ? themeColor('background')
@@ -265,7 +265,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
         const sixMoButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 2
                             ? themeColor('background')
@@ -278,7 +278,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
         const twelveMoButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 3
                             ? themeColor('background')
@@ -291,7 +291,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
         const maxButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         expirationIndex === 4
                             ? themeColor('background')
@@ -438,7 +438,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                     fontSize: 16,
                                                     color: themeColor('text'),
                                                     fontFamily:
-                                                        'PPNeueMontreal-Book',
+                                                        'Roboto-Regular',
                                                     marginBottom: 10
                                                 }}
                                             >

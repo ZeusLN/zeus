@@ -185,14 +185,14 @@ export default class GraphSyncPromptModal extends React.Component<
 
 const styles = StyleSheet.create({
     header: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontWeight: 'bold',
         fontSize: 20,
         marginBottom: 15,
         textAlign: 'center'
     },
     text: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 16,
         lineHeight: 22,
         textAlign: 'center'

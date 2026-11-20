@@ -356,7 +356,7 @@ export default class Bolt12AddressSettings extends React.Component<
                                 />
                                 <Text
                                     style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         color: themeColor('text'),
                                         fontSize: 20,
                                         marginLeft: 5,
@@ -385,10 +385,10 @@ export default class Bolt12AddressSettings extends React.Component<
 
 const styles = StyleSheet.create({
     secondaryText: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     tabText: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     button: {
         padding: 10

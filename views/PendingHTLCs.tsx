@@ -89,7 +89,7 @@ export default class PendingHTLCs extends React.PureComponent<
                         text: localeString('views.PendingHTLCs.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -137,7 +137,7 @@ export default class PendingHTLCs extends React.PureComponent<
                                                             'text'
                                                         ),
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book'
+                                                            'Roboto-Regular'
                                                     }}
                                                 >
                                                     {displayName}
@@ -198,7 +198,7 @@ export default class PendingHTLCs extends React.PureComponent<
                                                             'secondaryText'
                                                         ),
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book'
+                                                            'Roboto-Regular'
                                                     }}
                                                 >
                                                     {subTitle}
@@ -211,7 +211,7 @@ export default class PendingHTLCs extends React.PureComponent<
                                                             'secondaryText'
                                                         ),
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book'
+                                                            'Roboto-Regular'
                                                     }}
                                                 >
                                                     {item.channelDisplayName}
@@ -250,7 +250,7 @@ export default class PendingHTLCs extends React.PureComponent<
                         }}
                         titleStyle={{
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     />
                 )}
@@ -268,8 +268,7 @@ export default class PendingHTLCs extends React.PureComponent<
                                     >
                                         <Text
                                             style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
+                                                fontFamily: 'Roboto-Regular',
                                                 color: themeColor('background')
                                             }}
                                         >
@@ -287,8 +286,7 @@ export default class PendingHTLCs extends React.PureComponent<
                                     >
                                         <Text
                                             style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
+                                                fontFamily: 'Roboto-Regular',
                                                 color: themeColor('background')
                                             }}
                                         >
@@ -311,8 +309,7 @@ export default class PendingHTLCs extends React.PureComponent<
                                                     color: themeColor(
                                                         'background'
                                                     ),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
+                                                    fontFamily: 'Roboto-Regular'
                                                 }}
                                             >
                                                 {localeString(

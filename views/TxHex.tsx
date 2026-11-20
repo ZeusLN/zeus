@@ -516,7 +516,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     button: {
         padding: 10

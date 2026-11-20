@@ -59,7 +59,7 @@ export default function DonationInfoModal({
                         <>
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     color: themeColor('text'),
                                     marginBottom: 12,
                                     fontSize: 18,
@@ -112,7 +112,7 @@ export default function DonationInfoModal({
                                                 <Text
                                                     style={{
                                                         fontFamily:
-                                                            'PPNeueMontreal-Book',
+                                                            'Roboto-Regular',
                                                         color: themeColor(
                                                             'text'
                                                         )
@@ -180,7 +180,7 @@ export default function DonationInfoModal({
                     ) : (
                         <Text
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 color: themeColor('text'),
                                 fontSize: 18,
                                 marginBottom: 20,

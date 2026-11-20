@@ -404,7 +404,7 @@ export default class ActivityFilter extends React.Component<
             >
                 <Text
                     style={{
-                        fontFamily: 'PPNeueMontreal-Book',
+                        fontFamily: 'Roboto-Regular',
                         color: themeColor('text'),
                         marginRight: 15
                     }}
@@ -439,7 +439,7 @@ export default class ActivityFilter extends React.Component<
                     }}
                     titleStyle={{
                         color: themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }}
                     title={
                         (props.type === 'startDate' && startDate) ||
@@ -727,7 +727,7 @@ export default class ActivityFilter extends React.Component<
                         text: localeString('views.ActivityFilter.title'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     rightComponent={
@@ -792,7 +792,7 @@ export default class ActivityFilter extends React.Component<
                                                                     'text'
                                                                 ),
                                                                 fontFamily:
-                                                                    'PPNeueMontreal-Book'
+                                                                    'Roboto-Regular'
                                                             }}
                                                         >
                                                             {item.label}
@@ -900,7 +900,7 @@ export default class ActivityFilter extends React.Component<
                                                                                                 'text'
                                                                                             ),
                                                                                             fontFamily:
-                                                                                                'PPNeueMontreal-Book'
+                                                                                                'Roboto-Regular'
                                                                                         }}
                                                                                     >
                                                                                         {
@@ -1197,7 +1197,7 @@ export default class ActivityFilter extends React.Component<
                                                                                             'text'
                                                                                         ),
                                                                                         fontFamily:
-                                                                                            'PPNeueMontreal-Book'
+                                                                                            'Roboto-Regular'
                                                                                     }}
                                                                                 >
                                                                                     {
@@ -1344,8 +1344,7 @@ export default class ActivityFilter extends React.Component<
                                             <ListItem.Title
                                                 style={{
                                                     color: themeColor('text'),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
+                                                    fontFamily: 'Roboto-Regular'
                                                 }}
                                             >
                                                 {item.label}
@@ -1581,8 +1580,7 @@ export default class ActivityFilter extends React.Component<
                                                 style={{
                                                     color: themeColor('text'),
                                                     fontSize: 16,
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
+                                                    fontFamily: 'Roboto-Regular'
                                                 }}
                                             >
                                                 {localeString('general.cancel')}
@@ -1592,8 +1590,7 @@ export default class ActivityFilter extends React.Component<
                                             style={{
                                                 color: themeColor('text'),
                                                 fontSize: 16,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Medium'
+                                                fontFamily: 'Roboto-Medium'
                                             }}
                                         >
                                             {setStartDate
@@ -1629,8 +1626,7 @@ export default class ActivityFilter extends React.Component<
                                                         'highlight'
                                                     ),
                                                     fontSize: 16,
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Medium'
+                                                    fontFamily: 'Roboto-Medium'
                                                 }}
                                             >
                                                 {localeString(

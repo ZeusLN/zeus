@@ -24,7 +24,7 @@ export default function PaymentErrorView({
             <Text
                 style={{
                     color: themeColor('warning'),
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     fontSize: 32,
                     marginTop: windowSize.height * 0.07
                 }}
@@ -35,7 +35,7 @@ export default function PaymentErrorView({
                 <Text
                     style={{
                         color: themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book',
+                        fontFamily: 'Roboto-Regular',
                         fontSize: windowSize.width * windowSize.scale * 0.014,
                         textAlign: 'center',
                         marginTop: windowSize.height * 0.025,

@@ -357,7 +357,7 @@ export default class NWCConnectionDetails extends React.Component<
                                       : connection.name,
                                   style: {
                                       color: themeColor('text'),
-                                      fontFamily: 'PPNeueMontreal-Book'
+                                      fontFamily: 'Roboto-Regular'
                                   }
                               }
                             : undefined
@@ -505,7 +505,7 @@ export default class NWCConnectionDetails extends React.Component<
                                                         <Text
                                                             style={{
                                                                 fontFamily:
-                                                                    'PPNeueMontreal-Book',
+                                                                    'Roboto-Regular',
                                                                 color: themeColor(
                                                                     'text'
                                                                 )
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
     },
     permissionText: {
         fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textTransform: 'capitalize',
         fontWeight: '500'
     },
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
     inFlightWaitText: {
         flexShrink: 1,
         fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         textAlign: 'center'
     }
 });

@@ -132,7 +132,7 @@ export default class NostrMintSync extends React.Component<
                             ),
                             style: {
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                fontFamily: 'Roboto-Regular'
                             }
                         }}
                         rightComponent={
@@ -228,7 +228,7 @@ export default class NostrMintSync extends React.Component<
 
 const styles = StyleSheet.create({
     description: {
-        fontFamily: 'PPNeueMontreal-Book',
+        fontFamily: 'Roboto-Regular',
         fontSize: 14,
         marginBottom: 20,
         lineHeight: 20

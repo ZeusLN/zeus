@@ -321,7 +321,7 @@ export default class LightningAddress extends React.Component<
                                             <Text
                                                 style={{
                                                     fontFamily:
-                                                        'PPNeueMontreal-Book',
+                                                        'Roboto-Regular',
                                                     fontSize: 26 / fontScale,
                                                     color: themeColor('text'),
                                                     textAlign: 'center'
@@ -1001,7 +1001,7 @@ const styles = StyleSheet.create({
     explainer: {
         fontSize: 18,
         marginBottom: 10,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'Roboto-Regular'
     },
     optionBlock: {
         marginTop: 10,

@@ -637,7 +637,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const twentyPercentButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         selectedIndex === 0
                             ? themeColor('background')
@@ -650,7 +650,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const twentyFivePercentButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         selectedIndex === 1
                             ? themeColor('background')
@@ -663,7 +663,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const thirtyPercentButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         selectedIndex === 2
                             ? themeColor('background')
@@ -676,7 +676,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const customButton = () => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
+                    fontFamily: 'Roboto-Regular',
                     color:
                         selectedIndex === 3
                             ? themeColor('background')
@@ -818,7 +818,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         text: localeString('general.order'),
                         style: {
                             color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }
                     }}
                     navigation={navigation}
@@ -892,7 +892,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     <Text
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {baseDisplayValue}
@@ -900,7 +900,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     <Text
                                         style={{
                                             color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            fontFamily: 'Roboto-Regular'
                                         }}
                                     >
                                         {itemTaxRate}

@@ -115,7 +115,7 @@ export default class CurrencyList extends React.Component<
                                             currentUnit === item.value
                                                 ? themeColor('highlight')
                                                 : themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        fontFamily: 'Roboto-Regular'
                                     }}
                                 >
                                     {item.key}
@@ -124,7 +124,7 @@ export default class CurrencyList extends React.Component<
                                     <ListItem.Subtitle
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             fontSize: 12
                                         }}
                                     >
@@ -186,7 +186,7 @@ export default class CurrencyList extends React.Component<
                                 currentFiat === item.value
                                     ? themeColor('highlight')
                                     : themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            fontFamily: 'Roboto-Regular'
                         }}
                     >
                         {`${item.flag ? item.flag : ''} ${item.key} (${
@@ -214,7 +214,7 @@ export default class CurrencyList extends React.Component<
                             <ListItem.Subtitle
                                 style={{
                                     color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontFamily: 'Roboto-Regular',
                                     fontSize: 12
                                 }}
                             >
@@ -245,7 +245,7 @@ export default class CurrencyList extends React.Component<
                     <Text
                         style={{
                             color: themeColor('secondaryText'),
-                            fontFamily: 'PPNeueMontreal-Medium',
+                            fontFamily: 'Roboto-Medium',
                             fontSize: 14
                         }}
                     >
@@ -292,7 +292,7 @@ export default class CurrencyList extends React.Component<
                     value={search}
                     inputStyle={{
                         color: themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        fontFamily: 'Roboto-Regular'
                     }}
                     placeholderTextColor={placeholderColor()}
                     containerStyle={{
@@ -335,7 +335,7 @@ export default class CurrencyList extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Medium',
+                                            fontFamily: 'Roboto-Medium',
                                             fontSize: 14
                                         }}
                                     >

@@ -163,7 +163,7 @@ export default class RedeemWithdrawalRequest extends React.Component<
                         <Text
                             style={{
                                 color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
+                                fontFamily: 'Roboto-Regular',
                                 paddingBottom: windowSize.height / 10,
                                 fontSize:
                                     windowSize.width * windowSize.scale * 0.014
@@ -198,7 +198,7 @@ export default class RedeemWithdrawalRequest extends React.Component<
                                             color: themeColor('text'),
                                             paddingTop:
                                                 windowSize.height * 0.03,
-                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontFamily: 'Roboto-Regular',
                                             fontSize:
                                                 windowSize.width *
                                                 windowSize.scale *
@@ -238,7 +238,7 @@ export default class RedeemWithdrawalRequest extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('warning'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         fontSize: 32,
                                         marginTop: windowSize.height * 0.07
                                     }}
@@ -248,7 +248,7 @@ export default class RedeemWithdrawalRequest extends React.Component<
                                 <Text
                                     style={{
                                         color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontFamily: 'Roboto-Regular',
                                         fontSize:
                                             windowSize.width *
                                             windowSize.scale *
