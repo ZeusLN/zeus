@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as Keychain from 'react-native-keychain';
 
 import { sleep } from './SleepUtils';
+import { keychainSurvivedReinstall } from './KeychainReinstallUtils';
 import { settingsStore } from '../stores/Stores';
 import {
     Settings,
@@ -222,7 +223,9 @@ class MigrationsUtils {
             const localCreds = await Keychain.getInternetCredentials(key);
             if (localCreds) return localCreds;
 
-            // Fallback to cloud keychain
+            // Fallback to cloud keychain, except after a reinstall: the
+            // first-run check emptied the local keychain on purpose
+            if (await keychainSurvivedReinstall()) return false;
             return await Keychain.getInternetCredentials(key, {
                 cloudSync: true
             });
@@ -1644,6 +1647,20 @@ class MigrationsUtils {
         try {
             const hasRun = await this.readFlag(KEYCHAIN_DESYNC_KEY);
             if (hasRun === 'true') return;
+
+            // After a reinstall on the same device the first-run check
+            // emptied the local partition on purpose; copying the
+            // synchronizable one back would restore the old wallets. The flag
+            // stays unset, which also keeps autoPurgeLegacyKeychain from
+            // running: its copy-before-delete step would restore them too, and
+            // deleting the iCloud copies would remove them from any other
+            // device still reading that partition.
+            //
+            // Asked only after the flag check: while the first-run check is
+            // deferred (a launch while the device is locked) the answer waits
+            // for unlock, and an install whose migration already ran must
+            // not wait for it before loading settings.
+            if (await keychainSurvivedReinstall()) return;
 
             console.log('Attempting keychain desync migration...');
 

@@ -1,5 +1,6 @@
 #import "KeychainAudit.h"
 #import <Security/Security.h>
+#import <UIKit/UIKit.h>
 
 // Enumerates keychain internet-password items so JS can audit and clean up
 // the app's keychain partitions. react-native-keychain only enumerates
@@ -54,6 +55,55 @@ RCT_EXPORT_METHOD(getInternetPasswordServers:(BOOL)synchronizable
         }
 
         resolve([servers array]);
+    });
+}
+
+// Reads KEYCHAIN_SURVIVED_REINSTALL, which the first-run check in
+// AppDelegate.mm sets. Read here at call time rather than through RN's
+// Settings module: Settings.get serves a snapshot taken when JS loaded and
+// only learns of later writes through an async event, and the first-run check
+// can run after JS has loaded when launch happened before protected data was
+// available.
+//
+// While that check is still deferred on a fresh install the flag is not known
+// yet, and an unset flag would let JS copy the iCloud partition into a
+// keychain the check is about to clear. So the promise then resolves only once
+// the check has run. AppDelegate reports nothing pending for an install that
+// has run before, since its deferred check cannot change the flag.
+// AppDelegate reads the flag from defaults and from the file on disk. The
+// defaults-only read is a fallback for a delegate without that method.
+static NSNumber *SurvivedReinstall(id delegate) {
+    if ([delegate respondsToSelector:NSSelectorFromString(@"keychainSurvivedReinstallFlag")]) {
+        return @([[delegate valueForKey:@"keychainSurvivedReinstallFlag"] boolValue]);
+    }
+    return @([[NSUserDefaults standardUserDefaults] boolForKey:@"KEYCHAIN_SURVIVED_REINSTALL"]);
+}
+
+RCT_EXPORT_METHOD(keychainSurvivedReinstall:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+    // AppDelegate sets and clears the pending state on the main queue
+    dispatch_async(dispatch_get_main_queue(), ^{
+        id delegate = [UIApplication sharedApplication].delegate;
+        BOOL pending =
+            [delegate respondsToSelector:NSSelectorFromString(@"firstRunKeychainCheckPending")] &&
+            [[delegate valueForKey:@"firstRunKeychainCheckPending"] boolValue];
+
+        if (!pending) {
+            resolve(SurvivedReinstall(delegate));
+            return;
+        }
+
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        __block id observer = [center
+            addObserverForName:@"ZeusFirstRunKeychainCheckDidRun"
+                        object:nil
+                         queue:[NSOperationQueue mainQueue]
+                    usingBlock:^(NSNotification *note) {
+                        [[NSNotificationCenter defaultCenter] removeObserver:observer];
+                        observer = nil;
+                        resolve(SurvivedReinstall(delegate));
+                    }];
     });
 }
 
