@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { NativeModules } from 'react-native';
 import {
     localeString,
@@ -276,6 +278,41 @@ describe('allLocaleStrings', () => {
 
     it('lists each translation once', () => {
         expect(allLocaleStrings('test.shared')).toEqual(['Shared']);
+    });
+
+    // ALL_LOCALES is a list of its own, next to the switch in localeString.
+    // A language that can be selected but is missing from it would no
+    // longer have its stored labels mapped back.
+    describe('covers every language that can be selected', () => {
+        // SettingsStore cannot be loaded here, so its list is read as text
+        const source = readFileSync(
+            join(__dirname, '../stores/SettingsStore.ts'),
+            'utf8'
+        );
+        const list = source.slice(
+            source.indexOf('export const LOCALE_KEYS = ['),
+            source.indexOf('];', source.indexOf('export const LOCALE_KEYS = ['))
+        );
+        const languages = Array.from(
+            list.matchAll(/\{ key: '([^']+)', value: /g)
+        ).map((match) => match[1]);
+
+        it('reads the languages from SettingsStore', () => {
+            expect(languages.length).toBeGreaterThanOrEqual(33);
+            expect(languages).toEqual(
+                expect.arrayContaining(['en', 'de', 'jp', 'zh_TW', 'id'])
+            );
+        });
+
+        it.each(languages)('%s', (language) => {
+            mockSettings.locale = language;
+            const marker = localeString('test.marker');
+
+            // every language has a marker of its own in this file, so a
+            // new one cannot pass on the English fallback
+            if (language !== 'en') expect(marker).not.toBe('en');
+            expect(allLocaleStrings('test.marker')).toContain(marker);
+        });
     });
 
     it('skips locales where the key is empty', () => {
