@@ -6,6 +6,15 @@ import Storage from '../storage';
 export const LEGACY_CONTACTS_KEY = 'zeus-contacts';
 export const CONTACTS_KEY = 'zeus-contacts-v2';
 
+// Contacts saved before 01656c594 only have `id` (see Contact.getContactId).
+const storedContactId = (contact: any): string | undefined =>
+    contact?.contactId || contact?.id || undefined;
+
+const isSameContact = (a: any, b: any): boolean => {
+    const id = storedContactId(a);
+    return id !== undefined && id === storedContactId(b);
+};
+
 export default class ContactStore {
     @observable public loading: boolean = true;
     @observable public contacts: any = [];
@@ -47,7 +56,7 @@ export default class ContactStore {
 
             if (isEdit && this.prefillContact && !isNostrContact) {
                 const updatedContacts = existingContacts.map((contact) =>
-                    contact.contactId === this.prefillContact.contactId
+                    isSameContact(contact, this.prefillContact)
                         ? { ...contact, ...compactedContactDetails }
                         : contact
                 );
@@ -113,8 +122,7 @@ export default class ContactStore {
                     : [];
 
                 const updatedContacts = existingContacts.filter(
-                    (contact) =>
-                        contact.contactId !== this.prefillContact.contactId
+                    (contact) => !isSameContact(contact, this.prefillContact)
                 );
 
                 await Storage.setItem(CONTACTS_KEY, updatedContacts);
@@ -127,6 +135,28 @@ export default class ContactStore {
             } catch (error) {
                 console.log('Error deleting contact:', error);
             }
+        }
+    };
+
+    @action
+    public updateContact = async (updatedContact: any) => {
+        try {
+            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
+            if (!contactsString) return;
+
+            const existingContacts: Contact[] = JSON.parse(contactsString);
+            const contactIndex = existingContacts.findIndex((contact) =>
+                isSameContact(contact, updatedContact)
+            );
+            if (contactIndex === -1) return;
+
+            existingContacts[contactIndex] = updatedContact;
+            await Storage.setItem(CONTACTS_KEY, existingContacts);
+
+            console.log('Contact updated successfully!');
+            this.loadContacts();
+        } catch (error) {
+            console.log('Error updating contact:', error);
         }
     };
 
@@ -147,7 +177,7 @@ export default class ContactStore {
                 description: prefillContact.description,
                 photo: prefillContact.photo,
                 isFavourite: prefillContact.isFavourite,
-                contactId: prefillContact?.contactId
+                contactId: storedContactId(prefillContact)
             };
         } else {
             this.prefillContact = null;
