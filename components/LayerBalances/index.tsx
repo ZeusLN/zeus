@@ -454,18 +454,6 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         let DATA: DataRow[] = [];
 
-        DATA.push({
-            layer: 'Lightning',
-            balance: Number(lightningBalance).toFixed(3)
-        });
-
-        if (BackendUtils.supportsOnchainReceiving()) {
-            DATA.push({
-                layer: 'On-chain',
-                balance: Number(settledBlockchainBalance).toFixed(3)
-            });
-        }
-
         if (
             BackendUtils.supportsCashuWallet() &&
             settings?.ecash?.enableCashu
@@ -487,6 +475,18 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                 needsConfig: mintUrls?.length === 0,
                 balance: Number(totalBalanceSats).toFixed(3),
                 mints
+            });
+        }
+
+        DATA.push({
+            layer: 'Lightning',
+            balance: Number(lightningBalance).toFixed(3)
+        });
+
+        if (BackendUtils.supportsOnchainReceiving()) {
+            DATA.push({
+                layer: 'On-chain',
+                balance: Number(settledBlockchainBalance).toFixed(3)
             });
         }
 
