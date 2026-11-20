@@ -264,13 +264,17 @@ describe('CashuStore offline-token sweep across a wallet switch', () => {
 
     it("does not claim wallet A's tokens into wallet B's CDK database", async () => {
         switchToWalletB();
-        await store.initializeWallets();
+        // B's initializeCDK waits for A's claim before it opens B's database
+        const openB = store.initializeWallets();
+        await new Promise(setImmediate);
+        expect(mockCdk.openMnemonic).toBe(SEED_A);
+
+        // A's first claim returns while B's node is starting
+        mockCdk.answerFirstClaim!();
+        await openB;
         // B's own sweep claims B's token
         await sweeps.mock.results[1].value;
         expect(mockCdk.openMnemonic).toBe(SEED_B);
-
-        // A's first claim returns only now
-        mockCdk.answerFirstClaim!();
         await sweeps.mock.results[0].value;
 
         expect(mockCdk.databases[SEED_B].received).toEqual([
@@ -437,13 +441,31 @@ describe('CashuStore offline-token sweep across a wallet switch', () => {
 
     it("keeps wallet B's sweep the only one running after wallet A's stopped sweep ends", async () => {
         mockCdk.holdTokens = ['token-for-wallet-B'];
+        // A's stopped sweep holds at its final write of A's queue, after
+        // its claim has returned. B's initializeCDK waits only for the claim
+        const setItem = jest.mocked(Storage.setItem);
+        const write = setItem.getMockImplementation()!;
+        let finishWriteA: () => void = () => {};
+        const writeAHeld = new Promise<void>((resolve) => {
+            finishWriteA = resolve;
+        });
+        setItem.mockImplementation(async (key: string, value: any) => {
+            if (key === 'walletA-cashu-offline-pending-tokens') {
+                setItem.mockImplementation(write);
+                await writeAHeld;
+            }
+            return write(key, value);
+        });
         switchToWalletB();
-        await store.initializeWallets();
+        const openB = store.initializeWallets();
+        await new Promise(setImmediate);
+        mockCdk.answerFirstClaim!();
+        await openB;
         await new Promise(setImmediate);
         expect(mockCdk.heldClaims['token-for-wallet-B']).toBeDefined();
 
         // A's stopped sweep ends while B's sweep waits on its claim
-        mockCdk.answerFirstClaim!();
+        finishWriteA();
         await sweeps.mock.results[0].value;
 
         // Another trigger, such as a reconnect, must not start a second
@@ -538,12 +560,14 @@ describe('CashuStore offline-token sweep across a wallet switch with a second mi
 
     it("does not add wallet A's next mint to wallet B's CDK database", async () => {
         switchToWalletB();
-        await store.initializeWallets();
+        // B's initializeCDK waits for A's first claim before it opens B's
+        // database. A's sweep then goes on to the next mint
+        const openB = store.initializeWallets();
+        await new Promise(setImmediate);
+        mockCdk.answerFirstClaim!();
+        await openB;
         await sweeps.mock.results[1].value;
         expect(mockCdk.openMnemonic).toBe(SEED_B);
-
-        // A's first claim returns after B's database is open
-        mockCdk.answerFirstClaim!();
         await sweeps.mock.results[0].value;
 
         expect(mockCdk.databases[SEED_B].mints).toEqual([
