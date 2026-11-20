@@ -288,14 +288,20 @@ class MobileTools extends ReactContextBaseJavaModule {
             intent.setAction(null);
             intent.removeExtra(Intent.EXTRA_STREAM);
           }
+          // Before the promise settles, so a take JS makes on this result
+          // is not turned away. After the share is consumed, so that take
+          // cannot read it a second time.
+          sharedImageReads.remove(intent);
           promise.resolve(base64String);
         }
       } catch (Exception e) {
         if (settled.compareAndSet(false, true)) {
           android.util.Log.e(TAG, "Error processing shared image", e);
+          sharedImageReads.remove(intent);
           promise.reject("SHARE_ERROR", e.getMessage());
         }
       } finally {
+        // a read that lost to the deadline, or ended in an Error
         sharedImageReads.remove(intent);
       }
     });

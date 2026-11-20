@@ -45,7 +45,8 @@ const extract = () => {
 // returns a pipe and never writes to it, "blockingClose" does the same and
 // never returns from close(), "endless" writes without end, "atCap" and
 // "overCap" serve exactly SHARED_IMAGE_MAX_BYTES and one byte more,
-// "neverOpens" never returns from openInputStream. argv[1] is the deadline JS
+// "neverOpens" never returns from openInputStream and "openFails" throws
+// from it. argv[1] is the deadline JS
 // passes, in ms from the call. argv[2] asks for a second take once the first
 // has settled: "sameShare" of the same intent, "newShare" of a new one.
 // Prints how long the
@@ -89,6 +90,7 @@ class Harness {
     InputStream openInputStream(Uri uri) {
       opened.set(true);
       opens.incrementAndGet();
+      if (openFails) throw new SecurityException("Permission Denial");
       // a binder call into the sending app cannot be interrupted
       while (neverOpens) {
         try { new CountDownLatch(1).await(); }
@@ -107,13 +109,18 @@ class Harness {
     volatile String outcome;
     // settled on the thread running the @ReactMethod, before it returned
     volatile boolean inCall;
+    // the share still had a reader when the promise settled, so a take
+    // made on this result would have been turned away
+    volatile boolean readingAtSettle;
     void resolve(Object value) {
+      readingAtSettle = sharedImageReads.contains(intent);
       inCall = Thread.currentThread() == caller;
       calls.incrementAndGet();
       outcome = value == null ? "resolved:null" : "resolved:" + value;
       settled.countDown();
     }
     void reject(String code, String message) {
+      readingAtSettle = sharedImageReads.contains(intent);
       inCall = Thread.currentThread() == caller;
       calls.incrementAndGet();
       outcome = "rejected:" + code;
@@ -150,6 +157,7 @@ class Harness {
   static InputStream provider;
   static volatile Intent intent = new Intent();
   static volatile boolean neverOpens;
+  static volatile boolean openFails;
   static final AtomicInteger opens = new AtomicInteger();
   static volatile Thread caller;
   static final AtomicBoolean opened = new AtomicBoolean();
@@ -233,6 +241,9 @@ class Harness {
       case "neverOpens":
         neverOpens = true;
         break;
+      case "openFails":
+        openFails = true;
+        break;
       case "endless":
         provider = watched(new InputStream() {
           @Override public int read() { return 0; }
@@ -287,6 +298,7 @@ class Harness {
         + ",\\"settleCalls\\":" + promise.calls.get()
         + ",\\"settledInCall\\":" + promise.inCall
         + ",\\"secondInCall\\":" + secondInCall
+        + ",\\"readingAtSettle\\":" + promise.readingAtSettle
         + ",\\"opened\\":" + opened.get()
         + ",\\"opens\\":" + opens.get()
         + ",\\"served\\":" + served.get()
@@ -440,6 +452,24 @@ class Harness {
             expect(result.readerStopped).toBe(true);
             expect(result.secondInCall).toBe(false);
             expect(result.opens).toBe(2);
+        }, 20000);
+
+        // JS can take the share again as soon as it has the result. A read
+        // that failed must have let go of the share by then, or that take
+        // would find nothing.
+        it('lets go of the share before it settles a read that found no image', () => {
+            const result = run('overCap');
+
+            expect(result.outcome).toBe('resolved:null');
+            expect(result.readingAtSettle).toBe(false);
+        }, 20000);
+
+        it('lets go of the share before it settles a read that failed', () => {
+            const result = run('openFails');
+
+            expect(result.outcome).toBe('rejected:SHARE_ERROR');
+            expect(result.readingAtSettle).toBe(false);
+            expect(result.consumed).toBe(false);
         }, 20000);
 
         it('reads an image of exactly the byte cap', () => {
