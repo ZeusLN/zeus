@@ -114,6 +114,26 @@ describe('SwapsQRScanner', () => {
                 'components.QRCodeScanner.notRecognized'
             );
         });
+
+        it('rejects a mainnet address with a bad checksum', async () => {
+            // MAINNET with the last character changed
+            const navigation = await scan(
+                {},
+                'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5'
+            );
+            expect(alertMessage()).toBe(
+                'components.QRCodeScanner.notRecognized'
+            );
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+
+        it('rejects a testnet address on a regtest node', async () => {
+            const navigation = await scan({ isRegTest: true }, TESTNET);
+            expect(alertMessage()).toBe(
+                'components.QRCodeScanner.notRecognized'
+            );
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
     });
 
     describe('submarine swap invoice', () => {

@@ -814,6 +814,20 @@ export default class SwapStore {
         const fees = this.reverseInfo?.fees;
         const pairHash = this.reverseInfo?.hash;
 
+        // The Swaps screen only enables Initiate for an address of the
+        // node's network. Checked again here, before a key index is taken
+        // or the host is asked: the claim cannot pay out to anything else,
+        // and the hold invoice would stay paid until the swap times out.
+        if (
+            !AddressUtils.isAddressForNodeNetwork(destinationAddress, nodeInfo)
+        ) {
+            runInAction(() => {
+                this.apiError = localeString('views.Swaps.invalidClaimAddress');
+                this.loading = false;
+            });
+            return;
+        }
+
         // Decided once, before the invoice exists, and stored with the
         // swap: the Swaps screen showed this fee, and the claim pays it
         const claimMinerFee = this.getReverseClaimMinerFee(fee);
