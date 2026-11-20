@@ -37,6 +37,11 @@ jest.mock('../backends/LdkNode', () => mockBackend());
 jest.mock('../backends/CLNRest', () => mockBackend());
 jest.mock('../backends/LndHub', () => mockBackend());
 jest.mock('../backends/NostrWalletConnect', () => mockBackend());
+// the stub PSBT of the batch tests does not parse
+jest.mock('../utils/ChannelOpenUtils', () => ({
+    ...jest.requireActual('../utils/ChannelOpenUtils'),
+    signingKeepsTxid: () => true
+}));
 
 import { autorun } from 'mobx';
 
