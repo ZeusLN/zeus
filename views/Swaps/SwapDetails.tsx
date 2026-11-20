@@ -1306,7 +1306,7 @@ export default class SwapDetails extends React.Component<
                         <Text
                             style={{
                                 textAlign: 'center',
-                                fontFamily: font('marlide'),
+                                fontFamily: font('marlideBold'),
                                 fontSize: 22
                             }}
                         >

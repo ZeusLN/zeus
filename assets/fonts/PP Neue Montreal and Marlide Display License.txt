@@ -12,7 +12,6 @@ used in ZEUS under licence by Atlas 21 Inc.
       "Neue Montreal" is a trademark of Pangram Pangram Foundry.
       https://pangrampangram.com
 
-  Marlide-Display.ttf
   Marlide-Display-Bold.ttf
       Marlide Display. Copyright 2022 Kontour Type, LLC.
       "Marlide Display" is a trademark of Kontour Type, LLC.
