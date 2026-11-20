@@ -90,20 +90,30 @@ export const CUSTODIAL_LNDHUBS = [
     'https://ln.getalby.com'
 ];
 
+// 21,000,000 BTC
+const MAX_BIP21_SATS = new BigNumber(21000000).multipliedBy(SATS_PER_BTC);
+
 const bitcoinQrParser = (input: string, prefix: string) => {
     let satAmount, lightning, offer, clinkNoffer;
     const btcAddressAndParams = input.split(prefix)[1];
     const [btcAddress, params] = btcAddressAndParams.split('?');
 
     const result: any = {};
+    // Later duplicates overwrite earlier ones in `result`, so count the
+    // amount params separately: a URI that repeats one (in either case)
+    // has no single amount to show the user.
+    let amountParams = 0;
     params &&
         params.split('&').forEach(function (part) {
             const item = part.split('=');
+            if (item[0] === 'amount' || item[0] === 'AMOUNT') {
+                amountParams++;
+            }
             result[item[0]] = decodeURIComponent(item[1]);
         });
 
     const value = btcAddress;
-    if (result.amount || result.AMOUNT) {
+    if (amountParams === 1 && (result.amount || result.AMOUNT)) {
         let amount = result.amount || result.AMOUNT;
         // BIP21 amounts must be plain decimals, but some wallets (including
         // old ZEUS versions) emit comma group separators (e.g. 1,234.56789).
@@ -115,8 +125,13 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         }
         const parsedAmount = new BigNumber(amount).multipliedBy(SATS_PER_BTC);
         // Ignore amounts that are not a whole, non-negative number of sats
-        // (more than 8 decimals, a sign, Infinity)
-        if (parsedAmount.isInteger() && !parsedAmount.isNegative()) {
+        // (more than 8 decimals, a sign, Infinity) or that exceed the
+        // 21,000,000 BTC supply
+        if (
+            parsedAmount.isInteger() &&
+            !parsedAmount.isNegative() &&
+            parsedAmount.lte(MAX_BIP21_SATS)
+        ) {
             satAmount = parsedAmount.toFixed();
         }
     }
