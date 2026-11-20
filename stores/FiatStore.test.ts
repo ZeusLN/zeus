@@ -138,6 +138,27 @@ describe('FiatStore', () => {
             expect(store.getRate()).toBe('50,000.5د.إ BTC/AED');
         });
 
+        it.each([
+            // symbol before the rate
+            ['ARS', '$ 50.000,5 BTC/ARS'],
+            // symbol after the rate
+            ['CZK', '50.000,5 Kč BTC/CZK']
+        ])(
+            'puts a space between the rate and the %s symbol',
+            (code, formatted) => {
+                settingsStore.settings.fiat = code;
+                store.fiatRates = [
+                    {
+                        ...usdEntry,
+                        code,
+                        currencyPair: `${code}/BTC`,
+                        rate: 50000.5
+                    }
+                ];
+                expect(store.getRate()).toBe(formatted);
+            }
+        );
+
         // #4717: the currency is in the app list but not in the rates
         // response. The rate used to fall back to 0, which printed
         // 'N/A 0 BTC/IDR' and, in the sats form, a division by zero.

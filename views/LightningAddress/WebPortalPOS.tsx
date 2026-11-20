@@ -20,6 +20,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import SettingsStore from '../../stores/SettingsStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 import UnitsStore from '../../stores/UnitsStore';
+import FiatStore from '../../stores/FiatStore';
 import { CATEGORY_KEY, PRODUCT_KEY } from '../../stores/InventoryStore';
 
 import Storage from '../../storage';
@@ -29,6 +30,7 @@ interface WebPortalPOSProps {
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
     UnitsStore: UnitsStore;
+    FiatStore: FiatStore;
 }
 
 interface WebPortalPOSState {
@@ -40,7 +42,7 @@ interface WebPortalPOSState {
     disableTips: boolean;
 }
 
-@inject('SettingsStore', 'LightningAddressStore', 'UnitsStore')
+@inject('SettingsStore', 'LightningAddressStore', 'UnitsStore', 'FiatStore')
 @observer
 export default class WebPortalPOS extends React.Component<
     WebPortalPOSProps,
@@ -88,8 +90,13 @@ export default class WebPortalPOS extends React.Component<
     );
 
     render() {
-        const { navigation, SettingsStore, LightningAddressStore, UnitsStore } =
-            this.props;
+        const {
+            navigation,
+            SettingsStore,
+            LightningAddressStore,
+            UnitsStore,
+            FiatStore
+        } = this.props;
         const {
             posEnabled,
             fiatEnabled,
@@ -242,17 +249,24 @@ export default class WebPortalPOS extends React.Component<
                                             await updateSettings({
                                                 fiatEnabled: newFiatEnabled
                                             });
-                                            // stored, unlike resetUnits(),
-                                            // so the wallet does not come
-                                            // back in fiat at the next start
-                                            if (!newFiatEnabled) {
-                                                if (
-                                                    UnitsStore.units === 'fiat'
-                                                ) {
-                                                    await UnitsStore.setUnits(
-                                                        'sats'
-                                                    );
-                                                }
+                                            if (newFiatEnabled) {
+                                                // Nothing loads rates while
+                                                // fiat is off, so load them
+                                                // now rather than at the
+                                                // next wallet refresh. After
+                                                // the save, so a failed save
+                                                // makes no request.
+                                                FiatStore.getFiatRates();
+                                            } else if (
+                                                UnitsStore.units === 'fiat'
+                                            ) {
+                                                // stored, unlike
+                                                // resetUnits(), so the wallet
+                                                // does not come back in fiat
+                                                // at the next start
+                                                await UnitsStore.setUnits(
+                                                    'sats'
+                                                );
                                             }
                                         }}
                                     />
