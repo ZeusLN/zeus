@@ -14,6 +14,8 @@ import SwipeButton from '../components/SwipeButton';
 import Button from '../components/Button';
 import Text from '../components/Text';
 
+import BackendUtils from '../utils/BackendUtils';
+import { NO_FEE_RATE, satPerVbyteToSatPerKwu } from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -337,6 +339,11 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
         const { navigation, route } = this.props;
         const { destination, fee, satAmount, amount, account, fundMax } =
             route?.params;
+        // the node picks the rate when the one entered is unusable, so show
+        // that instead of the raw input
+        const autoFeeRate =
+            BackendUtils.supportsOnchainSendAutoFeeRate() &&
+            satPerVbyteToSatPerKwu(fee) === NO_FEE_RATE;
         const { slideToPayThreshold } = this.state;
 
         const totalAmount = this.getTotalAmount();
@@ -366,11 +373,20 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                         fundMax ? '0' : satAmount || amount || '0'
                     )}
 
-                    {!!fee && (
+                    {autoFeeRate ? (
                         <KeyValue
                             keyValue={localeString('views.Send.feeSatsVbyte')}
-                            value={fee}
+                            value={localeString('general.automatic')}
                         />
+                    ) : (
+                        !!fee && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Send.feeSatsVbyte'
+                                )}
+                                value={fee}
+                            />
+                        )
                     )}
 
                     {this.renderInputs()}

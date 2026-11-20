@@ -19,7 +19,9 @@ jest.mock('../utils/handleAnything', () => ({
 jest.mock('../utils/BackendUtils', () => ({
     supportsOnchainSends: () => true,
     supportsOnchainSendMax: () => true,
-    supportsOnchainSendFeeRate: () => false,
+    supportsOnchainSendFeeRate: jest.fn(() => false),
+    supportsOnchainSendAutoFeeRate: jest.fn(() => false),
+    supportsOnchainSendSubSatFeeRate: jest.fn(() => false),
     supportsOnchainBatching: jest.fn(() => false),
     supportsCoinControl: () => false,
     supportsKeysend: jest.fn(() => false),
@@ -401,6 +403,85 @@ describe('Send request arriving on the open screen', () => {
 
         expect(ref.current.state.amount).toBe('250000');
         expect(ref.current.state.satAmount).toBe('250000');
+    });
+});
+
+describe('Send on-chain fee rate', () => {
+    const supportsOnchainSendFeeRate =
+        BackendUtils.supportsOnchainSendFeeRate as jest.Mock;
+    const supportsOnchainSendAutoFeeRate =
+        BackendUtils.supportsOnchainSendAutoFeeRate as jest.Mock;
+    const supportsOnchainSendSubSatFeeRate =
+        BackendUtils.supportsOnchainSendSubSatFeeRate as jest.Mock;
+
+    const feeInput = () => hosts('OnchainFeeInput')[0];
+
+    const renderWithFee = async (fee: string) => {
+        await renderView();
+        await enterAmount('50000', 50000);
+        await fireEvent(feeInput(), 'changeFee', fee);
+    };
+
+    beforeEach(() => supportsOnchainSendFeeRate.mockReturnValue(true));
+
+    afterEach(() => {
+        supportsOnchainSendFeeRate.mockReturnValue(false);
+        supportsOnchainSendAutoFeeRate.mockReturnValue(false);
+        supportsOnchainSendSubSatFeeRate.mockReturnValue(false);
+    });
+
+    describe('on a backend that needs a whole sat/vB fee rate', () => {
+        // '0' is what OnchainFeeInput reports when the mempool fetch fails
+        it.each(['', '0', '0.5', '2001', 'abc'])(
+            'blocks Proceed when the fee is %p',
+            async (fee) => {
+                await renderWithFee(fee);
+                expect(isProceedDisabled()).toBe(true);
+            }
+        );
+
+        it.each(['1', '5', '2000'])(
+            'allows Proceed when the fee is %p',
+            async (fee) => {
+                await renderWithFee(fee);
+                expect(isProceedDisabled()).toBe(false);
+            }
+        );
+
+        it('tells the fee input that empty and sub-sat rates are not allowed', async () => {
+            await renderWithFee('');
+            expect(feeInput().props.autoFeeRate).toBe(false);
+            expect(feeInput().props.subSatFeeRate).toBe(false);
+        });
+    });
+
+    describe('on a backend that estimates the fee and takes sub-sat rates', () => {
+        beforeEach(() => {
+            supportsOnchainSendAutoFeeRate.mockReturnValue(true);
+            supportsOnchainSendSubSatFeeRate.mockReturnValue(true);
+        });
+
+        it.each(['', '0', '0.1', '0.5', '5'])(
+            'allows Proceed when the fee is %p',
+            async (fee) => {
+                await renderWithFee(fee);
+                expect(isProceedDisabled()).toBe(false);
+            }
+        );
+
+        it.each(['0.05', '2001'])(
+            'blocks Proceed when the fee is %p',
+            async (fee) => {
+                await renderWithFee(fee);
+                expect(isProceedDisabled()).toBe(true);
+            }
+        );
+
+        it('tells the fee input that empty and sub-sat rates are allowed', async () => {
+            await renderWithFee('');
+            expect(feeInput().props.autoFeeRate).toBe(true);
+            expect(feeInput().props.subSatFeeRate).toBe(true);
+        });
     });
 });
 

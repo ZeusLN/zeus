@@ -221,6 +221,8 @@ const EXPECTED_FLAGS: { [flag: string]: boolean } = {
     supportsTaproot: false,
     supportsBumpFee: false,
     supportsOnchainSendFeeRate: false,
+    supportsOnchainSendAutoFeeRate: false,
+    supportsOnchainSendSubSatFeeRate: false,
     supportsChannelOpenFeeRate: false,
     supportsChannelOpenMinConfs: false,
     supportsFlowLSP: false,
