@@ -4,7 +4,8 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 
 import lndMobile from '../../lndmobile/LndMobileInjection';
-const { buildRefundTransaction } = lndMobile.swaps;
+const { buildRefundTransaction, buildReverseClaimTransaction } =
+    lndMobile.swaps;
 
 import Button from '../../components/Button';
 
@@ -25,6 +26,7 @@ import { Row } from '../../components/layout/Row';
 
 import AddressUtils from '../../utils/AddressUtils';
 import BackendUtils from '../../utils/BackendUtils';
+import { reverseClaimMinerFee } from '../../utils/FeeUtils';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -40,8 +42,15 @@ import SwapStore from '../../stores/SwapStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 
+import {
+    privateKeyFromKeys,
+    preimageHexFrom,
+    ReverseClaimTransaction
+} from '../../models/ClaimTransaction';
 import NodeInfo from '../../models/NodeInfo';
 import Swap from '../../models/Swap';
+
+const DEFAULT_FEE_RATE = 2;
 
 interface RefundSwapProps {
     navigation: any;
@@ -152,6 +161,38 @@ export default class RefundSwap extends React.Component<
         ].join(' ');
     };
 
+    // A restored reverse swap often has no lockup hex. The host's reverse
+    // transaction endpoint is the one that returns it; the submarine
+    // lockup lookup does not.
+    getReverseTransactionHex = async (
+        swapData: Swap
+    ): Promise<string | null> => {
+        if (swapData.lockupTransaction?.hex) {
+            return swapData.lockupTransaction.hex;
+        }
+
+        const fetched =
+            await this.props.SwapStore?.getReverseLockupTransactionHex(
+                swapData.id,
+                swapData.endpoint
+            );
+        return fetched?.status === 'found' ? fetched.hex : null;
+    };
+
+    getReversePreimageHex = async (swapData: Swap): Promise<string | null> => {
+        const existing = preimageHexFrom(swapData.preimage);
+        if (existing) return existing;
+
+        const keyIndex = Number(swapData.keyIndex);
+        if (!Number.isInteger(keyIndex) || keyIndex < 0) return null;
+
+        const derivedPreimage =
+            await this.props.SwapStore?.derivePreimageFromRescueKey(keyIndex);
+        return derivedPreimage
+            ? Buffer.from(derivedPreimage).toString('hex')
+            : null;
+    };
+
     createRefundTransaction = async (
         swapData: Swap,
         fee: any,
@@ -219,6 +260,136 @@ export default class RefundSwap extends React.Component<
         }
     };
 
+    createReverseClaimTransaction = async (
+        swapData: Swap,
+        fee: any,
+        destinationAddress: string
+    ): Promise<void> => {
+        const { SwapStore } = this.props;
+
+        try {
+            const {
+                swapTreeDetails,
+                refundPubKey,
+                effectiveLockupAddress,
+                endpoint,
+                id
+            } = swapData;
+            const claimLeafOutput = swapTreeDetails?.claimLeaf?.output;
+            const refundLeafOutput = swapTreeDetails?.refundLeaf?.output;
+            const nodeInfo = this.props.NodeInfoStore?.nodeInfo;
+
+            if (!claimLeafOutput) {
+                throw new Error(
+                    localeString('views.Swaps.error.missingClaimLeaf')
+                );
+            }
+
+            if (!refundLeafOutput) {
+                throw new Error(
+                    localeString('views.Swaps.error.missingRefundLeaf')
+                );
+            }
+
+            if (!refundPubKey) {
+                throw new Error(
+                    localeString('views.Swaps.error.missingRefundPubKey')
+                );
+            }
+
+            if (!effectiveLockupAddress) {
+                throw new Error(
+                    localeString('views.Swaps.error.missingLockupAddress')
+                );
+            }
+
+            if (!nodeInfo) {
+                throw new Error(
+                    localeString('views.Swaps.error.nodeInfoUnavailable')
+                );
+            }
+
+            if (!SwapStore) {
+                throw new Error(localeString('views.SwapDetails.claimFailed'));
+            }
+
+            // Restored swaps keep the key as JSON, not refundPrivateKey.
+            const privateKey = privateKeyFromKeys(swapData.keys);
+            if (!privateKey) {
+                throw new Error(
+                    localeString('views.Swaps.error.missingPrivateKey')
+                );
+            }
+
+            const transactionHex = await this.getReverseTransactionHex(
+                swapData
+            );
+
+            if (!transactionHex) {
+                throw new Error(
+                    localeString('views.Swaps.error.missingLockupTx')
+                );
+            }
+
+            const preimageHex = await this.getReversePreimageHex(swapData);
+
+            if (!preimageHex) {
+                throw new Error(
+                    localeString('views.Swaps.error.missingPreimage')
+                );
+            }
+
+            const feeRate = Number(fee || DEFAULT_FEE_RATE);
+            const minerFee = reverseClaimMinerFee(
+                swapData.imported ? undefined : swapData.claimMinerFee,
+                feeRate
+            );
+            if (minerFee === undefined) {
+                throw new Error(
+                    localeString('views.Swaps.reverseClaimFeeRateRequired')
+                );
+            }
+
+            const claim = ReverseClaimTransaction.build({
+                swap: new Swap({
+                    ...swapData,
+                    preimage: preimageHex,
+                    destinationAddress
+                }),
+                transactionHex,
+                feeRate,
+                minerFee
+            });
+            if (!claim) {
+                throw new Error(localeString('views.SwapDetails.claimFailed'));
+            }
+
+            const txHex = await buildReverseClaimTransaction({
+                ...claim,
+                network: swapNetworkName(nodeInfo)
+            });
+            await SwapStore.saveClaimTransaction(id, txHex);
+            const txid = await SwapStore.broadcastSwapTransaction(
+                txHex,
+                endpoint
+            );
+            await SwapStore.saveClaimTxid(id, txid);
+
+            this.setState({
+                loading: false,
+                refundStatus: localeString('views.Swaps.claimSuccess'),
+                destinationAddress: ''
+            });
+        } catch (error: any) {
+            this.setState({
+                loading: false,
+                error: error.message
+            });
+            console.error('Error creating reverse claim transaction:', error);
+            throw error;
+        }
+    };
+
     componentDidUpdate(prevProps: Readonly<RefundSwapProps>) {
         const { route, navigation } = this.props;
         const scannedAddress = route.params?.scannedAddress;
@@ -252,7 +423,9 @@ export default class RefundSwap extends React.Component<
             claimLeaf: swapData?.swapTreeDetails.claimLeaf.output,
             refundLeaf: swapData?.swapTreeDetails.refundLeaf.output,
             transactionHex: swapData.lockupTransaction?.hex,
-            servicePubKey: swapData.servicePubKey,
+            servicePubKey: swapData.isReverseSwap
+                ? swapData.refundPubKey
+                : swapData.servicePubKey,
             feeRate: Number(fee),
             timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
             destinationAddress,
@@ -395,34 +568,38 @@ export default class RefundSwap extends React.Component<
                         }
                         navigation={navigation}
                     />
-                    <Row>
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                marginTop: 4
-                            }}
-                            infoModalText={localeString('views.Swaps.infoText')}
-                        >
-                            {localeString('views.Swaps.uncooperative')}
-                        </Text>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end',
-                                marginTop: 4
-                            }}
-                        >
-                            <Switch
-                                value={uncooperative}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        uncooperative: !uncooperative
-                                    });
+                    {!swapData.isReverseSwap && (
+                        <Row>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    marginTop: 4
                                 }}
-                            />
-                        </View>
-                    </Row>
+                                infoModalText={localeString(
+                                    'views.Swaps.infoText'
+                                )}
+                            >
+                                {localeString('views.Swaps.uncooperative')}
+                            </Text>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end',
+                                    marginTop: 4
+                                }}
+                            >
+                                <Switch
+                                    value={uncooperative}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            uncooperative: !uncooperative
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </Row>
+                    )}
 
                     <Accordion
                         id="refund-raw-details"
@@ -459,7 +636,13 @@ export default class RefundSwap extends React.Component<
 
                 <View style={{ marginBottom: 15 }}>
                     <Button
-                        title={localeString('views.Swaps.initiateRefund')}
+                        title={
+                            swapData.isReverseSwap
+                                ? localeString(
+                                      'views.Settings.LightningAddressInfo.redeem'
+                                  )
+                                : localeString('views.Swaps.initiateRefund')
+                        }
                         onPress={async () => {
                             this.setState({
                                 loading: true,
@@ -467,7 +650,10 @@ export default class RefundSwap extends React.Component<
                                 refundStatus: ''
                             });
 
-                            if (!swapData.lockupTransaction) {
+                            if (
+                                !swapData.isReverseSwap &&
+                                !swapData.lockupTransaction
+                            ) {
                                 swapData.lockupTransaction =
                                     await SwapStore?.getLockupTransaction(
                                         swapData.id,
@@ -476,11 +662,19 @@ export default class RefundSwap extends React.Component<
                             }
 
                             try {
-                                await this.createRefundTransaction(
-                                    swapData,
-                                    fee,
-                                    destinationAddress
-                                );
+                                if (swapData.isReverseSwap) {
+                                    await this.createReverseClaimTransaction(
+                                        swapData,
+                                        fee,
+                                        destinationAddress
+                                    );
+                                } else {
+                                    await this.createRefundTransaction(
+                                        swapData,
+                                        fee,
+                                        destinationAddress
+                                    );
+                                }
 
                                 console.log(
                                     'Refund transaction created successfully.'
