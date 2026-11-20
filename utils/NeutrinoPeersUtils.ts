@@ -4,8 +4,10 @@
  */
 
 import Log from '../lndmobile/log';
+import lndMobile from '../lndmobile/LndMobileInjection';
 
 import { localeString } from './LocaleUtils';
+import { sleep } from './SleepUtils';
 
 import { settingsStore } from '../stores/Stores';
 import {
@@ -22,8 +24,11 @@ export const BITCOIN_TESTNET_P2P_PORT = 18333;
 
 // Probe timeouts (ms)
 export const NEUTRINO_PING_TIMEOUT_MS = 3200;
-/** Background health checks — more lenient than optimize probes (radio warm-up). */
-export const NEUTRINO_HEALTHCHECK_PROBE_TIMEOUT_MS = 5500;
+/**
+ * Health-check probes. Anything slower than NEUTRINO_PING_THRESHOLD_MS counts
+ * as weak anyway, so waiting much longer only delays the same answer.
+ */
+export const NEUTRINO_HEALTHCHECK_PROBE_TIMEOUT_MS = 2000;
 const NEUTRINO_OPTIMIZE_PROBE_TIMEOUT_MS = 2400;
 
 // Latency tiers for peer selection (ms)
@@ -72,7 +77,14 @@ const DNS_DISCOVERY_TOTAL_TIMEOUT_MS = 5200;
 const PER_SEED_DNS_TIMEOUT_MS = 2800;
 const DNS_SEED_PARALLEL_BATCH = 4;
 
-const DNS_FAILURE_MESSAGE_HINTS = [
+// Errors that prove the peer cannot be reached: the name did not resolve, or
+// nothing listens on the port. On Android, React Native reports most network
+// errors as a generic "Network request failed", so the elapsed-time check
+// below still decides there.
+const UNREACHABLE_MESSAGE_HINTS = [
+    'connection refused', // Android, Linux
+    'econnrefused',
+    'could not connect to the server', // iOS NSURLErrorCannotConnectToHost
     'unable to resolve host',
     'no address associated',
     'could not find the server',
@@ -225,7 +237,7 @@ export async function probeNeutrinoPeer(
             };
         }
 
-        if (dnsFailureHintInMessage(String(e?.message ?? ''))) {
+        if (unreachableHintInMessage(String(e?.message ?? ''))) {
             reachable = false;
         } else {
             reachable =
@@ -359,74 +371,73 @@ export function isWeakNeutrinoProbeOutcome(ms: NeutrinoProbeOutcome): boolean {
     );
 }
 
+/**
+ * Probe every peer at once. A peer that cannot be probed at all (for example
+ * a stored value with a URL scheme) is reported as unreachable instead of
+ * failing the whole check.
+ */
 export async function probeNeutrinoPeerList(
     peers: string[],
     defaultPort: number,
     timeoutMs: number = NEUTRINO_HEALTHCHECK_PROBE_TIMEOUT_MS
 ): Promise<NeutrinoProbeRecord[]> {
-    const records: NeutrinoProbeRecord[] = [];
-
-    for (const peer of peers) {
-        const result = await probeNeutrinoPeer(peer, timeoutMs, defaultPort);
-        records.push(
-            result.timedOut
-                ? { peer, ms: 'Timed out' }
-                : {
-                      peer,
-                      ms: result.reachable ? result.ms : 'Unreachable'
-                  }
-        );
-    }
-
-    return records;
+    return Promise.all(
+        peers.map(async (peer): Promise<NeutrinoProbeRecord> => {
+            try {
+                const result = await probeNeutrinoPeer(
+                    peer,
+                    timeoutMs,
+                    defaultPort
+                );
+                if (result.timedOut) return { peer, ms: 'Timed out' };
+                return {
+                    peer,
+                    ms: result.reachable ? result.ms : 'Unreachable'
+                };
+            } catch (e) {
+                log.d(`Neutrino probe ${peer} failed`, [e]);
+                return { peer, ms: 'Unreachable' };
+            }
+        })
+    );
 }
 
+export const NEUTRINO_PEER_WAIT_TIMEOUT_MS = 30000;
+const NEUTRINO_PEER_POLL_MS = 3000;
+
 /**
- * On app restart, probe persisted peers and re-optimize if any are weak.
- * Must run before initializeLnd so LND starts with the updated peer list.
+ * Wait until neutrino reports at least one connected peer.
+ *
+ * Neutrino's own peer list is the real health signal; the HTTP probes above
+ * only guess. Resolves with the connected peers (empty if none connected
+ * within timeoutMs), or null if neutrino never answered the status call, for
+ * example on a build without NeutrinoKit. Stops early, resolving null, once
+ * isCurrent() turns false.
  */
-export type NeutrinoStartupPeerCheckResult = {
-    optimized: boolean;
-    alertProbes: NeutrinoProbeRecord[];
-};
+export async function waitForNeutrinoPeers(
+    isCurrent: () => boolean,
+    timeoutMs: number = NEUTRINO_PEER_WAIT_TIMEOUT_MS,
+    pollMs: number = NEUTRINO_PEER_POLL_MS
+): Promise<string[] | null> {
+    const deadline = Date.now() + timeoutMs;
+    let answered = false;
 
-export async function checkAndOptimizeNeutrinoPeersIfNeeded(
-    isTestnet?: boolean
-): Promise<NeutrinoStartupPeerCheckResult> {
-    const testnet = !!isTestnet;
-    const defaultPort = bitcoinP2pPort(testnet);
-    const peers = testnet
-        ? settingsStore.settings.neutrinoPeersTestnet
-        : settingsStore.settings.neutrinoPeersMainnet;
+    while (isCurrent()) {
+        try {
+            const status = await lndMobile.index.neutrinoKitStatus();
+            answered = true;
+            const peers = status?.peers ?? [];
+            if (peers.length > 0) return peers;
+        } catch (e) {
+            log.d('NeutrinoKit status unavailable', [e]);
+        }
 
-    if (!peers?.length) {
-        return { optimized: false, alertProbes: [] };
+        if (Date.now() + pollMs > deadline) break;
+        await sleep(pollMs);
     }
 
-    const probes = await probeNeutrinoPeerList(peers, defaultPort);
-    log.d(`Neutrino startup check: ${formatNeutrinoProbeSummary(probes)}`);
-
-    const weakProbes = probes.filter((probe) =>
-        isWeakNeutrinoProbeOutcome(probe.ms)
-    );
-    if (weakProbes.length === 0) {
-        log.d('Neutrino startup check: all peers healthy');
-        return { optimized: false, alertProbes: [] };
-    }
-
-    log.d('Neutrino startup check: weak peers detected, optimizing');
-    const selected = await optimizeNeutrinoPeers(testnet);
-    if (selected.length > 0) {
-        log.d(
-            'Neutrino startup check: optimize succeeded, skipping post-optimize alert'
-        );
-        return { optimized: true, alertProbes: [] };
-    }
-
-    log.d(
-        'Neutrino startup check: optimize found no replacement peers, keeping alert'
-    );
-    return { optimized: false, alertProbes: weakProbes };
+    if (!isCurrent()) return null;
+    return answered ? [] : null;
 }
 
 /**
@@ -443,8 +454,13 @@ export async function optimizeNeutrinoPeers(
         ? DEFAULT_NEUTRINO_PEERS_TESTNET
         : DEFAULT_NEUTRINO_PEERS_MAINNET;
 
+    // DNS-over-HTTPS goes to public resolvers over clearnet, which would
+    // bypass embedded Tor
+    const useDnsDiscovery = !settingsStore.settings?.embeddedTor;
+
     const seenHosts = new Set<string>();
     const probes: NeutrinoProbeRecord[] = [];
+    const dnsPeers = new Set<string>();
     let selected: string[] = [];
 
     const probeAndSelect = async (peers: string[]) => {
@@ -458,7 +474,7 @@ export async function optimizeNeutrinoPeers(
 
     await probeAndSelect(uniquePeers(curatedDefaults, seenHosts, defaultPort));
 
-    if (selected.length < peerTargetCount) {
+    if (selected.length < peerTargetCount && useDnsDiscovery) {
         let dnsEndpoints: string[] = [];
         try {
             dnsEndpoints = await discoverNeutrinoPeersFromDns(testnet);
@@ -468,14 +484,14 @@ export async function optimizeNeutrinoPeers(
         }
 
         if (dnsEndpoints.length > 0) {
-            await probeAndSelect(
-                uniquePeers(
-                    dnsEndpoints,
-                    seenHosts,
-                    defaultPort,
-                    DNS_PROBE_PEER_CAP
-                )
+            const dnsBatch = uniquePeers(
+                dnsEndpoints,
+                seenHosts,
+                defaultPort,
+                DNS_PROBE_PEER_CAP
             );
+            dnsBatch.forEach((peer) => dnsPeers.add(peer));
+            await probeAndSelect(dnsBatch);
         }
     }
 
@@ -495,7 +511,10 @@ export async function optimizeNeutrinoPeers(
         return [];
     }
 
-    const dontAllowOtherPeers = selected.length > 2;
+    // Seed-discovered IPs are random public nodes that come and go, so never
+    // make them the only peers neutrino may use
+    const dontAllowOtherPeers =
+        selected.length > 2 && !selected.some((peer) => dnsPeers.has(peer));
     await settingsStore.updateSettings(
         testnet
             ? {
@@ -534,19 +553,9 @@ function elapsedMs(start: number): number {
     return Math.round(global.performance.now() - start);
 }
 
-function formatNeutrinoProbeSummary(probes: NeutrinoProbeRecord[]): string {
-    return probes
-        .map((probe) => {
-            const outcome =
-                typeof probe.ms === 'number' ? `${probe.ms}ms` : probe.ms;
-            return `${probe.peer}=${outcome}`;
-        })
-        .join(', ');
-}
-
-function dnsFailureHintInMessage(message: string): boolean {
+function unreachableHintInMessage(message: string): boolean {
     const lower = message.toLowerCase();
-    return DNS_FAILURE_MESSAGE_HINTS.some((hint) => lower.includes(hint));
+    return UNREACHABLE_MESSAGE_HINTS.some((hint) => lower.includes(hint));
 }
 
 function dohUrls(fqdn: string): string[] {

@@ -552,23 +552,36 @@ export default class NeutrinoPeers extends React.Component<
                                 'views.Settings.EmbeddedNode.NeutrinoPeers.optimize'
                             )}
                             onPress={async () => {
+                                const isTestnet =
+                                    embeddedLndNetwork === 'Testnet';
+                                const peersOf = (settings: any) =>
+                                    (isTestnet
+                                        ? settings?.neutrinoPeersTestnet
+                                        : settings?.neutrinoPeersMainnet) || [];
                                 this.setState({
                                     loading: true
                                 });
-                                await optimizeNeutrinoPeers(
-                                    embeddedLndNetwork === 'Testnet'
-                                );
-                                const { getSettings } = SettingsStore;
-                                const settings = await getSettings();
-                                this.setState({
-                                    loading: false,
-                                    neutrinoPeers:
-                                        embeddedLndNetwork === 'Testnet'
-                                            ? settings.neutrinoPeersTestnet
-                                            : settings.neutrinoPeersMainnet
-                                });
+                                let changed = false;
+                                try {
+                                    const { getSettings } = SettingsStore;
+                                    const before = peersOf(await getSettings());
+                                    await optimizeNeutrinoPeers(isTestnet);
+                                    const after = peersOf(await getSettings());
+                                    changed =
+                                        JSON.stringify(before) !==
+                                        JSON.stringify(after);
+                                    this.setState({ neutrinoPeers: after });
+                                } catch (e) {
+                                    console.log(
+                                        'Neutrino peer optimize failed',
+                                        e
+                                    );
+                                } finally {
+                                    this.setState({ loading: false });
+                                }
 
-                                restartNeeded();
+                                // LND only reads its peers at startup
+                                if (changed) restartNeeded();
                             }}
                             tertiary
                         />

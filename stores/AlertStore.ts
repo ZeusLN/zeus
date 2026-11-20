@@ -7,7 +7,8 @@ import {
     NeutrinoProbeRecord,
     bitcoinP2pPort,
     isWeakNeutrinoProbeOutcome,
-    probeNeutrinoPeerList
+    probeNeutrinoPeerList,
+    waitForNeutrinoPeers
 } from '../utils/NeutrinoPeersUtils';
 
 interface Peer {
@@ -119,21 +120,78 @@ export default class AlertStore {
         this.neutrinoPeerError = this.problematicNeutrinoPeers.length > 0;
     };
 
+    private savedNeutrinoPeers = (): string[] =>
+        (this.settingsStore.embeddedLndNetwork === 'Testnet'
+            ? this.settingsStore.settings.neutrinoPeersTestnet
+            : this.settingsStore.settings.neutrinoPeersMainnet) || [];
+
+    /**
+     * Probe the saved peers and flag the weak ones. The probes go over
+     * clearnet, so nothing is probed while embedded Tor is on.
+     */
     @action
     public checkNeutrinoPeers = async () => {
+        if (this.settingsStore.settings?.embeddedTor) return;
+
         // Pinging every peer can outlast a wallet switch, and nothing awaits
         // this, so the result must not land on the next wallet's alerts
         const isCurrent = this.settingsStore.getConnectionGuard();
-        const peers =
-            this.settingsStore.embeddedLndNetwork === 'Testnet'
-                ? this.settingsStore.settings.neutrinoPeersTestnet
-                : this.settingsStore.settings.neutrinoPeersMainnet;
-
         const p2pPort = bitcoinP2pPort(
             this.settingsStore.embeddedLndNetwork === 'Testnet'
         );
-        const probes = await probeNeutrinoPeerList(peers, p2pPort);
+        const probes = await probeNeutrinoPeerList(
+            this.savedNeutrinoPeers(),
+            p2pPort
+        );
         if (!isCurrent()) return;
+        this.setNeutrinoPeerAlertsFromProbes(probes);
+    };
+
+    /**
+     * Run once embedded LND is up. Never delays the connect: callers do not
+     * await it.
+     *
+     * Neutrino's own peer list decides. If neutrino is connected to any peer
+     * the alert is cleared, whatever a probe would say. If it connects to
+     * none within the wait, every saved peer is flagged, with the probe
+     * result where one is available. Only when neutrino cannot report its
+     * status does this fall back to the probe-only check.
+     */
+    @action
+    public monitorNeutrinoPeers = async () => {
+        const isCurrent = this.settingsStore.getConnectionGuard();
+        const connectedPeers = await waitForNeutrinoPeers(isCurrent);
+        if (!isCurrent()) return;
+
+        if (connectedPeers === null) {
+            await this.checkNeutrinoPeers();
+            return;
+        }
+
+        if (connectedPeers.length > 0) {
+            this.setNeutrinoPeerAlertsFromProbes([]);
+            return;
+        }
+
+        const peers = this.savedNeutrinoPeers();
+        let probes: NeutrinoProbeRecord[] = peers.map((peer) => ({
+            peer,
+            ms: 'Unreachable'
+        }));
+        if (!this.settingsStore.settings?.embeddedTor) {
+            const p2pPort = bitcoinP2pPort(
+                this.settingsStore.embeddedLndNetwork === 'Testnet'
+            );
+            // Neutrino reached none of them, so a peer the probe calls
+            // healthy is still flagged as unreachable
+            probes = (await probeNeutrinoPeerList(peers, p2pPort)).map(
+                (probe) =>
+                    isWeakNeutrinoProbeOutcome(probe.ms)
+                        ? probe
+                        : { peer: probe.peer, ms: 'Unreachable' }
+            );
+            if (!isCurrent()) return;
+        }
         this.setNeutrinoPeerAlertsFromProbes(probes);
     };
 }

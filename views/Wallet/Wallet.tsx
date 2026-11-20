@@ -72,7 +72,6 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { applySystemNavigationBarTheme } from '../../utils/SystemNavigationBarUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import WalletRefreshRunner from '../../utils/WalletRefreshRunner';
-import { checkAndOptimizeNeutrinoPeersIfNeeded } from '../../utils/NeutrinoPeersUtils';
 
 import {
     loadPendingPaymentData,
@@ -891,12 +890,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 SettingsStore.justCreatedNodeDir = undefined;
                 if (!justCreated) {
                     try {
-                        const { alertProbes } =
-                            await checkAndOptimizeNeutrinoPeersIfNeeded(
-                                embeddedLndNetwork === 'Testnet'
-                            );
-                        AlertStore.setNeutrinoPeerAlertsFromProbes(alertProbes);
-
                         const isChannelMigrating =
                             this.state.isChannelMigrating ||
                             SettingsStore.isChannelMigrating;
@@ -1078,8 +1071,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 } else {
                     try {
                         // LND was just created and is already running — skip stop→init→start
-                        await AlertStore.checkNeutrinoPeers();
-
                         if (settings?.ecash?.enableCashu)
                             await CashuStore.initializeWallets();
                         if (!isCurrent()) return;
@@ -1099,6 +1090,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         throw error;
                     }
                 }
+
+                // LND is up. Check its peers in the background: this must
+                // never hold up the connect, so it is not awaited
+                AlertStore.monitorNeutrinoPeers();
 
                 try {
                     const batterySaverEnabled = await isBatterySaverEnabled();

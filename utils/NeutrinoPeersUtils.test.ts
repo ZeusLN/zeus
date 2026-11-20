@@ -17,6 +17,14 @@ jest.mock('../stores/Stores', () => ({
     }
 }));
 
+jest.mock('../lndmobile/LndMobileInjection', () => ({
+    index: { neutrinoKitStatus: jest.fn() }
+}));
+
+jest.mock('./SleepUtils', () => ({
+    sleep: jest.fn().mockResolvedValue(undefined)
+}));
+
 jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_NEUTRINO_PEERS_MAINNET: ['peer-a.example', 'peer-b.example'],
     DEFAULT_NEUTRINO_PEERS_TESTNET: ['testnet-a.example'],
@@ -29,16 +37,30 @@ import {
     NEUTRINO_DNS_SERVICE_BITS,
     NEUTRINO_PING_THRESHOLD_MS,
     bitcoinP2pPort,
-    checkAndOptimizeNeutrinoPeersIfNeeded,
     discoverNeutrinoPeersFromDns,
     dnsSeedFqdnWithServices,
     isWeakNeutrinoProbeOutcome,
     parseNeutrinoPeerEndpoint,
     pingPeer,
+    optimizeNeutrinoPeers,
     probeNeutrinoPeer,
-    selectNeutrinoPeersByLatency
+    probeNeutrinoPeerList,
+    selectNeutrinoPeersByLatency,
+    waitForNeutrinoPeers
 } from './NeutrinoPeersUtils';
+import lndMobile from '../lndmobile/LndMobileInjection';
 import { settingsStore } from '../stores/Stores';
+
+const neutrinoKitStatusMock = lndMobile.index
+    .neutrinoKitStatus as unknown as jest.Mock;
+
+const dohAnswer = (ips: string[]) => ({
+    ok: true,
+    json: async () => ({
+        Status: 0,
+        Answer: ips.map((data) => ({ type: 1, data }))
+    })
+});
 
 type MockFetchInit = {
     signal?: {
@@ -193,29 +215,171 @@ describe('NeutrinoPeersUtils', () => {
         });
     });
 
-    describe('checkAndOptimizeNeutrinoPeersIfNeeded', () => {
-        it('does not optimize when all peers are healthy', async () => {
-            mockFetch.mockResolvedValue({ ok: true });
-
-            const result = await checkAndOptimizeNeutrinoPeersIfNeeded(false);
-
-            expect(result).toEqual({ optimized: false, alertProbes: [] });
-            expect(settingsStore.updateSettings).not.toHaveBeenCalled();
-        });
-
-        it('optimizes when a persisted peer is weak', async () => {
-            mockFetch.mockImplementation((url: string) => {
-                if (url.includes('peer-a.example')) {
-                    return Promise.resolve({ ok: true });
-                }
-                return Promise.reject(new Error('unable to resolve host'));
+    describe('probeNeutrinoPeerList', () => {
+        it('probes all peers at once', async () => {
+            let inFlight = 0;
+            let maxInFlight = 0;
+            mockFetch.mockImplementation(async () => {
+                inFlight++;
+                maxInFlight = Math.max(maxInFlight, inFlight);
+                await Promise.resolve();
+                inFlight--;
+                return { ok: true };
             });
 
-            const result = await checkAndOptimizeNeutrinoPeersIfNeeded(false);
+            const probes = await probeNeutrinoPeerList(
+                ['a.example', 'b.example', 'c.example'],
+                BITCOIN_MAINNET_P2P_PORT
+            );
 
-            expect(result.optimized).toBe(true);
-            expect(result.alertProbes).toEqual([]);
-            expect(settingsStore.updateSettings).toHaveBeenCalled();
+            expect(probes.map((probe) => probe.peer)).toEqual([
+                'a.example',
+                'b.example',
+                'c.example'
+            ]);
+            expect(maxInFlight).toBe(3);
+        });
+
+        it('reports a peer that cannot be probed as unreachable instead of throwing', async () => {
+            mockFetch.mockResolvedValue({ ok: true });
+
+            const probes = await probeNeutrinoPeerList(
+                ['http://bad.example', 'good.example'],
+                BITCOIN_MAINNET_P2P_PORT
+            );
+
+            expect(probes[0]).toEqual({
+                peer: 'http://bad.example',
+                ms: 'Unreachable'
+            });
+            expect(typeof probes[1].ms).toBe('number');
+        });
+
+        it('treats a refused connection as unreachable, however long it took', async () => {
+            // Slow enough that the elapsed-time check alone would call it
+            // reachable
+            let now = 0;
+            const nowSpy = jest
+                .spyOn(global.performance, 'now')
+                .mockImplementation(() => (now += 150));
+            mockFetch.mockRejectedValue(
+                new Error(
+                    'Failed to connect: ECONNREFUSED (Connection refused)'
+                )
+            );
+
+            const probes = await probeNeutrinoPeerList(
+                ['down.example'],
+                BITCOIN_MAINNET_P2P_PORT
+            );
+
+            expect(probes).toEqual([
+                { peer: 'down.example', ms: 'Unreachable' }
+            ]);
+            // The React Native jest preset makes performance.now a
+            // jest.fn(Date.now); mockRestore would wipe that, so put it back
+            nowSpy.mockImplementation(() => Date.now());
+        });
+    });
+
+    describe('waitForNeutrinoPeers', () => {
+        it('returns as soon as neutrino reports a connected peer', async () => {
+            neutrinoKitStatusMock
+                .mockResolvedValueOnce({ peers: [] })
+                .mockResolvedValueOnce({ peers: ['1.2.3.4:8333'] });
+
+            const peers = await waitForNeutrinoPeers(() => true, 30000, 0);
+
+            expect(peers).toEqual(['1.2.3.4:8333']);
+            expect(neutrinoKitStatusMock).toHaveBeenCalledTimes(2);
+        });
+
+        it('returns an empty list when neutrino answers but never connects', async () => {
+            neutrinoKitStatusMock.mockResolvedValue({ peers: [] });
+
+            const peers = await waitForNeutrinoPeers(() => true, 0, 0);
+
+            expect(peers).toEqual([]);
+        });
+
+        it('returns null when neutrino cannot report its status', async () => {
+            neutrinoKitStatusMock.mockRejectedValue(
+                new Error('unknown service neutrinorpc.NeutrinoKit')
+            );
+
+            const peers = await waitForNeutrinoPeers(() => true, 0, 0);
+
+            expect(peers).toBeNull();
+        });
+
+        it('stops once the connection is no longer current', async () => {
+            let current = true;
+            neutrinoKitStatusMock.mockImplementation(async () => {
+                current = false;
+                return { peers: [] };
+            });
+
+            const peers = await waitForNeutrinoPeers(() => current, 30000, 0);
+
+            expect(peers).toBeNull();
+            expect(neutrinoKitStatusMock).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('optimizeNeutrinoPeers', () => {
+        afterEach(() => {
+            (settingsStore.settings as any).embeddedTor = false;
+        });
+
+        it('never makes seed-discovered peers the only allowed peers', async () => {
+            mockFetch.mockImplementation((url: string) => {
+                if (url.startsWith('https://')) {
+                    return Promise.resolve(
+                        dohAnswer(['1.1.1.10', '1.1.1.11', '1.1.1.12'])
+                    );
+                }
+                if (url.includes('.example')) {
+                    return Promise.reject(new Error('unable to resolve host'));
+                }
+                return Promise.resolve({ ok: true });
+            });
+
+            const selected = await optimizeNeutrinoPeers(false);
+
+            expect(selected).toHaveLength(3);
+            expect(settingsStore.updateSettings).toHaveBeenCalledWith(
+                expect.objectContaining({ dontAllowOtherPeers: false })
+            );
+        });
+
+        it('keeps curated peers exclusive when they fill the list', async () => {
+            mockFetch.mockImplementation((url: string) =>
+                url.startsWith('https://')
+                    ? Promise.reject(new Error('offline'))
+                    : Promise.resolve({ ok: true })
+            );
+
+            const selected = await optimizeNeutrinoPeers(false);
+
+            expect(selected).toHaveLength(3);
+            expect(settingsStore.updateSettings).toHaveBeenCalledWith(
+                expect.objectContaining({ dontAllowOtherPeers: true })
+            );
+        });
+
+        it('skips DNS-over-HTTPS discovery while embedded Tor is on', async () => {
+            (settingsStore.settings as any).embeddedTor = true;
+            mockFetch.mockRejectedValue(new Error('unable to resolve host'));
+
+            const selected = await optimizeNeutrinoPeers(false);
+
+            expect(selected).toEqual([]);
+            expect(
+                mockFetch.mock.calls.some(([url]) =>
+                    String(url).startsWith('https://')
+                )
+            ).toBe(false);
+            expect(settingsStore.updateSettings).not.toHaveBeenCalled();
         });
     });
 
