@@ -13,3 +13,19 @@ export const newStreamRequestId = (): string =>
 
 export const isEventForRequest = (event: any, requestId: string): boolean =>
     !!event && typeof event === 'object' && event.request_id === requestId;
+
+// A promise with its resolve and reject, for a stream listener that settles
+// it after the call that started the stream has returned. The caller may
+// never await it, so a rejection is handled once here and is not reported
+// as unhandled. A caller that does await the promise still gets the
+// rejection.
+export const deferred = () => {
+    let resolve: (value: any) => void = () => {};
+    let reject: (error: any) => void = () => {};
+    const promise = new Promise<any>((res, rej) => {
+        resolve = res;
+        reject = rej;
+    });
+    promise.catch(() => {});
+    return { promise, resolve, reject };
+};

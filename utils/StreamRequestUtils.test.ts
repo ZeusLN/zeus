@@ -1,4 +1,8 @@
-import { isEventForRequest, newStreamRequestId } from './StreamRequestUtils';
+import {
+    deferred,
+    isEventForRequest,
+    newStreamRequestId
+} from './StreamRequestUtils';
 
 describe('StreamRequestUtils', () => {
     describe('newStreamRequestId', () => {
@@ -41,6 +45,41 @@ describe('StreamRequestUtils', () => {
             expect(isEventForRequest(undefined, 'a')).toBe(false);
             expect(isEventForRequest(null, 'a')).toBe(false);
             expect(isEventForRequest('a', 'a')).toBe(false);
+        });
+    });
+
+    describe('deferred', () => {
+        const tick = () =>
+            new Promise<void>((resolve) => setImmediate(resolve));
+
+        it('resolves its promise with the value', async () => {
+            const { promise, resolve } = deferred();
+            resolve({ result: { chan_pending: {} } });
+            await expect(promise).resolves.toEqual({
+                result: { chan_pending: {} }
+            });
+        });
+
+        it('rejects its promise with the error', async () => {
+            const { promise, reject } = deferred();
+            reject(new Error('stream closed'));
+            await expect(promise).rejects.toThrow('stream closed');
+        });
+
+        it('keeps the first settlement', async () => {
+            const { promise, resolve, reject } = deferred();
+            resolve('pending');
+            reject(new Error('stream closed'));
+            await expect(promise).resolves.toBe('pending');
+        });
+
+        it('leaves no unhandled rejection when nothing awaits it', async () => {
+            const { promise, reject } = deferred();
+            reject(new Error('stream closed'));
+            // jest fails a test that leaves a rejection unhandled
+            await tick();
+            // a later reader still gets the rejection
+            await expect(promise).rejects.toThrow('stream closed');
         });
     });
 });

@@ -3,6 +3,7 @@ import OpenChannelRequest from '../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import { markNodeResponded } from './../utils/PaymentLookupUtils';
 import { TransactionPageRequest } from '../utils/OnchainTransactionUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
@@ -12,6 +13,7 @@ import {
     LndMobileEventEmitter
 } from '../utils/LndMobileUtils';
 import {
+    deferred,
     isEventForRequest,
     newStreamRequestId
 } from '../utils/StreamRequestUtils';
@@ -171,22 +173,41 @@ export default class EmbeddedLND extends LND {
         );
     openChannelStream = async (data: OpenChannelRequest) => {
         const requestId = newStreamRequestId();
+        // settles with the chan_pending update that follows psbt_fund (the
+        // peer has signed the commitment), or with the error or end that
+        // ends the stream first. Resolved along with psbt_fund as
+        // chanPending
+        const {
+            promise: chanPending,
+            resolve: resolvePending,
+            reject: rejectPending
+        } = deferred();
         return await new Promise((resolve, reject) => {
             LndMobileEventEmitter.addListener('OpenChannel', (e: any) => {
                 if (!isEventForRequest(e, requestId)) return;
                 try {
                     const error = checkLndStreamErrorResponse('OpenChannel', e);
                     if (error === 'EOF') {
+                        rejectPending(
+                            new Error(
+                                localeString(
+                                    'backends.LND.restReq.connectionError'
+                                )
+                            )
+                        );
                         return;
                     } else if (error) {
                         console.error('Got error from OpenChannel', [error]);
                         reject(error);
+                        rejectPending(error);
                         return;
                     }
 
                     const result = decodeOpenStatusUpdate(e.data);
                     if (result?.psbt_fund) {
-                        resolve({ result });
+                        resolve({ result, chanPending });
+                    } else if (result?.chan_pending) {
+                        resolvePending({ result });
                     }
                 } catch (error) {
                     console.error(error);

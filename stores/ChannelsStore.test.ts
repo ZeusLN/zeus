@@ -1015,7 +1015,8 @@ describe('ChannelsStore batch channel open', () => {
                         funding_amount: 1,
                         psbt: PSBT
                     }
-                }
+                },
+                chanPending: Promise.resolve({})
             } as any)
         );
         jest.mocked(BackendUtils.fundPsbt).mockResolvedValue({
@@ -1114,7 +1115,8 @@ describe('ChannelsStore batch channel open', () => {
                         funding_amount: 1,
                         psbt: PSBT
                     }
-                }
+                },
+                chanPending: Promise.resolve({})
             } as any);
 
         // the request object is reused between channels, so record what
