@@ -2432,6 +2432,12 @@ export default class CashuStore {
             // Neither has anything left to do on a removed relay.
             (relay as any).updateValidationRatio = () => {};
             relay.connectivity.connect = async () => {};
+            // On Android, closing a socket that is still CONNECTING does
+            // nothing natively (React Native only registers it in onOpen), so
+            // the relay can still connect after it was removed. Drop the
+            // pool's listeners and close the relay if that happens.
+            relay.removeAllListeners();
+            relay.on('connect', () => relay.connectivity.disconnect());
         }
         if (this.ndk === ndk) {
             this.ndk = undefined;
