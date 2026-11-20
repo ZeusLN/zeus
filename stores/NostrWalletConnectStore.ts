@@ -99,7 +99,9 @@ const PAYMENT_FEE_LIMIT_SATS = 1000;
  * already given up on the request.
  */
 const MAX_PAYMENT_QUEUE_WAIT_MS = 30_000;
-const SAVE_CONNECTIONS_DEBOUNCE_MS = 500;
+// One save reads and writes the whole connections record: about 70 ms for
+// 3 connections with 100 payments each on an Android 15 emulator
+const SAVE_CONNECTIONS_DEBOUNCE_MS = 1000;
 /** Min time a pay_invoice must stay pending before getActivities polls the node */
 const PENDING_PAYMENT_STATUS_MIN_AGE_MS = 5_000;
 /** Per-connection debounce for pending pay_invoice status refresh in getActivities */
