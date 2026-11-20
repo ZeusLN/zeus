@@ -172,7 +172,8 @@ function setup() {
             isLightTheme: () => false,
             isWipePending: async () => false,
             ...WalletRecoveryUtils,
-            autoPurgeLegacyKeychain: jest.fn()
+            autoPurgeLegacyKeychain: jest.fn(),
+            promptLegacyExportCleanup: jest.fn()
         }
     );
     const view = new Wallet();
