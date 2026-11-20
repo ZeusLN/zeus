@@ -98,8 +98,8 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                             <Text
                                 style={{
                                     ...styles.text,
-                                    fontFamily: font('marlideBold'),
-                                    fontSize: 55,
+                                    fontFamily: font('headline'),
+                                    fontSize: 46.75,
                                     color: themeColor('text')
                                 }}
                             >

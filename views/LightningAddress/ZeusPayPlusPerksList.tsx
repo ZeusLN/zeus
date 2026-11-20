@@ -91,8 +91,8 @@ export default class ZeusPayPlusPerksList extends React.Component<
 
 const styles = StyleSheet.create({
     perk: {
-        fontFamily: font('marlideBold'),
-        fontSize: 30,
+        fontFamily: font('headline'),
+        fontSize: 25.5,
         marginBottom: 5
     },
     note: {
@@ -101,14 +101,14 @@ const styles = StyleSheet.create({
         marginBottom: 5
     },
     comingSoon: {
-        fontFamily: font('marlideBold'),
-        fontSize: 15,
+        fontFamily: font('headline'),
+        fontSize: 13,
         marginLeft: 20,
         marginBottom: 5
     },
     value: {
-        fontFamily: font('marlideBold'),
-        fontSize: 35,
+        fontFamily: font('headline'),
+        fontSize: 30,
         marginLeft: 20,
         marginBottom: 5
     },

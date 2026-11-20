@@ -1,10 +1,7 @@
-import { Platform } from 'react-native';
-
+// React Native looks a custom font up by file name on Android and by
+// PostScript name on iOS. For Gloock both are 'Gloock-Regular'.
 const Fonts: { [key: string]: any } = {
-    marlideBold:
-        Platform.OS === 'android'
-            ? 'Marlide-Display-Bold'
-            : 'MarlideDisplay_Bold'
+    headline: 'Gloock-Regular'
 };
 
 export function font(id: string): any {

@@ -868,8 +868,8 @@ const styles = StyleSheet.create({
         maxWidth: 400
     },
     modalTitle: {
-        fontFamily: font('marlideBold'),
-        fontSize: 22,
+        fontFamily: font('headline'),
+        fontSize: 18.7,
         textAlign: 'center',
         marginBottom: 10
     },

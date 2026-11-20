@@ -1297,8 +1297,8 @@ export default class SwapDetails extends React.Component<
                         <Text
                             style={{
                                 textAlign: 'center',
-                                fontFamily: font('marlideBold'),
-                                fontSize: 28
+                                fontFamily: font('headline'),
+                                fontSize: 23.8
                             }}
                         >
                             {swapData.type}
@@ -1306,8 +1306,8 @@ export default class SwapDetails extends React.Component<
                         <Text
                             style={{
                                 textAlign: 'center',
-                                fontFamily: font('marlideBold'),
-                                fontSize: 22
+                                fontFamily: font('headline'),
+                                fontSize: 18.7
                             }}
                         >
                             {swapData.type === SwapType.Submarine

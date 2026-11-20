@@ -33,8 +33,8 @@ export default class Onboarding1 extends React.Component<Onboarding1Props, {}> {
                             <View style={styles.headerContainer}>
                                 <Text
                                     style={{
-                                        fontSize: 32,
-                                        fontFamily: font('marlideBold'),
+                                        fontSize: 27.2,
+                                        fontFamily: font('headline'),
                                         color: '#fff',
                                         textAlign: 'center'
                                     }}
