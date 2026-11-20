@@ -3631,12 +3631,19 @@ describe('CashuStore NDK teardown with the real NDK', () => {
     });
 
     it('closes a relay that connects after teardown (Android)', async () => {
-        stubWebSocket(true);
+        const sockets = stubWebSocket(true);
+        const error = jest.spyOn(console, 'error').mockImplementation(() => {});
         const ndk = await connected(['wss://relay.slow']);
         const [relay] = Array.from(ndk.pool.relays.values()) as any[];
         (newStore() as any).disconnectNdk(ndk);
         await jest.advanceTimersByTimeAsync(31000);
         expect(relay.status).not.toBe(5); // CONNECTED
+        expect(sockets).toHaveLength(1);
+        expect(sockets[0].readyState).toBe(3); // CLOSED
+        // the pool's handlers are gone, so it does not log "NDK BUG: relay
+        // not found in pool" for the removed relay
+        expect(error).not.toHaveBeenCalled();
         expect(jest.getTimerCount()).toBe(0);
+        error.mockRestore();
     });
 });
