@@ -52,6 +52,7 @@ import * as nodeCrypto from 'crypto';
 import ChannelBackupStore, {
     LAST_CHANNEL_BACKUP_STATUS
 } from './ChannelBackupStore';
+import { OLYMPUS_AUTH_TAG } from '../utils/AuthChallengeUtils';
 import Storage from '../storage';
 
 const SEED = Array(23).fill('abandon').concat(['about']);
@@ -218,8 +219,11 @@ describe('ChannelBackupStore', () => {
             mockFetch
                 .mockResolvedValueOnce({
                     info: () => ({ status: 200 }),
-                    // Olympus issues 64 random bytes as hex
-                    json: () => ({ verification: 'a1'.repeat(64) })
+                    // Olympus issues its tag followed by 64 random bytes
+                    // as hex
+                    json: () => ({
+                        verification: `${OLYMPUS_AUTH_TAG}${'a1'.repeat(64)}`
+                    })
                 })
                 .mockResolvedValueOnce({
                     info: () => ({ status: 200 }),

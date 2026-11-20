@@ -24,6 +24,10 @@ import { Notifications } from 'react-native-notifications';
 import { io } from 'socket.io-client';
 
 import BackendUtils from '../utils/BackendUtils';
+import {
+    OLYMPUS_AUTH_TAG,
+    ZEUS_PAY_AUTH_TAG
+} from '../utils/AuthChallengeUtils';
 import * as LocaleUtils from '../utils/LocaleUtils';
 import Storage from '../storage';
 import LightningAddressStore, {
@@ -34,11 +38,12 @@ import LightningAddressStore, {
 const HOST = 'https://zeuspay.com';
 const MINT = 'https://mint.test';
 const NODE_PUBKEY = '03cd';
-// The server issues 64 random bytes as lowercase hex
-const CHALLENGE = 'c0'.repeat(64);
-const FIRST = 'f1'.repeat(64);
-const SECOND = '5e'.repeat(64);
-const V = 'ab'.repeat(64);
+// The server issues its tag followed by 64 random bytes as lowercase hex
+const NONCE = 'c0'.repeat(64);
+const CHALLENGE = `${ZEUS_PAY_AUTH_TAG}${NONCE}`;
+const FIRST = `${ZEUS_PAY_AUTH_TAG}${'f1'.repeat(64)}`;
+const SECOND = `${ZEUS_PAY_AUTH_TAG}${'5e'.repeat(64)}`;
+const V = `${ZEUS_PAY_AUTH_TAG}${'ab'.repeat(64)}`;
 const CANONICAL_PHRASE =
     'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
 
@@ -134,13 +139,14 @@ describe('LightningAddressStore flows', () => {
     describe('auth', () => {
         it('signs the server challenge and sends it with the next call', async () => {
             const store = newStore();
-            reply('/api/lnurl/auth', ok({ verification: CHALLENGE }));
+            reply('/api/lnurl/auth/v2', ok({ verification: CHALLENGE }));
             reply('/api/plus/order', ok());
 
             await store.createZeusPayPlusOrder();
 
-            expect(bodyOf('/api/lnurl/auth')).toEqual({
-                pubkey: NODE_PUBKEY
+            expect(bodyOf('/api/lnurl/auth/v2')).toEqual({
+                pubkey: NODE_PUBKEY,
+                version: 2
             });
             expect(signMessage).toHaveBeenCalledWith(CHALLENGE);
             expect(bodyOf('/api/plus/order')).toEqual({
@@ -153,7 +159,7 @@ describe('LightningAddressStore flows', () => {
         it('uses the plain signature when the backend returns no zbase', async () => {
             const store = newStore();
             signMessage.mockResolvedValue({ signature: 'hexsig' });
-            reply('/api/lnurl/auth', ok({ verification: CHALLENGE }));
+            reply('/api/lnurl/auth/v2', ok({ verification: CHALLENGE }));
             reply('/api/plus/order', ok());
 
             await store.createZeusPayPlusOrder();
@@ -168,7 +174,7 @@ describe('LightningAddressStore flows', () => {
                 .mockResolvedValueOnce({ zbase: 'sig-first' })
                 .mockResolvedValueOnce({ zbase: 'sig-second' });
             reply(
-                '/api/lnurl/auth',
+                '/api/lnurl/auth/v2',
                 ok({ verification: FIRST }),
                 ok({ verification: SECOND })
             );
@@ -178,7 +184,7 @@ describe('LightningAddressStore flows', () => {
             now.mockReturnValue(1_000_000 + 10 * 60 * 1000 - 1);
             await store.createZeusPayPlusOrder();
 
-            expect(callsTo('/api/lnurl/auth')).toHaveLength(1);
+            expect(callsTo('/api/lnurl/auth/v2')).toHaveLength(1);
             expect(signMessage).toHaveBeenCalledTimes(1);
             expect(bodyOf('/api/plus/order', 1)).toMatchObject({
                 message: FIRST,
@@ -188,7 +194,7 @@ describe('LightningAddressStore flows', () => {
             now.mockReturnValue(1_000_000 + 10 * 60 * 1000 + 1);
             await store.createZeusPayPlusOrder();
 
-            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(callsTo('/api/lnurl/auth/v2')).toHaveLength(2);
             expect(signMessage).toHaveBeenCalledTimes(2);
             expect(signMessage).toHaveBeenLastCalledWith(SECOND);
             expect(bodyOf('/api/plus/order', 2)).toMatchObject({
@@ -200,7 +206,7 @@ describe('LightningAddressStore flows', () => {
         it('signs a new challenge after reset', async () => {
             const store = newStore();
             reply(
-                '/api/lnurl/auth',
+                '/api/lnurl/auth/v2',
                 ok({ verification: FIRST }),
                 ok({ verification: SECOND })
             );
@@ -210,14 +216,24 @@ describe('LightningAddressStore flows', () => {
             store.reset();
             await store.createZeusPayPlusOrder();
 
-            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(callsTo('/api/lnurl/auth/v2')).toHaveLength(2);
             expect(bodyOf('/api/plus/order', 1).message).toBe(SECOND);
         });
 
         it.each([
             ['the LNURL-auth canonical phrase', CANONICAL_PHRASE],
-            ['uppercase hex', CHALLENGE.toUpperCase()],
-            ['hex of the wrong length', 'c0'.repeat(32)],
+            ['a bare hex nonce', NONCE],
+            ['an Olympus challenge', `${OLYMPUS_AUTH_TAG}${NONCE}`],
+            ['uppercase hex', `${ZEUS_PAY_AUTH_TAG}${NONCE.toUpperCase()}`],
+            [
+                'hex of the wrong length',
+                `${ZEUS_PAY_AUTH_TAG}${'c0'.repeat(32)}`
+            ],
+            ['the tag without its trailing space', `zeuspay.com auth${NONCE}`],
+            [
+                'the tag followed by text',
+                `${ZEUS_PAY_AUTH_TAG}${CANONICAL_PHRASE}`
+            ],
             ['a non-hex string', 'challenge'],
             ['a non-string value', { toString: () => CHALLENGE }],
             ['a missing challenge', undefined]
@@ -225,7 +241,7 @@ describe('LightningAddressStore flows', () => {
             'refuses to sign %s and does not send it on',
             async (_label, verification) => {
                 const store = newStore();
-                reply('/api/lnurl/auth', ok({ verification }));
+                reply('/api/lnurl/auth/v2', ok({ verification }));
                 reply('/api/plus/order', ok());
 
                 await expect(store.createZeusPayPlusOrder()).rejects.toThrow(
@@ -242,7 +258,7 @@ describe('LightningAddressStore flows', () => {
         it('does not cache a refused challenge', async () => {
             const store = newStore();
             reply(
-                '/api/lnurl/auth',
+                '/api/lnurl/auth/v2',
                 ok({ verification: CANONICAL_PHRASE }),
                 ok({ verification: CHALLENGE })
             );
@@ -253,7 +269,7 @@ describe('LightningAddressStore flows', () => {
             );
             await store.createZeusPayPlusOrder();
 
-            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(callsTo('/api/lnurl/auth/v2')).toHaveLength(2);
             expect(signMessage).toHaveBeenCalledTimes(1);
             expect(signMessage).toHaveBeenCalledWith(CHALLENGE);
             expect(bodyOf('/api/plus/order').message).toBe(CHALLENGE);
@@ -268,7 +284,7 @@ describe('LightningAddressStore flows', () => {
                 )
                 .mockResolvedValueOnce({ zbase: 'sig-new' });
             reply(
-                '/api/lnurl/auth',
+                '/api/lnurl/auth/v2',
                 ok({ verification: FIRST }),
                 ok({ verification: SECOND })
             );
@@ -291,7 +307,7 @@ describe('LightningAddressStore flows', () => {
 
             await store.createZeusPayPlusOrder();
 
-            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(callsTo('/api/lnurl/auth/v2')).toHaveLength(2);
             expect(signMessage).toHaveBeenCalledTimes(2);
             expect(bodyOf('/api/plus/order', 1)).toMatchObject({
                 message: SECOND,
@@ -308,7 +324,7 @@ describe('LightningAddressStore flows', () => {
                 )
                 .mockResolvedValueOnce({ zbase: 'sig-new' });
             reply(
-                '/api/lnurl/auth',
+                '/api/lnurl/auth/v2',
                 ok({ verification: FIRST }),
                 ok({ verification: SECOND })
             );
@@ -328,7 +344,7 @@ describe('LightningAddressStore flows', () => {
 
             await store.createZeusPayPlusOrder();
 
-            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(callsTo('/api/lnurl/auth/v2')).toHaveLength(2);
             expect(bodyOf('/api/plus/order', 2)).toMatchObject({
                 message: SECOND,
                 signature: 'sig-new'
@@ -337,7 +353,7 @@ describe('LightningAddressStore flows', () => {
 
         it('fails the call without signing when the server refuses the challenge', async () => {
             const store = newStore();
-            reply('/api/lnurl/auth', {
+            reply('/api/lnurl/auth/v2', {
                 status: 429,
                 body: { error: 'rate limited' }
             });
@@ -356,7 +372,7 @@ describe('LightningAddressStore flows', () => {
                 .mockRejectedValueOnce(new Error('node locked'))
                 .mockResolvedValueOnce({ zbase: 'sig-retry' });
             reply(
-                '/api/lnurl/auth',
+                '/api/lnurl/auth/v2',
                 ok({ verification: FIRST }),
                 ok({ verification: SECOND })
             );
@@ -371,7 +387,7 @@ describe('LightningAddressStore flows', () => {
 
             await store.status();
 
-            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(callsTo('/api/lnurl/auth/v2')).toHaveLength(2);
             expect(bodyOf('/api/lnurl/status')).toMatchObject({
                 message: SECOND,
                 signature: 'sig-retry'
@@ -383,7 +399,7 @@ describe('LightningAddressStore flows', () => {
     describe('status', () => {
         const authed = () => {
             const store = newStore();
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             return store;
         };
 
@@ -693,7 +709,7 @@ describe('LightningAddressStore flows', () => {
     describe('redeemCashu', () => {
         const redeemStore = () => {
             const store = newStore();
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             const status = jest
                 .spyOn(store, 'status')
                 .mockResolvedValue(undefined);
@@ -1037,7 +1053,7 @@ describe('LightningAddressStore flows', () => {
             const status = jest
                 .spyOn(store, 'status')
                 .mockResolvedValue(undefined);
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply('/api/lnurl/nuts/redeem', ok());
 
             await store.deletePayment('q1');
@@ -1054,7 +1070,7 @@ describe('LightningAddressStore flows', () => {
             const status = jest
                 .spyOn(store, 'status')
                 .mockResolvedValue(undefined);
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply('/api/lnurl/nuts/redeem', {
                 status: 404,
                 body: { success: false, error: 'quote not found' }
@@ -1156,7 +1172,7 @@ describe('LightningAddressStore flows', () => {
             const store = newStore();
             const { socket, handlers } = newSocket();
             ioMock.mockReturnValue(socket);
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             const redeemAll = jest
                 .spyOn(store, 'redeemAllOpenPaymentsCashu')
                 .mockResolvedValue(undefined);
@@ -1203,7 +1219,7 @@ describe('LightningAddressStore flows', () => {
                 const store = newStore();
                 const { socket, handlers } = newSocket();
                 ioMock.mockReturnValue(socket);
-                reply('/api/lnurl/auth', ok({ verification: V }));
+                reply('/api/lnurl/auth/v2', ok({ verification: V }));
                 jest.spyOn(
                     store,
                     'redeemAllOpenPaymentsCashu'
@@ -1256,7 +1272,7 @@ describe('LightningAddressStore flows', () => {
         it('does nothing while a socket is still connecting', async () => {
             const store = newStore();
             ioMock.mockReturnValue(newSocket(false).socket);
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             const redeemAll = jest
                 .spyOn(store, 'redeemAllOpenPaymentsCashu')
                 .mockResolvedValue(undefined);
@@ -1275,7 +1291,7 @@ describe('LightningAddressStore flows', () => {
             store.socket = newSocket(false, false).socket;
             const { socket } = newSocket();
             ioMock.mockReturnValue(socket);
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             const redeemAll = jest
                 .spyOn(store, 'redeemAllOpenPaymentsCashu')
                 .mockResolvedValue(undefined);
@@ -1292,7 +1308,7 @@ describe('LightningAddressStore flows', () => {
             const store = newStore();
             ioMock.mockReturnValue(newSocket().socket);
             reply(
-                '/api/lnurl/auth',
+                '/api/lnurl/auth/v2',
                 new Error('offline'),
                 ok({ verification: V })
             );
@@ -1314,7 +1330,7 @@ describe('LightningAddressStore flows', () => {
             const { socket } = newSocket();
             ioMock.mockReturnValue(socket);
             reply(
-                '/api/lnurl/auth',
+                '/api/lnurl/auth/v2',
                 ok({ verification: V }),
                 ok({ verification: SECOND })
             );
@@ -1341,7 +1357,7 @@ describe('LightningAddressStore flows', () => {
             const store = newStore();
             const { socket, handlers } = newSocket();
             ioMock.mockReturnValue(socket);
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             jest.spyOn(store, 'redeemAllOpenPaymentsCashu').mockResolvedValue(
                 undefined
             );
@@ -1423,7 +1439,7 @@ describe('LightningAddressStore flows', () => {
             jest.spyOn(store, 'redeemAllOpenPaymentsCashu').mockResolvedValue(
                 undefined
             );
-            reply('/api/lnurl/auth', new Error('offline'));
+            reply('/api/lnurl/auth/v2', new Error('offline'));
 
             store.prepareToAutomaticallyAcceptCashu();
             await flushPromises();
@@ -1478,7 +1494,7 @@ describe('LightningAddressStore flows', () => {
     describe('createNWC', () => {
         it('creates an NWC address and enables it in settings', async () => {
             const store = newStore();
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply(
                 '/api/lnurl/create',
                 ok({ handle: 'satoshi', domain: 'zeuspay.com' })
@@ -1513,7 +1529,7 @@ describe('LightningAddressStore flows', () => {
 
         it('leaves settings alone when the server rejects the address', async () => {
             const store = newStore();
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply('/api/lnurl/create', {
                 status: 400,
                 body: { success: false, error: 'handle taken' }
@@ -1535,7 +1551,7 @@ describe('LightningAddressStore flows', () => {
             cashuStore.initializeWallet.mockImplementation(async (url) => {
                 cashuStore.cashuWallets[url] = { pubkey: '02ef' };
             });
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply(
                 '/api/lnurl/create',
                 ok({ handle: 'satoshi', domain: 'zeuspay.com' })
@@ -1562,7 +1578,7 @@ describe('LightningAddressStore flows', () => {
 
         it('reuses an initialized mint wallet', async () => {
             const store = newStore();
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply('/api/lnurl/create', ok());
 
             await store.createCashu(MINT);
@@ -1574,7 +1590,7 @@ describe('LightningAddressStore flows', () => {
 
         it('leaves settings alone when the server rejects the address', async () => {
             const store = newStore();
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply('/api/lnurl/create', {
                 status: 200,
                 body: { success: false, error: 'mint not allowed' }
@@ -1595,7 +1611,7 @@ describe('LightningAddressStore flows', () => {
             cashuStore.initializeWallet.mockRejectedValue(
                 new Error('mint offline')
             );
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
 
             await expect(
                 store.createCashu('https://new-mint.test')
@@ -1616,7 +1632,7 @@ describe('LightningAddressStore flows', () => {
                 { success: true }
             );
 
-            expect(callsTo('/api/lnurl/auth')).toHaveLength(0);
+            expect(callsTo('/api/lnurl/auth/v2')).toHaveLength(0);
             expect(bodyOf('/api/lnurl/nwc/test')).toEqual({
                 nwc_string: 'nwc'
             });
@@ -1655,7 +1671,7 @@ describe('LightningAddressStore flows', () => {
     describe('update', () => {
         it('defaults the domain to zeuspay.com when the reply has none', async () => {
             const store = newStore();
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply('/api/lnurl/update', ok({ handle: 'hal' }));
 
             await store.update({ handle: 'hal' });
@@ -1676,7 +1692,7 @@ describe('LightningAddressStore flows', () => {
         it('deletes the account, clears local flags and resets the store', async () => {
             const store = newStore();
             store.lightningAddress = 'satoshi@zeuspay.com';
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply('/api/lnurl/delete', ok());
 
             await expect(store.deleteAddress()).resolves.toBe(true);
@@ -1701,7 +1717,7 @@ describe('LightningAddressStore flows', () => {
         it('keeps local state when the server refuses', async () => {
             const store = newStore();
             store.lightningAddress = 'satoshi@zeuspay.com';
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply('/api/lnurl/delete', {
                 status: 403,
                 body: { error: 'invalid signature' }
@@ -1719,7 +1735,7 @@ describe('LightningAddressStore flows', () => {
 
         it('falls back to a generic message when the server gives no reason', async () => {
             const store = newStore();
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply('/api/lnurl/delete', { status: 500, body: {} });
 
             await expect(store.deleteAddress()).rejects.toBeUndefined();
@@ -1731,7 +1747,7 @@ describe('LightningAddressStore flows', () => {
     describe('createZeusPayPlusOrder', () => {
         it('returns the order from the server', async () => {
             const store = newStore();
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply('/api/plus/order', {
                 status: 200,
                 body: { invoice: 'lnbc1', amount: 21000 }
@@ -1747,7 +1763,7 @@ describe('LightningAddressStore flows', () => {
 
         it('falls back to a generic message when the server gives no reason', async () => {
             const store = newStore();
-            reply('/api/lnurl/auth', ok({ verification: V }));
+            reply('/api/lnurl/auth/v2', ok({ verification: V }));
             reply('/api/plus/order', { status: 500, body: {} });
 
             await expect(
