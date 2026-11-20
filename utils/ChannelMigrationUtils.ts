@@ -200,18 +200,30 @@ const resolveToLocalPath = async (uri: string): Promise<string> => {
  * lnd opens only the channel database of its configured backend
  * (channel.db for bolt, channel.sqlite for SQLite) and creates an empty
  * one when that file is missing. Check that the unzipped backup provided
- * it, so a backup of the other type, or one with no database, is reported
- * as an error instead of a restore with no channels.
+ * it with data in it, so a backup of the other type, one with no database,
+ * or an archive the unzip could not read is reported as an error instead
+ * of a restore with no channels. The files in the directory are removed
+ * before throwing: both callers empty it before they unzip, so these are
+ * the files the unzip wrote.
  */
 const assertChannelDbRestored = async (
     graphDir: string,
     isSqlite: boolean
 ): Promise<void> => {
     const file = isSqlite ? 'channel.sqlite' : 'channel.db';
-    if (await RNFS.exists(`${graphDir}/${file}`)) return;
-
     const otherFile = isSqlite ? 'channel.db' : 'channel.sqlite';
-    if (await RNFS.exists(`${graphDir}/${otherFile}`)) {
+    const entries = await RNFS.readDir(graphDir);
+    const hasData = (name: string): boolean =>
+        entries.some(
+            (item) =>
+                item.isFile() && item.name === name && Number(item.size) > 0
+        );
+    if (hasData(file)) return;
+
+    for (const item of entries) {
+        if (item.isFile()) await RNFS.unlink(item.path).catch(() => {});
+    }
+    if (hasData(otherFile)) {
         throw new Error(
             localeString('views.Tools.migration.import.databaseMismatch', {
                 backupType: isSqlite ? 'Bolt' : 'SQLite',
