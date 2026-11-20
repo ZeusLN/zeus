@@ -432,24 +432,6 @@ class CashuUtils {
         }
     };
 
-    isTokenP2PKLocked = (token: { proofs?: Array<{ secret: string }> }) => {
-        if (!token.proofs || !Array.isArray(token.proofs)) {
-            return false;
-        }
-        for (const proof of token.proofs) {
-            if (typeof proof.secret !== 'string') continue;
-            if (this.getP2PKPubkeySecret(proof.secret)) {
-                const locktime = this.getP2PKLocktime(proof.secret);
-                const currentTime = Date.now() / 1000;
-                if (!locktime) {
-                    return true;
-                } else if (locktime > currentTime) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    };
     getP2PKPubkeySecret = (secret: string) => {
         const secretObject = safeParseP2PKSecret(secret);
         if (secretObject == null) return undefined;

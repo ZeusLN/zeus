@@ -2095,24 +2095,27 @@ export default class CashuStore {
     };
 
     /**
-     * CDK: Receive ecash token
+     * CDK: Receive ecash token.
+     *
+     * Always offers CDK our P2PK key. A token from a mint that is not in
+     * the wallet is decoded without proofs, so a caller can't tell whether
+     * it is locked. CDK only uses the key for proofs locked to it.
      */
     public receiveTokenCDK = async (
         encodedToken: string,
-        signingKey?: string,
-        mintUrl?: string
+        { mintUrl }: { mintUrl?: string } = {}
     ): Promise<number> => {
         if (!this.cdkInitialized) {
             throw new Error('CDK not initialized');
         }
+
+        const signingKey = this.deriveCashuSecretKey();
 
         // Ensure the token's mint is added so CDK knows its keysets
         if (mintUrl) {
             await this.ensureMintAdded(mintUrl);
         }
 
-        // Our key, if the caller offered one. CDK only uses it for proofs
-        // locked to it.
         const options: { p2pk_signing_keys: string[] } = {
             p2pk_signing_keys: signingKey ? [signingKey] : []
         };
@@ -6430,16 +6433,9 @@ export default class CashuStore {
                         break;
                     }
 
-                    // A token queued from a mint that was not in the wallet
-                    // was decoded without proofs, so isTokenP2PKLocked can't
-                    // tell if it is locked. Always offer our key: CDK only
-                    // uses it for proofs locked to it.
-                    const signingKey = this.deriveCashuSecretKey() ?? undefined;
-                    await this.receiveTokenCDK(
-                        token.encodedToken,
-                        signingKey,
-                        token.mint
-                    );
+                    await this.receiveTokenCDK(token.encodedToken, {
+                        mintUrl: token.mint
+                    });
 
                     // CDK records the transaction internally
                     results.claimed++;
@@ -6622,11 +6618,6 @@ export default class CashuStore {
                 };
             }
 
-            const isLocked = CashuUtils.isTokenP2PKLocked(decoded);
-            const signingKey = isLocked
-                ? this.deriveCashuSecretKey() ?? undefined
-                : undefined;
-
             if (toSelfCustody) {
                 // Prepare the sweep invoice and fee probe BEFORE receiving
                 // the token: receiving consumes it at the mint, so failures
@@ -6699,15 +6690,11 @@ export default class CashuStore {
                     };
                 }
 
-                // Pass signing key only when token is P2PK-locked (decoded has proofs)
-
                 // Point of no return: this consumes the token and credits
                 // the wallet's own balance at the mint
-                const receivedAmt = await this.receiveTokenCDK(
-                    encodedToken,
-                    signingKey,
+                const receivedAmt = await this.receiveTokenCDK(encodedToken, {
                     mintUrl
-                );
+                });
                 await this.syncCDKBalances();
 
                 let melted: CDKMelted | undefined;
@@ -6786,7 +6773,7 @@ export default class CashuStore {
                 }
             } else {
                 // Regular receive via CDK
-                await this.receiveTokenCDK(encodedToken, signingKey, mintUrl);
+                await this.receiveTokenCDK(encodedToken, { mintUrl });
 
                 // CDK handles balance updates internally and records the
                 // transaction, so no need to also push to receivedTokens

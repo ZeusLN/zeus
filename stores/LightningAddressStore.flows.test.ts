@@ -69,7 +69,6 @@ const newCashuStore = () => ({
     mintUrls: [MINT],
     initializeWallet: jest.fn(),
     checkInvoicePaid: jest.fn(),
-    deriveCashuSecretKey: jest.fn(),
     receiveTokenCDK: jest.fn(),
     decodeTokenCDK: jest.fn()
 });
@@ -114,7 +113,6 @@ describe('LightningAddressStore flows', () => {
 
         cashuStore = newCashuStore();
         cashuStore.initializeWallet.mockResolvedValue(undefined);
-        cashuStore.deriveCashuSecretKey.mockReturnValue('cashu-key');
         cashuStore.receiveTokenCDK.mockResolvedValue(undefined);
         cashuStore.decodeTokenCDK.mockResolvedValue({ mint_url: MINT });
         settingsStore = {
@@ -721,10 +719,9 @@ describe('LightningAddressStore flows', () => {
                 signature: 'zsig',
                 quoteId: 'q1'
             });
-            expect(cashuStore.receiveTokenCDK).toHaveBeenCalledWith(
-                'cashuBtoken',
-                'cashu-key'
-            );
+            expect(cashuStore.receiveTokenCDK.mock.calls).toEqual([
+                ['cashuBtoken']
+            ]);
             expect(status).toHaveBeenCalledWith(true);
             expect(store.redeeming).toBe(false);
             expect(store.error).toBe(false);
@@ -743,20 +740,6 @@ describe('LightningAddressStore flows', () => {
                 MINT,
                 true,
                 true
-            );
-        });
-
-        it('receives the token without a signing key when none can be derived', async () => {
-            const { store } = redeemStore();
-            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
-            cashuStore.deriveCashuSecretKey.mockReturnValue(null);
-            reply('/api/lnurl/nuts/redeem', ok({ token: 'cashuBtoken' }));
-
-            await store.redeemCashu('q1', MINT, 1000);
-
-            expect(cashuStore.receiveTokenCDK).toHaveBeenCalledWith(
-                'cashuBtoken',
-                undefined
             );
         });
 

@@ -69,7 +69,8 @@ jest.mock('../cashu-cdk', () => ({
         getUnspentProofs: jest.fn(),
         getMintBalance: jest.fn(),
         createMeltQuote: jest.fn(),
-        melt: jest.fn()
+        melt: jest.fn(),
+        receive: jest.fn()
     }
 }));
 
@@ -126,6 +127,7 @@ const makeStore = () => {
         {} as any
     );
     store.cdkInitialized = true;
+    const realReceiveTokenCDK = store.receiveTokenCDK;
     store.receiveTokenCDK = jest.fn();
     store.createMeltQuoteCDK = jest.fn();
     store.meltCDK = jest.fn();
@@ -137,7 +139,7 @@ const makeStore = () => {
     (CashuDevKit.getMintKeysets as jest.Mock).mockResolvedValue([]);
     (CashuDevKit.getUnspentProofs as jest.Mock).mockResolvedValue([]);
 
-    return { store, invoicesStore };
+    return { store, invoicesStore, realReceiveTokenCDK };
 };
 
 describe('CashuStore.claimToken toSelfCustody', () => {
@@ -573,5 +575,90 @@ describe('CashuStore.sweepMint on a mint with input fees', () => {
             String(994 - 19 - 16)
         );
         expect(CashuDevKit.melt).toHaveBeenCalledWith(MINT_URL, 'q2');
+    });
+});
+
+describe('CashuStore.claimToken signing key', () => {
+    const SECRET_KEY = 'ab'.repeat(32);
+
+    // a token from a mint that is not in the wallet decodes without proofs,
+    // so it can't be checked for a P2PK lock
+    const makeDecodedWithoutProofs = () =>
+        new CashuToken({
+            mint: MINT_URL,
+            unit: 'sat',
+            proofs: [],
+            value: TOKEN_AMT
+        });
+
+    // receiveTokenCDK is not stubbed here: the key has to reach CDK
+    const makeKeyedStore = () => {
+        const { store, invoicesStore, realReceiveTokenCDK } = makeStore();
+        store.receiveTokenCDK = jest.fn(realReceiveTokenCDK);
+        store.deriveCashuSecretKey = jest.fn(() => SECRET_KEY);
+        (store as any).ensureMintAdded = jest.fn();
+        (store as any).checkAndSweepMints = jest.fn();
+        return { store, invoicesStore };
+    };
+
+    // toStrictEqual: toHaveBeenCalledWith treats [undefined] as []
+    const expectReceivedWithKeys = (keys: string[]) =>
+        expect((CashuDevKit.receive as jest.Mock).mock.calls).toStrictEqual([
+            [ENCODED_TOKEN, { p2pk_signing_keys: keys }]
+        ]);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (CashuDevKit.receive as jest.Mock).mockResolvedValue(TOKEN_AMT);
+    });
+
+    it('offers our key for a token decoded without proofs', async () => {
+        const { store } = makeKeyedStore();
+
+        const result = await store.claimToken(
+            ENCODED_TOKEN,
+            makeDecodedWithoutProofs()
+        );
+
+        expectReceivedWithKeys([SECRET_KEY]);
+        expect((store as any).ensureMintAdded).toHaveBeenCalledWith(MINT_URL);
+        expect(result).toEqual({ success: true, errorMessage: '' });
+    });
+
+    it('offers our key for an unlocked token', async () => {
+        const { store } = makeKeyedStore();
+
+        await store.claimToken(ENCODED_TOKEN, makeDecoded());
+
+        expectReceivedWithKeys([SECRET_KEY]);
+    });
+
+    it('offers our key when sweeping a token decoded without proofs to self-custody', async () => {
+        const { store, invoicesStore } = makeKeyedStore();
+        invoicesStore.createInvoice.mockResolvedValue({
+            paymentRequest: 'lnbc1invoice'
+        });
+        (store.createMeltQuoteCDK as jest.Mock).mockResolvedValue({
+            fee_reserve: 0
+        });
+
+        const result = await store.claimToken(
+            ENCODED_TOKEN,
+            makeDecodedWithoutProofs(),
+            true
+        );
+
+        expectReceivedWithKeys([SECRET_KEY]);
+        expect((store as any).ensureMintAdded).toHaveBeenCalledWith(MINT_URL);
+        expect(result).toEqual({ success: true, errorMessage: '' });
+    });
+
+    it('passes no key when none can be derived', async () => {
+        const { store } = makeKeyedStore();
+        store.deriveCashuSecretKey = jest.fn(() => null);
+
+        await store.claimToken(ENCODED_TOKEN, makeDecodedWithoutProofs());
+
+        expectReceivedWithKeys([]);
     });
 });
