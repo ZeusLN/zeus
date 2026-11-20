@@ -53,7 +53,11 @@ const DESTINATION = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
 const hosts = (type: string) =>
     screen.container.queryAll((n: any) => n.type === type);
 
-const renderSweep = async (implementation = 'lnd', fee?: string) => {
+const renderSweep = async (
+    implementation = 'lnd',
+    fee?: string,
+    balances = { confirmed: 1500000, unconfirmed: 250000 }
+) => {
     const navigation = { navigate: jest.fn() };
     await render(
         <Sweep
@@ -61,8 +65,8 @@ const renderSweep = async (implementation = 'lnd', fee?: string) => {
                 navigation,
                 route: { params: { destination: DESTINATION } },
                 BalanceStore: {
-                    confirmedBlockchainBalance: 1500000,
-                    unconfirmedBlockchainBalance: 250000
+                    confirmedBlockchainBalance: balances.confirmed,
+                    unconfirmedBlockchainBalance: balances.unconfirmed
                 },
                 SettingsStore: { implementation },
                 InvoicesStore: {},
@@ -121,6 +125,43 @@ describe('Sweep', () => {
             expect.objectContaining({ satAmount: '1500000' })
         );
     });
+
+    // CLN's withdraw spends confirmed outputs only
+    it('does not offer to proceed on CLNRest while the whole balance is unconfirmed', async () => {
+        const navigation = await renderSweep('cln-rest', undefined, {
+            confirmed: 0,
+            unconfirmed: 250000
+        });
+
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        // the balance is not missing, so no "no on-chain balance" warning
+        expect(hosts('WarningMessage')).toHaveLength(0);
+    });
+
+    it('sweeps a balance that is all unconfirmed on LND', async () => {
+        const navigation = await renderSweep('lnd', undefined, {
+            confirmed: 0,
+            unconfirmed: 250000
+        });
+
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'VerifyOnChain',
+            expect.objectContaining({ satAmount: '250000' })
+        );
+    });
+
+    it.each(['lnd', 'cln-rest'])(
+        'does not offer to proceed with no balance (%s)',
+        async (implementation) => {
+            const navigation = await renderSweep(implementation, undefined, {
+                confirmed: 0,
+                unconfirmed: 0
+            });
+
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            expect(hosts('WarningMessage')).toHaveLength(1);
+        }
+    );
 
     it.each(['', '0', '-1', 'abc', '2001', '2.5', '1e3', '0x10', ' 2'])(
         'does not offer to proceed at a fee rate of %p',
@@ -188,4 +229,23 @@ describe('Sweep', () => {
             expect(navigation.navigate).toHaveBeenCalledWith('SendingOnChain');
         }
     );
+
+    it('sends from the button on VerifyOnChain below the slide to pay threshold', async () => {
+        const sweepNavigation = await renderSweep('lnd', undefined, {
+            confirmed: 9999,
+            unconfirmed: 0
+        });
+        const { TransactionsStore } = await renderVerifyOnChain(
+            'lnd',
+            sweepNavigation.navigate.mock.calls[0][1]
+        );
+
+        expect(hosts('SwipeButton')).toHaveLength(0);
+        await fireEvent.press(screen.getByText('views.Send.sendCoins'));
+
+        expect(TransactionsStore.sendCoins).toHaveBeenCalledTimes(1);
+        expect(TransactionsStore.sendCoins).toHaveBeenCalledWith(
+            expect.objectContaining({ addr: DESTINATION, send_all: true })
+        );
+    });
 });

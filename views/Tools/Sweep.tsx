@@ -65,27 +65,33 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
         }
     }
 
-    // A sweep spends the whole balance at the fee rate in the input, which
-    // starts at a default the user may not have changed. As with Send's
-    // on-chain flow, VerifyOnChain shows amount, destination and rate, and
-    // its send max request (send_all, or amount 'all' on CLNRest) is sent
-    // only once the user confirms there
-    proceed = () => {
-        const { BalanceStore, SettingsStore, navigation } = this.props;
-        const { destination, fee } = this.state;
-        // CLN's withdraw spends confirmed outputs only (minconf defaults to
-        // 1, and CLNRest.sendCoins does not pass spend_unconfirmed on)
-        const satAmount = new BigNumber(
-            BalanceStore.confirmedBlockchainBalance || 0
-        ).plus(
+    // What a sweep can spend. CLN's withdraw spends confirmed outputs only
+    // (minconf defaults to 1, and CLNRest.sendCoins does not pass
+    // spend_unconfirmed on)
+    sweepableSats = (): BigNumber => {
+        const { BalanceStore, SettingsStore } = this.props;
+        return new BigNumber(BalanceStore.confirmedBlockchainBalance || 0).plus(
             SettingsStore.implementation === 'cln-rest'
                 ? 0
                 : BalanceStore.unconfirmedBlockchainBalance || 0
         );
+    };
+
+    // A sweep spends the whole balance at the fee rate in the input, which
+    // starts at a default the user may not have changed. As with Send's
+    // on-chain flow, VerifyOnChain shows amount, destination and rate, and
+    // its send max request (send_all, or amount 'all' on CLNRest) is sent
+    // only once the user confirms there. The amount shown is the balance
+    // when Proceed is tapped: if the balance changes while VerifyOnChain is
+    // open, the request still sweeps the balance at the time it is sent,
+    // as with send max in Send
+    proceed = () => {
+        const { navigation } = this.props;
+        const { destination, fee } = this.state;
         navigation.navigate('VerifyOnChain', {
             destination,
             fee,
-            satAmount: satAmount.toString(),
+            satAmount: this.sweepableSats().toString(),
             fundMax: true
         });
     };
@@ -114,6 +120,9 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
             confirmedBlockchainBalance === 0 &&
             unconfirmedBlockchainBalance === 0;
 
+        // On CLNRest a balance that is all unconfirmed cannot be swept yet
+        const nothingToSweep = !this.sweepableSats().gt(0);
+
         // Proceed stays off while the fee field shows an error. With an
         // empty or 0 rate the node picks its own fee, so the rate the user
         // confirms would not be the one used. VerifyOnChain shows the rate
@@ -121,7 +130,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
         const disabled =
             !destination ||
             !isValid ||
-            noOnchainBalance ||
+            nothingToSweep ||
             !/^\d+$/.test(fee) ||
             !isPlausibleSatPerVbyte(fee);
 
