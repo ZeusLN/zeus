@@ -22,6 +22,7 @@ jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ChannelMigrationUtils', () => ({}));
 jest.mock('../../stores/ModalStore', () => ({}));
 jest.mock('../../utils/LndMobileUtils', () => ({}));
+jest.mock('../../utils/NeutrinoPeersUtils', () => ({}));
 jest.mock('../../utils/SleepUtils', () => ({}));
 jest.mock('../../utils/LdkNodeUtils', () => ({
     getDefaultEsploraServer: () => '',
