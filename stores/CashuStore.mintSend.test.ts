@@ -447,6 +447,7 @@ describe('CashuStore.checkInvoicePaid', () => {
         expect(cdk.mint).toHaveBeenCalledWith(A, 'quote-1');
         expect(result).toEqual({
             isPaid: true,
+            minted: true,
             amtSat: 1000,
             paymentRequest: REQUEST,
             updatedInvoice: store.invoices![0]
@@ -502,6 +503,8 @@ describe('CashuStore.checkInvoicePaid', () => {
 
         expect(cdk.mint).not.toHaveBeenCalled();
         expect(result.isPaid).toBe(true);
+        // paid, but this call minted nothing
+        expect(result.minted).toBe(false);
         expect(store.invoices![0].isPaid).toBe(true);
     });
 
@@ -514,6 +517,7 @@ describe('CashuStore.checkInvoicePaid', () => {
 
         expect(cdk.mint).toHaveBeenCalledWith(A, 'quote-1');
         expect(result.isPaid).toBe(true);
+        expect(result.minted).toBe(true);
     });
 
     it('reports a pending quote the mint will not mint yet as unpaid', async () => {
@@ -598,7 +602,11 @@ describe('CashuStore.checkInvoicePaid', () => {
                 store.deriveCashuSecretKey()
             );
             expect(cdk.mintExternal).toHaveBeenCalledWith(A, 'quote-1', 1000);
-            expect(result).toMatchObject({ isPaid: true, amtSat: 1000 });
+            expect(result).toMatchObject({
+                isPaid: true,
+                minted: true,
+                amtSat: 1000
+            });
             expect(store.invoices![0].isPaid).toBe(true);
         });
 
@@ -655,6 +663,7 @@ describe('CashuStore.checkInvoicePaid', () => {
             const result = await store.checkInvoicePaid('quote-1', A, true);
 
             expect(result.isPaid).toBe(true);
+            expect(result.minted).toBe(true);
             expect(cdk.checkExternalMintQuote).not.toHaveBeenCalled();
             expect(cdk.addExternalMintQuote).not.toHaveBeenCalled();
         });
@@ -703,7 +712,11 @@ describe('CashuStore.checkInvoicePaid', () => {
                 secretKey
             );
             expect(cdk.mintExternal).toHaveBeenCalledWith(A, 'quote-x', 2100);
-            expect(result).toMatchObject({ isPaid: true, amtSat: 2100 });
+            expect(result).toMatchObject({
+                isPaid: true,
+                minted: true,
+                amtSat: 2100
+            });
             // no CDK quote, so no invoice record is written
             expect(result.updatedInvoice).toBeUndefined();
             expect(store.invoices).toEqual([]);
@@ -770,8 +783,13 @@ describe('CashuStore.checkInvoicePaid', () => {
 
             expect(cdk.restore).toHaveBeenCalledWith(A);
             expect(cdk.mintExternal).not.toHaveBeenCalled();
-            // the restored amount is reported, not the quote amount
-            expect(result).toMatchObject({ isPaid: true, amtSat: 1500 });
+            // the restored amount is reported, not the quote amount. The
+            // quote was issued before, so nothing was minted for it now
+            expect(result).toMatchObject({
+                isPaid: true,
+                minted: false,
+                amtSat: 1500
+            });
         });
 
         it('reports an issued external quote as paid even when restore finds nothing', async () => {
@@ -788,7 +806,11 @@ describe('CashuStore.checkInvoicePaid', () => {
             const result = await store.checkInvoicePaid('quote-x', A);
 
             // the proofs may already be in this wallet, or in another one
-            expect(result).toMatchObject({ isPaid: true, amtSat: 2100 });
+            expect(result).toMatchObject({
+                isPaid: true,
+                minted: false,
+                amtSat: 2100
+            });
         });
 
         it('leaves an unpaid external quote alone', async () => {

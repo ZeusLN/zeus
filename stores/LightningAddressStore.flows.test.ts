@@ -773,9 +773,11 @@ describe('LightningAddressStore flows', () => {
 
         it('redeems an already-issued quote without announcing a new payment', async () => {
             const { store } = redeemStore();
+            // what checkInvoicePaid returns for an Issued quote
             cashuStore.checkInvoicePaid.mockResolvedValue({
-                isPaid: false,
-                updatedInvoice: { state: 'ISSUED' }
+                isPaid: true,
+                minted: false,
+                amtSat: 21
             });
             reply('/api/lnurl/nuts/redeem', ok());
 
@@ -799,7 +801,11 @@ describe('LightningAddressStore flows', () => {
         it('posts a notification with a chime on iOS, grouping thousands', async () => {
             const { store } = redeemStore();
             const locale = jest.spyOn(LocaleUtils, 'localeString');
-            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            cashuStore.checkInvoicePaid.mockResolvedValue({
+                isPaid: true,
+                minted: true,
+                amtSat: 1234
+            });
             reply('/api/lnurl/nuts/redeem', ok());
 
             await store.redeemCashu('q1', MINT, 1234000, true, true);
@@ -819,7 +825,11 @@ describe('LightningAddressStore flows', () => {
             (Platform as any).OS = 'android';
             const { store } = redeemStore();
             const locale = jest.spyOn(LocaleUtils, 'localeString');
-            cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
+            cashuStore.checkInvoicePaid.mockResolvedValue({
+                isPaid: true,
+                minted: true,
+                amtSat: 1
+            });
             reply('/api/lnurl/nuts/redeem', ok());
 
             await store.redeemCashu('q1', MINT, 1000, true, true);
@@ -833,6 +843,50 @@ describe('LightningAddressStore flows', () => {
                 body: 'zeuspay.paymentReceived.body'
             });
         });
+
+        it('shows the amount the mint issued, not the amount in the event', async () => {
+            const { store } = redeemStore();
+            const locale = jest.spyOn(LocaleUtils, 'localeString');
+            cashuStore.checkInvoicePaid.mockResolvedValue({
+                isPaid: true,
+                minted: true,
+                amtSat: 21
+            });
+            reply('/api/lnurl/nuts/redeem', ok());
+
+            await store.redeemCashu('q1', MINT, 1e12, true, true);
+
+            expect(locale).toHaveBeenCalledWith(
+                'zeuspay.paymentReceived.body',
+                { value: '21', unit: 'general.sats' }
+            );
+            expect(postLocalNotification).toHaveBeenCalledTimes(1);
+        });
+
+        it.each([
+            ['no amount', undefined],
+            ['a zero amount', 0],
+            ['a negative amount', -21],
+            ['a fractional amount', 21.5],
+            ['a string amount', '21']
+        ])(
+            'redeems without announcing when the mint reports %s',
+            async (_label, amtSat) => {
+                const { store } = redeemStore();
+                cashuStore.checkInvoicePaid.mockResolvedValue({
+                    isPaid: true,
+                    minted: true,
+                    amtSat
+                });
+                reply('/api/lnurl/nuts/redeem', ok());
+
+                await store.redeemCashu('q1', MINT, 21000, true, true);
+
+                expect(callsTo('/api/lnurl/nuts/redeem')).toHaveLength(1);
+                expect(postLocalNotification).not.toHaveBeenCalled();
+                expect(store.error).toBe(false);
+            }
+        );
 
         it('reports an unpaid quote without calling ZEUS Pay', async () => {
             const { store, status } = redeemStore();

@@ -587,7 +587,8 @@ export default class LightningAddressStore {
     public redeemCashu = (
         quote_id: string,
         mint_url: string,
-        amount_msat: number,
+        // not used: the notification shows what the mint issued
+        _amount_msat: number,
         skipStatus?: boolean,
         localNotification?: boolean,
         skipMintCheck?: boolean
@@ -609,7 +610,6 @@ export default class LightningAddressStore {
         const redeem = this.redeemQuote(
             quote_id,
             mint_url,
-            amount_msat,
             skipStatus,
             localNotification,
             skipMintCheck
@@ -627,7 +627,6 @@ export default class LightningAddressStore {
     private redeemQuote = async (
         quote_id: string,
         mint_url: string,
-        amount_msat: number,
         skipStatus?: boolean,
         localNotification?: boolean,
         skipMintCheck?: boolean
@@ -675,8 +674,8 @@ export default class LightningAddressStore {
 
         this.redeeming = true;
 
-        const fireLocalNotification = () => {
-            const value = (amount_msat / 1000).toString();
+        const fireLocalNotification = (amtSat: number) => {
+            const value = amtSat.toString();
             const value_commas = value.replace(
                 /\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g,
                 ','
@@ -710,7 +709,9 @@ export default class LightningAddressStore {
         // call the payment is still claimable at the mint, so a connectivity
         // failure there is retryable rather than terminal.
         let step: 'claim' | 'redeem' | 'receive' = 'claim';
-        let notify = false;
+        // the amount the mint issued for this quote, set only when this
+        // redeem minted it
+        let notifyAmtSat: number | undefined;
 
         try {
             const response = await this.cashuStore.checkInvoicePaid(
@@ -765,7 +766,21 @@ export default class LightningAddressStore {
                     );
                 }
 
-                notify = !!(localNotification && response.isPaid);
+                // Announce only what this redeem minted, in the amount the
+                // mint issued. The event's amount_msat comes from the
+                // server, and a replayed event for a quote that was issued
+                // earlier is paid but mints nothing.
+                const amtSat = response.amtSat;
+                if (
+                    localNotification &&
+                    response.isPaid &&
+                    response.minted &&
+                    typeof amtSat === 'number' &&
+                    Number.isInteger(amtSat) &&
+                    amtSat > 0
+                ) {
+                    notifyAmtSat = amtSat;
+                }
             } else {
                 runInAction(() => {
                     this.redeeming = false;
@@ -806,9 +821,9 @@ export default class LightningAddressStore {
             this.redeeming = false;
         });
 
-        if (notify) {
+        if (notifyAmtSat !== undefined) {
             try {
-                fireLocalNotification();
+                fireLocalNotification(notifyAmtSat);
             } catch (e) {
                 console.log('Error posting payment notification', e);
             }

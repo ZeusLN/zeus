@@ -993,6 +993,9 @@ export default class CashuStore {
         lockedQuote?: boolean
     ): Promise<{
         isPaid: boolean;
+        // true only when this call minted the quote's proofs. An already
+        // issued quote is paid but mints nothing new.
+        minted?: boolean;
         amount?: number;
         quote?: CDKMintQuote;
         isLegacy?: boolean;
@@ -1055,18 +1058,28 @@ export default class CashuStore {
                         quoteId,
                         externalQuote
                     );
-                    return { isPaid: true, amount, quote };
+                    return { isPaid: true, minted: true, amount, quote };
                 }
                 await this.syncCDKBalances();
 
-                return { isPaid: true, amount: quote.amount, quote };
+                return {
+                    isPaid: true,
+                    minted: true,
+                    amount: quote.amount,
+                    quote
+                };
             }
 
             // Also check for 'Issued' state (proofs already minted)
             if (quote.state === 'Issued') {
                 console.log('CDK checkAndMintCDK: Quote already issued');
                 await this.syncCDKBalances();
-                return { isPaid: true, amount: quote.amount, quote };
+                return {
+                    isPaid: true,
+                    minted: false,
+                    amount: quote.amount,
+                    quote
+                };
             }
 
             // Handle 'Pending' state - payment in progress, try to mint anyway
@@ -1078,7 +1091,12 @@ export default class CashuStore {
                 try {
                     await CashuDevKit.mint(mintUrl, quoteId);
                     await this.syncCDKBalances();
-                    return { isPaid: true, amount: quote.amount, quote };
+                    return {
+                        isPaid: true,
+                        minted: true,
+                        amount: quote.amount,
+                        quote
+                    };
                 } catch (mintError: any) {
                     console.log(
                         'CDK checkAndMintCDK: Mint failed while pending:',
@@ -1144,6 +1162,7 @@ export default class CashuStore {
                                 );
                             return {
                                 isPaid: true,
+                                minted: true,
                                 amount,
                                 externalQuote
                             };
@@ -1180,6 +1199,7 @@ export default class CashuStore {
                             if (restored > 0) {
                                 return {
                                     isPaid: true,
+                                    minted: false,
                                     amount: restored,
                                     externalQuote
                                 };
@@ -1193,6 +1213,7 @@ export default class CashuStore {
                         }
                         return {
                             isPaid: true,
+                            minted: false,
                             amount: externalQuote.amount,
                             externalQuote
                         };
@@ -4998,6 +5019,7 @@ export default class CashuStore {
 
             return {
                 isPaid: true,
+                minted: !!result.minted,
                 amtSat: result.amount,
                 paymentRequest: this.invoice || '',
                 updatedInvoice
