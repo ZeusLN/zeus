@@ -31,6 +31,7 @@ class MainApplication : Application(), ReactApplication {
                     add(LncPackage())
                     add(NostrConnectPackage())
                     add(StealthModePackage())
+                    add(AppIconPackage())
                     add(CashuDevKitPackage())
                     add(LdkNodePackage())
                     add(ZipUtilsPackage())
