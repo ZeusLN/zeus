@@ -28,6 +28,7 @@ interface TextInputProps {
     multiline?: boolean;
     autoFocus?: boolean;
     secureTextEntry?: boolean;
+    maxLength?: number;
     prefix?: string | number;
     prefixStyle?: any;
     suffix?: string;
@@ -59,6 +60,7 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
             multiline,
             autoFocus,
             secureTextEntry,
+            maxLength,
             prefix,
             prefixStyle,
             suffix,
@@ -184,6 +186,7 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                     multiline={multiline}
                     autoFocus={autoFocus}
                     secureTextEntry={secureTextEntry}
+                    maxLength={maxLength}
                     onPressIn={onPressIn}
                     onSubmitEditing={props.onSubmitEditing}
                     ref={ref}
