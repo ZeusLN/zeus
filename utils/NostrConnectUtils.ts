@@ -1239,6 +1239,43 @@ export default class NostrConnectUtils {
         );
     }
 
+    /**
+     * How long a pay_invoice must have been pending before the user may
+     * release its budget hold. A payment normally resolves within minutes,
+     * including the node's own retries, so a hold this old is most likely
+     * one the node will never list (LndHub, a payment that failed after the
+     * client stopped waiting).
+     */
+    static readonly PAY_INVOICE_HOLD_RELEASE_MIN_AGE_MS = 60 * 60 * 1000;
+
+    /**
+     * True when the user may release a pending pay_invoice's budget hold:
+     * a Lightning payment still held against the budget and pending for at
+     * least PAY_INVOICE_HOLD_RELEASE_MIN_AGE_MS.
+     */
+    static canReleasePayInvoiceHold(
+        activity: ConnectionActivity,
+        nowMs: number = Date.now()
+    ): boolean {
+        if (
+            activity.type !== 'pay_invoice' ||
+            activity.payment_source === 'cashu' ||
+            activity.status !== 'pending' ||
+            activity.isBudgetDebited ||
+            activity.isHoldReleased
+        ) {
+            return false;
+        }
+
+        const createdAt = activity.createdAt?.getTime();
+        if (!createdAt) return false;
+
+        return (
+            nowMs >=
+            createdAt + NostrConnectUtils.PAY_INVOICE_HOLD_RELEASE_MIN_AGE_MS
+        );
+    }
+
     static isSettledPayment(payment: Payment): boolean {
         return !payment.isIncomplete && !payment.isFailed;
     }

@@ -94,6 +94,55 @@ describe('NWCConnection budget accounting with pending payments', () => {
         expect(connection.pendingSpendSats).toBe(0);
     });
 
+    it('frees the budget of a pending payment whose hold was released', () => {
+        const connection = baseConnection();
+        connection.activity.push(
+            {
+                id: 'lnbc-stuck',
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                status: 'pending',
+                satAmount: 90000,
+                feeLimitSats: 500,
+                isHoldReleased: true
+            },
+            {
+                id: 'lnbc-held',
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                status: 'pending',
+                satAmount: 5000
+            }
+        );
+
+        expect(connection.pendingSpendSats).toBe(5000);
+        expect(connection.remainingBudget).toBe(95000);
+        expect(connection.canSpend(95000)).toBe(true);
+    });
+
+    it('debits a released payment that settles later, even past the budget', () => {
+        const connection = baseConnection();
+        connection.activity.push({
+            id: 'lnbc-released',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 60000,
+            isHoldReleased: true
+        });
+        // the freed budget is spent on another payment
+        connection.trackSpending(80000);
+        expect(connection.remainingBudget).toBe(20000);
+
+        // mirror reconcile: the released payment settles after all
+        connection.activity[0].status = 'success';
+        connection.trackSpending(60000);
+
+        expect(connection.totalSpendSats).toBe(140000);
+        expect(connection.remainingBudget).toBe(0);
+        expect(connection.budgetLimitReached).toBe(true);
+    });
+
     it('rejects a payment when pending amounts exhaust the budget', () => {
         const connection = baseConnection();
         // Budget 100k: a single settled 10k payment plus a pending 90k

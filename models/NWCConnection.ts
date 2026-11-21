@@ -45,6 +45,10 @@ export interface ConnectionActivity {
     // backends that take no fee limit; held with satAmount while pending
     feeLimitSats?: number;
     isBudgetDebited?: boolean;
+    // the user released this pending pay_invoice's budget hold: it no
+    // longer counts against the budget while pending, but is still
+    // reconciled, so it is debited if the node later lists it as settled
+    isHoldReleased?: boolean;
 }
 
 export enum BudgetRenewalType {
@@ -236,12 +240,16 @@ export default class NWCConnection extends BaseModel {
      * cannot exceed the limit while their debits are deferred to reconcile.
      * Reconcile flips an activity to success and calls trackSpending in one
      * atomic action, so an amount is never counted in both this and
-     * totalSpendSats.
+     * totalSpendSats. A hold the user released is not counted.
      */
     @computed public get pendingSpendSats(): number {
         if (!this.activity?.length) return 0;
         return this.activity.reduce((sum, a) => {
-            if (a.type !== 'pay_invoice' || a.status !== 'pending') {
+            if (
+                a.type !== 'pay_invoice' ||
+                a.status !== 'pending' ||
+                a.isHoldReleased
+            ) {
                 return sum;
             }
             return (
