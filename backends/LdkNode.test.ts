@@ -64,6 +64,7 @@ import Bolt11Utils from '../utils/Bolt11Utils';
 import LdkNode from './LdkNode';
 import { LNURLAUTH_CANONICAL_PHRASE } from '../utils/LnurlAuthUtils';
 import Payment from '../models/Payment';
+import { isInvoiceNotFoundError } from '../utils/PaymentLookupUtils';
 import * as LocaleUtils from '../utils/LocaleUtils';
 
 const PAYMENT_ID = 'payment-id';
@@ -1314,5 +1315,43 @@ describe('LdkNode.requestLsps1Liquidity', () => {
         expect(mockLsps1RequestChannel).toHaveBeenCalledWith(
             expect.objectContaining({ channelExpiryBlocks: 52560 })
         );
+    });
+});
+
+describe('LdkNode.lookupInvoice', () => {
+    it('throws an error callers read as "invoice not found" for a hash the node does not list', async () => {
+        mockListPayments.mockResolvedValue([]);
+
+        const error = await new LdkNode()
+            .lookupInvoice({ r_hash: 'ab'.repeat(32) })
+            .then(
+                () => undefined,
+                (e: any) => e
+            );
+
+        expect(error).toBeInstanceOf(Error);
+        expect(isInvoiceNotFoundError(error)).toBe(true);
+    });
+
+    it('does not read an outbound payment with the same hash as the invoice', async () => {
+        mockListPayments.mockResolvedValue([
+            {
+                id: PAYMENT_ID,
+                direction: 'outbound',
+                status: 'succeeded',
+                amountMsat: 1000,
+                latestUpdateTimestamp: 0,
+                kind: { type: 'bolt11', hash: 'ab'.repeat(32), preimage: '' }
+            }
+        ]);
+
+        const error = await new LdkNode()
+            .lookupInvoice({ r_hash: 'ab'.repeat(32) })
+            .then(
+                () => undefined,
+                (e: any) => e
+            );
+
+        expect(isInvoiceNotFoundError(error)).toBe(true);
     });
 });

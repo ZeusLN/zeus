@@ -94,10 +94,12 @@ export default class LndHub extends LND {
                     new Invoice(userInvoice).getRHash === data.r_hash
             );
             if (!invoice) {
+                // The list is only the newest invoices (LNbits returns 20
+                // unless a limit is passed), so a miss does not mean the
+                // invoice is gone: not the invoiceNotFound error the other
+                // backends throw, which callers read as "unpaid"
                 throw new Error(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.invoiceNotFound'
-                    )
+                    localeString('backends.LndHub.invoiceNotInList')
                 );
             }
             return invoice;

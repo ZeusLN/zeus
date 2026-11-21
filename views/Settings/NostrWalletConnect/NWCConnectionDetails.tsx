@@ -369,12 +369,17 @@ export default class NWCConnectionDetails extends React.Component<
                             </View>
                         ) : (
                             <View style={styles.headerActions}>
-                                {connection?.hasPaymentPermissions() && (
+                                {(connection?.hasPaymentPermissions() ||
+                                    connection?.hasPermission(
+                                        'make_invoice'
+                                    )) && (
                                     <TouchableOpacity
                                         onPress={() =>
                                             navigation.navigate(
                                                 'NWCConnectionActivity',
-                                                { connectionId: connection?.id }
+                                                {
+                                                    connectionId: connection?.id
+                                                }
                                             )
                                         }
                                         style={styles.headerActionButton}
@@ -566,6 +571,26 @@ export default class NWCConnectionDetails extends React.Component<
                                             />
                                         </>
                                     )}
+
+                                    {!connection.maxAmountSats &&
+                                        connection.hasPermission(
+                                            'make_invoice'
+                                        ) && (
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'views.Settings.NostrWalletConnect.totalReceived'
+                                                )}
+                                                value={
+                                                    <Amount
+                                                        credit
+                                                        sats={
+                                                            connection.totalReceivedActivitySats
+                                                        }
+                                                        toggleable
+                                                    />
+                                                }
+                                            />
+                                        )}
 
                                     {connection.expiresAt && (
                                         <KeyValue
