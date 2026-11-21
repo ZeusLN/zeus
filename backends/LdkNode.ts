@@ -17,6 +17,13 @@ import {
 } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { markRequestTimeout } from '../utils/RequestTimeoutUtils';
+import { getActiveLsps2NodeId } from '../utils/LdkNodeUtils';
+import {
+    getJitQuoteMsat,
+    getLsps2ErrorMessage,
+    getReceivableMsat,
+    LSPS2_JIT_INVOICE_MAX_EXPIRY_SECS
+} from '../utils/Lsps2Utils';
 import type {
     Network,
     NodeStatus,
@@ -436,7 +443,14 @@ export default class LdkNode {
         return {
             channels: readyChannels.map((channel) =>
                 this.formatChannel(channel, balances)
-            )
+            ),
+            // what createInvoice compares the amount with before buying an
+            // LSPS2 channel, so Receive can tell when one will be bought
+            ...(this.isLsps2Active() && {
+                receivable_inbound_sat: Math.floor(
+                    getReceivableMsat(channels) / 1000
+                )
+            })
         };
     };
 
@@ -1325,7 +1339,30 @@ export default class LdkNode {
             throw new Error(localeString('error.invalidInvoiceAmountOrExpiry'));
         }
 
-        if (amountMsat > 0) {
+        // Callers set lsps2_jit when an LSPS2 JIT channel may be bought.
+        // 1 sat or less leaves nothing for the LSP's fee
+        const jit =
+            !!data.lsps2_jit &&
+            amountMsat > 1000 &&
+            getReceivableMsat(await LdkNodeInjection.channel.listChannels()) <
+                amountMsat;
+
+        if (jit) {
+            try {
+                invoice = await LdkNodeInjection.bolt11.receiveViaJitChannel({
+                    amountMsat,
+                    description: data.memo || '',
+                    expirySecs: Math.min(
+                        expirySecs,
+                        LSPS2_JIT_INVOICE_MAX_EXPIRY_SECS
+                    ),
+                    // the LSP's fee has to leave something to receive
+                    maxLspFeeLimitMsat: amountMsat - 1
+                });
+            } catch (e: any) {
+                throw new Error(getLsps2ErrorMessage(e?.message || String(e)));
+            }
+        } else if (amountMsat > 0) {
             invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
                 description: data.memo || '',
@@ -1351,10 +1388,18 @@ export default class LdkNode {
             console.error('[LDK] Error decoding invoice for payment hash:', e);
         }
 
+        const lspFeeMsat = jit
+            ? getJitQuoteMsat(
+                  await LdkNodeInjection.payments.listPayments(),
+                  paymentHash
+              )
+            : undefined;
+
         return {
             payment_request: invoice,
             r_hash: paymentHash,
-            add_index: ''
+            add_index: '',
+            ...(jit && { lsps2_jit: true, lsp_fee_msat: lspFeeMsat })
         };
     };
 
@@ -2285,6 +2330,9 @@ export default class LdkNode {
                 ? new BigNumber(payment.amountMsat).dividedBy(1000).toString()
                 : '0',
             amt_paid_msat: payment.amountMsat?.toString() || '0',
+            // What the LSP kept when it opened a JIT channel for this
+            // payment; the amounts above are what reached us
+            lsp_fee_msat: payment.kind.counterpartySkimmedFeeMsat?.toString(),
             state: isSettled
                 ? 'SETTLED'
                 : payment.status === 'pending'
@@ -2366,6 +2414,9 @@ export default class LdkNode {
     supportsChannelManagement = () => true;
     supportsCircularRebalancing = () => false;
     supportsForceClose = () => true;
+    supportsLSPS2 = () => true;
+    // A dedicated LSPS2 LSP is registered in the running node
+    isLsps2Active = () => !!getActiveLsps2NodeId();
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => true;
     supportsMPP = () => true;

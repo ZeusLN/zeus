@@ -37,7 +37,7 @@ import { isPlausibleSatPerVbyte } from '../../utils/FeeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { SATS_PER_BTC } from '../../utils/UnitsUtils';
+import { numberWithCommas, SATS_PER_BTC } from '../../utils/UnitsUtils';
 import AddressUtils from '../../utils/AddressUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import {
@@ -58,6 +58,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import FeeStore from '../../stores/FeeStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import LSPStore from '../../stores/LSPStore';
+import ChannelsStore from '../../stores/ChannelsStore';
 
 import ArrowDown from '../../assets/images/SVG/Arrow_down.svg';
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
@@ -83,6 +84,7 @@ interface SwapProps {
     FeeStore: FeeStore;
     NodeInfoStore: NodeInfoStore;
     LSPStore: LSPStore;
+    ChannelsStore: ChannelsStore;
 }
 
 interface SwapState {
@@ -123,7 +125,8 @@ interface SwapState {
     'SettingsStore',
     'FeeStore',
     'NodeInfoStore',
-    'LSPStore'
+    'LSPStore',
+    'ChannelsStore'
 )
 @observer
 export default class Swap extends React.PureComponent<SwapProps, SwapState> {
@@ -670,7 +673,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 prevState.enableLSP !== this.state.enableLSP) &&
             this.state.enableLSP &&
             !this.state.reverse &&
-            !this.state.flowLspNotConfigured
+            !this.state.flowLspNotConfigured &&
+            !BackendUtils.isLsps2Active()
         ) {
             const { LSPStore } = this.props;
             const outputSats = new BigNumber(this.state.outputSats);
@@ -2126,6 +2130,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                     </View>
                                     {BackendUtils.supportsFlowLSP() &&
                                         !flowLspNotConfigured &&
+                                        !BackendUtils.isLsps2Active() &&
                                         !reverse && (
                                             <View
                                                 style={{
@@ -2342,6 +2347,39 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             return;
                                                         }
 
+                                                        // Under LSPS2 a swap gets a plain invoice, where
+                                                        // Flow would wrap it: the swap provider can only
+                                                        // pay it over inbound the wallet already has, so
+                                                        // a larger swap would wait for its refund
+                                                        const receivableSats =
+                                                            this.props
+                                                                .ChannelsStore
+                                                                .inboundForReceive;
+                                                        if (
+                                                            !!enableLSP &&
+                                                            BackendUtils.supportsFlowLSP() &&
+                                                            !flowLspNotConfigured &&
+                                                            !reverse &&
+                                                            BackendUtils.isLsps2Active() &&
+                                                            new BigNumber(
+                                                                outputSats
+                                                            ).gt(receivableSats)
+                                                        ) {
+                                                            this.setState({
+                                                                error: localeString(
+                                                                    'views.Swaps.notEnoughInbound'
+                                                                ).replace(
+                                                                    '{max}',
+                                                                    numberWithCommas(
+                                                                        receivableSats
+                                                                    )
+                                                                ),
+                                                                fetchingInvoice:
+                                                                    false
+                                                            });
+                                                            return;
+                                                        }
+
                                                         await InvoicesStore.createUnifiedInvoice(
                                                             {
                                                                 memo: '',
@@ -2358,7 +2396,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     !!enableLSP &&
                                                                     BackendUtils.supportsFlowLSP() &&
                                                                     !flowLspNotConfigured &&
-                                                                    !reverse
+                                                                    !reverse &&
+                                                                    !BackendUtils.isLsps2Active()
                                                             }
                                                         );
 
