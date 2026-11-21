@@ -30,8 +30,10 @@ const extractTake = () => {
 
 // argv: <directory standing in for the app group container> <the deadline JS
 // passes, in ms from the call> [<ms each file read sleeps before it
-// returns>]. Writes a share, takes it, and prints how the promise settled,
-// whether the share file is still there, and whether the renamed copy was
+// returns> [<flags>]]. Flags: "newerShare" has the share extension write a
+// newer share while the take reads, "failRead" makes the read fail. Writes a
+// share, takes it, and prints how the promise settled, what the share file
+// holds afterwards (null when it is gone), and whether the renamed copy was
 // left behind.
 const HARNESS = (take: string) => `#import <Foundation/Foundation.h>
 #import <objc/runtime.h>
@@ -43,12 +45,18 @@ typedef void (^RCTPromiseRejectBlock)(NSString *code, NSString *message, NSError
 #define RCTLogWarn(...) do {} while (0)
 
 static useconds_t readDelayUs = 0;
+static NSURL *newerShareURL = nil;
+static BOOL failRead = NO;
 
 @implementation NSString (SlowRead)
 + (instancetype)slow_stringWithContentsOfURL:(NSURL *)url
                                     encoding:(NSStringEncoding)enc
                                        error:(NSError **)error {
+  if (newerShareURL) {
+    [@"NEWERQR" writeToURL:newerShareURL atomically:YES encoding:NSUTF8StringEncoding error:nil];
+  }
   usleep(readDelayUs);
+  if (failRead) return nil;
   return [self slow_stringWithContentsOfURL:url encoding:enc error:error];
 }
 @end
@@ -75,6 +83,11 @@ int main(int argc, const char *argv[]) {
           class_getClassMethod([NSString class], @selector(slow_stringWithContentsOfURL:encoding:error:)));
     }
     [@"QRIMAGE" writeToURL:file atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    if (argc > 4) {
+      NSString *flags = @(argv[4]);
+      if ([flags containsString:@"newerShare"]) newerShareURL = file;
+      failRead = [flags containsString:@"failRead"];
+    }
 
     ShareBridge *bridge = [ShareBridge new];
     bridge.sharedFileURL = file;
@@ -88,9 +101,13 @@ int main(int argc, const char *argv[]) {
           outcome = [@"rejected:" stringByAppendingString:code];
         }];
 
+    newerShareURL = nil;
+    failRead = NO;
+    readDelayUs = 0;
+    NSString *left = [NSString stringWithContentsOfURL:file encoding:NSUTF8StringEncoding error:nil];
     NSDictionary *report = @{
       @"outcome": outcome,
-      @"left": @([[NSFileManager defaultManager] fileExistsAtPath:file.path]),
+      @"left": left ?: [NSNull null],
       @"taken": @([[NSFileManager defaultManager] fileExistsAtPath:taken.path])
     };
     NSData *json = [NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
@@ -130,10 +147,15 @@ int main(int argc, const char *argv[]) {
             if (dir) fs.rmSync(dir, { recursive: true, force: true });
         });
 
-        const run = (settleByMs: number, readDelayMs?: number) => {
+        const run = (
+            settleByMs: number,
+            readDelayMs?: number,
+            flags?: string
+        ) => {
             const container = fs.mkdtempSync(path.join(dir, 'container-'));
             const args = [container, String(settleByMs)];
             if (readDelayMs !== undefined) args.push(String(readDelayMs));
+            if (flags !== undefined) args.push(flags);
             return JSON.parse(
                 execFileSync(binary, args, {
                     encoding: 'utf8'
@@ -144,7 +166,7 @@ int main(int argc, const char *argv[]) {
         it('takes the share when it starts before the deadline JS passed', () => {
             expect(run(7000)).toEqual({
                 outcome: 'resolved:QRIMAGE',
-                left: false,
+                left: null,
                 taken: false
             });
         });
@@ -152,7 +174,7 @@ int main(int argc, const char *argv[]) {
         it('takes the share when a slow read still ends before the deadline', () => {
             expect(run(2000, 200)).toEqual({
                 outcome: 'resolved:QRIMAGE',
-                left: false,
+                left: null,
                 taken: false
             });
         });
@@ -163,7 +185,7 @@ int main(int argc, const char *argv[]) {
         it('leaves the share when it starts after the deadline JS passed', () => {
             expect(run(-1000)).toEqual({
                 outcome: 'rejected:SHARE_TIMEOUT',
-                left: true,
+                left: 'QRIMAGE',
                 taken: false
             });
         });
@@ -173,7 +195,35 @@ int main(int argc, const char *argv[]) {
         it('puts the share back when its read ends after the deadline JS passed', () => {
             expect(run(200, 600)).toEqual({
                 outcome: 'rejected:SHARE_TIMEOUT',
-                left: true,
+                left: 'QRIMAGE',
+                taken: false
+            });
+        });
+
+        // sharedQR.txt holds one share, and the share extension overwrites
+        // an unread one. A share that cannot be put back because a newer one
+        // has taken its place is dropped the same way, and the newer one is
+        // left for the next take.
+        it('drops the share for a newer one when its read ends after the deadline', () => {
+            expect(run(200, 600, 'newerShare')).toEqual({
+                outcome: 'rejected:SHARE_TIMEOUT',
+                left: 'NEWERQR',
+                taken: false
+            });
+        });
+
+        it('drops the share for a newer one when its read fails', () => {
+            expect(run(7000, 0, 'newerShare,failRead')).toEqual({
+                outcome: 'resolved:null',
+                left: 'NEWERQR',
+                taken: false
+            });
+        });
+
+        it('takes the share and leaves a newer one that arrived during the read', () => {
+            expect(run(7000, 0, 'newerShare')).toEqual({
+                outcome: 'resolved:QRIMAGE',
+                left: 'NEWERQR',
                 taken: false
             });
         });
