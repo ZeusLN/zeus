@@ -4860,6 +4860,32 @@ describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
         expect(responseB.result.invoice).toBe('lnbc-second');
     });
 
+    it('answers with the payment hash of the invoice, not the backend r_hash encoding', async () => {
+        const { store, connection } = setup();
+        const hex = 'fbef'.repeat(16);
+        // LND REST returns r_hash as base64, which getFormattedRhash makes URL-safe
+        const base64Hash = Buffer.from(hex, 'hex').toString('base64');
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-hash',
+            r_hash: base64Hash
+        });
+        jest.spyOn(
+            NostrConnectUtils,
+            'decodeInvoiceTagsForMakeInvoice'
+        ).mockResolvedValue({
+            paymentHash: hex,
+            descriptionHash: '',
+            expiryTime: 4_000_000_000
+        });
+
+        const response = await (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000
+        });
+
+        expect(response.result.payment_hash).toBe(hex);
+        expect(connection.activity[0].paymentHash).toBe(hex);
+    });
+
     it('does not replace the invoice shown on the Receive screen', async () => {
         const { store, connection, invoicesStore } = setup();
         invoicesStore.payment_request = 'lnbc-on-screen';
