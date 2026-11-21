@@ -4860,6 +4860,19 @@ describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
         expect(responseB.result.invoice).toBe('lnbc-second');
     });
 
+    it('rejects a description_hash request instead of making a plain invoice', async () => {
+        const { store, connection } = setup();
+
+        const response = await (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000,
+            description_hash: 'ab'.repeat(32)
+        });
+
+        expect(response.error?.code).toBe(Nip47ErrorCode.NOT_IMPLEMENTED);
+        expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+        expect(connection.activity).toHaveLength(0);
+    });
+
     it('does not replace the invoice shown on the Receive screen', async () => {
         const { store, connection, invoicesStore } = setup();
         invoicesStore.payment_request = 'lnbc-on-screen';
