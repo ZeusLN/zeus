@@ -90,7 +90,7 @@ jest.mock('../../storage', () => ({}));
 import BackendUtils from '../../utils/BackendUtils';
 import { BACKEND_CAPABILITIES } from '../../utils/backendCapabilityFixtures';
 import { DEFAULT_FILTERS } from '../../stores/ActivityStore';
-import ActivityFilter from './ActivityFilter';
+import ActivityFilter, { SWAP_FILTER_STATES } from './ActivityFilter';
 
 const setBackend = (flags: Record<string, boolean>) => {
     Object.keys(BackendUtils).forEach((key) =>
@@ -479,6 +479,40 @@ describe('ActivityFilter Services switch', () => {
         );
     });
 
+    it('turns swaps off when submarine is off and reverse is on', async () => {
+        setBackend(NWC);
+        const filters = filtersWith({ submarine: false });
+        Object.keys(filters.swapFilter.submarine).forEach(
+            (state) => (filters.swapFilter.submarine[state] = false)
+        );
+        const { ActivityStore, filter } = await renderFilter({ filters });
+
+        await filter.handleToggle('swaps');
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.swaps).toBe(false);
+        Object.values(applied.swapFilter.reverse).forEach((on) =>
+            expect(on).toBe(false)
+        );
+    });
+
+    it('turns swaps off when reverse is off and submarine is on', async () => {
+        setBackend(NWC);
+        const filters = filtersWith({ reverse: false });
+        Object.keys(filters.swapFilter.reverse).forEach(
+            (state) => (filters.swapFilter.reverse[state] = false)
+        );
+        const { ActivityStore, filter } = await renderFilter({ filters });
+
+        await filter.handleToggle('swaps');
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.swaps).toBe(false);
+        Object.values(applied.swapFilter.submarine).forEach((on) =>
+            expect(on).toBe(false)
+        );
+    });
+
     it('turns the Swaps row on with one tap when its children are all off', async () => {
         setBackend(NWC);
         const filters = swapsOff();
@@ -496,7 +530,9 @@ describe('ActivityFilter Services switch', () => {
 });
 
 describe('ActivityFilter swap states', () => {
-    // turns every state of a group off, one tap at a time, as a user would
+    // turns every state in the group's data off, one tap at a time. This
+    // includes states its row does not offer, which a user cannot tap (see
+    // 'swap states the rows show' below)
     const turnOffEachState = async (filter: any, store: any, group: string) => {
         for (const state of Object.keys(store.filters.swapFilter[group])) {
             await filter.handleToggle([group, state]);
@@ -555,5 +591,186 @@ describe('ActivityFilter clear button', () => {
         await renderFilter({ filters, effectiveFilters: filters });
 
         expect(screen.queryByText(CLEAR)).not.toBeNull();
+    });
+});
+
+describe('ActivityFilter swap states the rows show', () => {
+    // taps each state a row offers, as a user would
+    const turnOffShown = async (
+        filter: any,
+        store: any,
+        group: 'submarine' | 'reverse'
+    ) => {
+        for (const state of SWAP_FILTER_STATES[group]) {
+            await filter.handleToggle([group, state]);
+            store.filters = store.setFilters.mock.calls.slice(-1)[0][0];
+        }
+    };
+
+    it('clears swaps once every shown submarine and reverse state is off', async () => {
+        setBackend(NWC);
+        const { ActivityStore, filter } = await renderFilter();
+
+        await turnOffShown(filter, ActivityStore, 'submarine');
+        await turnOffShown(filter, ActivityStore, 'reverse');
+
+        expect(ActivityStore.filters.submarine).toBe(false);
+        expect(ActivityStore.filters.reverse).toBe(false);
+        expect(ActivityStore.filters.swaps).toBe(false);
+    });
+
+    it('shows the Swaps row off while both of its rows show off', async () => {
+        setBackend(NWC);
+        const { ActivityStore, filter } = await renderFilter();
+
+        await turnOffShown(filter, ActivityStore, 'submarine');
+        await turnOffShown(filter, ActivityStore, 'reverse');
+
+        expect(filter.getServiceStates(ActivityStore.filters).swaps).toBe(
+            'off'
+        );
+    });
+
+    // filters whose shown states of a group are off while the group's flag and
+    // the states its row does not offer are still on, as saved filters can be
+    const withShownOff = (
+        group: 'submarine' | 'reverse',
+        except: string[] = []
+    ) => {
+        const filters = filtersWith();
+        SWAP_FILTER_STATES[group].forEach((state) => {
+            if (!except.includes(state)) {
+                filters.swapFilter[group][state] = false;
+            }
+        });
+        return filters;
+    };
+
+    it('turns the Submarine row on when its shown states are off but its flag is on', async () => {
+        setBackend(NWC);
+        const { ActivityStore, filter } = await renderFilter({
+            filters: withShownOff('submarine')
+        });
+
+        await filter.handleToggle('submarine');
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.submarine).toBe(true);
+        SWAP_FILTER_STATES.submarine.forEach((state) =>
+            expect(applied.swapFilter.submarine[state]).toBe(true)
+        );
+    });
+
+    it('clears swaps when the last shown state of a row goes off and the other row shows off', async () => {
+        setBackend(NWC);
+        const last = SWAP_FILTER_STATES.submarine[0];
+        const filters = withShownOff('submarine', [last]);
+        const reverse = withShownOff('reverse');
+        filters.swapFilter.reverse = reverse.swapFilter.reverse;
+        const { ActivityStore, filter } = await renderFilter({ filters });
+
+        await filter.handleToggle(['submarine', last]);
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.submarine).toBe(false);
+        expect(applied.swaps).toBe(false);
+    });
+
+    it('clears swaps when the Submarine row is turned off and the Reverse row shows off', async () => {
+        setBackend(NWC);
+        const { ActivityStore, filter } = await renderFilter({
+            filters: withShownOff('reverse')
+        });
+
+        await filter.handleToggle('submarine');
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.submarine).toBe(false);
+        expect(applied.swaps).toBe(false);
+    });
+
+    it('turns the Submarine row on with one tap after each of its states was turned off', async () => {
+        setBackend(NWC);
+        const { ActivityStore, filter } = await renderFilter();
+        await turnOffShown(filter, ActivityStore, 'submarine');
+        ActivityStore.setFilters.mockClear();
+
+        await filter.handleToggle('submarine');
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        SWAP_FILTER_STATES.submarine.forEach((state) =>
+            expect(applied.swapFilter.submarine[state]).toBe(true)
+        );
+    });
+
+    it('turns the Reverse row on with one tap after each of its states was turned off', async () => {
+        setBackend(NWC);
+        const { ActivityStore, filter } = await renderFilter();
+        await turnOffShown(filter, ActivityStore, 'reverse');
+        ActivityStore.setFilters.mockClear();
+
+        await filter.handleToggle('reverse');
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        SWAP_FILTER_STATES.reverse.forEach((state) =>
+            expect(applied.swapFilter.reverse[state]).toBe(true)
+        );
+    });
+
+    it('turns a partial Submarine row off and keeps swaps on while Reverse is on', async () => {
+        setBackend(NWC);
+        const filters = filtersWith();
+        filters.swapFilter.submarine[SWAP_FILTER_STATES.submarine[0]] = false;
+        const { ActivityStore, filter } = await renderFilter({ filters });
+
+        await filter.handleToggle('submarine');
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.submarine).toBe(false);
+        expect(applied.swaps).toBe(true);
+        SWAP_FILTER_STATES.submarine.forEach((state) =>
+            expect(applied.swapFilter.submarine[state]).toBe(false)
+        );
+    });
+
+    it('keeps the Submarine row and swaps on when one of its states goes off', async () => {
+        setBackend(NWC);
+        const { ActivityStore, filter } = await renderFilter();
+
+        await filter.handleToggle([
+            'submarine',
+            SWAP_FILTER_STATES.submarine[0]
+        ]);
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.submarine).toBe(true);
+        expect(applied.swaps).toBe(true);
+    });
+
+    it('keeps swaps on when the last shown Submarine state goes off while Reverse is partial', async () => {
+        setBackend(NWC);
+        const last = SWAP_FILTER_STATES.submarine[0];
+        const filters = withShownOff('submarine', [last]);
+        filters.swapFilter.reverse[SWAP_FILTER_STATES.reverse[0]] = false;
+        const { ActivityStore, filter } = await renderFilter({ filters });
+
+        await filter.handleToggle(['submarine', last]);
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.submarine).toBe(false);
+        expect(applied.swaps).toBe(true);
+    });
+
+    it('keeps swaps on when the Submarine row is turned off while Reverse is partial', async () => {
+        setBackend(NWC);
+        const filters = filtersWith();
+        filters.swapFilter.reverse[SWAP_FILTER_STATES.reverse[0]] = false;
+        const { ActivityStore, filter } = await renderFilter({ filters });
+
+        await filter.handleToggle('submarine');
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.submarine).toBe(false);
+        expect(applied.swaps).toBe(true);
     });
 });
