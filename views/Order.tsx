@@ -27,7 +27,11 @@ import { SATS_PER_BTC } from '../utils/UnitsUtils';
 import { getFormattedAmount } from '../utils/AmountUtils';
 
 import BackendUtils from '../utils/BackendUtils';
-import { calculateTaxSats, calculateTotalSats } from '../utils/PosUtils';
+import {
+    calculateCustomTipSats,
+    calculateTaxSats,
+    calculateTotalSats
+} from '../utils/PosUtils';
 import FiatStore from '../stores/FiatStore';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
@@ -311,40 +315,16 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             )
                             .toFixed(0);
                     } else if (customType === 'amount') {
-                        const effectiveAmount =
-                            customAmount === ''
-                                ? new BigNumber(subTotalSats)
-                                      .multipliedBy(0.21)
-                                      .integerValue(BigNumber.ROUND_HALF_UP)
-                                      .toFixed(0)
-                                : customAmount;
-                        if (units === 'fiat') {
-                            const customSats = new BigNumber(effectiveAmount)
-                                .div(rate)
-                                .multipliedBy(SATS_PER_BTC)
-                                .toFixed(0);
-
-                            totalSats = new BigNumber(subTotalSats)
-                                .plus(customSats)
-                                .plus(taxSats)
-                                .toFixed(0);
-
-                            tipSats = new BigNumber(customSats).toFixed(0);
-                        } else {
-                            const customSats =
-                                units === 'sats'
-                                    ? new BigNumber(effectiveAmount)
-                                    : new BigNumber(
-                                          effectiveAmount
-                                      ).multipliedBy(SATS_PER_BTC);
-
-                            totalSats = new BigNumber(subTotalSats)
-                                .plus(customSats)
-                                .plus(taxSats)
-                                .toFixed(0);
-
-                            tipSats = Number(customSats).toFixed(0);
-                        }
+                        tipSats = calculateCustomTipSats(
+                            customAmount,
+                            subTotalSats,
+                            units,
+                            rate
+                        );
+                        totalSats = new BigNumber(subTotalSats)
+                            .plus(tipSats)
+                            .plus(taxSats)
+                            .toFixed(0);
                     }
             }
         } else {
@@ -759,40 +739,16 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             )
                             .toFixed(0);
                     } else if (customType === 'amount') {
-                        const effectiveAmount =
-                            customAmount === ''
-                                ? new BigNumber(subTotalSats)
-                                      .multipliedBy(0.21)
-                                      .integerValue(BigNumber.ROUND_HALF_UP)
-                                      .toFixed(0)
-                                : customAmount;
-                        if (units === 'fiat') {
-                            const customSats = new BigNumber(effectiveAmount)
-                                .div(rate)
-                                .multipliedBy(SATS_PER_BTC)
-                                .toFixed(0);
-
-                            totalSats = new BigNumber(subTotalSats)
-                                .plus(customSats)
-                                .plus(taxSats)
-                                .toFixed(0);
-
-                            tipSats = new BigNumber(customSats).toFixed(0);
-                        } else {
-                            const customSats =
-                                units === 'sats'
-                                    ? new BigNumber(effectiveAmount)
-                                    : new BigNumber(
-                                          effectiveAmount
-                                      ).multipliedBy(SATS_PER_BTC);
-
-                            totalSats = new BigNumber(subTotalSats)
-                                .plus(customSats)
-                                .plus(taxSats)
-                                .toFixed(0);
-
-                            tipSats = Number(customSats).toFixed(0);
-                        }
+                        tipSats = calculateCustomTipSats(
+                            customAmount,
+                            subTotalSats,
+                            units,
+                            rate
+                        );
+                        totalSats = new BigNumber(subTotalSats)
+                            .plus(tipSats)
+                            .plus(taxSats)
+                            .toFixed(0);
                     }
             }
         } else {

@@ -1,4 +1,8 @@
-import { calculateTaxSats, calculateTotalSats } from './PosUtils';
+import {
+    calculateCustomTipSats,
+    calculateTaxSats,
+    calculateTotalSats
+} from './PosUtils';
 
 jest.mock('./UnitsUtils', () => ({
     SATS_PER_BTC: 100000000
@@ -133,5 +137,41 @@ describe('calculateTaxSats', () => {
         const subTotalSats = '2000';
         const result = calculateTaxSats(lineItems, subTotalSats, rate);
         expect(result).toBe('0');
+    });
+});
+
+describe('calculateCustomTipSats', () => {
+    const rate = 100000; // 1 BTC = $100,000
+
+    it('defaults to 21% of the subtotal in sats when empty (sats)', () => {
+        expect(calculateCustomTipSats('', '10000', 'sats', rate)).toBe('2100');
+    });
+
+    it('defaults to 21% of the subtotal in sats when empty (fiat)', () => {
+        expect(calculateCustomTipSats('', '10000', 'fiat', rate)).toBe('2100');
+    });
+
+    it('defaults to 21% of the subtotal in sats when empty (BTC)', () => {
+        expect(calculateCustomTipSats('', '10000', 'BTC', rate)).toBe('2100');
+    });
+
+    it('rounds the default tip half up', () => {
+        expect(calculateCustomTipSats('', '50', 'fiat', rate)).toBe('11');
+    });
+
+    it('uses a sats amount as-is', () => {
+        expect(calculateCustomTipSats('500', '10000', 'sats', rate)).toBe(
+            '500'
+        );
+    });
+
+    it('converts a BTC amount to sats', () => {
+        expect(calculateCustomTipSats('0.0001', '10000', 'BTC', rate)).toBe(
+            '10000'
+        );
+    });
+
+    it('converts a fiat amount to sats', () => {
+        expect(calculateCustomTipSats('1', '10000', 'fiat', rate)).toBe('1000');
     });
 });

@@ -85,3 +85,45 @@ export const calculateTaxSats = (
             .toFixed(0);
     }
 };
+
+/**
+ * Calculates a custom tip amount in sats.
+ *
+ * When no custom amount has been entered, the default tip is 21% of the
+ * subtotal, which is already denominated in sats and must not be converted
+ * using the currently selected display units.
+ *
+ * @param customAmount - The custom tip amount entered, in the selected units
+ * @param subTotalSats - The subtotal of the order in sats
+ * @param units - The selected units ('sats', 'BTC' or 'fiat')
+ * @param rate - The current fiat conversion rate
+ * @returns - The tip amount in sats as a string
+ */
+export const calculateCustomTipSats = (
+    customAmount: string,
+    subTotalSats: string,
+    units: string,
+    rate: number | string
+): string => {
+    if (customAmount === '') {
+        return new BigNumber(subTotalSats)
+            .multipliedBy(0.21)
+            .integerValue(BigNumber.ROUND_HALF_UP)
+            .toFixed(0);
+    }
+
+    if (units === 'fiat') {
+        return new BigNumber(customAmount)
+            .div(rate)
+            .multipliedBy(SATS_PER_BTC)
+            .toFixed(0);
+    }
+
+    if (units === 'BTC') {
+        return new BigNumber(customAmount)
+            .multipliedBy(SATS_PER_BTC)
+            .toFixed(0);
+    }
+
+    return new BigNumber(customAmount).toFixed(0);
+};
