@@ -1084,6 +1084,8 @@ describe('CLNRest capability flags', () => {
         supportsCircularRebalancing: true,
         supportsForceClose: false,
         supportsPendingChannels: false,
+        supportsRouteHintUserChannelIds: false,
+        supportsRouteHints: false,
         supportsClosedChannels: true,
         supportsMPP: false,
         supportsAMP: false,
