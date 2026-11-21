@@ -20,9 +20,22 @@ RCT_EXPORT_MODULE(MobileTools);
 // first renamed out of the way (an atomic rename within the container) and
 // then read. A share written after the rename lands at sharedQR.txt again and
 // is left for the next call instead of being removed unread.
-RCT_EXPORT_METHOD(takeSharedImageBase64:(RCTPromiseResolveBlock)resolve
+//
+// JS stops waiting for the image soon after settleByMs, its Date.now()
+// deadline. This call can wait behind other modules on a shared method
+// queue, and a take that ran after JS gave up would remove the share with
+// nobody to receive the image. So the take rejects with SHARE_TIMEOUT and
+// leaves the share in place when it starts after settleByMs, or when its
+// read of the file ends after it.
+RCT_EXPORT_METHOD(takeSharedImageBase64:(double)settleByMs
+                  resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
+  if ([[NSDate date] timeIntervalSince1970] * 1000 >= settleByMs) {
+    reject(@"SHARE_TIMEOUT", @"Shared image take started after its deadline", nil);
+    return;
+  }
+
   @try {
     NSURL *fileURL = [self getSharedFileURL];
     if (fileURL == nil) {
@@ -65,6 +78,16 @@ RCT_EXPORT_METHOD(takeSharedImageBase64:(RCTPromiseResolveBlock)resolve
         [fileManager removeItemAtURL:takenURL error:nil];
       }
       resolve(nil);
+      return;
+    }
+
+    // A large file or a busy disk can keep the read going past the
+    // deadline. Put the share back the same way as for a failed read.
+    if ([[NSDate date] timeIntervalSince1970] * 1000 >= settleByMs) {
+      if (![fileManager moveItemAtURL:takenURL toURL:fileURL error:nil]) {
+        [fileManager removeItemAtURL:takenURL error:nil];
+      }
+      reject(@"SHARE_TIMEOUT", @"Shared image take ran past its deadline", nil);
       return;
     }
     [fileManager removeItemAtURL:takenURL error:nil];

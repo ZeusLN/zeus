@@ -18,6 +18,7 @@ jest.mock('../stores/Stores', () => ({
 
 import { NativeModules } from 'react-native';
 import {
+    SHARED_IMAGE_TIMEOUT_MS,
     authenticatedShareIntent,
     processSharedQRImageFast,
     walletSelectedShareIntent
@@ -201,6 +202,68 @@ describe('processSharedQRImageFast', () => {
         const result = await processSharedQRImageFast();
 
         expect(result?.params.base64Image).toBe('QRIMAGE');
+    });
+
+    // The image is served by the app that shared it, and Wallet's start-up
+    // waits for this before it opens the Lockscreen. One that never serves
+    // it must not hold start-up forever.
+    describe('a share the sending app never serves', () => {
+        beforeEach(() => {
+            jest.useFakeTimers();
+            jest.spyOn(console, 'error').mockImplementation(() => {});
+        });
+        afterEach(() => jest.useRealTimers());
+
+        it('gives up after SHARED_IMAGE_TIMEOUT_MS', async () => {
+            takeSharedImageBase64.mockReturnValueOnce(new Promise(() => {}));
+            let settled = false;
+
+            const result = processSharedQRImageFast().finally(
+                () => (settled = true)
+            );
+            await jest.advanceTimersByTimeAsync(SHARED_IMAGE_TIMEOUT_MS - 1);
+            expect(settled).toBe(false);
+            await jest.advanceTimersByTimeAsync(1);
+
+            expect(await result).toEqual({
+                success: false,
+                error: 'utils.shareIntent.processingError'
+            });
+        });
+
+        // The native take can wait behind other native calls before it
+        // runs. Told when JS gives up, it gives up first, so it never
+        // consumes the share after nobody is waiting for the image.
+        it('tells the native take to settle a second before it gives up', async () => {
+            const now = Date.UTC(2026, 10, 19, 12, 0, 0);
+            jest.setSystemTime(now);
+            takeSharedImageBase64.mockReturnValueOnce(new Promise(() => {}));
+
+            const result = processSharedQRImageFast();
+            await jest.advanceTimersByTimeAsync(SHARED_IMAGE_TIMEOUT_MS);
+            await result;
+
+            // its own 5 s read plus 2 s queued behind other native calls
+            expect(takeSharedImageBase64).toHaveBeenCalledWith(now + 7000);
+        });
+
+        it('reads again once the stalled read has given up', async () => {
+            takeSharedImageBase64.mockReturnValueOnce(new Promise(() => {}));
+
+            const stalled = processSharedQRImageFast();
+            await jest.advanceTimersByTimeAsync(SHARED_IMAGE_TIMEOUT_MS);
+            await stalled;
+
+            const result = await processSharedQRImageFast();
+
+            expect(result?.params.base64Image).toBe('QRIMAGE');
+        });
+
+        it('leaves no timer behind once the image is read', async () => {
+            await processSharedQRImageFast();
+
+            expect(jest.getTimerCount()).toBe(0);
+        });
     });
 });
 
