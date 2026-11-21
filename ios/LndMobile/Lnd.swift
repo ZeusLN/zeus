@@ -87,6 +87,7 @@ open class Lnd {
     "DisconnectPeer": { bytes, cb in LndmobileDisconnectPeer (bytes, cb) },
     "GetRecoveryInfo": { bytes, cb in LndmobileGetRecoveryInfo(bytes, cb) },
     "RouterResetMissionControl": { bytes, cb in LndmobileRouterResetMissionControl(bytes, cb) },
+    "NeutrinoKitStatus": { bytes, cb in LndmobileNeutrinoKitStatus(bytes, cb) },
     "QueryRoutes": { bytes, cb in LndmobileQueryRoutes(bytes, cb) },
     "ListPayments": { bytes, cb in LndmobileListPayments(bytes, cb) },
     "ListInvoices": { bytes, cb in LndmobileListInvoices(bytes, cb) },

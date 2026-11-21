@@ -1,7 +1,10 @@
 import { observable, runInAction } from 'mobx';
 
 import AlertStore from './AlertStore';
-import { pingPeer } from '../utils/LndMobileUtils';
+import {
+    probeNeutrinoPeerList,
+    waitForNeutrinoPeers
+} from '../utils/NeutrinoPeersUtils';
 
 jest.mock('./SettingsStore', () => ({
     __esModule: true,
@@ -10,21 +13,33 @@ jest.mock('./SettingsStore', () => ({
 
 jest.mock('../utils/LocaleUtils');
 
-jest.mock('../utils/LndMobileUtils', () => ({
+jest.mock('../utils/NeutrinoPeersUtils', () => ({
     NEUTRINO_PING_THRESHOLD_MS: 1000,
-    pingPeer: jest.fn()
+    bitcoinP2pPort: (isTestnet: boolean) => (isTestnet ? 18333 : 8333),
+    isWeakNeutrinoProbeOutcome: (ms: any) =>
+        ms === 'Timed out' ||
+        ms === 'Unreachable' ||
+        (typeof ms === 'number' && ms > 1000),
+    probeNeutrinoPeerList: jest.fn(),
+    waitForNeutrinoPeers: jest.fn()
 }));
 
-const pingPeerMock = pingPeer as jest.Mock;
+const probeMock = probeNeutrinoPeerList as jest.Mock;
+const waitForPeersMock = waitForNeutrinoPeers as jest.Mock;
 
 const TIMED_OUT = 'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut';
+const UNREACHABLE = 'views.Settings.EmbeddedNode.NeutrinoPeers.unreachable';
 
-const makeSettingsStore = (embeddedLndNetwork = 'Mainnet') => {
+const makeSettingsStore = (
+    embeddedLndNetwork = 'Mainnet',
+    embeddedTor = false
+) => {
     const store: any = {
         implementation: 'embedded-lnd',
         embeddedLndNetwork,
         connectionSeq: 0,
         settings: {
+            embeddedTor,
             neutrinoPeersMainnet: ['fast.mainnet', 'slow.mainnet'],
             neutrinoPeersTestnet: ['fast.testnet']
         }
@@ -44,11 +59,11 @@ const pingTimes: { [peer: string]: number } = {
 
 describe('AlertStore', () => {
     beforeEach(() => {
-        pingPeerMock.mockReset();
-        pingPeerMock.mockImplementation(async (peer: string) => ({
-            ms: pingTimes[peer],
-            reachable: true
-        }));
+        probeMock.mockReset();
+        probeMock.mockImplementation(async (peers: string[]) =>
+            peers.map((peer) => ({ peer, ms: pingTimes[peer] }))
+        );
+        waitForPeersMock.mockReset();
     });
 
     it('does not raise an alert for a high zombie channel count', () => {
@@ -82,10 +97,12 @@ describe('AlertStore', () => {
         });
 
         it('flags peers whose ping times out', async () => {
-            pingPeerMock.mockImplementation(async (peer: string) => {
-                if (peer === 'fast.mainnet') throw new Error('timed out');
-                return { ms: 100, reachable: true };
-            });
+            probeMock.mockImplementation(async (peers: string[]) =>
+                peers.map((peer) => ({
+                    peer,
+                    ms: peer === 'fast.mainnet' ? 'Timed out' : 100
+                }))
+            );
             const store = new AlertStore(makeSettingsStore());
 
             await store.checkNeutrinoPeers();
@@ -101,8 +118,8 @@ describe('AlertStore', () => {
 
             await store.checkNeutrinoPeers();
 
-            expect(pingPeerMock).toHaveBeenCalledTimes(1);
-            expect(pingPeerMock).toHaveBeenCalledWith('fast.testnet');
+            expect(probeMock).toHaveBeenCalledTimes(1);
+            expect(probeMock).toHaveBeenCalledWith(['fast.testnet'], 18333);
             expect(store.problematicNeutrinoPeers).toEqual([]);
             expect(store.neutrinoPeerError).toBe(false);
             expect(store.hasError).toBe(false);
@@ -110,11 +127,11 @@ describe('AlertStore', () => {
 
         it('drops the result when the wallet changes during the pings', async () => {
             const settingsStore = makeSettingsStore();
-            pingPeerMock.mockImplementation(async (peer: string) => {
+            probeMock.mockImplementation(async (peers: string[]) => {
                 // a wallet switch lands while the old wallet's peers are
                 // still being pinged
-                if (peer === 'slow.mainnet') settingsStore.connectionSeq++;
-                return { ms: pingTimes[peer], reachable: true };
+                settingsStore.connectionSeq++;
+                return peers.map((peer) => ({ peer, ms: pingTimes[peer] }));
             });
             const store = new AlertStore(settingsStore);
 
@@ -123,6 +140,84 @@ describe('AlertStore', () => {
             expect(store.problematicNeutrinoPeers).toEqual([]);
             expect(store.neutrinoPeerError).toBe(false);
             expect(store.hasError).toBe(false);
+        });
+
+        it('does not probe over clearnet while embedded Tor is on', async () => {
+            const store = new AlertStore(makeSettingsStore('Mainnet', true));
+
+            await store.checkNeutrinoPeers();
+
+            expect(probeMock).not.toHaveBeenCalled();
+            expect(store.neutrinoPeerError).toBe(false);
+        });
+    });
+
+    describe('monitorNeutrinoPeers', () => {
+        it('clears the alert when neutrino is connected, whatever the probes say', async () => {
+            waitForPeersMock.mockResolvedValue(['1.2.3.4:8333']);
+            const store = new AlertStore(makeSettingsStore());
+            store.setNeutrinoPeerAlertsFromProbes([
+                { peer: 'slow.mainnet', ms: 1500 }
+            ]);
+
+            await store.monitorNeutrinoPeers();
+
+            expect(probeMock).not.toHaveBeenCalled();
+            expect(store.problematicNeutrinoPeers).toEqual([]);
+            expect(store.neutrinoPeerError).toBe(false);
+        });
+
+        it('flags every saved peer when neutrino connects to none', async () => {
+            waitForPeersMock.mockResolvedValue([]);
+            const store = new AlertStore(makeSettingsStore());
+
+            await store.monitorNeutrinoPeers();
+
+            expect(store.problematicNeutrinoPeers).toEqual([
+                // the probe calls it fast, but neutrino could not use it
+                { peer: 'fast.mainnet', ms: UNREACHABLE },
+                { peer: 'slow.mainnet', ms: 1500 }
+            ]);
+            expect(store.neutrinoPeerError).toBe(true);
+        });
+
+        it('flags every saved peer without probing while Tor is on', async () => {
+            waitForPeersMock.mockResolvedValue([]);
+            const store = new AlertStore(makeSettingsStore('Mainnet', true));
+
+            await store.monitorNeutrinoPeers();
+
+            expect(probeMock).not.toHaveBeenCalled();
+            expect(store.problematicNeutrinoPeers).toEqual([
+                { peer: 'fast.mainnet', ms: UNREACHABLE },
+                { peer: 'slow.mainnet', ms: UNREACHABLE }
+            ]);
+        });
+
+        it('falls back to the probes when neutrino cannot report its status', async () => {
+            waitForPeersMock.mockResolvedValue(null);
+            const store = new AlertStore(makeSettingsStore());
+
+            await store.monitorNeutrinoPeers();
+
+            expect(probeMock).toHaveBeenCalledTimes(1);
+            expect(store.problematicNeutrinoPeers).toEqual([
+                { peer: 'slow.mainnet', ms: 1500 }
+            ]);
+        });
+
+        it('drops the result when the wallet changes while waiting', async () => {
+            const settingsStore = makeSettingsStore();
+            waitForPeersMock.mockImplementation(async () => {
+                settingsStore.connectionSeq++;
+                return [];
+            });
+            const store = new AlertStore(settingsStore);
+
+            await store.monitorNeutrinoPeers();
+
+            expect(probeMock).not.toHaveBeenCalled();
+            expect(store.neutrinoPeerError).toBe(false);
         });
     });
 

@@ -32,6 +32,7 @@ jest.mock('../../utils/ThemeUtils', () => ({
 jest.mock('../../utils/RestartUtils', () => ({ restartNeeded: jest.fn() }));
 jest.mock('../../utils/ChannelMigrationUtils', () => ({}));
 jest.mock('../../utils/LndMobileUtils', () => ({}));
+jest.mock('../../utils/NeutrinoPeersUtils', () => ({}));
 jest.mock('../../utils/LdkNodeUtils', () => ({}));
 jest.mock('../../utils/SwapUtils', () => ({}));
 jest.mock('../../utils/AezeedUtils', () => ({}));

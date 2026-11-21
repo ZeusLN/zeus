@@ -200,6 +200,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
         view.props;
     AlertStore.setRgsError = jest.fn();
     AlertStore.checkNeutrinoPeers = jest.fn();
+    AlertStore.monitorNeutrinoPeers = jest.fn();
     NodeInfoStore.getNodeInfo = jest.fn(async () => {});
     NodeInfoStore.getNetworkInfo = jest.fn();
     NodeInfoStore.handleGetNodeInfoError = jest.fn();

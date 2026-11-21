@@ -890,8 +890,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 SettingsStore.justCreatedNodeDir = undefined;
                 if (!justCreated) {
                     try {
-                        AlertStore.checkNeutrinoPeers();
-
                         const isChannelMigrating =
                             this.state.isChannelMigrating ||
                             SettingsStore.isChannelMigrating;
@@ -1073,8 +1071,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 } else {
                     try {
                         // LND was just created and is already running — skip stop→init→start
-                        AlertStore.checkNeutrinoPeers();
-
                         if (settings?.ecash?.enableCashu)
                             await CashuStore.initializeWallets();
                         if (!isCurrent()) return;
@@ -1094,6 +1090,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         throw error;
                     }
                 }
+
+                // LND is up. Check its peers in the background: this must
+                // never hold up the connect, so it is not awaited
+                AlertStore.monitorNeutrinoPeers();
 
                 try {
                     const batterySaverEnabled = await isBatterySaverEnabled();

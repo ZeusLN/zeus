@@ -4,7 +4,12 @@ import {
     isEventForRequest,
     newStreamRequestId
 } from '../utils/StreamRequestUtils';
-import { lnrpc, routerrpc, invoicesrpc } from './../proto/lightning';
+import {
+    lnrpc,
+    routerrpc,
+    invoicesrpc,
+    neutrinorpc
+} from './../proto/lightning';
 import Long from 'long';
 
 import Base64Utils from '../utils/Base64Utils';
@@ -306,6 +311,26 @@ export const getInfo = async (): Promise<lnrpc.GetInfoResponse> => {
     });
     return response;
 };
+
+/**
+ * @throws
+ * Neutrino's own view of its backend: whether it is active and synced, and
+ * which peers it is connected to right now.
+ */
+export const neutrinoKitStatus =
+    async (): Promise<neutrinorpc.StatusResponse> => {
+        const response = await sendCommand<
+            neutrinorpc.IStatusRequest,
+            neutrinorpc.StatusRequest,
+            neutrinorpc.StatusResponse
+        >({
+            request: neutrinorpc.StatusRequest,
+            response: neutrinorpc.StatusResponse,
+            method: 'NeutrinoKitStatus',
+            options: {}
+        });
+        return response;
+    };
 
 const forcedTimeout = async (time_ms: number, response: any) => {
     await new Promise((res) => setTimeout(res, time_ms));
