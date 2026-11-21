@@ -100,6 +100,7 @@ interface NodeConfigExportImportState {
     selectedImportNodes: Array<number>;
     // Recovery state
     isScanning: boolean;
+    scanFailed: boolean;
     scanResult: RecoveryScanResult | null;
     selectedRecoveryResult: RecoveryResult | null;
     recoveryNodes: Node[];
@@ -136,11 +137,18 @@ export default class NodeConfigExportImport extends React.Component<
         selectedImportNodes: [],
         // Recovery state
         isScanning: false,
+        scanFailed: false,
         scanResult: null,
         selectedRecoveryResult: null,
         recoveryNodes: [],
         selectedRecoveryNodes: []
     };
+
+    private recoveryScanSequence = 0;
+
+    componentWillUnmount() {
+        this.recoveryScanSequence += 1;
+    }
 
     private resetExportState = () => {
         this.setState({
@@ -980,24 +988,26 @@ export default class NodeConfigExportImport extends React.Component<
 
     // Recovery methods
     private handleRecoveryScan = async () => {
+        const scanSequence = ++this.recoveryScanSequence;
         this.setState({
             activeModal: 'recovery',
             isScanning: true,
+            scanFailed: false,
             scanResult: null
         });
 
         try {
             const result = await KeychainRecoveryUtils.scanForRecoverableData();
-            this.setState({ scanResult: result, isScanning: false });
-        } catch (error) {
-            console.error('Recovery scan failed:', error);
-            this.setState({ isScanning: false });
-            Alert.alert(
-                localeString('general.error'),
-                localeString(
-                    'views.Tools.nodeConfigExportImport.recovery.scanError'
-                )
-            );
+            if (scanSequence !== this.recoveryScanSequence) return;
+            const scanFailed = result.error !== undefined;
+            this.setState({
+                scanResult: scanFailed ? null : result,
+                scanFailed,
+                isScanning: false
+            });
+        } catch {
+            if (scanSequence !== this.recoveryScanSequence) return;
+            this.setState({ scanFailed: true, isScanning: false });
         }
     };
 
@@ -1067,11 +1077,13 @@ export default class NodeConfigExportImport extends React.Component<
     };
 
     private resetRecoveryState = () => {
+        this.recoveryScanSequence += 1;
         this.setState({
             activeModal: 'none',
             scanResult: null,
             selectedRecoveryResult: null,
             isScanning: false,
+            scanFailed: false,
             recoveryNodes: [],
             selectedRecoveryNodes: []
         });
@@ -1149,7 +1161,7 @@ export default class NodeConfigExportImport extends React.Component<
     };
 
     private renderRecoveryModal = () => {
-        const { activeModal, isScanning, scanResult } = this.state;
+        const { activeModal, isScanning, scanFailed, scanResult } = this.state;
 
         const recoverableSettings =
             scanResult?.settingsFound.filter((r) => r.source !== 'current') ||
@@ -1211,7 +1223,15 @@ export default class NodeConfigExportImport extends React.Component<
                                     </View>
                                 )}
 
-                                {hasRecoverableData ? (
+                                {scanFailed ? (
+                                    <View style={styles.emptyState}>
+                                        <Text style={styles.emptyStateText}>
+                                            {localeString(
+                                                'views.Tools.nodeConfigExportImport.recovery.scanError'
+                                            )}
+                                        </Text>
+                                    </View>
+                                ) : hasRecoverableData ? (
                                     <>
                                         <Text style={styles.recoverySubtitle}>
                                             {localeString(
@@ -1244,7 +1264,7 @@ export default class NodeConfigExportImport extends React.Component<
                         )}
 
                         <View style={styles.buttonContainer}>
-                            {!isScanning && scanResult && (
+                            {!isScanning && (scanResult || scanFailed) && (
                                 <Button
                                     title={localeString(
                                         'views.Tools.nodeConfigExportImport.recovery.rescan'
