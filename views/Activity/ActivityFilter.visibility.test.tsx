@@ -732,4 +732,45 @@ describe('ActivityFilter swap states the rows show', () => {
             expect(applied.swapFilter.submarine[state]).toBe(false)
         );
     });
+
+    it('keeps the Submarine row and swaps on when one of its states goes off', async () => {
+        setBackend(NWC);
+        const { ActivityStore, filter } = await renderFilter();
+
+        await filter.handleToggle([
+            'submarine',
+            SWAP_FILTER_STATES.submarine[0]
+        ]);
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.submarine).toBe(true);
+        expect(applied.swaps).toBe(true);
+    });
+
+    it('keeps swaps on when the last shown Submarine state goes off while Reverse is partial', async () => {
+        setBackend(NWC);
+        const last = SWAP_FILTER_STATES.submarine[0];
+        const filters = withShownOff('submarine', [last]);
+        filters.swapFilter.reverse[SWAP_FILTER_STATES.reverse[0]] = false;
+        const { ActivityStore, filter } = await renderFilter({ filters });
+
+        await filter.handleToggle(['submarine', last]);
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.submarine).toBe(false);
+        expect(applied.swaps).toBe(true);
+    });
+
+    it('keeps swaps on when the Submarine row is turned off while Reverse is partial', async () => {
+        setBackend(NWC);
+        const filters = filtersWith();
+        filters.swapFilter.reverse[SWAP_FILTER_STATES.reverse[0]] = false;
+        const { ActivityStore, filter } = await renderFilter({ filters });
+
+        await filter.handleToggle('submarine');
+
+        const applied = ActivityStore.setFilters.mock.calls[0][0];
+        expect(applied.submarine).toBe(false);
+        expect(applied.swaps).toBe(true);
+    });
 });
