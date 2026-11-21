@@ -16,6 +16,7 @@ import {
     feeLimitSatsToMaxRoutingFeeMsat
 } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { invoiceNotFoundError } from '../utils/PaymentLookupUtils';
 import { markRequestTimeout } from '../utils/RequestTimeoutUtils';
 import type {
     Network,
@@ -1393,7 +1394,7 @@ export default class LdkNode {
             return this.formatPaymentAsInvoice(payment);
         }
 
-        throw new Error(
+        throw invoiceNotFoundError(
             localeString('stores.NostrWalletConnectStore.error.invoiceNotFound')
         );
     };

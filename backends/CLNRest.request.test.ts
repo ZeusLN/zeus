@@ -40,6 +40,7 @@ jest.mock('./CoreLightningRequestHandler', () => ({
 jest.mock('../utils/LocaleUtils');
 
 import CLNRest, { satPerVbyteToPerkb } from './CLNRest';
+import { isInvoiceNotFoundError } from '../utils/PaymentLookupUtils';
 
 const CONNECTION_ERROR = 'backends.LND.restReq.connectionError';
 const PAYMENT_TIMED_OUT = 'views.SendingLightning.paymentTimedOut';
@@ -1162,5 +1163,31 @@ describe('CLNRest.supports', () => {
         mockNodeInfoStore.nodeInfo = { version: 'v25.02', api_version: '1.2' };
         expect(cln.supports('v24.11', undefined, '1.2')).toBe(true);
         expect(cln.supports('v24.11', undefined, '1.3')).toBe(false);
+    });
+});
+
+describe('CLNRest.lookupInvoice', () => {
+    it('throws an error callers read as "invoice not found" for a hash the node does not list', async () => {
+        mockFetch.mockResolvedValue(blobResponse(200, '{"invoices":[]}'));
+
+        const error = await cln.lookupInvoice({ r_hash: 'ab'.repeat(32) }).then(
+            () => undefined,
+            (e: any) => e
+        );
+
+        expect(error).toBeInstanceOf(Error);
+        expect(isInvoiceNotFoundError(error)).toBe(true);
+    });
+
+    it('does not read a failed request as "invoice not found"', async () => {
+        mockFetch.mockRejectedValue(new Error('Network request failed'));
+
+        const error = await cln.lookupInvoice({ r_hash: 'ab'.repeat(32) }).then(
+            () => undefined,
+            (e: any) => e
+        );
+
+        expect(error).toBeDefined();
+        expect(isInvoiceNotFoundError(error)).toBe(false);
     });
 });
