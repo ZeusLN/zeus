@@ -13,6 +13,19 @@ jest.mock('./TorUtils', () => ({
     RequestMethod: { GET: 'get' }
 }));
 
+const mockResolveNamecoinProfile = jest.fn();
+const mockFetchNameValue = jest.fn();
+jest.mock('./NamecoinNip05', () => ({
+    ...jest.requireActual('./NamecoinNip05'),
+    resolveNamecoinProfile: (...args: any[]) =>
+        mockResolveNamecoinProfile(...args)
+}));
+jest.mock('./NamecoinElectrumX', () => ({
+    NamecoinElectrumXClient: jest.fn().mockImplementation(() => ({
+        fetchNameValue: mockFetchNameValue
+    }))
+}));
+
 import NostrUtils from './NostrUtils';
 
 describe('NostrUtils', () => {
@@ -309,6 +322,68 @@ describe('NostrUtils', () => {
     describe('queryNip05Profile', () => {
         beforeEach(() => {
             mockQueryProfile.mockReset();
+            mockResolveNamecoinProfile.mockReset();
+            mockFetchNameValue.mockReset();
+        });
+
+        it('resolves a namespaced Namecoin identity without DNS NIP-05', async () => {
+            mockResolveNamecoinProfile.mockResolvedValue({
+                pubkey: validHex,
+                relays: ['wss://relay.testls.bit/']
+            });
+
+            const result = await NostrUtils.queryNip05Profile('D/MSTROFNONE');
+
+            expect(mockResolveNamecoinProfile).toHaveBeenCalledWith(
+                'd/mstrofnone',
+                mockFetchNameValue
+            );
+            expect(mockQueryProfile).not.toHaveBeenCalled();
+            expect(result).toEqual({
+                pubkey: validHex,
+                relays: ['wss://relay.testls.bit/']
+            });
+        });
+
+        it('routes .bit NIP-05 identifiers through the Namecoin traversal', async () => {
+            mockResolveNamecoinProfile.mockResolvedValue({
+                pubkey: validHex
+            });
+
+            const result = await NostrUtils.queryNip05Profile('M@TestLS.BIT');
+
+            expect(mockResolveNamecoinProfile).toHaveBeenCalledWith(
+                'm@testls.bit',
+                mockFetchNameValue
+            );
+            expect(mockQueryProfile).not.toHaveBeenCalled();
+            expect(result).toEqual({ pubkey: validHex });
+        });
+
+        it('routes a trailing-dot .bit identifier through Namecoin', async () => {
+            mockResolveNamecoinProfile.mockResolvedValue({
+                pubkey: validHex
+            });
+
+            await NostrUtils.queryNip05Profile('M@TestLS.BIT.');
+
+            expect(mockResolveNamecoinProfile).toHaveBeenCalledWith(
+                'm@testls.bit.',
+                mockFetchNameValue
+            );
+            expect(mockQueryProfile).not.toHaveBeenCalled();
+        });
+
+        it('does not make direct Namecoin lookups when Tor is enabled', async () => {
+            for (const identifier of ['d/mstrofnone', 'm@testls.bit']) {
+                await expect(
+                    NostrUtils.queryNip05Profile(identifier, true)
+                ).resolves.toBeNull();
+            }
+
+            expect(mockResolveNamecoinProfile).not.toHaveBeenCalled();
+            expect(mockQueryProfile).not.toHaveBeenCalled();
+            expect(mockDoTorRequest).not.toHaveBeenCalled();
         });
 
         it('lowercases the identifier before the lookup', async () => {

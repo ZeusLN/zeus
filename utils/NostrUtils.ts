@@ -1,5 +1,7 @@
 import { nip05, nip19 } from 'nostr-tools';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
+import { isNamecoinIdentifier, resolveNamecoinProfile } from './NamecoinNip05';
+import { NamecoinElectrumXClient } from './NamecoinElectrumX';
 
 /**
  * Validates an npub string format using regex.
@@ -167,6 +169,13 @@ class NostrUtils {
         enableTor: boolean = false
     ): Promise<nip19.ProfilePointer | null> => {
         const normalized = identifier.toLowerCase();
+        if (isNamecoinIdentifier(normalized)) {
+            // React Native WebSockets cannot use nitro-tor's HTTP-only
+            // transport. Never silently send a Tor-requested lookup directly.
+            if (enableTor) return null;
+            const client = new NamecoinElectrumXClient();
+            return resolveNamecoinProfile(normalized, client.fetchNameValue);
+        }
         if (/\.onion\.?$/.test(normalized)) {
             return null;
         }
