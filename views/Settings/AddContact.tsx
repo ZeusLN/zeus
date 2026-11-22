@@ -7,7 +7,6 @@ import {
     Platform,
     ScrollView,
     Image,
-    Modal,
     Text,
     TextInput
 } from 'react-native';
@@ -19,6 +18,7 @@ import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
+import Modal from '../../components/Modal';
 import { localeString } from '../../utils/LocaleUtils';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';

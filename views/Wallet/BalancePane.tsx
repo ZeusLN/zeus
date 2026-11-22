@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
     Alert,
     ImageBackground,
-    Modal,
     ScrollView,
     Text,
     View,
@@ -17,6 +16,7 @@ import RNRestart from 'react-native-restart';
 import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
+import Modal from '../../components/Modal';
 import Conversion from '../../components/Conversion';
 import SyncingStatus from '../../components/SyncingStatus';
 import RecoveryStatus from '../../components/RecoveryStatus';

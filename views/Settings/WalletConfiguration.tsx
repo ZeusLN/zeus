@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
-    Modal,
     StyleSheet,
     Text,
     View,
@@ -37,6 +36,7 @@ import Button from '../../components/Button';
 import CollapsedQR from '../../components/CollapsedQR';
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
+import Modal from '../../components/Modal';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Pill from '../../components/Pill';

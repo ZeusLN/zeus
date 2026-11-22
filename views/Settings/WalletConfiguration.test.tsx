@@ -65,6 +65,9 @@ jest.mock('../../components/DropdownSetting', () => 'DropdownSetting');
 jest.mock('../../components/Header', () => 'Header');
 jest.mock('../../components/KeyValue', () => 'KeyValue');
 jest.mock('../../components/LoadingIndicator', () => 'LoadingIndicator');
+// the app's Modal reads the login state from SettingsStore, which the
+// Stores mock does not have
+jest.mock('../../components/Modal', () => require('react-native').Modal);
 jest.mock('../../components/Pill', () => 'Pill');
 jest.mock('../../components/Screen', () => 'Screen');
 jest.mock('../../components/SuccessErrorMessage', () => ({

@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     FlatList,
-    Modal,
     Platform,
     StyleSheet,
     View,
@@ -18,6 +17,7 @@ import { localeString } from '../utils/LocaleUtils';
 import backendUtils from '../utils/BackendUtils';
 
 import Button from '../components/Button';
+import Modal from '../components/Modal';
 import { ChannelItem } from './Channels/ChannelItem';
 import ChannelsFilter from './Channels/ChannelsFilter';
 import LoadingIndicator from './LoadingIndicator';

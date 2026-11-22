@@ -5,8 +5,7 @@ import {
     View,
     KeyboardAvoidingView,
     Platform,
-    TouchableOpacity,
-    Modal
+    TouchableOpacity
 } from 'react-native';
 import { Button, Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
@@ -27,6 +26,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import SwapStore from '../../stores/SwapStore';
 
 import Header from '../../components/Header';
+import Modal from '../../components/Modal';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
