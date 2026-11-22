@@ -97,6 +97,19 @@ import {
 } from './ChannelMigrationUtils';
 import { sourceMethods } from '../backends/lncTestUtils';
 
+// What the graph directory holds after a backup has been unzipped into it
+const dirEntry = (name: string, size: number) => ({
+    name,
+    path: `/graph/mainnet/${name}`,
+    size,
+    isFile: () => true
+});
+const RESTORED_GRAPH_DIR = [
+    dirEntry('channel.db', 262144),
+    dirEntry('sphinxreplay.db', 16384),
+    dirEntry('wtclient.db', 16384)
+];
+
 const mockFetch = ReactNativeBlobUtil.fetch as jest.Mock;
 const mockSignNodePubkey = signMessageNodePubkey as jest.Mock;
 const mockAlert = Alert.alert as jest.Mock;
@@ -377,6 +390,100 @@ describe('ChannelMigrationUtils', () => {
     });
 
     describe('importChannelDb', () => {
+        beforeEach(() => {
+            mockReadDir.mockResolvedValue(RESTORED_GRAPH_DIR);
+        });
+
+        // First readDir is the clear before the unzip, second is the check
+        // after it
+        const unzipLeaves = (entries: any[]) =>
+            mockReadDir
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce(entries);
+
+        const importPicked = (isSqlite = false) =>
+            importChannelDb(
+                'content://downloads/backup.zip',
+                'backup.zip',
+                'lnd',
+                false,
+                isSqlite
+            );
+
+        it('rejects when the unzip leaves an empty channel.db (#5797)', async () => {
+            unzipLeaves([dirEntry('channel.db', 0)]);
+
+            await expect(importPicked()).rejects.toThrow(
+                'views.Tools.migration.import.databaseMissing'
+            );
+
+            expect(mockUnlink).toHaveBeenCalledWith(
+                '/graph/mainnet/channel.db'
+            );
+            expect(mockUnlink).toHaveBeenCalledWith(
+                '/cache/zeus-import-temp.zip'
+            );
+        });
+
+        it('rejects when the unzip leaves nothing', async () => {
+            unzipLeaves([]);
+
+            await expect(importPicked()).rejects.toThrow(
+                'views.Tools.migration.import.databaseMissing'
+            );
+        });
+
+        it('rejects when the archive has no channel database', async () => {
+            unzipLeaves([dirEntry('notes.txt', 500)]);
+
+            await expect(importPicked()).rejects.toThrow(
+                'views.Tools.migration.import.databaseMissing'
+            );
+            expect(mockUnlink).toHaveBeenCalledWith('/graph/mainnet/notes.txt');
+        });
+
+        it('does not count another SQLite file as the channel database', async () => {
+            unzipLeaves([dirEntry('lnd.sqlite', 4096)]);
+
+            await expect(importPicked(true)).rejects.toThrow(
+                'views.Tools.migration.import.databaseMissing'
+            );
+        });
+
+        it('does not count a directory named channel.db', async () => {
+            unzipLeaves([
+                { ...dirEntry('channel.db', 4096), isFile: () => false }
+            ]);
+
+            await expect(importPicked()).rejects.toThrow(
+                'views.Tools.migration.import.databaseMissing'
+            );
+            expect(mockUnlink).not.toHaveBeenCalledWith(
+                '/graph/mainnet/channel.db'
+            );
+        });
+
+        it('accepts a bolt backup and keeps its files', async () => {
+            unzipLeaves(RESTORED_GRAPH_DIR);
+
+            await importPicked();
+
+            expect(mockUnlink).toHaveBeenCalledTimes(1);
+            expect(mockUnlink).toHaveBeenCalledWith(
+                '/cache/zeus-import-temp.zip'
+            );
+        });
+
+        it('accepts a SQLite backup with empty wal and shm files', async () => {
+            unzipLeaves([
+                dirEntry('channel.sqlite', 4096),
+                dirEntry('channel.sqlite-wal', 0),
+                dirEntry('channel.sqlite-shm', 0)
+            ]);
+
+            await expect(importPicked(true)).resolves.toBeUndefined();
+        });
+
         it('validates, unzips, and places files in the graph directory', async () => {
             await importChannelDb(
                 '/path/to/backup.zip',
@@ -406,8 +513,8 @@ describe('ChannelMigrationUtils', () => {
 
         it('clears existing files before unzipping', async () => {
             mockReadDir.mockResolvedValue([
-                { path: '/graph/mainnet/channel.db', isFile: () => true },
-                { path: '/graph/mainnet/peers.json', isFile: () => true }
+                dirEntry('channel.db', 262144),
+                dirEntry('peers.json', 10)
             ]);
 
             await importChannelDb(
@@ -509,11 +616,7 @@ describe('ChannelMigrationUtils', () => {
         ])(
             'rejects a backup of the other database type (isSqlite %p, backup has %s)',
             async (isSqlite, backupFile) => {
-                mockExists.mockImplementation(
-                    async (path: string) =>
-                        !path.includes('/channel.') ||
-                        path.endsWith(`/${backupFile}`)
-                );
+                unzipLeaves([dirEntry(backupFile, 4096)]);
 
                 await expect(
                     importChannelDb(
@@ -533,10 +636,7 @@ describe('ChannelMigrationUtils', () => {
             'accepts a backup with the database of the selected type (isSqlite %p)',
             async (isSqlite) => {
                 const file = isSqlite ? 'channel.sqlite' : 'channel.db';
-                mockExists.mockImplementation(
-                    async (path: string) =>
-                        !path.includes('/channel.') || path.endsWith(`/${file}`)
-                );
+                unzipLeaves([dirEntry(file, 4096)]);
 
                 await expect(
                     importChannelDb(
@@ -575,9 +675,7 @@ describe('ChannelMigrationUtils', () => {
         it.each([false, true])(
             'rejects a backup that unpacks to no channel database (isSqlite %p)',
             async (isSqlite) => {
-                mockExists.mockImplementation(
-                    async (path: string) => !path.includes('/channel.')
-                );
+                unzipLeaves([dirEntry('peers.json', 10)]);
 
                 await expect(
                     importChannelDb(
@@ -910,6 +1008,35 @@ describe('ChannelMigrationUtils', () => {
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
 
+        const serveBackup = () => {
+            serveChallenges([CHALLENGE, CHALLENGE], {
+                last_backup_at: '2026-11-01T00:00:00Z'
+            });
+        };
+
+        it('restores a backup that unzips to a channel database', async () => {
+            serveBackup();
+            mockReadDir.mockResolvedValue(RESTORED_GRAPH_DIR);
+
+            expect(await restore()).toBe(true);
+            expect(mockUnzipFile).toHaveBeenCalledTimes(1);
+        });
+
+        it('rejects when the downloaded backup unzips to an empty channel.db (#5797)', async () => {
+            serveBackup();
+            mockReadDir
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce([dirEntry('channel.db', 0)]);
+
+            await expect(restore()).rejects.toThrow(
+                'views.Tools.migration.import.databaseMissing'
+            );
+            expect(mockUnzipFile).toHaveBeenCalledTimes(1);
+            expect(mockUnlink).toHaveBeenCalledWith(
+                '/graph/mainnet/channel.db'
+            );
+        });
+
         it('refuses the LNURL-auth phrase as the restore challenge', async () => {
             mockFetch
                 .mockResolvedValueOnce(
@@ -1186,6 +1313,10 @@ describe('ChannelMigrationUtils', () => {
             );
 
         it('restores and removes the staging .enc and zip on success', async () => {
+            mockReadDir
+                .mockResolvedValueOnce([])
+                .mockResolvedValueOnce(RESTORED_GRAPH_DIR);
+
             await expect(restore()).resolves.toBe(true);
 
             expect(mockDecryptFile).toHaveBeenCalledWith(
