@@ -2,11 +2,7 @@ import BigNumber from 'bignumber.js';
 
 import { settingsStore, fiatStore } from '../stores/Stores';
 
-// 100_000_000
-const SATS_PER_BTC = 100000000;
-// 21,000,000 BTC supply cap
-const MAX_BTC = 21000000;
-const MAX_SATS = MAX_BTC * SATS_PER_BTC;
+import { MAX_BTC, MAX_SATS, SATS_PER_BTC } from './BitcoinConstants';
 
 const getDecimalPlaceholder = (amount: string, units: string) => {
     const [_, decimalPart] = amount.split('.');

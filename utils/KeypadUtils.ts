@@ -4,6 +4,7 @@ import BigNumber from 'bignumber.js';
 import FiatStore from '../stores/FiatStore';
 import SettingsStore from '../stores/SettingsStore';
 
+import { MAX_BTC, MAX_SATS } from './BitcoinConstants';
 import type { Units } from './UnitsUtils';
 
 /**
@@ -107,10 +108,10 @@ export const validateKeypadInput = (
     const proposedNewAmount = new BigNumber(proposedNewAmountStr);
 
     // Deny if exceeding BTC 21 million capacity
-    if (units === 'BTC' && proposedNewAmount.gt(21000000)) {
+    if (units === 'BTC' && proposedNewAmount.gt(MAX_BTC)) {
         return { valid: false, newAmount: currentAmount };
     }
-    if (units === 'sats' && proposedNewAmount.gt(2100000000000000)) {
+    if (units === 'sats' && proposedNewAmount.gt(MAX_SATS)) {
         return { valid: false, newAmount: currentAmount };
     }
 
@@ -359,8 +360,8 @@ export const parseClipboardAmount = (
 
     const bn = new BigNumber(finalAmount);
     if (bn.isNaN()) return null;
-    if (units === 'BTC' && bn.gt(21000000)) return null;
-    if (units === 'sats' && bn.gt(2100000000000000)) return null;
+    if (units === 'BTC' && bn.gt(MAX_BTC)) return null;
+    if (units === 'sats' && bn.gt(MAX_SATS)) return null;
 
     return finalAmount;
 };
