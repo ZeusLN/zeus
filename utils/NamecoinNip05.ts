@@ -73,8 +73,92 @@ function isObject(value: unknown): value is NamecoinObject {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+const keyInsertionOrder = new WeakMap<NamecoinObject, string[]>();
+const JSON_KEY_PREFIX = '__namecoin_json_key__';
+
 function emptyObject(): NamecoinObject {
-    return Object.create(null) as NamecoinObject;
+    const out = Object.create(null) as NamecoinObject;
+    keyInsertionOrder.set(out, []);
+    return out;
+}
+
+function orderedKeys(obj: NamecoinObject): string[] {
+    return keyInsertionOrder.get(obj) ?? Object.keys(obj);
+}
+
+function setOwn(obj: NamecoinObject, key: string, value: unknown): void {
+    let order = keyInsertionOrder.get(obj);
+    if (order === undefined) {
+        order = Object.keys(obj);
+        keyInsertionOrder.set(obj, order);
+    }
+    if (!hasOwn(obj, key)) order.push(key);
+    obj[key] = value;
+}
+
+// JSON.parse orders integer-like object keys numerically instead of retaining
+// their source order. Prefix every key before parsing so Quartz's first-entry
+// fallback remains faithful even for names such as "2" and "1".
+function prefixJsonObjectKeys(raw: string): string {
+    let output = '';
+    let index = 0;
+    let expectingKey = false;
+    const containers: string[] = [];
+
+    while (index < raw.length) {
+        const char = raw[index];
+        if (char === '"') {
+            const start = index++;
+            let escaped = false;
+            while (index < raw.length) {
+                const stringChar = raw[index++];
+                if (escaped) {
+                    escaped = false;
+                } else if (stringChar === '\\') {
+                    escaped = true;
+                } else if (stringChar === '"') {
+                    break;
+                }
+            }
+            const token = raw.slice(start, index);
+            output += expectingKey
+                ? `"${JSON_KEY_PREFIX}${token.slice(1)}`
+                : token;
+            expectingKey = false;
+            continue;
+        }
+
+        output += char;
+        index += 1;
+        if (char === '{' || char === '[') {
+            containers.push(char);
+            expectingKey = char === '{';
+        } else if (char === '}' || char === ']') {
+            containers.pop();
+            expectingKey = false;
+        } else if (char === ',') {
+            expectingKey = containers[containers.length - 1] === '{';
+        }
+    }
+    return output;
+}
+
+function restoreJsonKeys(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(restoreJsonKeys);
+    if (!isObject(value)) return value;
+
+    const out = emptyObject();
+    for (const key of Object.keys(value)) {
+        const originalKey = key.startsWith(JSON_KEY_PREFIX)
+            ? key.slice(JSON_KEY_PREFIX.length)
+            : key;
+        setOwn(out, originalKey, restoreJsonKeys(value[key]));
+    }
+    return out;
+}
+
+function parseOrderedJson(raw: string): unknown {
+    return restoreJsonKeys(JSON.parse(prefixJsonObjectKeys(raw)));
 }
 
 function success(value: NamecoinObject): TraversalResult {
@@ -283,8 +367,8 @@ function parseOperations(item: unknown): ImportOperation[] | null {
 function removeKey(obj: NamecoinObject, keyToRemove: string): NamecoinObject {
     if (!hasOwn(obj, keyToRemove)) return obj;
     const out = emptyObject();
-    for (const key of Object.keys(obj)) {
-        if (key !== keyToRemove) out[key] = obj[key];
+    for (const key of orderedKeys(obj)) {
+        if (key !== keyToRemove) setOwn(out, key, obj[key]);
     }
     return out;
 }
@@ -295,8 +379,8 @@ function replaceKey(
     newValue: unknown
 ): NamecoinObject {
     const out = emptyObject();
-    for (const key of Object.keys(obj)) {
-        out[key] = key === keyToReplace ? newValue : obj[key];
+    for (const key of orderedKeys(obj)) {
+        setOwn(out, key, key === keyToReplace ? newValue : obj[key]);
     }
     return out;
 }
@@ -306,8 +390,8 @@ function removeDefaultMapEntry(
     map: NamecoinObject
 ): NamecoinObject {
     const newMap = emptyObject();
-    for (const key of Object.keys(map)) {
-        if (key.length > 0) newMap[key] = map[key];
+    for (const key of orderedKeys(map)) {
+        if (key.length > 0) setOwn(newMap, key, map[key]);
     }
     return replaceKey(obj, 'map', newMap);
 }
@@ -316,12 +400,16 @@ function mergeImporterWins(
     importer: NamecoinObject,
     imported: NamecoinObject
 ): NamecoinObject {
-    if (Object.keys(imported).length === 0) return importer;
-    if (Object.keys(importer).length === 0) return imported;
+    if (orderedKeys(imported).length === 0) return importer;
+    if (orderedKeys(importer).length === 0) return imported;
 
     const out = emptyObject();
-    for (const key of Object.keys(imported)) out[key] = imported[key];
-    for (const key of Object.keys(importer)) out[key] = importer[key];
+    for (const key of orderedKeys(imported)) {
+        setOwn(out, key, imported[key]);
+    }
+    for (const key of orderedKeys(importer)) {
+        setOwn(out, key, importer[key]);
+    }
     return out;
 }
 
@@ -406,7 +494,7 @@ class NamecoinTraversal {
                 result = failure();
             } else {
                 try {
-                    const parsed: unknown = JSON.parse(raw);
+                    const parsed: unknown = parseOrderedJson(raw);
                     result = isObject(parsed) ? success(parsed) : failure();
                 } catch {
                     result = failure();
@@ -640,7 +728,7 @@ function extractFromDomainValue(
         } else if (root !== null && isValidPubkey(root)) {
             matched = { localPart: '_', pubkey: root };
         } else if (parsed.localPart === '_') {
-            const firstKey = Object.keys(namesField)[0];
+            const firstKey = orderedKeys(namesField)[0];
             if (firstKey !== undefined) {
                 const first = primitiveContent(getOwn(namesField, firstKey));
                 if (first !== null && isValidPubkey(first)) {

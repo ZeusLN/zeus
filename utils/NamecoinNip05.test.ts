@@ -229,6 +229,28 @@ describe('Namecoin Nostr extraction', () => {
         ).resolves.toBeNull();
     });
 
+    it('preserves source order for integer-like names keys', async () => {
+        const { fetcher } = makeFetcher({
+            'd/testls': `{"nostr":{"names":{"2":"${PK_M}","1":"${PK_A}"}}}`
+        });
+
+        await expect(
+            resolveNamecoinProfile('d/testls', fetcher)
+        ).resolves.toEqual({ pubkey: PK_M });
+    });
+
+    it('preserves integer-like key order through imports and default maps', async () => {
+        const { fetcher, queries } = makeFetcher({
+            'd/testls': JSON.stringify({ import: 'dd/testls' }),
+            'dd/testls': `{"map":{"":{"nostr":{"names":{"2":"${PK_M}","1":"${PK_A}"}}}}}`
+        });
+
+        await expect(
+            resolveNamecoinProfile('d/testls', fetcher)
+        ).resolves.toEqual({ pubkey: PK_M });
+        expect(queries).toEqual(['d/testls', 'dd/testls']);
+    });
+
     it('does not use an arbitrary first name for a non root lookup', async () => {
         const { fetcher } = makeFetcher({
             'd/testls': JSON.stringify({
