@@ -1151,6 +1151,12 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 connection.connectTimeout = 30000
                 connection.readTimeout = 30000
                 connection.setRequestProperty("Accept", "application/json")
+                // The scheme and host check above runs once, on this URL.
+                // A followed redirect would go to a host it never saw, such
+                // as a loopback or LAN address, so a 3xx is rejected below
+                // like any other non-200 status. CDK's own mint transport
+                // does not follow redirects either.
+                connection.instanceFollowRedirects = false
 
                 val responseCode = connection.responseCode
                 if (responseCode != HttpURLConnection.HTTP_OK) {
