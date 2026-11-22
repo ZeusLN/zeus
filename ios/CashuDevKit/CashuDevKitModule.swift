@@ -3,37 +3,6 @@ import CommonCrypto
 import CashuDevKit
 import ZeusCashuRestore
 
-// MARK: - External quote fetch without redirects
-
-/// Refuses every HTTP redirect, so the task completes with the 3xx
-/// response itself. checkExternalMintQuote checks the mint URL's scheme
-/// and host once, before the request. A followed redirect would go to a
-/// destination that check never saw: a loopback or LAN address, or plain
-/// HTTP, which ATS allows here (NSAllowsArbitraryLoads). CDK's own mint
-/// transport does not follow redirects either.
-final class CashuNoRedirectSessionDelegate: NSObject, URLSessionTaskDelegate {
-    func urlSession(_ session: URLSession, task: URLSessionTask,
-                    willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest,
-                    completionHandler: @escaping (URLRequest?) -> Void) {
-        completionHandler(nil)
-    }
-}
-
-enum CashuExternalQuoteFetch {
-    // One session for the app's lifetime. It keeps a strong reference to
-    // its delegate and is never invalidated, so nothing is created per call.
-    static let session = URLSession(configuration: .default,
-                                    delegate: CashuNoRedirectSessionDelegate(),
-                                    delegateQueue: nil)
-
-    static func data(from url: URL) async throws -> (Data, URLResponse) {
-        return try await session.data(from: url)
-    }
-}
-
-// MARK: - End external quote fetch without redirects
-
 /// CashuDevKit Native Module for React Native
 /// Provides bridge to CDK FFI bindings
 ///
@@ -816,14 +785,13 @@ class CashuDevKitModule: RCTEventEmitter {
                     return
                 }
 
-                let (data, response) = try await URLSession.shared.data(from: requestUrl)
+                // Throws for a body over CashuMintHTTP.maxResponseBytes
+                let response = try await CashuMintHTTP.get(requestUrl, followRedirects: true)
 
                 // Check HTTP response status
-                if let httpResponse = response as? HTTPURLResponse {
-                    guard (200...299).contains(httpResponse.statusCode) else {
-                        reject("HTTP_ERROR", "Mint returned HTTP \(httpResponse.statusCode)", nil)
-                        return
-                    }
+                guard response.isSuccess, let data = response.body else {
+                    reject("HTTP_ERROR", "Mint returned HTTP \(response.status)", nil)
+                    return
                 }
 
                 // Parse JSON response
@@ -921,92 +889,6 @@ class CashuDevKitModule: RCTEventEmitter {
         }
     }
 
-    /// Reject loopback, private (RFC1918), link-local and other internal hosts
-    /// for server-supplied mint URLs. Matches on the literal host only (no DNS
-    /// resolution) to avoid a rebinding/latency side channel; this is
-    /// defense-in-depth on top of the JS-side configured-mint binding.
-    private static func isDisallowedMintHost(_ host: String) -> Bool {
-        var h = host.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
-            .lowercased()
-        // A single trailing dot is the fully qualified spelling of the same
-        // host (localhost., 127.0.0.1.), so drop it before matching
-        if h.hasSuffix(".") { h.removeLast() }
-        if h.isEmpty { return true }
-        if h == "localhost" || h.hasSuffix(".localhost") { return true }
-        // A host containing ":" can only be an IPv6 literal (hostnames
-        // cannot contain it), so parse it numerically instead of
-        // prefix-matching one spelling: mapped (::ffff:127.0.0.1),
-        // hex-mapped (::ffff:7f00:1) and zero-expanded (0:0:0:0:0:0:0:1)
-        // forms of the same internal address all normalize to the same
-        // bytes. inet_pton involves no DNS.
-        if h.contains(":") { return isDisallowedIPv6Literal(h) }
-        return isDisallowedIPv4(h)
-    }
-
-    // Internal / non-routable IPv4 ranges as (network, prefix length):
-    // 0/8 this network, 10/8 private, 100.64/10 shared CGNAT,
-    // 127/8 loopback, 169.254/16 link-local, 172.16/12 private,
-    // 192.0.0/24 IETF protocol assignments, 192.168/16 private,
-    // 198.18/15 benchmarking, 224/4 multicast, 240/4 reserved
-    private static let disallowedIPv4Ranges: [(UInt32, UInt32)] = [
-        (0x0000_0000, 8),
-        (0x0a00_0000, 8),
-        (0x6440_0000, 10),
-        (0x7f00_0000, 8),
-        (0xa9fe_0000, 16),
-        (0xac10_0000, 12),
-        (0xc000_0000, 24),
-        (0xc0a8_0000, 16),
-        (0xc612_0000, 15),
-        (0xe000_0000, 4),
-        (0xf000_0000, 4)
-    ]
-
-    // Parse the host with inet_aton, the same parser the OS resolver
-    // applies, so decimal (2130706433), hex (0x7f.1), octal (0177.0.0.1)
-    // and shortened (127.1) spellings of an internal address are caught as
-    // well as the dotted-quad one. A host that does not parse is a hostname
-    // and is not an internal literal.
-    private static func isDisallowedIPv4(_ h: String) -> Bool {
-        var addr = in_addr()
-        guard inet_aton(h, &addr) == 1 else { return false }
-        return isDisallowedIPv4(UInt32(bigEndian: addr.s_addr))
-    }
-
-    private static func isDisallowedIPv4(_ addr: UInt32) -> Bool {
-        return disallowedIPv4Ranges.contains { network, prefix in
-            let mask: UInt32 = prefix == 0 ? 0 : ~UInt32(0) << (32 - prefix)
-            return addr & mask == network
-        }
-    }
-
-    private static func isDisallowedIPv6Literal(_ literal: String) -> Bool {
-        var addr = in6_addr()
-        guard inet_pton(AF_INET6, literal, &addr) == 1 else {
-            // Not parseable as an IPv6 literal and not a valid hostname
-            // either: fail closed
-            return true
-        }
-        let bytes = withUnsafeBytes(of: addr) { Array($0) }
-        // IPv4-mapped (::ffff:a.b.c.d in any spelling): hold the embedded
-        // address to the same rules as a dotted host
-        if bytes[0...9].allSatisfy({ $0 == 0 }) && bytes[10] == 0xff &&
-            bytes[11] == 0xff {
-            let v4 = UInt32(bytes[12]) << 24 | UInt32(bytes[13]) << 16 |
-                UInt32(bytes[14]) << 8 | UInt32(bytes[15])
-            return isDisallowedIPv4(v4)
-        }
-        // ::1 loopback and :: unspecified
-        if bytes[0...14].allSatisfy({ $0 == 0 }) &&
-            (bytes[15] == 0 || bytes[15] == 1) {
-            return true
-        }
-        // fe80::/10 link-local, fec0::/10 site-local (deprecated)
-        if bytes[0] == 0xfe && (bytes[1] & 0x80) == 0x80 { return true }
-        // fc00::/7 unique-local
-        return (bytes[0] & 0xfe) == 0xfc
-    }
-
     /// Check mint quote status directly from the mint's HTTP API.
     /// This bypasses the local database check and works for external quotes
     /// (e.g., quotes created by ZeusPay server).
@@ -1028,7 +910,7 @@ class CashuDevKitModule: RCTEventEmitter {
                 guard let baseUrl = URL(string: normalizedUrl),
                       baseUrl.scheme?.lowercased() == "https",
                       let host = baseUrl.host,
-                      !CashuDevKitModule.isDisallowedMintHost(host)
+                      !CashuMintHost.isDisallowed(host)
                 else {
                     reject("UNSAFE_MINT_URL", "Refusing to contact non-HTTPS or internal mint host: \(mintUrl)", nil)
                     return
@@ -1054,16 +936,18 @@ class CashuDevKitModule: RCTEventEmitter {
                     return
                 }
 
-                // Redirects are not followed: a 3xx is rejected below
-                let (data, response) = try await CashuExternalQuoteFetch.data(from: quoteUrl)
+                // Redirects are not followed, so a 3xx is rejected below.
+                // The scheme and host check above runs once, on this URL. A
+                // followed redirect would go to a destination it never saw:
+                // a loopback or LAN address, or plain HTTP. CDK's own mint
+                // transport does not follow redirects either.
+                // Throws for a body over CashuMintHTTP.maxResponseBytes.
+                let response = try await CashuMintHTTP.get(quoteUrl, followRedirects: false)
 
                 // Check HTTP response status
-                if let httpResponse = response as? HTTPURLResponse {
-                    guard (200...299).contains(httpResponse.statusCode) else {
-                        let errorBody = String(data: data, encoding: .utf8) ?? "Unknown error"
-                        reject("HTTP_ERROR", "Mint returned HTTP \(httpResponse.statusCode): \(errorBody)", nil)
-                        return
-                    }
+                guard response.isSuccess, let data = response.body else {
+                    reject("HTTP_ERROR", "Mint returned HTTP \(response.status): \(response.errorText)", nil)
+                    return
                 }
 
                 // Parse JSON response

@@ -186,6 +186,7 @@
 		CD6C66E0CE0C4C79A526266C /* Sync.svg in Resources */ = {isa = PBXBuildFile; fileRef = D1418EE4DB29450299558B85 /* Sync.svg */; };
 		CDC0DEF22A54C2B6000927CE /* CashuDevKitModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC0DEF02A54C2B6000927CE /* CashuDevKitModule.swift */; };
 		CDC0DEF32A54C2B6000927CE /* CashuDevKitModule.m in Sources */ = {isa = PBXBuildFile; fileRef = CDC0DEF12A54C2B6000927CE /* CashuDevKitModule.m */; };
+		CDC0DEF52A54C2B6000927CE /* CashuMintHTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC0DEF42A54C2B6000927CE /* CashuMintHTTP.swift */; };
 		CF78CA4D1C4A446999F455B0 /* ExportImport.svg in Resources */ = {isa = PBXBuildFile; fileRef = A50EF69A05534B4984110D51 /* ExportImport.svg */; };
 		D1C071806D9E488FA919E88C /* DeleteKey.svg in Resources */ = {isa = PBXBuildFile; fileRef = CE0235666BAA4B108E838374 /* DeleteKey.svg */; };
 		D1EBD1023E904A66B05DEE97 /* Contact.svg in Resources */ = {isa = PBXBuildFile; fileRef = C2058B1AED6D4B97A6650200 /* Contact.svg */; };
@@ -684,6 +685,7 @@
 		CD61856C84E64B23AB9305C4 /* zeus_illustration_3a.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_illustration_3a.jpg; path = ../assets/images/zeus_illustration_3a.jpg; sourceTree = "<group>"; };
 		CDC0DEF02A54C2B6000927CE /* CashuDevKitModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CashuDevKitModule.swift; sourceTree = "<group>"; };
 		CDC0DEF12A54C2B6000927CE /* CashuDevKitModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CashuDevKitModule.m; sourceTree = "<group>"; };
+		CDC0DEF42A54C2B6000927CE /* CashuMintHTTP.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CashuMintHTTP.swift; sourceTree = "<group>"; };
 		CE0235666BAA4B108E838374 /* DeleteKey.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = DeleteKey.svg; path = ../assets/images/SVG/DeleteKey.svg; sourceTree = "<group>"; };
 		CE4931FF962B4189AC3F3EEB /* Dice.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Dice.svg; path = ../assets/images/SVG/Dice.svg; sourceTree = "<group>"; };
 		CE60F60AE34649628EB4D675 /* FontAwesome5_Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Regular.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Regular.ttf"; sourceTree = "<group>"; };
@@ -1335,6 +1337,7 @@
 			children = (
 				CDC0DEF02A54C2B6000927CE /* CashuDevKitModule.swift */,
 				CDC0DEF12A54C2B6000927CE /* CashuDevKitModule.m */,
+				CDC0DEF42A54C2B6000927CE /* CashuMintHTTP.swift */,
 			);
 			path = CashuDevKit;
 			sourceTree = "<group>";
@@ -2095,6 +2098,7 @@
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
 				CDC0DEF22A54C2B6000927CE /* CashuDevKitModule.swift in Sources */,
 				CDC0DEF32A54C2B6000927CE /* CashuDevKitModule.m in Sources */,
+				CDC0DEF52A54C2B6000927CE /* CashuMintHTTP.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
