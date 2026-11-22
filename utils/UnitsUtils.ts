@@ -4,6 +4,9 @@ import { settingsStore, fiatStore } from '../stores/Stores';
 
 // 100_000_000
 const SATS_PER_BTC = 100000000;
+// 21,000,000 BTC supply cap
+const MAX_BTC = 21000000;
+const MAX_SATS = MAX_BTC * SATS_PER_BTC;
 
 const getDecimalPlaceholder = (amount: string, units: string) => {
     const [_, decimalPart] = amount.split('.');
@@ -88,6 +91,8 @@ type Units = 'sats' | 'BTC' | 'fiat';
 
 export {
     SATS_PER_BTC,
+    MAX_BTC,
+    MAX_SATS,
     getDecimalPlaceholder,
     numberWithCommas,
     numberWithDecimals,

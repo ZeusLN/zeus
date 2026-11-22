@@ -368,7 +368,14 @@ describe('AddressUtils', () => {
             ['in both cases', 'amount=0.001&AMOUNT=10'],
             ['in upper case', 'AMOUNT=0.001&AMOUNT=10'],
             ['around other params', 'amount=0.001&label=shop&amount=10'],
-            ['with an empty first value', 'amount=&amount=10']
+            ['with an empty first value', 'amount=&amount=10'],
+            ['after a second ?', 'amount=0.001&label=what?&amount=10'],
+            [
+                'after a second bitcoin:',
+                'amount=0.001&label=bitcoin:&amount=10'
+            ],
+            ['in mixed case', 'amount=0.001&Amount=10'],
+            ['with a percent-encoded key', 'amount=0.001&%61mount=10']
         ])('ignores the amount when it appears %s', (_case, query) => {
             expect(
                 AddressUtils.processBIP21Uri(`bitcoin:${address}?${query}`)
@@ -390,7 +397,31 @@ describe('AddressUtils', () => {
             });
         });
 
-        it.each(['21000000.00000001', '21000001', '1e9'])(
+        // BigNumber reads these as 16, 3, 1000, 0.001, 10 and 10 BTC
+        it.each(['0x10', '0b11', '1e3', '1e-3', '%2B10', '%2010'])(
+            'ignores %s, which is not a plain decimal',
+            (amount) => {
+                expect(
+                    AddressUtils.processBIP21Uri(
+                        `bitcoin:${address}?amount=${amount}`
+                    )
+                ).toEqual({ value: address, satAmount: undefined });
+            }
+        );
+
+        it.each([
+            ['.5', '50000000'],
+            ['5.', '500000000'],
+            ['0.000000010', '1']
+        ])('reads %s BTC as %s sats', (amount, satAmount) => {
+            expect(
+                AddressUtils.processBIP21Uri(
+                    `bitcoin:${address}?amount=${amount}`
+                )
+            ).toEqual({ value: address, satAmount });
+        });
+
+        it.each(['21000000.00000001', '21000001', '1000000000'])(
             'ignores %s BTC, above the 21,000,000 BTC supply',
             (amount) => {
                 expect(
