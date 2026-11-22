@@ -13,7 +13,8 @@ jest.mock('../stores/Stores', () => {
     const settingsStore = observable({
         loggedIn: true,
         posStatus: 'unselected',
-        loginRequired: () => !settingsStore.loggedIn
+        loginRequired: () => !settingsStore.loggedIn,
+        isPosEnabled: () => false
     });
     return { settingsStore };
 });

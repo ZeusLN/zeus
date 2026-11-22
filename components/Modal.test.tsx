@@ -14,7 +14,9 @@ jest.mock('../stores/Stores', () => {
     const settingsStore = observable({
         loggedIn: true,
         posStatus: 'unselected',
-        loginRequired: () => !settingsStore.loggedIn
+        posEnabled: false,
+        loginRequired: () => !settingsStore.loggedIn,
+        isPosEnabled: () => settingsStore.posEnabled
     });
     return { settingsStore };
 });
@@ -22,9 +24,17 @@ jest.mock('../stores/Stores', () => {
 import Modal from './Modal';
 import { settingsStore } from '../stores/Stores';
 
-const setSession = (session: { loggedIn: boolean; posStatus?: string }) =>
+const setSession = (session: {
+    loggedIn: boolean;
+    posStatus?: string;
+    posEnabled?: boolean;
+}) =>
     act(() => {
-        Object.assign(settingsStore, { posStatus: 'unselected', ...session });
+        Object.assign(settingsStore, {
+            posStatus: 'unselected',
+            posEnabled: false,
+            ...session
+        });
     });
 
 const renderModal = (props: any) =>
@@ -86,10 +96,40 @@ describe('Modal', () => {
     });
 
     it('stays usable in an active POS session, which the Lockscreen waives', async () => {
-        await setSession({ loggedIn: false, posStatus: 'active' });
+        await setSession({
+            loggedIn: false,
+            posStatus: 'active',
+            posEnabled: true
+        });
         await renderModal({ visible: true });
 
         expect(modal()).not.toBeNull();
         expect(contents()).toHaveLength(1);
+    });
+
+    // the Lockscreen asks for the PIN in both of these, so the modal must
+    // not stay in front of it
+    it('is hidden when posStatus is active but POS is disabled', async () => {
+        await setSession({
+            loggedIn: false,
+            posStatus: 'active',
+            posEnabled: false
+        });
+        await renderModal({ visible: true });
+
+        expect(modal()).toBeNull();
+        expect(contents()).toHaveLength(0);
+    });
+
+    it('is hidden when POS is enabled but its session is not active', async () => {
+        await setSession({
+            loggedIn: false,
+            posStatus: 'inactive',
+            posEnabled: true
+        });
+        await renderModal({ visible: true });
+
+        expect(modal()).toBeNull();
+        expect(contents()).toHaveLength(0);
     });
 });
