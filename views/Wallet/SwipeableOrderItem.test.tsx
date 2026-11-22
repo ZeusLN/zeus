@@ -75,7 +75,8 @@ const satsLine = {
 const fiatLine = {
     name: 'Coffee',
     quantity: 1,
-    base_price_money: { amount: 5, sats: 0 }
+    // $0.50, below 1 on purpose: the check is `amount > 0`
+    base_price_money: { amount: 0.5, sats: 0 }
 };
 
 const order: any = {
@@ -219,6 +220,12 @@ describe('SwipeableOrderItem', () => {
             ).toHaveBeenCalledWith('Order', { order: item });
         }
     );
+
+    it('opens a paid order with fiat on before any rates load', async () => {
+        expect(
+            await tapOrder(undefined, { item: paidOrder })
+        ).toHaveBeenCalledWith('Order', { order: paidOrder });
+    });
 
     it('opens an order with a fiat-priced line with fiat off once rates have loaded', async () => {
         expect(

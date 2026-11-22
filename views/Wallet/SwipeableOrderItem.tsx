@@ -125,10 +125,10 @@ const SwipeableOrderItem = React.forwardRef<
                     onPress={() => {
                         // Wait for the first rates. Rates that loaded
                         // without a usable one for this currency still
-                        // open the order. With fiat off nothing loads
-                        // rates, so only an unpaid order priced in fiat
-                        // still waits for them: a Square order, or a
-                        // standalone order with a fiat-priced line.
+                        // open the order. With fiat off the wallet does
+                        // not load rates, so only an unpaid order priced
+                        // in fiat still waits for them: a Square order,
+                        // or a standalone order with a fiat-priced line.
                         // Order needs a rate for their sats. A paid
                         // order has its rate in order.payment.
                         const { fiatEnabled, pos } =
