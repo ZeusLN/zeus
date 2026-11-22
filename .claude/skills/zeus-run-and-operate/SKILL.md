@@ -157,7 +157,7 @@ Per `docs/ReproducibleBuilds.md`:
 
 ### CI workflows are manual-only
 
-`.github/workflows/build-android.yml` (runs `bash ./build.sh --no-tty` on ubuntu, Node 24.x, uploads the 4 APKs as artifacts, 5-day retention) and `.github/workflows/dependency-scan.yml` (GuardDog + npm-scan) are both `workflow_dispatch:`-only; they take a branch input and never run on push/PR. PR CI is the 4 verify checks (Test, Lint, Prettier, Typescript Check; see zeus-validation-and-qa). Two more workflows run automatically but check nothing: `coverage-comment.yml` runs on `workflow_run` after a successful `Test` run for a pull request and posts or updates the coverage comment on the PR, and `telegram.yml` posts master pushes, issue events and published releases to the project Telegram group.
+`.github/workflows/build-android.yml` (runs `bash ./build.sh --no-tty` on ubuntu, Node 24.x, uploads the 4 APKs as artifacts, 5-day retention) is `workflow_dispatch:`-only; it builds the branch named in its `branch` input and never runs on push/PR. There is no dependency scan workflow. PR CI is the 4 verify checks (Test, Lint, Prettier, Typescript Check; see zeus-validation-and-qa). Two more workflows run automatically but check nothing: `coverage-comment.yml` runs on `workflow_run` after a successful `Test` run for a pull request and posts or updates the coverage comment on the PR, and `telegram.yml` posts master pushes, issue events and published releases to the project Telegram group.
 
 ### PGP signing
 
@@ -200,7 +200,7 @@ Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha, versionCode
 | Unsigned release + per-ABI versionCode map + reproducible Zip settings | `grep -n 'signingConfig\|versionCodeOverride\|versionCodes\|reproducibleFileOrder' android/app/build.gradle` |
 | Current versionCode/versionName | `grep -n 'versionCode \|versionName' android/app/build.gradle` |
 | 4 APK names/paths | `grep 'path:' .github/workflows/build-android.yml` |
-| Workflows dispatch-only | `grep -A2 '^on:' .github/workflows/build-android.yml .github/workflows/dependency-scan.yml` |
+| Workflows dispatch-only | `grep -A2 '^on:' .github/workflows/build-android.yml` |
 | All workflows and their triggers | `grep -n -A3 '^on:' .github/workflows/*.yml` |
 | 7 implementations + labels | `grep -n -A14 'INTERFACE_KEYS' stores/SettingsStore.ts \| head -25` |
 | Embedded networks + mutinynet filter | `grep -n 'EMBEDDED_NODE_NETWORK_KEYS\|mutinynet' stores/SettingsStore.ts views/Settings/WalletConfiguration.tsx utils/LdkNodeUtils.ts` |

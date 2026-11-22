@@ -156,7 +156,7 @@ Verified in `.github/workflows/` at `3dc9f83e6`: exactly four workflows trigger 
 
 All four = `yarn verify` locally (`package.json`: `concurrently "yarn test" "yarn prettier" "yarn tsc" "yarn lint"`). Run `yarn verify` before every push. Details of each job's traps (themeColor style-sheet lint rule, Prettier pinned at 2.4.1, jest transform whitelist): **zeus-validation-and-qa**.
 
-What PR CI does **NOT** do: no mobile build, no dependency scan. `build-android.yml` and `dependency-scan.yml` are `workflow_dispatch`-only (manually triggered); `telegram.yml` is a push/issues/release notifier, not a check. This is exactly why Rule 4 (manual device testing) exists.
+What PR CI does **NOT** do: no mobile build, no dependency scan. `build-android.yml` is `workflow_dispatch`-only (manually triggered) and there is no dependency scan workflow; `telegram.yml` is a push/issues/release notifier, not a check. This is exactly why Rule 4 (manual device testing) exists.
 
 CI runs on ubuntu-latest, Node 24.x, `yarn install --frozen-lockfile`.
 
@@ -203,7 +203,7 @@ Re-verify volatile facts:
 | PR CI = exactly 4 workflows | `grep -l 'pull_request:' .github/workflows/*.yml` (expect lint, prettier, test, tsc) |
 | Branch protection on `master` | `gh api repos/ZeusLN/zeus/branches/master/protection` |
 | Dependabot policy | `cat .github/dependabot.yml` |
-| build/scan not in PR CI | `grep -A2 '^on:' .github/workflows/build-android.yml .github/workflows/dependency-scan.yml` (expect `workflow_dispatch`) |
+| build/scan not in PR CI | `grep -A2 '^on:' .github/workflows/build-android.yml` (expect `workflow_dispatch`) |
 | `yarn verify` composition | `grep '"verify"' package.json` |
 | CI Node version | `grep node-version .github/workflows/test.yml` (24.x as of 2026-07-06) |
 | PR template sections | `cat .github/PULL_REQUEST_TEMPLATE.md` |
