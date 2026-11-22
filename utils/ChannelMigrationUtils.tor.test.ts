@@ -15,7 +15,16 @@ jest.mock('react-native-fs', () => ({
     exists: jest.fn().mockResolvedValue(true),
     mkdir: jest.fn().mockResolvedValue(undefined),
     unlink: jest.fn().mockResolvedValue(undefined),
-    readDir: jest.fn().mockResolvedValue([])
+    // What the graph directory holds after the backup is unzipped into it.
+    // The restore refuses to finish without a channel.db that has data.
+    readDir: jest.fn().mockResolvedValue([
+        {
+            name: 'channel.db',
+            path: '/graph/mainnet/channel.db',
+            size: 262144,
+            isFile: () => true
+        }
+    ])
 }));
 jest.mock('react-native-blob-util', () => ({
     __esModule: true,
