@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import { SATS_PER_BTC } from './UnitsUtils';
+import { SATS_PER_BTC } from './BitcoinConstants';
 import { LineItem } from '../models/Order';
 
 /**

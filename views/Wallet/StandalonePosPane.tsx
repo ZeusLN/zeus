@@ -30,7 +30,7 @@ import InventoryStore from '../../stores/InventoryStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
-import { SATS_PER_BTC } from '../../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../../utils/BitcoinConstants';
 import { getFormattedAmount, getAmountFromSats } from '../../utils/AmountUtils';
 
 interface StandalonePosPaneProps {

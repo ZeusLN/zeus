@@ -13,7 +13,7 @@ import BigNumber from 'bignumber.js';
 
 import Button from '../../components/Button';
 import OrderItem from './OrderItem';
-import { SATS_PER_BTC } from '../../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../../utils/BitcoinConstants';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Order from '../../models/Order';

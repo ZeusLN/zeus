@@ -8,7 +8,7 @@ import { nodeInfoStore } from '../stores/Stores';
 
 import Base64Utils from '../utils/Base64Utils';
 import NostrUtils from '../utils/NostrUtils';
-import { MAX_SATS, SATS_PER_BTC } from '../utils/UnitsUtils';
+import { MAX_SATS, SATS_PER_BTC } from '../utils/BitcoinConstants';
 
 import { walletrpc } from '../proto/lightning';
 

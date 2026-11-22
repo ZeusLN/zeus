@@ -37,7 +37,7 @@ import { isPlausibleSatPerVbyte } from '../../utils/FeeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { SATS_PER_BTC } from '../../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../../utils/BitcoinConstants';
 import AddressUtils from '../../utils/AddressUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import {
