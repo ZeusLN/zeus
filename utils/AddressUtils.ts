@@ -8,7 +8,7 @@ import { nodeInfoStore } from '../stores/Stores';
 
 import Base64Utils from '../utils/Base64Utils';
 import NostrUtils from '../utils/NostrUtils';
-import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import { MAX_SATS, SATS_PER_BTC } from '../utils/BitcoinConstants';
 
 import { walletrpc } from '../proto/lightning';
 
@@ -90,20 +90,39 @@ export const CUSTODIAL_LNDHUBS = [
     'https://ln.getalby.com'
 ];
 
+// BIP21 amounts are plain decimals. BigNumber also reads 0x10, 1e3, +1
+// and padded values, so the shape is checked first.
+const bip21Amount = /^(\d+\.?\d*|\.\d+)$/;
+
 const bitcoinQrParser = (input: string, prefix: string) => {
     let satAmount, lightning, offer, clinkNoffer;
-    const btcAddressAndParams = input.split(prefix)[1];
-    const [btcAddress, params] = btcAddressAndParams.split('?');
+    // The query is everything after the first '?'. Splitting on the prefix
+    // or on every '?' would drop params that follow a second one.
+    const btcAddressAndParams = input.slice(prefix.length);
+    const queryStart = btcAddressAndParams.indexOf('?');
+    const btcAddress =
+        queryStart === -1
+            ? btcAddressAndParams
+            : btcAddressAndParams.slice(0, queryStart);
+    const params =
+        queryStart === -1 ? '' : btcAddressAndParams.slice(queryStart + 1);
 
     const result: any = {};
+    // Later duplicates overwrite earlier ones in `result`, so count the
+    // amount params separately: a URI that repeats one (in either case)
+    // has no single amount to show the user.
+    let amountParams = 0;
     params &&
         params.split('&').forEach(function (part) {
             const item = part.split('=');
+            if (decodeURIComponent(item[0]).toLowerCase() === 'amount') {
+                amountParams++;
+            }
             result[item[0]] = decodeURIComponent(item[1]);
         });
 
     const value = btcAddress;
-    if (result.amount || result.AMOUNT) {
+    if (amountParams === 1 && (result.amount || result.AMOUNT)) {
         let amount = result.amount || result.AMOUNT;
         // BIP21 amounts must be plain decimals, but some wallets (including
         // old ZEUS versions) emit comma group separators (e.g. 1,234.56789).
@@ -114,9 +133,13 @@ const bitcoinQrParser = (input: string, prefix: string) => {
             amount = amount.replace(/,/g, '');
         }
         const parsedAmount = new BigNumber(amount).multipliedBy(SATS_PER_BTC);
-        // Ignore amounts that are not a whole, non-negative number of sats
-        // (more than 8 decimals, a sign, Infinity)
-        if (parsedAmount.isInteger() && !parsedAmount.isNegative()) {
+        // Ignore amounts that are not a plain decimal, not a whole number
+        // of sats (more than 8 decimals) or above the 21,000,000 BTC supply
+        if (
+            bip21Amount.test(amount) &&
+            parsedAmount.isInteger() &&
+            parsedAmount.lte(MAX_SATS)
+        ) {
             satAmount = parsedAmount.toFixed();
         }
     }

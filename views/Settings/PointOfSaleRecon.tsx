@@ -25,7 +25,7 @@ import PosStore from '../../stores/PosStore';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { SATS_PER_BTC } from '../../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../../utils/BitcoinConstants';
 
 import { ReconHeader } from './PointOfSaleReconHeader';
 

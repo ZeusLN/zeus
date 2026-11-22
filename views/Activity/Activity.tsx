@@ -17,11 +17,8 @@ import ActivityToCsv from './ActivityToCsv';
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import {
-    SATS_PER_BTC,
-    numberWithCommas,
-    numberWithDecimals
-} from '../../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../../utils/BitcoinConstants';
+import { numberWithCommas, numberWithDecimals } from '../../utils/UnitsUtils';
 
 import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';

@@ -23,7 +23,6 @@ jest.mock('../../utils/NavigationUtils', () => ({
     reAuthNavigation: jest.fn()
 }));
 jest.mock('../../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
-jest.mock('../../utils/UnitsUtils', () => ({ SATS_PER_BTC: 100000000 }));
 // the real SwapUtils touches the filesystem and save dialog for the rescue
 // key export; neither is exercised here
 jest.mock('react-native-fs', () => ({}));

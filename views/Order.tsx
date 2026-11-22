@@ -23,7 +23,7 @@ import TextInput from '../components/TextInput';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../utils/BitcoinConstants';
 import { getFormattedAmount } from '../utils/AmountUtils';
 
 import BackendUtils from '../utils/BackendUtils';

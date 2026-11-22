@@ -8,11 +8,8 @@ import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { getRawAmountFromSats, getSatAmount } from '../utils/AmountUtils';
-import {
-    SATS_PER_BTC,
-    formatBitcoinWithSpaces,
-    numberWithCommas
-} from '../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../utils/BitcoinConstants';
+import { formatBitcoinWithSpaces, numberWithCommas } from '../utils/UnitsUtils';
 
 import { fiatStore, settingsStore, unitsStore } from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
