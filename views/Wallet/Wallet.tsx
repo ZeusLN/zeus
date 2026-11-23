@@ -350,6 +350,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             'change',
             this.handleAppStateChange
         );
+        // A Wallet mounted while the app is in the background never gets
+        // that change
+        this.refreshRunner.trackAppState(AppState.currentState);
 
         const {
             SettingsStore: { updateSettings }
@@ -378,6 +381,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { SettingsStore, NostrWalletConnectStore } = this.props;
         const { settings } = SettingsStore;
         const { loginBackground } = settings;
+        // Tracked here for every change: the 'background' branch below only
+        // runs with a lock configured
+        const resumedFromBackground =
+            this.refreshRunner.trackAppState(nextAppState);
         if (
             nextAppState === 'background' &&
             SettingsStore.loginMethodConfigured() &&
@@ -399,7 +406,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (BackendUtils.supportsNostrWalletConnectService()) {
                     NostrWalletConnectStore.initializeService();
                 }
-                if (this.refreshRunner.running) {
+                if (!resumedFromBackground) {
+                    // An iOS system sheet (Face ID, Control Center) went
+                    // 'inactive' and back without the app leaving the
+                    // foreground. After a Face ID unlock the focus refresh
+                    // has only just run (#4791). NWC is still initialized
+                    // above, because 'inactive' reset it.
+                    console.log(
+                        '[Wallet] handleAppStateChange(active): skipping, the app was not in the background'
+                    );
+                } else if (this.refreshRunner.running) {
                     console.log(
                         '[Wallet] handleAppStateChange(active): skipping — getSettingsAndNavigate already in flight'
                     );

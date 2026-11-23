@@ -1,3 +1,5 @@
+import type { AppStateStatus } from 'react-native';
+
 interface RefreshFlagStore {
     triggerSettingsRefresh: boolean;
 }
@@ -9,6 +11,8 @@ interface RefreshFlagStore {
 // right away instead of on the next focus event (#4751).
 export default class WalletRefreshRunner {
     private inFlight = false;
+    // Whether the app has been in the background since it was last active
+    private backgrounded = false;
 
     constructor(
         private settingsStore: RefreshFlagStore,
@@ -21,6 +25,22 @@ export default class WalletRefreshRunner {
     public get running(): boolean {
         return this.inFlight;
     }
+
+    // Takes every AppState change and returns true when the app is active
+    // again after being in the background. iOS also reports 'active' after
+    // 'inactive' alone, when a system sheet (Face ID, Control Center,
+    // Notification Center) covered the app without it leaving the
+    // foreground. A refresh there repeats one that ran moments ago (#4791).
+    public trackAppState = (appState: AppStateStatus): boolean => {
+        if (appState === 'background') {
+            this.backgrounded = true;
+            return false;
+        }
+        if (appState !== 'active') return false;
+        const resumed = this.backgrounded;
+        this.backgrounded = false;
+        return resumed;
+    };
 
     // Starts the refresh unless one is already in flight. The returned
     // promise settles once the refresh and any follow-up are done.
