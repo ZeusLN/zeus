@@ -1821,6 +1821,7 @@
     "utils.handleAnything.nostrProfileError": "Errore durante il recupero del profilo Nostr",
     "utils.handleAnything.addressError": "Errore durante il recupero dell'indirizzo",
     "utils.handleAnything.invalidNoffer": "Impossibile decodificare CLINK noffer",
+    "stores.ChannelsStore.batchNeedsNativeSegWit": "Opening several channels at once needs UTXOs from SegWit (P2WKH) or Taproot (P2TR) addresses. At least one UTXO funding this batch is Nested SegWit (NP2WKH) or legacy, so ZEUS stopped before spending anything. Select SegWit or Taproot UTXOs, or open the channels one at a time.",
     "stores.ChannelsStore.openOutcomeUnknown": "Il tuo nodo non ha risposto in tempo, pertanto ZEUS non è in grado di stabilire se questo canale sia stato aperto. Controlla i tuoi canali in sospeso prima di aprirne un altro.",
     "stores.ChannelsStore.openStreamTimeout": "Il tuo nodo non ha avviato il finanziamento di questo canale in tempo, pertanto ZEUS ha interrotto l'apertura prima di spendere alcunché. Puoi riprovare.",
     "stores.ChannelBackupStore.invalidBackup": "Il backup ricevuto dal server non è valido",
