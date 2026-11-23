@@ -7,9 +7,11 @@ jest.mock('./ChannelsStore', () => ({
     default: class ChannelsStore {}
 }));
 
+const mockLspConfig = { flowHost: 'https://flow.test' };
 jest.mock('./SettingsStore', () => ({
     __esModule: true,
-    default: class SettingsStore {}
+    default: class SettingsStore {},
+    getLspConfigForNetwork: jest.fn(() => mockLspConfig)
 }));
 
 jest.mock('../utils/BackendUtils', () => ({
@@ -18,7 +20,8 @@ jest.mock('../utils/BackendUtils', () => ({
         getMyNodeInfo: jest.fn(),
         getNetworkInfo: jest.fn(),
         supportsOffers: jest.fn(() => false),
-        supportsListingOffers: jest.fn(() => false)
+        supportsListingOffers: jest.fn(() => false),
+        isLocalWallet: jest.fn(() => false)
     }
 }));
 
@@ -159,5 +162,87 @@ describe('NodeInfoStore.getNetworkInfo', () => {
         expect(store.error).toBe(true);
         expect(store.loading).toBe(false);
         expect(store.networkInfo).toEqual({});
+    });
+});
+
+describe('NodeInfoStore.flowLspNotConfigured', () => {
+    const isLocalWallet = (BackendUtils as any).isLocalWallet as jest.Mock;
+    const makeStore = (settingsStore: any, features: any = {}) => {
+        const store = new NodeInfoStore({} as any, settingsStore);
+        store.nodeInfo = { features, isRegTest: true };
+        return store;
+    };
+    const flowReady = { '47': {}, '51': {} };
+
+    beforeEach(() => {
+        mockLspConfig.flowHost = 'https://flow.test';
+        isLocalWallet.mockReturnValue(false);
+    });
+
+    it('reads the Flow host for the wallet settings and the node network', () => {
+        const settingsStore = { implementation: 'lnd', settings: { a: 1 } };
+        const store = makeStore(settingsStore);
+
+        store.flowLspNotConfigured();
+
+        expect(
+            jest.requireMock('./SettingsStore').getLspConfigForNetwork
+        ).toHaveBeenLastCalledWith(settingsStore.settings, store.nodeInfo);
+    });
+
+    it('is configured for an on-device wallet with a Flow host', () => {
+        isLocalWallet.mockReturnValue(true);
+        const store = makeStore({ implementation: 'ldk-node', settings: {} });
+
+        expect(store.flowLspNotConfigured()).toMatchObject({
+            flowLspNotConfigured: false,
+            nodeNotConfigured: false
+        });
+    });
+
+    it('is not configured for an on-device wallet on a network with no Flow host (#5681)', () => {
+        mockLspConfig.flowHost = '';
+        isLocalWallet.mockReturnValue(true);
+        const store = makeStore({ implementation: 'ldk-node', settings: {} });
+
+        // the node itself is ready; only the host is missing
+        expect(store.flowLspNotConfigured()).toMatchObject({
+            flowLspNotConfigured: true,
+            nodeNotConfigured: false
+        });
+    });
+
+    it('is not configured for a Flow-ready remote LND on a network with no Flow host (#5681)', () => {
+        mockLspConfig.flowHost = '';
+        const store = makeStore(
+            { implementation: 'lnd', certVerification: true, settings: {} },
+            flowReady
+        );
+
+        expect(store.flowLspNotConfigured()).toMatchObject({
+            flowLspNotConfigured: true,
+            nodeNotConfigured: false
+        });
+    });
+
+    it('is configured for a Flow-ready remote LND with a Flow host', () => {
+        const store = makeStore(
+            { implementation: 'lnd', certVerification: true, settings: {} },
+            flowReady
+        );
+
+        expect(store.flowLspNotConfigured().flowLspNotConfigured).toBe(false);
+    });
+
+    it('is not configured for a remote LND without zero-conf, whatever the host', () => {
+        const store = makeStore(
+            { implementation: 'lnd', certVerification: true, settings: {} },
+            { '47': {} }
+        );
+
+        expect(store.flowLspNotConfigured()).toMatchObject({
+            flowLspNotConfigured: true,
+            nodeNotConfigured: true
+        });
     });
 });

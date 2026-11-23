@@ -387,6 +387,8 @@ export default class LSPStore {
     // LSPS1 picks native, then REST, then custom messages.
     public isOlympus = (service: LSPService = LSPService.LSPS1) => {
         const config = this.getLspConfig();
+        // A network without an LSP has no defaults to match
+        if (!config.defaultPubkey) return false;
         const usesDefaultPubkey = this.getLSPSPubkey() === config.defaultPubkey;
 
         if (service === LSPService.LSPS7) {
@@ -573,6 +575,8 @@ export default class LSPStore {
         const { implementation, settings, enableTor } = this.settingsStore;
         if (
             settings.enableLSP &&
+            // empty on a network with no LSP (regtest, plain signet)
+            this.getFlowHost() &&
             (implementation !== 'lnd' ||
                 (!enableTor &&
                     !this.nodeInfoStore.flowLspNotConfigured()

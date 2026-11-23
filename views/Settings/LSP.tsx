@@ -73,8 +73,13 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
         const isMutinynet = nodeInfo?.isMutinynet;
         const isTestNet = nodeInfo?.isTestNet;
 
-        const { flowLspNotConfigured, zeroConfConfig, scidAlias, zeroConf } =
-            NodeInfoStore.flowLspNotConfigured();
+        // The checklist is about the node. A missing host is set below
+        const {
+            nodeNotConfigured: flowLspNotConfigured,
+            zeroConfConfig,
+            scidAlias,
+            zeroConf
+        } = NodeInfoStore.flowLspNotConfigured();
 
         const showReset: boolean =
             !enableLSP ||

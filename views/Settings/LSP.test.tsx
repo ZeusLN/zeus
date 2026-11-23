@@ -42,14 +42,18 @@ import * as React from 'react';
 import { act, render, screen } from '@testing-library/react-native';
 import LSP from './LSP';
 
-const mount = async (settings: any, nodeInfo: any = {}) => {
+const mount = async (
+    settings: any,
+    nodeInfo: any = {},
+    flowState: any = { flowLspNotConfigured: false }
+) => {
     const SettingsStore = {
         settings: { enableLSP: true, nodes: [], selectedNode: 0, ...settings },
         updateSettings: jest.fn().mockResolvedValue({})
     };
     const NodeInfoStore = {
         nodeInfo,
-        flowLspNotConfigured: () => ({ flowLspNotConfigured: false })
+        flowLspNotConfigured: () => flowState
     };
     await render(
         <LSP
@@ -157,5 +161,32 @@ describe('LSP settings discount code', () => {
         expect(SettingsStore.updateSettings).toHaveBeenLastCalledWith({
             lspAccessKey: 'key-for-lsp-b'
         });
+    });
+});
+
+describe('LSP settings on a network with no Flow host (#5681)', () => {
+    it('still shows the host field, so one can be entered', async () => {
+        const { SettingsStore } = await mount(
+            { lspMainnet: '' },
+            { isRegTest: true },
+            // the node is ready, only the host is missing
+            { flowLspNotConfigured: true, nodeNotConfigured: false }
+        );
+
+        expect(fields()).toHaveLength(2);
+        await typeHost('http://localhost:8080');
+        expect(SettingsStore.updateSettings).toHaveBeenCalledWith({
+            lspMainnet: 'http://localhost:8080'
+        });
+    });
+
+    it('shows the node checklist instead when the node is not set up for Flow', async () => {
+        await mount(
+            {},
+            {},
+            { flowLspNotConfigured: true, nodeNotConfigured: true }
+        );
+
+        expect(fields()).toHaveLength(0);
     });
 });

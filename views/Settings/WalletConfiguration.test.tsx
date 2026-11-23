@@ -18,7 +18,8 @@ jest.mock('../../stores/SettingsStore', () => ({
     BLOCK_EXPLORER_KEYS: [],
     DEFAULT_MEMPOOL_INSTANCE: 'https://mempool.space',
     MEMPOOL_INSTANCE_KEYS: [],
-    getLspConfigForNetwork: jest.fn(() => ({}))
+    getLspConfigForNetwork: jest.fn(() => ({})),
+    getTrustedZeroConfPeers: jest.fn(() => [])
 }));
 jest.mock('../../utils/BackendUtils', () => ({
     disconnect: jest.fn(() => Promise.resolve())
@@ -1694,6 +1695,42 @@ describe('WalletConfiguration', () => {
             expect(createLdkNodeWallet).toHaveBeenCalledWith(
                 expect.objectContaining({
                     scorerUrl: 'https://scorer.default'
+                })
+            );
+        });
+
+        it("trusts the 0-conf peers of the wallet's network", async () => {
+            const lspConfig = { lsps1Pubkey: '', lsps1Host: '' };
+            const settings = { privacy: {} };
+            const SettingsStoreModule = jest.requireMock(
+                '../../stores/SettingsStore'
+            );
+            SettingsStoreModule.getLspConfigForNetwork.mockReturnValueOnce(
+                lspConfig
+            );
+            SettingsStoreModule.getTrustedZeroConfPeers.mockReturnValueOnce([
+                'peer-for-this-network'
+            ]);
+            const view: any = new WalletConfiguration({
+                navigation: {},
+                route: { params: { newEntry: true } },
+                SettingsStore: { settings }
+            } as any);
+            view.setState = (update: any) => Object.assign(view.state, update);
+            view.saveLdkNodeWalletConfiguration = jest.fn();
+
+            await view.createLdkNodeNewWallet('regtest');
+
+            expect(
+                SettingsStoreModule.getLspConfigForNetwork
+            ).toHaveBeenLastCalledWith(settings, 'regtest');
+            expect(
+                SettingsStoreModule.getTrustedZeroConfPeers
+            ).toHaveBeenLastCalledWith(lspConfig);
+            expect(createLdkNodeWallet).toHaveBeenLastCalledWith(
+                expect.objectContaining({
+                    lsps1Config: undefined,
+                    trustedPeers0conf: ['peer-for-this-network']
                 })
             );
         });

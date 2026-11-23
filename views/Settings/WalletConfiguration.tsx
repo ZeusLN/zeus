@@ -68,7 +68,8 @@ import SettingsStore, {
     Settings,
     Node,
     Implementations,
-    getLspConfigForNetwork
+    getLspConfigForNetwork,
+    getTrustedZeroConfPeers
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
@@ -1497,13 +1498,7 @@ export default class WalletConfiguration extends React.Component<
                       }
                     : undefined;
 
-            // Always include Flow LSP pubkey as trusted 0-conf peer
-            const flowLspPubkey = lspConfig.defaultPubkey;
-
-            const trustedPeers = [flowLspPubkey];
-            if (lsps1Config?.nodeId && lsps1Config.nodeId !== flowLspPubkey) {
-                trustedPeers.push(lsps1Config.nodeId);
-            }
+            const trustedPeers = getTrustedZeroConfPeers(lspConfig);
 
             const response = await createLdkNodeWallet({
                 nodeDir: ldkNodeDir,

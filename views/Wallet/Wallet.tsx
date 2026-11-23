@@ -114,7 +114,8 @@ import SettingsStore, {
     PosEnabled,
     INTERFACE_KEYS,
     Settings,
-    getLspConfigForNetwork
+    getLspConfigForNetwork,
+    getTrustedZeroConfPeers
 } from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -764,18 +765,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                           }
                         : undefined;
 
-                // Always include Flow LSP pubkey as trusted 0-conf peer
-                const flowLspPubkey = lspConfig.defaultPubkey;
-
-                // Include both the default Flow LSP and user-configured
-                // LSP as trusted 0-conf peers (dedup if they're the same)
-                const trustedPeers = [flowLspPubkey];
-                if (
-                    lsps1Config?.nodeId &&
-                    lsps1Config.nodeId !== flowLspPubkey
-                ) {
-                    trustedPeers.push(lsps1Config.nodeId);
-                }
+                const trustedPeers = getTrustedZeroConfPeers(lspConfig);
 
                 console.log('[LDK startup] calling startLdkNodeWallet');
                 let ldkResult;

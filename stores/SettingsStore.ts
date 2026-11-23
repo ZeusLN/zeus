@@ -1391,14 +1391,30 @@ export const DEFAULT_LSPS1_PUBKEY_MUTINYNET =
     '032ae843e4d7d177f151d021ac8044b0636ec72b1ce3ffcde5c04748db2517ab03';
 export const DEFAULT_LSPS1_HOST_MUTINYNET = '45.79.201.241:9735';
 
+export type LspNetwork =
+    | string
+    | {
+          isMutinynet: boolean;
+          isTestNet: boolean;
+          isRegTest?: boolean;
+          isSigNet?: boolean;
+      };
+
 /**
  * Select LSP config values for a given network.
- * Accepts either a network string ('mainnet'|'testnet'|'signet'|'mutinynet')
- * or NodeInfo-style flags ({ isMutinynet, isTestNet }).
+ * Accepts either a network string
+ * ('mainnet'|'testnet'|'signet'|'regtest'|'mutinynet') or NodeInfo-style
+ * flags ({ isMutinynet, isTestNet, isRegTest, isSigNet }).
+ *
+ * ZEUS runs no LSP on regtest or on a signet other than Mutinynet, so those
+ * networks have no defaults: every value is empty unless the user changed
+ * the mainnet setting, which these networks share, from its default (for
+ * example to a local test LSP). Callers treat an empty value as "no LSP",
+ * so a regtest or signet node is not sent to the mainnet LSP (#5681).
  */
 export function getLspConfigForNetwork(
     settings: Settings,
-    network: string | { isMutinynet: boolean; isTestNet: boolean }
+    network: LspNetwork
 ): {
     flowHost: string;
     lsps1Rest: string;
@@ -1414,9 +1430,12 @@ export function getLspConfigForNetwork(
             ? network === 'mutinynet'
             : network.isMutinynet;
     const isTestnet =
+        typeof network === 'string' ? network === 'testnet' : network.isTestNet;
+    // LDK Node sets isSigNet on Mutinynet too, which is handled first below
+    const hasNoLsp =
         typeof network === 'string'
-            ? network === 'testnet' || network === 'signet'
-            : network.isTestNet;
+            ? network === 'regtest' || network === 'signet'
+            : !!network.isRegTest || !!network.isSigNet;
 
     if (isMutinynet) {
         return {
@@ -1446,6 +1465,29 @@ export function getLspConfigForNetwork(
             defaultLsps1Host: DEFAULT_LSPS1_HOST_TESTNET
         };
     }
+    if (hasNoLsp) {
+        const custom = (value: string, mainnetDefault: string) =>
+            value && value !== mainnetDefault ? value : '';
+        return {
+            flowHost: custom(settings.lspMainnet, DEFAULT_LSP_MAINNET),
+            lsps1Rest: custom(
+                settings.lsps1RestMainnet,
+                DEFAULT_LSPS1_REST_MAINNET
+            ),
+            lsps1Pubkey: custom(
+                settings.lsps1PubkeyMainnet,
+                DEFAULT_LSPS1_PUBKEY_MAINNET
+            ),
+            lsps1Host: custom(
+                settings.lsps1HostMainnet,
+                DEFAULT_LSPS1_HOST_MAINNET
+            ),
+            defaultPubkey: '',
+            defaultFlowHost: '',
+            defaultLsps1Rest: '',
+            defaultLsps1Host: ''
+        };
+    }
     return {
         flowHost: settings.lspMainnet || DEFAULT_LSP_MAINNET,
         lsps1Rest: settings.lsps1RestMainnet || DEFAULT_LSPS1_REST_MAINNET,
@@ -1460,6 +1502,27 @@ export function getLspConfigForNetwork(
 }
 
 /**
+ * The peers an LDK Node wallet accepts 0-conf channels from: the network's
+ * Flow LSP, and the configured LSPS1 peer when it is another node. Empty on
+ * a network with no LSP and no configured peer.
+ */
+export function getTrustedZeroConfPeers(config: {
+    defaultPubkey: string;
+    lsps1Pubkey: string;
+    lsps1Host: string;
+}): string[] {
+    const peers = config.defaultPubkey ? [config.defaultPubkey] : [];
+    if (
+        config.lsps1Pubkey &&
+        config.lsps1Host &&
+        config.lsps1Pubkey !== config.defaultPubkey
+    ) {
+        peers.push(config.lsps1Pubkey);
+    }
+    return peers;
+}
+
+/**
  * Whether the configured LSPS1 peer is still ZEUS's own Olympus node, for
  * screens that reach the LSP over the peer transport rather than REST.
  * The pubkey is the whole test: the handshake proves the remote holds that
@@ -1468,10 +1531,13 @@ export function getLspConfigForNetwork(
  */
 export function isOlympusPeer(
     settings: Settings,
-    network: string | { isMutinynet: boolean; isTestNet: boolean }
+    network: LspNetwork
 ): boolean {
     const config = getLspConfigForNetwork(settings, network);
-    return config.lsps1Pubkey === config.defaultPubkey;
+    // A network without an LSP has no default to match
+    return (
+        !!config.defaultPubkey && config.lsps1Pubkey === config.defaultPubkey
+    );
 }
 
 // Swaps
