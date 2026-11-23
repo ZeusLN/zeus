@@ -3161,7 +3161,7 @@ export default class NostrWalletConnectStore {
             request,
             {
                 paymentRequest: invoice?.getPaymentRequest || paymentRequest,
-                paymentHash: rHash || paymentHash,
+                paymentHash,
                 descriptionHash,
                 expiryTime
             }
