@@ -838,6 +838,30 @@ describe('handleAnything', () => {
             }
         );
 
+        // The resolve only checks a callback that is present, so params
+        // without one reach handleAnything's own check
+        it.each([
+            ['withdrawRequest', undefined],
+            ['withdrawRequest', ''],
+            ['channelRequest', undefined]
+        ])('rejects a %s whose callback is %p', async (tag, callback) => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlw://example.com/lnurl'
+            });
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag,
+                callback,
+                k1: 'k1',
+                uri: 'node@example.com:9735',
+                minWithdrawable: 1000,
+                maxWithdrawable: 100000
+            });
+
+            await expect(
+                handleAnything('lnurlw://example.com/lnurl')
+            ).rejects.toThrow('Could not parse lnurl params');
+        });
+
         it('should return true if from clipboard', async () => {
             const data =
                 'LIGHTNING:lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13';
