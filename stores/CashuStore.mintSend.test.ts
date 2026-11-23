@@ -791,6 +791,91 @@ describe('CashuStore.checkInvoicePaid', () => {
             expect(result).toMatchObject({ isPaid: true, amtSat: 2100 });
         });
 
+        // CDK's restore releases proofs this wallet has reserved (#5567)
+        describe('issued external quote on a mint with reserved proofs', () => {
+            const issued = () => {
+                cdk.checkExternalMintQuote.mockResolvedValue({
+                    state: 'ISSUED',
+                    amount: 2100
+                });
+                cdk.restore.mockResolvedValue(1500);
+            };
+            const sent = (mint: string, spent = false) =>
+                ({ mint, spent, encodedToken: `token-${mint}` } as any);
+            const storeOnA = () => {
+                const store = newStore();
+                // runs after a quote is reported paid
+                jest.spyOn(store, 'checkAndSweepMints').mockResolvedValue(
+                    undefined
+                );
+                return store;
+            };
+
+            it('does not restore while a sent token is unclaimed, and leaves the quote for the next check', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(A)];
+                issued();
+
+                const result = await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).not.toHaveBeenCalled();
+                expect(result).toMatchObject({ isPaid: false });
+            });
+
+            it('does not restore while a melt on the mint is unsettled', async () => {
+                const store = storeOnA();
+                store.pendingMelts = [{ mintUrl: A, quote: 'melt-1' } as any];
+                issued();
+
+                const result = await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).not.toHaveBeenCalled();
+                expect(result).toMatchObject({ isPaid: false });
+            });
+
+            it('compares mint URLs without their trailing slash', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(`${A}/`)];
+                issued();
+
+                await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).not.toHaveBeenCalled();
+            });
+
+            it('restores once the sent token has been claimed', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(A, true)];
+                issued();
+
+                const result = await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).toHaveBeenCalledWith(A);
+                expect(result).toMatchObject({ isPaid: true, amtSat: 1500 });
+            });
+
+            it('restores when the reserved proofs belong to another mint', async () => {
+                const store = storeOnA();
+                store.sentTokens = [sent(B), { spent: false } as any];
+                store.pendingMelts = [{ mintUrl: B, quote: 'melt-1' } as any];
+                issued();
+
+                await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).toHaveBeenCalledWith(A);
+            });
+
+            it('restores before the sent tokens have been loaded', async () => {
+                const store = storeOnA();
+                store.sentTokens = undefined;
+                issued();
+
+                await store.checkInvoicePaid('quote-x', A);
+
+                expect(cdk.restore).toHaveBeenCalledWith(A);
+            });
+        });
+
         it('leaves an unpaid external quote alone', async () => {
             const store = newStore();
             cdk.checkExternalMintQuote.mockResolvedValue({ state: 'UNPAID' });
@@ -823,6 +908,45 @@ describe('CashuStore.checkInvoicePaid', () => {
             'database locked'
         );
         expect(cdk.checkExternalMintQuote).not.toHaveBeenCalled();
+    });
+});
+
+// addMint(url, true) restores a mint to check for existing balances
+describe('CashuStore.restoreCDK', () => {
+    beforeEach(() => {
+        cdk.restore.mockResolvedValue(700);
+        cdk.getBalances.mockResolvedValue({});
+        cdk.getTotalBalance.mockResolvedValue(0);
+    });
+
+    it('restores a mint with no reserved proofs', async () => {
+        const store = newStore();
+
+        await expect(store.restoreCDK(`${A}/`)).resolves.toBe(700);
+
+        expect(cdk.restore).toHaveBeenCalledWith(A);
+    });
+
+    it('skips the restore while a sent token of the mint is unclaimed (#5567)', async () => {
+        const store = newStore();
+        store.sentTokens = [
+            { mint: A, spent: false, encodedToken: 'token' } as any
+        ];
+
+        await expect(store.restoreCDK(A)).resolves.toBe(0);
+
+        expect(cdk.restore).not.toHaveBeenCalled();
+        // balances are still read
+        expect(cdk.getBalances).toHaveBeenCalled();
+    });
+
+    it('skips the restore while a melt on the mint is unsettled (#5567)', async () => {
+        const store = newStore();
+        store.pendingMelts = [{ mintUrl: A, quote: 'melt-1' } as any];
+
+        await expect(store.restoreCDK(A)).resolves.toBe(0);
+
+        expect(cdk.restore).not.toHaveBeenCalled();
     });
 });
 

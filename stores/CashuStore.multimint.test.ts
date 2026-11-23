@@ -706,10 +706,11 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         ]);
         expect(final.totalSelectedBalance).toBe(1100);
 
-        // after reporting success, each mint is restored and balances synced
+        // after reporting success, balances are synced. The mints are not
+        // restored: CashuDevKit.melt stored each part's change, and a
+        // restore would release proofs of unclaimed sent tokens (#5567)
         await flush();
-        expect(cdk.restore).toHaveBeenCalledWith(A);
-        expect(cdk.restore).toHaveBeenCalledWith(B);
+        expect(cdk.restore).not.toHaveBeenCalled();
         expect(cdk.getBalances).toHaveBeenCalled();
         expect(cdk.listTransactions).toHaveBeenCalled();
     });

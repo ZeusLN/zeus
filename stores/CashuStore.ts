@@ -1168,7 +1168,13 @@ export default class CashuStore {
                                 `CDK checkAndMintCDK: External quote ${quoteId} already ISSUED`
                             );
                         }
-                        // Proofs were already minted, try restore to claim them
+                        // Proofs were already minted, try restore to claim
+                        // them. Not while this wallet holds proofs a restore
+                        // would release: the invoice stays unpaid here and
+                        // the next check of pending items tries again
+                        if (this.restoreWouldReleaseProofs(mintUrl)) {
+                            return { isPaid: false, externalQuote };
+                        }
                         try {
                             const restored = await CashuDevKit.restore(mintUrl);
                             if (__DEV__) {
@@ -2134,10 +2140,32 @@ export default class CashuStore {
         const normalizedUrl = this.normalizeMintUrl(mintUrl);
         await this.ensureMintAdded(normalizedUrl);
 
-        const amount = await CashuDevKit.restore(normalizedUrl);
+        const amount = this.restoreWouldReleaseProofs(normalizedUrl)
+            ? 0
+            : await CashuDevKit.restore(normalizedUrl);
         await this.syncCDKBalances();
 
         return amount;
+    };
+
+    /**
+     * Whether this wallet holds proofs of the mint that CDK's restore would
+     * hand back to the balance. Up to CDK 0.18.3, restore writes every proof
+     * it finds with the state the mint reports (cashubtc/cdk#2793): the
+     * proofs of a sent token nobody has claimed yet turn spendable again,
+     * and so do the proofs a melt in flight has reserved. The next send
+     * could then pick them, and whichever spend reaches the mint second
+     * fails.
+     */
+    private restoreWouldReleaseProofs = (mintUrl: string): boolean => {
+        const mint = this.normalizeMintUrl(mintUrl);
+        const sameMint = (url?: string) =>
+            !!url && this.normalizeMintUrl(url) === mint;
+        return (
+            !!this.sentTokens?.some(
+                (token) => !token.spent && sameMint(token.mint)
+            ) || this.pendingMelts.some((melt) => sameMint(melt.mintUrl))
+        );
     };
 
     /**
@@ -6157,17 +6185,16 @@ export default class CashuStore {
             isProcessing: false
         });
 
-        // Restore and sync balances in background after showing success
-        (async () => {
-            for (const { mintUrl } of plannedMeltQuotes) {
-                try {
-                    await CashuDevKit.restore(mintUrl);
-                } catch (e) {
-                    // restore may fail if CDK already handled it
-                }
-            }
-            await this.syncCDKBalances(true);
-        })();
+        // Sync balances in the background after showing success. No restore
+        // here: each part is paid with CashuDevKit.melt, which stores its
+        // own change, and a restore on a mint in use releases reserved
+        // proofs (#5567)
+        this.syncCDKBalances(true).catch((e) =>
+            console.error(
+                'CDK payLnInvoiceFromEcashMultiMint: balance sync failed:',
+                e
+            )
+        );
 
         return segmentPayments[0];
     };
