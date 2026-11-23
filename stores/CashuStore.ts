@@ -19,7 +19,12 @@ import CashuDevKit, {
 } from '../cashu-cdk';
 
 import { LNURLWithdrawParams } from 'js-lnurl';
-import NDK, { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
+import NDK, {
+    NDKEvent,
+    NDKFilter,
+    NDKKind,
+    normalizeRelayUrl
+} from '@nostr-dev-kit/ndk';
 import * as bip39scure from '@scure/bip39';
 import {
     generateSecretKey,
@@ -2316,7 +2321,12 @@ export default class CashuStore {
     private getNdk = async (countUser = false): Promise<NDK> => {
         if (!this.ndk || !this.ndkConnect) {
             const ndk = new NDK({
-                explicitRelayUrls: DEFAULT_NOSTR_RELAYS,
+                // NDK 3.0.3 uses these URLs as given for a filter without
+                // authors, but compares them with its normalized relay URLs
+                // to decide whether enough relays sent EOSE. Unless they
+                // match, such a subscription only emits 'eose' once every
+                // relay answered.
+                explicitRelayUrls: DEFAULT_NOSTR_RELAYS.map(normalizeRelayUrl),
                 enableOutboxModel: false
             });
             this.ndk = ndk;

@@ -30,7 +30,9 @@ jest.mock('../utils/BackendUtils', () => ({
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('@nostr-dev-kit/ndk', () => ({
     __esModule: true,
-    default: jest.fn()
+    default: jest.fn(),
+    normalizeRelayUrl:
+        jest.requireActual('@nostr-dev-kit/ndk').normalizeRelayUrl
 }));
 jest.mock('../utils/NostrUtils', () => ({}));
 jest.mock('../utils/NostrMintBackup', () => ({}));
@@ -1081,10 +1083,10 @@ describe('CashuStore NDK instance', () => {
 
         expect(MockNDK).toHaveBeenCalledWith({
             explicitRelayUrls: [
-                'wss://relay.one',
-                'wss://relay.two',
-                'wss://relay.three',
-                'wss://relay.four'
+                'wss://relay.one/',
+                'wss://relay.two/',
+                'wss://relay.three/',
+                'wss://relay.four/'
             ],
             enableOutboxModel: false
         });
@@ -1150,7 +1152,10 @@ describe('CashuStore NDK instance', () => {
         store.validateNpub = () => 'ab'.repeat(32);
 
         const trusted = store.fetchMintsFromFollows();
-        await jest.advanceTimersByTimeAsync(8000);
+        // still waiting for a first relay just before the 8 s bound
+        await jest.advanceTimersByTimeAsync(7999);
+        expect(store.loadingTrustedMints).toBe(true);
+        await jest.advanceTimersByTimeAsync(1);
         await trusted;
 
         expect(instances[0].fetchEvents).not.toHaveBeenCalled();
@@ -1187,7 +1192,10 @@ describe('CashuStore NDK instance', () => {
         ndk.fetchEvents.mockReturnValueOnce(new Promise(() => {}));
 
         const trusted = store.fetchMintsFromFollows();
-        await jest.advanceTimersByTimeAsync(15000);
+        // still waiting for the fetch just before the 15 s bound
+        await jest.advanceTimersByTimeAsync(14999);
+        expect(store.loadingTrustedMints).toBe(true);
+        await jest.advanceTimersByTimeAsync(1);
         await trusted;
 
         expect(store.loadingTrustedMints).toBe(false);
@@ -1301,6 +1309,28 @@ describe('CashuStore NDK instance', () => {
         expect(store.ndk).toBeUndefined();
         expect(store.ndkUsers.size).toBe(0);
         expect(store.loadingReviews).toBe(false);
+    });
+
+    it('fetchReviewerProfiles keeps an instance another discovery still uses', async () => {
+        let finishFetch!: (events: Set<any>) => void;
+        const store = newStore() as any;
+        store.validateNpub = () => 'ab'.repeat(32);
+        const ndk = await store.getNdk();
+        ndk.fetchEvents.mockReturnValueOnce(
+            new Promise((resolve) => (finishFetch = resolve))
+        );
+
+        const trusted = store.fetchMintsFromFollows();
+        await store.fetchReviewerProfiles(['cd'.repeat(32)]);
+
+        expect(ndk.pool.removeRelay).not.toHaveBeenCalled();
+        expect(store.ndk).toBe(ndk);
+
+        finishFetch(new Set());
+        await trusted;
+
+        expect(ndk.pool.removeRelay).toHaveBeenCalledTimes(4);
+        expect(store.ndkUsers.size).toBe(0);
     });
 
     it('fetchReviewerProfiles releases its instance when the fetch times out', async () => {
@@ -3625,7 +3655,7 @@ describe('CashuStore NDK teardown with the real NDK', () => {
 
     // androidClose: close() on a CONNECTING socket does nothing and the
     // socket still opens later, as with React Native's Android WebSocketModule
-    const stubWebSocket = (androidClose = false) => {
+    const stubWebSocket = (androidClose = false, down = 'relay.down') => {
         const sockets: any[] = [];
         (global as any).WebSocket = class {
             static CONNECTING = 0;
@@ -3636,11 +3666,12 @@ describe('CashuStore NDK teardown with the real NDK', () => {
             onopen?: () => void;
             onclose?: () => void;
             onerror?: () => void;
+            onmessage?: (e: { data: string }) => void;
             constructor(public url: string) {
                 sockets.push(this);
                 setTimeout(
                     () => {
-                        if (url.includes('relay.down')) {
+                        if (url.includes(down)) {
                             this.readyState = 3;
                             this.onerror?.();
                             this.onclose?.();
@@ -3657,7 +3688,15 @@ describe('CashuStore NDK teardown with the real NDK', () => {
             }
             addEventListener() {}
             removeEventListener() {}
-            send() {}
+            // answers a REQ with EOSE, as a relay with no matching event does
+            send(data: string) {
+                const [type, id] = JSON.parse(data);
+                if (type !== 'REQ') return;
+                setTimeout(() => {
+                    if (this.readyState !== 1) return;
+                    this.onmessage?.({ data: JSON.stringify(['EOSE', id]) });
+                }, 10);
+            }
             close() {
                 if (this.readyState >= 2) return;
                 const connecting = this.readyState === 0;
@@ -3724,5 +3763,31 @@ describe('CashuStore NDK teardown with the real NDK', () => {
         expect(error).not.toHaveBeenCalled();
         expect(jest.getTimerCount()).toBe(0);
         error.mockRestore();
+    });
+
+    it('ends fetchMints on the subscription EOSE while a relay is down', async () => {
+        // relay.four never connects. For a filter without authors, NDK uses
+        // the explicit relay URLs as given and compares them with its
+        // normalized relay URLs, so it only treats the EOSEs of the other
+        // three as enough when the URLs were normalized.
+        const sockets = stubWebSocket(false, 'relay.four');
+        const MockNDK = NDK as unknown as jest.Mock;
+        MockNDK.mockImplementation((opts: any) => new RealNDK(opts));
+        const log = jest.spyOn(console, 'log').mockImplementation(() => {});
+        const store = newStore();
+
+        const discovery = store.fetchMints();
+        // the 2 s connect and the EOSEs, well short of the 10 s timeout
+        await jest.advanceTimersByTimeAsync(3000);
+
+        expect(store.loading).toBe(false);
+        expect(log).toHaveBeenCalledWith('Mint discovery: EOSE received');
+        await discovery;
+        await jest.advanceTimersByTimeAsync(31000);
+        expect(sockets).toHaveLength(4);
+        sockets.forEach((socket) => expect(socket.readyState).toBe(3));
+        expect(jest.getTimerCount()).toBe(0);
+        log.mockRestore();
+        MockNDK.mockReset();
     });
 });
