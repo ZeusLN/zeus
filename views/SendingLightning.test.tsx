@@ -65,7 +65,7 @@ jest.mock('../assets/images/SVG/wordmark-black.svg', () => 'Wordmark');
 jest.mock('../utils/AmountUtils', () => ({ getFeePercentage: jest.fn() }));
 
 import * as React from 'react';
-import { BackHandler, StyleSheet } from 'react-native';
+import { BackHandler, Dimensions, StyleSheet } from 'react-native';
 import {
     act,
     fireEvent,
@@ -160,6 +160,16 @@ describe('SendingLightning retry', () => {
         expect(
             screen.getByText('views.SendingLightning.inTransit')
         ).toBeOnTheScreen();
+    });
+
+    it('shows the in-transit clock at 16% of the window height', async () => {
+        await renderView({ status: 'IN_FLIGHT' });
+
+        const clocks = hosts('Clock');
+        expect(clocks).toHaveLength(1);
+        const size = Dimensions.get('window').height * 0.16;
+        expect(clocks[0].props.width).toBeCloseTo(size);
+        expect(clocks[0].props.height).toBeCloseTo(size);
     });
 
     it('shows the success screen for a completed payment', async () => {
