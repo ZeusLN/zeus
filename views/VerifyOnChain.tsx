@@ -12,6 +12,7 @@ import KeyValue from '../components/KeyValue';
 import Amount from '../components/Amount';
 import SwipeButton from '../components/SwipeButton';
 import Button from '../components/Button';
+import OnchainSendInFlightNotice from '../components/OnchainSendInFlightNotice';
 import Text from '../components/Text';
 
 import { localeString } from '../utils/LocaleUtils';
@@ -165,11 +166,15 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
     };
 
     onConfirm = () => {
-        if (this.confirmed) return;
-        this.confirmed = true;
-
         const { navigation, TransactionsStore, SettingsStore, route } =
             this.props;
+
+        // an earlier send still holds the store's guard, so sendCoins would
+        // refuse this one and SendingOnChain would show the earlier send's
+        // outcome as this one's
+        if (this.confirmed || TransactionsStore.onchainSendInFlight) return;
+        this.confirmed = true;
+
         const {
             destination,
             fee,
@@ -403,9 +408,13 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                     )}
                 </ScrollView>
                 <View style={{ bottom: 10 }}>
+                    <OnchainSendInFlightNotice
+                        TransactionsStore={TransactionsStore}
+                    />
                     {shouldUseSwipeButton ? (
                         <SwipeButton
                             onSwipeSuccess={this.onConfirm}
+                            disabled={TransactionsStore.onchainSendInFlight}
                             instructionText={localeString(
                                 'views.PaymentRequest.slideToPay'
                             )}

@@ -27,7 +27,20 @@ jest.mock('../components/Header', () => 'Header');
 jest.mock('../components/KeyValue', () => 'KeyValue');
 jest.mock('../components/Amount', () => 'Amount');
 jest.mock('../components/Text', () => 'Text');
-jest.mock('../components/SwipeButton', () => 'SwipeButton');
+// keeps the props so a test can fire onSwipeSuccess on a disabled swipe,
+// as a swipe finishing in the same frame the guard was taken would
+const mockSwipeProps: { current: any } = { current: null };
+jest.mock('../components/SwipeButton', () => (props: any) => {
+    mockSwipeProps.current = props;
+    return null;
+});
+jest.mock('../components/OnchainSendInFlightNotice', () => {
+    const { Text } = require('react-native');
+    return ({ TransactionsStore }: any) =>
+        TransactionsStore.onchainSendInFlight ? (
+            <Text>OnchainSendInFlightNotice</Text>
+        ) : null;
+});
 jest.mock('../components/Button', () => {
     const { Pressable, Text } = require('react-native');
     return ({ title, onPress, disabled }: any) => (
@@ -65,7 +78,7 @@ const navigation = {
 };
 const focus = () => focusListeners.forEach((listener) => listener());
 
-const renderConfirm = (store: TransactionsStore) =>
+const renderConfirm = (store: TransactionsStore, amount = 5000) =>
     render(
         <VerifyOnChain
             {...({
@@ -73,8 +86,8 @@ const renderConfirm = (store: TransactionsStore) =>
                 route: {
                     params: {
                         destination: 'bc1qrecipient',
-                        amount: '5000',
-                        satAmount: 5000,
+                        amount: String(amount),
+                        satAmount: amount,
                         fee: '2',
                         utxos: [],
                         account: 'default',
@@ -97,7 +110,9 @@ const renderConfirm = (store: TransactionsStore) =>
 describe('VerifyOnChain', () => {
     beforeEach(() => {
         sendCoins.mockReset();
+        navigation.navigate.mockReset();
         focusListeners.length = 0;
+        mockSwipeProps.current = null;
     });
 
     it('sends once when the first send answers before the second press', async () => {
@@ -152,5 +167,75 @@ describe('VerifyOnChain', () => {
         expect(
             screen.getByRole('button', { name: 'views.Send.sendCoins' })
         ).toBeDisabled();
+    });
+
+    it('explains why Send Coins is disabled while a send is in flight', async () => {
+        const store = newStore();
+        store.onchainSendInFlight = true;
+        await renderConfirm(store);
+
+        expect(screen.getByText('OnchainSendInFlightNotice')).toBeTruthy();
+    });
+
+    describe('slide to pay', () => {
+        // at or above slideToPayThreshold (10000 here)
+        const swipeAmount = 20000;
+        const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+        it('disables the swipe while a send is in flight', async () => {
+            const store = newStore();
+            store.onchainSendInFlight = true;
+            await renderConfirm(store, swipeAmount);
+            await flush();
+
+            expect(mockSwipeProps.current.disabled).toBe(true);
+        });
+
+        it('sends once when the swipe fires twice', async () => {
+            sendCoins.mockReturnValue(new Promise(() => undefined));
+            const store = newStore();
+            await renderConfirm(store, swipeAmount);
+            await flush();
+
+            mockSwipeProps.current.onSwipeSuccess();
+            mockSwipeProps.current.onSwipeSuccess();
+
+            expect(sendCoins).toHaveBeenCalledTimes(1);
+            expect(navigation.navigate).toHaveBeenCalledTimes(1);
+        });
+
+        // Android back leaves SendingOnChain while a send is loading. A new
+        // send started then would be refused by the store, and SendingOnChain
+        // would show the earlier send's success and txid as this one's
+        it('stays on the screen while an earlier send is in flight', async () => {
+            let resolveEarlier: (value: any) => void = () => undefined;
+            sendCoins.mockReturnValueOnce(
+                new Promise((resolve) => (resolveEarlier = resolve))
+            );
+            const store = newStore();
+            store.sendCoins({
+                addr: 'bc1qearlier',
+                amount: '5000',
+                sat_per_vbyte: '2',
+                account: 'default'
+            } as any);
+            await renderConfirm(store, swipeAmount);
+            await flush();
+
+            mockSwipeProps.current.onSwipeSuccess();
+
+            expect(sendCoins).toHaveBeenCalledTimes(1);
+            expect(navigation.navigate).not.toHaveBeenCalled();
+
+            // the earlier send settles and the screen can send
+            resolveEarlier({ txid: 'txid-earlier' });
+            await flush();
+            sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+            mockSwipeProps.current.onSwipeSuccess();
+
+            expect(sendCoins).toHaveBeenCalledTimes(2);
+            expect(sendCoins.mock.calls[1][0].addr).toBe('bc1qrecipient');
+            expect(navigation.navigate).toHaveBeenCalledWith('SendingOnChain');
+        });
     });
 });

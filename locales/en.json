@@ -241,6 +241,7 @@
     "components.PaymentInFlightNotice.payAnyway": "Pay anyway",
     "components.PaymentInFlightNotice.confirmTitle": "Previous payment still pending",
     "components.PaymentInFlightNotice.confirmText": "Your previous payment may still complete. If this is another attempt at the same payment, you may pay twice. Check the Activity view for the previous payment's outcome.",
+    "components.OnchainSendInFlightNotice.text": "A previous on-chain send is still waiting for your node. You can send again once it finishes.",
     "components.QRSpeedMeterButton.speed": "Speed",
     "components.FeeBreakdown.nowClosed": "Now closed",
     "components.HopPicker.defaultTitle": "Channel to use",
