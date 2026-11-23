@@ -18,6 +18,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import cloneDeep from 'lodash/cloneDeep';
 
 import handleAnything from '../../utils/handleAnything';
+import showHandleAnythingError from '../../utils/showHandleAnythingError';
 import { isUnsafeLnurlError } from '../../utils/LnurlFetchUtils';
 
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
@@ -317,13 +318,8 @@ export default class ReceiveEcash extends React.Component<
             if (!response) return;
             const [route, props] = response;
             navigation.navigate(route, props);
-        } catch (err: any) {
-            Alert.alert(
-                localeString('general.error'),
-                err?.message ?? String(err),
-                [{ text: localeString('general.ok'), onPress: () => void 0 }],
-                { cancelable: false }
-            );
+        } catch (err) {
+            showHandleAnythingError(err);
         }
     };
 

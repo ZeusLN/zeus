@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    View,
-    TouchableOpacity
-} from 'react-native';
+import { ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { Divider } from '@rneui/themed';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
@@ -33,6 +27,7 @@ import TextInput from '../components/TextInput';
 import UTXOPicker from '../components/UTXOPicker';
 
 import handleAnything from '../utils/handleAnything';
+import showHandleAnythingError from '../utils/showHandleAnythingError';
 import { scanNfcTag } from '../utils/NFCUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
 import BackendUtils from '../utils/BackendUtils';
@@ -271,19 +266,7 @@ export default class OpenChannel extends React.Component<
                 const [route, props] = response;
                 navigation.navigate(route, props);
             })
-            .catch((err) => {
-                Alert.alert(
-                    localeString('general.error'),
-                    err?.message ?? String(err),
-                    [
-                        {
-                            text: localeString('general.ok'),
-                            onPress: () => void 0
-                        }
-                    ],
-                    { cancelable: false }
-                );
-            });
+            .catch(showHandleAnythingError);
     };
 
     selectUTXOs = (

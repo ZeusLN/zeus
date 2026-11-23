@@ -10,6 +10,7 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import QRCodeScanner from '../components/QRCodeScanner';
 
 import handleAnything from '../utils/handleAnything';
+import showHandleAnythingError from '../utils/showHandleAnythingError';
 import Base64Utils from '../utils/Base64Utils';
 import { joinQRs } from '../utils/BbqrUtils';
 import { cryptoAccountToWalletExport } from '../utils/CryptoAccountUtils';
@@ -233,17 +234,7 @@ export default class HandleAnythingQRScanner extends React.Component<
                 // Reset flag on error so user can try scanning again
                 this.isProcessing = false;
 
-                Alert.alert(
-                    localeString('general.error'),
-                    err.message,
-                    [
-                        {
-                            text: localeString('general.ok'),
-                            onPress: () => void 0
-                        }
-                    ],
-                    { cancelable: false }
-                );
+                showHandleAnythingError(err);
 
                 this.setState({
                     loading: false

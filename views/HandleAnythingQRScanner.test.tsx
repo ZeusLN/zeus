@@ -10,6 +10,7 @@ jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/handleAnything', () => jest.fn());
 
 import * as React from 'react';
+import { Alert } from 'react-native';
 import { act, render, screen } from '@testing-library/react-native';
 import { UREncoder } from '@ngraveio/bc-ur';
 import { CryptoPSBT } from '@keystonehq/bc-ur-registry';
@@ -177,5 +178,25 @@ describe('HandleAnythingQRScanner BC-UR', () => {
 
         await scan(BYTES_UR);
         expect(mockHandleAnything).toHaveBeenCalledWith('hello from a UR');
+    });
+});
+
+describe('HandleAnythingQRScanner when handleAnything fails', () => {
+    it('shows the error and closes the scanner', async () => {
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        mockHandleAnything.mockRejectedValue('boom');
+        const navigation = await mount();
+
+        await scan('q5891 not a token');
+
+        expect(mockHandleAnything).toHaveBeenCalledWith('q5891 not a token');
+        expect(alert).toHaveBeenCalledWith(
+            'general.error',
+            'boom',
+            expect.any(Array),
+            { cancelable: false }
+        );
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(navigation.goBack).toHaveBeenCalledTimes(1);
     });
 });

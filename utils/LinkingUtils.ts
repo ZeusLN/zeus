@@ -1,8 +1,8 @@
-import { Alert, Linking, Platform, NativeModules } from 'react-native';
+import { Linking, Platform, NativeModules } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { localeString } from './LocaleUtils';
 import handleAnything from './handleAnything';
+import showHandleAnythingError from './showHandleAnythingError';
 import { processSharedQRImageFast } from './ShareIntentProcessor';
 import { startedByInAppRestart } from './InAppRestartUtils';
 import { settingsStore } from '../stores/Stores';
@@ -168,19 +168,7 @@ class LinkingUtils {
                         navigation.navigate(route, props);
                     }
                 })
-                .catch((err) => {
-                    Alert.alert(
-                        localeString('general.error'),
-                        err?.message ?? String(err),
-                        [
-                            {
-                                text: localeString('general.ok'),
-                                onPress: () => void 0
-                            }
-                        ],
-                        { cancelable: false }
-                    );
-                });
+                .catch(showHandleAnythingError);
         }
     };
 

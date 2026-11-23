@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-    Alert,
     BackHandler,
     NativeEventSubscription,
     ScrollView,
@@ -30,6 +29,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import handleAnything from '../../utils/handleAnything';
+import showHandleAnythingError from '../../utils/showHandleAnythingError';
 import { localeString } from '../../utils/LocaleUtils';
 import { OrderInvoiceCheck, verifyOrderInvoice } from '../../utils/LspUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -242,19 +242,7 @@ export default class LSPPaymentAwait extends React.Component<
                 const [route, props] = response;
                 navigation.navigate(route, props);
             })
-            .catch((err) => {
-                Alert.alert(
-                    localeString('general.error'),
-                    err?.message ?? String(err),
-                    [
-                        {
-                            text: localeString('general.ok'),
-                            onPress: () => void 0
-                        }
-                    ],
-                    { cancelable: false }
-                );
-            });
+            .catch(showHandleAnythingError);
     };
 
     private goToWallet = () => {

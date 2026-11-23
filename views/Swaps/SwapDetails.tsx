@@ -33,6 +33,7 @@ import {
     reverseClaimMinerFee
 } from '../../utils/FeeUtils';
 import handleAnything from '../../utils/handleAnything';
+import showHandleAnythingError from '../../utils/showHandleAnythingError';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { sleep } from '../../utils/SleepUtils';
 import { font } from '../../utils/FontUtils';
@@ -1523,21 +1524,7 @@ export default class SwapDetails extends React.Component<
                                         const [route, props] = response;
                                         navigation.navigate(route, props);
                                     })
-                                    .catch((err) => {
-                                        Alert.alert(
-                                            localeString('general.error'),
-                                            err?.message ?? String(err),
-                                            [
-                                                {
-                                                    text: localeString(
-                                                        'general.ok'
-                                                    ),
-                                                    onPress: () => void 0
-                                                }
-                                            ],
-                                            { cancelable: false }
-                                        );
-                                    });
+                                    .catch(showHandleAnythingError);
                             }
                         }}
                         secondary
