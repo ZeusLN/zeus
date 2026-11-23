@@ -1821,6 +1821,7 @@
     "utils.handleAnything.nostrProfileError": "Chyba při načítání Nostr profilu",
     "utils.handleAnything.addressError": "Chyba při načítání adresy",
     "utils.handleAnything.invalidNoffer": "CLINK noffer se nezdařilo dekódovat",
+    "stores.ChannelsStore.batchNeedsNativeSegWit": "Opening several channels at once needs UTXOs from SegWit (P2WKH) or Taproot (P2TR) addresses. At least one UTXO funding this batch is Nested SegWit (NP2WKH) or legacy, so ZEUS stopped before spending anything. Select SegWit or Taproot UTXOs, or open the channels one at a time.",
     "stores.ChannelsStore.openOutcomeUnknown": "Váš uzel neodpověděl včas, ZEUS proto nedokáže určit, zda byl tento kanál otevřen. Zkontrolujte své probíhající kanály dříve, než otevřete další.",
     "stores.ChannelsStore.openStreamTimeout": "Váš uzel nezačal tento kanál financovat včas, ZEUS proto jeho otevření zastavil dříve, než bylo cokoliv utraceno. Můžete to zkusit znovu.",
     "stores.ChannelBackupStore.invalidBackup": "Záloha přijatá ze serveru není platná",
