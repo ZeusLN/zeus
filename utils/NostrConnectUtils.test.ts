@@ -40,7 +40,9 @@ import * as nostrTools from 'nostr-tools';
 import { hexToBytes } from '@noble/hashes/utils.js';
 
 import BackendUtils from './BackendUtils';
-import NostrConnectUtils from './NostrConnectUtils';
+import NostrConnectUtils, {
+    DEFAULT_INVOICE_EXPIRY_SECONDS
+} from './NostrConnectUtils';
 import Payment from '../models/Payment';
 import Invoice from '../models/Invoice';
 import Base64Utils from './Base64Utils';
@@ -48,6 +50,7 @@ import {
     invoiceNotFoundError,
     isInvoiceNotFoundError
 } from './PaymentLookupUtils';
+import dateTimeUtils from './DateTimeUtils';
 import { PermissionType } from '../models/NWCConnection';
 import type { ConnectionActivity } from '../models/NWCConnection';
 import CashuPayment from '../models/CashuPayment';
@@ -680,6 +683,87 @@ describe('NostrConnectUtils', () => {
                 true
             );
             expect(NostrConnectUtils.isIgnorableError('no route')).toBe(false);
+        });
+    });
+
+    describe('decodeInvoiceTagsForMakeInvoice', () => {
+        // BOLT11 spec example, the same vector as utils/LncPayUtils.test.ts
+        const INVOICE =
+            'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+        const INVOICE_HASH =
+            '0001020304050607080900010203040506070809000102030405060708090102';
+        const BACKEND_HASH = 'ff'.repeat(32);
+        const NOW = 1_800_000_000;
+
+        let timestampSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            timestampSpy = jest
+                .spyOn(dateTimeUtils, 'getCurrentTimestamp')
+                .mockReturnValue(NOW);
+        });
+
+        afterEach(() => {
+            timestampSpy.mockRestore();
+        });
+
+        it('prefers the hash of the invoice over a different backend r_hash', async () => {
+            const result =
+                await NostrConnectUtils.decodeInvoiceTagsForMakeInvoice(
+                    INVOICE,
+                    BACKEND_HASH
+                );
+
+            expect(result.paymentHash).toBe(INVOICE_HASH);
+        });
+
+        it('falls back to the backend r_hash and a default expiry when the invoice cannot be decoded', async () => {
+            const result =
+                await NostrConnectUtils.decodeInvoiceTagsForMakeInvoice(
+                    'not-an-invoice',
+                    BACKEND_HASH
+                );
+
+            expect(result.paymentHash).toBe(BACKEND_HASH);
+            expect(result.descriptionHash).toBe('');
+            expect(result.expiryTime).toBe(
+                NOW + DEFAULT_INVOICE_EXPIRY_SECONDS
+            );
+        });
+
+        it('throws when the invoice cannot be decoded and there is no r_hash', async () => {
+            await expect(
+                NostrConnectUtils.decodeInvoiceTagsForMakeInvoice(
+                    'not-an-invoice',
+                    ''
+                )
+            ).rejects.toThrow();
+        });
+
+        it('reads the hash of a Cashu invoice, which has no r_hash', async () => {
+            const result =
+                await NostrConnectUtils.decodeInvoiceTagsForMakeInvoice(
+                    INVOICE
+                );
+
+            expect(result.paymentHash).toBe(INVOICE_HASH);
+        });
+
+        it('returns an empty hash and a default expiry for a Cashu invoice that cannot be decoded', async () => {
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => undefined);
+
+            const result =
+                await NostrConnectUtils.decodeInvoiceTagsForMakeInvoice(
+                    'not-an-invoice'
+                );
+
+            expect(result.paymentHash).toBe('');
+            expect(result.expiryTime).toBe(
+                NOW + DEFAULT_INVOICE_EXPIRY_SECONDS
+            );
+            consoleError.mockRestore();
         });
     });
 
