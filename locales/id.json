@@ -1881,6 +1881,7 @@
     "stores.NostrWalletConnectStore.error.payInvoiceNotPermitted": "This connection is not allowed to pay invoices.",
     "stores.NostrWalletConnectStore.error.paymentQueueWaitExceeded": "Another payment was in progress and this request waited too long; it was not executed. Please try again.",
     "stores.NostrWalletConnectStore.error.makeInvoiceRateLimited": "Too many invoice requests from this connection. Please wait before trying again.",
+    "stores.NostrWalletConnectStore.error.descriptionHashNotSupported": "make_invoice with a description_hash is not supported",
     "stores.NostrWalletConnectStore.error.failedToConnectRelay": "Gagal Menghubungkan ke {{relayUrl}}",
     "stores.NostrWalletConnectStore.error.failedToLoadConnections": "Gagal memuat koneksi",
     "stores.NostrWalletConnectStore.error.failedToSaveConnections": "Gagal menyimpan koneksi",
