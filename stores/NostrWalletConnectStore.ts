@@ -3297,6 +3297,19 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
+        // None of the createInvoice wrappers pass a description hash yet, and
+        // a plain description would not bind the invoice to the caller's
+        // request. The request is not checked by the SDK, so it can be
+        // missing.
+        if (request?.description_hash) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.descriptionHashNotSupported'
+                ),
+                Nip47ErrorCode.NOT_IMPLEMENTED
+            );
+        }
+
         const limitError = this.checkMakeInvoiceLimits(connection);
         if (limitError) {
             return limitError;
