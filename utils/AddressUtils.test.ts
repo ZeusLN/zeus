@@ -355,6 +355,104 @@ describe('AddressUtils', () => {
         });
     });
 
+    describe('processBIP21Uri amount checks', () => {
+        const address = 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu';
+        const invoice =
+            'LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6';
+
+        // the last value used to win, so amount=0.001&amount=10 read as
+        // 10 BTC; a URI with more than one amount has no amount
+        it.each([
+            ['twice', 'amount=0.001&amount=10'],
+            ['with the same value', 'amount=0.001&amount=0.001'],
+            ['in both cases', 'amount=0.001&AMOUNT=10'],
+            ['in upper case', 'AMOUNT=0.001&AMOUNT=10'],
+            ['around other params', 'amount=0.001&label=shop&amount=10'],
+            ['with an empty first value', 'amount=&amount=10'],
+            ['after a second ?', 'amount=0.001&label=what?&amount=10'],
+            [
+                'after a second bitcoin:',
+                'amount=0.001&label=bitcoin:&amount=10'
+            ],
+            ['in mixed case', 'amount=0.001&Amount=10'],
+            ['with a percent-encoded key', 'amount=0.001&%61mount=10']
+        ])('ignores the amount when it appears %s', (_case, query) => {
+            expect(
+                AddressUtils.processBIP21Uri(`bitcoin:${address}?${query}`)
+            ).toEqual({ value: address, satAmount: undefined });
+        });
+
+        it('keeps the lightning and offer params', () => {
+            const offer =
+                'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes';
+            expect(
+                AddressUtils.processBIP21Uri(
+                    `bitcoin:${address}?amount=0.001&lightning=${invoice}&amount=10&lno=${offer}`
+                )
+            ).toEqual({
+                value: address,
+                satAmount: undefined,
+                lightning: invoice,
+                offer
+            });
+        });
+
+        // BigNumber reads these as 16, 3, 1000, 0.001, 10 and 10 BTC
+        it.each(['0x10', '0b11', '1e3', '1e-3', '%2B10', '%2010'])(
+            'ignores %s, which is not a plain decimal',
+            (amount) => {
+                expect(
+                    AddressUtils.processBIP21Uri(
+                        `bitcoin:${address}?amount=${amount}`
+                    )
+                ).toEqual({ value: address, satAmount: undefined });
+            }
+        );
+
+        it.each([
+            ['.5', '50000000'],
+            ['5.', '500000000'],
+            ['0.000000010', '1']
+        ])('reads %s BTC as %s sats', (amount, satAmount) => {
+            expect(
+                AddressUtils.processBIP21Uri(
+                    `bitcoin:${address}?amount=${amount}`
+                )
+            ).toEqual({ value: address, satAmount });
+        });
+
+        it.each(['21000000.00000001', '21000001', '1000000000'])(
+            'ignores %s BTC, above the 21,000,000 BTC supply',
+            (amount) => {
+                expect(
+                    AddressUtils.processBIP21Uri(
+                        `bitcoin:${address}?amount=${amount}`
+                    )
+                ).toEqual({ value: address, satAmount: undefined });
+            }
+        );
+
+        it('reads the full 21,000,000 BTC supply', () => {
+            expect(
+                AddressUtils.processBIP21Uri(
+                    `bitcoin:${address}?amount=21000000`
+                )
+            ).toEqual({ value: address, satAmount: '2100000000000000' });
+        });
+
+        it('still reads a single amount next to other params', () => {
+            expect(
+                AddressUtils.processBIP21Uri(
+                    `bitcoin:${address}?label=shop&amount=0.001&lightning=${invoice}`
+                )
+            ).toEqual({
+                value: address,
+                satAmount: '100000',
+                lightning: invoice
+            });
+        });
+    });
+
     describe('extractBolt12Offer', () => {
         const offer =
             'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes';

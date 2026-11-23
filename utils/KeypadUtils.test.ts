@@ -408,6 +408,45 @@ describe('KeypadUtils', () => {
                     newAmount: '2100000000000000'
                 });
             });
+
+            // the cases above are also stopped by the digit limits; these
+            // are stopped by the supply cap alone
+            it.each([
+                ['2100000', '1', 'BTC'],
+                ['21000000.', '1', 'BTC'],
+                ['2100000000000000.', '1', 'sats']
+            ])(
+                'rejects %s + %s %s, above the supply',
+                (current, key, units) => {
+                    expect(
+                        validateKeypadInput(
+                            current,
+                            key,
+                            units,
+                            fiatStore as any,
+                            settingsStore as any
+                        )
+                    ).toEqual({ valid: false, newAmount: current });
+                }
+            );
+
+            it.each([
+                ['20999999.', '9', 'BTC'],
+                ['2099999999999999.', '9', 'sats']
+            ])(
+                'accepts %s + %s %s, below the supply',
+                (current, key, units) => {
+                    expect(
+                        validateKeypadInput(
+                            current,
+                            key,
+                            units,
+                            fiatStore as any,
+                            settingsStore as any
+                        )
+                    ).toEqual({ valid: true, newAmount: `${current}${key}` });
+                }
+            );
         });
     });
 
@@ -484,6 +523,20 @@ describe('KeypadUtils', () => {
 
     describe('parseClipboardAmount', () => {
         const settingsStore = createMockSettingsStore();
+
+        it('applies the 21,000,000 BTC supply cap', () => {
+            const fiatStore = createMockFiatStore();
+            const parse = (value: string) =>
+                parseClipboardAmount(
+                    value,
+                    'BTC',
+                    fiatStore as any,
+                    settingsStore as any
+                );
+            expect(parse('21000000')).toBe('21000000');
+            expect(parse('21000001')).toBeNull();
+            expect(parse('21000000.00000001')).toBeNull();
+        });
 
         it('returns null for empty input', () => {
             const fiatStore = createMockFiatStore();

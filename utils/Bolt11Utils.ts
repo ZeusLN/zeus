@@ -5,6 +5,7 @@ import BigNumber from 'bignumber.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import * as secp from '@noble/secp256k1';
 import base64Utils from './Base64Utils';
+import { MAX_SATS, SATS_PER_BTC } from './BitcoinConstants';
 
 interface Bolt11Network {
     bech32: string;
@@ -479,8 +480,8 @@ class Bolt11Utils {
 
     private TAGNAMES: { [code: string]: string } = {};
 
-    private MILLISATS_PER_BTC = new BigNumber('100000000000');
-    private MAX_MILLISATS = new BigNumber('2100000000000000000');
+    private MILLISATS_PER_BTC = new BigNumber(SATS_PER_BTC).times(1000);
+    private MAX_MILLISATS = new BigNumber(MAX_SATS).times(1000);
     private DIVISORS: { [k: string]: BigNumber } = {
         m: new BigNumber('1000'),
         u: new BigNumber('1000000'),

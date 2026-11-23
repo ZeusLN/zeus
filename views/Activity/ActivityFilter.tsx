@@ -39,6 +39,36 @@ import { SwapState } from '../../models/Swap';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 
+// The states each swap row offers. swapFilter holds every SwapState for both
+// groups, so what a group shows, and what a tap decides from, is read from
+// these lists and not from all the keys.
+export const SWAP_FILTER_STATES: Record<'submarine' | 'reverse', SwapState[]> =
+    {
+        submarine: [
+            SwapState.InvoiceSet,
+            SwapState.TransactionClaimPending,
+            SwapState.TransactionMempool,
+            SwapState.TransactionConfirmed,
+            SwapState.TransactionClaimed,
+            SwapState.InvoicePending,
+            SwapState.InvoicePaid,
+            SwapState.TransactionRefunded,
+            SwapState.InvoiceFailedToPay,
+            SwapState.SwapExpired,
+            SwapState.TransactionLockupFailed
+        ],
+        reverse: [
+            SwapState.Created,
+            SwapState.TransactionMempool,
+            SwapState.TransactionFailed,
+            SwapState.TransactionConfirmed,
+            SwapState.InvoiceSettled,
+            SwapState.TransactionRefunded,
+            SwapState.SwapExpired,
+            SwapState.InvoiceExpired
+        ]
+    };
+
 interface ActivityFilterProps {
     navigation: NativeStackNavigationProp<any, any>;
     ActivityStore: ActivityStore;
@@ -125,11 +155,19 @@ export default class ActivityFilter extends React.Component<
                 !!this.props.SettingsStore?.settings?.ecash?.enableCashu
         });
 
+    // The state of a swap row, from the states it shows
+    getSwapGroupState = (filters: Filter, group: 'submarine' | 'reverse') =>
+        this.getParentState(
+            SWAP_FILTER_STATES[group].map(
+                (state) => filters.swapFilter[group][state]
+            )
+        );
+
     // The state of each service, from its children (what the switches show)
     getServiceStates = (filters: Filter) => ({
         swaps: this.getCombinedState([
-            this.getParentState(Object.values(filters.swapFilter.submarine)),
-            this.getParentState(Object.values(filters.swapFilter.reverse))
+            this.getSwapGroupState(filters, 'submarine'),
+            this.getSwapGroupState(filters, 'reverse')
         ]),
         lsps1: this.getParentState(Object.values(filters.lsps1State)),
         lsps7: this.getParentState(Object.values(filters.lsps7State))
@@ -191,14 +229,15 @@ export default class ActivityFilter extends React.Component<
                     newFilters[group] = true;
                     newFilters.swaps = true;
                 } else {
-                    const allChildrenOff = Object.values(
-                        newFilters.swapFilter[group]
-                    ).every((c) => c === false);
-                    if (allChildrenOff) {
+                    if (this.getSwapGroupState(newFilters, group) === 'off') {
                         newFilters[group] = false;
                         const other =
                             group === 'submarine' ? 'reverse' : 'submarine';
-                        if (!newFilters[other]) newFilters.swaps = false;
+                        if (
+                            this.getSwapGroupState(newFilters, other) === 'off'
+                        ) {
+                            newFilters.swaps = false;
+                        }
                     }
                 }
             } else {
@@ -264,7 +303,8 @@ export default class ActivityFilter extends React.Component<
                 case 'submarine':
                 case 'reverse': {
                     const sectionName = key;
-                    const isTurningOn = !filters[sectionName];
+                    const isTurningOn =
+                        this.getSwapGroupState(filters, sectionName) === 'off';
                     newFilters[sectionName] = isTurningOn;
 
                     Object.keys(newFilters.swapFilter[sectionName]).forEach(
@@ -279,7 +319,10 @@ export default class ActivityFilter extends React.Component<
                     } else {
                         const otherSection =
                             key === 'submarine' ? 'reverse' : 'submarine';
-                        if (filters[otherSection] === false) {
+                        if (
+                            this.getSwapGroupState(filters, otherSection) ===
+                            'off'
+                        ) {
                             newFilters.swaps = false;
                         }
                     }
@@ -510,33 +553,12 @@ export default class ActivityFilter extends React.Component<
                             {
                                 label: localeString('views.Swaps.submarine'),
                                 section: 'submarine',
-                                states: [
-                                    SwapState.InvoiceSet,
-                                    SwapState.TransactionClaimPending,
-                                    SwapState.TransactionMempool,
-                                    SwapState.TransactionConfirmed,
-                                    SwapState.TransactionClaimed,
-                                    SwapState.InvoicePending,
-                                    SwapState.InvoicePaid,
-                                    SwapState.TransactionRefunded,
-                                    SwapState.InvoiceFailedToPay,
-                                    SwapState.SwapExpired,
-                                    SwapState.TransactionLockupFailed
-                                ]
+                                states: SWAP_FILTER_STATES.submarine
                             },
                             {
                                 label: localeString('views.Swaps.reverse'),
                                 section: 'reverse',
-                                states: [
-                                    SwapState.Created,
-                                    SwapState.TransactionMempool,
-                                    SwapState.TransactionFailed,
-                                    SwapState.TransactionConfirmed,
-                                    SwapState.InvoiceSettled,
-                                    SwapState.TransactionRefunded,
-                                    SwapState.SwapExpired,
-                                    SwapState.InvoiceExpired
-                                ]
+                                states: SWAP_FILTER_STATES.reverse
                             }
                         ]
                     },

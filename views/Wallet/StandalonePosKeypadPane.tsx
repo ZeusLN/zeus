@@ -26,7 +26,8 @@ import {
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import { SATS_PER_BTC, getDecimalPlaceholder } from '../../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../../utils/BitcoinConstants';
+import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
 
 import { PricedIn } from '../../models/Product';
 

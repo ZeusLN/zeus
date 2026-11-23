@@ -13,7 +13,7 @@ import {
     isWholeSatAmount
 } from './AmountUtils';
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
-import { SATS_PER_BTC } from './UnitsUtils';
+import { SATS_PER_BTC } from './BitcoinConstants';
 
 jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => {

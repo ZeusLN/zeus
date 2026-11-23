@@ -2,8 +2,7 @@ import BigNumber from 'bignumber.js';
 
 import { settingsStore, fiatStore } from '../stores/Stores';
 
-// 100_000_000
-const SATS_PER_BTC = 100000000;
+import { SATS_PER_BTC } from './BitcoinConstants';
 
 const getDecimalPlaceholder = (amount: string, units: string) => {
     const [_, decimalPart] = amount.split('.');
@@ -87,7 +86,6 @@ const satsToBip21Amount = (sats: string | number) =>
 type Units = 'sats' | 'BTC' | 'fiat';
 
 export {
-    SATS_PER_BTC,
     getDecimalPlaceholder,
     numberWithCommas,
     numberWithDecimals,

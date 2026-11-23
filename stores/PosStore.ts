@@ -9,7 +9,7 @@ import UnitsStore from './UnitsStore';
 
 import Order from '../models/Order';
 
-import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../utils/BitcoinConstants';
 import { calculateTaxSats } from '../utils/PosUtils';
 import { toCsvRow } from '../utils/CsvUtils';
 import BackendUtils from '../utils/BackendUtils';

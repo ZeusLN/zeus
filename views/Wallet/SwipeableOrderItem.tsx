@@ -13,12 +13,13 @@ import BigNumber from 'bignumber.js';
 
 import Button from '../../components/Button';
 import OrderItem from './OrderItem';
-import { SATS_PER_BTC } from '../../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../../utils/BitcoinConstants';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Order from '../../models/Order';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import FiatStore from '../../stores/FiatStore';
+import { PosEnabled } from '../../stores/SettingsStore';
 
 interface SwipeableOrderItemProps {
     item: Order;
@@ -124,8 +125,23 @@ const SwipeableOrderItem = React.forwardRef<
                     onPress={() => {
                         // Wait for the first rates. Rates that loaded
                         // without a usable one for this currency still
-                        // open the order.
-                        if (!fiatStore!.fiatRates) return;
+                        // open the order. With fiat off the wallet does
+                        // not load rates, so only an unpaid order priced
+                        // in fiat still waits for them: a Square order,
+                        // or a standalone order with a fiat-priced line.
+                        // Order needs a rate for their sats. A paid
+                        // order has its rate in order.payment.
+                        const { fiatEnabled, pos } =
+                            fiatStore!.settingsStore.settings;
+                        const fiatPriced = item.line_items?.some(
+                            (li) => li.base_price_money.amount > 0
+                        );
+                        const waitForRates =
+                            fiatEnabled ||
+                            pos?.posEnabled === PosEnabled.Square ||
+                            fiatPriced;
+                        if (!isPaid && waitForRates && !fiatStore!.fiatRates)
+                            return;
                         navigation.navigate('Order', { order: item });
                     }}
                 >

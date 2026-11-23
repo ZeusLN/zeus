@@ -48,7 +48,7 @@ Use a sibling skill instead when you need:
 "verify": "concurrently \"yarn test\" \"yarn prettier\" \"yarn tsc\" \"yarn lint\""
 ```
 
-These SAME four checks are the ENTIRE PR CI gate. `.github/workflows/` contains `test.yml`, `lint.yml`, `prettier.yml`, `tsc.yml` (each: ubuntu-latest, Node 24.x, `yarn install --frozen-lockfile`, then the one script). `test.yml` runs `yarn run test:coverage --coverageReporters=json-summary` rather than plain `yarn test` (same suites, plus a coverage summary); `coverage-comment.yml` then posts or updates one coverage comment on the PR (#4676). It reports coverage, it does not gate on it. `build-android.yml` and `dependency-scan.yml` are `workflow_dispatch`-only, and `telegram.yml` is a push/issues/release notification workflow, not a check: no mobile build, no emulator, no dependency scan runs on PRs. The coverage comment compares the PR against a `coverage-baseline` artifact from the latest successful `master` push run of Test, and it is posted only when the PR's Test run succeeds. Green CI proves types, format, lint, and the Jest suites (201 as of 2026-10-24, see section 4). Nothing more.
+These SAME four checks are the ENTIRE PR CI gate. `.github/workflows/` contains `test.yml`, `lint.yml`, `prettier.yml`, `tsc.yml` (each: ubuntu-latest, Node 24.x, `yarn install --frozen-lockfile`, then the one script). `test.yml` runs `yarn run test:coverage --coverageReporters=json-summary` rather than plain `yarn test` (same suites, plus a coverage summary); `coverage-comment.yml` then posts or updates one coverage comment on the PR (#4676). It reports coverage, it does not gate on it. `build-android.yml` is `workflow_dispatch`-only, and `telegram.yml` is a push/issues/release notification workflow, not a check: no mobile build, no emulator, no dependency scan runs on PRs. The coverage comment compares the PR against a `coverage-baseline` artifact from the latest successful `master` push run of Test, and it is posted only when the PR's Test run succeeds. Green CI proves types, format, lint, and the Jest suites (201 as of 2026-10-24, see section 4). Nothing more.
 
 | CI check name | Exact local command | What it runs | Common failure modes |
 |---|---|---|---|
@@ -204,7 +204,7 @@ Re-verify volatile facts:
 | Fact | Command |
 |---|---|
 | `verify`/`test`/`lint`/`prettier`/`tsc` script definitions | `grep -A2 '"verify"' package.json` and `grep '"lint"\|"prettier"\|"tsc"\|"test"' package.json` |
-| CI = exactly these 4 PR checks | `ls .github/workflows/` and `grep -A3 '^on:' .github/workflows/*.yml` (`build-android.yml`/`dependency-scan.yml` must still say `workflow_dispatch`; note a bare `grep -l 'pull_request'` also matches build-android.yml via a concurrency-group expression, not a trigger) |
+| CI = exactly these 4 PR checks | `ls .github/workflows/` and `grep -A3 '^on:' .github/workflows/*.yml` (`build-android.yml` must still say `workflow_dispatch`; note a bare `grep -l 'pull_request'` also matches build-android.yml via a concurrency-group expression, not a trigger) |
 | CI Node version / engines | `grep node-version .github/workflows/test.yml`; `grep -A2 '"engines"' package.json` |
 | jest `testPathIgnorePatterns`, `transformIgnorePatterns`, `moduleNameMapper` | `python3 -c "import json;print(json.load(open('package.json'))['jest'])"` |
 | themeColor style-sheet ban | `cat eslint-rules/no-themecolor-in-static-stylesheet.js` |

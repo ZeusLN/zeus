@@ -246,3 +246,27 @@ export const paymentCreationTimeMs = (payment: any): number | null => {
     if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
     return null;
 };
+
+export const INVOICE_NOT_FOUND_CODE = 'INVOICE_NOT_FOUND';
+
+// What a backend throws when the node answered an invoice lookup with "no
+// such invoice". It is marked with a code, not recognised by its message:
+// the message is translated, and another error's translation can contain it
+export const invoiceNotFoundError = (message: string) =>
+    Object.assign(new Error(message), { code: INVOICE_NOT_FOUND_CODE });
+
+// The node's answer to an invoice lookup for a hash it does not know: lnd's
+// NOT_FOUND ("unable to locate invoice", or "there are no existing invoices"
+// on a node that has never created one), which comes from the node in
+// English, and the error CLNRest and LdkNode throw when the invoice is
+// missing from their list, which carries INVOICE_NOT_FOUND_CODE. LndHub's
+// list is only the newest invoices (LNbits returns 20 unless asked for
+// more), so a miss there is not an answer: its error has no such code.
+export const isInvoiceNotFoundError = (error: any): boolean => {
+    if (error?.code === INVOICE_NOT_FOUND_CODE) return true;
+    const message = String(error?.message ?? error ?? '').toLowerCase();
+    return (
+        message.includes('unable to locate invoice') ||
+        message.includes('there are no existing invoices')
+    );
+};

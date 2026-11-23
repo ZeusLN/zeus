@@ -3,11 +3,8 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
 import SettingsStore from './SettingsStore';
-import {
-    SATS_PER_BTC,
-    numberWithCommas,
-    numberWithDecimals
-} from '../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../utils/BitcoinConstants';
+import { numberWithCommas, numberWithDecimals } from '../utils/UnitsUtils';
 
 interface CurrencyDisplayRules {
     symbol: string;
